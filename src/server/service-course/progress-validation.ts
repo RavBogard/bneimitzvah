@@ -2,6 +2,7 @@ import "server-only";
 import { closedObject } from "../http/query";
 import { HttpBoundaryError } from "../http/responses";
 import { parseProgress, serializeProgress, type Progress } from "../../lib/service-course/progress";
+import { lessonById, SERVICE_COURSE } from "../../lib/service-course/course";
 
 /**
  * Service-course progress request shapes (2.0 SC4), a fork of course-progress/validation.ts. The document is checked by
@@ -23,15 +24,26 @@ function ownerName(value: unknown): string {
   if (typeof value !== "string" || !/^[a-f0-9]{32}$/.test(value)) return invalid();
   return value;
 }
-export type PutInput = Readonly<{ progress: Progress; expectedVersion: number; owner: string }>;
+/**
+ * The lessons the browser finished under `owner` (2.0 SC5a), apart from the document: known lesson ids, each once. Optional, so an
+ * older browser's request, which has none, still syncs and marks nothing.
+ */
+function stamps(value: unknown): readonly string[] {
+  if (value === undefined) return Object.freeze([]);
+  if (!Array.isArray(value) || value.length > SERVICE_COURSE.lessons.length) return invalid();
+  const out: string[] = [];
+  for (const id of value) { if (typeof id !== "string" || !lessonById(id) || out.includes(id)) return invalid(); out.push(id); }
+  return Object.freeze(out);
+}
+export type PutInput = Readonly<{ progress: Progress; expectedVersion: number; owner: string; stamps: readonly string[] }>;
 /** Replace the member's document: `expectedVersion` is the version last seen, 0 when there is none yet; `owner` whose it is. */
 export function put(value: unknown): PutInput {
-  const row = closedObject(value, ["progress", "expectedVersion", "owner"]);
-  return Object.freeze({ progress: progress(row.progress), expectedVersion: version(row.expectedVersion), owner: ownerName(row.owner) });
+  const row = closedObject(value, ["progress", "expectedVersion", "owner"], ["stamps"]);
+  return Object.freeze({ progress: progress(row.progress), expectedVersion: version(row.expectedVersion), owner: ownerName(row.owner), stamps: stamps(row.stamps) });
 }
-export type MergeInput = Readonly<{ progress: Progress; owner: string }>;
+export type MergeInput = Readonly<{ progress: Progress; owner: string; stamps: readonly string[] }>;
 /** Fold a browser's progress into the account's (first sign-in, or a conflict between devices); `owner` is whose it is. */
 export function merge(value: unknown): MergeInput {
-  const row = closedObject(value, ["progress", "owner"]);
-  return Object.freeze({ progress: progress(row.progress), owner: ownerName(row.owner) });
+  const row = closedObject(value, ["progress", "owner"], ["stamps"]);
+  return Object.freeze({ progress: progress(row.progress), owner: ownerName(row.owner), stamps: stamps(row.stamps) });
 }

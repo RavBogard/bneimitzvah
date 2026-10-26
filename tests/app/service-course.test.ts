@@ -298,7 +298,7 @@ describe("the tone rule over every learner-facing string", () => {
   });
   it("keeps the approved wording for the strings that already ship", () => {
     expect(COPY.done.siddur).toBe("Open in the siddur, page {page}");
-    expect(COPY.home.saved).toBe("Progress is saved on this device. Sign in to keep it.");
+    expect(COPY.home.saved).toBe("Progress is saved on this device.");
     expect(COPY.home.done).toBe("Done. Review when you like.");
     expect(COPY.frame.skip).toBe("Skip to the lesson");
   });

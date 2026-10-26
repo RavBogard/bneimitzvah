@@ -45,10 +45,14 @@ export function createServiceCourseProgressService<Q extends PgQueryResultHKT>(i
       return write(request, value.owner, async (tx, owner) => {
         const current = await data.progressRow(tx, owner), until = await data.ownCeremonyDate(tx, owner);
         if ((current?.version ?? 0) !== value.expectedVersion) return { ok: false as const, code: "conflict" as const, current: view(owner, current, until) };
+        // A put never drops a lesson the account has done (2.0 SC5a review): a browser that read the account's copy wrongly (an older
+        // bundle, a corrupt read) is answered as a conflict, so it merges instead and loses nothing.
+        if (current && Object.keys(stored(current).lessons).some(id => !Object.hasOwn(value.progress.lessons, id))) return { ok: false as const, code: "conflict" as const, current: view(owner, current, until) };
         const row = current ? await data.updateProgress(tx, owner, value.expectedVersion, value.progress) : await data.insertProgress(tx, owner, value.progress);
         if (!row) throw new Error("Service course progress unavailable");
-        // 2.0 SC5: the stored document's done lessons that are the student's own assigned parts become finished marks.
-        await markFinishedParts(tx, owner, stored(row));
+        // 2.0 SC5 and SC5a: the lessons this request stamps as done under this account, done in the stored document, that are the
+        // student's own assigned parts become finished marks. The request's owner is this account (`write` refuses any other).
+        await markFinishedParts(tx, owner, stored(row), value.stamps);
         return view(owner, row, until);
       });
     },
@@ -67,8 +71,7 @@ export function createServiceCourseProgressService<Q extends PgQueryResultHKT>(i
         if (text === null || !parseProgress(JSON.parse(text))) return { ok: false as const, code: "too-large" as const, current: view(owner, current, until) };
         const row = current ? await data.updateProgress(tx, owner, current.version, merged) : await data.insertProgress(tx, owner, merged);
         if (!row) throw new Error("Service course progress unavailable");
-        // 2.0 SC5: the stored document's done lessons that are the student's own assigned parts become finished marks.
-        await markFinishedParts(tx, owner, stored(row));
+        await markFinishedParts(tx, owner, stored(row), value.stamps);
         return view(owner, row, until);
       });
     },

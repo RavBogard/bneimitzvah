@@ -37,14 +37,15 @@ export function assignedLessons(tenant: Tenant, unitIds: readonly string[]): str
 }
 
 /**
- * After the member's own progress is stored: every lesson the stored document has done that is one of the member's own student's
- * assigned parts, and is not yet marked, is marked now (finished_at is the server's now()). A side effect of sync, not a request of
- * its own: a member without a live student grant and link (a parent, a tutor, an approved Member), a student with no plan, and every
+ * After the member's own progress is stored: every lesson the request stamps as finished under this account (`stamps`, sent apart
+ * from the document; Daniel, 2026-10-26, "Count only signed-in", 2.0 SC5a) that the stored document has done and that is one of
+ * the member's own student's assigned parts, and is not yet marked, is marked now (finished_at is the server's now()). A side effect of sync, not a request of
+ * its own: a lesson with no stamp (done signed out, or sent by an older browser), a member without a live student grant and link (a parent, a tutor, an approved Member), a student with no plan, and every
  * lesson outside the plan (fluency, Review, any other prayer) write nothing. Runs in a savepoint of the sync's own transaction, so a
- * failure here never loses the student's progress; the next sync marks what this one could not, from the whole stored document.
+ * failure here never loses the student's progress; the next sync marks what this one could not, from the stamps the browser still keeps.
  */
-export async function markFinishedParts<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, owner: Owner, progress: Progress): Promise<readonly string[]> {
-  const tenant = tenantFile(owner.tenantId), done = Object.keys(progress.lessons);
+export async function markFinishedParts<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, owner: Owner, progress: Progress, stamps: readonly string[]): Promise<readonly string[]> {
+  const tenant = tenantFile(owner.tenantId), done = stamps.filter(id => Object.hasOwn(progress.lessons, id));
   if (!tenant || !done.length) return [];
   try {
     return await tx.transaction(async sp => {

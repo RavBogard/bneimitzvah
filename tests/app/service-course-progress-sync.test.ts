@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { browserProgressStore, emptyProgress, mergeProgress, parseProgress, PROGRESS_KEY, type Progress } from "../../src/lib/service-course/progress";
-import { createProgressSync, SYNC_KEY, type Account } from "../../src/components/learn/service/progress-sync";
+import { browserProgressStore, completeLesson, emptyProgress, mergeProgress, parseProgress, PROGRESS_KEY, type Progress } from "../../src/lib/service-course/progress";
+import { lessonById } from "../../src/lib/service-course/course";
+import { createProgressSync, GUEST_KEY, STAMPS_KEY, SYNC_KEY, type Account } from "../../src/components/learn/service/progress-sync";
+import { writeLocal } from "../../src/components/learn/service/progress";
 
 // Release 2.0 SC4: the browser half of the service course's signed-in progress, against a fake server and in-memory storage,
 // on Learn to lein's sync test (learn-progress-sync.test.ts): every shared-device and sign-out rule, at the course's own routes.
@@ -11,8 +13,8 @@ const doc = (lessons: Record<string, string>, cards: Record<string, [number, str
   lessons: Object.fromEntries(Object.entries(lessons).map(([id, done]) => [id, { done }])), cards: Object.fromEntries(Object.entries(cards).map(([id, [box, due]]) => [id, { box, due }])) })!;
 const T1 = "2026-10-20T10:00:00.000Z", T2 = "2026-10-21T10:00:00.000Z";
 
-function rig(server: { owner?: string; progress?: Progress | null; version?: number; status?: number; until?: string | null } = {}, marker?: unknown, local?: Progress) {
-  const storage = new MemoryStorage(), store = browserProgressStore(() => storage as unknown as Storage);
+function rig(server: { owner?: string; progress?: Progress | null; version?: number; status?: number; until?: string | null } = {}, marker?: unknown, local?: Progress, storage = new MemoryStorage(), now?: () => number) {
+  const store = browserProgressStore(() => storage as unknown as Storage);
   if (local) store.save(local);
   if (marker !== undefined) storage.setItem(SYNC_KEY, typeof marker === "string" ? marker : JSON.stringify(marker));
   const state = { owner: server.owner ?? A, progress: server.progress ?? null, version: server.version ?? 0, status: server.status ?? 200, until: server.until ?? null, conflictOnce: false, before: null as null | ((path: string) => void), refusal: { error: "x" } as unknown };
@@ -33,9 +35,10 @@ function rig(server: { owner?: string; progress?: Progress | null; version?: num
   }) as unknown as typeof fetch;
   const timers: (() => void)[] = [], seen: { progress: Progress[]; accounts: Account[] } = { progress: [], accounts: [] };
   const sync = createProgressSync({ fetch: fetcher, storage: () => storage as unknown as Storage, store, onProgress: p => seen.progress.push(p), onAccount: a => seen.accounts.push(a),
-    timer: callback => { timers.push(callback); return timers.length; }, clearTimer: () => {} });
+    timer: callback => { timers.push(callback); return timers.length; }, clearTimer: () => {}, ...(now ? { now } : {}) });
   const marker_ = () => JSON.parse(storage.getItem(SYNC_KEY) ?? "null");
-  return { storage, store, state, calls, sync, seen, timers, marker: marker_, local: () => JSON.parse(storage.getItem(PROGRESS_KEY) ?? "null") };
+  return { storage, store, state, calls, sync, seen, timers, marker: marker_, local: () => JSON.parse(storage.getItem(PROGRESS_KEY) ?? "null"),
+    guest: () => JSON.parse(storage.getItem(GUEST_KEY) ?? "null") };
 }
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 
@@ -50,21 +53,25 @@ describe("signed-in progress in the browser", () => {
       expect(r.marker()).toBeNull();
     }
   });
-  it("on first sign-in merges the browser's progress into the account's, and replaces the local copy only with the server's answer", async () => {
+  it("on first sign-in sends none of the browser's signed-out progress: it is set aside on the device and the account's copy is taken", async () => {
     const local = doc({ "aleinu": T2 }, { "word:shma:read": [3, "2026-10-30"] }), account = doc({ "aleinu": T1, "barchu": T2 });
     const r = rig({ progress: account, version: 4, until: "2027-01-02" }, undefined, local);
-    await r.sync.start();
-    expect(r.calls.map(c => c.path)).toEqual(["/api/learn/service/progress", "/api/learn/service/progress/merge"]);
-    expect(r.calls[1].body).toEqual({ progress: local, owner: A });
-    expect(r.store.load()).toEqual(mergeProgress(account, local));
-    expect(r.marker()).toEqual({ owner: A, version: 5, dirty: false });
+    await r.sync.start(); await settle();
+    expect(r.calls.map(c => c.path)).toEqual(["/api/learn/service/progress"]);
+    expect(r.store.load()).toEqual(account);
+    expect(r.state.progress).toEqual(account);
+    expect(r.marker()).toEqual({ owner: A, version: 4, dirty: false });
     expect(r.sync.account).toEqual({ state: "synced", until: "2027-01-02" });
+    expect(parseProgress(r.guest())).toEqual(local);
   });
-  it("keeps the browser's copy untouched when the first merge does not answer", async () => {
-    const local = doc({ "aleinu": T1 }), r = rig({ progress: null }, undefined, local);
-    const start = r.sync.start(); r.state.status = 503; await start;
+  it("leaves the device as it was when the signed-out copy cannot be set aside", async () => {
+    class NoGuest extends MemoryStorage { setItem(key: string, value: string) { if (key === GUEST_KEY) throw new Error("full"); super.setItem(key, value); } }
+    const local = doc({ "aleinu": T1 }), r = rig({ progress: doc({ "barchu": T2 }), version: 2 }, undefined, local, new NoGuest());
+    await r.sync.start();
+    expect(r.calls.map(c => c.path)).toEqual(["/api/learn/service/progress"]);
     expect(r.store.load()).toEqual(local);
     expect(r.marker()).toBeNull();
+    expect(r.sync.account.state).toBe("unknown");
   });
   it("writes a change back under the version last seen, and merges when another device got there first", async () => {
     const r = rig({ progress: doc({ "aleinu": T1 }), version: 1 }, { owner: A, version: 1, dirty: false }, doc({ "aleinu": T1 }));
@@ -108,7 +115,8 @@ describe("signed-in progress in the browser", () => {
     for (const marker of ["{", JSON.stringify({ owner: "x", version: 1, dirty: false }), JSON.stringify({ owner: A, version: -1, dirty: false }), JSON.stringify({ owner: A, version: 1, dirty: false, extra: 1 })]) {
       const r = rig({ progress: null }, marker, doc({ "aleinu": T1 }));
       await r.sync.start();
-      expect(r.calls.map(c => c.path), marker).toEqual(["/api/learn/service/progress", "/api/learn/service/progress/merge"]);
+      expect(r.calls.map(c => c.path), marker).toEqual(["/api/learn/service/progress"]);
+      expect(parseProgress(r.guest()), marker).toEqual(doc({ "aleinu": T1 }));
     }
   });
   it("refuses a malformed server answer and changes nothing", async () => {
@@ -119,14 +127,14 @@ describe("signed-in progress in the browser", () => {
     expect(r.store.load()).toEqual(local);
     expect(r.sync.account.state).toBe("unknown");
   });
-  it("never drops a change made while the first-sign-in merge is out: it is folded in and sent next", async () => {
+  it("counts a lesson done while the first sign-in is still being answered as signed-out work: it is set aside, never sent", async () => {
     const r = rig({ progress: null }, undefined, doc({ "aleinu": T1 }));
-    r.state.before = path => { if (path === "/api/learn/service/progress/merge") { r.store.save(doc({ "aleinu": T1, "barchu": T2 })); r.sync.changed(); r.state.before = null; } };
-    await r.sync.start(); await settle(); await settle(); await settle();
-    expect(r.calls.map(c => c.path)).toEqual(["/api/learn/service/progress", "/api/learn/service/progress/merge", "/api/learn/service/progress/put"]);
-    expect(Object.keys(r.store.load().lessons).sort()).toEqual(["aleinu", "barchu"]);
-    expect(Object.keys(r.state.progress!.lessons).sort()).toEqual(["aleinu", "barchu"]);
-    expect(r.marker()).toEqual({ owner: A, version: 2, dirty: false });
+    r.state.before = path => { if (path === "/api/learn/service/progress") { r.store.save(doc({ "aleinu": T1, "barchu": T2 })); r.sync.changed(); r.state.before = null; } };
+    await r.sync.start(); for (let i = 0; i < 4; i++) await settle();
+    expect(r.calls.map(c => c.path)).toEqual(["/api/learn/service/progress"]);
+    expect(Object.keys(r.guest().lessons).sort()).toEqual(["aleinu", "barchu"]);
+    expect(r.store.load()).toEqual(emptyProgress());
+    expect(r.state.progress).toBeNull();
   });
   it("never drops a change made while a put meets a conflict", async () => {
     const r = rig({ progress: doc({ "aleinu": T1 }), version: 1 }, { owner: A, version: 1, dirty: false }, doc({ "aleinu": T1 }));
@@ -144,6 +152,14 @@ describe("signed-in progress in the browser", () => {
     await clean.sync.start();
     expect(clean.store.load()).toEqual(emptyProgress());
     expect(clean.marker()).toBeNull();
+    // What was set aside at the first sign-in comes back for signed-out use, and is no longer kept apart.
+    const back = rig({ status: 401 }, { owner: A, version: 3, dirty: false }, doc({ "aleinu": T1 }));
+    back.storage.setItem(GUEST_KEY, JSON.stringify(doc({ "shma": T2 })));
+    await back.sync.start();
+    expect(back.store.load()).toEqual(doc({ "shma": T2 }));
+    expect(back.marker()).toBeNull();
+    expect(back.guest()).toBeNull();
+    expect(back.seen.progress.at(-1)).toEqual(doc({ "shma": T2 }));
     const dirty = rig({ status: 401 }, { owner: A, version: 3, dirty: true }, doc({ "aleinu": T1 }));
     await dirty.sync.start();
     expect(dirty.store.load()).toEqual(doc({ "aleinu": T1 }));
@@ -156,7 +172,8 @@ describe("signed-in progress in the browser", () => {
       await r.sync.start();
       expect(r.store.load(), String(status)).toEqual(local);
       expect(r.marker(), String(status)).toEqual({ owner: A, version: 3, dirty: false });
-      expect(r.seen.progress, String(status)).toEqual([]);
+      // Refused as its own account, the page shows the set-aside copy (2.0 SC5a review); the account's stays on the device.
+      expect(r.seen.progress, String(status)).toEqual(status === 403 ? [emptyProgress()] : []);
     }
     // A membership ended mid-session: the write is refused, the change stays here and stays unsent.
     const r = rig({ progress: doc({ "aleinu": T1 }), version: 3 }, { owner: A, version: 3, dirty: false }, doc({ "aleinu": T1 }));
@@ -195,10 +212,164 @@ describe("signed-in progress in the browser", () => {
   });
 });
 
+describe("count only signed-in (Daniel, 2026-10-26, 2.0 SC5a)", () => {
+  const shma = lessonById("shma")!, vahavta = lessonById("vahavta")!;
+  const finish = (r: ReturnType<typeof rig>, lesson = shma) => writeLocal(r.store, r.sync, value => completeLesson(value, lesson, Date.parse(T2)), lesson.id);
+  const stamps = (r: ReturnType<typeof rig>) => JSON.parse(r.storage.getItem(STAMPS_KEY) ?? "null");
+  const writes = (r: ReturnType<typeof rig>) => r.calls.filter(c => c.path !== "/api/learn/service/progress");
+  const run = async () => { for (let i = 0; i < 8; i++) await settle(); };
+  /** What a browser built before SC5a reads (origin/main's parser): the document's shape exactly, and a lesson is `{ done }` only. */
+  const oldReader = (value: unknown) => {
+    const row = value as { schema?: unknown; lessons?: Record<string, unknown>; cards?: unknown };
+    return !!row && Object.keys(row).sort().join() === "cards,lessons,schema" && row.schema === "service-course-progress/v1" && !!row.lessons
+      && Object.values(row.lessons).every(entry => !!entry && typeof entry === "object" && Object.keys(entry).join() === "done");
+  };
+  it("guest lessons and a first sign-in upload no guest lesson; a lesson finished once synced goes up with its stamp beside the document", async () => {
+    const r = rig({ progress: null }, undefined, completeLesson(emptyProgress(), vahavta, Date.parse(T1)));
+    expect(r.sync.stamp).toBeNull();
+    await r.sync.start();
+    expect(r.sync.stamp).toBe(A);
+    finish(r);
+    r.timers.shift()!(); await run();
+    expect(writes(r).map(c => c.path)).toEqual(["/api/learn/service/progress/put"]);
+    expect(writes(r)[0].body.stamps).toEqual(["shma"]);
+    expect(Object.keys(writes(r)[0].body.progress.lessons)).toEqual(["shma"]);
+    expect(JSON.stringify(r.calls)).not.toContain("vahavta");
+    expect(r.guest().lessons).toEqual({ vahavta: { done: T1 } });
+  });
+  it("writes only documents an older browser reads: the device's copies and every put and merge keep lessons as { done }", async () => {
+    const r = rig({ progress: doc({ "aleinu": T1 }), version: 1 }, { owner: A, version: 1, dirty: false }, doc({ "aleinu": T1 }));
+    await r.sync.start();
+    finish(r);
+    r.state.conflictOnce = true;
+    r.timers.shift()!(); await run();
+    expect(writes(r).map(c => c.path)).toEqual(["/api/learn/service/progress/put", "/api/learn/service/progress/merge"]);
+    for (const call of writes(r)) { expect(oldReader(call.body.progress), call.path).toBe(true); expect(call.body.stamps).toEqual(["shma"]); }
+    expect(oldReader(r.local())).toBe(true);
+    expect(oldReader(r.state.progress)).toBe(true);
+    expect(stamps(r).lessons).toHaveProperty("shma");
+  });
+  it("after the account's session ends, a signed-out lesson goes to the set-aside copy and never rides up with the account's unsent changes", async () => {
+    const r = rig({ status: 401, progress: doc({ "aleinu": T1 }), version: 3 }, { owner: A, version: 3, dirty: true }, doc({ "aleinu": T1, "barchu": T2 }));
+    await r.sync.start();
+    expect(r.sync.account.state).toBe("signed-out");
+    expect(r.sync.apart).toBe(true);
+    expect(r.seen.progress.at(-1)).toEqual(emptyProgress());
+    expect(finish(r, vahavta)!.lessons).toEqual({ vahavta: { done: T2 } });
+    expect(r.guest().lessons).toEqual({ vahavta: { done: T2 } });
+    expect(r.store.load()).toEqual(doc({ "aleinu": T1, "barchu": T2 }));
+    expect(stamps(r)).toBeNull();
+    // A signs in again: A's own unsent change goes up, and nothing of the signed-out lesson.
+    r.state.status = 200;
+    await r.sync.start(); await run();
+    expect(writes(r).map(c => c.path)).toEqual(["/api/learn/service/progress/put"]);
+    expect(Object.keys(writes(r)[0].body.progress.lessons).sort()).toEqual(["aleinu", "barchu"]);
+    expect(writes(r)[0].body.stamps).toEqual([]);
+    expect(JSON.stringify(r.calls)).not.toContain("vahavta");
+    expect(r.sync.apart).toBe(false);
+  });
+  it("marks nothing for an account when refused, with no marker, or in a frozen tab", async () => {
+    for (const status of [401, 403]) {
+      const r = rig({ status }, { owner: A, version: 3, dirty: true }, doc({ "aleinu": T1 }));
+      r.state.refusal = { error: "forbidden", owner: A };
+      await r.sync.start();
+      expect(r.sync.stamp, String(status)).toBeNull();
+      finish(r);
+      expect(stamps(r), String(status)).toBeNull();
+      expect(r.store.load(), String(status)).toEqual(doc({ "aleinu": T1 }));
+    }
+    const guest = rig({ status: 503 }, undefined, doc({ "aleinu": T1 }));
+    await guest.sync.start();
+    expect(guest.sync.stamp).toBeNull();
+    expect(finish(guest)!.lessons.shma).toEqual({ done: T2 });
+    expect(stamps(guest)).toBeNull();
+    const frozen = rig({ progress: doc({ "aleinu": T1 }), version: 3 }, { owner: A, version: 3, dirty: false }, doc({ "aleinu": T1 }));
+    await frozen.sync.start();
+    expect(frozen.sync.stamp).toBe(A);
+    frozen.storage.setItem(SYNC_KEY, JSON.stringify({ owner: B, version: 1, dirty: false }));
+    expect(frozen.sync.stamp).toBeNull();
+    expect(finish(frozen)).toBeNull();
+  });
+  it("a signed-in learner offline finishes a lesson under the account, and it goes up stamped when the device is back online", async () => {
+    const r = rig({ progress: doc({ "aleinu": T1 }), version: 3 }, { owner: A, version: 3, dirty: false }, doc({ "aleinu": T1 }));
+    expect(r.sync.stamp).toBe(A);
+    r.state.status = 503;
+    await r.sync.start();
+    expect(r.sync.account.state).toBe("unknown");
+    expect(finish(r)!.lessons.shma).toEqual({ done: T2 });
+    expect(Object.keys(stamps(r).lessons)).toEqual(["shma"]);
+    expect(r.marker()).toEqual({ owner: A, version: 3, dirty: true });
+    expect(writes(r)).toEqual([]);
+    r.state.status = 200;
+    await r.sync.start(); await run();
+    const put = writes(r).find(c => c.path === "/api/learn/service/progress/put")!;
+    expect(put.body).toMatchObject({ expectedVersion: 3, owner: A, stamps: ["shma"] });
+    expect(r.marker()).toEqual({ owner: A, version: 4, dirty: false });
+  });
+  it("never stamps B's work with A's name when the device changes account while offline, in a tab that never had an answer or one that had", async () => {
+    const fresh = rig({ status: 503 }, { owner: A, version: 3, dirty: false }, doc({ "aleinu": T1 }));
+    await fresh.sync.start();
+    expect(fresh.sync.stamp).toBe(A);
+    fresh.storage.setItem(SYNC_KEY, JSON.stringify({ owner: B, version: 7, dirty: false }));
+    expect(fresh.sync.stamp).toBeNull();
+    finish(fresh);
+    expect(stamps(fresh)).toBeNull();
+    expect(fresh.guest().lessons).toHaveProperty("shma");
+    expect(fresh.store.load()).toEqual(doc({ "aleinu": T1 }));
+    fresh.storage.removeItem(SYNC_KEY);
+    expect(fresh.sync.stamp).toBeNull();
+    const synced = rig({ progress: doc({ "aleinu": T1 }), version: 3 }, { owner: A, version: 3, dirty: false }, doc({ "aleinu": T1 }));
+    await synced.sync.start();
+    synced.state.status = 503; await synced.sync.start();
+    synced.storage.setItem(SYNC_KEY, JSON.stringify({ owner: B, version: 7, dirty: false }));
+    expect(synced.sync.stamp).toBeNull();
+    expect(finish(synced)).toBeNull();
+  });
+  it("account A's stamps never count for B on the same device, whether A's copy was clean or unsent", async () => {
+    for (const dirty of [false, true]) {
+      const r = rig({ owner: B, progress: doc({ "barchu": T2 }), version: 5 }, { owner: A, version: 3, dirty }, doc({ "aleinu": T1, "shma": T2 }));
+      r.storage.setItem(STAMPS_KEY, JSON.stringify({ owner: A, synced: 1, lessons: { shma: 2 } }));
+      await r.sync.start(); r.store.save(doc({ "barchu": T2, "shma": T2 })); r.sync.changed();
+      r.timers.shift()!(); await run();
+      expect(r.sync.stamp).toBe(B);
+      expect(writes(r).map(c => c.body.stamps)).toEqual([[]]);
+      expect(stamps(r)).toEqual(expect.objectContaining({ owner: B, lessons: {} }));
+    }
+  });
+  it("a tab left synced after its account signed out elsewhere drops the stamp it made since the last clean sync, when its put is refused", async () => {
+    let clock = 1000;
+    const r = rig({ progress: doc({ "aleinu": T1 }), version: 3 }, { owner: A, version: 3, dirty: false }, doc({ "aleinu": T1 }), undefined, () => clock);
+    await r.sync.start();
+    expect(stamps(r)).toEqual({ owner: A, synced: 1000, lessons: {} });
+    clock = 2000; finish(r);
+    expect(stamps(r).lessons).toEqual({ shma: 2000 });
+    // A signed out in another tab: this tab's put is refused, and the dirty copy stays for A, with no stamp.
+    r.state.status = 401;
+    r.timers.shift()!(); await run();
+    expect(r.marker()).toMatchObject({ owner: A, dirty: true });
+    expect(stamps(r).lessons).toEqual({});
+    r.state.status = 200;
+    await r.sync.start(); await run();
+    const put = writes(r).at(-1)!;
+    expect(put.path).toBe("/api/learn/service/progress/put");
+    expect(Object.keys(put.body.progress.lessons).sort()).toEqual(["aleinu", "shma"]);
+    expect(put.body.stamps).toEqual([]);
+  });
+  it("a clean sign-out drops the account's stamps with its copy", async () => {
+    const r = rig({ status: 401 }, { owner: A, version: 3, dirty: false }, doc({ "shma": T1 }));
+    r.storage.setItem(STAMPS_KEY, JSON.stringify({ owner: A, synced: 1, lessons: { shma: 1 } }));
+    await r.sync.start();
+    expect(r.marker()).toBeNull();
+    expect(stamps(r)).toBeNull();
+  });
+});
+
 describe("the course's own keys", () => {
   it("keeps its marker and its document apart from Learn to lein's, so neither course's sync reads the other's", () => {
     expect(SYNC_KEY).toBe("crc-torah:service-sync/v1");
     expect(PROGRESS_KEY).toBe("crc-torah:service-progress/v1");
+    expect(GUEST_KEY).toBe("crc-torah:service-guest-progress/v1");
+    expect(STAMPS_KEY).toBe("crc-torah:service-stamps/v1");
   });
 });
 

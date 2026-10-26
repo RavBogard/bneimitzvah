@@ -64,7 +64,7 @@ test("the course home opens at 360 px: the next lesson, the links, every unit, a
   await expect(next).toHaveAttribute("data-next", "shma");
   await expect(next.getByRole("heading", { level: 2, name: "Sh’ma" })).toBeVisible();
   await expect(next.getByText("about 5 minutes")).toBeVisible();
-  await expect(page.getByText("Progress is saved on this device. Sign in to keep it.")).toBeVisible();
+  await expect(page.getByText("Progress is saved on this device.")).toBeVisible();
   // CRC's Saturday evening and Havdalah are here now (2.0 SC7), so the "come next" line is gone and their two units list below.
   await expect(page.getByText("Saturday evening and Havdalah come next.")).toHaveCount(0);
   for (const title of ["Saturday evening: the Sh’ma and its blessings", "Havdalah"]) await expect(page.getByRole("heading", { level: 2, name: title, exact: true })).toBeVisible();
@@ -195,7 +195,7 @@ test("About names the teacher and the text, and goes back to the course", async 
   expect(response?.status()).toBe(200); expect(response?.headers()["x-robots-tag"]).toBe("noindex, nofollow");
   await expect(page.getByRole("heading", { level: 1, name: "About this course" })).toBeVisible();
   await expect(page.getByText("The teaching on each prayer is by Rabbi Daniel Bogard.")).toBeVisible();
-  await expect(page.getByText("Nothing here records you. Progress stays on this device unless you sign in.")).toBeVisible();
+  await expect(page.getByText("Signed out, progress stays on this device. Nothing here records you.")).toBeVisible();
   expect(await noHorizontalScroll(page)).toBe(true);
   await page.getByRole("link", { name: "Back to the course" }).click();
   await expect(page).toHaveURL(/\/learn\/service$/);

@@ -59,7 +59,7 @@ function FluencyRun({ lesson, intro, steps, seed }: { lesson: Lesson; intro: rea
     <RunBar title={lesson.title} rail={{ at, total }} />
     <main id="lesson-main" ref={main} tabIndex={-1} className={learn.lesson} data-lesson={lesson.id} data-step={phase === "run" ? step?.kind : phase}>
       {phase === "intro" && intro ? <Intro lesson={lesson} rows={intro} onNext={() => { setPhase("run"); move(); }} />
-        : phase === "done" || !step ? <FluencyDone lesson={lesson} complete={() => update(value => completeLesson(value, lesson, Date.now()))}
+        : phase === "done" || !step ? <FluencyDone lesson={lesson} complete={() => update(value => completeLesson(value, lesson, Date.now()), lesson.id)}
             nextId={(() => { const order = SERVICE_COURSE.lessons.filter(row => row.kind === "fluency"), after = order[order.findIndex(row => row.id === lesson.id) + 1]; return after?.id ?? (progress ? nextLesson(completeLesson(progress, lesson, Date.now()), CRC_TENANT)?.id ?? null : null); })()} />
         : step.kind === "item" ? <ItemView key={`${step.key}:${run.at}`} step={step} again={(run.misses.get(step.key) ?? 0) < CHECK_REASKS} onAnswer={record} onNext={right => advance(right)} />
         : step.kind === "word" ? <WordView key={`${step.key}:${run.at}`} step={step} onNext={() => advance(true)} />

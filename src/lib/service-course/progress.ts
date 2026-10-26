@@ -111,17 +111,17 @@ export const courseDone = (progress: Progress, tenant: Tenant = CRC_TENANT) => s
 
 /** Browser storage for signed-out learners: one key, every access guarded; corrupt or missing means fresh. */
 export type ProgressStore = Readonly<{ load(): Progress; save(progress: Progress): boolean }>;
-export function browserProgressStore(storage: () => Storage | null = () => { try { return window.localStorage; } catch { return null; } }): ProgressStore {
+export function browserProgressStore(storage: () => Storage | null = () => { try { return window.localStorage; } catch { return null; } }, key: string = PROGRESS_KEY): ProgressStore {
   return Object.freeze({
     load() {
       try {
-        const text = storage()?.getItem(PROGRESS_KEY);
+        const text = storage()?.getItem(key);
         if (!text || text.length > PROGRESS_LIMITS.bytes) return emptyProgress();
         return parseProgress(JSON.parse(text)) ?? emptyProgress();
       } catch { return emptyProgress(); }
     },
     save(progress) {
-      try { const text = serializeProgress(progress); if (!text) return false; storage()?.setItem(PROGRESS_KEY, text); return true; } catch { return false; }
+      try { const text = serializeProgress(progress); if (!text) return false; storage()?.setItem(key, text); return true; } catch { return false; }
     },
   });
 }
