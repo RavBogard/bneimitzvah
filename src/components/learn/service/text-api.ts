@@ -23,15 +23,22 @@ export async function fetchServiceText(unit: string, signal: AbortSignal): Promi
   return parseServiceText(await getJson(serviceTextPath(unit), SERVICE_TEXT_LIMITS.answerBytes, signal), unit) ?? bad();
 }
 
+/** The verse a line's word card opens: its first text page by ref, the address the service-course pack keeps (2.0 SC6). */
+export const versePath = (ref: Pick<TorahRef, "ref" | "kind">) => publicTextPath({ by: "ref", ref: ref.ref, kind: ref.kind }, ref.kind, 0);
+/** That page's answer, checked and analysed as Learn analyses its own verses; null when it is not exactly this verse. */
+export function parseVerse(value: unknown, ref: Pick<TorahRef, "ref" | "kind">): AnalysedVerse | null {
+  try {
+    const plan = studyRangePlan([ref.ref], ref.kind, 0);
+    const row = referenceRecord(value, ["kind", "ref", "offset", "nextOffset", "totalVerses", "translation", "verses", "chapters"]);
+    if (!row || row.kind !== ref.kind || row.ref !== ref.ref) return null;
+    const page = parseStudyContent(row, plan, 0, 1), verse = page.verses[0];
+    if (!verse || verse.ref !== ref.ref) return null;
+    return analyseVerse({ ref: ref.ref, kind: ref.kind, hebrew: verse.hebrew });
+  } catch { return null; }
+}
 /** The verse the card is about, analysed as Learn analyses its own verses. */
 export async function fetchVerse(ref: TorahRef, signal: AbortSignal): Promise<AnalysedVerse> {
-  const plan = studyRangePlan([ref.ref], ref.kind, 0);
-  const row = referenceRecord(await getJson(publicTextPath({ by: "ref", ref: ref.ref, kind: ref.kind }, ref.kind, 0), 2 * 1024 * 1024, signal),
-    ["kind", "ref", "offset", "nextOffset", "totalVerses", "translation", "verses", "chapters"]);
-  if (!row || row.kind !== ref.kind || row.ref !== ref.ref) return bad();
-  const page = parseStudyContent(row, plan, 0, 1), verse = page.verses[0];
-  if (!verse || verse.ref !== ref.ref) return bad();
-  return analyseVerse({ ref: ref.ref, kind: ref.kind, hebrew: verse.hebrew }) ?? bad();
+  return parseVerse(await getJson(versePath(ref), 2 * 1024 * 1024, signal), ref) ?? bad();
 }
 
 /** The divine name's spellings, as letters: the prayer's two yods and the verse's four letters are the same word. */

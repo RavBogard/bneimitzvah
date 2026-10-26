@@ -153,3 +153,63 @@ test("offline, the 1.6 activities run from the course pack: look-alikes and whic
   await expect(page.getByRole("heading", { name: "Which phrase is this?" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("The recording did not load. Try again.")).toHaveCount(0);
 });
+
+// 2.0 SC6, the exit test: the service course's public text is served from a synthetic build (invented letters, never prayer text), as
+// e2e/service-course.spec.ts does. Signed out, so no evening text is ever kept; the siddur reader (the licensed book) is never asked.
+const syntheticWord = (seed: number) => Array.from({ length: 3 }, (_, i) => String.fromCharCode(0x05d0 + ((seed * 7 + i * 5 + 3) % 22))).join("");
+const syntheticServiceText = (unit: string) => ({ unit, volume: "shabbat-shacharit", credit: { title: "Shirei Tfilah", licence: "CC BY-NC-SA 4.0" },
+  lines: Array.from({ length: 10 }, (_, line) => ({ he: Array.from({ length: 46 }, (_, w) => syntheticWord(line * 50 + w)).join(" "), tr: Array.from({ length: 46 }, (_, w) => `syl${line}x${w}`).join(" "), en: `Synthetic English line ${line}.` })) });
+test("offline within 14 days, a done service-course lesson's Read, Key words and Check work from the service-course pack; the siddur link needs a connection; the licensed book is never asked for", async ({ context, page }, testInfo) => {
+  test.skip(testInfo.project.name !== "phone", "one device is enough for the worker");
+  test.setTimeout(300_000);
+  const app = await installedApp(context), asked: string[] = [];
+  context.on("request", request => asked.push(request.url()));
+  await context.route("**/api/public/service-text?**", route => app.state.offline ? route.abort("internetdisconnected")
+    : route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(syntheticServiceText(new URL(route.request().url()).searchParams.get("unit") ?? "")) }));
+  const main = page.locator("main#lesson-main"), next = () => page.getByRole("button", { name: "Next" }).click();
+  async function lessonToDone() {
+    await expect(main).toHaveAttribute("data-step", "about", { timeout: 30_000 });
+    await next(); await expect(main).toHaveAttribute("data-step", "where");
+    await next(); await expect(main).toHaveAttribute("data-step", "read");
+    await expect(main).toHaveAttribute("data-text", "ready", { timeout: 30_000 });
+    await expect(main.locator("ol li p[lang='he']").first()).toBeVisible();
+  }
+  async function wordsCheckDone() {
+    await next(); await expect(main).toHaveAttribute("data-step", "words");
+    await expect(main.locator("[data-word-card]").first()).toBeVisible();
+    await next(); await expect(main).toHaveAttribute("data-step", "check");
+    for (let n = 0; n < 40 && await main.getAttribute("data-step") === "check"; n++) { await main.locator("ul button").first().click(); await next(); }
+    await expect(main).toHaveAttribute("data-step", "done");
+  }
+  await page.goto("/");
+  await expect.poll(async () => (await packs(page)).map(row => row.key).sort(), { timeout: 120_000 }).toEqual(expect.arrayContaining(["course", "service-course"]));
+  await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
+  const service = (await packs(page)).find(row => row.key === "service-course")!;
+  expect(service.assets.length).toBeGreaterThanOrEqual(30);
+  expect(service.assets.every(asset => /^\/api\/public\/(?:service-text\?unit=[a-z0-9.-]+%40(?!bm-)[a-z0-9-]+&build=[a-f0-9]+|text\?ref=[^&]+&kind=(?:torah|haftarah)&offset=0)$/.test(asset))).toBe(true);
+  expect((await packs(page)).some(row => row.assets.some(asset => asset.includes("evening-text")))).toBe(false);
+
+  // Online: the lesson is done once.
+  await page.goto("/learn/service/vahavta");
+  await lessonToDone();
+  await expect(main.getByRole("link", { name: /^Open in the siddur, page \d+/ })).toBeVisible();
+  await wordsCheckDone();
+  expect(await page.evaluate(() => Object.keys((JSON.parse(localStorage.getItem("crc-torah:service-progress/v1") ?? "{}") as { lessons?: object }).lessons ?? {}))).toContain("vahavta");
+
+  // The network cut: the lesson opens from the shell, its text from the pack, and the siddur link says it needs a connection.
+  await app.offline(true);
+  app.state.fromWorker.length = 0;
+  await page.goto("/learn/service/vahavta");
+  await lessonToDone();
+  await expect(main.locator("[data-siddur-page][data-offline]")).toHaveText("Needs a connection");
+  await expect(main.locator("[data-siddur-page] a")).toHaveCount(0);
+  await wordsCheckDone();
+  await expect(main.locator("[data-siddur-page][data-offline]")).toBeVisible();
+  expect(app.state.fromWorker).toEqual(expect.arrayContaining(["/learn/service/vahavta", "/api/public/service-text"]));
+  // The home opens too, with no siddur line.
+  await page.goto("/learn/service");
+  await expect(page.locator("[data-lesson='vahavta']").first()).toHaveAttribute("data-state", "done", { timeout: 30_000 });
+  // Never the siddur reader (the licensed book), never the evening text, never anything private from the worker.
+  expect(asked.filter(url => /siddur\.centralreform\.org|\/api\/public\/evening-text/.test(url))).toEqual([]);
+  expect(app.state.fromWorker.filter(path => /^\/api\/(?!public\/(?:service-text|text|manifest)$)/.test(path))).toEqual([]);
+});

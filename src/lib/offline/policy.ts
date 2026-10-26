@@ -51,7 +51,9 @@ export const HINT_DISMISSED_KEY = "crc.offline.install-dismissed";
 
 /** Static pages the worker keeps as the app shell; a navigation that fails offline falls back to one of them.
  * The Learn to lein lesson pages join them (shell.ts adds one per lesson). */
-export const SHELL_BASE_PAGES: readonly string[] = Object.freeze(["/read", "/offline", "/learn", "/learn/about", "/learn/review"]);
+export const SHELL_BASE_PAGES: readonly string[] = Object.freeze(["/read", "/offline", "/learn", "/learn/about", "/learn/review",
+  // 2.0 SC6 (A4 10): the service course's home, About, Review and Quick ten; shell.ts adds one page per open lesson.
+  "/learn/service", "/learn/service/about", "/learn/service/review", "/learn/service/practice/quick-ten"]);
 /** App code: cache-first into the shell cache. */
 export const STATIC_PATH = /^\/(?:_next\/static|fonts)\//;
 /** Never app code, whatever its prefix: an encoded slash, backslash or dot segment. */
@@ -59,10 +61,11 @@ export const STATIC_UNSAFE = /%2f|%5c|%2e|\/\.\.?(?:\/|$)|\/\//i;
 /** PocketTorah short clips only (G3): exactly the content-addressed short-v1 path, no query. */
 export const CLIP_PATH = /^\/reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$/;
 /**
- * The public reading routes a pack may hold (§3.2): reading, text and short-reference pages, (2.0 SC7) the evening lessons' text, and
- * (1.9 N24) the week's calendar aliyot and its approved portion summary, the public route that never serves a draft.
+ * The public reading routes a pack may hold (§3.2): reading, text and short-reference pages, (2.0 SC7) the evening lessons' text,
+ * (1.9 N24) the week's calendar aliyot and its approved portion summary, the public route that never serves a draft, and (2.0 SC6)
+ * the service course's public-lane prayer text.
  */
-export const PACK_DATA_PATH = /^\/api\/public\/(?:reading|text|reference\/short|evening-text|aliyot|portion-summary)$/;
+export const PACK_DATA_PATH = /^\/api\/public\/(?:reading|text|reference\/short|evening-text|service-text|aliyot|portion-summary)$/;
 /**
  * A route only an owner pack may hold (2.0 SC7): the CRC siddur's evening text. Daniel, 2026-10-25: "Yes, for signed-in CRC people";
  * a signed-out visitor's device keeps none of it. The private /api/offline/packs names the evening pack only for a signed-in CRC person,
@@ -73,9 +76,18 @@ export const OWNER_ONLY_PATH = /^\/api\/public\/evening-text$/;
 const pathOf = (asset: string) => { const query = asset.indexOf("?"); return query < 0 ? asset : asset.slice(0, query); };
 export const ownerOnlyAsset = (asset: string): boolean => typeof asset === "string" && OWNER_ONLY_PATH.test(pathOf(asset));
 
+/**
+ * 2.0 SC6 decision point: the two prayer-text routes take exactly `?unit=&build=`, as text-api.ts asks for them. The service course's
+ * public route never names a unit of the Beit Mitzvah siddur (`@bm-…`, the licensed book) or the Mi Shebeirach, whatever the server
+ * would answer. The evening route names only a Saturday-evening unit of that book, and only an owner pack may hold it (OWNER_ONLY_PATH).
+ */
+export const SERVICE_TEXT_QUERY = /^\?unit=(?![^&]*mi-shebeirach)[a-z0-9-]{1,80}\.[a-z0-9-]{1,80}%40(?!bm-)[a-z0-9-]{1,80}&build=[a-f0-9]{7,40}$/;
+export const EVENING_TEXT_QUERY = /^\?unit=(?![^&]*mi-shebeirach)[a-z0-9-]{1,80}\.[a-z0-9-]{1,80}%40bm-maariv&build=[a-f0-9]{12}$/;
 const EXACT_QUERY: Readonly<Record<string, RegExp>> = Object.freeze({
   "/api/public/portion-summary": /^\?reading=[a-z0-9]{1,80}(?:-[a-z0-9]{1,80}){0,8}$/,
   "/api/public/aliyot": /^\?date=\d{4}-\d{2}-\d{2}$/,
+  "/api/public/service-text": SERVICE_TEXT_QUERY,
+  "/api/public/evening-text": EVENING_TEXT_QUERY,
 });
 /** May this same-origin path (with its query) ever enter a pack? The G3 and private-data guard. */
 export function packAssetAllowed(asset: string): boolean {
@@ -87,6 +99,30 @@ export function packAssetAllowed(asset: string): boolean {
   if (exact) return exact.test(search);
   return PACK_DATA_PATH.test(path) && search.length > 1;
 }
+
+/** The service-course pack's key (2.0 SC6). */
+export const SERVICE_PACK_KEY = "service-course";
+/** A verse by ref, first page: what the service course's word card asks for a line that is a Bible verse (text-api.ts, fetchVerse). */
+const SERVICE_VERSE_QUERY = /^\?ref=[A-Za-z0-9+%.-]{1,200}&kind=(?:torah|haftarah)&offset=0$/;
+/**
+ * 2.0 SC6 decision point: what the service-course pack may hold, and nothing else. It is a public pack (owner "public", fetched with no
+ * cookie), so it holds only public-lane text: each course unit's `/api/public/service-text` answer and the first text page of the few
+ * Bible verses its word card opens. Never the evening text (the CRC siddur's, an owner pack's alone), never a unit of the licensed Beit
+ * Mitzvah book, never anything private. The packer and the stored index both hold the pack to this one rule.
+ */
+export function servicePackAssetAllowed(asset: string): boolean {
+  if (!packAssetAllowed(asset) || ownerOnlyAsset(asset)) return false;
+  const query = asset.indexOf("?"), path = query < 0 ? asset : asset.slice(0, query), search = query < 0 ? "" : asset.slice(query);
+  if (path === "/api/public/service-text") return SERVICE_TEXT_QUERY.test(search);
+  if (path === "/api/public/text") return SERVICE_VERSE_QUERY.test(search);
+  return false;
+}
+/**
+ * 2.0 SC6: the device's last copy of a signed-in student's own parts (A4 10, "Your parts" offline), under a synthetic key in the pack
+ * cache that the worker never serves. It is the owner's, like an owner pack: kept only beside an index of the same owner, so the
+ * sign-out purge, Remove saved readings and an account switch all remove it with the cache (pack-index.ts, path-copy.ts).
+ */
+export const PATH_COPY_KEY = "/__crc_offline__/path";
 
 /**
  * A2: the private endpoint that names the signed-in person's own readings (descriptors only). The worker never
@@ -100,8 +136,8 @@ export const OWNER_KEY = /^[A-Za-z0-9_-]{43}$/;
 const PACK_REF = /^[A-Za-z0-9 :;,.-]{1,1000}$/;
 export const packRefAllowed = (ref: unknown): ref is string => typeof ref === "string" && PACK_REF.test(ref);
 
-export type PackDescriptor = Readonly<{ type: "week"; date: string } | { type: "course" } | { type: "ref"; kind: "torah" | "haftarah"; ref: string } | { type: "evening" }>;
-/** `owner` is "public" (This week, the course) or the owner key of the person whose own reading (or, CRC, evening text) it is. */
+export type PackDescriptor = Readonly<{ type: "week"; date: string } | { type: "course" } | { type: "service" } | { type: "ref"; kind: "torah" | "haftarah"; ref: string } | { type: "evening" }>;
+/** `owner` is "public" (This week, the course, (2.0 SC6) the service course) or the owner key of the person whose own reading (or, CRC, evening text) it is. */
 export type Pack = Readonly<{
   key: string; owner: string; label: string; descriptor: PackDescriptor; assets: readonly string[];
   bytes: number; renewedAt: number; expiresAt: number; format: 1;
@@ -122,6 +158,7 @@ function descriptorOf(value: unknown): PackDescriptor | null {
   const row = value as Record<string, unknown>;
   if (row.type === "course" && Object.keys(row).length === 1) return Object.freeze({ type: "course" });
   if (row.type === "evening" && Object.keys(row).length === 1) return Object.freeze({ type: "evening" });
+  if (row.type === "service" && Object.keys(row).length === 1) return Object.freeze({ type: "service" });
   if (row.type === "week" && Object.keys(row).length === 2 && typeof row.date === "string" && DATE.test(row.date)) return Object.freeze({ type: "week", date: row.date });
   if (row.type === "ref" && Object.keys(row).length === 3 && (row.kind === "torah" || row.kind === "haftarah") && packRefAllowed(row.ref))
     return Object.freeze({ type: "ref", kind: row.kind, ref: row.ref });
@@ -147,6 +184,8 @@ export function parsePackIndex(value: unknown): PackIndex {
         || !Array.isArray(p.assets) || p.assets.length > 4000 || !p.assets.every(packAssetAllowed)
         // The evening text is only ever an owner pack's: a public pack that holds it, or an evening pack holding anything else, is no index.
         || (p.owner === "public" && (p.assets as string[]).some(ownerOnlyAsset)) || (descriptor.type === "evening" && !(p.assets as string[]).every(ownerOnlyAsset))
+        // 2.0 SC6: the service-course pack (public, owned is false above) holds only what servicePackAssetAllowed allows, or it is no index.
+        || (descriptor.type === "service" && !(p.assets as string[]).every(servicePackAssetAllowed))
         || !Number.isSafeInteger(p.bytes) || (p.bytes as number) < 0
         || !Number.isSafeInteger(p.renewedAt) || !Number.isSafeInteger(p.expiresAt) || p.format !== 1) return EMPTY_INDEX;
       packs.push(Object.freeze({ key: p.key, owner: p.owner as string, label: p.label, descriptor, assets: Object.freeze([...(p.assets as string[])]),

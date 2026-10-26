@@ -16,7 +16,7 @@ import { syntheticCommentaryFetch } from "../helpers/commentary";
 import { publicShortFixture, byteStream } from "./reference-public-short-fixture";
 import { askOwner, coursePackCurrent, openOffline, ownerPackKey, PackStopped, parseOwnerAnswer, renewPack, type PackerIo } from "../../src/lib/offline/packer";
 import { purgeOffline, readIndex, sweep, writeIndex } from "../../src/lib/offline/pack-index";
-import { BEIT_MITZVAH_ORIGIN, EMPTY_INDEX, INDEX_KEY, OFFLINE_CACHE, OFFLINE_HEADER, packAssetAllowed, parsePackIndex, WINDOW_MS, type Pack } from "../../src/lib/offline/policy";
+import { BEIT_MITZVAH_ORIGIN, EMPTY_INDEX, INDEX_KEY, OFFLINE_CACHE, OFFLINE_HEADER, packAssetAllowed, parsePackIndex, SERVICE_PACK_KEY, WINDOW_MS, type Pack } from "../../src/lib/offline/policy";
 import { publicReadingPath, publicShortPath, publicTextPath } from "../../src/components/portal/public-reading/urls";
 import { publicAliyotPath } from "../../src/components/portal/print/api";
 import { portionSummaryPath } from "../../src/lib/portion-summary/reading";
@@ -44,7 +44,9 @@ async function harness(options: { pocketTorah?: boolean; origin?: string; parash
   const short = await createShortSourceManifestLoader({ sha256: source.manifestSHA256, parentCatalogSHA256: source.parentCatalogSHA256, parentCatalogBytes: source.parent, get: async () => byteStream(source.manifest) })();
   const service = createPublicReadingService({ loadReading: calendar, loadText: createSefariaStudyReader({ fetch: upstream, verseCounts: TANAKH_VERSE_COUNTS }),
     stepSource: { book: async () => Object.freeze([]), lexicon: async () => Object.freeze([]) }, pocketTorah: options.pocketTorah === false ? null : { loadCatalog: async () => catalog, loadManifest: async () => short } });
+  // 2.0 SC6: the service course's public text answers too (synthetic letters), so every public pack of an open is made.
   const runtime: PublicRuntime = { resolveTenant: async () => undefined, reading: service, commentary: createSefariaCommentaryReader({ fetch: syntheticCommentaryFetch() as typeof globalThis.fetch }), ...unavailableExtras,
+    serviceText: async unit => ({ unit, volume: "shabbat-shacharit", credit: { title: "Synthetic volume", licence: "CC BY-NC-SA 4.0" }, lines: [{ he: String.fromCharCode(0x05d0, 0x05d1, 0x05d2) }] }),
     ...(options.portionSummary ? { portionSummary: options.portionSummary } : {}) };
   const dispatch = createHttpDispatcher(async () => { throw new Error("The session runtime must not be reached"); }, async action => action(runtime));
   const requests: { url: string; init: RequestInit }[] = [];
@@ -137,7 +139,7 @@ describe("This week", () => {
     const h = await harness(), first = NOW;
     await openOffline({ ...h.io, origin });
     const count = h.requests.length;
-    expect((await packs(h)).map(row => row.key).sort()).toEqual(["course", `week:${thisShabbat(first)}`].sort());
+    expect((await packs(h)).map(row => row.key).sort()).toEqual(["course", SERVICE_PACK_KEY, `week:${thisShabbat(first)}`].sort());
     h.setNow(first + 11 * 3_600_000);
     await openOffline(h.io);
     expect(h.requests.length).toBe(count);
@@ -235,7 +237,7 @@ describe("owner packs (A2): the person's own readings, and the purge on an accou
   test("an open asks whose readings these are, then packs This week, the person's own readings and the course", async () => {
     const h = await harness();
     await openOffline({ ...h.io, owner: own(A, [reading, { kind: "torah", ref: "Genesis 1:1-5", name: "Mine" }]) });
-    expect(await keys(h)).toEqual(["course", ownerPackKey("haftarah", "Isaiah 1:1-3"), ownerPackKey("torah", "Genesis 1:1-5"), `week:${date}`].sort());
+    expect(await keys(h)).toEqual(["course", SERVICE_PACK_KEY, ownerPackKey("haftarah", "Isaiah 1:1-3"), ownerPackKey("torah", "Genesis 1:1-5"), `week:${date}`].sort());
     const stored = await index(h);
     expect(stored.owner).toBe(A);
     expect(stored.packs.find(row => row.key === ownerPackKey("torah", "Genesis 1:1-5"))).toMatchObject({ owner: A, label: "Mine" });
@@ -250,7 +252,7 @@ describe("owner packs (A2): the person's own readings, and the purge on an accou
     const stored = await index(h);
     expect(stored.owner).toBe(B);
     expect(stored.packs.some(row => row.owner === A)).toBe(false);
-    expect(await keys(h)).toEqual(["course", ownerPackKey("torah", "Genesis 1:1-5"), `week:${date}`].sort());
+    expect(await keys(h)).toEqual(["course", SERVICE_PACK_KEY, ownerPackKey("torah", "Genesis 1:1-5"), `week:${date}`].sort());
     // The public packs were deleted and fetched again: the clip came over the network a second time.
     expect(clips()).toBeGreaterThan(first);
   });
@@ -265,7 +267,7 @@ describe("owner packs (A2): the person's own readings, and the purge on an accou
     await openOffline({ ...h.io, owner: async () => { throw new Error("Synthetic network failure"); } });
     expect(await keys(h)).toContain(ownerPackKey("haftarah", "Isaiah 1:1-3"));
     await openOffline({ ...h.io, owner: async () => ({ state: "signed-out" as const }) });
-    expect(await keys(h)).toEqual(["course", `week:${date}`].sort());
+    expect(await keys(h)).toEqual(["course", SERVICE_PACK_KEY, `week:${date}`].sort());
     expect((await index(h)).owner).toBeNull();
     // The public packs were kept, not fetched again (they are inside their 12 hours).
     expect(h.requests.length).toBe(count);
@@ -279,7 +281,7 @@ describe("owner packs (A2): the person's own readings, and the purge on an accou
     const h = await harness();
     await openOffline({ ...h.io, owner: own(A, [reading, { kind: "torah", ref: "Genesis 1:1-5", name: "Old" }]) });
     await openOffline({ ...h.io, owner: own(A, [{ kind: "torah", ref: "Genesis 1:1-5", name: "New" }]) });
-    expect(await keys(h)).toEqual(["course", ownerPackKey("torah", "Genesis 1:1-5"), `week:${date}`].sort());
+    expect(await keys(h)).toEqual(["course", SERVICE_PACK_KEY, ownerPackKey("torah", "Genesis 1:1-5"), `week:${date}`].sort());
     expect((await packs(h)).find(row => row.descriptor.type === "ref")?.label).toBe("New");
   });
 

@@ -9,6 +9,8 @@ import type { WordCardTarget } from "../../../lib/learn/word-tap";
 import { PortalRequestError } from "../../portal/api";
 import { RATE_LIMITED_MESSAGE } from "../../portal/public-reading/rate-limited";
 import { useWordCard } from "../word-card";
+import { PLAN } from "../../../lib/offline/copy";
+import { useOfflineWording } from "../../portal/offline/status";
 import { isDone } from "../../../lib/service-course/progress";
 import { useServiceProgress } from "./progress";
 import { fetchServiceText, fetchVerse, verseTargets } from "./text-api";
@@ -90,10 +92,13 @@ export function HebrewLine({ he, line, large = true, mark }: { he: string; line:
 }
 
 function TextProblem({ state, onRetry }: { state: TextState; onRetry(): void }) {
+  const offline = useOfflineWording();
   if (state.status === "loading") return <p role="status" className={styles.note}>{COPY.state.lessonLoading}</p>;
   if (state.status !== "error") return null;
   if (state.notHere) return <p role="status" className={styles.note}>{COPY.state.tenantOff}</p>;
-  return <div role="alert" className={learn.state}><p>{state.rateLimited ? RATE_LIMITED_MESSAGE : COPY.state.textError}</p>
+  // 2.0 SC6: offline with no saved text, "Needs a connection" in place of the error, as the app's other tools say it (status.tsx).
+  // A7's st.text.offline line is not approved yet, so it is not shown. The lesson is not marked done either way.
+  return <div role="alert" className={learn.state} data-offline={offline || undefined}><p>{offline ? PLAN.needsConnection : state.rateLimited ? RATE_LIMITED_MESSAGE : COPY.state.textError}</p>
     <button type="button" className="button-secondary" onClick={onRetry}>{COPY.state.retry}</button></div>;
 }
 
