@@ -38,7 +38,7 @@ async function page(who: "admin" | "tutor" | "student" = "admin", mobile = false
   const tab = await context.newPage(); tab.on("console", message => { if (message.text().includes("Encountered two children with the same key")) duplicateKeyWarnings++; });
   await tab.goto("/", { waitUntil: "domcontentloaded" });
   if (!cookies[who]) { const email = `pg-${who}@example.test`; expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status).toBe(200); await openAuthMail(tab, fixture.takeMail(email)); cookies[who] = await context.cookies(); }
-  await tab.goto(who === "student" ? "/workspace/student" : `/workspace/${who === "admin" ? "admin/students" : "tutor"}/${fixture.student.id}${who === "admin" ? "/reading" : ""}`, { waitUntil: "domcontentloaded" });
+  await tab.goto(who === "student" ? "/workspace/student?tab=reading" : `/workspace/${who === "admin" ? "admin/students" : "tutor"}/${fixture.student.id}${who === "admin" ? "/reading" : ""}`, { waitUntil: "domcontentloaded" });
   await ui(tab.locator('.study-verses [data-verse-ref="Genesis 1:1"]')).toBeVisible(); await openVerseTools(tab, "Genesis 1:1"); return tab;
 }
 async function open(tab: Page, ref = "Genesis 1:1") { await openVerseTools(tab, ref); await panel(tab, ref).getByRole("button", { name: /^Sources( \(\d+\))?$/ }).click(); await ui(panel(tab, ref).getByRole("button", { name: "Browse related sources", exact: true })).toBeEnabled(); }

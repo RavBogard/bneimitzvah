@@ -26,7 +26,7 @@ describe("the course home for a student's own reading", () => {
     const html = render({ status: "ready", torah: reading("torah", ["Genesis 23:1", "Genesis 23:2"]), haftarah: null });
     expect(html).toContain('data-first-phrase="torah"'); expect(html).toContain("First phrase of your verse");
     expect(html).toContain('href="/learn/prepare?ref=Genesis+23%3A1&amp;kind=torah"');
-    expect(html).toContain('href="/workspace/student">Back to my reading</a>');
+    expect(html).toContain('href="/workspace/student?tab=reading">Back to my reading</a>');
     expect(html.indexOf("The two endings")).toBeLessThan(html.indexOf("First phrase of your verse"));
     expect(html.indexOf("First phrase of your verse")).toBeLessThan(html.indexOf("Inside the verse"));
     expect(ids(html)).toEqual(["path-torah", "path-haftarah"]);

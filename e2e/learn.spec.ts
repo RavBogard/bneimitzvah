@@ -293,7 +293,7 @@ test("signed in, the browser's progress is merged into the account on first sign
   await expect(page.locator("[data-next]")).toHaveAttribute("data-next", "torah-sof-pasuk");
   await expect.poll(() => posts.length).toBe(1);
   expect(posts[0].path).toBe("/api/learn/progress/merge");
-  expect(posts[0].body).toEqual({ progress: JSON.parse(introDone) });
+  expect(posts[0].body).toEqual({ progress: JSON.parse(introDone), owner });
   await expect(page.getByText("Progress is saved on this device. Sign in to keep it.")).toHaveCount(0);
   const marker = JSON.parse((await page.evaluate(() => localStorage.getItem("crc-torah:learn-sync/v1")))!);
   expect(marker).toEqual({ owner, version: 1, dirty: false });

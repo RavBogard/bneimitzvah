@@ -69,6 +69,26 @@
 - GATE: merged #75 (1.9 N6, portion summary, ae2e959) and applied `0044_portion_summary` to production with the scratch operator (check, then apply with its own verify). Proceeded because CI was green, the adversarial review's five fixes were in the merged head, and the check found the ledger at 44 with the journal at 45 and no portion_summary objects yet. All thirteen checks passed on the live database: ledger 45; forced RLS with the one tenant_isolation policy; INSERT-only table grant; the exact SELECT and UPDATE column lists, with drafted_by, approved_by and approved_grant_id unreadable; the portion_summary_guard trigger; the security_invoker, security_barrier public view; the two runtime functions, all three closed to PUBLIC; no PUBLIC grants; an empty table; the seven older tables unchanged; tenants, hosts, audit events, students and role grants unchanged.
 - GATE: tagged v1.8.2 at f079b94 (P1–P5 live, plus N6, N20, #84, N9, SC3 and the two test-flake fixes #90 and #92). Proceeded because main's CI was green there after one re-run (a known timing flake in http-browser practice-calendar-ui), the deploy succeeded, and /, /read and /learn answered 200 signed out.
 - GATE: merged N10 (#89) with two screen-reader-only labels pending Daniel's confirmation ("Workspace", "Skip to workspace tabs"). Proceeded because they follow the approved "Skip to the lesson" pattern. They are listed in Cowork's T3 batch.
+- **Resume point, 2026-10-25 late (prod ledger 47):**
+  - **Merged since the last resume point:** N12, SC4, #102 (the Learn sync fix; security item closed), N4 and #105 (test fix).
+  - **Ready, waiting only on CI after update-branch:**
+    - #103 N11 and #104 N5.
+    - #100 N19. Its RLS check PASSED. After merge, run `node <scratchpad>/verse-review-migrate.mjs check` and then `apply`, after pulling the study checkout.
+  - Merge only with `bash <scratchpad>/merge-if-green.sh <pr>`.
+  - **In flight:**
+    - SC7, the evening lessons from the BM siddur (MISSION 2026-10-25 amendment). It also adds the refused() freeze to service sync and needs an adversarial review.
+    - Flaky-test stabilisation (fix/http-browser-flakes).
+  - **Waiting on Daniel:**
+    - `/mcp` → Beit Mitzvah, then load T1 (61 summaries, drafts only) and T2 (60 picks, attended).
+    - T7 (firewall, SiteGround DNS).
+  - **Next:**
+    - The Learn T3 strings plus N19a (after N11).
+    - N7, N8 (T6 subsets), N13–N16, N21–N25, SC5, SC6.
+    - The T3 late-gap batch (the gaps added 2026-10-25 aren't in Cowork's Approved table).
+- GATE: merged SC4 (#88, 3b43e0b) and applied `0046_service_course_progress` to production (check ready, then apply with its verify). The ledger is now 47. Proceeded because the adversarial privacy and auth review passed, its should-fixes landed, and a second adversarial pass on the client race fix passed. CI was green and /learn/service answered 200.
+  - One low divergence was found after merge: refused() doesn't freeze a tab on a 403 naming another account. It is being fixed inside SC7's PR.
+- GATE: merged the Learn to lein shared-browser fix (#102, 291a430). The SECURITY item from the 2026-10-25 resume point is closed: the server owner check, the marker re-check under navigator.locks, frozen displaced tabs and merge re-validation are all in. Proceeded because the adversarial review passed on its third pass (it BLOCKED once on the slow-answer race, which is now fixed and covered by two-tab tests). CI was green and /learn answered 200.
+- GATE: merged N4 (#101, the one Sheet and the tool dock). Proceeded because CI was green on both runs and the Lein tap still hears, per Daniel's Friday-prep ruling.
 - GATE: merged N12 (#99, 512f605; its title still says "migration 0047" but the file is 0045) and applied `0045_lesson_note_before_next` to production with its scratch operator (check ready, then apply with its own verify). Prod ledger is now 46. Proceeded because the second-agent RLS check passed (same readers, no new policy, only GRANT UPDATE (before_next)), CI was green, the deploy succeeded and /read answered 200.
 - **Resume point, 2026-10-25 (v1.8.2 live at f079b94; then N10, N1, the T10 calendar #93, N17, N2, N18 and N3 merged and deployed; prod ledger still 45):**
   - **Open PRs:**

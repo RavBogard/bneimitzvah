@@ -30,7 +30,7 @@ test("Noa, assigned Genesis 23:1, gets a first-verse lesson on Genesis 23:1 and 
   await page.goto("/learn/torah-first-verse");
   await expect(page.getByText("In your reading", { exact: true })).toBeVisible();
   await expect(refOf(page)).toHaveText("Genesis 23:1");
-  await expect(page.getByRole("link", { name: "Back to my reading" })).toHaveAttribute("href", "/workspace/student");
+  await expect(page.getByRole("link", { name: "Back to my reading" })).toHaveAttribute("href", "/workspace/student?tab=reading");
   expect(weekAsked).toEqual([]);
   expect(seen).toContain("/api/students");
 });
@@ -57,7 +57,7 @@ test("the course home gives Noa a first-phrase row after the endings and a way b
   // The row follows the endings unit and precedes the next one.
   const order = await page.locator("#path-torah").locator("xpath=ancestor::section[1]").locator("h3, [data-first-phrase]").allTextContents();
   expect(order.indexOf("First phrase of your verse")).toBe(order.indexOf("The two endings") + 1);
-  await expect(page.getByRole("link", { name: "Back to my reading" })).toHaveAttribute("href", "/workspace/student");
+  await expect(page.getByRole("link", { name: "Back to my reading" })).toHaveAttribute("href", "/workspace/student?tab=reading");
   // A Torah student keeps the Torah path first.
   expect(await page.locator("#path-torah, #path-haftarah").evaluateAll(nodes => nodes.map(node => node.id))).toEqual(["path-torah", "path-haftarah"]);
 });

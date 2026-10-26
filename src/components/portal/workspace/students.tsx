@@ -11,9 +11,12 @@ import { ceremonyCountdown, ReadingPanel } from "./reading";
 import { reconcileSelectedStudent, sortStudentsByCeremony } from "./student-label";
 import { HonorsEntry, HonorsNote } from "./honors/sheet";
 import { DocumentTitle } from "./document-title";
+import { StudentToday } from "./today/today";
 
 export function StudentWorkspace({ mode, studentId }: { mode: "student" | "parent" | "tutor"; studentId?: string }) {
-  const { summary } = useWorkspace();
+  const { summary } = useWorkspace(), tab = useSearchParams().get("tab");
+  // A student's page with no view named (the Today tab, and where signing in lands) is Today; ?tab=reading, service or lessons is the reading page (1.9 N11).
+  if (mode === "student" && !studentId && parseReadingTab(tab) === null) return <RequireRole role="student"><StudentToday /></RequireRole>;
   // A tutor an admin chose to approve accounts sees waiting requests here, as admins do on Students.
   return <RequireRole role={mode}>{mode === "tutor" && !studentId && summary.approver && !summary.roles.includes("admin") && <AccountRequestsLine mode="tutor" />}
     <StudentSelection key={studentId ?? ""} mode={mode} routeStudentId={studentId} /></RequireRole>;

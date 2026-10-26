@@ -198,7 +198,7 @@ it("held student and child practice read directly, keep word tools and open opti
   const captures: { name: string; width: number; height: number; sha256: string }[] = []; let authenticated: BrowserContext | undefined;
   try {
     for (const [mobile, scheme] of [[false, "light"], [false, "dark"], [true, "light"], [true, "dark"]] as const) {
-      const { tab, state } = await page(mobile, "tutor", authenticated, { held: true, colorScheme: scheme, destination: "/workspace/student" }); authenticated ??= tab.context();
+      const { tab, state } = await page(mobile, "tutor", authenticated, { held: true, colorScheme: scheme, destination: "/workspace/student?tab=reading" }); authenticated ??= tab.context();
       const reading = tab.locator(".study-verses"); await ui(player(tab)).toHaveCount(0); await ui(tab.getByRole("dialog")).toHaveCount(0);
       await ui(tab.getByRole("button", { name: /^Hear/ })).toHaveCount(0); expect(await described(word(tab, 1, 1))).toBe("Select word for tools");
       const start = tab.getByRole("button", { name: "Start reading", exact: true }); await start.focus(); await tab.keyboard.press("Enter");

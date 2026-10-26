@@ -39,7 +39,7 @@ async function page(who: "student" | "parent" | "tutor" | "admin", mobile = fals
     expect(await tab.evaluate(async email => (await fetch("/api/auth/sign-in/magic-link", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email }) })).status, email)).toBe(200);
     await openAuthMail(tab, fixture.takeMail(email)); cookies.set(account, await context.cookies());
   }
-  if (who === "student") await tab.goto("/workspace/student", { waitUntil: "domcontentloaded" });
+  if (who === "student") await tab.goto("/workspace/student?tab=reading", { waitUntil: "domcontentloaded" });
   else if (who === "tutor") await tab.goto(`/workspace/tutor/${fixture.student.id}`, { waitUntil: "domcontentloaded" });
   else if (who === "admin") await tab.goto(`/workspace/admin/students/${fixture.student.id}/reading`, { waitUntil: "domcontentloaded" });
   else { await tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); }

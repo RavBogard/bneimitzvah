@@ -68,7 +68,7 @@ afterAll(async () => { await Promise.all(contexts.map(context => context.close()
 it("reports only explicit service choices with exact bindings and never manufactures visits on access restoration", async () => {
   const tab = await page("student"), seen = traffic(tab);
   const response = tab.waitForResponse(r => new URL(r.url()).pathname.endsWith("/practice-calendar") && r.status() === 200);
-  await safe(() => tab.goto("/workspace/student", { waitUntil: "domcontentloaded" })); const { serverDay } = await (await response).json();
+  await safe(() => tab.goto("/workspace/student?tab=reading", { waitUntil: "domcontentloaded" })); const { serverDay } = await (await response).json();
   await ready(tab); await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click()); await ui(tab.getByRole("button", { name: "Synthetic part 0", exact: true })).toBeVisible(); expect(seen.posts).toHaveLength(0);
   await click(tab, "Synthetic part 0"); await ui(tab.locator(".service-unit")).toContainText("Synthetic translation 0"); await ui.poll(() => seen.posts.length).toBe(1); await marked(tab, true);
   expect(seen.posts[0]).toEqual({ context: null, body: { mode: "student", eventId: expect.stringMatching(/^[0-9a-f-]{36}$/), expectedDay: serverDay, action: "visit", target: { type: "service-unit", catalogId, catalogIdentity: content.identity, planId: plans.get(fixture.student.id)!.id, planRevision: 1, unitId: content.first } } });

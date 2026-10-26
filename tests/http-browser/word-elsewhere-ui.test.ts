@@ -53,7 +53,7 @@ it("a student on a phone taps a word and goes to its other places in the reading
   await context.route("**/*", async route => { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); });
   const tab = await context.newPage(); await tab.goto("/", { waitUntil: "domcontentloaded" });
   expect(await api(tab, "/api/auth/sign-in/magic-link", { email: "pg-student@example.test" })).toBe(200); await openAuthMail(tab, fixture.takeMail("pg-student@example.test"));
-  await tab.goto("/workspace/student", { waitUntil: "domcontentloaded" });
+  await tab.goto("/workspace/student?tab=reading", { waitUntil: "domcontentloaded" });
   await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
   const tools = tab.getByRole("region", { name: "Word tools", exact: true }), elsewhere = tools.getByRole("region", { name: "This word elsewhere", exact: true });
   await tab.locator('.study-verses [data-verse-ref="Genesis 1:1"] [data-word-index="0"]').first().click();
