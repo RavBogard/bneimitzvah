@@ -100,7 +100,7 @@ afterAll(async () => { await Promise.all(contexts.map(context => context.close()
 it("shows the student's week, reports explicit inline verse visits on the server's day, and retains dates through unchanged quiet checks", async () => {
   for (const mobile of [false, true]) {
     const tab = await page("student", mobile), seen = traffic(tab);
-    const day = await serverDay(tab, () => safe(() => tab.goto("/workspace/student", { waitUntil: "domcontentloaded" })));
+    const day = await serverDay(tab, () => safe(() => tab.goto("/workspace/student?tab=reading", { waitUntil: "domcontentloaded" })));
     await ui(week(tab).getByRole("listitem")).toHaveCount(7);
     await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
     // Loading the page, its text and its calendar is not practice.
@@ -156,7 +156,7 @@ it("shows the student's week, reports explicit inline verse visits on the server
 
 it("re-reads after a stale day without resending, and the next explicit open uses the fresh day", async () => {
   const tab = await page("student"), seen = traffic(tab);
-  const day = await serverDay(tab, () => safe(() => tab.goto("/workspace/student", { waitUntil: "domcontentloaded" })));
+  const day = await serverDay(tab, () => safe(() => tab.goto("/workspace/student?tab=reading", { waitUntil: "domcontentloaded" })));
   await ui(week(tab).getByRole("listitem")).toHaveCount(7);
   let stale = true;
   await safe(() => tab.route("**/practice-events", async route => { if (!stale) return route.fallback(); stale = false; await route.fulfill({ status: 409, contentType: "application/json", body: '{"ok":false,"code":"stale-day"}' }); }));
@@ -211,7 +211,7 @@ it("held Start visits the first verse of the current text page without listening
   await fixture.ownerDb.delete(s.assignmentVerse).where(eq(s.assignmentVerse.assignmentId, assignmentId));
   await fixture.ownerDb.insert(s.assignmentVerse).values(refs.map((verseRef, index) => ({ tenantId: "crc", studentId: fixture.student.id, assignmentId, ordinal: index + 1, verseRef })));
   const tab = await page("student"), seen = traffic(tab);
-  const day = await serverDay(tab, () => safe(() => tab.goto("/workspace/student", { waitUntil: "domcontentloaded" })));
+  const day = await serverDay(tab, () => safe(() => tab.goto("/workspace/student?tab=reading", { waitUntil: "domcontentloaded" })));
   await ui(tab.locator(".study-verses").getByRole("heading", { name: refs[0], exact: true })).toBeVisible();
   await click(tab, "Next text page");
   await ui(tab.locator(".study-verses").getByRole("heading", { name: refs[100], exact: true })).toBeVisible();

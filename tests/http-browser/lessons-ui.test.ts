@@ -32,7 +32,7 @@ async function page(role: "tutor" | "student", mobile = false) {
 }
 /** The tutor account also holds the fixture's parent role, so one sign-in covers both views. */
 async function workspace(tab: Page, role: "tutor" | "student" | "parent") {
-  await safe(() => tab.goto(`/workspace/${role}`, { waitUntil: "domcontentloaded" }));
+  await safe(() => tab.goto(`/workspace/${role}${role === "student" ? "?tab=reading" : ""}`, { waitUntil: "domcontentloaded" }));
   if (role !== "student") await safe(() => tab.getByLabel(role === "parent" ? "Child" : "Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(tab.locator(".reading-hero")).toBeVisible();
 }

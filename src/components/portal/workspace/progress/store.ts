@@ -27,6 +27,8 @@ export class ProgressStore {
     const mode = this.baseline?.mode;
     return mode === "student" || mode === "child-practice" ? "self-check" : mode === "tutor" || mode === "admin" ? "assessment" : null;
   }
+  /** The child's first name, for the tutor's Solid criterion (1.9 N19): lines about a child use the child's name. */
+  get studentName(): string | null { return this.baseline?.student.firstName || null; }
   /** Every reload re-reads marks; a different student, context or assignment starts empty. */
   configure(baseline: Assigned | null) {
     const scope = baseline ? scopeOf(baseline) : "";

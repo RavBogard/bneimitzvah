@@ -96,7 +96,7 @@ beforeAll(async () => {
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
 
 it("shows a remembered consonant-only tikkun column in the STaM face beside Torah, and never for the haftarah", async () => {
-  const tab = await page("student"); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
+  const tab = await page("student"); await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab, "Genesis 1:1");
   const flow = tab.locator(".assigned-study .study-verses");
   await ui(tikkunControl(tab)).toHaveAttribute("data-active", "false");
   // It opens a menu, like Size: no toggle state of its own; the name states the current view.
@@ -133,7 +133,7 @@ it("shows a remembered consonant-only tikkun column in the STaM face beside Tora
   expect(await colored()).toEqual([pointedColored, tikkunColored]);
   await capture(tab, "tikkun-desktop");
   // Remembered like the other reading choices.
-  await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
+  await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab, "Genesis 1:1");
   await ui(tikkunControl(tab)).toHaveAttribute("data-active", "true"); await ui(tikkunControl(tab)).toHaveAccessibleName("Tikkun: Side by side");
   await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(3);
   // A haftarah is read from a book: no control and no scroll lettering.
@@ -144,7 +144,7 @@ it("shows a remembered consonant-only tikkun column in the STaM face beside Tora
 });
 
 it("on a phone keeps both columns side by side, or shows the tikkun in place of the pointed text, keeping verse numbers", async () => {
-  const tab = await page("student", true); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
+  const tab = await page("student", true); await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab, "Genesis 1:1");
   const flow = tab.locator(".assigned-study .study-verses");
   // Side by side is two columns on a phone too, with no sideways page scroll at 390 or 360 pixels.
   await chooseTikkun(tab, "Side by side");
@@ -187,7 +187,7 @@ it("on a phone keeps both columns side by side, or shows the tikkun in place of 
 });
 
 it("never breaks a Hebrew word in either side-by-side column on a phone, at Large and Huge", async () => {
-  const tab = await page("student", true); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
+  const tab = await page("student", true); await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab, "Genesis 1:1");
   const flow = tab.locator(".assigned-study .study-verses");
   await chooseTikkun(tab, "Side by side"); await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(3);
   for (const size of ["Large", "Huge"] as const) {
@@ -211,7 +211,7 @@ it("never breaks a Hebrew word in either side-by-side column on a phone, at Larg
 });
 
 it("previews a print-only practice sheet with an optional tikkun column and no English, for the student and staff", async () => {
-  const tab = await page("student"); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
+  const tab = await page("student"); await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab, "Genesis 1:1");
   await chooseTikkun(tab, "Side by side"); await ui(tikkunControl(tab)).toHaveAttribute("data-active", "true");
   const opener = tab.getByRole("button", { name: "Print practice sheet", exact: true });
   await safe(() => opener.click());

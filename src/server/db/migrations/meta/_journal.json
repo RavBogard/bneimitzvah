@@ -330,6 +330,13 @@
       "when": 1792955157401,
       "tag": "0046_service_course_progress",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1792962919629,
+      "tag": "0047_verse_review",
+      "breakpoints": true
     }
   ]
 }

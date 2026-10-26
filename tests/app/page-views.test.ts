@@ -246,7 +246,10 @@ describe("where the beacon is mounted", () => {
       expect(await readFile(layout, "utf8")).toMatch(/<PageViewBeacon \/>/);
     // Every page those layouts wrap is one of the public pages; a signed-in page added under them must be placed elsewhere.
     expect(all.filter(f => /^src\/app\/(read|learn|trope-chart)\//.test(f) && /\/page\.tsx$/.test(f)).sort()).toEqual([
-      "src/app/learn/[lesson]/page.tsx", "src/app/learn/about/page.tsx", "src/app/learn/page.tsx", "src/app/learn/practice/[id]/page.tsx", "src/app/learn/prepare/page.tsx", "src/app/learn/review/page.tsx", "src/app/learn/service/[lesson]/page.tsx", "src/app/learn/service/about/page.tsx", "src/app/learn/service/page.tsx", "src/app/learn/service/practice/quick-ten/page.tsx", "src/app/learn/service/review/page.tsx", "src/app/read/page.tsx", "src/app/trope-chart/page.tsx"]);
+      "src/app/learn/[lesson]/page.tsx", "src/app/learn/about/page.tsx", "src/app/learn/page.tsx", "src/app/learn/practice/[id]/page.tsx", "src/app/learn/prepare/page.tsx", "src/app/learn/review/page.tsx", "src/app/learn/run-through/page.tsx", "src/app/learn/service/[lesson]/page.tsx", "src/app/learn/service/about/page.tsx", "src/app/learn/service/page.tsx", "src/app/learn/service/practice/quick-ten/page.tsx", "src/app/learn/service/review/page.tsx", "src/app/read/page.tsx", "src/app/trope-chart/page.tsx"]);
+    // 1.9 N19: the Run-through is the same public shell for everyone (a student's own reading is read in the browser), and its path is never counted.
+    for (const location of ["/learn/run-through", "/learn/run-through?kind=haftarah"]) expect(normalizePublicPagePath(location), location).toBeNull();
+    expect(publicPageViewPaths()).not.toContain("/learn/run-through");
     // Nothing under the signed-in workspace, the account page, sign-in, connect or the root layout imports it.
     for (const file of all.filter(f => /^src\/app\/(workspace|account|sign-in|connect|invitations|unsubscribe|offline)\//.test(f) || f === "src/app/layout.tsx" || f === "src/app/page.tsx"))
       expect(await readFile(file, "utf8"), file).not.toMatch(/PageViewBeacon|page-view-beacon|api\/public\/view/);
