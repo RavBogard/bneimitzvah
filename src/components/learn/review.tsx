@@ -1,9 +1,10 @@
 "use client";
-import { useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import type { FamilyId } from "../../lib/trope/chart-catalog";
 import { COURSE, MELODY_FAMILIES, type Drill, type Melody } from "../../lib/learn/course";
 import { drillItems, itemRefs, poolOf, seededRandom, type DrillItem, type Phrase, type Pools } from "../../lib/learn/pools";
-import { comesBack, composeReview, emptyProgress, isDone, localDay, recordAnswer, type Progress, type ReviewSlot } from "../../lib/learn/progress";
+import { comesBack, composeReview, emptyProgress, isDone, localDay, recordAnswer, type CardId, type Progress, type ReviewSlot } from "../../lib/learn/progress";
+import { dueVerses, type VerseCardId } from "../../lib/learn/verse-review";
 import { answerRun, currentItem, runDone, startRun, type Run } from "../../lib/learn/run";
 import { useCourseVerses } from "./course-data";
 import { icons, LoadFailure, revealAnswer } from "./bits";
@@ -11,6 +12,8 @@ import { fromZakef, isHarder } from "../../lib/learn/production";
 import { QuickTenLinks } from "./home";
 import { HearAndName, SameOrDifferent, TapThePhrase, WhereDoesItEnd } from "./drills";
 import { LearnServices, useLearnServices, useProgress } from "./services";
+import { useVerseReview } from "./own-verses";
+import { VerseReviewStage } from "./verse-run";
 import styles from "./learn.module.css";
 
 /** The families a learner has finished in a melody: the review's distractors. */
@@ -48,6 +51,10 @@ export function ReviewScreen() { return <LearnServices><Review /></LearnServices
 function Review() {
   const { progress: loaded, update, until } = useProgress(), progress = loaded ?? emptyProgress();
   const seed = useRef(Math.floor(Math.random() * 2 ** 31)), today = localDay(Date.now());
+  // 1.9 N19: a signed-in student's due verse cards follow the phrase items, with no audio. The due list is fixed when the cards arrive.
+  const verseCards = useVerseReview(), verseState = verseCards.state, verseReview = verseState.status === "ready" ? verseState.review : null;
+  const [verseIds, setVerseIds] = useState<VerseCardId[] | null>(null), [versesDone, setVersesDone] = useState(false);
+  useEffect(() => { if (verseIds === null && verseState.status === "ready") setVerseIds(dueVerses(verseState.review, today, verseState.until)); }, [verseState.status]); // eslint-disable-line react-hooks/exhaustive-deps
   const plan = useMemo(() => loaded ? composeReview(loaded, today, seededRandom(seed.current), until) : null, [loaded === null]); // eslint-disable-line react-hooks/exhaustive-deps
   const lessons = useMemo(() => plan ? COURSE.lessons.filter(lesson => plan.some(slot => slot.melody === lesson.melody && (lesson.family ? slot.family === lesson.family || learned(progress, slot.melody).includes(lesson.family) : isDone(progress, lesson.id)))) : [], [plan]); // eslint-disable-line react-hooks/exhaustive-deps
   const [retry, setRetry] = useState(0), data = useCourseVerses(lessons, retry);
@@ -55,28 +62,34 @@ function Review() {
     <header className={styles.bar}><a className={styles.close} href="/learn" aria-label="Back to the path">{icons.close}</a><h1 className={styles.barTitle}>Review</h1><span /></header>
     <main className={styles.lesson}>{body}{footer && <div className={styles.footer}><div className={styles.footerInner}>{footer}</div></div>}</main>
   </div>;
-  if (!loaded) return frame(<p role="status" className={styles.state}>Loading the review…</p>);
-  if (!plan?.length) return frame(<><p className={styles.doneLine}>Nothing to review yet. Finish a lesson and its phrases come back here.</p><QuickTenLinks progress={progress} /></>,
+  const verseStage = verseIds?.length && !versesDone && verseState.status === "ready"
+    ? <VerseReviewStage ids={verseIds} review={verseReview} until={verseState.until} update={verseCards.update} onDone={() => { setVersesDone(true); window.scrollTo({ top: 0 }); }} frame={frame} /> : null;
+  /** "Done. These come back on Thursday.": the soonest of the phrase cards asked and the verse cards asked. */
+  const finish = (cards: readonly CardId[]) => {
+    const asked = [...cards, ...(versesDone && verseIds ? verseIds : [])] as CardId[], all = { ...progress, cards: { ...progress.cards, ...verseReview?.cards } };
+    const back = comesBack(all, asked, today);
+    return frame(<><div className={styles.doneHead}><p className={styles.doneLine}>{back ? "weekday" in back ? `Done. These come back on ${back.weekday}.` : "Done. These come back next week." : "Done."}</p></div>
+      <QuickTenLinks progress={progress} /></>,
     <a className={styles.backLink} href="/learn">Back to the path</a>);
+  };
+  if (!loaded) return frame(<p role="status" className={styles.state}>Loading the review…</p>);
+  if (!plan?.length) return verseStage ?? (versesDone ? finish([]) : frame(<><p className={styles.doneLine}>Nothing to review yet. Finish a lesson and its phrases come back here.</p><QuickTenLinks progress={progress} /></>,
+    <a className={styles.backLink} href="/learn">Back to the path</a>));
   if (data.status === "loading") return frame(<p role="status" className={styles.state}>Loading the review…</p>);
-  if (data.status === "error" || !data.pools.families.size) return frame(<LoadFailure rateLimited={data.status === "error" && data.rateLimited} onRetry={() => setRetry(n => n + 1)} />, <a className={styles.backLink} href="/learn">Back to the path</a>);
-  return <ReviewRun slots={plan} pools={data.pools} progress={progress} seed={seed.current} today={today} until={until} update={update} frame={frame} />;
+  if (data.status === "error" || !data.pools.families.size) return verseStage ?? frame(<LoadFailure rateLimited={data.status === "error" && data.rateLimited} onRetry={() => setRetry(n => n + 1)} />, <a className={styles.backLink} href="/learn">Back to the path</a>);
+  return <ReviewRun slots={plan} pools={data.pools} progress={progress} seed={seed.current} today={today} until={until} update={update} frame={frame} after={verseStage} versesDone={versesDone} finish={finish} />;
 }
-function ReviewRun({ slots, pools, progress, seed, today, until, update, frame }: { slots: ReviewSlot[]; pools: Pools; progress: Progress; seed: number; today: string; until: string | null;
-  update: ReturnType<typeof useProgress>["update"]; frame(body: ReactNode, footer?: ReactNode): ReactElement }) {
+function ReviewRun({ slots, pools, progress, seed, today, until, update, frame, after, versesDone, finish }: { slots: ReviewSlot[]; pools: Pools; progress: Progress; seed: number; today: string; until: string | null;
+  update: ReturnType<typeof useProgress>["update"]; frame(body: ReactNode, footer?: ReactNode): ReactElement;
+  /** The verse cards' stage, when any are due and not yet asked. */ after: ReactElement | null; versesDone: boolean; finish(cards: readonly CardId[]): ReactElement }) {
   const items = useMemo(() => reviewItems(slots, pools, progress, seed), [slots, pools]); // eslint-disable-line react-hooks/exhaustive-deps
   const slotOf = useMemo(() => new Map(items.map(row => [row.item.key, row.slot])), [items]);
   const [run, setRun] = useState<Run>(() => startRun(items.map(row => row.item))), [shown, setShown] = useState<{ item: DrillItem | null; n: number }>(() => ({ item: items[0]?.item ?? null, n: 0 }));
   const [answered, setAnswered] = useState(false), [finished, setFinished] = useState(false), rng = useRef(seededRandom(seed + 7)), moved = useRef(new Set<string>()), nextButton = useRef<HTMLButtonElement>(null);
   const { player } = useLearnServices();
-  if (!items.length) return frame(<p className={styles.doneLine}>No supported review questions yet. Revisit a sound or prepare a verse.</p>,
-    <a className={styles.backLink} href="/learn">Back to the path</a>);
-  if (finished || !shown.item) {
-    const back = comesBack(progress, slots.map(slot => slot.card), today);
-    return frame(<><div className={styles.doneHead}><p className={styles.doneLine}>{back ? "weekday" in back ? `Done. These come back on ${back.weekday}.` : "Done. These come back next week." : "Done."}</p></div>
-      <QuickTenLinks progress={progress} /></>,
-      <a className={styles.backLink} href="/learn">Back to the path</a>);
-  }
+  if (!items.length) return after ?? (versesDone ? finish([]) : frame(<p className={styles.doneLine}>No supported review questions yet. Revisit a sound or prepare a verse.</p>,
+    <a className={styles.backLink} href="/learn">Back to the path</a>));
+  if (finished || !shown.item) return after ?? finish(slots.map(slot => slot.card));
   const item = shown.item, slot = slotOf.get(item.key)!;
   const contrast = (family: FamilyId, avoid: readonly string[]): Phrase | null => { const pool = poolOf(pools, family, slot.melody).filter(phrase => !avoid.includes(phrase.ref)); return pool[Math.floor(rng.current() * pool.length)] ?? null; };
   const answer = (right: boolean) => {

@@ -314,3 +314,17 @@ a.stepLink:hover { background: var(--color-hover); color: var(--color-ink); }
 .soundAnchor { display: grid; justify-items: start; gap: 0.75rem; padding-block: 1.25rem; border-block-end: 1px solid var(--color-rule); }
 .soundAnchor > p { margin: 0; }
 .soundNavigation { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; }
+
+/* ---------- 1.9 N19: own verses, no audio (the Run-through and verse cards in review) ---------- */
+.runStep { display: grid; gap: 1rem; }
+.runStep > * { margin: 0; }
+.runVerse { font-size: 2rem; line-height: 2.05; max-width: none; }
+.runNote { color: var(--color-muted); }
+.helpLine { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; color: var(--color-muted); font-weight: 600; }
+.helpLevel { min-height: 48px; padding: 0.25rem 0.875rem; border: 0; border-radius: 999px; background: var(--color-surface); color: var(--color-ink); font: inherit; cursor: pointer; box-shadow: inset 0 0 0 1px var(--color-rule); }
+.helpLevel:hover { background: var(--color-hover); }
+.helpLevel[aria-pressed="true"] { background: var(--color-ink); color: var(--color-canvas); box-shadow: none; }
+.helpLevel:focus-visible { outline: 3px solid var(--marigold); outline-offset: 2px; }
+.verseAnswers { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.verseAnswers > button { width: 100%; min-height: 56px; }
+@media (max-width: 480px) { .runVerse { font-size: 1.625rem; } }

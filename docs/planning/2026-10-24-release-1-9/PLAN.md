@@ -151,6 +151,19 @@ Main at writing: `a9bbd6e`. Live: v1.8.0 (`7c13cac`), prod ledger 43 (newest mig
 - **Wording gaps (screen-reader only, not approved).** The description of what a tap on a word does is the old label without its number and verse: "Open word", "Select word for tools", "Focus phrase", "Hear whole verse; select word for tools", "Hear whole verse", "Hear word". "Verse tools" as the name of a Study verse's action (the heading "Verse tools · {ref}" is precedent). None is visible text.
 - **Left for others.** N5: the header still puts 15 Tab stops before the dock (its two-line header and "More" sheet fix that); the Portion control and Choose verses move into "More". N7: the insights column and commentary Hebrew scaling; commentary and the word card now open in the same Sheet. N8: the word card's Hebrew uses the reading face when it changes. N14: tutor marks are no longer visible for every verse on the page (only the selected verse's); the "Needs work" block there is now the overview. Tests: seven http-browser files now open a verse's sheet first (`tests/http-browser/verse-tools.ts`).
 
+### N19 (review and readiness for the student's own verses), decided while building
+
+- **N19.1 Its own document and migration.** Verse cards are a separate `learn-verses/v1` document in a new table, `verse_review`, migration `0047_verse_review` (journal idx 47, renumbered from the proposed 0048 after N12 took 0045 and SC4 0046). It is a copy of 0037 with its own owner setting, `app.verse_review_owner`, set only in `src/server/verse-review/access.ts`, as SC4 forked 0037 for the service course. Every stored `learn-progress/v1` document and its strict parser are unchanged. Not applied to production here.
+- **N19.2 Students only.** Only a membership with a live student grant keeps verse cards (403 for a tutor, parent, admin or Member). The routes are `GET /api/learn/verses` and `POST /api/learn/verses/put`, private and no-store; a stale version answers 409 with the current document and the browser merges (each card at the higher box). There is no staff, parent, MCP or Sheet reader, and no audit row.
+- **N19.3 No copy on the device, and never into another account.** Unlike phrase progress, the cards live only in the account: fetched once per page, changed in memory, written back. A shared device never holds one student's verse list for the next person. Every answer names an opaque owner (its own `learn-verses-owner/v1` hash), and every write names the owner its cards were read from; the server refuses a mismatch with a bare 403 before reading or writing anything. A page that sees another owner, a refusal, or a sign-out drops the cards it holds and sends nothing more (the second-agent review's finding, fixed here: sibling A's open tab after sibling B signs in elsewhere).
+- **N19.3a After the ceremony** no verse card is asked (`dueVerses` is empty once the date has passed); before it, no card is later than the day before.
+- **N19.4 Where cards come from.** On Learn, a signed-in student's own Got it marks and the tutor's Solid marks are read through the same workspace progress API the student's Reading screen uses (`GET /api/students/{id}/progress?mode=student`), and each such verse becomes a card in box 1, due after box 1's gap, capped by the ceremony. A card is never removed when a mark is cleared. Lein's saved-reading marks are not a source.
+- **N19.5 Results.** Clean moves a card up one box only when it is due, at most once per run. Stumbled drops it two boxes and brings it back today, and a stumbled verse with no card gets one in box 0, due today. Due verse cards follow the phrase items in `/learn/review` with the same Clean and Stumbled.
+- **N19.6 The fade.** Help is Colors → Marks only → Tikkun, a suggestion by box (box 0–1 Colors, 2 Marks only, 3+ Tikkun); the Run-through never suggests Colors. Every level is one tap away. "Try it in the tikkun." shows when the tikkun is suggested and another level is open.
+- **N19.7 The summary.** "Practise verses 3 and 8 again." names verses by number within a chapter, by chapter:verse across chapters, in full across books; one verse reads "Practise verse 3 again.". Nothing is said when nothing stumbled.
+- **N19.8 The criteria.** The student's Got it line shows under the student's own marks; the tutor's Solid line shows under the tutor's and admin's assessment, with the child's first name in place of "they" (Daniel's name ruling for N13).
+- **N19.9 Off until worded.** The stumble's join with its neighbour (CHANTING-RECONCILIATION §2) is built as a pure function and not rendered (`JOIN_OFFER_ENABLED = false`).
+
 ## Versions and tags
 
 | Tag | When | Contents |
@@ -618,6 +631,7 @@ Each stays off until answered. Source IDs point to the lens findings.
 - **N7:** a heading for the insights column, if M6's existing headings don't fit.
 - **N24:** a label for the packed assigned reading on /offline, if `copy.ts` has none that fits.
 - **N1:** none expected (Sefaria's credit is used as served); if the UI needs a sentence to choose the alternative edition, it is a gap.
+- **N19:** a home line when verse cards are due and no phrase card is (until then those cards wait for the Review screen or a Run-through); a closing line for a Run-through with no stumble (it shows only the way back); the stumble's offer to practise the verse with its neighbour (built, off).
 
 ## Exit for the whole plan
 

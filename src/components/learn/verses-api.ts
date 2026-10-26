@@ -89,6 +89,28 @@ async function passage(ref: string, kind: Melody, signal: AbortSignal): Promise<
   return out;
 }
 
+/**
+ * 1.9 N19: one passage's text alone, every page, for the screens that play nothing (the Run-through and the verse cards in
+ * review). No recording or its metadata is asked for, so nothing on those screens can reach audio.
+ */
+export async function passageText(ref: string, kind: Melody, signal: AbortSignal): Promise<readonly Readonly<{ ref: string; hebrew: StudyVerse["hebrew"] }>[]> {
+  let total: number;
+  try { total = expandReadingRanges(ref.split("; "), kind, TANAKH_VERSE_COUNTS).length; } catch { return bad(); }
+  const out: { ref: string; hebrew: StudyVerse["hebrew"] }[] = [];
+  for (let offset: number | null = 0, guard = 0; offset !== null && guard < 12; guard++) {
+    const { plan, page } = await textPage(ref, kind, offset, total, signal);
+    plan.refs.forEach((member, i) => out.push(Object.freeze({ ref: member, hebrew: page.verses[i].hebrew })));
+    offset = plan.nextOffset;
+  }
+  return Object.freeze(out);
+}
+/** Single verses' text alone, grouped into as few canonical passages as passagesFor allows. */
+export async function verseTexts(refs: readonly string[], kind: Melody, signal: AbortSignal): Promise<ReadonlyMap<string, StudyVerse["hebrew"]>> {
+  const out = new Map<string, StudyVerse["hebrew"]>();
+  for (const passage of passagesFor(refs, kind)) for (const verse of await passageText(passage, kind, signal)) out.set(verse.ref, verse.hebrew);
+  return out;
+}
+
 /** One per page: loads each verse once, however many lessons and drills ask for it. */
 export function createVerseLoader(fetchPassage: typeof passage = passage) {
   const verses = new Map<string, Promise<LoadedVerse>>(), passages = new Map<string, Promise<readonly LoadedVerse[]>>();
