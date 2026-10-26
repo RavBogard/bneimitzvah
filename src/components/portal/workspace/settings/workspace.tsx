@@ -4,6 +4,7 @@ import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "../provider"
 import { validateSettings, SETTINGS_LIMITS, type CongregationSettings, type NotificationSettings, type ServiceSetting } from "../../../../server/settings/validation";
 import { settingsApi, type SettingsView } from "./api";
 import { resetCongregationRead } from "./links";
+import { Button, Chip, PageHeader } from "../../../ui";
 
 type Draft = { rabbiDisplayName: string; preferredSources: string; morningLabel: string; morningStart: string; havdalahLabel: string; havdalahStart: string;
   siddurUrl: string; musicUrl: string; rosterSheetId: string; consentNotice: string; digestWeekday: string };
@@ -66,6 +67,9 @@ function CongregationSettingsPage() {
   const [pending, setPending] = useState(false), [problems, setProblems] = useState<string[]>([]), [message, setMessage] = useState<{ text: string; tone: "status" | "alert" } | null>(null);
   const [conflict, setConflict] = useState(false), [accessError, setAccessError] = useState(false);
   const request = useRef<AbortController | null>(null), alive = useRef(true), mutation = useRef<{ key: string; id: string } | null>(null);
+  // G21 (AD-13): after a refused save, focus moves to the first field that needs a change.
+  const form = useRef<HTMLFormElement>(null), [focusTurn, setFocusTurn] = useState(0);
+  useEffect(() => { if (focusTurn) form.current?.querySelector<HTMLElement>("[aria-invalid=\"true\"]")?.focus(); }, [focusTurn]);
   const load = useCallback(async () => {
     request.current?.abort(); const controller = new AbortController(); request.current = controller;
     setLoading(true); setFailure(false);
@@ -83,7 +87,7 @@ function CongregationSettingsPage() {
     event.preventDefault();
     if (!view || !draft || pending || conflict) return;
     const settings = settingsOf(draft, switches), checked = validateSettings(settings);
-    if (!checked.ok) { setProblems(checked.problems); setMessage({ text: "Some settings need a change before they can be saved.", tone: "alert" }); return; }
+    if (!checked.ok) { setProblems(checked.problems); setFocusTurn(turn => turn + 1); setMessage({ text: "Some settings need a change before they can be saved.", tone: "alert" }); return; }
     // One mutation id per exact request, so a retry after a lost reply is recognised rather than saved twice.
     const key = JSON.stringify([view.version, settings]);
     if (mutation.current?.key !== key) mutation.current = { key, id: crypto.randomUUID() };
@@ -94,7 +98,7 @@ function CongregationSettingsPage() {
       if (outcome.ok) { mutation.current = null; resetCongregationRead(); setMessage({ text: "Settings saved.", tone: "status" }); await load(); return; }
       mutation.current = null;
       if (outcome.code === "no-change") setMessage({ text: "Nothing changed, so nothing was saved.", tone: "status" });
-      else if (outcome.code === "invalid") { setProblems(outcome.problems); setMessage({ text: "Some settings need a change before they can be saved.", tone: "alert" }); }
+      else if (outcome.code === "invalid") { setProblems(outcome.problems); setFocusTurn(turn => turn + 1); setMessage({ text: "Some settings need a change before they can be saved.", tone: "alert" }); }
       else { setConflict(true); setMessage({ text: "Someone saved these settings after you opened this page, so your changes weren’t saved. Reload to see the latest, then make your changes again.", tone: "alert" }); }
     } catch (error) {
       if (!alive.current) return;
@@ -119,10 +123,10 @@ function CongregationSettingsPage() {
     aria-invalid={invalid.has(name) || undefined} aria-describedby={errorId(name)} disabled={locked} onChange={event => change(name, event.target.value)} />;
 
   return <section className="role-workspace admin-workspace settings-workspace">
-    <div className="admin-head"><h1>Congregation settings</h1></div>
+    <PageHeader title="Congregation settings" />
     {loading && !view ? <p role="status">Loading settings…</p>
-      : failure || !view || !draft ? <div className="admin-state" role="alert"><p>The settings couldn’t be loaded.</p><button type="button" className="button-secondary admin-pill" onClick={() => void reload()}>Reload</button></div>
-      : <form onSubmit={event => void save(event)} noValidate>
+      : failure || !view || !draft ? <div className="admin-state" role="alert"><p>The settings couldn’t be loaded.</p><Button onClick={() => void reload()}>Reload</Button></div>
+      : <form ref={form} onSubmit={event => void save(event)} noValidate>
         <section className="people-card" aria-labelledby="settings-rabbi"><div className="people-card-head"><h2 id="settings-rabbi">Rabbi</h2></div>
           {field("rabbiDisplayName", "Name on study guides", textInput("rabbiDisplayName", { maxLength: SETTINGS_LIMITS.rabbiDisplayName, placeholder: view.defaults.rabbiDisplayName, autoComplete: "name" }),
             <>Students see it as “Reviewed by {draft.rabbiDisplayName.trim() || view.defaults.rabbiDisplayName}”. Left blank, guides use “{view.defaults.rabbiDisplayName}”.</>)}
@@ -144,11 +148,12 @@ function CongregationSettingsPage() {
           {field("musicUrl", "Music link", textInput("musicUrl", { type: "url", inputMode: "url" }), "Left blank, no music link is shown.")}
         </section>
         <section className="people-card" aria-labelledby="settings-records"><div className="people-card-head"><h2 id="settings-records">Roster and families</h2></div>
-          {field("rosterSheetId", "Roster sheet ID", textInput("rosterSheetId", { maxLength: 100 }), "Kept for a future congregation’s roster sheet. The CRC roster sheet is set by the portal’s operator, not here.")}
+          {view.portal.rosterSheetId && field("rosterSheetId", "Roster sheet ID", textInput("rosterSheetId", { maxLength: 100 }), "Kept for a future congregation’s roster sheet. The CRC roster sheet is set by the portal’s operator, not here.")}
           {field("consentNotice", "Consent notice", textArea("consentNotice", 4, SETTINGS_LIMITS.consentNotice),
             "Parents see it in their child’s preparation summary. Say what is stored, who hears it and when it is deleted. Left blank, no notice is shown.")}
         </section>
-        <section className="people-card" aria-labelledby="settings-email"><div className="people-card-head"><h2 id="settings-email">Email</h2><p>Each kind is off until you turn it on here. Nothing is sent until the portal’s operator has turned email on as well. Every email has a one-click unsubscribe, and people can turn each kind off in their own email settings.</p></div>
+        <section className="people-card" aria-labelledby="settings-email"><div className="people-card-head"><h2 id="settings-email">Email</h2><p>Each kind is off until you turn it on here. Nothing is sent until the portal’s operator has turned email on as well. Every email has a one-click unsubscribe, and people can turn each kind off in their own email settings.</p>
+            {view.portal.email !== null && <p className="settings-email-status" data-testid="settings-email-status"><Chip tone={view.portal.email ? "done" : "neutral"}>{view.portal.email ? "Email is on for this portal" : "Email is off for this portal"}</Chip></p>}</div>
           {([["tutorDraft", "Draft notices for tutors", "When a student saves a translation draft, their tutor gets one short email with a link to sign in. At most one a day for each student."],
             ["weeklyDigest", "Weekly updates for parents", "Once a week, each parent gets their own child’s days practiced, new lesson notes and upcoming dates. Adult students can turn this on for themselves."],
             ["studentReminder", "Practice reminders for students", "Students who sign in with their own email can ask for a weekly reminder on a day they choose. No student gets one unless they turn it on."]] as const).map(([key, label, help]) =>
@@ -160,8 +165,8 @@ function CongregationSettingsPage() {
         {message && <p className={message.tone === "alert" ? "request-error roster-message" : "workspace-notice roster-message"} role={message.tone}>{message.text}</p>}
         {accessError && <p><WorkspaceLink href="/">Check account and sign in again</WorkspaceLink></p>}
         <div className="form-actions settings-actions">
-          {conflict ? <button type="button" className="button-primary admin-pill" disabled={loading} onClick={() => void reload()}>Reload settings</button>
-            : <button type="submit" className="button-primary admin-pill" disabled={locked}>{pending ? "Saving…" : "Save settings"}</button>}
+          {conflict ? <Button variant="primary" disabled={loading} onClick={() => void reload()}>Reload settings</Button>
+            : <Button type="submit" variant="primary" disabled={locked}>{pending ? "Saving…" : "Save settings"}</Button>}
         </div>
       </form>}
   </section>;

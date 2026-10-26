@@ -2,6 +2,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { statusOf, useWorkspace, WorkspaceLink } from "../provider";
 import { connectionsApi, type Connection, type ConnectionAccess, type ConnectionsView } from "./api";
+import { Button, EmptyState, PageHeader } from "../../../ui";
+
+/** The portal's MCP address, as Claude's connector form takes it. */
+export const connectorAddress = (origin: string) => `${origin}/api/mcp`;
+/** G22 (TP-21), Daniel's approved line, with the address filled in. */
+export const connectLine = (address: string) => `To connect, add this portal as a connector in Claude (Settings -> Connectors) using ${address}, then sign in here when Claude asks.`;
 
 const accessNames: Record<ConnectionAccess, string> = { read: "Read", study: "Study guides", roster: "Roster" };
 const when = (value: string) => new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
@@ -21,6 +27,9 @@ function ConnectionsPage({ admin }: { admin: boolean }) {
   const [confirming, setConfirming] = useState<string | null>(null), [pending, setPending] = useState(false);
   const [message, setMessage] = useState<{ text: string; tone: "status" | "alert"; signIn?: boolean } | null>(null);
   const request = useRef<AbortController | null>(null), alive = useRef(true), gate = useRef(false);
+  // The address is this portal's own, so it is read in the browser (never a server-rendered guess at the host).
+  const [address, setAddress] = useState<string | null>(null);
+  useEffect(() => { setAddress(connectorAddress(window.location.origin)); }, []);
   const load = useCallback(async () => {
     request.current?.abort(); const controller = new AbortController(); request.current = controller;
     setLoading(true); setFailure(false);
@@ -64,24 +73,23 @@ function ConnectionsPage({ admin }: { admin: boolean }) {
       </div>
       <div className="people-actions">
         {confirming === c.id ? <>
-          <button type="button" className="roster-action people-danger" aria-label={`End now: ${label}`} disabled={pending} onClick={() => void end(c)}>{pending ? "Ending…" : "End now"}</button>
+          <button type="button" className="roster-action roster-danger" aria-label={`End now: ${label}`} disabled={pending} onClick={() => void end(c)}>{pending ? "Ending…" : "End now"}</button>
           <button type="button" className="roster-action" aria-label={`Keep ${label}`} disabled={pending} onClick={() => setConfirming(null)}>Keep</button>
-        </> : <button type="button" className="roster-action" aria-label={`End connection: ${label}`} disabled={pending || confirming !== null} onClick={() => { setMessage(null); setConfirming(c.id); }}>End connection</button>}
+        </> : <button type="button" className="roster-action people-danger" aria-label={`End connection: ${label}`} disabled={pending || confirming !== null} onClick={() => { setMessage(null); setConfirming(c.id); }}>End connection</button>}
       </div>
     </li>;
   };
 
   return <section className="role-workspace admin-workspace connections-workspace">
-    <div className="admin-head"><h1>Claude connections</h1></div>
-    <p className="people-student">Claude reaches the portal as the person who connected it, with that person’s access. Ending a connection stops it at once; to use Claude again, connect it again from Claude.</p>
+    <PageHeader title="Claude connections" description="Claude reaches the portal as the person who connected it, with that person’s access. Ending a connection stops it at once; to use Claude again, connect it again from Claude." />
     {message && <p className={message.tone === "alert" ? "request-error roster-message" : "workspace-notice roster-message"} role={message.tone}>{message.text}</p>}
     {message?.signIn && <p><WorkspaceLink href="/">Check account and sign in again</WorkspaceLink></p>}
     {loading && !view ? <p role="status">Loading connections…</p>
-      : failure || !view ? <div className="admin-state" role="alert"><p>Connections couldn’t be loaded.</p><button type="button" className="button-secondary admin-pill" onClick={() => void load()}>Reload</button></div>
+      : failure || !view ? <div className="admin-state" role="alert"><p>Connections couldn’t be loaded.</p><Button onClick={() => void load()}>Reload</Button></div>
       : <>
         <section className="people-card" aria-labelledby="claude-mine"><div className="people-card-head"><h2 id="claude-mine">Your connections</h2>
           <p>{view.role === "admin" ? "Read sees every student; study guides lets Claude write guides; roster lets Claude add students from Maven and set up readings, tutors and sources." : "Read lets Claude see your own students and their readings."}</p></div>
-          {mine.length ? <ul className="people-list">{mine.map(row)}</ul> : <p className="people-empty">No Claude connection is active.</p>}
+          {mine.length ? <ul className="people-list">{mine.map(row)}</ul> : <div className="connections-empty" data-testid="connections-empty"><EmptyState level={3} title="No Claude connection is active" description={address ? connectLine(address) : undefined} /></div>}
         </section>
         {view.role === "admin" && <section className="people-card" aria-labelledby="claude-staff"><div className="people-card-head"><h2 id="claude-staff">Other staff</h2><p>Connections other staff members made. Ending one stops it for them too.</p></div>
           {others.length ? <ul className="people-list">{others.map(row)}</ul> : <p className="people-empty">No other staff member has Claude connected.</p>}

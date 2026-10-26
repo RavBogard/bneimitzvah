@@ -49,7 +49,9 @@ test("every signed-in page sets its own title, ending with | CRC Torah", async (
 
 test("a page whose h1 is fixed is titled with that h1", () => {
   const source = (file: string) => readFileSync(join(process.cwd(), "src", file), "utf8");
-  const headings = (file: string) => [...source(file).matchAll(/<h1[^>]*>([^<{]+)<\/h1>/g)].map(match => match[1]);
+  // A page's h1 is a literal <h1> or the one PageHeader's title (its first literal when the title is chosen by role).
+  const headings = (file: string) => [...[...source(file).matchAll(/<h1[^>]*>([^<{]+)<\/h1>/g)].map(match => match[1]),
+    ...[...source(file).matchAll(/<PageHeader title=(?:"([^"]+)"|\{[^"}]*"([^"]+)")/g)].map(match => match[1] ?? match[2])];
   const titleOf = (file: string) => /signedInTitle\("([^"]+)"\)/.exec(source(file))?.[1];
   for (const [component, page] of [
     ["components/portal/workspace/accounts/workspace.tsx", "app/workspace/accounts/page.tsx"],

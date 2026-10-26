@@ -166,7 +166,13 @@ it("reviews valid/invalid and duplicate CSV rows, invalidates changed drafts and
   const tab = await page(); await navigate(tab, "/workspace/admin/students/import"); await importLoaded(tab);
   const draft = `${CSV_HEADER}\nSynthetic,CsvReviewed,2027-01-02,parent@example.test,`;
   await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(`${CSV_HEADER}\nSynthetic,Invalid,not-a-date,parent@example.test,`)); await click(tab, "Preview import");
-  await ui(tab.getByText("Row 2: check the ceremony date (YYYY-MM-DD, for example 2027-05-08).", { exact: true })).toBeVisible(); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
+  await ui(tab.getByTestId("csv-issues").getByRole("row", { name: /^2 Check the ceremony date/ })).toBeVisible(); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
+  // G21: the ready rows import on their own; the row to fix stays in the draft, and a later row with the same name and date is flagged.
+  await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(`${CSV_HEADER}\nSynthetic,Invalid,not-a-date,parent@example.test,\nSynthetic,CsvReady,2027-01-09,parent@example.test,`)); await click(tab, "Preview import");
+  await safe(() => tab.getByTestId("csv-import-ready").click()); await ui(tab.getByText("1 student record created. No invitations were sent.", { exact: true })).toBeVisible(); await importLoaded(tab);
+  expect((await fixture.ownerDb.select().from(s.student).where(eq(s.student.lastName, "CsvReady")))).toHaveLength(1);
+  expect((await tab.getByLabel("CSV draft to review", { exact: true }).inputValue()).split(/\r?\n/).filter(Boolean)).toEqual([CSV_HEADER, "Synthetic,Invalid,not-a-date,parent@example.test,"]);
+  await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(`${CSV_HEADER}\nSynthetic,CsvReady,2027-01-09,other@example.test,`)); await click(tab, "Preview import"); await ui(tab.getByTestId("csv-same-name")).toBeVisible();
   await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(draft)); await click(tab, "Preview import"); await ui(tab.getByRole("button", { name: "Import reviewed students", exact: true })).toBeEnabled(); await capture(tab, "csv-review-desktop");
   await focus(tab); await ui(tab.getByLabel("CSV draft to review", { exact: true })).toHaveValue(draft); await ui(tab.getByRole("button", { name: "Import reviewed students", exact: true })).toBeEnabled();
   await click(tab, "Preview import"); await create(tab, "CsvRosterChanged"); await click(tab, "Import reviewed students"); await ui(tab.locator("#workspace-main").getByRole("alert")).toContainText("changed after this review");

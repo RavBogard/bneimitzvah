@@ -8,6 +8,7 @@ import { invitationApi, invitationTargetFingerprint, issueReview, INVITATION_PAG
 import { InvitationForm } from "./form";
 import { InvitationList } from "./list";
 import { InvitationActionReview, type InvitationReview } from "./review";
+import { PageHeader } from "../../../ui";
 
 type Snapshot = { rows: Invitation[]; students: RosterStudent[] };
 function matches(review: InvitationReview, data: Snapshot): boolean {
@@ -159,7 +160,7 @@ function Invitations() {
     : outcome.receipt.delivery === "failed" ? "The email failed to send. Nothing is resent automatically; use Send again if you want to try once more."
     : "We couldn’t confirm whether the email went out. Nothing is resent automatically.");
   return <section className="role-workspace invitation-workspace admin-workspace"><PeopleNav />
-    <div className="admin-head"><h1 ref={pageHeading} tabIndex={-1}>Invitations</h1>{!blocked && <button type="button" className="hero-icon roster-reload" aria-label="Reload invitations" disabled={pending || loading} onClick={() => void reloadExplicitly()}><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></button>}</div>
+    <PageHeader title="Invitations" titleRef={pageHeading} actions={!blocked ? <button type="button" className="hero-icon roster-reload" aria-label="Reload invitations" disabled={pending || loading} onClick={() => void reloadExplicitly()}><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></button> : undefined} />
     <InvitationForm draft={draft} change={change} students={snapshot?.students ?? []} ready={Boolean(snapshot && !loading && !failure)} pending={pending} blocked={blocked} review={openIssue} />
     {message && !review && <p className={blocked ? "request-error roster-message" : "workspace-notice roster-message"} role={blocked ? "alert" : "status"}>{message}</p>}
     {blocked && <button type="button" className="button-secondary admin-pill roster-reload-inline" disabled={pending || loading} onClick={() => void reloadExplicitly()}>Reload invitations</button>}

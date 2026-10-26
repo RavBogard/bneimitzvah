@@ -63,6 +63,10 @@ it("an admin opens Congregation settings from More, fixes a refused link, saves,
   await ui(main(tab).getByRole("alert")).toHaveText("Some settings need a change before they can be saved.");
   await ui(tab.getByText("Use a full https:// link on centralreform.org or centralreform.live.", { exact: true })).toBeVisible();
   await ui(tab.getByLabel("Siddur link", { exact: true })).toHaveAttribute("aria-invalid", "true");
+  // G21: focus moves to the first field that needs a change; CRC's roster sheet is the operator's, so its field is not offered.
+  await ui(tab.getByLabel("Siddur link", { exact: true })).toBeFocused();
+  await ui(tab.getByLabel("Roster sheet ID", { exact: true })).toHaveCount(0);
+  await ui(tab.getByTestId("settings-email-status")).toBeVisible();
   expect(posts).toBe(0);
   await safe(() => tab.getByLabel("Siddur link", { exact: true }).fill("https://siddur.centralreform.org/crc/"));
   await safe(() => tab.getByLabel("Morning start time", { exact: true }).fill("09:30"));

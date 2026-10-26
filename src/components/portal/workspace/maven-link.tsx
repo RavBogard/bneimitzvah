@@ -46,7 +46,7 @@ export function MavenLinkPanel({ studentId, name, locked }: { studentId: string;
     {failed ? <p>The Maven link couldn’t be checked. <button type="button" className="button-text" onClick={() => void load()}>Check again</button></p>
       : link && <>
         <p>Linked to Maven contact <code>{link.mavenContactId}</code> since <time dateTime={link.linkedAt}>{day(link.linkedAt)}</time>{link.linkKind === "created" ? ", when the Maven import added this student." : "."} If that is the wrong person, unlink it; the student’s record stays as it is.</p>
-        {!confirming ? <button type="button" className="button-secondary admin-pill" disabled={pending || locked} onClick={() => { setMessage(null); setConfirming(true); }}>Unlink from Maven</button>
+        {!confirming ? <button type="button" className="button-secondary people-danger" disabled={pending || locked} onClick={() => { setMessage(null); setConfirming(true); }}>Unlink from Maven</button>
           : <><p role="status">Unlink <bdi dir="auto">{name}</bdi> from this Maven contact?</p><div className="form-actions">
             <button type="button" className="button-primary admin-pill roster-danger" disabled={pending || locked} onClick={() => void unlink()}>{pending ? "Unlinking…" : "Confirm unlink"}</button>
             <button type="button" className="button-secondary admin-pill" disabled={pending} onClick={() => setConfirming(false)}>Cancel</button></div></>}

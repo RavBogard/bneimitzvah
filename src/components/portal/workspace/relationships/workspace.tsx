@@ -8,6 +8,7 @@ import { identityLabels, makeReview, relationshipApi, type Action, type Relation
 import { AccessReview } from "./review";
 import { staffApi, type Teaching } from "../staff/api";
 import { teachesLine } from "../staff/model";
+import { PageHeader } from "../../../ui";
 
 // teaching: on the Tutors page, each tutor's current students (1.9 N15, G11), or null where it isn't read or couldn't be.
 type Snapshot = { relationships: Relationships | null; tutors: Tutor[]; teaching: Map<string, Teaching["students"]> | null };
@@ -113,10 +114,10 @@ function Access({ studentId }: { studentId?: string }) {
   </li>;
   const calm = message === "Saved. Access is up to date." || message === "Access reloaded.";
   return <section className="role-workspace access-workspace admin-workspace">{!studentId && <PeopleNav />}{studentId && <div className="admin-crumbs"><WorkspaceLink href={`/workspace/admin/students/${studentId}/reading`}>Student page</WorkspaceLink></div>}
-    <div className="admin-head"><div><h1 ref={pageHeading} tabIndex={-1}>{studentId ? "People and access" : "Tutors"}</h1>
-      {data ? <p className="people-student"><bdi dir="auto">{data.student.firstName} {data.student.lastName}</bdi> · <time dateTime={data.student.ceremonyDate}>{ceremonyCountdown(data.student.ceremonyDate).label}</time>{data.student.disabled && <span className="roster-chip">Disabled</span>}</p>
-        : !studentId && <p className="people-student">Tutors join by invitation. Assign them to students from each student’s People page.</p>}</div>
-      {!failed && <button type="button" className="hero-icon roster-reload" aria-label="Reload access" disabled={pending || loading} onClick={() => void reload()}>{reloadIcon}</button>}</div>
+    <PageHeader title={studentId ? "People and access" : "Tutors"} titleRef={pageHeading}
+      description={data ? <><bdi dir="auto">{data.student.firstName} {data.student.lastName}</bdi> · <time dateTime={data.student.ceremonyDate}>{ceremonyCountdown(data.student.ceremonyDate).label}</time>{data.student.disabled && <> <span className="roster-chip">Disabled</span></>}</>
+        : !studentId ? "Tutors join by invitation. Assign them to students from each student’s People page." : undefined}
+      actions={!failed ? <button type="button" className="hero-icon roster-reload" aria-label="Reload access" disabled={pending || loading} onClick={() => void reload()}>{reloadIcon}</button> : undefined} />
     {data?.student.disabled && <p className="people-note">This student is disabled. Nobody can use their access; existing links can still be removed.</p>}
     {message && !review && <p className={calm ? "workspace-notice roster-message" : "request-error roster-message"} role={blocked ? "alert" : "status"}>{message}</p>}
     {loading ? <p role="status">Checking current access…</p> : failed ? <div className="admin-state" role="alert"><h2>Access unavailable</h2><p>Current access couldn’t be loaded, so none of it is shown.</p><div className="form-actions"><button className="button-secondary admin-pill" disabled={pending || loading} onClick={() => void reload()}>Reload access</button><WorkspaceLink className="button-text" href="/">Check account and sign in again</WorkspaceLink></div></div> : snapshot && <>
