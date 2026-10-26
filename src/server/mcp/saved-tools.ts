@@ -50,7 +50,9 @@ async function byPortion<Q extends PgQueryResultHKT>(input: Record<string, unkno
   const invalid = (problem: string) => ({ refused: { ok: false, code: "invalid", problems: [problem], hint: HINTS.invalid } });
   if (!named) return create && input.ranges === undefined ? invalid("Give ranges, or name a portion and a pick.") : { input };
   if (input.ranges !== undefined) return invalid("Give ranges, or a portion and a pick, not both.");
-  const picked = await resolvePick({ portion: input.portion, pick: input.pick, kind: input.kind }, ctx.signal, ctx.loadReading);
+  // With no portion, a pick resolves against the Shabbat of the reading's own date when one is given (not this week's).
+  const on = input.portion === undefined && typeof input.date === "string" ? input.date : undefined;
+  const picked = await resolvePick({ portion: input.portion, pick: input.pick, kind: input.kind, date: on }, ctx.signal, ctx.loadReading);
   if (!picked.ok) return invalid(picked.problem);
   const { portion: _portion, pick: _pick, ...rest } = input;
   return { input: { ...rest, ranges: picked.ref, ...create ? { kind: picked.kind, date: input.date === undefined ? picked.date : input.date } : {} } };

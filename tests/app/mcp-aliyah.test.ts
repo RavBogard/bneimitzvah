@@ -139,6 +139,18 @@ describe("portion and pick", () => {
     expect(saved).toMatchObject({ ok: true, reading: { kind: "haftarah", ranges: "II Kings 4:1-37", date } });
   });
 
+  it("resolves a pick with no portion against the Shabbat of the reading's own date, on create and on revise", async () => {
+    const { admin, call } = await setup();
+    const shabbat = addDays(thisShabbat(), 7 * weeksUntil("Vayera")), date = addDays(shabbat, -3);
+    // This week (Shemot) has no aliyah 4; the date's Shabbat (Vayera) does, and the saved date stays the one given.
+    const made = (await call(admin, "create_saved_reading", { name: "By date", pick: "aliyah-4", date, mutationId: randomUUID() })).json();
+    expect(made).toMatchObject({ ok: true, reading: { ranges: "Genesis 19:21-21:4", verseCount: 40, date } });
+    expect((await call(admin, "revise_saved_reading", { id: made.reading.id, revision: 1, pick: "aliyah-2", date })).json())
+      .toMatchObject({ ok: true, reading: { ranges: "Genesis 18:15-33", date } });
+    // With no date, a pick is still this coming Shabbat's.
+    expect((await call(admin, "create_saved_reading", { name: "This week", pick: "aliyah-4", mutationId: randomUUID() })).json()).toMatchObject({ ok: false, code: "invalid" });
+  });
+
   it("refuses an unknown portion, an out-of-range aliyah, a pick the week lacks and every mix it cannot honour", async () => {
     const { t, admin, call } = await setup();
     const study = async (args: Record<string, unknown>) => { const r = (await call(admin, "study_link", args)).json(); expect(r.ok, JSON.stringify(args)).toBe(false); return r.problems.join(" "); };
