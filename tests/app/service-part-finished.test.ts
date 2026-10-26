@@ -127,6 +127,15 @@ describe("count only signed-in (Daniel, 2026-10-26, 2.0 SC5a)", () => {
     expect((await t.rows()).map(r => `${r.student}:${r.lesson}`)).toEqual(["own:vahavta"]);
   });
 
+  it("a lesson finished offline under the account, sent when the device is back online, marks the part", async () => {
+    const t = await setup();
+    // The device's last sync, then the offline lesson: its done instant is the device's, its name the account's own.
+    expect((await t.put("learner", doc("shma"), null)).status).toBe(200);
+    expect(await t.rows()).toEqual([]);
+    expect((await t.put("learner", doc("shma", "vahavta"))).status).toBe(200);
+    expect((await t.rows()).map(r => `${r.student}:${r.lesson}`)).toEqual(["own:vahavta"]);
+  });
+
   it("a lesson carrying another account's name counts for nobody: it is stored as done, without the name, and marks nothing", async () => {
     const t = await setup();
     const other = (await t.owner("multi")).owner, mine = (await t.owner("learner")).owner;

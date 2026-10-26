@@ -99,6 +99,9 @@ export function createProgressSync(io: SyncIo) {
   // Set once another tab has taken the device over (or the server named another account): this tab then neither saves to the shared
   // copy nor shows what other tabs save, until its next start learns whose session this is.
   let frozen = false;
+  // The account the device's marker named when this page opened: until a start answers, a lesson done here counts for it, and for
+  // no other account a marker may name later (2.0 SC5a; offline is a supported path since N24).
+  const opened = readMarker(io.storage())?.owner ?? null;
   const setAccount = (next: Account) => { account = next; io.onAccount(next); };
   async function call(path: string, body?: unknown): Promise<{ status: number; value: unknown }> {
     try {
@@ -225,12 +228,15 @@ export function createProgressSync(io: SyncIo) {
     /** False once another tab owns the device: the page then saves nothing to the shared copy and applies nothing from it. */
     get writable() { return writable(); },
     /**
-     * The owner name a lesson done now is marked with (2.0 SC5a): this page's account, only while it is synced, not frozen, and the
-     * device's marker names it. Otherwise null: signed out, refused, not yet answered or offline, a lesson counts for no account.
+     * The owner name a lesson done now is marked with (2.0 SC5a): the account the device's marker names, read now, when it is this
+     * page's account (the one its last start answered for, or before any answer, the one the marker named when the page opened).
+     * Offline, or before the first answer, still counts. Null in a frozen tab, once signed out or refused, with no marker (the
+     * device's copy is then signed-out work), or when the marker names any other account than this page's.
      */
     get stamp(): string | null {
-      if (frozen || account.state !== "synced" || owner === null) return null;
-      return readMarker(io.storage())?.owner === owner ? owner : null;
+      if (frozen || account.state === "signed-out" || account.state === "not-eligible") return null;
+      const marker = readMarker(io.storage()), mine = owner ?? opened;
+      return marker && mine !== null && marker.owner === mine ? mine : null;
     },
     /** Once per page: learn whose this browser's progress is, and bring the two copies together. */
     async start() {

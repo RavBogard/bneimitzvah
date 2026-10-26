@@ -229,19 +229,61 @@ describe("count only signed-in (Daniel, 2026-10-26, 2.0 SC5a)", () => {
     // The guest's lesson is still on the device, apart, with no account's name.
     expect(r.guest().lessons).toEqual({ vahavta: { done: T1 } });
   });
-  it("marks nothing with an account's name signed out, refused, before the first answer or in a frozen tab", async () => {
-    for (const status of [401, 403, 503]) {
+  it("marks nothing with an account's name signed out, refused, with no marker, or in a frozen tab", async () => {
+    for (const status of [401, 403]) {
       const r = rig({ status }, { owner: A, version: 3, dirty: true }, doc({ "aleinu": T1 }));
       r.state.refusal = { error: "forbidden", owner: A };
       await r.sync.start();
       expect(r.sync.stamp, String(status)).toBeNull();
       expect(finish(r)!.lessons.shma, String(status)).toEqual({ done: T2 });
     }
+    const guest = rig({ status: 503 }, undefined, doc({ "aleinu": T1 }));
+    await guest.sync.start();
+    expect(guest.sync.stamp).toBeNull();
+    expect(finish(guest)!.lessons.shma).toEqual({ done: T2 });
     const frozen = rig({ progress: doc({ "aleinu": T1 }), version: 3 }, { owner: A, version: 3, dirty: false }, doc({ "aleinu": T1 }));
     await frozen.sync.start();
     expect(frozen.sync.stamp).toBe(A);
     frozen.storage.setItem(SYNC_KEY, JSON.stringify({ owner: B, version: 1, dirty: false }));
     expect(frozen.sync.stamp).toBeNull();
+  });
+  it("a signed-in learner offline finishes a lesson under the account's name, and it goes up stamped when the device is back online", async () => {
+    const r = rig({ progress: doc({ "aleinu": T1 }), version: 3 }, { owner: A, version: 3, dirty: false }, doc({ "aleinu": T1 }));
+    // Before any answer, then offline: the device's marker names A, so the lesson counts for A.
+    expect(r.sync.stamp).toBe(A);
+    r.state.status = 503;
+    await r.sync.start();
+    expect(r.sync.account.state).toBe("unknown");
+    expect(finish(r)!.lessons.shma).toEqual({ done: T2, by: A });
+    expect(r.marker()).toEqual({ owner: A, version: 3, dirty: true });
+    expect(r.calls.filter(c => c.path !== "/api/learn/service/progress")).toEqual([]);
+    // Back online: the next start sends it, stamped, under the version last seen.
+    r.state.status = 200;
+    await r.sync.start(); for (let i = 0; i < 6; i++) await settle();
+    const put = r.calls.find(c => c.path === "/api/learn/service/progress/put")!;
+    expect(put.body).toMatchObject({ expectedVersion: 3, owner: A });
+    expect(put.body.progress.lessons.shma).toEqual({ done: T2, by: A });
+    expect(r.state.progress!.lessons.shma).toEqual({ done: T2, by: A });
+    expect(r.marker()).toEqual({ owner: A, version: 4, dirty: false });
+  });
+  it("never stamps B's work with A's name when the device changes account while offline, in a tab that never had an answer or one that had", async () => {
+    // Opened offline with A's marker; B then signs in in another tab and its marker replaces A's.
+    const fresh = rig({ status: 503 }, { owner: A, version: 3, dirty: false }, doc({ "aleinu": T1 }));
+    await fresh.sync.start();
+    expect(fresh.sync.stamp).toBe(A);
+    fresh.storage.setItem(SYNC_KEY, JSON.stringify({ owner: B, version: 7, dirty: false }));
+    expect(fresh.sync.stamp).toBeNull();
+    expect(finish(fresh)!.lessons.shma).toEqual({ done: T2 });
+    // A's marker dropped at a sign-out in another tab: the copy here is no account's.
+    fresh.storage.removeItem(SYNC_KEY);
+    expect(fresh.sync.stamp).toBeNull();
+    // Synced as A, then offline while B takes the device: this tab neither stamps nor saves.
+    const synced = rig({ progress: doc({ "aleinu": T1 }), version: 3 }, { owner: A, version: 3, dirty: false }, doc({ "aleinu": T1 }));
+    await synced.sync.start();
+    synced.state.status = 503; await synced.sync.start();
+    synced.storage.setItem(SYNC_KEY, JSON.stringify({ owner: B, version: 7, dirty: false }));
+    expect(synced.sync.stamp).toBeNull();
+    expect(finish(synced)).toBeNull();
   });
   it("a lesson done signed out and done again once synced is done now, under the account", async () => {
     const r = rig({ progress: doc({ "shma": T1 }), version: 2 }, { owner: A, version: 2, dirty: false }, doc({ "shma": T1 }));
