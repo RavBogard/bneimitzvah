@@ -74,6 +74,7 @@ import { createOfflineService } from "../offline/service";
 import { createAccountsService } from "../accounts/service";
 import { createCourseProgressService } from "../course-progress/service";
 import { createServiceCourseProgressService } from "../service-course/progress-service";
+import { createVerseReviewService } from "../verse-review/service";
 import { createServiceCoursePath } from "../service-course/path";
 import { createLogger } from "../logging/logger";
 import type { HostFrame } from "../logging/logger";
@@ -237,6 +238,8 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     send: createAccountMailTransport({ ...config.mail, origin: config.origin, fetch, enabled: config.deployment.environment === "production" }) });
   // Learn to lein, slice 3: a member's own course progress, readable only by that member.
   const courseProgress = createCourseProgressService({ access });
+  // 1.9 N19: a student's own verse review cards, readable only by that student.
+  const verseReview = createVerseReviewService({ access });
   // Release 2.0 SC4: a member's own service-course progress, readable only by that member, and a student's own path through the course.
   const serviceCourseProgress = createServiceCourseProgressService({ access });
   const serviceCoursePath = createServiceCoursePath({ access, serviceLearning });
@@ -248,7 +251,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, signInCodeCap, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved, offline, courseProgress, serviceCourseProgress, serviceCoursePath, accounts });
+  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, signInCodeCap, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved, offline, courseProgress, verseReview, serviceCourseProgress, serviceCoursePath, accounts });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;

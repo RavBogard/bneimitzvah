@@ -39,7 +39,7 @@ const lessons = (tab: Page) => tab.locator(".lesson-log");
 const modals = (tab: Page) => tab.evaluate(() => document.querySelectorAll("dialog:modal").length);
 const loaded = (tab: Page, ref: string) => ui(tab.locator(".study-verses").getByRole("heading", { name: ref, level: 4, exact: true })).toBeVisible();
 async function workspace(tab: Page, role: "student" | "tutor" | "parent" | "admin") {
-  await safe(() => tab.goto(role === "admin" ? `/workspace/admin/students/${fixture.student.id}/reading` : role === "tutor" ? `/workspace/tutor/${fixture.student.id}` : `/workspace/${role}`, { waitUntil: "domcontentloaded" }));
+  await safe(() => tab.goto(role === "admin" ? `/workspace/admin/students/${fixture.student.id}/reading` : role === "tutor" ? `/workspace/tutor/${fixture.student.id}` : `/workspace/${role}${role === "student" ? "?tab=reading" : ""}`, { waitUntil: "domcontentloaded" }));
   if (role === "parent") await safe(() => tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(tab.locator("#reading-heading")).toBeVisible();
 }

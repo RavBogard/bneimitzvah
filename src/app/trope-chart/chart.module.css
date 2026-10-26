@@ -18,6 +18,10 @@
 .markName { line-height: 1.5; overflow-wrap: anywhere; }
 .other { border-top: 1px solid var(--color-ink); padding-top: 1.5rem; margin-top: 2.5rem; }
 .otherMarks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem 1.5rem; }
+/* T3 P4-1: the poetic-book signs, a closed section after the context signs. */
+.poetic { border-top: 1px solid var(--color-rule); margin-top: 2rem; padding-top: 1rem; }
+.poeticSummary { display: inline-flex; align-items: center; min-height: 44px; font-size: 1.25rem; font-weight: 600; cursor: pointer; }
+.poetic[open] .poeticSummary { margin-bottom: 0.5rem; }
 .sources { border-top: 1px solid var(--color-rule); margin-top: 2.5rem; padding-top: 1.5rem; color: var(--color-muted); font-size: 0.875rem; }
 .sources p { max-width: none; }
 .sources p + p { margin-top: 0.75rem; }
@@ -47,6 +51,10 @@
   .mark { max-width: none; flex: 1 1 0; }
   .sample { font-size: 22pt; line-height: 1.6; padding-inline: 0.15em; }
   .markName { font-size: 10pt; line-height: 1.25; }
+  .poetic { margin-top: 9pt; padding-top: 4pt; }
+  .poeticSummary { font-size: 12pt; min-height: 0; }
+  /* A closed section still prints: its content shows whatever the open state (browsers without ::details-content are covered by the beforeprint handler in PrintChart). */
+  .poetic::details-content { content-visibility: visible; display: block; height: auto; }
   .other { margin-top: 9pt; padding-top: 6pt; }
   .otherMarks { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5pt 6pt; }
   .otherMarks .sample { font-size: 20pt; }

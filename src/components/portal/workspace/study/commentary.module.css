@@ -52,9 +52,9 @@ button.number[aria-pressed="true"] > span { background: var(--lake); color: #fff
 .text { margin: 0; max-inline-size: 62ch; font-size: 0.875rem; line-height: 1.6; overflow-wrap: break-word; }
 .text strong { font-weight: 600; }
 .clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
-.hebrewText { margin-block-start: 0.25rem; font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 1.1875rem; line-height: 1.85; text-align: start; }
+.hebrewText { margin-block-start: 0.25rem; font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: calc(1.1875rem * var(--comment-scale, 1)); line-height: 1.85; text-align: start; }
 .hebrewText strong { font-weight: 600; color: var(--color-ink); }
-.dibbur { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 1.125rem; font-weight: 600; line-height: 1; color: var(--color-ink); unicode-bidi: isolate; }
+.dibbur { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: calc(1.125rem * var(--comment-scale, 1)); font-weight: 600; line-height: 1; color: var(--color-ink); unicode-bidi: isolate; }
 /* The English edition's own lemma, calmer than bold; capitals become small capitals, the letters unchanged. */
 .lemma { font-weight: 500; }
 .lemma[data-caps] { font-variant-caps: all-small-caps; letter-spacing: 0.02em; }
@@ -87,7 +87,7 @@ button.number[aria-pressed="true"] > span { background: var(--lake); color: #fff
 .credits a:hover { color: var(--color-action); }
 .credits a.creditLine { display: block; width: fit-content; }
 /* Hebrew quoted inside Rashi's English (the word a comment translates): the Hebrew face and language, not the English face, which has no Hebrew glyphs. */
-.hebrewInEnglish { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 1.15em; font-synthesis: none; font-feature-settings: "mark", "mkmk"; unicode-bidi: isolate; }
+.hebrewInEnglish { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: calc(1.15em * var(--comment-scale, 1)); font-synthesis: none; font-feature-settings: "mark", "mkmk"; unicode-bidi: isolate; }
 
 /* Quiet states: one line per work, never in front of the Hebrew */
 .status { margin-block: 0.25rem 0.5rem; color: var(--color-muted); font-size: 0.875rem; }
@@ -131,7 +131,7 @@ button.number[aria-pressed="true"] > span { background: var(--lake); color: #fff
 .compareTitle { margin: 0 0 0.25rem; color: var(--color-ink); font-size: 0.8125rem; font-weight: 650; line-height: 1.4; overflow-wrap: anywhere; }
 .compareText { margin: 0; font-size: 0.9375rem; line-height: 1.65; overflow-wrap: break-word; }
 .compareText strong { font-weight: 600; }
-.aramaic { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 1.1875rem; line-height: 1.85; text-align: start; }
+.aramaic { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: calc(1.1875rem * var(--comment-scale, 1)); line-height: 1.85; text-align: start; }
 .compareCredit { margin: 0.25rem 0 0; color: var(--color-muted); font-size: 0.75rem; line-height: 1.5; overflow-wrap: anywhere; }
 .compareCredit a { color: var(--color-muted); text-decoration-color: color-mix(in srgb, var(--color-muted) 55%, transparent); }
 .compareCredit a:hover { color: var(--color-action); }
@@ -156,3 +156,11 @@ button.number[aria-pressed="true"] > span { background: var(--lake); color: #fff
 .sourceText { margin-block: 0.25rem 0.75rem; padding-inline-start: 0.875rem; box-shadow: inset 2px 0 0 var(--color-rule); color: var(--color-muted); }
 .shelfPills :global(.button-secondary)[aria-pressed="true"] { background: var(--lake); color: #fff; box-shadow: none; }
 .shelfPills :global(.button-secondary):not([aria-pressed="true"]):hover { background: var(--color-hover); }
+
+/* Commentary Hebrew follows the size control (1.9 N5, G17): the same four steps as the reading, as a share of Standard, in the page and in the Sheet that holds the verse panel. */
+.versePanel[data-size="small"] { --comment-scale: 0.8125; }
+.versePanel[data-size="large"] { --comment-scale: 1.25; }
+.versePanel[data-size="huge"] { --comment-scale: 1.5625; }
+
+/* The "English" tag above an English comment in More on this verse (1.9 N5). */
+.languageTag { margin-block: 0.25rem 0.125rem; }

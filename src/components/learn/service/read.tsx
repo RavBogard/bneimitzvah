@@ -1,9 +1,9 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import type { Lesson } from "../../../lib/service-course/course";
+import type { Lesson, ServiceSlot } from "../../../lib/service-course/course";
 import { COPY, fill } from "../../../lib/service-course/copy";
-import { hebrewWords, plainWord, type ServiceText, type TextLine } from "../../../lib/service-course/text";
+import { EVENING_UNIT, hebrewWords, plainWord, type ServiceText, type TextLine } from "../../../lib/service-course/text";
 import { answerCheck, buildCheck, checkDone, currentCheck, resolveKeyWords, seeded, startCheck, type CheckItem, type CheckRun, type ResolvedKeyWord } from "../../../lib/service-course/check";
 import type { WordCardTarget } from "../../../lib/learn/word-tap";
 import { PortalRequestError } from "../../portal/api";
@@ -21,7 +21,7 @@ import styles from "./service.module.css";
  * lesson from /api/public/service-text; nothing here holds or caches prayer text beyond the page. A line that is a Bible verse opens
  * the real word card for that verse when its words are found in it; any other key word opens a small glossary card.
  */
-export type TextState = Readonly<{ status: "loading" } | { status: "ready"; text: ServiceText } | { status: "error"; rateLimited: boolean }>;
+export type TextState = Readonly<{ status: "loading" } | { status: "ready"; text: ServiceText } | { status: "error"; rateLimited: boolean; notHere?: boolean }>;
 export function useLessonText(lesson: Lesson): { state: TextState; retry(): void } {
   const [state, setState] = useState<TextState>({ status: "loading" }), [attempt, setAttempt] = useState(0);
   const unit = lesson.read?.unit;
@@ -31,7 +31,9 @@ export function useLessonText(lesson: Lesson): { state: TextState; retry(): void
     setState({ status: "loading" });
     fetchServiceText(unit, controller.signal).then(
       text => { if (!controller.signal.aborted) setState({ status: "ready", text }); },
-      error => { if (!controller.signal.aborted) setState({ status: "error", rateLimited: error instanceof PortalRequestError && error.status === 429 }); });
+      // An evening lesson's text answers 404 anywhere but the CRC site (2.0 SC7): the course is not offered there, so it says so.
+      error => { if (!controller.signal.aborted) setState({ status: "error", rateLimited: error instanceof PortalRequestError && error.status === 429,
+        ...(EVENING_UNIT.test(unit) && error instanceof PortalRequestError && error.status === 404 ? { notHere: true } : {}) }); });
     return () => controller.abort();
   }, [unit, attempt]);
   return { state, retry: useCallback(() => setAttempt(n => n + 1), []) };
@@ -90,12 +92,13 @@ export function HebrewLine({ he, line, large = true, mark }: { he: string; line:
 function TextProblem({ state, onRetry }: { state: TextState; onRetry(): void }) {
   if (state.status === "loading") return <p role="status" className={styles.note}>{COPY.state.lessonLoading}</p>;
   if (state.status !== "error") return null;
+  if (state.notHere) return <p role="status" className={styles.note}>{COPY.state.tenantOff}</p>;
   return <div role="alert" className={learn.state}><p>{state.rateLimited ? RATE_LIMITED_MESSAGE : COPY.state.textError}</p>
     <button type="button" className="button-secondary" onClick={onRetry}>{COPY.state.retry}</button></div>;
 }
 
 /** Step 3: the lines, right to left, with transliteration and English on request (Batch 2 Q8), the credit and the siddur link. */
-export function ReadStep({ lesson, state, onRetry }: { lesson: Lesson; state: TextState; onRetry(): void }) {
+export function ReadStep({ lesson, state, onRetry, slot = "morning" }: { lesson: Lesson; state: TextState; onRetry(): void; slot?: ServiceSlot }) {
   const [tr, setTr] = useState(false), [en, setEn] = useState(false);
   const { progress } = useServiceProgress(), letters = !progress || isDone(progress, "f1");
   const words = useContext(WordsContext), read = lesson.read!;
@@ -115,10 +118,11 @@ export function ReadStep({ lesson, state, onRetry }: { lesson: Lesson; state: Te
         {tr && line.tr && <p className={styles.lineTr}>{line.tr}</p>}
         {en && line.en && <p className={styles.lineEn} lang="en">{line.en}</p>}
       </li>)}</ol>
-      <p className={styles.credit}>{fill(COPY.read.credit, { volume: text.credit.title, licence: text.credit.licence })}</p>
+      {/* The public build's book and licence (A7 read.credit); the CRC siddur's own attribution, verbatim, as Service parts show it (2.0 SC7). */}
+      <p className={styles.credit}>{"licence" in text.credit ? fill(COPY.read.credit, { volume: text.credit.title, licence: text.credit.licence }) : text.credit.attribution}</p>
     </>}
     <p className={styles.note}>{COPY.read.siddurNote}</p>
-    <LessonSiddurLink lessonId={lesson.id} />
+    <LessonSiddurLink lessonId={lesson.id} slot={slot} />
     {!letters && <p className={styles.note}><a href="/learn/service/f1">{COPY.read.newToHebrew}</a></p>}
   </>;
 }

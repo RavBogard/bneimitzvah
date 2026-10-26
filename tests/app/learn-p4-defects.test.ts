@@ -146,7 +146,9 @@ describe("G19's visual part: a wrong choice is an x on a muted fill, never the h
     expect(drills.match(/icons\.wrong/g)).toHaveLength(4);
     expect(read("src/components/learn/bits.tsx")).toMatch(/wrong: svg\(/);
   });
-  it("adds no 'one more try' text", () => {
-    for (const path of ["src/components/learn/drills.tsx", "src/components/learn/lesson.tsx", "src/components/learn/activity-copy.ts"]) expect(read(path).toLowerCase(), path).not.toContain("one more try");
+  it("adds no 'one more try' text after a wrong choice; the phrase is Quick ten's approved position line (T3 P4-4) and nowhere else", () => {
+    for (const path of ["src/components/learn/drills.tsx", "src/components/learn/lesson.tsx"]) expect(read(path).toLowerCase(), path).not.toContain("one more try");
+    expect(read("src/components/learn/activity-copy.ts").match(/One more try/g)).toHaveLength(1);
+    expect(read("src/components/learn/quick-ten.tsx")).toContain("POSITION.quickTenAgain");
   });
 });

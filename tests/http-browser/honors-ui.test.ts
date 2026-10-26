@@ -247,7 +247,7 @@ it("own adult uses the existing honors sheet and link controls while child pract
     await ui(student.locator('input[value="Synthetic Adult Honoree"]')).toHaveCount(0); expect((await api(student, `/api/students/${fixture.student.id}/honors?mode=student`)).status).toBe(403);
     expect((await api(student, `/api/students/${fixture.student.id}/honoree-links/status`, { mode: "student", startVerse: "Genesis 1:2" })).status).toBe(403);
     expect((await api(student, `/api/students/${fixture.student.id}/honoree-links/receipt`, receiptIntent)).status).toBe(403);
-    await student.goto("/workspace/student", { waitUntil: "domcontentloaded" });
+    await student.goto("/workspace/student?tab=reading", { waitUntil: "domcontentloaded" });
     await ui(student.getByRole("region", { name: "Family honors", exact: true })).toBeVisible(); await ui(student.getByRole("button", { name: "Family honors", exact: true })).toHaveCount(0);
   } finally { await fixture.ownerDb.update(s.student).set({ studentKind: "adult" }).where(eq(s.student.id, fixture.student.id)); }
   const parent = await page("parent"), entered = await api(parent, "/api/practice/enter", { studentId: children[0].id }); expect(entered.status).toBe(201); const denied = await parent.evaluate(async ({ id, handle }) => { const r = await fetch(`/api/students/${id}/honors?mode=parent`, { headers: { "X-Practice-Context": handle }, cache: "no-store" }); return r.status; }, { id: children[0].id, handle: entered.data.handle }); expect(denied).toBe(403);

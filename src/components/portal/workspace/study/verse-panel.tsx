@@ -9,6 +9,7 @@ import { DISCUSSION_LABELS } from "../../../../lib/discussions/labels";
 import { WordPanelBody, type WordPanelHost } from "./word-panel";
 import { focusKey, moveWord, requestPanel, type PanelOpen, type VersePanelKind } from "./verse-panel-state";
 import { useStudyLens } from "../study-lens";
+import { useReadingPrefs } from "../reading-prefs";
 import { Button, Sheet } from "../../../ui";
 import styles from "./commentary.module.css";
 
@@ -24,7 +25,7 @@ import styles from "./commentary.module.css";
  */
 export type { VersePanelKind } from "./verse-panel-state";
 type Open = PanelOpen;
-type Scope = Readonly<{ open: Open | null; active: boolean; toggle(verse: string, kind: VersePanelKind, trigger: HTMLElement): void; close(): void; closeWord(): void;
+type Scope = Readonly<{ open: Open | null; active: boolean; listOpen: boolean; openList(trigger: HTMLElement): void; toggle(verse: string, kind: VersePanelKind, trigger: HTMLElement): void; close(): void; closeWord(): void;
   /** A source in a reading's list: the discussion panel at its verse, brought into view first. */
   openFromList(verse: string, trigger: HTMLElement): void; backToVerse(): void;
   /** Study's word tap: the word card for one word, in the sheet. Null when no text page has registered a host. */
@@ -40,7 +41,7 @@ const inView = (element: HTMLElement) => { const box = element.getBoundingClient
  */
 export function VersePanelScope({ children, passage }: { children: ReactNode; passage?: DiscussionPassage | null }) {
   const lens = useStudyLens(), active = lens.available && lens.lens === "study";
-  const [open, setOpen] = useState<Open | null>(null), base = useId();
+  const [open, setOpen] = useState<Open | null>(null), [listOpen, setListOpen] = useState(false), base = useId(), listTrigger = useRef<HTMLElement | null>(null);
   const trigger = useRef<HTMLElement | null>(null), lastWord = useRef<{ verse: string; word: number } | null>(null), toVerse = useRef<string | null>(null);
   const current = useRef(open); current.current = open;
   const request = useCallback((verse: string, kind: VersePanelKind, element: HTMLElement | null, word?: number, from?: "list") => {
@@ -60,6 +61,8 @@ export function VersePanelScope({ children, passage }: { children: ReactNode; pa
     trigger.current = null; setOpen(next); host.current?.onVisit?.(verse);
   }, []);
   const close = useCallback(() => { setOpen(null); }, []);
+  const openList = useCallback((element: HTMLElement) => { listTrigger.current = element; setListOpen(true); }, []);
+  const closeList = useCallback(() => { setListOpen(false); }, []);
   const closeWord = useCallback(() => { if (current.current?.kind === "word") close(); }, [close]);
   // A list entry takes the reader to the verse (the text page that holds it is loaded first), then opens its sources there.
   const openFromList = useCallback((verse: string, element: HTMLElement) => { host.current?.reveal?.(verse); request(verse, "discussion", element, undefined, "list"); }, [request]);
@@ -80,10 +83,12 @@ export function VersePanelScope({ children, passage }: { children: ReactNode; pa
     if (target && !inView(target)) { try { target.scrollIntoView({ block: "center" }); } catch { /* Stay where the page is. */ } }
     return target;
   }, []);
-  useEffect(() => { if (!active) setOpen(null); }, [active]);
-  const value = useMemo<Scope>(() => ({ open: active ? open : null, active, toggle, close, closeWord, openFromList, backToVerse, openWord: hasWords ? openWord : null, moveWord: stepWord, host, setHost }),
-    [active, open, toggle, close, closeWord, openFromList, backToVerse, hasWords, openWord, stepWord, setHost]);
-  const scope = <Context.Provider value={value}>{children}{active && open && <VersePanelSheet open={open} onClose={close} returnTarget={returnTarget} />}</Context.Provider>;
+  useEffect(() => { if (!active) { setOpen(null); setListOpen(false); } }, [active]);
+  // A source chosen in the phone's Sources sheet: that sheet gives way to the verse's own in the same render, and the Sources button is where focus comes back to.
+  const openFromSheet = useCallback((verse: string, element: HTMLElement) => { setListOpen(false); openFromList(verse, listTrigger.current?.isConnected ? listTrigger.current : element); }, [openFromList]);
+  const value = useMemo<Scope>(() => ({ open: active ? open : null, active, listOpen, openList, toggle, close, closeWord, openFromList, backToVerse, openWord: hasWords ? openWord : null, moveWord: stepWord, host, setHost }),
+    [active, open, listOpen, openList, toggle, close, closeWord, openFromList, backToVerse, hasWords, openWord, stepWord, setHost]);
+  const scope = <Context.Provider value={value}>{children}{active && open && <VersePanelSheet open={open} onClose={close} returnTarget={returnTarget} />}{active && listOpen && !open && <SourcesSheet onClose={closeList} onOpen={openFromSheet} />}</Context.Provider>;
   return passage === undefined ? scope : <DiscussionsSource passage={passage} active={active}>{scope}</DiscussionsSource>;
 }
 const usePanel = () => useContext(Context);
@@ -91,10 +96,24 @@ const usePanel = () => useContext(Context);
 export const useOpenPanelVerse = (): string | null => usePanel()?.open?.verse ?? null;
 /** Study's word tap: the card opener, or null when there is no card here (Lein, the proposed portion, a page not yet loaded). */
 export const useWordCardOpener = () => usePanel()?.openWord ?? null;
-/** The reading's "Sources for this reading", where the page puts it (under the reading's header); nothing without discussions or outside Study. */
+/**
+ * The reading's "Sources" column (1.9 N7), a child of the reading's own grid so that on a laptop it stands to the right of the verses (globals.css);
+ * below that width it is not drawn, and `SourcesButton` is the way to the same list. Nothing without discussions or outside Study.
+ */
 export function DiscussionList() {
   const scope = usePanel(), view = useDiscussionsView();
-  return scope?.active && view ? <DiscussionListView view={view} onOpen={scope.openFromList} /> : null;
+  return scope?.active && view ? <aside className="reading-sources-column" data-sources-column=""><DiscussionListView view={view} onOpen={scope.openFromList} /></aside> : null;
+}
+/** On a phone or a tablet the sources are one tap away, in the Sheet: the button is in flow above the text, never over a verse; at laptop width the column replaces it. */
+export function SourcesButton() {
+  const scope = usePanel(), view = useDiscussionsView();
+  return scope?.active && view ? <p className="reading-sources-open" data-sources-open="">
+    <button type="button" className="button-secondary" aria-haspopup="dialog" onClick={event => scope.openList(event.currentTarget)}>{DISCUSSION_LABELS.column}</button></p> : null;
+}
+/** The Sources sheet: the column's list, titled by the sheet; a source opens its verse's sources in the same Sheet (this one gives way). */
+function SourcesSheet({ onClose, onOpen }: { onClose(): void; onOpen(verse: string, trigger: HTMLElement): void }) {
+  const view = useDiscussionsView();
+  return <Sheet open onClose={onClose} title={DISCUSSION_LABELS.column} closeLabel="Close">{view && <DiscussionListView view={view} onOpen={onOpen} headed={false} />}</Sheet>;
 }
 /** The text page tells the panel what it needs for a word card (its verses and how to read word details); nothing renders. */
 export function WordPanelSource({ host }: { host: WordPanelHost | null }) {
@@ -124,14 +143,14 @@ const titleOf = (open: Open) => open.kind === "discussion" ? `${DISCUSSION_LABEL
 
 /** What the sheet holds for the open panel. After Previous word or Next word the button pressed may have become disabled: focus then goes to the sheet's title, never to the page. */
 function PanelBody({ open }: { open: Open }) {
-  const body = useRef<HTMLDivElement | null>(null), lens = useStudyLens(), scope = usePanel();
+  const body = useRef<HTMLDivElement | null>(null), lens = useStudyLens(), scope = usePanel(), size = useReadingPrefs().size;
   useEffect(() => {
     if (open.kind !== "word") return;
     const at = document.activeElement;
     if ((at instanceof HTMLButtonElement && at.disabled) || at === document.body) body.current?.closest("dialog")?.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
   });
   const word = open.kind === "word" ? scope?.host.current : null;
-  return <div id={open.id} ref={body} className={styles.versePanel} data-verse-panel={open.verse}>
+  return <div id={open.id} ref={body} className={styles.versePanel} data-verse-panel={open.verse} data-size={size}>
     {open.kind === "compare" ? <CompareView verse={open.verse} />
       : open.kind === "discussion" ? <DiscussionPanelBody verse={open.verse} />
       : open.kind === "word" ? word && open.word !== undefined && scope ? <WordPanelBody key={word.scopeKey} host={word} verse={open.verse} word={open.word} onMove={scope.moveWord} onGone={scope.close} /> : null

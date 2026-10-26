@@ -8,10 +8,26 @@
 .picker input { flex: 1 1 10rem; min-width: 0; max-width: 100%; min-height: 44px; padding: 0 0.75rem; border: 1px solid var(--color-control-rule); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-ink); font: inherit; }
 /* A heading that takes focus by code (after a reading is chosen) is not a control: no ring. */
 .title:focus { outline: none; }
-/* Rooms held while the reading loads (D3): the hero's date line, its button row and a screen of reading, so nothing that arrives moves what is on screen. */
-.metaReserve { display: block; min-height: 1.5em; }
-.actionsReserve { min-height: 48px; }
-.readingBlock { min-height: 70svh; }
+/* A screen of room held for the reading while it loads (D3), so the Save card and the foot of the page stay below the fold until the text is in: the header is two lines now (N5), so the reading starts high and 70svh no longer reached the bottom of the screen. */
+.readingBlock { min-height: calc(100svh - 3rem); }
+/* The two-line header (1.9 N5): the eyebrow, then the name at title size with the week arrows and More on its line. One line of room each, so nothing moves under a reader (D3). */
+.readHeader { min-width: 0; margin-block: 0 0.5rem; }
+.titleRow { display: flex; flex-wrap: wrap; align-items: center; gap: 0 0.5rem; }
+.readHeader .readTitle { flex: 1 1 9rem; min-width: 0; max-width: none; margin: 0; font-size: var(--text-title); font-weight: var(--weight-strong); line-height: 1.2; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.readHeader .readTitle:focus { outline: none; }
+.tools { display: flex; align-items: center; gap: 0.25rem; margin-inline-start: auto; }
+.arrow { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--color-control-rule); border-radius: 999px; background: var(--color-surface); color: var(--color-ink); }
+.arrow:hover:not(:disabled) { background: var(--color-hover); }
+.arrow:disabled { opacity: 0.5; }
+.readHeader .moreButton { min-height: 44px; padding-inline: 1rem; }
+/* The More sheet: one column of actions, each as wide as the sheet. */
+.moreList { display: grid; gap: 0.75rem; min-width: 0; }
+.moreList:empty { display: none; }
+.moreList > :global(.button-hero-secondary), .moreList > :global(.button-primary), .moreList > :global(.button-secondary), .moreList > div > :global(.button-hero-secondary), .moreList > div > :global(.button-secondary) { width: 100%; justify-content: center; }
+.moreList > :global(.field-help) { margin: 0; }
+.moreList .picker { justify-content: space-between; }
+.moreList .portion { display: flex; justify-content: space-between; }
+.moreList .portion select { flex: 1 1 10rem; }
 .upClose { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin-block: 1rem; }
 .signIn { margin-top: 2.5rem; padding: 1.25rem 1.5rem 1.5rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
 .signIn h2 { margin: 0 0 0.5rem; font-size: 1.25rem; font-weight: 750; letter-spacing: -0.01em; }
@@ -38,7 +54,5 @@
   .choiceRow > button { flex: 1 1 100%; }
   .weeks > :global(.button-hero-secondary) { flex: 1 1 auto; justify-content: center; }
   .picker { flex: 1 1 100%; justify-content: space-between; }
-  .metaReserve { min-height: 3em; }
-  .actionsReserve { min-height: 176px; }
   .signIn a { width: 100%; }
 }

@@ -65,20 +65,22 @@ test("the course home opens at 360 px: the next lesson, the links, every unit, a
   await expect(next.getByRole("heading", { level: 2, name: "Sh’ma" })).toBeVisible();
   await expect(next.getByText("about 5 minutes")).toBeVisible();
   await expect(page.getByText("Progress is saved on this device. Sign in to keep it.")).toBeVisible();
-  await expect(page.getByText("Saturday evening and Havdalah come next.")).toBeVisible();
+  // CRC's Saturday evening and Havdalah are here now (2.0 SC7), so the "come next" line is gone and their two units list below.
+  await expect(page.getByText("Saturday evening and Havdalah come next.")).toHaveCount(0);
+  for (const title of ["Saturday evening: the Sh’ma and its blessings", "Havdalah"]) await expect(page.getByRole("heading", { level: 2, name: title, exact: true })).toBeVisible();
   const nav = page.getByRole("navigation", { name: "Course" });
   await expect(nav.getByRole("link", { name: "Learn to lein" })).toHaveAttribute("href", "/learn");
   await expect(nav.getByRole("link", { name: "About" })).toHaveAttribute("href", "/learn/service/about");
-  for (const title of ["The parts every student leads", "Morning blessings", "The Sh’ma and its blessings", "The Amidah", "The Torah service", "Closing the service"]) await expect(page.getByRole("heading", { level: 2, name: title })).toBeVisible();
+  for (const title of ["The parts every student leads", "Morning blessings", "The Sh’ma and its blessings", "The Amidah", "The Torah service", "Closing the service"]) await expect(page.getByRole("heading", { level: 2, name: title, exact: true })).toBeVisible();
   // Reading Hebrew sits at the top, optional: its unit, its six lessons and the quiet row that points to it until f1 is done (2.0 SC3).
   await expect(page.getByRole("heading", { level: 2, name: "Reading Hebrew" })).toBeVisible();
   await expect(page.getByRole("link", { name: "New to Hebrew letters? Start with Reading Hebrew." })).toHaveAttribute("href", "/learn/service/f1");
   await expect(page.locator("[data-unit='reading'] li")).toHaveText(["Letters, part one", "Letters, part two", "Vowels", "Dots that change a letter", "Reading words", "Reading lines"]);
   // Nothing is due and nothing is read yet: no Review row, no Quick ten row.
   await expect(page.locator("[data-row='review'], [data-row='quick-ten']")).toHaveCount(0);
-  // Every row of every list is a link, never a bare span (DP-09): 37 lessons and the 6 of the strand, 43 links.
-  await expect(page.locator("ol li")).toHaveCount(43);
-  await expect(page.locator("ol li > a[href^='/learn/service/']")).toHaveCount(43);
+  // Every row of every list is a link, never a bare span (DP-09): 37 morning lessons, the 6 of the strand and the 11 of the evening, 54 links.
+  await expect(page.locator("ol li")).toHaveCount(54);
+  await expect(page.locator("ol li > a[href^='/learn/service/']")).toHaveCount(54);
   expect(await noHorizontalScroll(page)).toBe(true);
 });
 
@@ -197,6 +199,73 @@ test("About names the teacher and the text, and goes back to the course", async 
   expect(await noHorizontalScroll(page)).toBe(true);
   await page.getByRole("link", { name: "Back to the course" }).click();
   await expect(page).toHaveURL(/\/learn\/service$/);
+});
+
+// 2.0 SC7: the evening and Havdalah lessons read the CRC siddur's own text from /api/public/evening-text. The unconfigured server has no
+// stored siddur book, so each test serves a synthetic one: invented letters, invented transliteration, an invented attribution.
+const EVENING = [["maariv-aravim", 37], ["ahavat-olam", 38], ["hashkiveinu", 42], ["shalom-rav", 50], ["yayin", 60], ["bsamim", 60], ["eish", 61], ["havdalah", 61], ["eliyahu", 62], ["miryam", 62], ["shavua-tov", 62]] as const;
+async function serveEvening(page: Page, status = 200) {
+  const asked: string[] = [];
+  await page.route("**/api/public/evening-text?**", async route => {
+    const url = new URL(route.request().url()), unit = url.searchParams.get("unit") ?? "";
+    asked.push(url.searchParams.get("build") === "781faabb7b21" && route.request().headers()["cookie"] === undefined ? unit : "wrong-request");
+    if (status !== 200) return route.fulfill({ status, contentType: "application/json", headers: { "cache-control": "no-store" }, body: JSON.stringify({ error: status === 404 ? "not-found" : "unavailable" }) });
+    const lines = Array.from({ length: 17 }, (_, i) => ({ he: syntheticLine(i).he, tr: syntheticLine(i).tr, ...(i === 16 ? { en: "Synthetic translation.\n~ Synthetic translator" } : {}) }));
+    return route.fulfill({ status: 200, contentType: "application/json", headers: { "cache-control": "no-store" },
+      body: JSON.stringify({ unit, volume: "legacy-beit-mitzvah", credit: { title: "Synthetic book", attribution: "Synthetic attribution for this congregation." }, lines }) });
+  });
+  return asked;
+}
+
+test("every evening and Havdalah lesson opens at 360 px, reads the siddur's text signed out, and runs to Done with its own evening page", async ({ page }) => {
+  const asked = await serveEvening(page);
+  for (const [id, pageNumber] of EVENING) {
+    await page.goto(`/learn/service/${id}`);
+    const main = page.locator("main#lesson-main");
+    await expect(main.getByRole("heading", { level: 1, name: "About this prayer" })).toBeVisible();
+    await expect(main.getByText("Rabbi Daniel Bogard", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Next" }).click();
+    await expect(main.getByText(`In your siddur it is on page ${pageNumber}.`)).toBeVisible();
+    await page.getByRole("button", { name: "Next" }).click();
+    await expect(main.getByRole("heading", { level: 1, name: "Read it" })).toBeVisible();
+    await expect(main.locator("ol li").first()).toBeVisible();
+    await expect(main.getByText("Synthetic attribution for this congregation.")).toBeVisible();
+    await expect(main.locator(`[data-siddur-page='${pageNumber}']`)).toBeVisible();
+    expect(await noHorizontalScroll(page), id).toBe(true);
+    await readToDone(page);
+    await expect(main.getByRole("link", { name: `Open in the siddur, page ${pageNumber}` })).toBeVisible();
+  }
+  expect(new Set(asked).has("wrong-request")).toBe(false);
+  expect(new Set(asked).size).toBe(11);
+});
+
+test("an evening lesson shows transliteration and the printed translation only on request, and its neighbours in the book's order", async ({ page }) => {
+  await serveEvening(page);
+  await page.goto("/learn/service/maariv-aravim");
+  const main = page.locator("main#lesson-main");
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(main.getByText("Ma’ariv Aravim comes after Bar’chu and before Ahavat Olam.")).toBeVisible();
+  await expect(main.getByText("Part of Saturday evening: the Sh’ma and its blessings.")).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(main.getByText(syntheticLine(0).tr)).toHaveCount(0);
+  await main.getByRole("button", { name: "Show transliteration" }).click();
+  await expect(main.getByText(syntheticLine(0).tr)).toBeVisible();
+  await expect(main.getByText("~ Synthetic translator")).toHaveCount(0);
+  await main.getByRole("button", { name: "Show English" }).click();
+  await expect(main.getByText(/~ Synthetic translator/)).toBeVisible();
+});
+
+test("an evening lesson off the CRC site says the course is not offered here, and a failed text offers Try again", async ({ page }) => {
+  await serveEvening(page, 404);
+  await page.goto("/learn/service/yayin");
+  for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.getByText("The service course isn’t available here yet.")).toBeVisible();
+  await page.unroute("**/api/public/evening-text?**");
+  await serveEvening(page, 503);
+  await page.goto("/learn/service/yayin");
+  for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.getByText("The prayer text did not load. Try again.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
 });
 
 test("the strand of letters is open and an unknown lesson is a plain 404, as in Learn to lein", async ({ page }) => {

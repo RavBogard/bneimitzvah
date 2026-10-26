@@ -68,7 +68,7 @@ export function createPortionSummaryTools<Q extends PgQueryResultHKT>(): readonl
     {
       name: "approve_portion_summary", roles: ["admin"], scope: SCOPES.study, attendedOnly: true,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-      description: "Approve one draft revision, exactly as listed: it becomes the parashah's public portion summary, credited \"Rabbi Daniel Bogard\", and will show once the reading page displays summaries. Only when the rabbi has read that exact text in this conversation and says to approve it. A revision approved before it for the same parashah is withdrawn. Never from a scheduled routine.",
+      description: "Approve one draft revision, exactly as listed: it becomes the parashah's public portion summary, credited \"Rabbi Daniel Bogard\", and shows atop Study on the reading page, on /read and on a student's own reading, within about ten minutes. Only when the rabbi has read that exact text in this conversation and says to approve it. A revision approved before it for the same parashah is withdrawn. Never from a scheduled routine.",
       inputSchema: closed({ reading, revision }, ["reading", "revision"]),
       handler: async (input, ctx) => refusal(ctx, true, true) ?? outcome(await approveSummary(summaryAuthority(ctx, "data-write"), input)),
     },

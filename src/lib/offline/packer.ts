@@ -6,7 +6,10 @@ import type { ShortReferenceSource } from "../reference-audio/short-source";
 import { coursePassages } from "../../components/learn/verses-api";
 import { parsePublicRefReading, parsePublicShortPage, parsePublicTextPage, parsePublicWeek, refSource, weekSource, type PublicSource } from "../../components/portal/public-reading/api";
 import { publicReadingPath, publicShortPath, publicTextPath } from "../../components/portal/public-reading/urls";
-import { BUDGET, OFFLINE_CACHE, OFFLINE_PACKS_PATH, OWNER_KEY, RENEW_AFTER_MS, OFFLINE_HEADER, PACK_CONCURRENCY, packAssetAllowed, packRefAllowed, WINDOW_MS, type Pack, type PackDescriptor } from "./policy";
+import { BUDGET, OFFLINE_CACHE, OFFLINE_PACKS_PATH, OWNER_KEY, RENEW_AFTER_MS, OFFLINE_HEADER, PACK_CONCURRENCY, ownerOnlyAsset, packAssetAllowed, packRefAllowed, WINDOW_MS, type Pack, type PackDescriptor } from "./policy";
+import { CRC_TENANT, EVENING_TEXT_UNITS } from "../service-course/course";
+import { parseEveningText } from "../service-course/text";
+import { eveningTextPath } from "../../components/learn/service/text-api";
 import { assetKey, inspectPack, packingStarted, purgeGeneration, readIndex, refreshOfflineState, setOfflineState, sweep, trackPacking, writeIndex, type PackState } from "./pack-index";
 
 /**
@@ -32,7 +35,8 @@ export type PackerIo = Readonly<{
   owner?: (signal: AbortSignal) => Promise<OwnerAnswer>;
 }>;
 export type OwnerPack = Readonly<{ kind: "torah" | "haftarah"; ref: string; name: string | null }>;
-export type OwnerAnswer = Readonly<{ state: "owner"; owner: string; packs: readonly OwnerPack[] }> | Readonly<{ state: "signed-out" }> | Readonly<{ state: "unknown" }>;
+/** `evening`: this signed-in person may keep the CRC siddur's evening text on the device (2.0 SC7; CRC people only, never signed out). */
+export type OwnerAnswer = Readonly<{ state: "owner"; owner: string; packs: readonly OwnerPack[]; evening?: boolean }> | Readonly<{ state: "signed-out" }> | Readonly<{ state: "unknown" }>;
 const UNKNOWN: OwnerAnswer = Object.freeze({ state: "unknown" });
 const OWNER_PACKS = 8;
 
@@ -40,8 +44,10 @@ const OWNER_PACKS = 8;
 export function parseOwnerAnswer(status: number, body: unknown): OwnerAnswer {
   if (status === 401 || status === 403) return Object.freeze({ state: "signed-out" });
   if (status !== 200 || !body || typeof body !== "object" || Array.isArray(body)) return UNKNOWN;
-  const row = body as Record<string, unknown>;
-  if (Object.keys(row).sort().join() !== "owner,packs" || typeof row.owner !== "string" || !OWNER_KEY.test(row.owner) || !Array.isArray(row.packs) || row.packs.length > OWNER_PACKS) return UNKNOWN;
+  const row = body as Record<string, unknown>, keys = Object.keys(row).sort().join();
+  // `evening` (2.0 SC7) is a boolean when present; an answer without it keeps no evening text.
+  if ((keys !== "owner,packs" && keys !== "evening,owner,packs") || (keys.startsWith("evening") && typeof row.evening !== "boolean")
+    || typeof row.owner !== "string" || !OWNER_KEY.test(row.owner) || !Array.isArray(row.packs) || row.packs.length > OWNER_PACKS) return UNKNOWN;
   const packs: OwnerPack[] = [];
   for (const raw of row.packs) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return UNKNOWN;
@@ -53,8 +59,10 @@ export function parseOwnerAnswer(status: number, body: unknown): OwnerAnswer {
     if (p.name !== null && (typeof p.name !== "string" || p.name.length < 1 || Array.from(p.name).length > 80 || /[\u0000-\u001f\u007f-\u009f]/.test(p.name))) return UNKNOWN;
     packs.push(Object.freeze({ kind: p.kind, ref: p.ref, name: p.name as string | null }));
   }
-  return Object.freeze({ state: "owner", owner: row.owner, packs: Object.freeze(packs) });
+  return Object.freeze({ state: "owner", owner: row.owner, packs: Object.freeze(packs), ...(row.evening === true ? { evening: true } : {}) });
 }
+/** The owner pack that holds the evening lessons' text, when the private endpoint allows it. */
+export const EVENING_PACK_KEY = "evening";
 /** Asks the private endpoint with the session cookie, never stored (no-store, and the worker does not handle it). */
 export async function askOwner(io: Pick<PackerIo, "origin" | "fetch">, signal: AbortSignal): Promise<OwnerAnswer> {
   const url = io.origin + OFFLINE_PACKS_PATH;
@@ -147,6 +155,20 @@ async function planRef(io: PackerIo, kind: "torah" | "haftarah", ref: string, si
   return plan;
 }
 
+/**
+ * The evening lessons' text (2.0 SC7): every Saturday-evening unit the course names, from the public route with no cookie, each answer
+ * checked by the browser's own parser. Only ever an owner pack, named by the private endpoint for a signed-in CRC person.
+ */
+async function planEvening(io: PackerIo, signal: AbortSignal, generation: number): Promise<Plan> {
+  const plan: Plan = { label: "", json: new Map(), clips: new Map(), bytes: 0 };
+  for (const unit of [...EVENING_TEXT_UNITS].sort()) {
+    const body = await fetchJson(io, eveningTextPath(unit), signal, plan, generation);
+    if (!parseEveningText(body, unit, CRC_TENANT.siddurBook)) throw new PackStopped("failed");
+  }
+  if (!plan.json.size) throw new PackStopped("failed");
+  return plan;
+}
+
 async function pool<T>(items: readonly T[], work: (item: T) => Promise<void>) {
   let next = 0, failure: unknown = null;
   await Promise.all(Array.from({ length: Math.min(PACK_CONCURRENCY, items.length) }, async () => {
@@ -158,9 +180,11 @@ async function pool<T>(items: readonly T[], work: (item: T) => Promise<void>) {
 /** Builds or renews one pack. Resolves to the state the pack is in afterwards. An owner pack names its owner and label. */
 export async function renewPack(io: PackerIo, descriptor: PackDescriptor, signal: AbortSignal, own?: Readonly<{ owner: string; label: string }>): Promise<PackState> {
   const generation = purgeGeneration(), now = io.now();
-  if ((descriptor.type === "ref") !== (own !== undefined) || (own && !OWNER_KEY.test(own.owner))) throw new PackStopped("failed");
+  // A ref, or the evening text, is an owner's pack and nothing else is: neither is ever packed without an owner.
+  if ((descriptor.type === "ref" || descriptor.type === "evening") !== (own !== undefined) || (own && !OWNER_KEY.test(own.owner))) throw new PackStopped("failed");
   const plan = descriptor.type === "week" ? await planWeek(io, descriptor.date, signal, generation)
-    : descriptor.type === "ref" ? await planRef(io, descriptor.kind, descriptor.ref, signal, generation) : await planCourse(io, signal, generation);
+    : descriptor.type === "ref" ? await planRef(io, descriptor.kind, descriptor.ref, signal, generation)
+    : descriptor.type === "evening" ? await planEvening(io, signal, generation) : await planCourse(io, signal, generation);
   if (purgeGeneration() !== generation || signal.aborted) throw new PackStopped("purged");
   const cache = await io.caches.open(OFFLINE_CACHE);
   const missing: ShortReferenceSource[] = [];
@@ -192,7 +216,9 @@ export async function renewPack(io: PackerIo, descriptor: PackDescriptor, signal
   const assets = [...plan.json.keys(), ...plan.clips.keys()];
   if (!assets.every(packAssetAllowed)) throw new PackStopped("failed");
   if (purgeGeneration() !== generation || signal.aborted) throw new PackStopped("purged");
-  const key = descriptor.type === "week" ? `week:${descriptor.date}` : descriptor.type === "ref" ? ownerPackKey(descriptor.kind, descriptor.ref) : "course";
+  const key = descriptor.type === "week" ? `week:${descriptor.date}` : descriptor.type === "ref" ? ownerPackKey(descriptor.kind, descriptor.ref) : descriptor.type === "evening" ? EVENING_PACK_KEY : "course";
+  // The evening text only ever enters an owner's pack; nothing else may carry it.
+  if ((descriptor.type === "evening") !== assets.some(ownerOnlyAsset) || (descriptor.type === "evening" && !assets.every(ownerOnlyAsset))) throw new PackStopped("failed");
   const pack: Pack = Object.freeze({ key, owner: own ? own.owner : "public", label: own ? own.label : plan.label, descriptor, assets: Object.freeze(assets),
     bytes: plan.bytes + [...plan.clips.values()].reduce((sum, source) => sum + source.bytes, 0), renewedAt: now, expiresAt: now + WINDOW_MS, format: 1 });
   const index = await readIndex(cache);
@@ -227,7 +253,7 @@ export async function openOffline(io: PackerIo & { locks?: Locks | null }) {
       setOfflineState({ week: null, course: null, savedUntil: null });
       cache = await io.caches.open(OFFLINE_CACHE);
     }
-    const listed = new Set(answer.state === "owner" ? answer.packs.map(pack => ownerPackKey(pack.kind, pack.ref)) : []);
+    const listed = new Set(answer.state === "owner" ? [...answer.packs.map(pack => ownerPackKey(pack.kind, pack.ref)), ...(answer.evening === true ? [EVENING_PACK_KEY] : [])] : []);
     await sweep(cache, io.now(), pack => (pack.descriptor.type !== "week" || pack.key === weekKey) && (pack.owner === "public" || answer.state === "unknown" || listed.has(pack.key)),
       answer.state === "owner" ? answer.owner : answer.state === "signed-out" ? null : undefined);
     if (answer.state !== "unknown") setOfflineState({ ownerChecked: true });
@@ -236,6 +262,8 @@ export async function openOffline(io: PackerIo & { locks?: Locks | null }) {
     type Job = Readonly<{ key: string; descriptor: PackDescriptor; state?: "week" | "course"; own?: Readonly<{ owner: string; label: string }> }>;
     const own: Job[] = answer.state === "owner" ? answer.packs.map(pack => ({ key: ownerPackKey(pack.kind, pack.ref), descriptor: Object.freeze({ type: "ref" as const, kind: pack.kind, ref: pack.ref }),
       own: Object.freeze({ owner: answer.owner, label: pack.name ?? "" }) })) : [];
+    // The evening lessons' text, for a signed-in CRC person only (2.0 SC7): an owner pack, so a sign-out or another account removes it.
+    if (answer.state === "owner" && answer.evening === true) own.push({ key: EVENING_PACK_KEY, descriptor: Object.freeze({ type: "evening" as const }), own: Object.freeze({ owner: answer.owner, label: "" }) });
     // This week first, then the person's own readings, then the course.
     const jobs: Job[] = [{ key: weekKey, descriptor: { type: "week", date }, state: "week" }, ...own, { key: "course", descriptor: { type: "course" }, state: "course" }];
     for (const job of jobs) {

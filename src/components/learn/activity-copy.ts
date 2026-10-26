@@ -49,6 +49,20 @@ export const NEW = Object.freeze({
   quickTenLoading: "Loading the phrases…",
 });
 
+/** T3 wording, approved by Daniel 2026-10-25 (cowork-offload 1.9 T3-STRINGS, "Approved": P4-3 to P4-7). Positions only, never a score. */
+export const POSITION = Object.freeze({
+  /** P4-3: under the bar during the ten. */
+  quickTen: (n: number) => `Phrase ${n} of 10`,
+  /** P4-4: when a missed phrase comes back after the ten, so "11 of 10" never shows. */
+  quickTenAgain: "One more try",
+});
+/** P4-5 to P4-7: Build the phrase, spoken to screen readers after each tap. */
+export const BUILD_SAY = Object.freeze({
+  placed: (mark: string, n: number, total: number) => `${mark}, ${n} of ${total} in place.`,
+  later: (mark: string) => `${mark} comes later in the phrase.`,
+  complete: "All the marks are in order.",
+});
+
 /** The tell line for a look-alike word's mark (learn-next-activities.md), by where the mark sits on this word. */
 export function lookTell(side: { word: Pick<LookAlikeWord, "mark" | "text"> }): string {
   const { mark, text } = side.word, place = markPlace(text, mark), tells = DRAFTED.lookAlikes.tells;

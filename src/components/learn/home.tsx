@@ -10,6 +10,7 @@ import { DRAFTED } from "./activity-copy";
 import { ContourMark, FamilyChip, icons } from "./bits";
 import { firstVerseOf, useOwnReading, type OwnReading } from "./own-reading";
 import { useProgress } from "./services";
+import { useVerseReview } from "./own-verses";
 import { LearningStart } from "./learning-start";
 import styles from "./learn.module.css";
 
@@ -40,9 +41,11 @@ function PathList({ melody, progress, next, after }: { melody: Melody; progress:
 /**
  * 1.9 N17: a signed-in student's first phrase, a path row like Quick ten after the endings. It opens the existing passage preparation
  * on the first verse of their own assigned reading, so it adds no lesson and no progress key. Signed-out visitors and everyone
- * without an assignment see no row (the signed-out wording is not approved).
+ * without an assignment see "This week's first phrase" (T3 CUR-1, Daniel 2026-10-25), which opens this week's reading on its first part;
+ * nothing shows while the account answer is pending, so a student never first sees the week's row.
  */
 export function FirstPhraseRow({ own, melody }: { own: OwnReading; melody: Melody }) {
+  if (own.status === "none") return <a className={styles.review} href={melody === "haftarah" ? "/learn/prepare?kind=haftarah" : "/learn/prepare"} data-first-phrase={melody} data-first-phrase-source="week"><span>This week's first phrase</span>{icons.arrow}</a>;
   const reading = own.status === "ready" ? own[melody] : null;
   if (!reading) return null;
   return <a className={styles.review} href={preparationHref(firstVerseOf(reading), melody)} data-first-phrase={melody}><span>First phrase of your verse</span>{icons.arrow}</a>;
@@ -64,6 +67,8 @@ export function CourseHome() {
   const haftarahOpen = isUnlocked(progress, pathLessons("haftarah")[0]);
   // 1.9 N17: a student whose own reading is a haftarah sees that path first; the order of the two paths is otherwise unchanged.
   const own = useOwnReading(), mine = own.status === "ready" ? own : null, haftarahFirst = !!mine?.haftarah && !mine.torah;
+  // 1.9 N19: opening Learn brings the student's Got it and Solid verses into their own verse cards.
+  useVerseReview(!!mine);
   const paths = (["torah", "haftarah"] as const).map(melody => melody === "torah"
     ? <section key="torah" aria-labelledby="path-torah"><div className={styles.pathHead}><h2 id="path-torah">Torah</h2></div><PathList melody="torah" progress={progress} next={next} after={<FirstPhraseRow own={own} melody="torah" />} /></section>
     : <section key="haftarah" aria-labelledby="path-haftarah"><div className={styles.pathHead}><h2 id="path-haftarah">Haftarah</h2>{!haftarahOpen && <span className={styles.pathNote}>Best after The two endings.</span>}</div>
@@ -85,9 +90,11 @@ export function CourseHome() {
               <div className={styles.nextAction}><a className="button-start" href={`/learn/${next.id}`} aria-describedby="learn-next">Start</a><span className={styles.minutes}>about {lessonMinutes(next)} minutes</span></div>
             </section>}
           {review && <a className={styles.review} href="/learn/review"><span>{reviewLine(review)}</span>{icons.arrow}</a>}
+          {/* 1.9 N19: a student with their own reading runs through it, no audio and colours off. */}
+          {mine && <a className={styles.review} href="/learn/run-through" data-run-through><span>Run-through</span>{icons.arrow}</a>}
           {ready && <QuickTenLinks progress={progress} />}
           <LearningStart />
-          <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a>{mine && <a href="/workspace/student">Back to my reading</a>}</nav>
+          <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a>{mine && <a href="/workspace/student?tab=reading">Back to my reading</a>}</nav>
           {account.state !== "synced" && <p className={styles.saved}>Progress is saved on this device. <a href="/sign-in">Sign in</a> to keep it.</p>}
         </div>
         <div className={styles.paths}>{paths}</div>

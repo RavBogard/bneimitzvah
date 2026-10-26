@@ -40,7 +40,7 @@ async function page(mode: "student" | "parent" = "student") {
     expect(await tab.evaluate(async () => (await fetch("/api/auth/sign-in/magic-link", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "pg-tutor@example.test" }) })).status)).toBe(200);
     await openAuthMail(tab, fixture.takeMail("pg-tutor@example.test")); cached.set("tutor", await context.cookies());
   }
-  await tab.goto(`/workspace/${mode}`, { waitUntil: "domcontentloaded" });
+  await tab.goto(`/workspace/${mode}${mode === "student" ? "?tab=reading" : ""}`, { waitUntil: "domcontentloaded" });
   if (mode === "parent") await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click();
   await ui(tab.locator(".study-verses")).toBeVisible(); await heldReading(tab); return tab;
 }

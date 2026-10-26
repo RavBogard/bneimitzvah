@@ -44,10 +44,19 @@ export function StaffPracticeDays({ calendar, firstName }: { calendar: PracticeC
   </section>;
 }
 
-function PracticeMonths({ today, first, practiced }: { today: number; first: number; practiced(ordinal: number): boolean }) {
+/** A day the calendar marks apart from practice: a rehearsal or the ceremony (1.9 N11). The word is said to assistive technology and in the key. */
+export type CalendarMark = "rehearsal" | "ceremony";
+const markWords: Record<CalendarMark, string> = { rehearsal: "Rehearsal", ceremony: "Ceremony" };
+
+/**
+ * The month view. By default it runs from the first day of the window to this month. `marks` names days to mark (a rehearsal, the
+ * ceremony) and `lastDay` carries the months forward to that day, so a student can see the ceremony month ahead of time.
+ */
+export function PracticeMonths({ today, first, practiced, marks, lastDay }: { today: number; first: number; practiced(ordinal: number): boolean; marks?: ReadonlyMap<string, CalendarMark>; lastDay?: number }) {
   const now = parts(today), earliest = parts(first), index = (year: number, month: number) => year * 12 + month - 1;
   const [shown, setShown] = useState(index(now.year, now.month));
-  const min = index(earliest.year, earliest.month), max = index(now.year, now.month), at = Math.min(Math.max(shown, min), max);
+  const ahead = lastDay !== undefined && lastDay > today ? parts(lastDay) : now;
+  const min = index(earliest.year, earliest.month), max = index(ahead.year, ahead.month), at = Math.min(Math.max(shown, min), max);
   const year = Math.floor(at / 12), month = at % 12 + 1, begin = dayOrdinal(`${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-01`);
   const length = dayOrdinal(dayString(begin + 31).slice(0, 8) + "01") - begin, lead = weekday(begin);
   const cells = [...Array<null>(lead).fill(null), ...Array.from({ length }, (_, day) => begin + day)];
@@ -65,11 +74,12 @@ function PracticeMonths({ today, first, practiced }: { today: number; first: num
       <tbody>{weeks.map((week, row) => <tr key={row}>{Array.from({ length: 7 }, (_, column) => {
         const ordinal = week[column];
         if (ordinal === null || ordinal === undefined) return <td key={column} />;
-        const done = ordinal <= today && ordinal >= first && practiced(ordinal);
-        return <td key={column} className={`${done ? "practice-cell-done" : ""}${ordinal === today ? " practice-cell-today" : ""}${ordinal > today ? " practice-cell-future" : ""}`.trim() || undefined}>
-          <span aria-hidden="true" className="practice-cell-mark">{parts(ordinal).day}</span><span className="sr-only">{spoken(ordinal)}{ordinal === today ? ", today" : ""}{done ? ", practiced" : ""}</span>
+        const done = ordinal <= today && ordinal >= first && practiced(ordinal), mark = marks?.get(dayString(ordinal));
+        return <td key={column} className={`${done ? "practice-cell-done" : ""}${ordinal === today ? " practice-cell-today" : ""}${ordinal > today ? " practice-cell-future" : ""}${mark ? ` practice-cell-${mark}` : ""}`.trim() || undefined}>
+          <span aria-hidden="true" className="practice-cell-mark">{parts(ordinal).day}</span><span className="sr-only">{spoken(ordinal)}{ordinal === today ? ", today" : ""}{done ? ", practiced" : ""}{mark ? `, ${markWords[mark].toLowerCase()}` : ""}</span>
         </td>;
       })}</tr>)}</tbody>
     </table>
+    {marks && marks.size > 0 && <ul className="practice-key">{(["rehearsal", "ceremony"] as const).filter(kind => [...marks.values()].includes(kind)).map(kind => <li key={kind}><span aria-hidden="true" className={`practice-key-swatch practice-key-${kind}`} />{markWords[kind]}</li>)}</ul>}
   </details>;
 }

@@ -26,7 +26,7 @@ const fail = (code: FailureCode, problems?: readonly string[]): SummaryFailure =
 const digest = (parts: unknown) => createHash("sha256").update(canonical(parts)).digest("hex");
 const LIST_LIMIT = 50;
 /** Until N7 renders summaries on the reader (and N24 packs them), an approval is public data that no page shows yet: say so. */
-const APPROVED_NOTE = "Approved. It is the parashah's public portion summary and will show once the reading page displays summaries.";
+const APPROVED_NOTE = "Approved. It is the parashah's public portion summary and shows atop Study on the reading page, on /read and on a student's own reading, within about ten minutes.";
 const revisionOf = (value: unknown) => Number.isSafeInteger(value) && (value as number) >= 1 && (value as number) < 2147483647 ? value as number : null;
 const view = (row: data.SummaryRow) => Object.freeze({ reading: row.readingKey, revision: row.revision, status: row.status,
   summary: row.summary, outline: Object.freeze(row.outline.map((line, i) => Object.freeze({ aliyah: i + 1, line }))),

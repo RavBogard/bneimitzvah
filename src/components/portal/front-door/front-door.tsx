@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { thisShabbat } from "../../../lib/readings/public-shabbat";
+import { addDays, congregationToday, isSaturday, thisShabbat } from "../../../lib/readings/public-shabbat";
 import { fetchPublicWeek, type PublicWeek } from "../public-reading/api";
+import { readAddress } from "../public-reading/urls";
 import { MyReadings } from "../saved/my-readings";
 import { InstallHint } from "../offline/install-hint";
 import { SavedLine } from "../offline/status";
@@ -16,14 +17,14 @@ const displayRange = (ranges: readonly string[]) => ranges.join("; ").replace(/(
 const longDate = (date: string) => new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
 const FALLBACK_TITLE = "This week’s reading";
 
-/** What This week shows: nothing known yet (loading), the week, or a failure. */
-export type ThisWeekState = Readonly<{ date: string | null; status: "loading" } | { date: string; status: "ready"; week: PublicWeek } | { date: string | null; status: "failed" }>;
+/** What This week shows: nothing known yet (loading), the week, or a failure. On a Saturday the home leads with the Shabbat after it (`next`, 1.9 N5): the reading of the day is known to the people at the service, so what they come to the page for is the week ahead. */
+export type ThisWeekState = Readonly<{ date: string | null; status: "loading" } | { date: string; status: "ready"; week: PublicWeek } | { date: string | null; status: "failed" }> & Readonly<{ next?: boolean }>;
 
 /** This Shabbat at display scale. Lein and Study always work, whatever the reading call did. */
 export function ThisWeekView({ state }: { state: ThisWeekState }) {
   const week = state.status === "ready" ? state.week : null, loading = state.status === "loading";
   return <section className={styles.week} aria-labelledby="this-week-title" aria-busy={loading}>
-    <p className={styles.eyebrow}>This Shabbat</p>
+    <p className={styles.eyebrow}>{state.next ? "Next Shabbat" : "This Shabbat"}</p>
     <h1 id="this-week-title" className={styles.parashah}>
       {loading ? <><span className="sr-only">{FALLBACK_TITLE}</span><span className={styles.skeleton} aria-hidden="true" data-skeleton /></> : week?.parashah ?? FALLBACK_TITLE}
     </h1>
@@ -31,8 +32,9 @@ export function ThisWeekView({ state }: { state: ThisWeekState }) {
       {week?.torah && <> · Torah <bdi dir="ltr">{displayRange(week.torah.ranges)}</bdi></>}
       {week?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(week.haftarah.ranges)}</bdi></>}</p>}
     <div className={styles.actions}>
-      <a className="button-start" href="/read">Lein</a>
-      <a className="button-hero-secondary" href="/read?lens=study">Study</a>
+      <a className="button-start" href={state.next && state.date ? readAddress({ mode: "week", date: state.date, kind: null }) : "/read"}>Lein</a>
+      <a className="button-hero-secondary" href={state.next && state.date ? readAddress({ mode: "week", date: state.date, kind: null }, { study: true }) : "/read?lens=study"}>Study</a>
+      {state.next && <a className="button-hero-secondary" href="/read">This Shabbat</a>}
     </div>
   </section>;
 }
@@ -42,11 +44,11 @@ function ThisWeek() {
   const [state, setState] = useState<ThisWeekState>({ date: null, status: "loading" });
   useEffect(() => {
     const controller = new AbortController();
-    let date: string;
-    try { date = thisShabbat(); } catch { setState({ date: null, status: "failed" }); return; }
-    setState({ date, status: "loading" });
-    fetchPublicWeek(date, controller.signal).then(week => { if (!controller.signal.aborted) setState({ date, status: "ready", week }); },
-      () => { if (!controller.signal.aborted) setState({ date, status: "failed" }); });
+    let date: string, next = false;
+    try { const today = congregationToday(); next = isSaturday(today); date = next ? addDays(today, 7) : thisShabbat(); } catch { setState({ date: null, status: "failed" }); return; }
+    setState({ date, status: "loading", next });
+    fetchPublicWeek(date, controller.signal).then(week => { if (!controller.signal.aborted) setState({ date, status: "ready", week, next }); },
+      () => { if (!controller.signal.aborted) setState({ date, status: "failed", next }); });
     return () => controller.abort();
   }, []);
   return <ThisWeekView state={state} />;

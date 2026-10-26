@@ -9,10 +9,18 @@ import { GuidedPreparation } from "./guided-preparation";
 import { useReadingVerses } from "./week-data";
 import styles from "./learn.module.css";
 
-/** Keep the established lesson IDs/progress contract while teaching a complete preparation loop. */
+/** What the line above the practice says for a course verse (T3 N19a-7); any other course verse keeps the general line. */
+const COURSE_LINE: Readonly<Record<string, string>> = Object.freeze({ "Genesis 1:1": "The first verse of the Torah.", "Exodus 25:8": "A shorter verse from Exodus." });
+const COURSE_LINE_DEFAULT = "A teaching example from the course.";
+
+/**
+ * Keep the established lesson IDs/progress contract while teaching a complete preparation loop. A lesson with a course source
+ * (N19a: Genesis 1:1, then Exodus 25:8) starts on its own verses and never asks for this week's reading; a student's own
+ * assigned reading (N17) still comes first, and the haftarah lesson still takes the week's shortest verse.
+ */
 export function FirstVerse({ lesson, onDone }: { lesson: Lesson; onDone(): void }) {
   const activity = lesson.activities.find((row): row is FirstVerseActivity => row.type === "first-verse")!;
-  const kind = activity.params.kind, week = useReadingVerses(kind), fallbackData = useCourseVerses(useMemo(() => [lesson], [lesson]));
+  const kind = activity.params.kind, week = useReadingVerses(kind, 0, activity.params.source !== "course"), fallbackData = useCourseVerses(useMemo(() => [lesson], [lesson]));
   const weekCandidates = useMemo(() => week.status !== "ready" ? [] : week.source === "own" ? ownVerseCandidates(week.verses) : firstVerseCandidates(week.verses, activity.params.maxWords), [week, activity.params.maxWords]);
   const fallback = useMemo(() => fallbackData.status === "ready" ? (fallbackData.examples.get(lesson.id) ?? []).map(row => row.verse) : [], [fallbackData, lesson.id]);
   const candidates = [...weekCandidates.map(verse => ({ verse, fromWeek: true })), ...fallback.filter(verse => !weekCandidates.some(other => other.ref === verse.ref)).map(verse => ({ verse, fromWeek: false }))];
@@ -25,9 +33,9 @@ export function FirstVerse({ lesson, onDone }: { lesson: Lesson; onDone(): void 
   const { verse, fromWeek } = selected, own = fromWeek && week.status === "ready" && week.source === "own", position = week.status === "ready" ? week.refs.indexOf(verse.ref) + 1 : 0;
   const lein = fromWeek && !own && week.status === "ready" && position > 0 ? leinHref({ date: week.date, kind, verse: position }) : leinHref({ ref: verse.ref, kind, verse: 1 });
   return <>
-    <p className={styles.listen}>{own ? "In your reading" : fromWeek ? "One verse from this week's reading." : "A teaching example from the course."}</p>
-    {own && <p className={styles.muted}><a href="/workspace/student">Back to my reading</a></p>}
-    {!fromWeek && !weekCandidates.length && <p className={styles.muted}>From the course's own verses while this week's recording is not ready.</p>}
+    <p className={styles.listen}>{own ? "In your reading" : fromWeek ? "One verse from this week's reading." : COURSE_LINE[verse.ref] ?? COURSE_LINE_DEFAULT}</p>
+    {own && <p className={styles.muted}><a href="/workspace/student?tab=reading">Back to my reading</a></p>}
+    {!fromWeek && !weekCandidates.length && activity.params.source !== "course" && <p className={styles.muted}>From the course's own verses while this week's recording is not ready.</p>}
     {fromWeek && !own && week.status === "ready" && week.shifted && <p className={styles.muted}>Showing the coming Shabbat.</p>}
     <GuidedPreparation key={`${verse.kind}:${verse.ref}`} verse={verse} lein={activity.params.openInLein ? lein : null} onDone={onDone}
       onAnother={candidates.length > 1 ? () => setChoice(value => value + 1) : undefined} />

@@ -169,7 +169,7 @@ dd { margin: 0; font-weight: 600; }
 .skip-link:focus { top: 1rem; }
 [lang="he"] { direction: rtl; line-height: 2; letter-spacing: normal; font-feature-settings: "mark", "mkmk"; }
 html { scrollbar-color: var(--color-control-rule) var(--color-canvas); scrollbar-width: thin; }
-.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; min-height: 0; clip-path: inset(50%); white-space: nowrap; border: 0; }
 @media (max-width: 900px) {
   .portal-shell { padding-inline: 2rem; }
   .entry-layout { column-gap: 3rem; padding-top: 4rem; }
@@ -438,6 +438,7 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 @media (max-width: 640px) { .hero-slot-time { display: none; } }
 .hero-date { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; color: var(--color-muted); font-variant-numeric: tabular-nums; }
 .hero-rehearsals { margin: 0.125rem 0 0; color: var(--color-muted); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+.hero-date time, .hero-rehearsals time, .hero-days { white-space: nowrap; }
 .hero-days { background: var(--marigold); color: var(--on-ink); font-weight: 650; font-size: 0.875rem; padding: 0.125rem 0.625rem; border-radius: 999px; }
 .hero-icon { margin-inline-start: auto; display: inline-grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 999px; background: transparent; color: var(--color-muted); }
 .hero-icon:hover { background: var(--color-hover); color: var(--color-ink); }
@@ -487,6 +488,17 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .practice-cell-today .practice-cell-mark { box-shadow: inset 0 0 0 2px var(--lake); }
 .practice-cell-done.practice-cell-today .practice-cell-mark { box-shadow: 0 0 0 2px var(--color-canvas), 0 0 0 4px var(--lake); }
 .practice-grid .practice-cell-future { color: var(--color-muted); }
+/* 1.9 N11: a rehearsal is a lake ring, the ceremony a marigold disc; the key under the month says which is which, in words. */
+.practice-grid .practice-cell-rehearsal { color: var(--color-ink); }
+.practice-cell-rehearsal .practice-cell-mark { box-shadow: inset 0 0 0 3px var(--color-action); font-weight: 700; }
+.practice-grid .practice-cell-ceremony { color: var(--on-ink); }
+.practice-cell-ceremony .practice-cell-mark { background: var(--marigold); font-weight: 750; }
+.practice-key { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; max-width: 19rem; margin: 0.5rem 0 0; padding: 0; list-style: none; color: var(--color-muted); font-size: 0.875rem; }
+.practice-key li { display: inline-flex; align-items: center; gap: 0.5rem; }
+.practice-key-swatch { width: 0.875rem; height: 0.875rem; border-radius: 50%; }
+.practice-key-rehearsal { box-shadow: inset 0 0 0 3px var(--color-action); }
+.practice-key-ceremony { background: var(--marigold); }
+@media (forced-colors: active) { .practice-cell-ceremony .practice-cell-mark { forced-color-adjust: none; background: Highlight; color: HighlightText; } .practice-key-ceremony { forced-color-adjust: none; background: Highlight; } }
 
 /* Torah / Haftarah as one segmented control. */
 .study-kind-choice { display: flex; flex-wrap: wrap; gap: 0.25rem; width: fit-content; max-width: 100%; padding: 0.25rem; border-radius: 999px; background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
@@ -516,9 +528,9 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 
 /* Verses are objects you can tap. */
 .assigned-study { border-top: 0; padding-top: 0; --hebrew-size: 2rem; }
-.assigned-study[data-size="small"] { --hebrew-size: 1.625rem; }
-.assigned-study[data-size="large"] { --hebrew-size: 2.5rem; }
-.assigned-study[data-size="huge"] { --hebrew-size: 3.125rem; }
+.assigned-study[data-size="small"] { --hebrew-size: 1.625rem; --comment-scale: 0.8125; }
+.assigned-study[data-size="large"] { --hebrew-size: 2.5rem; --comment-scale: 1.25; }
+.assigned-study[data-size="huge"] { --hebrew-size: 3.125rem; --comment-scale: 1.5625; }
 .study-hebrew { font-size: var(--hebrew-size, 2rem); margin-block: 0.5rem 0.25rem; }
 .study-verses { margin-block: 1.25rem; }
 .study-verses > li { margin: 0 0 0.75rem; padding: 0; border: 0; }
@@ -682,6 +694,22 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
   html:has(.reading-toolbar) { --dock-base: var(--shell-bar-h, env(safe-area-inset-bottom, 0px)); }
 }
 @media print { .reading-toolbar { display: none; } }
+
+/* 1.9 N7: the Study sources column. From 1180px (a laptop) the curated sources stand in their own column to the right of the verses, as the layout's last column, and stay in
+   view as the page scrolls; the Hebrew keeps its size setting (the text column only wraps more). Narrower, the column is not drawn and a "Sources" button in flow above the text
+   opens the same list in the Sheet: one tap, over no verse. */
+.reading-sources-open { margin-block: 0.25rem 0.5rem; }
+.reading-sources-open .button-secondary { min-height: 44px; }
+.reading-sources-column { display: none; }
+@media (min-width: 1180px) {
+  .reading-sources-open { display: none; }
+  .reading-passage-layout:has(> .reading-sources-column) { display: grid; grid-template-columns: minmax(0, 1fr) 6.5rem minmax(14rem, 18rem); column-gap: 1.5rem; }
+  .reading-passage-layout:has(> .reading-sources-column):not(:has(> .reading-toolbar)) { grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem); }
+  .reading-passage-layout:has(> .reading-sources-column) > :not(.reading-toolbar):not(.reading-sources-column) { grid-column: 1; min-width: 0; }
+  .reading-sources-column { display: block; grid-column: 3; grid-row: 1; align-self: start; position: sticky; top: 5rem; max-height: calc(100svh - 6rem); overflow-y: auto; overscroll-behavior: contain; padding-inline-start: 1rem; box-shadow: inset 1px 0 0 var(--color-rule); }
+  .reading-passage-layout:not(:has(> .reading-toolbar)) > .reading-sources-column { grid-column: 2; }
+  .reading-sources-column > section { margin-block: 0; max-inline-size: none; }
+}
 
 /* The selected verse's bar (1.9 N4): its tools (one Sheet), Up close and its mark, under the passage. */
 .study-verse-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; margin-block: 1.25rem 0; }
@@ -1090,3 +1118,21 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
   :is(button, a)[aria-pressed="true"], :is(button, a, [role="tab"])[aria-selected="true"], a[aria-current="page"], .toolbar-item[data-active="true"] {
     forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
 }
+
+/* 1.9 N5: on /read the reading starts at the top of the screen (the first Hebrew above y 320 on a Pixel 7): the header, the lenses and the chips are tight, and the first section label and verse close up under them. */
+@media (max-width: 640px) {
+  .workspace-main:has([data-more-button]) { padding-top: 0.5rem; }
+  .reading-workspace:has([data-more-button]) { margin-top: 0; }
+  .reading-workspace:has([data-more-button]) .reading-lens-row { margin-block: 0.25rem; }
+  .reading-workspace:has([data-more-button]) [data-section-tabs] { padding-block: 0.25rem; }
+  .reading-workspace:has([data-more-button]) .study-verses { margin-block-start: 0.25rem; }
+  .reading-workspace:has([data-more-button]) .study-verses > li:first-child .study-hebrew { margin-block-start: 0; }
+}
+/* The first section label under the chips says what the selected chip already says; it stays for assistive technology (the panel is named by it too) and drops out of the sight line. */
+.reading-workspace:has([data-more-button]) .study-verses > :first-child > .student-aliyah:first-child, .reading-workspace:has([data-more-button]) [data-study-rows] > .student-aliyah:first-child { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; min-height: 0; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@media (max-width: 640px) {
+  .reading-workspace:has([data-more-button]) [data-study-rows] > :first-child + article:first-of-type, .reading-workspace:has([data-more-button]) [data-study-rows] > article:first-child { padding-top: 0.25rem; }
+}
+
+/* 1.9 N11: Today sits tighter under the app bar and above the tab bar, so it is a screen and a half, not two. */
+.workspace-main:has([data-today]) { padding-block: 1rem 1.5rem; }

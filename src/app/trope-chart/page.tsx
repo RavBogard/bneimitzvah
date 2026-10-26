@@ -16,6 +16,8 @@ export const revalidate = 3600;
 export async function generateMetadata(): Promise<Metadata> {
   return { title: pageTitle(await readPublicProductName(), "Trope chart"), metadataBase: publicMetadataBase(), referrer: "no-referrer", robots: publicRobots() };
 }
+/** T3 P4-1: the signs of the poetic books sit in their own closed section, since no Torah or haftarah reading uses them. */
+const POETIC_SIGNS: readonly string[] = ["ole", "dehi", "iluy", "atnach-hafukh"];
 /** The lesson a family is taught in: the Torah lesson when there is one (the haftarah-only ending has just its own). */
 const lessonFor = (family: string) => COURSE.lessons.find(lesson => lesson.family === family && lesson.melody === "torah") ?? COURSE.lessons.find(lesson => lesson.family === family);
 function Mark({ accent }: { accent: ChartAccent }) {
@@ -42,9 +44,12 @@ export default function TropeChartPage() {
           {family.id === "revia" && <li className={styles.mark}><span className={`${styles.sample} ${hebrew.hebrew}`} lang="he" dir="rtl">{LEGARMEH_SAMPLE}</span><span className={styles.markName}>munach + paseq (legarmeh)</span></li>}
           </ul></li>)}</ol>
       </section>
-      <section aria-labelledby="other-signs-heading" className={styles.other}><h2 id="other-signs-heading" className={styles.sectionHeading}>Signs that follow phrase context</h2><p className={styles.explanation}>Tipcha, pashta, yetiv and zarka join the following phrase. Conjunctive signs take their phrase's color; ole and dehi belong to the additional poetic system. Both zarka forms are shown.</p>
-        <ul className={styles.otherMarks}>{CHART_ACCENTS.filter(accent => !accent.family).map(accent => <Mark key={accent.codepoint} accent={accent} />)}</ul>
+      <section aria-labelledby="other-signs-heading" className={styles.other}><h2 id="other-signs-heading" className={styles.sectionHeading}>Signs that follow phrase context</h2><p className={styles.explanation}>Tipcha, pashta, yetiv and zarka join the following phrase. Conjunctive signs take their phrase's color. Both zarka forms are shown.</p>
+        <ul className={styles.otherMarks}>{CHART_ACCENTS.filter(accent => !accent.family && !POETIC_SIGNS.includes(accent.name)).map(accent => <Mark key={accent.codepoint} accent={accent} />)}</ul>
       </section>
+      <details className={styles.poetic} data-chart-poetic><summary className={styles.poeticSummary}>Other signs</summary><p className={styles.explanation}>These signs mark Psalms, Proverbs and Job. They don't appear in a Torah or haftarah reading.</p>
+        <ul className={styles.otherMarks}>{CHART_ACCENTS.filter(accent => POETIC_SIGNS.includes(accent.name)).map(accent => <Mark key={accent.codepoint} accent={accent} />)}</ul>
+      </details>
       <footer className={styles.sources}><p>Samples use an invented letter and vowel, not a verse. The final-haftarah family is an ending context, not a separate accent.</p><p>Hebrew: Noto Serif Hebrew 2.004, © 2022 The Noto Project Authors, <a href="/fonts/noto-serif-hebrew/OFL.txt">SIL Open Font License 1.1</a>.</p></footer>
     </main>
   </div>;

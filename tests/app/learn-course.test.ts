@@ -72,7 +72,7 @@ describe("the Learn to lein course data", () => {
   });
   it("words each lesson's goal for the end screen in the present", () => {
     expect(presentGoal(lessonById("torah-etnachta")!.goal)).toBe("You can hear where a verse rests in the middle, and tell that rest from the ending.");
-    expect(presentGoal(lessonById("torah-first-verse")!.goal)).toBe("You have leined one verse of this week's Torah reading.");
+    expect(presentGoal(lessonById("torah-first-verse")!.goal)).toBe("You have leined Genesis 1:1, one part at a time and then whole.");
   });
   it("never carries a field derived from the private index", () => {
     const text = JSON.stringify(raw);

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
+import { openMore } from "./more-sheet";
 import { browserFixture } from "./fixture";
 import { assertBrowserStartupAllowed, BROWSER_ORIGIN, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
@@ -88,6 +89,7 @@ it("a person asks, an admin sees the count and approves, and the new member save
   await ui(asker.getByRole("heading", { name: "Your account can save readings", exact: true })).toBeVisible();
   await ui(asker.getByRole("region", { name: "My readings" })).toBeVisible();
   await asker.goto("/read", { waitUntil: "domcontentloaded" });
+  await openMore(asker);
   await asker.getByRole("button", { name: "Save", exact: true }).click();
   await asker.getByRole("form", { name: "Save this reading" }).getByRole("button", { name: "Save reading", exact: true }).click();
   await ui(asker.getByRole("status").filter({ hasText: "Saved to My readings." })).toBeVisible();

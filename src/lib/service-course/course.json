@@ -110,6 +110,35 @@
         "parents-blessing",
         "closing-blessing"
       ]
+    },
+    {
+      "id": "evening",
+      "title": "Saturday evening: the Sh’ma and its blessings",
+      "summary": "The evening forms of the prayers around the Sh’ma: Ma’ariv Aravim, Ahavat Olam and Hashkiveinu.",
+      "phase": "evening",
+      "map": true,
+      "lessons": [
+        "maariv-aravim",
+        "ahavat-olam",
+        "hashkiveinu",
+        "shalom-rav"
+      ]
+    },
+    {
+      "id": "havdalah",
+      "title": "Havdalah",
+      "summary": "Wine, spices, fire and the blessing of separation, then songs for the week ahead.",
+      "phase": "evening",
+      "map": true,
+      "lessons": [
+        "yayin",
+        "bsamim",
+        "eish",
+        "havdalah",
+        "eliyahu",
+        "miryam",
+        "shavua-tov"
+      ]
     }
   ],
   "lessons": [
@@ -2001,6 +2030,586 @@
       },
       "prerequisites": [],
       "hear": null
+    },
+    {
+      "id": "maariv-aravim",
+      "kind": "prayer",
+      "title": "Ma’ariv Aravim",
+      "summary": "Evening falls, and the day turns over.",
+      "goal": "After this you can read Ma’ariv Aravim and say what its key words mean.",
+      "section": "evening",
+      "read": {
+        "unit": "shma.maariv-aravim@bm-maariv",
+        "blocks": [
+          0,
+          16
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 2,
+          "word": 2,
+          "gloss": "brings on evening"
+        },
+        {
+          "block": 3,
+          "word": 2,
+          "gloss": "gates"
+        },
+        {
+          "block": 6,
+          "word": 2,
+          "gloss": "the stars"
+        },
+        {
+          "block": 9,
+          "word": 1,
+          "gloss": "light"
+        },
+        {
+          "block": 9,
+          "word": 3,
+          "gloss": "darkness"
+        },
+        {
+          "block": 11,
+          "word": 3,
+          "gloss": "night"
+        }
+      ],
+      "check": {
+        "items": 4
+      },
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "ahavat-olam",
+      "kind": "prayer",
+      "title": "Ahavat Olam",
+      "summary": "Everlasting love, the evening’s second blessing.",
+      "goal": "After this you can read Ahavat Olam and say what its key words mean.",
+      "section": "evening",
+      "read": {
+        "unit": "shma.ahavat-olam@bm-maariv",
+        "blocks": [
+          0,
+          12
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "love",
+          "root": "a-h-v"
+        },
+        {
+          "block": 2,
+          "word": 0,
+          "gloss": "teaching, Torah"
+        },
+        {
+          "block": 2,
+          "word": 1,
+          "gloss": "and commandments",
+          "root": "tz-v-h"
+        },
+        {
+          "block": 3,
+          "word": 3,
+          "gloss": "you taught",
+          "root": "l-m-d"
+        },
+        {
+          "block": 5,
+          "word": 0,
+          "gloss": "when we lie down",
+          "root": "sh-ch-v"
+        },
+        {
+          "block": 5,
+          "word": 1,
+          "gloss": "and when we rise up",
+          "root": "k-u-m"
+        }
+      ],
+      "check": {
+        "items": 4
+      },
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "hashkiveinu",
+      "kind": "prayer",
+      "title": "Hashkiveinu",
+      "summary": "Shelter for the night, and hope of light.",
+      "goal": "After this you can read Hashkiveinu and say what its key words mean.",
+      "section": "evening",
+      "read": {
+        "unit": "shma.hashkiveinu@bm-maariv",
+        "blocks": [
+          0,
+          4
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "lay us down",
+          "root": "sh-ch-v"
+        },
+        {
+          "block": 0,
+          "word": 3,
+          "gloss": "in peace",
+          "root": "sh-l-m"
+        },
+        {
+          "block": 1,
+          "word": 0,
+          "gloss": "and raise us up",
+          "root": "a-m-d"
+        },
+        {
+          "block": 1,
+          "word": 2,
+          "gloss": "to life",
+          "root": "ch-y-h"
+        },
+        {
+          "block": 3,
+          "word": 1,
+          "gloss": "shelter of"
+        },
+        {
+          "block": 4,
+          "word": 5,
+          "gloss": "Jerusalem"
+        }
+      ],
+      "check": {
+        "items": 4
+      },
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "shalom-rav",
+      "kind": "prayer",
+      "title": "Shalom Rav",
+      "summary": "The evening Amidah’s prayer for peace.",
+      "goal": "After this you can read Shalom Rav and say what its key words mean.",
+      "section": "evening",
+      "read": {
+        "unit": "amidah.shalom-rav@bm-maariv",
+        "blocks": [
+          0,
+          8
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "peace",
+          "root": "sh-l-m"
+        },
+        {
+          "block": 0,
+          "word": 1,
+          "gloss": "abundant"
+        },
+        {
+          "block": 0,
+          "word": 3,
+          "gloss": "Israel"
+        },
+        {
+          "block": 1,
+          "word": 0,
+          "gloss": "may you set"
+        },
+        {
+          "block": 4,
+          "word": 0,
+          "gloss": "and it is good"
+        },
+        {
+          "block": 4,
+          "word": 2,
+          "gloss": "to bless",
+          "root": "b-r-ch"
+        }
+      ],
+      "check": {
+        "items": 4
+      },
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "yayin",
+      "kind": "prayer",
+      "title": "The wine",
+      "summary": "Havdalah begins, as Shabbat did, with wine.",
+      "goal": "After this you can read The wine and say what its key words mean.",
+      "section": "havdalah",
+      "read": {
+        "unit": "havdalah.the-wine@bm-maariv",
+        "blocks": [
+          0,
+          2
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "blessed",
+          "root": "b-r-ch"
+        },
+        {
+          "block": 1,
+          "word": 1,
+          "gloss": "ruler",
+          "root": "m-l-ch"
+        },
+        {
+          "block": 1,
+          "word": 2,
+          "gloss": "of the world"
+        },
+        {
+          "block": 2,
+          "word": 0,
+          "gloss": "who creates",
+          "root": "b-r-a"
+        },
+        {
+          "block": 2,
+          "word": 1,
+          "gloss": "fruit of"
+        },
+        {
+          "block": 2,
+          "word": 2,
+          "gloss": "the vine"
+        }
+      ],
+      "check": {
+        "items": 3
+      },
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "bsamim",
+      "kind": "prayer",
+      "title": "The spices",
+      "summary": "Spices passed hand to hand.",
+      "goal": "After this you can read The spices and say what its key words mean.",
+      "section": "havdalah",
+      "read": {
+        "unit": "havdalah.the-spices@bm-maariv",
+        "blocks": [
+          0,
+          2
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "blessed",
+          "root": "b-r-ch"
+        },
+        {
+          "block": 1,
+          "word": 1,
+          "gloss": "ruler",
+          "root": "m-l-ch"
+        },
+        {
+          "block": 1,
+          "word": 2,
+          "gloss": "of the world"
+        },
+        {
+          "block": 2,
+          "word": 0,
+          "gloss": "who creates",
+          "root": "b-r-a"
+        },
+        {
+          "block": 2,
+          "word": 1,
+          "gloss": "kinds of"
+        },
+        {
+          "block": 2,
+          "word": 2,
+          "gloss": "spices"
+        }
+      ],
+      "check": {
+        "items": 3
+      },
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "eish",
+      "kind": "prayer",
+      "title": "The light of the fire",
+      "summary": "A flame with more than one wick.",
+      "goal": "After this you can read The light of the fire and say what its key words mean.",
+      "section": "havdalah",
+      "read": {
+        "unit": "havdalah.the-light-of-the-fire@bm-maariv",
+        "blocks": [
+          0,
+          2
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "blessed",
+          "root": "b-r-ch"
+        },
+        {
+          "block": 1,
+          "word": 1,
+          "gloss": "ruler",
+          "root": "m-l-ch"
+        },
+        {
+          "block": 1,
+          "word": 2,
+          "gloss": "of the world"
+        },
+        {
+          "block": 2,
+          "word": 0,
+          "gloss": "who creates",
+          "root": "b-r-a"
+        },
+        {
+          "block": 2,
+          "word": 1,
+          "gloss": "lights of",
+          "root": "a-v-r"
+        },
+        {
+          "block": 2,
+          "word": 2,
+          "gloss": "the fire"
+        }
+      ],
+      "check": {
+        "items": 3
+      },
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "havdalah",
+      "kind": "prayer",
+      "title": "The blessing of separation",
+      "summary": "Holy and ordinary, and the line between.",
+      "goal": "After this you can read The blessing of separation and say what its key words mean.",
+      "section": "havdalah",
+      "read": {
+        "unit": "havdalah.the-blessing-of-separation@bm-maariv",
+        "blocks": [
+          0,
+          7
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 2,
+          "word": 0,
+          "gloss": "who separates",
+          "root": "b-d-l"
+        },
+        {
+          "block": 2,
+          "word": 2,
+          "gloss": "holy",
+          "root": "k-d-sh"
+        },
+        {
+          "block": 2,
+          "word": 3,
+          "gloss": "from the ordinary"
+        },
+        {
+          "block": 3,
+          "word": 1,
+          "gloss": "light"
+        },
+        {
+          "block": 3,
+          "word": 2,
+          "gloss": "from darkness"
+        },
+        {
+          "block": 4,
+          "word": 2,
+          "gloss": "the seventh",
+          "root": "sh-v-a"
+        }
+      ],
+      "check": {
+        "items": 4
+      },
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "eliyahu",
+      "kind": "prayer",
+      "title": "Eliyahu HaNavi",
+      "summary": "A song for the prophet of a better time.",
+      "goal": "After this you can read Eliyahu HaNavi and say what its key words mean.",
+      "section": "havdalah",
+      "read": {
+        "unit": "havdalah.eliyahu-hanavi@bm-maariv",
+        "blocks": [
+          0,
+          3
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "Elijah"
+        },
+        {
+          "block": 0,
+          "word": 1,
+          "gloss": "the prophet",
+          "root": "n-v-a"
+        },
+        {
+          "block": 2,
+          "word": 0,
+          "gloss": "soon"
+        },
+        {
+          "block": 2,
+          "word": 1,
+          "gloss": "in our days"
+        },
+        {
+          "block": 2,
+          "word": 2,
+          "gloss": "may he come",
+          "root": "b-v-a"
+        },
+        {
+          "block": 3,
+          "word": 1,
+          "gloss": "the anointed one"
+        }
+      ],
+      "check": {
+        "items": 4
+      },
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "miryam",
+      "kind": "prayer",
+      "title": "Miryam HaN’viah",
+      "summary": "A song for Miriam, who led the singing.",
+      "goal": "After this you can read Miryam HaN’viah and say what its key words mean.",
+      "section": "havdalah",
+      "read": {
+        "unit": "havdalah.miryam-hanviah@bm-maariv",
+        "blocks": [
+          0,
+          6
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "Miriam"
+        },
+        {
+          "block": 0,
+          "word": 1,
+          "gloss": "the prophet (a woman)",
+          "root": "n-v-a"
+        },
+        {
+          "block": 0,
+          "word": 3,
+          "gloss": "and song",
+          "root": "z-m-r"
+        },
+        {
+          "block": 1,
+          "word": 1,
+          "gloss": "will dance",
+          "root": "r-k-d"
+        },
+        {
+          "block": 4,
+          "word": 0,
+          "gloss": "to repair",
+          "root": "t-k-n"
+        },
+        {
+          "block": 6,
+          "word": 2,
+          "gloss": "rescue, salvation",
+          "root": "y-sh-a"
+        }
+      ],
+      "check": {
+        "items": 4
+      },
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "shavua-tov",
+      "kind": "prayer",
+      "title": "Shavua Tov",
+      "summary": "A good week: what we say to each other.",
+      "goal": "After this you can read Shavua Tov and say what its key words mean.",
+      "section": "havdalah",
+      "read": {
+        "unit": "havdalah.shavua-tov@bm-maariv",
+        "blocks": [
+          0,
+          0
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "week"
+        },
+        {
+          "block": 0,
+          "word": 1,
+          "gloss": "good"
+        }
+      ],
+      "prerequisites": [],
+      "hear": null
     }
   ],
   "service": [
@@ -2039,6 +2648,48 @@
     "aleinu",
     "mourners-kaddish",
     "adon-olam",
+    "parents-blessing",
+    "closing-blessing"
+  ],
+  "evening": [
+    "tallit",
+    "hineih-mah-tov",
+    "chatzi-kaddish",
+    "barchu",
+    "maariv-aravim",
+    "ahavat-olam",
+    "shma",
+    "vahavta",
+    "mi-chamochah",
+    "hashkiveinu",
+    "tfilah",
+    "avot-vimahot",
+    "gvurot",
+    "kdushah",
+    "vshamru",
+    "avodah",
+    "hodaah",
+    "shalom-rav",
+    "oseh-shalom",
+    "torah-service",
+    "torah-before",
+    "torah-reading",
+    "torah-after",
+    "mi-shebeirach",
+    "haftarah-before",
+    "haftarah-reading",
+    "haftarah-after",
+    "commentary",
+    "eitz-chayim",
+    "aleinu",
+    "mourners-kaddish",
+    "yayin",
+    "bsamim",
+    "eish",
+    "havdalah",
+    "eliyahu",
+    "miryam",
+    "shavua-tov",
     "parents-blessing",
     "closing-blessing"
   ],

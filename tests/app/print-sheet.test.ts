@@ -3,7 +3,7 @@ vi.mock("server-only", () => ({}));
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DEFAULT_FORMAT, describeFormat, formatEntries, formatFromRecord, parseFormat, SHEET_TYPE, type SheetFormat } from "../../src/lib/print/sheet-format";
-import { parsePrintAddress, printAddress, printTargetFromRead, PRINT_PATH, refFromVerses } from "../../src/lib/print/print-address";
+import { parsePrintAddress, printAddress, printTargetFromRead, PRINT_PATH, readAddressOfPrint, refFromVerses } from "../../src/lib/print/print-address";
 import { aliyahStartsIn, parsePortions, portionRef, portionsOf, type WeekPortions } from "../../src/lib/print/portions";
 import { sheetHebrew } from "../../src/components/portal/print/hebrew";
 import { PrintDocument, sheetCredits, type SheetText } from "../../src/components/portal/print/document";
@@ -83,6 +83,22 @@ test("print addresses: plain /print is this Shabbat; every reading form and a po
   expect(parsePrintAddress("?pick=aliyah-9").target).toMatchObject({ pick: "full" });
   expect(parsePrintAddress("?reading=no-such-reading").target).toBeNull();
   expect(printTargetFromRead("/read?reading=bereshit&lens=study&verse=3")).toEqual({ mode: "named", slug: "bereshit", passage: 1 });
+});
+
+test("Back to the reading names the same reading and, for a Shabbat, the same part of it (1.9 N5)", () => {
+  const today = "2026-10-24";
+  expect(readAddressOfPrint({ mode: "week", date: null, kind: null, pick: "full" }, today)).toBe("/read");
+  expect(readAddressOfPrint({ mode: "week", date: today, kind: null, pick: "full" }, today)).toBe("/read");
+  expect(readAddressOfPrint({ mode: "week", date: "2026-10-31", kind: null, pick: "aliyah-4" }, today)).toBe("/read?date=2026-10-31&pick=aliyah-4");
+  expect(readAddressOfPrint({ mode: "week", date: "2026-10-31", kind: "haftarah", pick: "full" }, today)).toBe("/read?date=2026-10-31&kind=haftarah");
+  expect(readAddressOfPrint({ mode: "named", slug: "bereshit", passage: 2 }, today)).toBe("/read?reading=bereshit&passage=2");
+  expect(readAddressOfPrint({ mode: "ref", ref: "Genesis 18:1-10", kind: "torah" }, today)).toBe("/read?ref=Genesis+18%3A1-10&kind=torah");
+  expect(readAddressOfPrint({ mode: "saved", id: "00000000-0000-4000-8000-000000000042" }, today)).toBe("/read?saved=00000000-0000-4000-8000-000000000042");
+  // It always round-trips to the same print target.
+  for (const address of ["/read?date=2026-10-31&pick=aliyah-4", "/read?reading=bereshit", "/read?ref=Genesis+18%3A1-10&kind=torah"]) {
+    const target = printTargetFromRead(address)!;
+    expect(printTargetFromRead(readAddressOfPrint(target, today))).toEqual(target);
+  }
 });
 
 test("a Shabbat's portions come from the calendar: whole, triennial, one aliyah, maftir, and where each aliyah begins", () => {
