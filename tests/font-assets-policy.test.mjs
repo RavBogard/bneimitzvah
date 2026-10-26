@@ -41,9 +41,12 @@ async function fixture(action) {
 }
 
 test("font manifest is a fixed immutable pair and byte comparison has no repository override", () => {
-  assert.equal(FONT_ASSETS.length, 13);
-  assert.deepEqual(FONT_ASSETS.map(asset => [asset.family, asset.kind]), [["noto-serif-hebrew", "font"], ["noto-serif-hebrew", "font"], ["noto-serif-hebrew", "license"], ["bricolage-grotesque", "font"], ["bricolage-grotesque", "font"], ["bricolage-grotesque", "license"], ["stam-ashkenaz-clm", "font"], ["stam-ashkenaz-clm", "license"], ["stam-ashkenaz-clm", "source"], ["taamey-frank-clm", "font"], ["taamey-frank-clm", "font"], ["taamey-frank-clm", "license"], ["taamey-frank-clm", "source"]]);
-  assert.deepEqual(FONT_ASSETS.map(asset => asset.path), [fontPath, notoSubsetPath, licensePath, brandFontPath, brandSubsetPath, brandLicensePath, stamFontPath, stamLicensePath, stamSourcePath, taameyFontPath, taameySubsetPath, taameyLicensePath, taameySourcePath]);
+  // Thirteen font entries, then the ten brand-mural entries pinned and checked in brand-assets-policy.test.mjs.
+  assert.equal(FONT_ASSETS.length, 23);
+  const fontEntries = FONT_ASSETS.slice(0, 13);
+  assert.ok(FONT_ASSETS.slice(13).every(asset => asset.family === "brand-mural"));
+  assert.deepEqual(fontEntries.map(asset => [asset.family, asset.kind]), [["noto-serif-hebrew", "font"], ["noto-serif-hebrew", "font"], ["noto-serif-hebrew", "license"], ["bricolage-grotesque", "font"], ["bricolage-grotesque", "font"], ["bricolage-grotesque", "license"], ["stam-ashkenaz-clm", "font"], ["stam-ashkenaz-clm", "license"], ["stam-ashkenaz-clm", "source"], ["taamey-frank-clm", "font"], ["taamey-frank-clm", "font"], ["taamey-frank-clm", "license"], ["taamey-frank-clm", "source"]]);
+  assert.deepEqual(fontEntries.map(asset => asset.path), [fontPath, notoSubsetPath, licensePath, brandFontPath, brandSubsetPath, brandLicensePath, stamFontPath, stamLicensePath, stamSourcePath, taameyFontPath, taameySubsetPath, taameyLicensePath, taameySourcePath]);
   assert.equal(reviewedFontAsset(taameyFontPath).sha256, "f558d3564d385a6a512ce938705f47236e71457e8aa4ad9eaf6cebc3e17b991c");
   assert.equal(reviewedFontAsset(taameyFontPath).size, 105076);
   assert.equal(reviewedFontAsset(taameySourcePath).sha256, "0679128225b0a522d8def9490444c28d6add1a897d26743e5669379fc5d95fe7");
@@ -221,6 +224,7 @@ test("exact-path byte attributes preserve real font and OFL through autocrlf che
   assert.deepEqual(rules, [
     `/${fontPath} -text`, `/${notoSubsetPath} -text`, `/${licensePath} -text`, `/${brandFontPath} -text`, `/${brandSubsetPath} -text`, `/${brandLicensePath} -text`, `/${stamFontPath} -text`, `/${stamLicensePath} -text`, `/${stamSourcePath} -text`,
     `/${taameyFontPath} -text`, `/${taameySubsetPath} -text`, `/${taameyLicensePath} -text`, `/${taameySourcePath} -text`,
+    ...FONT_ASSETS.filter(asset => asset.family === "brand-mural").map(asset => `/${asset.path} -text`),
     "/src/server/db/migrations/** text eol=lf",
     "/scripts/db-migrate.mjs text eol=lf",
     "/scripts/release-migrate*.mjs text eol=lf",
