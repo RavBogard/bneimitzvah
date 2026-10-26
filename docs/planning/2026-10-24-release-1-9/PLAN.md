@@ -650,6 +650,13 @@ Each stays off until answered. Source IDs point to the lens findings.
 - N13: "Keep, with name fix". The app stores no pronouns, so lines about a child use the child's name. The tier A line becomes "Sit down with Noa and tap Practice with Noa to go through Noa's verses together." TP-03 becomes "Sit with Noa for each verse. Tap Got it only when Noa reads it without stopping."
 - N18, N19, P4: "Keep, drop the tally". The run-through summary is "Practise verses 3 and 8 again." with no "Clean: 7 of 9". The help line is "Help: Colors → Marks only → Tikkun", spelled Colors as the app spells it. P4's "one more try" ships.
 
+**Answered (Daniel, 2026-10-26 popups).**
+
+- N21: the confirmation is "Mark Noa's ceremony done? Noa keeps the account, Learn and Study. Tutors stop seeing Noa. You can undo this." The staff list heading is "Ceremony done". The student sees nothing new.
+- N22: the invitation email subject is "Central Reform Congregation invited you to CRC Torah".
+- N14 Needs-you rows: "No tutor yet. Choose a tutor." · "The family's invitation expired. Send a new one." · "No reading yet. Assign the reading." · "No service date yet. Set the service." · "Honors not started. Open the honors form."
+- SC5 (review note): "Count only signed-in." Finished marks come only from lessons done while signed in to that account; signed-out progress stays on the device and is never uploaded. Built as SC5a.
+
 ### Tier C: gaps (no draft anywhere; not invented here)
 
 - **N23:** the student's full disclosure of what the tutor sees (per-day verses and mark changes, beyond the Learn line); the parent's count line.
