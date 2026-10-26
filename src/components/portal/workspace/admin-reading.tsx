@@ -11,6 +11,6 @@ export function AdminReadingWorkspace({ studentId }: { studentId: string }) {
   const [name, setName] = useState<string | null>(null);
   const known = useCallback((student: Student) => setName(`${student.firstName} ${student.lastName}`), []);
   return <RequireRole role="admin"><section className="role-workspace role-workspace-focused admin-workspace">{name ? <><h1 className="sr-only"><bdi dir="auto">{name}</bdi></h1><DocumentTitle heading={name} /></> : <h1 className="sr-only">Student</h1>}
-    <div className="admin-crumbs"><WorkspaceLink href="/workspace/admin/students">All students</WorkspaceLink><WorkspaceLink className="admin-crumb-action" href={`/workspace/admin/students/${studentId}/access`}>People and access</WorkspaceLink></div>
+    <div className="admin-crumbs"><WorkspaceLink href="/workspace/admin/students?tab=students">All students</WorkspaceLink><WorkspaceLink className="admin-crumb-action" href={`/workspace/admin/students/${studentId}/access`}>People and access</WorkspaceLink></div>
     <ReadingPanel mode="admin" studentId={studentId} onStudentReload={known} /></section></RequireRole>;
 }
