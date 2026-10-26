@@ -342,7 +342,7 @@ it("supports colors-off qere/maqaf and keyboard whole-verse playback in the phon
   expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(0); expect((await native(tab)).currentTime).toBeLessThan(1);
   await tab.evaluate(() => { const audio = (window as TrackedWindow).referenceAudios.at(-1)!; audio.currentTime = 2.2; audio.dispatchEvent(new Event("timeupdate")); }); await ui(qere).toHaveAttribute("data-reference-active", "true");
   await qere.press("Space"); await playing(tab); expect((await native(tab)).currentTime).toBeLessThan(1);
-  await ui(tab.locator('.study-verses .study-alternative > span:first-child [data-word-index]')).toHaveCount(0);
+  await ui(tab.locator('.study-verses .study-alternative .study-ketiv [data-word-index]')).toHaveCount(0);
   expect(await tab.locator('.study-verses [data-verse-ref="Genesis 1:1"]').innerText()).toContain("־");
   await tab.getByRole("button", { name: "Hear Genesis 1:2", exact: true }).click(); await playing(tab); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse");
   await sameOwner(tab, owner); expect(state.requests).toBe(1); expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

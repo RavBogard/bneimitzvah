@@ -208,7 +208,7 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   studentTab = learner;
   expect(await learner.getByText("Aliyah boundaries have not been recorded for this assignment.", { exact: true }).count()).toBe(0);
   expect(await learner.locator(".student-aliyah").count()).toBe(0);
-  for (const prose of ["Confirmed assignment", "Calendar source", "Selected English edition available.", "Unsent work stays only in this tab"]) expect(await learner.getByText(prose).count()).toBe(0);
+  for (const prose of ["Confirmed assignment", "Calendar source", "Selected English edition available.", "Unsent work stays only in this tab"]) expect(await learner.getByText(prose).count(), prose).toBe(0);
   await ui(colorsControl(learner)).toHaveAttribute("aria-pressed", "true");
   await ui(learner.getByRole("button", { name: "Hear verse", exact: true })).toHaveCount(0); await heldReading(learner);
   await firstHebrewInViewport(learner);
@@ -236,12 +236,12 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   await setColors(learner, false);
   expect(await learner.locator(".study-verses [data-family], .study-verses [data-phrase], .study-hebrew [aria-describedby*='-phrase-']").count()).toBe(0); // no phrase colours, so no phrase descriptions (the words still carry their action's description)
   expect(await first.locator("[data-word-index]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-word-index")).join(","))).toBe(indices);
-  expect(await first.locator(".study-alternative > span:first-child [data-word-index]").count()).toBe(0); // Ketiv is never a reading-word target.
+  expect(await first.locator(".study-alternative .study-ketiv [data-word-index]").count()).toBe(0); // Ketiv is never a reading-word target.
   expect(await hebrew.textContent() === original && calls === beforeColors).toBe(true);
   await setColors(learner, true); await colorVerse(learner, "Genesis 1:1");
   expect(await first.locator("[data-word-index]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-word-index")).join(","))).toBe(indices);
   expect(await hebrew.textContent() === original && calls === beforeColors).toBe(true);
-  expect(await first.locator(".study-alternative > span:first-child [data-family]").count()).toBe(0);
+  expect(await first.locator(".study-alternative .study-ketiv [data-family]").count()).toBe(0);
   await capture(learner, "study-colors-mobile");
   await safe(() => learner.getByRole("button", { name: "View Genesis 1:1 up close", exact: true }).click());
   const lifted = learner.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(lifted).toBeVisible();

@@ -159,7 +159,7 @@ it("edits own and assisted translations, preserves Unicode and literal markup, a
     await cdp.send("DOM.enable"); await cdp.send("CSS.enable"); const dom = await cdp.send("DOM.getDocument");
     const { nodeId } = await cdp.send("DOM.querySelector", { nodeId: dom.root.nodeId, selector: ".study-hebrew > span" });
     const { fonts } = await cdp.send("CSS.getPlatformFontsForNode", { nodeId });
-    expect(fonts.some(font => font.isCustomFont && font.familyName === "Noto Serif Hebrew" && font.glyphCount > 0)).toBe(true);
+    expect(fonts.some(font => font.isCustomFont && font.familyName === "Taamey Frank CLM" && font.glyphCount > 0)).toBe(true);
     expect(fonts.every(font => font.isCustomFont)).toBe(true);
   } finally { await cdp.detach(); }
   const geometry = await student.locator(".study-hebrew > span").first().evaluate(span => { const range = document.createRange(); range.selectNodeContents(span); const box = range.getBoundingClientRect(); return { top: box.top, bottom: box.bottom, height: innerHeight, scroll: scrollY }; });
