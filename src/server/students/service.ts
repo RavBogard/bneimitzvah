@@ -99,6 +99,20 @@ export async function writeStudentEdit<Q extends PgQueryResultHKT>(tx:AccessTran
 }
 
 /**
+ * The one student-disable write, shared by the portal's Disable and the MCP: the record and its history stay,
+ * marked disabled. 404 for a missing or already disabled student, null on a stale revision.
+ */
+export async function writeStudentDisable<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,actor:Actor,id:string,expected:number,at:number){
+  const current=await data.editableStudent(tx,actor.tenantId,id);
+  if(!current || current.disabledAt)throw new AccessDenied(404);
+  if(current.revision!==expected)return null;
+  const updated=await data.updateStudent(tx,actor.tenantId,id,expected,{disabledAt:new Date(at)});
+  if(!updated)return null;
+  await data.audit(tx,actor,"student.update",id);
+  return {revision:updated.revision};
+}
+
+/**
  * Choosing and confirming a student's reading: the portal's reading editor (through createStudentService,
  * under the cookie session) and the portal MCP (under a live admin connection) both run exactly this.
  * The authority establishes the actor and the student; everything after that is checked here.
@@ -269,12 +283,8 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
     const id=identifier(selection.studentId),expected=revision(selection.expectedRevision);
     return input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
       requireCookieMutation(request,actor.origin);
-      const current=await data.editableStudent(tx,actor.tenantId,id);
-      if(!current || current.disabledAt)throw new AccessDenied(404);
-      if(current.revision!==expected)return conflict();
-      const updated=await data.updateStudent(tx,actor.tenantId,id,expected,{disabledAt:new Date(now())});
+      const updated=await writeStudentDisable(tx,actor,id,expected,now());
       if(!updated)return conflict();
-      await data.audit(tx,actor,"student.update",id);
       return {ok:true as const,id,revision:updated.revision};
     });
   }

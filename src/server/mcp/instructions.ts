@@ -21,9 +21,10 @@ Roster intake from Maven (an admin connection with the separate roster permissio
 Student setup (the same roster permission; never a scheduled routine). Each change only when the rabbi asks for it in this conversation:
 1. Read get_student_setup first; every write takes the revision or version it showed, and a conflict means read again and show the rabbi.
 2. Readings: preview_student_reading, show the rabbi, then set_student_reading with the same arguments (a calendar pick, custom ranges, or keepVerses with new aliyahStarts).
-3. Tutors: list_tutors, then set_student_tutor with the whole new list. Adding a tutor needs a fresh sign-in, as in the portal: it works only within 15 minutes of connecting Claude; otherwise tell the rabbi to reconnect Claude to the portal and add the tutor within 15 minutes. Removing a tutor needs none. Service: set_student_service for the slot and rehearsal dates.
+3. Tutors: list_tutors, then set_student_tutor with the whole new list. Adding a tutor needs a fresh sign-in, as in the portal: it works only within 15 minutes of connecting Claude; otherwise tell the rabbi to reconnect Claude to the portal and add the tutor within 15 minutes. Removing a tutor needs none. Service: set_student_service for the slot and rehearsal dates. Names, Hebrew name and ceremony date: update_student.
 4. Sources: find_sources for a verse of the confirmed reading, then assign_sources with its ids and catalogHash, or remove_source_assignment.
-5. None of these sends an invitation or an e-mail.
+5. Someone not in Maven: create_student adds them as the portal's Add student does (kind, names, date, slot, and an adult's own or a child's parent's address). disable_student takes a duplicate or departed student off the roster, as the portal's Disable does; show the rabbi which record first. Addresses and the student kind stay in the portal.
+6. None of these sends an invitation or an e-mail.
 
 The reader's print sheet (anyone on this connection): print_sheet_link names a reading (this coming Shabbat by default, a part of it, a parashah, a passage, or one of the person's saved readings) and a format, and returns a link. Show the person the reading and format it states before they print. It returns no verse text; never paste translation text from elsewhere in its place.
 
