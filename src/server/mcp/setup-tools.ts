@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { AccessDenied } from "../access/errors";
 import type { AccessTransaction, Actor, LockIntent, StudentAuthority } from "../access/types";
@@ -13,7 +13,7 @@ import { readingView } from "../portal/service";
 import * as relationships from "../relationships/data";
 import { displayName, writeTutorAssignment, writeTutorRevocation } from "../relationships/service";
 import { preferredFirst } from "../settings/validation";
-import { writeStudentEdit } from "../students/service";
+import { writeNewStudent, writeStudentEdit } from "../students/service";
 import { rehearsalsFit, studentInput } from "../students/validation";
 import { lockRabbi } from "../study-guides/authority";
 import { currentVerseCapture } from "../study/current-verse-context";
@@ -29,7 +29,9 @@ import { GOOGLE_CONSENT_WINDOW_MS, type McpActor } from "./service";
 import type { Tool, ToolContext } from "./tools";
 
 // Student setup through the portal MCP (Daniel, 2026-10-21: "Add setup + sources"): the rabbi's Claude
-// sets a student's reading, tutors, service slot, rehearsals and verse sources. Admin only, under the
+// sets a student's reading, tutors, service slot, rehearsals and verse sources. Since 2026-10-26 ("It should be
+// possible for me to do all of those pieces with the MCP") it also adds a student who is not in Maven
+// (create_student, the portal's Add student) and edits the names, Hebrew name and dates (update_student). Admin only, under the
 // roster consent (portal:roster) a scheduled routine never holds. Every write runs the portal's own
 // write path (the reading work, writeStudentEdit, the tutor writes, the verse-source replace) under the
 // live connection with the admin grant re-locked, so validation, conflicts, audit events and RLS match
@@ -49,6 +51,8 @@ const mutationId = { type: "string", pattern: UUID.source, description: "A fresh
 const sourceIds = { type: "array", minItems: 1, maxItems: 32, items: { type: "string", pattern: SOURCE_ID.source }, description: "Source ids from find_sources." };
 const expectedVersion = { type: "integer", minimum: 0, maximum: 2147483646, description: "That verse's sources version from get_student_setup or find_sources (0 when it has none)." };
 const nullableDate = (description: string) => ({ type: ["string", "null"], pattern: DATE.source, description });
+const personName = (description: string) => ({ type: "string", minLength: 1, maxLength: 100, description });
+const address = (description: string) => ({ type: "string", maxLength: 254, description });
 
 /** Every setup tool needs an admin connection with the roster consent, which a scheduled routine never holds. */
 const requireRoster = (actor: McpActor) => { if (actor.role !== "admin" || !actor.scopes.has(SCOPES.roster)) throw new AccessDenied(403); };
@@ -281,13 +285,13 @@ export function createSetupTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>
       handler: async (input, ctx) => {
         if (ctx.actor.unattended) return routine;
         const ready = await prepared(input, ctx);
-        if ("result" in ready) return ready.result;
+        if ("result" in ready) return ready.result?.code === "conflict" ? (await alreadySet(input, ctx)) ?? ready.result : ready.result;
         let saved;
         const phase: Phase = { called: false, entered: false };
         // The preparation is checked again at confirm; a refusal there means it expired or no longer matches.
         try { saved = await ctx.readings.confirmReadingAs(studentAuthority(ctx, "data-write", undefined, phase), { studentId: input.studentId as string, binding: ready.value.binding }); }
         catch (error) { if (serviceRefusal(error, phase)) return { ok: false, code: "conflict", hint: READING_HINTS.conflict }; throw error; }
-        if (!saved.ok) return { ok: false, code: "conflict", hint: READING_HINTS.conflict };
+        if (!saved.ok) return (await alreadySet(input, ctx)) ?? { ok: false, code: "conflict", hint: READING_HINTS.conflict };
         return { ok: true, assignmentId: saved.assignmentId, readingRevision: saved.revision, set: ready.summary,
           next: "Nothing was sent to anyone. Sources chosen for the old reading stay with it; choose this reading's sources with find_sources and assign_sources." };
       },
@@ -308,7 +312,31 @@ export function createSetupTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>
         serviceSlot: { type: "string", enum: ["morning", "havdalah", "unknown"], description: "The service the ceremony is in." },
         rehearsal1: nullableDate("First rehearsal date, YYYY-MM-DD, or null to clear."), rehearsal2: nullableDate("Second rehearsal date, YYYY-MM-DD, or null to clear.") },
       ["studentId", "expectedRevision"]),
-      handler: async (input, ctx) => setService(input, ctx),
+      handler: async (input, ctx) => editStudent(input, ctx, SERVICE_FIELDS),
+    },
+    {
+      name: "create_student", roles, scope, annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      description: "Add one student to the roster, as the portal's Add student does: for someone not in Maven (for a Maven family use the roster intake instead). Give studentKind, firstName, lastName, ceremonyDate and serviceSlot; an adult needs ownEmail, a child parentEmail. Optional: hebrewName, secondParentEmail, rehearsal1, rehearsal2. If the same student (kind, names, ceremony date and addresses) is already on the roster, nothing is added and that student's id comes back with created:false. Only on the rabbi's instruction in this conversation. Addresses are never shown back. Sends no invitation or e-mail.",
+      inputSchema: closed({ studentKind: { type: "string", enum: ["child", "adult"], description: "child (a parent's address needed) or adult (the student's own address needed)." },
+        firstName: personName("First name."), lastName: personName("Last name."), ceremonyDate: { type: "string", pattern: DATE.source, description: "Ceremony date, YYYY-MM-DD." },
+        serviceSlot: { type: "string", enum: ["morning", "havdalah", "unknown"], description: "The service the ceremony is in. With unknown, no calendar reading can be picked until it is set." },
+        hebrewName: { type: "string", maxLength: 400, description: "Optional Hebrew name." },
+        ownEmail: address("The student's own address; required for an adult."), parentEmail: address("A parent's address; required for a child."), secondParentEmail: address("Optional second parent's address."),
+        rehearsal1: { type: "string", pattern: DATE.source, description: "Optional first rehearsal date, YYYY-MM-DD, on or before the ceremony." },
+        rehearsal2: { type: "string", pattern: DATE.source, description: "Optional second rehearsal date, YYYY-MM-DD, on or after the first." } },
+      ["studentKind", "firstName", "lastName", "ceremonyDate", "serviceSlot"]),
+      handler: async (input, ctx) => createStudent(input, ctx),
+    },
+    {
+      name: "update_student", roles, scope, annotations: replaces,
+      description: "Change a student's names, Hebrew name, ceremony date, service slot or rehearsal dates, as the portal's student editor does. Give only what changes (hebrewName or a rehearsal null clears it). A changed ceremony date or slot sends the readings and service plan back to review. Addresses, the student kind and disabling a student stay in the portal. Only on the rabbi's instruction in this conversation. expectedRevision is the student's revision from get_student_setup. Sends nothing to anyone.",
+      inputSchema: closed({ studentId, expectedRevision: { type: "integer", minimum: 1, maximum: 2147483647, description: "The student's revision from get_student_setup." },
+        firstName: personName("New first name."), lastName: personName("New last name."), hebrewName: { type: ["string", "null"], maxLength: 400, description: "New Hebrew name, or null to clear." },
+        ceremonyDate: { type: "string", pattern: DATE.source, description: "New ceremony date, YYYY-MM-DD." },
+        serviceSlot: { type: "string", enum: ["morning", "havdalah", "unknown"], description: "The service the ceremony is in." },
+        rehearsal1: nullableDate("First rehearsal date, YYYY-MM-DD, or null to clear."), rehearsal2: nullableDate("Second rehearsal date, YYYY-MM-DD, or null to clear.") },
+      ["studentId", "expectedRevision"]),
+      handler: async (input, ctx) => editStudent(input, ctx, EDIT_FIELDS),
     },
   ] satisfies Tool<Q>[]);
 }
@@ -384,32 +412,97 @@ async function setTutors<Q extends PgQueryResultHKT>(input: Record<string, unkno
   }));
 }
 
-async function setService<Q extends PgQueryResultHKT>(input: Record<string, unknown>, ctx: ToolContext<Q>) {
+type EditField = "firstName" | "lastName" | "hebrewName" | "ceremonyDate" | "serviceSlot" | "rehearsal1" | "rehearsal2";
+const SERVICE_FIELDS: readonly EditField[] = ["serviceSlot", "rehearsal1", "rehearsal2"];
+const EDIT_FIELDS: readonly EditField[] = ["firstName", "lastName", "hebrewName", "ceremonyDate", ...SERVICE_FIELDS];
+
+/** set_student_service and update_student: the portal's student edit, with every field not given kept as it is. */
+async function editStudent<Q extends PgQueryResultHKT>(input: Record<string, unknown>, ctx: ToolContext<Q>, fields: readonly EditField[]) {
   requireRoster(ctx.actor);
   if (ctx.actor.unattended) return routine;
+  const given = fields.filter(key => input[key] !== undefined);
+  if (!given.length) return { ok: false, code: "invalid-input", hint: `Give ${fields.join(", ")}: at least one.` };
   const date = (key: "rehearsal1" | "rehearsal2") => input[key] === undefined || input[key] === null || (typeof input[key] === "string" && DATE.test(input[key] as string));
   if (!date("rehearsal1") || !date("rehearsal2")) return { ok: false, code: "invalid-input", hint: "rehearsal1 and rehearsal2 are YYYY-MM-DD dates, or null to clear." };
-  if (input.serviceSlot === undefined && input.rehearsal1 === undefined && input.rehearsal2 === undefined) return { ok: false, code: "invalid-input", hint: "Give serviceSlot, rehearsal1 or rehearsal2." };
   const id = input.studentId as string, expected = input.expectedRevision as number;
   return asAdmin(ctx, "authority-write", async (tx, live, portal, alive) => {
     const current = await roster.editableStudent(tx, live.tenantId, id);
     if (!current || current.disabledAt) throw new AccessDenied(404);
     const conflict = { ok: false, code: "conflict", currentRevision: current.revision, hint: "The student changed since get_student_setup: read it again, show the rabbi, and resend with the current revision." };
     if (current.revision !== expected) return conflict;
-    const slot = (input.serviceSlot as string | undefined) ?? current.serviceSlot;
-    const rehearsal1 = input.rehearsal1 === undefined ? current.rehearsal1 : input.rehearsal1 as string | null, rehearsal2 = input.rehearsal2 === undefined ? current.rehearsal2 : input.rehearsal2 as string | null;
-    if (slot === current.serviceSlot && rehearsal1 === current.rehearsal1 && rehearsal2 === current.rehearsal2) return { ok: false, code: "no-change", hint: "Nothing changed; nothing was saved." };
-    if (!rehearsalsFit(current.ceremonyDate, rehearsal1, rehearsal2)) return { ok: false, code: "rehearsals-do-not-fit", hint: `Rehearsals fall on or before the ceremony (${current.ceremonyDate}), the first on or before the second.` };
+    const pick = <K extends EditField>(key: K) => (input[key] === undefined ? current[key] : input[key]) as (typeof current)[K];
+    // The student's own fields stay as they are; only the fields given change (the portal editor's StudentInput).
     let values;
-    // The student's own fields stay as they are; only the slot and the rehearsals given change (the portal editor's StudentInput).
-    try { values = studentInput({ firstName: current.firstName, lastName: current.lastName, ceremonyDate: current.ceremonyDate, studentKind: current.studentKind, parentEmail: current.parentEmail,
-      ownEmail: current.ownEmail, serviceSlot: slot, ...(input.rehearsal1 === undefined ? {} : { rehearsal1 }), ...(input.rehearsal2 === undefined ? {} : { rehearsal2 }) }); }
-    catch { return { ok: false, code: "invalid-input", hint: "Those dates are not valid, or this student's record needs fixing in the portal's roster first." }; }
+    try { values = studentInput({ firstName: pick("firstName"), lastName: pick("lastName"), ceremonyDate: pick("ceremonyDate"), studentKind: current.studentKind, parentEmail: current.parentEmail,
+      ownEmail: current.ownEmail, serviceSlot: pick("serviceSlot"), ...(input.hebrewName === undefined ? {} : { hebrewName: input.hebrewName }),
+      rehearsal1: pick("rehearsal1"), rehearsal2: pick("rehearsal2") }); }
+    catch {
+      const rehearsal1 = pick("rehearsal1"), rehearsal2 = pick("rehearsal2"), ceremony = pick("ceremonyDate");
+      if (typeof ceremony === "string" && DATE.test(ceremony) && !rehearsalsFit(ceremony, rehearsal1, rehearsal2)) return { ok: false, code: "rehearsals-do-not-fit", hint: `Rehearsals fall on or before the ceremony (${ceremony}), the first on or before the second.` };
+      return { ok: false, code: "invalid-input", hint: "A name, the Hebrew name or a date is not valid (names hold no < or >), or this student's record needs fixing in the portal's roster first." };
+    }
+    const after = { ...values, hebrewName: values.hebrewName === undefined ? current.hebrewName : values.hebrewName };
+    if (EDIT_FIELDS.every(key => after[key] === current[key])) return { ok: false, code: "no-change", hint: "Nothing changed; nothing was saved." };
     alive();
     const updated = await writeStudentEdit(tx, portal, id, expected, values, ctx.mcp.now());
     if (!updated) return conflict;
     alive();
-    return { ok: true, studentId: id, revision: updated.revision, serviceSlot: slot, rehearsal1, rehearsal2, readingsSentToReview: updated.readingNeedsReview,
-      next: updated.readingNeedsReview ? "The slot changed, so the student's readings and service plan are marked for review: check the readings with get_student_setup." : "Nothing was sent to anyone." };
+    const shownFields = Object.fromEntries(given.map(key => [key, key === "firstName" || key === "lastName" || key === "hebrewName" ? shown(after[key] ?? null) : after[key]]));
+    return { ok: true, studentId: id, revision: updated.revision, ...shownFields, rehearsal1: after.rehearsal1, rehearsal2: after.rehearsal2, serviceSlot: after.serviceSlot, readingsSentToReview: updated.readingNeedsReview,
+      next: updated.readingNeedsReview ? "The date or slot changed, so the student's readings and service plan are marked for review: check the readings with get_student_setup." : "Nothing was sent to anyone." };
   });
+}
+
+/** create_student: the portal's Add student (writeNewStudent), refusing nothing the portal would accept and adding no duplicate. */
+async function createStudent<Q extends PgQueryResultHKT>(input: Record<string, unknown>, ctx: ToolContext<Q>) {
+  requireRoster(ctx.actor);
+  if (ctx.actor.unattended) return routine;
+  let values;
+  try { values = studentInput({ studentKind: input.studentKind, firstName: input.firstName, lastName: input.lastName, ceremonyDate: input.ceremonyDate, serviceSlot: input.serviceSlot,
+    parentEmail: input.parentEmail ?? null, ownEmail: input.ownEmail ?? null, ...(input.secondParentEmail === undefined ? {} : { secondParentEmail: input.secondParentEmail }),
+    ...(input.hebrewName === undefined ? {} : { hebrewName: input.hebrewName }), ...(input.rehearsal1 === undefined ? {} : { rehearsal1: input.rehearsal1 }), ...(input.rehearsal2 === undefined ? {} : { rehearsal2: input.rehearsal2 }) }); }
+  catch { return { ok: false, code: "invalid-input", hint: "Check the names (no < or >), the ceremony date, the rehearsals (on or before the ceremony, in order) and the addresses: an adult needs ownEmail, a child parentEmail, and the student's own address differs from the parents'." }; }
+  // authority-write, as the portal's manage-students: the admin grant's row lock makes two deliveries of one call take turns.
+  return asAdmin(ctx, "authority-write", async (tx, live, portal, alive) => {
+    // A resent call (or the same student added twice) finds the student already there; the portal's import treats the same key as a duplicate.
+    const same = (await tx.select({ id: s.student.id, revision: s.student.revision, parentEmail: s.student.parentEmail, ownEmail: s.student.ownEmail, serviceSlot: s.student.serviceSlot,
+      hebrewName: s.student.hebrewName, secondParentEmail: s.student.secondParentEmail, rehearsal1: s.student.rehearsal1, rehearsal2: s.student.rehearsal2 }).from(s.student)
+      .where(and(eq(s.student.tenantId, live.tenantId), eq(s.student.firstName, values.firstName), eq(s.student.lastName, values.lastName), eq(s.student.ceremonyDate, values.ceremonyDate),
+        eq(s.student.studentKind, values.studentKind), isNull(s.student.disabledAt))).limit(50))
+      .find(row => row.parentEmail === values.parentEmail && row.ownEmail === values.ownEmail);
+    if (same) {
+      // Only the fields given are compared; a student found with different ones is reported, never silently kept or changed.
+      const differs = (["serviceSlot", "hebrewName", "secondParentEmail", "rehearsal1", "rehearsal2"] as const).filter(key => values[key] !== undefined && (values[key] ?? null) !== same[key]);
+      if (differs.length) return { ok: false, code: "already-on-roster", studentId: same.id, revision: same.revision, differs,
+        hint: "A student with these names, kind, ceremony date and addresses is already on the roster, with different values for the fields listed; nothing was added. Show the rabbi, then change that student with update_student or set_student_service if asked." };
+    }
+    if (same) return { ok: true, created: false, studentId: same.id, revision: same.revision, next: "This student is already on the roster (perhaps an earlier attempt of this same call), so nothing was added. Read it with get_student_setup." };
+    alive();
+    const student = await writeNewStudent(tx, portal, values, "student.create", ctx.mcp.now());
+    alive();
+    return { ok: true, created: true, studentId: student.id, revision: student.revision, name: shown(`${student.firstName} ${student.lastName}`), studentKind: values.studentKind,
+      hebrewName: shown(values.hebrewName ?? null), ceremonyDate: values.ceremonyDate, serviceSlot: values.serviceSlot, rehearsal1: values.rehearsal1 ?? null, rehearsal2: values.rehearsal2 ?? null, invitationsSent: 0,
+      next: "Nothing was sent to anyone. Next: set the readings (preview_student_reading, then set_student_reading) and tutors (set_student_tutor); the rabbi invites the student or family in the portal." };
+  });
+}
+
+/**
+ * After a conflict on set_student_reading: when the student's confirmed reading already is exactly what was asked
+ * (an earlier delivery of this same call saved it, or someone set the same thing), say so instead of a conflict.
+ * Anything else stays a conflict. Nothing is written here.
+ */
+async function alreadySet<Q extends PgQueryResultHKT>(input: Record<string, unknown>, ctx: ToolContext<Q>) {
+  const kind = input.kind as "torah" | "haftarah", expected = input.expectedReadingRevision as number;
+  let head;
+  try { head = await studentAuthority(ctx, "read")(input.studentId as string, async (tx, actor) => roster.currentAssignment(tx, actor.tenantId, actor.studentId, kind)); }
+  catch { return null; }
+  // A reading sent back to review (a new date or slot) is not "already set": the rabbi must see that conflict.
+  const review = head?.proposalSnapshot && typeof head.proposalSnapshot === "object" && (head.proposalSnapshot as Record<string, unknown>).needsReview === true;
+  if (!head || head.status !== "confirmed" || head.revision <= expected || review) return null;
+  const again = await prepared({ ...input, expectedReadingRevision: head.revision }, ctx);
+  if ("result" in again) return null;
+  const same = again.value.basis === head.basis && again.value.ranges.join("; ") === head.ref && JSON.stringify(again.value.aliyahStarts ?? null) === JSON.stringify(head.aliyahStarts ?? null);
+  if (!same) return null;
+  return { ok: true, alreadySet: true, assignmentId: head.id, readingRevision: head.revision, set: again.summary,
+    next: "The student's reading already is exactly this (most likely an earlier attempt of this same call saved it), so nothing new was saved. Nothing was sent to anyone." };
 }

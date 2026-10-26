@@ -9,7 +9,7 @@ import { closeMcpFixtures, mcpFixture } from "./mcp-fixture";
 afterEach(async () => { vi.restoreAllMocks(); await closeMcpFixtures(); });
 
 // Student setup through the portal MCP (Daniel, 2026-10-21: "Add setup + sources"). Synthetic students and sources only.
-const SETUP = ["list_tutors", "get_student_setup", "find_sources", "assign_sources", "remove_source_assignment", "preview_student_reading", "set_student_reading", "set_student_tutor", "set_student_service"];
+const SETUP = ["list_tutors", "get_student_setup", "find_sources", "assign_sources", "remove_source_assignment", "preview_student_reading", "set_student_reading", "set_student_tutor", "set_student_service", "create_student", "update_student"];
 const ALL = "portal:read portal:study portal:roster";
 const raw = (ref: string) => Array.from({ length: 40 }, (_, i) => ({ _id: `source_${String(i).padStart(2, "0")}`, sourceRef: `Invented Work ${i} on ${ref}`, index_title: `Invented Work ${i}`, category: "Commentary", anchorRef: ref }));
 
@@ -53,6 +53,7 @@ describe("student setup through the portal MCP", () => {
       ["set_student_tutor", { studentId: crc.id, expectedTutorIds: [t.f.tutorGrant.id], tutorIds: [] }],
       ["set_student_tutor", { studentId: crc.id, expectedTutorIds: [], tutorIds: [] }],
       ["set_student_service", { studentId: crc.id, expectedRevision: 2, serviceSlot: "morning" }],
+      ["update_student", { studentId: crc.id, expectedRevision: 2, hebrewName: "Invented" }],
     ];
     for (const [name, args] of calls) expect((await call(name, args)).text, name).toMatch(/Not found/);
     expect(await audits(["student.update", "reading.set", "tutor.assign", "tutor.revoke", "source-assignment.set"])).toHaveLength(0);
@@ -80,8 +81,8 @@ describe("student setup through the portal MCP", () => {
     const listed = (await t.rpc(admin, "tools/list")).body.result.tools as { name: string; annotations: Record<string, boolean> }[];
     const hint = (name: string) => listed.find(x => x.name === name)!.annotations;
     for (const name of ["list_tutors", "get_student_setup", "find_sources", "preview_student_reading"]) expect(hint(name)).toMatchObject({ readOnlyHint: true, destructiveHint: false });
-    for (const name of ["remove_source_assignment", "set_student_reading", "set_student_tutor", "set_student_service"]) expect(hint(name)).toMatchObject({ readOnlyHint: false, destructiveHint: true, idempotentHint: true });
-    expect(hint("assign_sources")).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: true });
+    for (const name of ["remove_source_assignment", "set_student_reading", "set_student_tutor", "set_student_service", "update_student"]) expect(hint(name)).toMatchObject({ readOnlyHint: false, destructiveHint: true, idempotentHint: true });
+    for (const name of ["assign_sources", "create_student"]) expect(hint(name)).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: true });
   });
 
   it("reads the setup and the tutor list with names, ids and contact presence only, and refuses another congregation's student", async () => {
@@ -172,6 +173,51 @@ describe("student setup through the portal MCP", () => {
     expect(await audits(["tutor.assign"])).toHaveLength(2);
   });
 
+  it("adds a student who is not in Maven through the portal's Add student, once, never echoing an address, in this congregation only", async () => {
+    const { json, call, texts, owner, audits, student, t } = await setup();
+    const adult = { studentKind: "adult", firstName: "Synthetic", lastName: "Grown-up", ceremonyDate: "2027-03-06", serviceSlot: "morning", hebrewName: "Invented Hebrew", ownEmail: "Grown.Up@example.test" };
+    const made = await json("create_student", adult);
+    expect(made).toMatchObject({ ok: true, created: true, revision: 1, name: "Synthetic Grown-up", studentKind: "adult", hebrewName: "Invented Hebrew", ceremonyDate: "2027-03-06", serviceSlot: "morning", invitationsSent: 0 });
+    expect(await student(made.studentId)).toMatchObject({ tenantId: "crc", studentKind: "adult", ownEmail: "grown.up@example.test", parentEmail: null, hebrewName: "Invented Hebrew", serviceSlot: "morning", revision: 1 });
+    expect(await audits(["student.create"])).toHaveLength(1);
+    // Resent (or added twice): the student is found, not added again.
+    expect(await json("create_student", { ...adult, ownEmail: "grown.up@example.test" })).toMatchObject({ ok: true, created: false, studentId: made.studentId });
+    expect(await audits(["student.create"])).toHaveLength(1);
+    // The same student with a different slot is reported, never added again or silently kept.
+    expect(await json("create_student", { ...adult, serviceSlot: "havdalah" })).toMatchObject({ ok: false, code: "already-on-roster", studentId: made.studentId, differs: ["serviceSlot"] });
+    expect(await audits(["student.create"])).toHaveLength(1);
+    // The new student is a full setup subject straight away: a calendar pick works because the slot is known.
+    expect(await json("preview_student_reading", { studentId: made.studentId, kind: "torah", expectedReadingRevision: 0, pick: "aliyah:1" })).toMatchObject({ ok: true, wouldSet: { readingDate: "2027-03-06" } });
+    // The portal's rules hold: an adult needs an own address, a child a parent's, and rehearsals fall on or before the ceremony.
+    for (const bad of [{ ...adult, ownEmail: undefined }, { ...adult, studentKind: "child" }, { ...adult, firstName: "<b>" }, { ...adult, rehearsal1: "2027-03-13" }])
+      expect(await json("create_student", bad)).toMatchObject({ ok: false, code: "invalid-input" });
+    const child = await json("create_student", { studentKind: "child", firstName: "Synthetic", lastName: "Young", ceremonyDate: "2028-03-04", serviceSlot: "havdalah", parentEmail: "parent.young@example.test", rehearsal1: "2028-02-26" });
+    expect(child).toMatchObject({ ok: true, created: true, studentKind: "child", hebrewName: null, rehearsal1: "2028-02-26", rehearsal2: null });
+    const rows = await owner(() => t.f.db.select({ tenantId: s.student.tenantId }).from(s.student).where(inArray(s.student.id, [made.studentId, child.studentId])));
+    expect(rows.map(r => r.tenantId)).toEqual(["crc", "crc"]);
+    expect(await audits(["student.create"])).toHaveLength(2);
+    // Another congregation's connection would add to its own roster only; this one never reaches it, and no address ever comes back.
+    expect((await call("get_student_setup", { studentId: t.f.students[3].id })).text).toMatch(/Not found/);
+    for (const text of texts) { expect(text).not.toMatch(/@/); expect(text).not.toMatch(/withheld/); }
+  });
+
+  it("edits names, the Hebrew name and the ceremony date through the portal's student edit, sending readings to review on a new date", async () => {
+    const { json, call, crc, other, student, audits } = await setup();
+    expect(await json("update_student", { studentId: crc.id, expectedRevision: 1, hebrewName: "Invented Hebrew" })).toMatchObject({ ok: true, revision: 2, hebrewName: "Invented Hebrew", readingsSentToReview: false });
+    expect(await student(crc.id)).toMatchObject({ hebrewName: "Invented Hebrew", firstName: "Synthetic", parentEmail: crc.parentEmail, revision: 2 });
+    expect(await json("update_student", { studentId: crc.id, expectedRevision: 2, hebrewName: "Invented Hebrew" })).toMatchObject({ ok: false, code: "no-change" });
+    expect(await json("update_student", { studentId: crc.id, expectedRevision: 1, lastName: "Renamed" })).toMatchObject({ ok: false, code: "conflict", currentRevision: 2 });
+    expect(await json("update_student", { studentId: crc.id, expectedRevision: 2, lastName: "Renamed", ceremonyDate: "2027-01-09" })).toMatchObject({ ok: true, revision: 3, lastName: "Renamed", ceremonyDate: "2027-01-09", readingsSentToReview: true });
+    expect(await student(crc.id)).toMatchObject({ lastName: "Renamed", ceremonyDate: "2027-01-09", hebrewName: "Invented Hebrew" });
+    expect(await json("update_student", { studentId: crc.id, expectedRevision: 3, rehearsal1: "2027-01-02", ceremonyDate: "2026-12-26" })).toMatchObject({ ok: false, code: "rehearsals-do-not-fit" });
+    expect(await json("update_student", { studentId: crc.id, expectedRevision: 3, firstName: "<i>" })).toMatchObject({ ok: false, code: "invalid-input" });
+    expect(await json("update_student", { studentId: crc.id, expectedRevision: 3, hebrewName: null })).toMatchObject({ ok: true, revision: 4, hebrewName: null });
+    expect(await json("update_student", { studentId: crc.id, expectedRevision: 4 })).toMatchObject({ ok: false, code: "invalid-input" });
+    expect((await call("update_student", { studentId: other.id, expectedRevision: 1, hebrewName: "Invented" })).text).toMatch(/Not found/);
+    expect(await student(other.id)).toMatchObject({ revision: 1 });
+    expect(await audits(["student.update"])).toHaveLength(3);
+  });
+
   it("previews and sets readings through the portal's reading work: calendar picks, custom ranges and cut points, with conflicts on a stale revision", async () => {
     const { json, call, unrelated, other, owner, audits, t } = await setup();
     const reading = (kind: "torah" | "haftarah") => owner(async () => (await t.f.db.select().from(s.assignment).where(and(eq(s.assignment.studentId, unrelated.id), eq(s.assignment.kind, kind))))[0]);
@@ -185,7 +231,11 @@ describe("student setup through the portal MCP", () => {
     expect(set).toMatchObject({ ok: true, readingRevision: 1, set: { ranges: ["Genesis 1:1-6"] } });
     expect(await reading("torah")).toMatchObject({ id: set.assignmentId, status: "confirmed", ref: "Genesis 1:1-6", basis: "selection", revision: 1, setByMembershipId: t.f.adminMember.id });
     expect(await audits(["reading.set"])).toHaveLength(1);
-    expect(await json("set_student_reading", pick)).toMatchObject({ ok: false, code: "conflict" });
+    // The same call delivered twice: the second finds the reading already exactly so, says so, and writes nothing.
+    expect(await json("set_student_reading", pick)).toMatchObject({ ok: true, alreadySet: true, assignmentId: set.assignmentId, readingRevision: 1, set: { ranges: ["Genesis 1:1-6"] } });
+    expect(await audits(["reading.set"])).toHaveLength(1);
+    // A different reading at the stale revision is still a conflict.
+    expect(await json("set_student_reading", { ...pick, pick: "aliyah:1" })).toMatchObject({ ok: false, code: "conflict" });
     // New aliyah cut points on the confirmed verses only.
     expect(await json("set_student_reading", { studentId: unrelated.id, kind: "torah", expectedReadingRevision: 1, keepVerses: true, aliyahStarts: ["Genesis 1:4"] })).toMatchObject({ ok: true, readingRevision: 2 });
     expect(await reading("torah")).toMatchObject({ ref: "Genesis 1:1-6", aliyahStarts: ["Genesis 1:4"], revision: 2 });
@@ -199,6 +249,14 @@ describe("student setup through the portal MCP", () => {
     const view = await json("get_student_setup", { studentId: unrelated.id });
     expect(view.readings.torah).toMatchObject({ confirmed: true, readingRevision: 2, ranges: ["Genesis 1:1-6"], aliyahStarts: ["Genesis 1:4"] });
     expect(view.readings.haftarah).toMatchObject({ confirmed: true, readingRevision: 1, ranges: ["Isaiah 1:1-2"] });
+    // A reading sent back to review by a new slot is never "already set": the stale call is a conflict the rabbi sees.
+    expect(await json("set_student_service", { studentId: unrelated.id, expectedRevision: 2, serviceSlot: "havdalah" })).toMatchObject({ ok: true, readingsSentToReview: true });
+    expect(await json("set_student_service", { studentId: unrelated.id, expectedRevision: 3, serviceSlot: "morning" })).toMatchObject({ ok: true });
+    const reviewed = await reading("torah");
+    expect(reviewed.proposalSnapshot).toMatchObject({ needsReview: true });
+    expect(await json("set_student_reading", pick)).toMatchObject({ ok: false, code: "conflict" });
+    expect(await json("set_student_reading", { ...pick, expectedReadingRevision: reviewed.revision })).toMatchObject({ ok: true, readingRevision: reviewed.revision + 1 });
+    expect(await audits(["reading.set"])).toHaveLength(4);
   });
 
   it("finds, assigns and removes verse sources through the portal's source replace, with replay, conflicts and stale readings refused", async () => {
