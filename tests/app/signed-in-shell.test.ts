@@ -66,7 +66,7 @@ test("a page whose h1 is fixed is titled with that h1", () => {
   ] as const) expect(headings(component), page).toContain(titleOf(page));
 });
 
-test("each page has exactly one footer landmark: the credit, with no second page footer", async () => {
+test("each page has exactly one footer landmark: the site footer, with no second page footer", async () => {
   const page = async (element: unknown) => renderToStaticMarkup(createElement(RootLayout, null, await element as never));
   const boundary = Promise.resolve({});
   const markups = [
@@ -75,9 +75,11 @@ test("each page has exactly one footer landmark: the credit, with no second page
   ];
   for (const markup of markups) {
     expect(markup.match(/<footer\b/g) ?? []).toHaveLength(1);
-    expect(markup).toContain('<footer class="site-credit">');
-    // The page's own closing lines stay, as a named region (inside a landmark, for axe), never a second footer.
-    expect(markup).toMatch(/<section class="portal-footer" aria-label="About this portal">/);
+    expect(markup).toContain('<footer class="site-footer">');
+    expect(markup).toContain("Central Reform Congregation · Your account and reading stay private.");
+    expect(markup).toContain('A project of <a href="https://danielbogard.com"');
+    expect(markup).not.toContain("portal-footer");
+    expect(markup).not.toContain("Learning at Central Reform Congregation");
   }
   // The workspace shell is client-only; its source must not bring a second footer either.
   expect(readFileSync(join(process.cwd(), "src", "components", "portal", "workspace", "provider.tsx"), "utf8")).not.toMatch(/<footer\b/);
