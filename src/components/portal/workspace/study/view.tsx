@@ -17,6 +17,8 @@ import { LensSwitch } from "../lens-switch";
 import { StudyRows } from "./study-rows";
 import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi, workStatuses } from "./commentary-view";
 import { VersePanelScope, WordPanelSource } from "./verse-panel";
+import { StudySummary } from "./portion-summary";
+import { parashahSlug } from "../../../../lib/portion-summary/reading";
 import type { WordPanelHost } from "./word-panel";
 import { ReadingPlace, scrollToVerse } from "./reading-place";
 import { aliyahPosition } from "../../../../lib/readings/aliyah-starts";
@@ -282,6 +284,10 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     {sections.length > 0 && <SectionTabs sticky label="Reading sections" current={sectionNow >= 0 ? sections[sectionNow].n : null}
       tabs={[...sections.map(row => ({ id: row.n, label: row.label })), ...onService ? [{ id: SERVICE_CHIP, label: "Service parts" }] : []]}
       onSelect={id => { if (id === SERVICE_CHIP) onService?.(); else goSection(sections.findIndex(row => row.n === id)); }} />}
+    {/* The portion summary (1.9 N7), atop Study: only an approved one, only on a calendar parashah's Torah. A line goes to its aliyah only where the tutor
+        recorded the whole portion aliyah by aliyah (seven sections); a student's own divisions are not the calendar's, so then the outline is plain text. */}
+    {study && kind === "torah" && <StudySummary slug={parashahSlug(assignment?.readingKey)} active={active && !concealed} aliyot={sections.length >= 7 ? sections.map(row => row.n) : undefined}
+      onAliyah={n => { const target = sections.find(row => row.n === n); if (target && assignment) jumpTo(assignment.verses[target.start]); }} />}
     {!current || current.loading ? <p role="status">Loading the assigned text…</p> : current.error ? <div role="status"><h4>{current.error === 409 ? "Assignment changed" : [401, 403, 404].includes(current.error) ? "Text access changed" : "Text unavailable"}</h4>
       <p>{current.error === 409 ? learner ? "Your reading was just updated. Load the new version to keep going." : "Refresh the reading metadata before loading this assignment’s text again." : learner ? "The verses didn’t load. Check your connection and try again." : "No previous text is being shown. Confirmed references and the reading review form remain separate."}</p>
       <button className="button-secondary" onClick={() => { if (current.error === 409) void reloadMetadata().catch(() => undefined); else void explicitLoad(kind, selection.current?.offset ?? 0); }}>{current.error === 409 ? "Refresh reading and text" : "Reload assigned text"}</button>

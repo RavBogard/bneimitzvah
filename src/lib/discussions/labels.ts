@@ -12,5 +12,7 @@ export const selectedByDetail = (name: string) => `Selected by ${name}`;
 export const DISCUSSION_LABELS = Object.freeze({
   marker: "Sources on this verse",
   list: "Sources for this reading",
+  /** The Study column and its phone sheet (1.9 N7; Daniel, 2026-10-25, T3 N7-1: "Alternatives" to "Sources for this reading"). Print keeps `list`. */
+  column: "Sources",
   back: "Back to this verse",
 });

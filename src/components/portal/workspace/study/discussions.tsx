@@ -78,13 +78,14 @@ export function DiscussionPanelBody({ verse }: { verse: string }) {
 }
 
 /**
- * "Sources for this reading": under the reading's header, each discussion's title and its sources, each opening in the verse panel at its
- * anchor verse. Nothing at all (no heading either) when the reading has no discussion.
+ * "Sources" (1.9 N7: the 1.7 list, "Sources for this reading", under its new heading): each discussion's title and its sources, each opening in the
+ * verse panel at its anchor verse. In the laptop column it is headed; in the phone's Sheet the Sheet's own title is the heading, so the list is only
+ * named. Nothing at all (no heading either) when the reading has no discussion.
  */
-export function DiscussionListView({ view, onOpen }: { view: DiscussionsView; onOpen(verse: string, trigger: HTMLElement): void }) {
+export function DiscussionListView({ view, onOpen, headed = true }: { view: DiscussionsView; onOpen(verse: string, trigger: HTMLElement): void; headed?: boolean }) {
   const id = useId();
-  return <section className={styles.discussionList} aria-labelledby={`${id}-heading`} data-discussion-list="">
-    <h3 id={`${id}-heading`} className={styles.discussionListHeading}>{DISCUSSION_LABELS.list}</h3>
+  return <section className={styles.discussionList} aria-labelledby={headed ? `${id}-heading` : undefined} aria-label={headed ? undefined : DISCUSSION_LABELS.column} data-discussion-list="">
+    {headed && <h3 id={`${id}-heading`} className={styles.discussionListHeading}>{DISCUSSION_LABELS.column}</h3>}
     <ul className={styles.discussionItems}>{view.answer.discussions.map(discussion => <li key={discussion.slug} className={styles.discussionItem}>
       <p className={styles.discussionTitle}><bdi>{discussion.title}</bdi></p>
       <ul className={styles.shelfItems}>{discussion.sources.map(source => <li key={source.position}>

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createSavedReading, fetchSavedReadings, type SavedKind } from "./api";
+import { parseSession, requestPortal } from "../api";
 import { rememberSignedIn, signedInHint, signInPending } from "../signed-in-hint";
 import { ReturnSignInLink } from "../return-sign-in-link";
 import { savedReadingHref } from "./my-readings";
@@ -17,6 +18,8 @@ const kindName = (kind: SavedKind) => kind === "torah" ? "Torah" : "Haftarah";
 export function suggestedName(passage: SavablePassage): string {
   return Array.from(`${passage.title ?? "Shabbat reading"} · ${passage.label ?? kindName(passage.kind)}`).slice(0, 80).join("");
 }
+/** What a signed-in student sees on pressing Save (1.9 N20-1 and N20-2; Daniel, 2026-10-25, "Keep it"): why, and where their own reading is. */
+export const STUDENT_LINE = "Student accounts don’t save other readings. Your assigned reading is always under Reading.";
 const problems: Record<Exclude<SaveProblem, null>, string> = {
   invalid: "Use a name of 1 to 80 characters and a real date, or leave the date empty.",
   limit: "You have 100 saved readings, the most an account keeps. Remove one to save another.",
@@ -27,8 +30,8 @@ const problems: Record<Exclude<SaveProblem, null>, string> = {
  * The quiet Save beside the passage, in each of its states. Everything opens inline; nothing is a dialog. Signed out, Save is
  * "Sign in to save" (F4), a link that comes back to this reading (`back`, N20) and offers Save there.
  */
-export function SaveReadingView({ step, problem, name, date, panelId, savedId = null, back, onSave, onName, onDate, onSubmit, onCancel }: {
-  step: SaveStep; problem: SaveProblem; name: string; date: string; panelId: string; savedId?: string | null; back?: () => string | null;
+export function SaveReadingView({ step, problem, name, date, panelId, savedId = null, student = false, back, onSave, onName, onDate, onSubmit, onCancel }: {
+  step: SaveStep; problem: SaveProblem; name: string; date: string; panelId: string; savedId?: string | null; student?: boolean; back?: () => string | null;
   onSave: () => void; onName: (value: string) => void; onDate: (value: string) => void; onSubmit: () => void; onCancel: () => void;
 }) {
   const open = step === "form" || step === "saving";
@@ -36,7 +39,9 @@ export function SaveReadingView({ step, problem, name, date, panelId, savedId = 
     {step === "signed-out" ? <ReturnSignInLink className="button-hero-secondary" back={back}>Sign in to save</ReturnSignInLink>
       : step !== "saved" && <button type="button" className="button-hero-secondary" aria-expanded={open} aria-controls={open ? panelId : undefined}
       disabled={step === "checking" || step === "saving"} onClick={onSave}>Save</button>}
-    {step === "not-eligible" && <p className={styles.line}><a href="/account">Ask for an account to save readings</a></p>}
+    {step === "not-eligible" && (student
+      ? <p className={styles.line} data-save-student="">{STUDENT_LINE} <a href="/workspace/student?tab=reading">Open your reading</a></p>
+      : <p className={styles.line}><a href="/account">Ask for an account to save readings</a></p>)}
     {step === "unavailable" && <p className={styles.line} role="status">Saving isn’t available right now. Try again.</p>}
     {step === "saved" && <p className={styles.line} role="status">Saved to <a href="/">My readings</a>.{savedId && <> <a href={savedReadingHref(savedId)}>Open your reading</a></>}</p>}
     {open && <form id={panelId} className={styles.panel} aria-label="Save this reading" onSubmit={event => { event.preventDefault(); onSubmit(); }}>
@@ -62,12 +67,19 @@ export function SaveReadingView({ step, problem, name, date, panelId, savedId = 
  */
 export function SaveReading({ passage, onSaved, back, offer }: { passage: SavablePassage; onSaved?(): void; back?: () => string | null; offer?: { current: boolean } }) {
   const [step, setStep] = useState<SaveStep>("idle"), [problem, setProblem] = useState<SaveProblem>(null), [savedId, setSavedId] = useState<string | null>(null);
-  const [name, setName] = useState(() => suggestedName(passage)), [date, setDate] = useState(passage.date ?? "");
+  const [name, setName] = useState(() => suggestedName(passage)), [date, setDate] = useState(passage.date ?? ""), [student, setStudent] = useState(false);
   const panelId = useId(), live = useRef<AbortController | null>(null);
   // Another passage on screen starts over; nothing typed for the last one carries across.
   const key = JSON.stringify([passage.kind, passage.ranges, passage.date, passage.title, passage.label]);
   useLayoutEffect(() => { live.current?.abort(); setStep(signedInHint() ? "idle" : "signed-out"); setProblem(null); setName(suggestedName(passage)); setDate(passage.date ?? ""); }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => live.current?.abort(), []);
+  // An account that cannot save is told why only when it is a student's (G20: a student already has an account to ask for); any other keeps the way to ask.
+  useEffect(() => {
+    if (step !== "not-eligible") { setStudent(false); return; }
+    const request = new AbortController();
+    requestPortal("/api/session", undefined, request.signal).then(value => { if (!request.signal.aborted) setStudent(parseSession(value).roles.includes("student")); }, () => { /* The way to ask stays. */ });
+    return () => request.abort();
+  }, [step]);
   const begin = () => { live.current?.abort(); const controller = new AbortController(); live.current = controller; return controller; };
   const check = (spend?: { current: boolean }) => {
     const controller = begin(); setStep("checking");
@@ -96,6 +108,6 @@ export function SaveReading({ passage, onSaved, back, offer }: { passage: Savabl
       setStep("form"); setProblem(result.code);
     });
   };
-  return <SaveReadingView step={step} problem={problem} name={name} date={date} panelId={panelId} savedId={savedId} back={back} onSave={onSave} onName={setName} onDate={setDate} onSubmit={onSubmit}
+  return <SaveReadingView step={step} problem={problem} name={name} date={date} panelId={panelId} savedId={savedId} student={student} back={back} onSave={onSave} onName={setName} onDate={setDate} onSubmit={onSubmit}
     onCancel={() => { live.current?.abort(); setStep("idle"); setProblem(null); }} />;
 }

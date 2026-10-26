@@ -124,7 +124,7 @@ describe("portion summary tools", () => {
     expect(approved).toMatchObject({ ok: true, reading: "vayera", revision: 1, status: "approved", credit: "Rabbi Daniel Bogard", replaced: null });
     // Nothing on the reader renders a summary yet (N7), so the answer never claims readers see it.
     expect(approved).not.toHaveProperty("shown");
-    expect(approved.note).toMatch(/will show once the reading page displays summaries/);
+    expect(approved.note).toMatch(/shows atop Study on the reading page/);
     expect(await shown()).toEqual({ reading: "vayera", revision: 1, summary: SUMMARY, outline: OUTLINE.map((line, i) => ({ aliyah: i + 1, line })),
       credit: "Rabbi Daniel Bogard", approvedAt: approved.approvedAt });
     expect(await shown("noach")).toBeNull();

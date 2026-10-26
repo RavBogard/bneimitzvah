@@ -69,13 +69,25 @@ test("the marker is on the anchor verses only; opening it shows the sources with
   await expect(button).toBeFocused();
 });
 
-test("the list is headed 'Sources for this reading'; a source opens at its verse with a Claude translation credited by the product name, and Back to this verse", async ({ page }) => {
+const sourcesColumn = (page: Page) => page.locator("[data-sources-column]");
+const sourcesButton = (page: Page) => page.locator("[data-sources-open] button");
+/** The sources list where this width has it (1.9 N7): the laptop's column, or below 1180px the Sources sheet that the Sources button opens. */
+async function openSources(page: Page) {
+  await expect(page.locator("[data-sources-column]:visible, [data-sources-open] button:visible")).toHaveCount(1);
+  if (await sourcesColumn(page).isVisible()) return sourcesColumn(page).locator("[data-discussion-list]");
+  await sourcesButton(page).click();
+  return page.getByRole("dialog", { name: "Sources", exact: true }).locator("[data-discussion-list]");
+}
+
+test("the list is headed 'Sources'; a source opens at its verse with a Claude translation credited by the product name, and Back to this verse", async ({ page }) => {
   await reduced(page);
   await mock(page);
   await page.goto("/read?lens=study");
-  await expect(list(page).getByRole("heading", { name: "Sources for this reading" })).toBeVisible();
-  await expect(list(page).getByText("A synthetic question")).toBeVisible();
-  const second = list(page).getByRole("button", { name: "Synthetic Midrash 2:2" });
+  const sources = await openSources(page);
+  await expect(page.getByRole("heading", { name: "Sources", exact: true })).toBeVisible();
+  await expect(page.getByText("Sources for this reading")).toHaveCount(0);
+  await expect(sources.getByText("A synthetic question")).toBeVisible();
+  const second = sources.getByRole("button", { name: "Synthetic Midrash 2:2" });
   expect((await second.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await second.click();
   await expect(panel(page)).toHaveAttribute("data-verse-panel", "Genesis 1:3");
@@ -85,11 +97,12 @@ test("the list is headed 'Sources for this reading'; a source opens at its verse
   await page.getByRole("dialog").getByRole("button", { name: "Back to this verse" }).click();
   await expect(panel(page)).toHaveCount(0);
   await expect(row(page, "Genesis 1:3")).toBeFocused();
-  // Esc from the list's own opener hands focus back to it.
-  await second.click();
+  // Esc from a source hands focus back to what opened it: its entry in the column, or the Sources button that opened the sheet.
+  const entry = (await openSources(page)).getByRole("button", { name: "Synthetic Midrash 2:2" });
+  await entry.click();
   await expect(panel(page)).toHaveAttribute("data-verse-panel", "Genesis 1:3");
   await page.keyboard.press("Escape");
-  await expect(second).toBeFocused();
+  await expect(await sourcesColumn(page).isVisible() ? entry : sourcesButton(page)).toBeFocused();
 });
 
 test("a source Sefaria could not give shows its credit and its link and no text, never an error page", async ({ page }) => {
@@ -110,17 +123,17 @@ test("a reading with no discussions shows no heading and no marker, in Study and
   await mock(page, { none: true });
   await page.goto("/read?lens=study");
   await expect(row(page, "Genesis 1:2")).toBeVisible();
-  await expect(page.getByText("Sources for this reading")).toHaveCount(0);
+  await expect(page.locator("[data-sources-column], [data-sources-open]")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Sources on this verse" })).toHaveCount(0);
   await page.goto("/read");
-  await expect(page.getByText("Sources for this reading")).toHaveCount(0);
+  await expect(page.locator("[data-sources-column], [data-sources-open]")).toHaveCount(0);
 });
 
 test("Lein is for chanting: no list and no marker even where discussions exist", async ({ page }) => {
   await mock(page);
   await page.goto("/read");
   await expect(page.locator("[data-verse-ref]").first()).toBeVisible();
-  await expect(page.getByText("Sources for this reading")).toHaveCount(0);
+  await expect(page.locator("[data-sources-column], [data-sources-open]")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Sources on this verse" })).toHaveCount(0);
 });
 

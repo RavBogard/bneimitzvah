@@ -1,0 +1,15 @@
+/* 1.9 N7: the "This portion" block at the top of Study. Hairline rules and the shelf's own rows, no new hue and no motion; 44px targets. */
+.block { margin-block: 0.5rem 1rem; max-inline-size: 72ch; padding: 0.25rem 1rem 0.5rem; border-radius: var(--radius-control, 12px); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.heading { display: flex; align-items: center; min-height: 44px; cursor: pointer; font-size: 1rem; font-weight: 700; color: var(--color-ink); }
+.heading:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.prose { font-size: 1rem; line-height: 1.6; color: var(--color-ink); overflow-wrap: break-word; }
+.prose p, .prose ul, .prose ol { margin: 0 0 0.75rem; }
+.credit { margin: 0 0 0.5rem; color: var(--color-muted); font-size: 0.875rem; }
+.outline { list-style: none; margin: 0; padding: 0; }
+.outline > li + li { box-shadow: inset 0 1px 0 var(--color-rule); }
+.line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.75rem; inline-size: 100%; min-height: 44px; margin: 0; padding: 0.625rem 0; border: 0; background: transparent; color: var(--color-ink); font: inherit; font-size: 0.9375rem; line-height: 1.45; text-align: start; }
+button.line { cursor: pointer; }
+button.line:hover .label { text-decoration: underline; text-underline-offset: 0.2em; }
+button.line:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.label { flex: none; min-inline-size: 5.5rem; color: var(--color-action); font-weight: 650; font-variant-numeric: tabular-nums; }
+p.line .label { color: var(--color-muted); }
