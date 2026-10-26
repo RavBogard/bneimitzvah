@@ -87,7 +87,7 @@ export function CourseHome() {
           {review && <a className={styles.review} href="/learn/review"><span>{reviewLine(review)}</span>{icons.arrow}</a>}
           {ready && <QuickTenLinks progress={progress} />}
           <LearningStart />
-          <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a>{mine && <a href="/workspace/student">Back to my reading</a>}</nav>
+          <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a>{mine && <a href="/workspace/student?tab=reading">Back to my reading</a>}</nav>
           {account.state !== "synced" && <p className={styles.saved}>Progress is saved on this device. <a href="/sign-in">Sign in</a> to keep it.</p>}
         </div>
         <div className={styles.paths}>{paths}</div>
