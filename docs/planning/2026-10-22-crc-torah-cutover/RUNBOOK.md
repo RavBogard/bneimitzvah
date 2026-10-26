@@ -33,6 +33,7 @@ The code that makes this a configuration switch is `src/lib/navigation/canonical
 ## Phase 2: the window (about 30 minutes)
 1. **Daniel:** Vercel, Project, Settings, Environment Variables, Production: `BETTER_AUTH_URL = https://torah.centralreform.org`, exactly, with no trailing slash. This does nothing until the redeploy.
 2. **Redeploy production** (Vercel Redeploy of the current production deployment, which rebuilds with the new env). The agent may do this; Daniel sets the env himself.
+   - The redeploy must be a real rebuild, not a promotion of an old build: `/sw.js` is built once per deploy (N24, #113), so its origin list is fixed at build time from `BETTER_AUTH_URL`, `PORTAL_ENVIRONMENT` and `PORTAL_DEPLOYMENT`. Probe: `GET https://beitmitzvah.centralreform.org/sw.js` gives 200 (not 303) and its body is the tombstone (it clears the `crc-` caches and unregisters), so a worker installed there before the switch removes itself and the packs stored with it.
 3. **Automated post-switch probes:**
    - `torah /` gives 200; `/read` gives 200 with `X-Robots-Tag: noindex, nofollow`; `/robots.txt` says `Disallow: /`.
    - Each of `beitmitzvah`, `barmitzvah`, `batmitzvah`, `bnaimitzvah`, `bneimitzvah`, `bneimitzvah.vercel.app`: `GET /read?x=1` gives 303 with Location exactly `https://torah.centralreform.org/#home` and `private, no-store`; `GET /api/session` gives 404; `POST /` gives 404.
