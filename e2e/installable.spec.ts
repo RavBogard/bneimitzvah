@@ -75,7 +75,7 @@ test("offline, the installed app opens this week's reading from its shell and a 
   await page.goto("/read");
   await expect(page.getByRole("heading", { level: 1, name: "Synthetic", exact: true })).toBeVisible();
   await saved(page);
-  for (const pack of await packs(page)) expect(pack.assets.every(asset => /^\/(?:api\/public\/(?:reading|text|reference\/short)\?|reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$)/.test(asset)), pack.key).toBe(true);
+  for (const pack of await packs(page)) expect(pack.assets.every(asset => /^\/(?:api\/public\/(?:reading|text|reference\/short|aliyot|portion-summary)\?|reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$)/.test(asset)), pack.key).toBe(true);
   // One controlled visit, so every build file the reader loads is in the shell.
   await page.goto("/read");
   await expect(page.locator(".study-verses").getByRole("heading", { name: "Genesis 12:1", exact: true })).toBeVisible();
@@ -90,7 +90,7 @@ test("offline, the installed app opens this week's reading from its shell and a 
   await page.locator('.study-verses [data-verse-ref="Genesis 12:1"] [data-word-index="0"]').first().click();
   await expect.poll(plays, { timeout: 20_000 }).toBeGreaterThan(before);
   expect(app.state.fromWorker).toEqual(expect.arrayContaining(["/read", "/api/public/reading", "/api/public/text"]));
-  expect(app.state.fromWorker.filter(path => /^\/api\/(?!public\/(?:reading|text|reference\/short|manifest)$)/.test(path))).toEqual([]);
+  expect(app.state.fromWorker.filter(path => /^\/api\/(?!public\/(?:reading|text|reference\/short|manifest|aliyot|portion-summary)$)/.test(path))).toEqual([]);
   expect(app.state.ranges).toEqual([]);
   expect(await page.evaluate(async () => { try { await fetch("/api/session", { credentials: "same-origin" }); return "answered"; } catch { return "failed"; } })).toBe("failed");
 
@@ -105,7 +105,7 @@ test("offline, the installed app opens this week's reading from its shell and a 
   await page.goto("/read");
   await expect(page.getByRole("heading", { name: "The reading didn’t load", exact: true })).toBeVisible({ timeout: 30_000 });
   await expect(page.locator("[data-offline-expiry]")).toContainText("Saved readings stay on this device for 14 days after you last opened CRC Torah online.");
-  expect(app.state.fromWorker.filter(path => path.startsWith("/reference-audio/") || /^\/api\/public\/(?:reading|text|reference)/.test(path))).toEqual([]);
+  expect(app.state.fromWorker.filter(path => path.startsWith("/reference-audio/") || /^\/api\/public\/(?:reading|text|reference|aliyot|portion-summary)/.test(path))).toEqual([]);
 });
 
 test("offline, a Learn to lein lesson opens from the shell and can be finished; the progress is kept on the device", async ({ context, page }, testInfo) => {
