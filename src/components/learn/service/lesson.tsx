@@ -66,7 +66,7 @@ function LessonFlow({ lesson }: { lesson: Lesson }) {
           : step === "read" ? lesson.read ? <><ReadStep lesson={lesson} state={state} onRetry={retry} slot={slot} />{forward(!text)}</> : <><SiddurOnly lesson={lesson} slot={slot} />{forward()}</>
           : step === "words" && text ? <><KeyWordsStep lesson={lesson} text={text} />{forward()}</>
           : step === "check" && items ? <CheckStep key={seed} items={items as readonly CheckItem[]} seed={seed} onFinish={next} footer={children => <Footer>{children}</Footer>} />
-          : step === "done" ? <Done lesson={lesson} state={state} complete={() => update((value, stamp) => completeLesson(value, lesson, Date.now(), stamp))} progress={progress} pathView={pathView} slot={slot} />
+          : step === "done" ? <Done lesson={lesson} state={state} complete={() => update(value => completeLesson(value, lesson, Date.now()), lesson.id)} progress={progress} pathView={pathView} slot={slot} />
           : <p role="status" className={styles.note}>{COPY.state.lessonLoading}</p>}
       </LessonWords>
     </main>

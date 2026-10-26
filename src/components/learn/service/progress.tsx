@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { browserProgressStore, emptyProgress, PROGRESS_KEY, type Progress, type ProgressStore } from "../../../lib/service-course/progress";
 import { parsePath, type Path } from "../../../lib/service-course/path";
-import { createProgressSync, SYNC_KEY, type Account, type ProgressSync } from "./progress-sync";
+import { createProgressSync, GUEST_KEY, SYNC_KEY, type Account, type ProgressSync } from "./progress-sync";
 
 /**
  * The learner's progress in the service course: this browser's copy, and, signed in with a live grant, the account's
@@ -19,7 +19,7 @@ function progressHub() {
   const set = (patch: Partial<State>) => { made.state = Object.freeze({ ...made.state, ...patch }); for (const listener of listeners) listener(); };
   made.sync = createProgressSync({ fetch: (...args) => fetch(...args), storage: () => { try { return window.localStorage; } catch { return null; } }, store,
     onProgress: progress => set({ progress }), onAccount: account => set({ account }) });
-  made.state = Object.freeze({ progress: store.load(), account: made.state.account });
+  made.state = Object.freeze({ progress: made.sync.load(), account: made.state.account });
   hub = made;
   void made.sync.start();
   const hide = () => { if (document.visibilityState !== "visible") made.sync.flush(); };
@@ -27,24 +27,30 @@ function progressHub() {
   // Back online: the account's copy and this device's meet again.
   window.addEventListener("online", () => { void made.sync.start(); });
   // Another tab saved: show what it saved, unless another account owns the device now (then this tab is frozen).
-  window.addEventListener("storage", event => { if ((event.key === null || event.key === PROGRESS_KEY || event.key === SYNC_KEY) && made.sync.writable) set({ progress: store.load() }); });
+  window.addEventListener("storage", event => { if ((event.key === null || event.key === PROGRESS_KEY || event.key === SYNC_KEY || event.key === GUEST_KEY) && made.sync.writable) set({ progress: made.sync.load() }); });
   return made;
 }
 /**
  * One local change: the stored copy is the working copy (another tab may have saved since this one last read it). A tab another
  * account has taken the device from saves nothing, so whoever uses that tab next cannot write into the other account's copy.
  */
-export function writeLocal(store: ProgressStore, sync: Pick<ProgressSync, "writable" | "changed" | "stamp">, change: (value: Progress, stamp: string | null) => Progress): Progress | null {
+export function writeLocal(store: ProgressStore, sync: Pick<ProgressSync, "writable" | "changed" | "stamp" | "apart" | "guest" | "record">, change: (value: Progress) => Progress, completed?: string): Progress | null {
   if (!sync.writable) return null;
-  // `stamp`: the account a lesson done now counts for, or null (2.0 SC5a, progress-sync.ts).
-  const next = change(store.load(), sync.stamp);
-  store.save(next); sync.changed();
+  // A marker here but no account this page may count work for (signed out, refused, another tab's account): the work is signed-out
+  // work, kept in the set-aside copy and never sent (2.0 SC5a review).
+  if (sync.apart) { const next = change(sync.guest.load()); sync.guest.save(next); return next; }
+  // `stamp`: the account a lesson finished now counts for, or null with no marker (progress-sync.ts).
+  const stamp = sync.stamp, next = change(store.load());
+  store.save(next);
+  if (stamp !== null && completed !== undefined && Object.hasOwn(next.lessons, completed)) sync.record(completed, stamp);
+  sync.changed();
   return next;
 }
 export function useServiceProgress() {
   const { progress, account } = useSyncExternalStore(listener => { const h = progressHub(); h.listeners.add(listener); return () => { h.listeners.delete(listener); }; }, () => progressHub().state, () => UNLOADED);
-  const update = useCallback((change: (value: Progress, stamp: string | null) => Progress) => {
-    const h = progressHub(), next = writeLocal(h.store, h.sync, change);
+  /** `completed`: the lesson this change finishes, so it can count for the account (2.0 SC5a). */
+  const update = useCallback((change: (value: Progress) => Progress, completed?: string) => {
+    const h = progressHub(), next = writeLocal(h.store, h.sync, change, completed);
     if (!next) return;
     h.state = Object.freeze({ ...h.state, progress: next });
     for (const listener of h.listeners) listener();

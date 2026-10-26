@@ -15,8 +15,7 @@ import { syntheticServiceCatalog } from "../helpers/service-learning";
 type Base = Awaited<ReturnType<typeof postgresAccessFixture>>;
 const fixtures: Base[] = [];
 afterEach(async () => { for (const f of fixtures.splice(0)) await f.close(); });
-// 2.0 SC5a: lessons done while synced carry the account's owner name; only those mark.
-const doc = (by: string, ...lessons: string[]) => ({ schema: "service-course-progress/v1", lessons: Object.fromEntries(lessons.map(id => [id, { done: "2026-10-20T10:00:00.000Z", by }])), cards: {} });
+const doc = (...lessons: string[]) => ({ schema: "service-course-progress/v1", lessons: Object.fromEntries(lessons.map(id => [id, { done: "2026-10-20T10:00:00.000Z" }])), cards: {} });
 const status = (operation: PromiseLike<unknown>) => Promise.resolve(operation).then(() => 200, error => error instanceof AccessDenied ? error.status : 503);
 
 test("a student's sync marks only their assigned parts on real PostgreSQL, and only the linked tutor and the admin read the marks", async () => {
@@ -36,8 +35,8 @@ test("a student's sync marks only their assigned parts on real PostgreSQL, and o
   const course = createServiceCourseProgressService({ access: f.a }), finished = createServicePartFinished({ access: f.b });
   const mutation = () => { const value = f.request("tutor"); value.headers.set("origin", "http://localhost:3000"); return { ...value, method: "POST" }; };
   const owner = serviceCourseOwnerName({ tenantId: "crc", membershipId: member.id });
-  expect(await course.merge(mutation(), { progress: doc(owner, "vahavta", "shma", "f1"), owner })).toMatchObject({ ok: true, version: 1 });
-  expect(await course.put(mutation(), { progress: doc(owner, "vahavta", "shma", "f1", "torah-before"), expectedVersion: 1, owner })).toMatchObject({ ok: true, version: 2 });
+  expect(await course.merge(mutation(), { progress: doc("vahavta", "shma", "f1"), owner, stamps: ["vahavta", "shma", "f1"] })).toMatchObject({ ok: true, version: 1 });
+  expect(await course.put(mutation(), { progress: doc("vahavta", "shma", "f1", "torah-before"), expectedVersion: 1, owner, stamps: ["vahavta", "shma", "f1", "torah-before"] })).toMatchObject({ ok: true, version: 2 });
   const rows = (await query(f.owner, "SELECT lesson_id FROM service_part_finished WHERE student_id = $1 ORDER BY lesson_id", [f.student.id])).rows as { lesson_id: string }[];
   expect(rows.map(r => r.lesson_id)).toEqual(["torah-before", "vahavta"]);
   expect((await query(f.owner, "SELECT count(*)::int AS n FROM audit_event WHERE action = 'service-part.finish'")).rows[0]).toEqual({ n: 2 });

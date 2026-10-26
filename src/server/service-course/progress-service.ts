@@ -3,7 +3,7 @@ import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAccessService } from "../access/service";
 import type { AccessRequest, AccessTransaction } from "../access/types";
 import * as data from "../data/service-course-progress";
-import { mergeProgress, onlyStampedBy, parseProgress, serializeProgress, type Progress } from "../../lib/service-course/progress";
+import { mergeProgress, parseProgress, serializeProgress, type Progress } from "../../lib/service-course/progress";
 import { createServiceCourseProgressAccess, serviceCourseOwnerName, ServiceCourseRefused, type ServiceCourseOwner } from "./progress-access";
 import * as validate from "./progress-validation";
 import { markFinishedParts } from "./finished";
@@ -43,14 +43,16 @@ export function createServiceCourseProgressService<Q extends PgQueryResultHKT>(i
     async put(request: Request, supplied: unknown) {
       const value = validate.put(supplied);
       return write(request, value.owner, async (tx, owner) => {
-        // 2.0 SC5a: a lesson keeps `by` only when it names this account; any other is stored as done, unstamped.
-        const name = serviceCourseOwnerName(owner), progress = onlyStampedBy(value.progress, name);
         const current = await data.progressRow(tx, owner), until = await data.ownCeremonyDate(tx, owner);
         if ((current?.version ?? 0) !== value.expectedVersion) return { ok: false as const, code: "conflict" as const, current: view(owner, current, until) };
-        const row = current ? await data.updateProgress(tx, owner, value.expectedVersion, progress) : await data.insertProgress(tx, owner, progress);
+        // A put never drops a lesson the account has done (2.0 SC5a review): a browser that read the account's copy wrongly (an older
+        // bundle, a corrupt read) is answered as a conflict, so it merges instead and loses nothing.
+        if (current && Object.keys(stored(current).lessons).some(id => !Object.hasOwn(value.progress.lessons, id))) return { ok: false as const, code: "conflict" as const, current: view(owner, current, until) };
+        const row = current ? await data.updateProgress(tx, owner, value.expectedVersion, value.progress) : await data.insertProgress(tx, owner, value.progress);
         if (!row) throw new Error("Service course progress unavailable");
-        // 2.0 SC5 and SC5a: the stored document's lessons done under this account that are the student's own assigned parts become finished marks.
-        await markFinishedParts(tx, owner, stored(row), name);
+        // 2.0 SC5 and SC5a: the lessons this request stamps as done under this account, done in the stored document, that are the
+        // student's own assigned parts become finished marks. The request's owner is this account (`write` refuses any other).
+        await markFinishedParts(tx, owner, stored(row), value.stamps);
         return view(owner, row, until);
       });
     },
@@ -61,16 +63,15 @@ export function createServiceCourseProgressService<Q extends PgQueryResultHKT>(i
     async merge(request: Request, supplied: unknown) {
       const value = validate.merge(supplied);
       return write(request, value.owner, async (tx, owner) => {
-        const name = serviceCourseOwnerName(owner), progress = onlyStampedBy(value.progress, name);
         const current = await data.progressRow(tx, owner), until = await data.ownCeremonyDate(tx, owner);
-        const merged = current ? mergeProgress(onlyStampedBy(stored(current), name), progress) : progress;
+        const merged = current ? mergeProgress(stored(current), value.progress) : value.progress;
         // Two valid documents can merge into one the parser refuses (more cards, or more bytes, than one document holds): never
         // store what a later read would refuse; answer 409 with the account's copy, and the browser keeps its own.
         const text = serializeProgress(merged);
         if (text === null || !parseProgress(JSON.parse(text))) return { ok: false as const, code: "too-large" as const, current: view(owner, current, until) };
         const row = current ? await data.updateProgress(tx, owner, current.version, merged) : await data.insertProgress(tx, owner, merged);
         if (!row) throw new Error("Service course progress unavailable");
-        await markFinishedParts(tx, owner, stored(row), name);
+        await markFinishedParts(tx, owner, stored(row), value.stamps);
         return view(owner, row, until);
       });
     },
