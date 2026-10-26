@@ -385,7 +385,7 @@ it("fences a late selected-unit response across linked-child switching and never
   await parent.route("**/service-plan/unit", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); delivered = true; });
   try {
     await click(parent, "Synthetic part 0"); await ui.poll(() => held).toBe(true);
-    await safe(() => parent.getByRole("button", { name: /^Switch to/ }).filter({ hasText: "Sibling" }).click());
+    await safe(() => parent.getByRole("button", { name: /^Switch to .*Sibling/ }).click());
     // A new child opens on the Reading tab; Service parts is one tap away.
     await safe(() => parent.getByRole("tab", { name: "Service parts", exact: true }).click());
     await ui(panel(parent).getByRole("button", { name: "Synthetic part 2", exact: true })).toBeVisible();

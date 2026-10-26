@@ -234,6 +234,8 @@ it("admin printing verifies only the saved copy; real guardian denial clears pri
 });
 it("own adult uses the existing honors sheet and link controls while child practice tutor and foreign targets stay denied", async () => {
   const student = await page("student"); await openAdult(student);
+  // An adult's honors entry sits after the adult's reading (G20); the sheet is open now, so check the page behind it.
+  expect(await student.evaluate(() => { const reading = document.getElementById("reading-heading"), honors = document.getElementById("family-honors"); return !!reading && !!honors && !!(reading.compareDocumentPosition(honors) & Node.DOCUMENT_POSITION_FOLLOWING); })).toBe(true);
   await add(student, "Opening the ark", "Synthetic Adult Honoree"); await add(student, "Aliyah 2 · Genesis 1:2 – Genesis 1:3", "Synthetic Adult Aliyah");
   const result = await save(student, fixture.student.id); expect(result.ok).toBe(true);
   const [identity] = await fixture.ownerDb.select().from(s.studentIdentity).where(eq(s.studentIdentity.studentId, fixture.student.id));
@@ -254,8 +256,6 @@ it("own adult uses the existing honors sheet and link controls while child pract
     expect((await api(student, `/api/students/${fixture.student.id}/honoree-links/receipt`, receiptIntent)).status).toBe(403);
     await student.goto("/workspace/student?tab=reading", { waitUntil: "domcontentloaded" });
     await ui(student.getByRole("region", { name: "Family honors", exact: true })).toBeVisible(); await ui(student.getByRole("button", { name: "Open the honors form", exact: true })).toHaveCount(0);
-    // An adult's honors entry sits after the adult's reading (G20).
-    await ui.poll(() => student.evaluate(() => { const reading = document.getElementById("reading-heading"), honors = document.getElementById("family-honors"); return !!reading && !!honors && !!(reading.compareDocumentPosition(honors) & Node.DOCUMENT_POSITION_FOLLOWING); })).toBe(true);
   } finally { await fixture.ownerDb.update(s.student).set({ studentKind: "adult" }).where(eq(s.student.id, fixture.student.id)); }
   const parent = await page("parent"), entered = await api(parent, "/api/practice/enter", { studentId: children[0].id }); expect(entered.status).toBe(201); const denied = await parent.evaluate(async ({ id, handle }) => { const r = await fetch(`/api/students/${id}/honors?mode=parent`, { headers: { "X-Practice-Context": handle }, cache: "no-store" }); return r.status; }, { id: children[0].id, handle: entered.data.handle }); expect(denied).toBe(403);
   await parent.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await parent.locator(`button.student-card[data-student-id="${children[0].id}"]`).click(); await parent.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(parent.getByRole("button", { name: "Done", exact: true })).toBeVisible(); await ui(parent.getByRole("button", { name: "Open the honors form", exact: true })).toHaveCount(0);
