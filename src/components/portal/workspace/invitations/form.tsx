@@ -7,7 +7,8 @@ export function InvitationForm({ draft, change, students, ready, pending, blocke
   draft: InviteDraft; change(value: InviteDraft): void; students: RosterStudent[]; ready: boolean; pending: boolean; blocked: boolean; review(): void;
 }) {
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); review(); }
-  const active = students.filter(row => !row.disabledAt);
+  // N21: a student whose ceremony is done is not on the active roster, so is not offered here.
+  const active = students.filter(row => !row.disabledAt && !row.ceremonyDoneAt);
   return <section className="invitation-compose people-card" aria-labelledby="invite-compose-title"><div className="people-card-head"><h2 id="invite-compose-title">Invite someone</h2>
     <p>They get an email link, sign in with that address and accept. Nothing changes until they do.</p></div>
     <form onSubmit={submit} className="invitation-form">

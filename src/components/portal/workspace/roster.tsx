@@ -26,7 +26,7 @@ function Roster() {
   const [rows, setRows] = useState<RosterStudent[]>([]), [loading, setLoading] = useState(true), [unavailable, setUnavailable] = useState(false);
   const [current, setCurrent] = useState<RosterStudent | null>(null), [form, setForm] = useState<StudentInput>(empty), [editing, setEditing] = useState(false);
   const [pending, setPending] = useState(false), [message, setMessage] = useState(""), [conflict, setConflict] = useState(false), [confirmDisable, setConfirmDisable] = useState(false), [page, setPage] = useState(0);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(""), [confirmDone, setConfirmDone] = useState(false);
   // Closing a changed form asks Keep editing / Discard changes, like lesson notes and honors.
   const [discarding, setDiscarding] = useState(false), departure = useRef<((leave: boolean) => void) | null>(null), keepEditing = useRef<HTMLButtonElement>(null);
   const [honorsStudent, setHonorsStudent] = useState<RosterStudent | null>(null), honorsOrigin = useRef<HTMLButtonElement | null>(null);
@@ -36,7 +36,7 @@ function Roster() {
   const load = useCallback(async (preserve = false) => {
     const generation = ++turn.current; abort.current?.abort(); const request = new AbortController(); abort.current = request;
     setUnavailable(false);
-    if (!preserve) { setLoading(true); setRows([]); setCurrent(null); setEditing(false); setForm(empty); setConflict(false); setConfirmDisable(false); setMessage(""); }
+    if (!preserve) { setLoading(true); setRows([]); setCurrent(null); setEditing(false); setForm(empty); setConflict(false); setConfirmDisable(false); setConfirmDone(false); setMessage(""); }
     try {
       const values = await workspaceApi.roster(request.signal);
       if (generation === turn.current && !request.signal.aborted) {
@@ -45,6 +45,7 @@ function Roster() {
         if (preserve && selected) {
           const next = values.find(row => row.id === selected.id);
           if (!next) { setCurrent(null); setEditing(false); setForm(empty); }
+          else if (next.ceremonyDoneAt && !next.disabledAt) { setCurrent(null); setEditing(false); setForm(empty); }
           else if (next.disabledAt) { setCurrent(next); setForm(empty); }
           else if (next.revision !== selected.revision) { setConflict(true); setMessage("This student changed while you were away. Your draft is kept here but can’t be saved. Reload the roster to use the current details."); }
         }
@@ -80,7 +81,7 @@ function Roster() {
     document.addEventListener("keydown", block, true); return () => document.removeEventListener("keydown", block, true);
   }, [pending]);
   // An unresolved outcome (conflict or unclear save) stays on the list after the sheet closes, and blocks new edits until a reload.
-  function closeEditor() { if (gate.current) return; setEditing(false); setCurrent(null); setForm(empty); setConfirmDisable(false); setDiscarding(false); departure.current?.(true); departure.current = null; }
+  function closeEditor() { if (gate.current) return; setEditing(false); setCurrent(null); setForm(empty); setConfirmDisable(false); setConfirmDone(false); setDiscarding(false); departure.current?.(true); departure.current = null; }
   function requestClose() { if (gate.current) return; if (shown.current.dirty) setDiscarding(true); else closeEditor(); }
   function keep() { setDiscarding(false); departure.current?.(false); departure.current = null; }
   useLayoutEffect(() => { if (discarding) keepEditing.current?.focus(); }, [discarding]);
@@ -100,7 +101,27 @@ function Roster() {
   function choose(row: RosterStudent | null, event: { currentTarget: HTMLElement }) {
     if (conflict) return;
     origin.current = event.currentTarget; lastFocus.current = null;
-    setCurrent(row); setForm(row ? draft(row) : empty); setEditing(true); setMessage(""); setConflict(false); setConfirmDisable(false);
+    setCurrent(row); setForm(row ? draft(row) : empty); setEditing(true); setMessage(""); setConflict(false); setConfirmDisable(false); setConfirmDone(false);
+  }
+  // N21 "Ceremony done": set from the student's sheet (after the approved confirmation), undone from the Ceremony done list.
+  // Wording gaps (Daniel): the two status lines below are neutral placeholders, and so is the "Undo" label.
+  async function ceremony(row: RosterStudent, reverse: boolean) {
+    if (gate.current || conflict) return;
+    gate.current = true; setPending(true); setMessage(""); const generation = lifetime.current;
+    try {
+      await workspaceApi.ceremonyDone(row, reverse);
+      if (generation !== lifetime.current) return;
+      const done = reverse ? `${fullName(row)} is back in the list.` : `${fullName(row)}: Ceremony done.`;
+      let refreshed = true; try { await load(); } catch { refreshed = false; }
+      if (generation === lifetime.current) setMessage(done + (refreshed ? "" : " The list couldn’t be refreshed. Reload it to check the current record."));
+    } catch (error) {
+      if (generation !== lifetime.current) return;
+      const status = statusOf(error);
+      setMessage(status === 409 ? "Someone changed this student since you opened it. Nothing was overwritten. Reload the roster to see the current details."
+        : status === 401 || status === 403 || status === 404 ? "This change isn’t allowed any more. Reload the roster to check current access."
+        : "We couldn’t confirm whether this saved. Reload the roster to check before trying again.");
+      setConflict(true);
+    } finally { gate.current = false; setPending(false); }
   }
   async function mutate(disable: boolean) {
     if (gate.current || conflict) return;
@@ -124,9 +145,12 @@ function Roster() {
     } finally { gate.current = false; setPending(false); }
   }
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void mutate(false); }
-  const matches = useMemo(() => { const words = searchable(query).split(/\s+/).filter(Boolean); return words.length ? rows.filter(row => { const name = searchable(fullName(row)); return words.every(word => name.includes(word)); }) : rows; }, [rows, query]);
+  // N21: a student whose ceremony is done leaves the active roster for the Ceremony done list (a disabled one stays as Disabled).
+  const listed = useMemo(() => rows.filter(row => !row.ceremonyDoneAt || row.disabledAt), [rows]);
+  const doneRows = useMemo(() => rows.filter(row => row.ceremonyDoneAt && !row.disabledAt), [rows]);
+  const matches = useMemo(() => { const words = searchable(query).split(/\s+/).filter(Boolean); return words.length ? listed.filter(row => { const name = searchable(fullName(row)); return words.every(word => name.includes(word)); }) : listed; }, [listed, query]);
   const pageCount = Math.max(1, Math.ceil(matches.length / PAGE)), pageRows = matches.slice(page * PAGE, page * PAGE + PAGE);
-  const disabledCount = rows.filter(row => row.disabledAt).length, activeCount = rows.length - disabledCount;
+  const disabledCount = listed.filter(row => row.disabledAt).length, activeCount = listed.length - disabledCount;
   const label = (name: keyof StudentInput) => name === "firstName" ? "First name" : name === "lastName" ? "Last name" : name === "ceremonyDate" ? "Ceremony date" : name === "parentEmail" ? (form.studentKind === "child" ? "Parent email" : "Parent email (optional)") : (form.studentKind === "adult" ? "Student email" : "Student email (optional)");
   const input = (name: "firstName" | "lastName" | "ceremonyDate" | "parentEmail" | "ownEmail") => <div key={name} className="roster-field">
     <label htmlFor={`roster-${name}`}>{label(name)}</label>
@@ -148,9 +172,9 @@ function Roster() {
     {!sheetOpen && notice}{!sheetOpen && conflict && <button type="button" className="button-secondary admin-pill roster-reload-inline" onClick={() => void load().catch(() => undefined)}>Reload roster</button>}
     {loading ? <p role="status">Loading students…</p> : unavailable ? <div className="admin-state" role="alert"><h2>Students unavailable</h2><p>The full list couldn’t be loaded, so none of it is shown. Access may have changed, or the list may be too large to load at once.</p><button className="button-secondary admin-pill" onClick={() => void load().catch(() => undefined)}>Reload roster</button></div>
       : <>
-        {rows.length > 0 && <div className="roster-tools">
+        {listed.length > 0 && <div className="roster-tools">
           <label className="roster-search"><span className="sr-only">Find a student</span><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M16 16l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg><input type="search" placeholder="Find a student" value={query} onChange={event => { setQuery(event.target.value); setPage(0); }} autoComplete="off" /></label>
-          <p className="roster-count" aria-live="polite">{query.trim() ? `${matches.length} of ${rows.length} ${rows.length === 1 ? "student" : "students"}` : `${activeCount} ${activeCount === 1 ? "student" : "students"}${disabledCount ? ` · ${disabledCount} disabled` : ""}`}{pageCount > 1 ? ` · page ${page + 1} of ${pageCount}` : ""}</p>
+          <p className="roster-count" aria-live="polite">{query.trim() ? `${matches.length} of ${listed.length} ${listed.length === 1 ? "student" : "students"}` : `${activeCount} ${activeCount === 1 ? "student" : "students"}${disabledCount ? ` · ${disabledCount} disabled` : ""}`}{pageCount > 1 ? ` · page ${page + 1} of ${pageCount}` : ""}</p>
           <button type="button" className="hero-icon roster-reload" aria-label="Reload roster" disabled={pending} onClick={() => void load().catch(() => undefined)}>{reloadIcon}</button>
         </div>}
         {pageRows.length > 0 && <ul className="roster-list" aria-label="Students">{pageRows.map(row => {
@@ -162,9 +186,15 @@ function Roster() {
             <div className="roster-row-actions">{!row.disabledAt && <button type="button" className="roster-action" aria-label={`Honors for ${name}`} disabled={pending || editing || !!honorsStudent} onClick={event => { honorsOrigin.current = event.currentTarget; setHonorsStudent(row); }}>Honors</button>}<button type="button" className="roster-action" aria-label={`${row.disabledAt ? "Details" : "Edit details"} for ${name}`} disabled={pending || conflict} onClick={event => choose(row, event)}>{row.disabledAt ? "Details" : "Edit"}</button><WorkspaceLink className="roster-action" aria-label={`People for ${name}`} href={`/workspace/admin/students/${row.id}/access`}>People</WorkspaceLink></div>
           </li>;
         })}</ul>}
-        {!rows.length ? <div className="admin-empty"><p className="admin-empty-title">No students yet</p><p>Add a student, or import a list from a spreadsheet.</p><button type="button" className="button-text" onClick={() => void load().catch(() => undefined)}>Reload roster</button></div>
+        {!listed.length ? <div className="admin-empty"><p className="admin-empty-title">No students yet</p><p>Add a student, or import a list from a spreadsheet.</p><button type="button" className="button-text" onClick={() => void load().catch(() => undefined)}>Reload roster</button></div>
           : !matches.length && <div className="admin-empty"><p className="admin-empty-title">No student matches “<bdi dir="auto">{query.trim()}</bdi>”</p><p>Check the spelling, or search by first or last name.</p></div>}
         {pageCount > 1 && <nav className="roster-pages" aria-label="Roster pages"><button className="button-secondary admin-pill" disabled={pending || page === 0} onClick={() => setPage(value => value - 1)}>Previous page</button><button className="button-secondary admin-pill" disabled={pending || page + 1 >= pageCount} onClick={() => setPage(value => value + 1)}>Next page</button></nav>}
+        {doneRows.length > 0 && <section className="roster-ceremony-done" aria-labelledby="roster-ceremony-done-heading" data-testid="ceremony-done-list">
+          <h2 id="roster-ceremony-done-heading">Ceremony done</h2>
+          <ul className="roster-list">{doneRows.map(row => { const name = fullName(row), when = ceremonyCountdown(row.ceremonyDate);
+            return <li key={row.id} className="roster-row"><div className="roster-row-main"><span className="roster-row-name"><bdi dir="auto">{name}</bdi></span><span className="roster-row-meta"><time dateTime={row.ceremonyDate}>{when.label}</time><span>{row.studentKind === "adult" ? "Adult" : "Child"}</span></span></div>
+              <div className="roster-row-actions"><button type="button" className="roster-action" data-testid="ceremony-done-undo" aria-label={`Undo Ceremony done for ${name}`} disabled={pending || conflict || editing} onClick={() => void ceremony(row, true)}>Undo</button></div></li>; })}</ul>
+        </section>}
       </>}
     <dialog ref={sheet} className="roster-sheet" aria-labelledby="roster-editor-title" onFocus={event => { const node = event.target as HTMLElement; if (settled.current && node !== formHeading.current) lastFocus.current = node; }} closedby={pending ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); if (!pending) requestClose(); }} onClose={sheetClosed}>
       <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close student details" disabled={pending} onClick={requestClose}>{icons.close}</button></div>
@@ -184,9 +214,14 @@ function Roster() {
             <div className="form-actions"><button className="button-primary admin-pill" disabled={pending || conflict}>{pending ? "Saving…" : "Save student"}</button><button type="button" className="button-secondary admin-pill" disabled={pending} onClick={requestClose}>Cancel</button></div>
           </form>}
         {current && <MavenLinkPanel key={current.id} studentId={current.id} name={fullName(current)} locked={pending || conflict} />}
+        {current && !current.disabledAt && !current.ceremonyDoneAt && <div className="disable-student" data-testid="ceremony-done-action">
+          {!confirmDone ? <button type="button" className="button-secondary admin-pill" disabled={pending || conflict} onClick={() => { setConfirmDisable(false); setConfirmDone(true); }}>Ceremony done</button>
+            : <><p role="status" data-testid="ceremony-done-confirm">{`Mark ${current.firstName}'s ceremony done? ${current.firstName} keeps the account, Learn and Study. Tutors stop seeing ${current.firstName}. You can undo this.`}</p>
+              <div className="form-actions"><button type="button" className="button-primary admin-pill" disabled={pending || conflict} onClick={() => void ceremony(current, false)}>Ceremony done</button><button type="button" className="button-secondary admin-pill" disabled={pending} onClick={() => setConfirmDone(false)}>Cancel</button></div></>}
+        </div>}
         {current && !current.disabledAt && <div className="disable-student"><h3>Disable this student</h3><p>Stops access to their practice. Their record and history are kept.</p>
-          {!confirmDisable ? <button className="button-secondary admin-pill" disabled={pending || conflict} onClick={() => setConfirmDisable(true)}>Disable student</button>
-            : <><p role="status">Disable <bdi dir="auto">{fullName(current)}</bdi>?</p><div className="form-actions"><button className="button-primary admin-pill roster-danger" disabled={pending || conflict} onClick={() => void mutate(true)}>{pending ? "Disabling…" : "Confirm disable"}</button><button className="button-secondary admin-pill" disabled={pending} onClick={() => setConfirmDisable(false)}>Keep student active</button></div></>}
+          {!confirmDisable ? <button className="button-secondary admin-pill" disabled={pending || conflict} onClick={() => { setConfirmDone(false); setConfirmDisable(true); }}>Disable student</button>
+            : <><p role="status">Disable <bdi dir="auto">{fullName(current)}</bdi>?</p><p className="field-help" data-testid="disable-warning">This can't be undone here.</p><div className="form-actions"><button className="button-primary admin-pill roster-danger" disabled={pending || conflict} onClick={() => void mutate(true)}>{pending ? "Disabling…" : "Confirm disable"}</button><button className="button-secondary admin-pill" disabled={pending} onClick={() => setConfirmDisable(false)}>Keep student active</button></div></>}
         </div>}
       </section>}
     </dialog>

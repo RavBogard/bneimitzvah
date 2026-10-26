@@ -10,8 +10,8 @@ export type ServiceSlot = "morning" | "havdalah" | "unknown";
 export type Student = { id: string; firstName: string; lastName: string; ceremonyDate: string; revision: number; ownAdultHonors?: boolean; rehearsal1?: string | null; rehearsal2?: string | null; serviceSlot?: ServiceSlot };
 export type ImportMetadata={version:1;parent1Name:string|null;householdPhone:string|null;parent2Name:string|null;parashahLabel:string|null;tutorName:string|null;
   tutorMatch:{status:"matched";grantId:string}|{status:"unmatched"|"ambiguous"}|null;adminNotes:string|null};
-export type RosterStudent = Student & { studentKind: "child" | "adult"; serviceSlot: ServiceSlot; parentEmail: string | null; ownEmail: string | null; disabledAt: string | null;hebrewName?:string|null;secondParentEmail?:string|null;importMetadata?:ImportMetadata|null };
-export type StudentInput = Omit<RosterStudent, "id" | "revision" | "disabledAt" | "importMetadata" | "ownAdultHonors">;
+export type RosterStudent = Student & { studentKind: "child" | "adult"; serviceSlot: ServiceSlot; parentEmail: string | null; ownEmail: string | null; disabledAt: string | null; ceremonyDoneAt?: string | null;hebrewName?:string|null;secondParentEmail?:string|null;importMetadata?:ImportMetadata|null };
+export type StudentInput = Omit<RosterStudent, "id" | "revision" | "disabledAt" | "ceremonyDoneAt" | "importMetadata" | "ownAdultHonors">;
 export type Context = { id: string; authorityRevision: number; studentId: string; studentRevision: number; expiresAt: string };
 export type Selection = { handle: string; context: Context };
 export type Reading = { id: string; kind: "torah" | "haftarah"; revision: number; ranges: string[]; verses: string[]; needsReview: boolean; aliyahStarts:string[]|null; readingKey?: string | null;
@@ -66,7 +66,9 @@ export function parseStudents(value: unknown, roster = false): Student[] | Roste
     const rich=roster && !!value && typeof value==="object" && Object.hasOwn(value,"importMetadata");
     const eligibility = !roster && !!value && typeof value === "object" && Object.hasOwn(value, "ownAdultHonors");
     const studentKeys = studentKeysOf(value, roster);
-    const row = object(value, roster ? [...studentKeys, "studentKind", "serviceSlot", "parentEmail", "ownEmail", "disabledAt",...(rich?["hebrewName","secondParentEmail","importMetadata"]:[])] : [...studentKeys, ...(eligibility ? ["ownAdultHonors"] : [])]), student = studentFields(row);
+    // N21: when the student's ceremony was marked done, or null (absent from an older server).
+    const done = roster && !!value && typeof value === "object" && Object.hasOwn(value, "ceremonyDoneAt");
+    const row = object(value, roster ? [...studentKeys, "studentKind", "serviceSlot", "parentEmail", "ownEmail", "disabledAt",...(done?["ceremonyDoneAt"]:[]),...(rich?["hebrewName","secondParentEmail","importMetadata"]:[])] : [...studentKeys, ...(eligibility ? ["ownAdultHonors"] : [])]), student = studentFields(row);
     if (!roster) {
       if (eligibility && typeof row.ownAdultHonors !== "boolean") return bad();
       return eligibility ? { ...student, ownAdultHonors: row.ownAdultHonors as boolean } : student;
@@ -79,7 +81,7 @@ export function parseStudents(value: unknown, roster = false): Student[] | Roste
     if ((studentKind === "child" && parentEmail === null) || (studentKind === "adult" && ownEmail === null) || (ownEmail !== null && ownEmail === parentEmail)) return bad();
     const intake=rich?{hebrewName:intakeText(row.hebrewName,400),secondParentEmail:row.secondParentEmail===null?null:mailbox(row.secondParentEmail),importMetadata:importMetadata(row.importMetadata)}:{};
     if(ownEmail!==null && intake.secondParentEmail===ownEmail)return bad();
-    return { ...student, studentKind, serviceSlot, parentEmail, ownEmail, disabledAt: row.disabledAt === null ? null : instant(row.disabledAt),...intake };
+    return { ...student, studentKind, serviceSlot, parentEmail, ownEmail, disabledAt: row.disabledAt === null ? null : instant(row.disabledAt),...(done ? { ceremonyDoneAt: row.ceremonyDoneAt === null ? null : instant(row.ceremonyDoneAt) } : {}),...intake };
   });
   if (new Set(result.map(row => row.id)).size !== result.length) return bad();
   return result;
@@ -165,6 +167,8 @@ export const workspaceApi = {
     if (current && (row.ok !== true || typeof row.readingNeedsReview !== "boolean" || row.id !== current.id || positive(row.revision) <= current.revision)) return bad();
     return { id: identifier(row.id), revision: positive(row.revision), readingNeedsReview: row.readingNeedsReview === true };
   },
+  /** N21 "Ceremony done": set it (the server ends every tutor assignment) or, with reverse, undo it (no tutor comes back). */
+  async ceremonyDone(student: RosterStudent, reverse = false) { const row = object(await call(`/api/admin/students/${identifier(student.id)}/${reverse ? "ceremony-reverse" : "ceremony-done"}`, { expectedRevision: positive(student.revision) }), ["ok", "id", "revision"]); if (row.ok !== true || row.id !== student.id) return bad(); return { id: identifier(row.id), revision: positive(row.revision) }; },
   async disable(student: RosterStudent) { const row = object(await call(`/api/admin/students/${identifier(student.id)}/disable`, { expectedRevision: positive(student.revision) }), ["ok", "id", "revision"]); if (row.ok !== true || row.id !== student.id) return bad(); return { id: identifier(row.id), revision: positive(row.revision) }; },
   async prepareReading(mode: StaffMode, baseline: Assigned, kind: ReadingKind, input: { pick?: string; ranges?: string[];aliyahStarts?:string[];preparationMode?:"current-assignment";expectedAssignmentRevision?:number }) {
     if (!["admin", "tutor"].includes(mode) || baseline.mode !== mode || !["torah", "haftarah"].includes(kind) || input.pick !== undefined && input.ranges !== undefined) return bad();
