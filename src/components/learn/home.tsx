@@ -8,7 +8,8 @@ import { preparationHref } from "../../lib/learn/passage-preparation";
 import { openPractice } from "../../lib/learn/practice";
 import { DRAFTED } from "./activity-copy";
 import { ContourMark, FamilyChip, icons } from "./bits";
-import { firstVerseOf, useOwnReading, type OwnReading } from "./own-reading";
+import { firstVerseOf, ownAssigned, useOwnReading, type OwnReading } from "./own-reading";
+import { LearnPracticeDisclosure } from "../portal/practice-visibility/disclosure";
 import { useProgress } from "./services";
 import { useVerseReview } from "./own-verses";
 import { LearningStart } from "./learning-start";
@@ -17,6 +18,9 @@ import styles from "./learn.module.css";
 export function LearnAppBar() {
   return <header className="portal-header app-bar"><a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a></header>;
 }
+
+/** 1.9 N23: a signed-in student is one whose own workspace answers with their assignment (the student API refuses everyone else). */
+const isStudent = async () => (await ownAssigned()) !== null;
 
 /** The unit each path's "First phrase of your verse" row follows: the endings (the haftarah path opens with them inside its first unit). */
 const ENDINGS_UNIT: Record<Melody, string> = { torah: "u1-the-two-endings", haftarah: "u5-haftarah-same-phrases-new-tune" };
@@ -95,6 +99,8 @@ export function CourseHome() {
           {ready && <QuickTenLinks progress={progress} />}
           <LearningStart />
           <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a>{mine && <a href="/workspace/student?tab=reading">Back to my reading</a>}</nav>
+          {/* 1.9 N23: what the tutor sees of Learn, told to the student; behind the same release gate as the tutor's lines. */}
+          <LearnPracticeDisclosure signedIn={account.state === "synced"} isStudent={isStudent} />
           {account.state !== "synced" && <p className={styles.saved}>Progress is saved on this device. <a href="/sign-in">Sign in</a> to keep it.</p>}
         </div>
         <div className={styles.paths}>{paths}</div>

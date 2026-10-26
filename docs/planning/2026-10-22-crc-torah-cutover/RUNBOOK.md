@@ -61,3 +61,8 @@ The code that makes this a configuration switch is `src/lib/navigation/canonical
 - **Or:** set the env back and redeploy. The code handles both origins.
 - No database step. DNS and the Google entries stay, and they're harmless.
 - Anyone who signed in on torah signs in again on beitmitzvah. Claude reconnects to the beitmitzvah URL.
+
+### Rolling back code after migration 0052 (1.9 N23, practice visibility)
+- Code from before 0052 is safe to run against the migrated database, but it does not name a mark's source. When a mark changes state, 0052's trigger stamps a new instant and keeps the previous source.
+- So if a parent's child-practice mark is followed by the student's own mark made on pre-0052 code, that later mark reads as "with parent" (and is dated the day of the change). Nothing else is affected.
+- After such a rollback, roll forward before the release gate (`PRACTICE_VISIBILITY_FROM`) is opened. If the gate is already open, tell the tutors that "with parent" may be wrong for marks changed during the rollback window. The window can be found from the deployment times; no data needs changing.
