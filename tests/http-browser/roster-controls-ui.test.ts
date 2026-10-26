@@ -236,6 +236,7 @@ it("warns before Disable, marks a ceremony done after the approved confirmation,
   await click(tab, "Ceremony done");
   await ui(tab.getByTestId("ceremony-done-confirm")).toHaveText("Mark Noa's ceremony done? Noa keeps the account, Learn and Study. Tutors stop seeing Noa. You can undo this.");
   await click(tab, "Ceremony done");
+  await ui(tab.getByText("Noa: ceremony done.", { exact: true })).toBeVisible();
   const list = tab.getByTestId("ceremony-done-list");
   await ui(list.getByRole("heading", { level: 2 })).toBeVisible();
   await ui(list.getByText(name, { exact: true })).toBeVisible();
@@ -243,6 +244,7 @@ it("warns before Disable, marks a ceremony done after the approved confirmation,
   const row = (await api(tab, "/api/admin/students")).data.students.find((value: { id: string }) => value.id === id);
   expect(typeof row.ceremonyDoneAt === "string" && row.disabledAt === null).toBe(true);
   await safe(() => list.getByTestId("ceremony-done-undo").click());
+  await ui(tab.getByText("Noa is back in the active list. Choose a tutor.", { exact: true })).toBeVisible();
   await ui(tab.getByRole("button", { name: `Edit details for ${name}`, exact: true })).toBeVisible();
   await ui(tab.getByTestId("ceremony-done-list")).toHaveCount(0);
   expect((await api(tab, "/api/admin/students")).data.students.find((value: { id: string }) => value.id === id).ceremonyDoneAt).toBeNull();

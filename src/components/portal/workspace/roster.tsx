@@ -104,14 +104,14 @@ function Roster() {
     setCurrent(row); setForm(row ? draft(row) : empty); setEditing(true); setMessage(""); setConflict(false); setConfirmDisable(false); setConfirmDone(false);
   }
   // N21 "Ceremony done": set from the student's sheet (after the approved confirmation), undone from the Ceremony done list.
-  // Wording gaps (Daniel): the two status lines below are neutral placeholders, and so is the "Undo" label.
+  // Wording approved by Daniel (2026-10-26): the "Undo" label and the two status lines below, word for word.
   async function ceremony(row: RosterStudent, reverse: boolean) {
     if (gate.current || conflict) return;
     gate.current = true; setPending(true); setMessage(""); const generation = lifetime.current;
     try {
       await workspaceApi.ceremonyDone(row, reverse);
       if (generation !== lifetime.current) return;
-      const done = reverse ? `${fullName(row)} is back in the list.` : `${fullName(row)}: Ceremony done.`;
+      const done = reverse ? `${row.firstName} is back in the active list. Choose a tutor.` : `${row.firstName}: ceremony done.`;
       let refreshed = true; try { await load(); } catch { refreshed = false; }
       if (generation === lifetime.current) setMessage(done + (refreshed ? "" : " The list couldn’t be refreshed. Reload it to check the current record."));
     } catch (error) {
