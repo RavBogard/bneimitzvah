@@ -12,6 +12,7 @@ import { FrontDoor, type FrontDoorAccount } from "./front-door/front-door";
 import { AccountRequest } from "./account-request";
 import { purgeOffline } from "../../lib/offline/pack-index";
 import { TabBar, TabSkipLink } from "./shell/tab-bar";
+import { PracticeDisclosure } from "./practice-visibility/disclosure";
 
 export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "uncertain" }
   | { kind: "accepted"; role: SessionSummary["roles"][number] }
@@ -209,6 +210,8 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
             {view.summary.roles.some(role => role === "admin" || role === "tutor") && <p><a href="/workspace/claude">Claude connections</a><span className="field-help"> · see and end Claude’s access to the portal</span></p>}
             {view.summary.approver && <p><a href="/workspace/accounts">Account requests</a><span className="field-help"> · approve accounts for people who ask</span></p>}
             {/* 1.9 N11: a student's way to help, the congregation's own preparation guide (the link the reading page already carries). */}
+            {/* 1.9 N23: the student is told what the tutor sees, behind the same release gate as every tutor and parent line. */}
+            {view.summary.roles.includes("student") && <PracticeDisclosure place="account" />}
             {view.summary.roles.includes("student") && <p><a href="https://www.centralreform.org/beit-mitzvah/" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Need help?</a></p>}
             {/* Never offered to a student, who already has an account (G20, 1.9 N20); other accounts without saved readings may ask. */}
             {!view.summary.saved && !view.summary.roles.includes("student") && <AccountRequest level={doors ? 4 : 3} />}</>

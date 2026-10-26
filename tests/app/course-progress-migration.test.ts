@@ -63,8 +63,10 @@ test("0037 adds only the course_progress table, leaves existing rows and the aud
     const rls = await client.query("select relname, relrowsecurity, relforcerowsecurity from pg_class where relname = $1 and relkind='r'", [TABLE]);
     expect(rls.rows).toEqual([{ relname: TABLE, relrowsecurity: true, relforcerowsecurity: true }]);
     const owner = "((tenant_id = NULLIF(current_setting('app.tenant_id'::text, true), ''::text)) AND (membership_id = (NULLIF(current_setting('app.course_owner'::text, true), ''::text))::uuid))";
-    const policies = await client.query("select tablename, policyname, cmd, permissive, roles::text[] as roles, qual, with_check from pg_policies where tablename = $1", [TABLE]);
+    // 1.9 N23 (0052) adds one SELECT policy for the assigned tutor reader (tests/app/practice-visibility-migration.test.ts); owner_only is unchanged.
+    const policies = await client.query("select tablename, policyname, cmd, permissive, roles::text[] as roles, qual, with_check from pg_policies where tablename = $1 and policyname <> 'assigned_tutor_reader'", [TABLE]);
     expect(policies.rows).toEqual([{ tablename: TABLE, policyname: "owner_only", cmd: "ALL", permissive: "PERMISSIVE", roles: ["portal_runtime"], qual: owner, with_check: owner }]);
+    expect((await client.query("select policyname from pg_policies where tablename = $1 order by 1", [TABLE])).rows).toEqual([{ policyname: "assigned_tutor_reader" }, { policyname: "owner_only" }]);
     const tableGrants = await client.query("select privilege_type from information_schema.table_privileges where grantee='portal_runtime' and table_name = $1 order by privilege_type", [TABLE]);
     expect(tableGrants.rows).toEqual([{ privilege_type: "INSERT" }, { privilege_type: "SELECT" }]);
     const columnGrants = await client.query("select column_name from information_schema.column_privileges where grantee='portal_runtime' and privilege_type='UPDATE' and table_name = $1 order by column_name", [TABLE]);

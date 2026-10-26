@@ -358,6 +358,13 @@
       "when": 1793008733628,
       "tag": "0051_invitation_copy",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1793020039672,
+      "tag": "0052_practice_visibility",
+      "breakpoints": true
     }
   ]
 }

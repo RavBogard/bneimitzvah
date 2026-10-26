@@ -38,7 +38,8 @@ test("the course-progress data module is imported only from src/server/course-pr
 });
 
 test("no code outside the layer names the table, and no staff-facing service reaches it", () => {
-  const allowed = new Set(["src/server/db/course-progress-schema.ts", "src/server/data/course-progress.ts", MIGRATION]);
+  // 1.9 N23: 0052 adds the one SELECT policy for the assigned tutor reader (tests/practice-visibility-structure.test.mjs guards its reader).
+  const allowed = new Set(["src/server/db/course-progress-schema.ts", "src/server/data/course-progress.ts", MIGRATION, "src/server/db/migrations/0052_practice_visibility.sql"]);
   for (const file of sources) {
     if (allowed.has(file.path) || /^src\/server\/db\/migrations\/meta\/\d{4}_snapshot\.json$/.test(file.path)) continue;
     assert.doesNotMatch(file.text, /\bcourseProgressTable\b|\bcourse_progress\b/, `${file.path} names the course-progress table`);

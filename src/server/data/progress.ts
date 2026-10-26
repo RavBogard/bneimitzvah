@@ -9,7 +9,7 @@ import * as s from "../db/index";
 
 export type ProgressActor = StudentActor | PracticeActor;
 const table = (stream: ProgressStream) => stream === "self-check" ? s.verseSelfCheck : s.verseAssessment;
-const key = (t: typeof s.verseSelfCheck, actor: ProgressActor, assignmentId: string, verseRef: string) => and(
+const key = (t: typeof s.verseSelfCheck | typeof s.verseAssessment, actor: ProgressActor, assignmentId: string, verseRef: string) => and(
   eq(t.tenantId, actor.tenantId), eq(t.studentId, actor.studentId), eq(t.assignmentId, assignmentId), eq(t.verseRef, verseRef));
 
 // One statement gives both streams from one snapshot; page and counts are
@@ -29,7 +29,17 @@ export async function lockHead<Q extends PgQueryResultHKT>(tx: AccessTransaction
   return row ?? null;
 }
 export async function change<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: ProgressActor, stream: ProgressStream, assignmentId: string, write: ProgressWrite, exists: boolean) {
-  const t = table(stream), values = { state: write.state, version: write.expectedVersion + 1 };
+  if (stream === "self-check") {
+    // 1.9 N23 (0052): a student's mark records whether it was made with a parent (child practice), as practice events do.
+    // The instant of the change is the server's, stamped by 0052's trigger.
+    if (actor.mode !== "student" && actor.mode !== "child-practice") throw new Error("Progress mode unavailable");
+    const t = s.verseSelfCheck, values = { state: write.state, version: write.expectedVersion + 1, sourceMode: actor.mode };
+    const [row] = exists
+      ? await tx.update(t).set(values).where(and(key(t, actor, assignmentId, write.verseRef), eq(t.version, write.expectedVersion))).returning({ id: t.id, state: t.state, version: t.version })
+      : await tx.insert(t).values({ tenantId: actor.tenantId, studentId: actor.studentId, assignmentId, verseRef: write.verseRef, ...values }).onConflictDoNothing().returning({ id: t.id, state: t.state, version: t.version });
+    return row ?? null;
+  }
+  const t = s.verseAssessment, values = { state: write.state, version: write.expectedVersion + 1 };
   const [row] = exists
     ? await tx.update(t).set(values).where(and(key(t, actor, assignmentId, write.verseRef), eq(t.version, write.expectedVersion))).returning({ id: t.id, state: t.state, version: t.version })
     : await tx.insert(t).values({ tenantId: actor.tenantId, studentId: actor.studentId, assignmentId, verseRef: write.verseRef, ...values }).onConflictDoNothing().returning({ id: t.id, state: t.state, version: t.version });
