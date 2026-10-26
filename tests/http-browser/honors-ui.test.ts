@@ -235,7 +235,7 @@ it("admin printing verifies only the saved copy; real guardian denial clears pri
 it("own adult uses the existing honors sheet and link controls while child practice tutor and foreign targets stay denied", async () => {
   const student = await page("student"); await openAdult(student);
   // An adult's honors entry sits after the adult's reading (G20); the sheet is open now, so check the page behind it.
-  expect(await student.evaluate(() => { const reading = document.getElementById("reading-heading"), honors = document.getElementById("family-honors"); return !!reading && !!honors && !!(reading.compareDocumentPosition(honors) & Node.DOCUMENT_POSITION_FOLLOWING); })).toBe(true);
+  await ui.poll(() => student.evaluate(() => { const reading = document.getElementById("reading-heading"), honors = document.getElementById("family-honors"); return !!reading && !!honors && !!(reading.compareDocumentPosition(honors) & Node.DOCUMENT_POSITION_FOLLOWING); })).toBe(true);
   await add(student, "Opening the ark", "Synthetic Adult Honoree"); await add(student, "Aliyah 2 · Genesis 1:2 – Genesis 1:3", "Synthetic Adult Aliyah");
   const result = await save(student, fixture.student.id); expect(result.ok).toBe(true);
   const [identity] = await fixture.ownerDb.select().from(s.studentIdentity).where(eq(s.studentIdentity.studentId, fixture.student.id));
