@@ -4,6 +4,7 @@ import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction, ActiveMode, LockIntent } from "../access/types";
 import { lockStrength } from "../access/types";
 import * as s from "../db/index";
+import { notCeremonyDone } from "./ceremony-done";
 
 export type SessionProof = Readonly<{ id: string; userId: string; token: string }>;
 
@@ -50,6 +51,9 @@ export async function lockStudentRelationship<Q extends PgQueryResultHKT>(tx: Ac
   if (mode === "tutor") {
     const [link] = await tx.select({ id: s.tutorStudent.id }).from(s.tutorStudent).where(and(
       eq(s.tutorStudent.tenantId, tenantId), eq(s.tutorStudent.studentId, studentId), eq(s.tutorStudent.tutorGrantId, grantId), isNull(s.tutorStudent.revokedAt),
+      // N21, defence in depth: setting "Ceremony done" ends every tutor row in its own transaction and 0049 refuses a new one while
+      // it is live, so this never matches a live row; were one ever left, a tutor still reads nothing of a ceremony-done student.
+      notCeremonyDone(s.tutorStudent.tenantId, s.tutorStudent.studentId),
     )).for(strength);
     return link ? { ...link, revision: null } : undefined;
   }

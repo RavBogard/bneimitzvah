@@ -6,6 +6,7 @@ import { AccessDenied } from "../access/errors";
 import { requireCookieMutation, type CookieMutationRequest } from "../http/mutations";
 import { identifier, revision } from "../students/validation";
 import * as data from "./data";
+import { isCeremonyDone } from "../data/ceremony-done";
 import type { AdminSelection, EligibleTutor, FlagSelection, LinkSelection } from "./types";
 
 const conflict = () => Object.freeze({ ok: false as const, code: "stale-state" as const });
@@ -28,6 +29,9 @@ export async function writeTutorAssignment<Q extends PgQueryResultHKT>(tx: Acces
   if (subject.grant.role !== "tutor" || subject.grant.revokedAt || subject.membership.disabledAt || !subject.verified) throw new AccessDenied(404);
   const student = await data.student(tx, actor.tenantId, studentId, "authority-write");
   if (student.disabledAt) throw new AccessDenied(404);
+  // N21: no tutor assignment while the student's ceremony is done (0049's trigger refuses it as well). After a reversal an admin
+  // assigns tutors again here, by hand; the reversal itself restores none.
+  if (await isCeremonyDone(tx, actor.tenantId, studentId)) return conflict();
   if (await data.activeTutorLink(tx, actor.tenantId, studentId, grantId)) return conflict();
   const link = await data.insertTutor(tx, actor.tenantId, studentId, grantId);
   await data.audit(tx, actor, "tutor.assign", link.id, studentId);

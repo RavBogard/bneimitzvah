@@ -45,7 +45,7 @@ function Invitations() {
   const prefilled = useRef(false);
   useEffect(() => {
     if (prefilled.current || !snapshot) return; prefilled.current = true;
-    const query = new URLSearchParams(window.location.search), role = query.get("role"), row = snapshot.students.find(value => value.id === query.get("student") && !value.disabledAt);
+    const query = new URLSearchParams(window.location.search), role = query.get("role"), row = snapshot.students.find(value => value.id === query.get("student") && !value.disabledAt && !value.ceremonyDoneAt);
     if (!row || (role !== "parent" && role !== "student")) return;
     // Never replace anything the admin has already started.
     setDraft(current => current.email || current.studentId || current.role !== "parent" ? current : { role, studentId: row.id, email: (role === "parent" ? row.parentEmail : row.ownEmail) ?? "" });

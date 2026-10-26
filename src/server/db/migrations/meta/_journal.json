@@ -344,6 +344,13 @@
       "when": 1792981854024,
       "tag": "0048_service_part_finished",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1793001108321,
+      "tag": "0049_ceremony_done",
+      "breakpoints": true
     }
   ]
 }
