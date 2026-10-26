@@ -48,14 +48,16 @@ export function createStaffService<Q extends PgQueryResultHKT>(input: { access: 
         await data.openParentInvites(tx, tenantId), await data.confirmedAssignments(tx, tenantId), await data.honorsStarted(tx, tenantId)];
       [tutors, families, invites, readings, honors].forEach(tooMany);
       const tutorCount = new Map(tutors.map(row => [row.studentId, Number(row.count)])), joined = new Set(families.map(row => row.studentId)), started = new Set(honors.map(row => row.studentId));
-      const at = now();
+      const group = <T extends { studentId: string | null }>(rows: readonly T[]) => { const map = new Map<string, T[]>(); for (const row of rows) if (row.studentId) map.set(row.studentId, [...map.get(row.studentId) ?? [], row]); return map; };
+      const invitesOf = group(invites), readingsOf = group(readings), at = now();
       return Object.freeze(active.map(student => {
         let family: FamilyState | null = null;
         if (student.studentKind === "child") {
-          const open = invites.filter(row => row.studentId === student.id), live = open.filter(row => row.expiresAt.getTime() > at);
+          // "Expires tomorrow" as N22 counts it: a pending link with a day or less left.
+          const open = invitesOf.get(student.id) ?? [], live = open.filter(row => row.expiresAt.getTime() > at);
           family = joined.has(student.id) ? "joined" : live.length ? (live.every(row => row.expiresAt.getTime() - at <= DAY_MS) ? "expiring" : "invited") : open.length ? "expired" : "none";
         }
-        const own = readings.filter(row => row.studentId === student.id);
+        const own = readingsOf.get(student.id) ?? [];
         const reading = !own.length ? "none" : own.some(row => assignmentNeedsReview(row.snapshot, student.ceremonyDate)) ? "review" : "confirmed";
         return Object.freeze({ id: student.id, tutors: tutorCount.get(student.id) ?? 0, family, reading, honors: started.has(student.id) });
       }));
