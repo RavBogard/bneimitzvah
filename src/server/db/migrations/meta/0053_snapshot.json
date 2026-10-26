@@ -12475,7 +12475,8 @@
           "columns": [
             "tenant_id",
             "invite_id",
-            "student_id"
+            "student_id",
+            "held_by_grant_id"
           ]
         }
       },

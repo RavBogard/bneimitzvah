@@ -127,6 +127,7 @@ export async function audit<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>
   action: "tutor.assign" | "tutor.revoke" | "guardian.revoke" | "guardian.practice-set" | "identity.revoke" | "grant.revoke" | "tutor.cantor-set",
   targetId: string, studentId: string | null = null, guardianId: string | null = null) {
   await tx.insert(s.auditEvent).values({ tenantId: actor.tenantId, actorUserId: actor.userId, actorMembershipId: actor.membershipId, roleGrantId: actor.roleGrantId,
-    mode: "admin", actingStudentId: studentId, guardianId, action, targetType: action === "grant.revoke" || action === "tutor.cantor-set" ? "role_grant"
+    // The acting user's own mode: an admin's for every portal and MCP write, a tutor's when accepting an invitation makes their held links.
+    mode: actor.mode, actingStudentId: studentId, guardianId, action, targetType: action === "grant.revoke" || action === "tutor.cantor-set" ? "role_grant"
       : action === "identity.revoke" ? "student_identity" : action.startsWith("guardian.") ? "guardian" : "tutor_student", targetId, requestId: crypto.randomUUID() });
 }

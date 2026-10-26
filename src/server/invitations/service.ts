@@ -345,8 +345,9 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
         const link = await data.linkInvitedStudent(tx, identity.tenantId, invitation.studentId, grantId, invitation.role, invitation.id, invitation.createdAt);
         if (link.created) await data.writeInvitationAudit(tx, actor, invitation.role === "parent" ? "guardian.link" : "identity.link", link.id);
       }
-      // The students the rabbi held for this tutor invitation become the tutor's, through the portal's own tutor write. A student
-      // since disabled, ceremony-done or already linked is skipped; nothing else about the acceptance changes.
+      // The students the rabbi held for this tutor invitation become the tutor's, through the portal's own tutor write, in student-id
+      // order. A student since disabled, ceremony-done or already linked is skipped, and so is a hold whose admin is no longer live;
+      // nothing else about the acceptance changes. The tutor.assign audit names the accepting tutor, in tutor mode.
       if (invitation.role === "tutor") for (const studentId of await holds.heldStudents(tx, identity.tenantId, invitation.id)) {
         const held = await data.lockInvitationStudent(tx, identity.tenantId, studentId);
         if (!held || held.disabledAt) continue;

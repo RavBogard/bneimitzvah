@@ -262,7 +262,10 @@ describe("student setup through the portal MCP", () => {
       .innerJoin(s.membership, eq(s.membership.id, s.roleGrant.membershipId)).innerJoin(s.user, eq(s.user.id, s.membership.userId)).where(eq(s.user.email, "held.tutor@example.test")));
     expect(links.map(l => l.tutor_student.studentId).sort()).toEqual([crc.id, unrelated.id].sort());
     expect(links.every(l => l.tutor_student.revokedAt === null && l.role_grant.role === "tutor")).toBe(true);
-    expect(await owner(() => t.f.db.select().from(s.auditEvent).where(eq(s.auditEvent.action, "tutor.assign")))).toHaveLength(2);
+    // The links are audited as the accepting tutor, in tutor mode.
+    const assigned = await owner(() => t.f.db.select().from(s.auditEvent).where(eq(s.auditEvent.action, "tutor.assign")));
+    expect(assigned).toHaveLength(2);
+    expect(assigned.every(a => a.mode === "tutor" && a.roleGrantId === links[0].role_grant.id)).toBe(true);
     // Row security: a hold needs a live admin grant, a live tutor invitation and an enabled student, and is never updated or deleted.
     const tryInsert = (values: Partial<typeof s.tutorInviteHold.$inferInsert>) => withTenantTransaction(t.f.db, { tenantId: "crc" }, tx =>
       tx.insert(s.tutorInviteHold).values({ tenantId: "crc", inviteId: again.inviteId, studentId: crc.id, heldByGrantId: t.f.adminGrant.id, ...values } as typeof s.tutorInviteHold.$inferInsert)).then(() => "ok", () => "refused");

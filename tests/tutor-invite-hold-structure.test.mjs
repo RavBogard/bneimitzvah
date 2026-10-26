@@ -27,6 +27,11 @@ test("only the holds data module names the table, and only the invitation servic
     assert.deepEqual(sources.filter(file => file.path !== DATA && new RegExp(`\\b${write}\\b`).test(file.text)).map(file => file.path), [SERVICE], write);
 });
 
+test("only the holds data module sets app.tutor_hold_actor", () => {
+  assert.deepEqual(sources.filter(file => /set_config\('app\.tutor_hold_actor'/.test(file.text)).map(file => file.path), [DATA]);
+  assert.deepEqual(sources.filter(file => file.text.includes("app.tutor_hold_actor")).map(file => file.path).sort(), [DATA, "src/server/db/migrations/0053_tutor_invite_hold.sql"].sort());
+});
+
 test("acceptance links held students only through writeTutorAssignment, only for a tutor invitation, before the invitation is consumed", () => {
   const service = sources.find(file => file.path === SERVICE).text;
   const accept = service.slice(service.indexOf("async function acceptCore"));

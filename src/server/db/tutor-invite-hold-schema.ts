@@ -19,7 +19,8 @@ export const tutorInviteHold = pgTable("tutor_invite_hold", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
   unique("tutor_invite_hold_tenant_id_key").on(t.tenantId, t.id),
-  unique("tutor_invite_hold_invite_student_key").on(t.tenantId, t.inviteId, t.studentId),
+  // One row per invitation, student and writer: a live admin can hold a student again after the admin who first held it left.
+  unique("tutor_invite_hold_invite_student_key").on(t.tenantId, t.inviteId, t.studentId, t.heldByGrantId),
   foreignKey({ name: "tutor_invite_hold_invite_fk", columns: [t.tenantId, t.inviteId], foreignColumns: [invite.tenantId, invite.id] }),
   foreignKey({ name: "tutor_invite_hold_student_fk", columns: [t.tenantId, t.studentId], foreignColumns: [student.tenantId, student.id] }),
   foreignKey({ name: "tutor_invite_hold_held_by_fk", columns: [t.tenantId, t.heldByGrantId, t.heldByRole], foreignColumns: [roleGrant.tenantId, roleGrant.id, roleGrant.role] }),
