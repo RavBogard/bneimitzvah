@@ -178,8 +178,13 @@ describe("the licensed lane cannot be reached from the course", () => {
   const ROOT = join(__dirname, "..", "..");
   const files = (dir: string): string[] => readdirSync(join(ROOT, dir)).flatMap(name => statSync(join(ROOT, dir, name)).isDirectory() ? files(`${dir}/${name}`) : [`${dir}/${name}`]);
   const COURSE = [...files("src/server/service-course"), ...files("src/lib/service-course"), ...files("src/components/learn/service"), "src/server/runtime/public-composition.ts", "src/app/learn/service/[lesson]/page.tsx"];
+  // 2.0 SC7 (MISSION, amended 2026-10-25): the evening lessons show the CRC siddur's own text, through exactly one module,
+  // src/server/service-course/evening.ts, held to its own stricter rules in service-course-evening.test.ts. Every other course module,
+  // page and the public runtime still never touch the licensed catalog or its parser.
+  const EVENING_MODULE = "src/server/service-course/evening.ts";
   it("no course module, page or the public runtime reads the licensed catalog, its parser or a licensed volume", () => {
-    for (const file of COURSE) {
+    expect(COURSE).toContain(EVENING_MODULE);
+    for (const file of COURSE.filter(name => name !== EVENING_MODULE)) {
       // Code only: the comments say what is never read, by name.
       const text = readFileSync(join(ROOT, file), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1").replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
       expect(text, file).not.toMatch(/serviceCatalog\b|service_catalog\b|parseServiceFeed|readStoredFeed|createServiceLearningService|booklet-projector|dist-app/);

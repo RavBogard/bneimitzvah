@@ -72,11 +72,12 @@ describe("GET /api/offline/packs: who gets which readings", () => {
     await t.confirm(0, "torah", "Genesis 1:1-2", ["Genesis 1:1", "Genesis 1:2"]);
     await t.confirm(1, "haftarah", "Isaiah 1:1-2", ["Isaiah 1:1", "Isaiah 1:2"]);
     const after = await t.call("learner");
-    expect(after.json).toEqual({ owner: before.json.owner, packs: [{ kind: "torah", ref: "Genesis 1:1-2", name: null }] });
+    // A CRC member may also keep the evening lessons' text (2.0 SC7): a flag, never the text.
+    expect(after.json).toEqual({ owner: before.json.owner, packs: [{ kind: "torah", ref: "Genesis 1:1-2", name: null }], evening: true });
     // Descriptors only: no name, email address, ceremony date or text.
     const body = JSON.stringify(after.json);
     for (const leak of ["@", "Synthetic", "Sibling", "2027-01-02", "2026-10-01", "hebrew", "english"]) expect(body, leak).not.toContain(leak);
-    expect(parseOwnerAnswer(200, after.json)).toEqual({ state: "owner", owner: after.json.owner, packs: after.json.packs });
+    expect(parseOwnerAnswer(200, after.json)).toEqual({ state: "owner", owner: after.json.owner, packs: after.json.packs, evening: true });
   });
 
   it("gives tutor, admin and parent grants nothing: no child's or tutee's reading travels offline", async () => {
@@ -129,6 +130,21 @@ describe("GET /api/offline/packs: who gets which readings", () => {
     expect(there.json.packs).toEqual([{ kind: "torah", ref: "Genesis 6:9-10", name: null }]);
     expect(there.json.owner).not.toBe(b.json.owner);
     expect((await t.call("multi")).json.packs).toEqual([]);
+  });
+
+  it("lets only a signed-in CRC person keep the evening lessons' text (2.0 SC7): never signed out, never on another congregation's site", async () => {
+    const t = await setup();
+    // Signed in at CRC, with a membership: the flag, never the text.
+    for (const who of ["learner", "admin", "multi"] as const) expect((await t.call(who)).json.evening, who).toBe(true);
+    expect(JSON.stringify((await t.call("learner")).json)).not.toMatch(/[\u0590-\u05FF]|evening-text|bm-maariv/);
+    // The same person on a synthetic second congregation's site: no evening text to keep there.
+    const there = await t.call("multi", { origin: OTHER });
+    expect(there.status).toBe(200); expect(there.json.evening).toBe(false);
+    expect(parseOwnerAnswer(200, there.json)).not.toHaveProperty("evening");
+    // Signed out: 401, which the device reads as signed out and keeps no owner pack.
+    const out = await t.call("anonymous");
+    expect(out.status).toBe(401); expect(out.json).not.toHaveProperty("evening");
+    expect(parseOwnerAnswer(401, out.json)).toEqual({ state: "signed-out" });
   });
 
   it("a revoked student grant or a removed link takes the readings away at the next ask", async () => {

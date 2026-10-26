@@ -3,6 +3,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNod
 import type { VerseChoiceView } from "../workspace/study/verse-choice";
 import { countLine, countSelected, fitsGroups, selectionFromRanges, selectionLine, selectionRanges, tapVerse, SELECTION_MAX_GROUPS } from "../../../lib/readings/verse-selection";
 import { printAddress } from "../../../lib/print/print-address";
+import { useMore } from "./read-header";
 import styles from "./choose-verses.module.css";
 
 /** The words of Choose verses. "Choose verses", "Change verses" and "Whole portion" are the approved plan's; the rest are the plainest literal labels. */
@@ -56,7 +57,7 @@ export function useVerseChoice(plan: ChoosePlan | undefined, order: readonly str
   const [choosing, setChoosing] = useState(Boolean(plan?.autoStart));
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => plan?.autoStart ? selectionFromRanges(plan.start, kind) ?? new Set() : new Set());
   const [anchor, setAnchor] = useState<string | null>(null), [rangeMode, setRangeMode] = useState(false), [note, setNote] = useState(""), [saved, setSaved] = useState(false);
-  const opener = useRef<HTMLButtonElement | null>(null), bar = useRef<HTMLElement | null>(null), restore = useRef(false), entered = useRef(false);
+  const opener = useRef<HTMLButtonElement | null>(null), bar = useRef<HTMLElement | null>(null), restore = useRef(false), entered = useRef(false), more = useMore();
   const markedKey = plan?.marked?.join("; ") ?? "";
   const marked = useMemo(() => plan?.marked?.length ? selectionFromRanges(plan.marked, kind) ?? new Set<string>() : new Set<string>(), [markedKey, kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -78,12 +79,19 @@ export function useVerseChoice(plan: ChoosePlan | undefined, order: readonly str
   };
   const leave = () => { restore.current = true; setChoosing(false); setRangeMode(false); setNote(""); plan?.onClose?.(); };
   useEffect(() => { if (choosing && !entered.current) { entered.current = true; bar.current?.focus({ preventScroll: true }); } if (!choosing) entered.current = false; }, [choosing]);
-  useEffect(() => { if (!choosing && restore.current) { restore.current = false; opener.current?.focus(); } });
+  // Back to the button that began it; with a More sheet that button is inside the closed sheet, so More itself takes the focus.
+  useEffect(() => {
+    if (choosing || !restore.current) return;
+    restore.current = false;
+    const back = opener.current?.isConnected && opener.current.getClientRects().length > 0 ? opener.current : document.querySelector<HTMLElement>("[data-more-button]") ?? opener.current;
+    back?.focus();
+  });
 
   const told = useRef(plan?.onChoosing); told.current = plan?.onChoosing;
   useEffect(() => { told.current?.(choosing); return () => told.current?.(false); }, [choosing]);
   const view: VerseChoiceView | undefined = plan ? { choosing, selected, marked, onToggle } : undefined;
-  const button = plan && !choosing ? <button type="button" ref={opener} className="button-secondary" onClick={begin}>{plan.label}</button> : null;
+  // In the More sheet the sheet closes first, so the bar that opens is the one that takes focus.
+  const button = plan && !choosing ? <button type="button" ref={opener} className="button-secondary" onClick={() => more && !plan.onBegin ? more.close(begin) : begin()}>{plan.label}</button> : null;
   const live = rangeMode && anchor !== null ? `${countLine(count, ranges)}. ${CHOOSE_STRINGS.rangeFrom}` : count < 1 ? CHOOSE_STRINGS.hint : countLine(count, ranges);
   const barView = plan && choosing ? <ChooseBar barRef={bar} label={plan.label} line={live} note={note} rangeMode={rangeMode} canRange={anchor !== null} empty={count < 1} saved={saved}
     onRange={() => setRangeMode(value => !value)} onClear={() => { change(new Set()); setAnchor(null); setRangeMode(false); setNote(""); }} onCancel={leave}

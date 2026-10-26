@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { studyRangePlan } from "../src/components/portal/workspace/study/api";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
+import { closeMore, openMore } from "./more-sheet";
 
 // Release 1.4 saved readings in the built, unconfigured production server. The session, reading and
 // saved-readings answers are synthetic route fulfilments, so the page's own client code is under test.
@@ -34,11 +35,13 @@ test("Save on /read asks about the account only when pressed, and answers signed
   // A browser never seen signed in here starts on Sign in to save (F4), still without asking.
   await page.goto("/read?date=2026-10-24");
   await expect(page.getByRole("heading", { level: 1, name: "Noach", exact: true })).toBeVisible();
+  await openMore(page);
   await expect(page.getByRole("link", { name: "Sign in to save", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
   expect(saved).toEqual([]);
   await seenSignedIn(page); await page.reload();
   await expect(page.getByRole("heading", { level: 1, name: "Noach", exact: true })).toBeVisible();
+  await openMore(page);
   const save = page.getByRole("button", { name: "Save", exact: true });
   await expect(save).toBeVisible();
   // Visiting the reading never asks about a session, and the app bar offers Sign in.
@@ -56,9 +59,11 @@ test("Save on /read asks about the account only when pressed, and answers signed
   expect(saved).toEqual(["/api/saved/readings"]);
   answer = { status: 403, body: { error: "forbidden" } };
   await seenSignedIn(page); await page.reload();
+  await openMore(page);
   await save.click();
   await expect(page.getByRole("link", { name: "Ask for an account to save readings", exact: true })).toHaveAttribute("href", "/account");
   await expect(page.getByRole("form", { name: "Save this reading" })).toHaveCount(0);
+  await closeMore(page);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
@@ -72,6 +77,7 @@ test("a member saves the passage on screen with its name and Shabbat filled in, 
     await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: [] }));
     await page.route("**/api/saved/readings/create", route => { posted.push(route.request().postDataJSON()); return json(route, createAnswer.status, createAnswer.body); });
     await page.goto("/read?date=2026-10-24");
+    await openMore(page);
     await page.getByRole("button", { name: "Save", exact: true }).click();
     const form = page.getByRole("form", { name: "Save this reading" });
     await expect(form).toBeVisible();
@@ -93,7 +99,9 @@ test("a member saves the passage on screen with its name and Shabbat filled in, 
     await expect(page.getByRole("link", { name: "My readings", exact: true })).toHaveAttribute("href", "/");
     expect(posted.at(-1)).toEqual({ name: "My Noach", date: null, kind: "torah", ranges: "Genesis 6:9-11:32" });
     // The haftarah is its own passage: Save starts over for it, named for it.
+    await closeMore(page);
     await page.getByRole("button", { name: "Haftarah", exact: true }).click();
+    await openMore(page);
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("form", { name: "Save this reading" }).getByLabel("Name")).toHaveValue("Noach · Haftarah");
     await page.getByRole("button", { name: "Cancel", exact: true }).click();

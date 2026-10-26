@@ -1,6 +1,7 @@
 {
   "tenant": "crc",
   "enabled": true,
+  "evening": true,
   "siddurBook": "legacy-beit-mitzvah",
   "publicVolume": "shabbat-shacharit",
   "credit": "Rabbi Daniel Bogard",
@@ -14,6 +15,9 @@
   ],
   "lessons": {
     "modeh-ani": {
+      "bm": [
+        "awakening.modeh-ani"
+      ],
       "pages": {
         "morning": 2
       },
@@ -24,16 +28,28 @@
       }
     },
     "tallit": {
+      "bm": [
+        "awakening.tallit-blessing"
+      ],
       "pages": {
-        "morning": 2
+        "morning": 2,
+        "evening": 34
       },
       "teaching": {
         "text": "The tallit is a four-cornered prayer shawl, and its blessing is not really about the cloth but about the fringes on its corners, the tzitzit. The Torah asks for them so that we will look at them and remember (Numbers 15:39), and because that verse is about seeing, the tradition wears the tallit by day, which is why it belongs to the morning. The blessing thanks God, who makes us holy through mitzvot and commands us *l'hitateif batzitzit*, \"to wrap ourselves in fringes.\" We can hear that command as a reminder that we are bound into obligations larger than ourselves, tied by the same strings to the past and to one another. Many egalitarian communities welcome anyone who wishes to wear one. Some of us wrap in it fully for a moment, saying its words softly. The tallit puts our reminders where we cannot help but see them.",
         "approved": "2026-10-24",
         "from": "A3-DRAFTS/01-07-morning-blessings.md"
+      },
+      "eveningTeaching": {
+        "text": "The tallit is a four-cornered prayer shawl, and its blessing is not really about the cloth but about the fringes on its corners, the tzitzit. The Torah asks for them so that we will look at them and remember (Numbers 15:39), and because that verse is about seeing, the tradition wears the tallit by day, so a service that begins before sunset still falls within its time. The blessing thanks God, who makes us holy through mitzvot and commands us *l'hitateif batzitzit*, \"to wrap ourselves in fringes.\" We can hear that command as a reminder that we are bound into obligations larger than ourselves, tied by the same strings to the past and to one another. Many egalitarian communities welcome anyone who wishes to wear one. Some of us wrap in it fully for a moment, saying its words softly. The tallit puts our reminders where we cannot help but see them.",
+        "approved": "2026-10-24",
+        "from": "A3-DRAFTS/evening-33-63.md"
       }
     },
     "mah-tovu": {
+      "bm": [
+        "awakening.mah-tovu"
+      ],
       "pages": {
         "morning": 3
       },
@@ -44,8 +60,12 @@
       }
     },
     "hineih-mah-tov": {
+      "bm": [
+        "awakening.hineih-mah-tov"
+      ],
       "pages": {
-        "morning": 3
+        "morning": 3,
+        "evening": 34
       },
       "teaching": {
         "text": "Hineih Mah Tov is the first verse of Psalm 133, one of the Songs of Ascents (Psalms 120–134) that pilgrims are said to have sung on the road up to Jerusalem. Its subject is almost unbearably plain: how good and how pleasant it is when kin sit together. The Hebrew says *achim*, brothers; we hear it as all of us, family by birth and by choice. The psalm ends by saying that there, where people are together, God has commanded the blessing, as if the gathering itself were the place blessing lives. Sung near the start of the service, it does what it describes, turning a room of separate people into a community. Sitting together is not the warm-up to prayer. It is already one.",
@@ -54,6 +74,9 @@
       }
     },
     "birchot-hashachar": {
+      "bm": [
+        "awakening.birchot-hashachar"
+      ],
       "pages": {
         "morning": 4
       },
@@ -64,6 +87,9 @@
       }
     },
     "psukei-dzimrah": {
+      "bm": [
+        "awakening.psukei-dzimrah"
+      ],
       "pages": {
         "morning": 5
       },
@@ -74,18 +100,31 @@
       }
     },
     "chatzi-kaddish": {
+      "bm": [
+        "awakening.readers-kaddish"
+      ],
       "pages": {
-        "morning": 6
+        "morning": 6,
+        "evening": 35
       },
       "teaching": {
         "text": "The Chatzi Kaddish, the \"half Kaddish,\" also called the Reader's Kaddish, marks a seam in the service: one movement closes, and the next begins. Here it seals the verses of song and turns us toward Bar'chu. Though the Kaddish is best known as a mourner's prayer, it names no death. It is written mostly in Aramaic, the everyday language of the Jews who shaped it, and its opening words, *yitgadal v'yitkadash*, echo Ezekiel 38:23. At its center is the room's answer, *y'hei sh'mei rabba m'varach*, \"may God's great name be blessed,\" which is why it is said with a minyan. At heart it is a communal yearning for a world made whole. This shorter version stops before the closing lines for peace that the fuller Kaddish adds, and so it leaves that yearning open as we go on to pray.",
         "approved": "2026-10-24",
         "from": "A3-DRAFTS/01-07-morning-blessings.md"
+      },
+      "eveningTeaching": {
+        "text": "The Chatzi Kaddish, the \"half Kaddish,\" also called the Reader's Kaddish, marks a seam in the service: one movement closes, and the next begins. Here it closes the gathering and turns us toward Bar'chu. Though the Kaddish is best known as a mourner's prayer, it names no death. It is written mostly in Aramaic, the everyday language of the Jews who shaped it, and its opening words, *yitgadal v'yitkadash*, echo Ezekiel 38:23. At its center is the room's answer, *y'hei sh'mei rabba m'varach*, \"may God's great name be blessed,\" which is why it is said with a minyan. At heart it is a communal yearning for a world made whole. This shorter version stops before the closing lines for peace that the fuller Kaddish adds, and so it leaves that yearning open as we go on to pray.",
+        "approved": "2026-10-24",
+        "from": "A3-DRAFTS/evening-33-63.md"
       }
     },
     "barchu": {
+      "bm": [
+        "shma.barchu"
+      ],
       "pages": {
-        "morning": 7
+        "morning": 7,
+        "evening": 36
       },
       "teaching": {
         "text": "Bar'chu is the call to formal prayer, the moment the serious work of the service begins. The leader calls, the congregation answers, and a room of individuals becomes a community. The tradition requires a minyan for it (Mishnah Megillah 4:3): a person praying alone does not say Bar'chu, because it is a summons, and a summons needs someone to answer. Wherever Jews are in the world, this is the moment we reorient ourselves like spokes toward a center, so that facing the center also means facing one another. Some of us bow as we answer.",
@@ -94,6 +133,9 @@
       }
     },
     "yotzeir-or": {
+      "bm": [
+        "shma.yotzeir-or"
+      ],
       "pages": {
         "morning": 8
       },
@@ -104,6 +146,9 @@
       }
     },
     "ahavah-rabbah": {
+      "bm": [
+        "shma.ahavah-rabah-ahavtanu"
+      ],
       "pages": {
         "morning": 9
       },
@@ -118,7 +163,8 @@
         "shma.the-shma"
       ],
       "pages": {
-        "morning": 10
+        "morning": 10,
+        "evening": 39
       },
       "teaching": {
         "text": "The Sh'ma (Deuteronomy 6:4) is among the oldest fixed parts of Jewish prayer; the Mishnah already takes for granted that it is said each evening and morning. It is less a statement of belief than a statement of relationship: that all of existence is one, and that we stand inside that oneness rather than at its center. Jews have long called that oneness God. Two letters are written large in the Torah scroll, the last of the first word and the last of the last, and together they spell *ed*, \"witness\": the one who says it bears witness.",
@@ -131,7 +177,8 @@
         "shma.vahavta"
       ],
       "pages": {
-        "morning": 11
+        "morning": 11,
+        "evening": 40
       },
       "teaching": {
         "text": "The V'ahavta (Deuteronomy 6:5–9) follows the Sh'ma directly, and the order is the point: having said that all of existence is one, we hear what that asks of us. Love, with all your heart, all your soul and all your might; the rabbis read \"might\" as everything you have, your means as well as your strength (Mishnah Berakhot 9:5). The paragraph then carries that love into ordinary life: words spoken at home and on the road, at lying down and rising up, bound on the hand and written on the doorposts. Love here is less a feeling than a practice, an obligation to the past, the present and most of all the future. It is a hope that if we live the best of our values, the world will be different.",
@@ -140,18 +187,31 @@
       }
     },
     "mi-chamochah": {
+      "bm": [
+        "shma.mi-chamochah"
+      ],
       "pages": {
-        "morning": 12
+        "morning": 12,
+        "evening": 41
       },
       "teaching": {
         "text": "Mi Chamochah, \"who is like you,\" is the song at the shore, the moment a people first sang itself free (Exodus 15:11). It sits inside the blessing of redemption, *ge'ulah*, which follows the Sh'ma and turns the Exodus into a present tense. The Hebrew around it is plain about the cost of that freedom, the firstborn of Egypt and the drowning at the sea, and it is honest to notice that. But the prayer leans toward a redemption still unfinished. That is why we rise from it straight into the Amidah, without a pause (Berakhot 9b): from a vision of a redeemed world into the work of making one.",
         "approved": "2026-10-24",
         "from": "A3-DRAFTS/08-13-shma-and-blessings.md"
+      },
+      "eveningTeaching": {
+        "text": "Mi Chamochah, \"who is like you,\" is the song at the shore, the moment a people first sang itself free (Exodus 15:11). It sits inside Emet v'Emunah, the blessing of redemption, *ge'ulah*, which follows the Sh'ma and turns the Exodus into a present tense. In its traditional form, the Hebrew around it is plain about the cost of that freedom, the firstborn of Egypt and the drowning at the sea, and it is honest to notice that. But the prayer leans toward a redemption still unfinished. In the evening one more blessing, Hashkiveinu, comes before the Amidah, and the rabbis count it as this same redemption drawn out into the night (Berakhot 4b). We move from declaring oneness to striving towards freedom, and from a vision of a redeemed world toward the work of making one.",
+        "approved": "2026-10-24",
+        "from": "A3-DRAFTS/evening-33-63.md"
       }
     },
     "tfilah": {
+      "bm": [
+        "amidah.tfilah"
+      ],
       "pages": {
-        "morning": 13
+        "morning": 13,
+        "evening": 43
       },
       "teaching": {
         "text": "The Amidah, the \"standing\" prayer, is so central that the rabbis simply call it HaT'filah, the prayer. On Shabbat it has seven blessings: three that open, three that close, and one in the middle for the day itself. Taken together, they are a set of blessings around the gap between the world as it is and the world we are obliged to create. It opens with a single borrowed verse, *Adonai s'fatai tiftach*, \"open my lips\" (Psalm 51:17). Before we ask for anything, we ask only to be able to pray; even our words are something we receive before we offer them. Some of us take three small steps forward as we begin. To say this verse is to admit that the right words do not start with us.",
@@ -160,8 +220,12 @@
       }
     },
     "avot-vimahot": {
+      "bm": [
+        "amidah.avot-vimahot"
+      ],
       "pages": {
-        "morning": 14
+        "morning": 14,
+        "evening": 44
       },
       "teaching": {
         "text": "Avot v'Imahot, \"ancestors,\" is the first blessing of the Amidah, and it begins with names. Its oldest form names only Abraham, Isaac and Jacob; egalitarian siddurim add Sarah, Rebecca, Leah and Rachel, and some go further, naming Bilhah and Zilpah, the handmaids of Genesis 30 whose sons became four of the twelve tribes. This blessing gives us our standing, the way a court gives a person standing: we do not come alone, but as heirs, connected to the past and obligated to the present because of it. It asks God to remember the faithful love of our ancestors, *chasdei avot v'imahot*. Some of us bow at its opening and closing words. To say these names is to take our place in a long line, and to accept that what they began is now ours to carry.",
@@ -170,8 +234,12 @@
       }
     },
     "gvurot": {
+      "bm": [
+        "amidah.gvurot"
+      ],
       "pages": {
-        "morning": 15
+        "morning": 15,
+        "evening": 45
       },
       "teaching": {
         "text": "G'vurot, \"powers,\" is the second blessing. It praises the power that sustains life: holding up the falling, healing the sick, freeing the captive. Its traditional refrain is *m'chayeh hameitim*, \"who revives the dead\"; many Reform prayer books say instead *m'chayeh hakol*, \"who gives life to all.\" Some siddurim print both, side by side, so each of us can say the words we can mean, and many hear either one as renewal. Either way, the blessing is about our obligations to the future: even the limits of a single lifetime do not exempt us from what we owe. It says God keeps faith \"with those who sleep in the dust,\" and so do we, carrying on work begun by people who did not live to finish it. To say G'vurot is to accept a debt that runs past our own lifetime.",
@@ -180,8 +248,12 @@
       }
     },
     "kdushah": {
+      "bm": [
+        "amidah.kdushah"
+      ],
       "pages": {
-        "morning": 16
+        "morning": 16,
+        "evening": 46
       },
       "teaching": {
         "text": "The K'dushah, \"holiness,\" is the third blessing as it sounds when the Amidah is said aloud together. It borrows the song the prophets imagined the angels singing, *kadosh, kadosh, kadosh* (Isaiah 6:3) and *baruch k'vod Adonai mim'komo* (Ezekiel 3:12), and makes it ours. It opens *Nekadesh et shimcha ba'olam*, \"we will make Your name holy in the world\": the words picture heaven, but the work is here. The K'dushah is about lifting ourselves and our world toward a more sacred calling. Tradition says it only with a minyan, because this holiness is made together, the room answering as one voice. Some of us rise on our toes at each *kadosh*. To sing it is to promise that holiness will not stay in the heavens; it is ours to bring into the world.",
@@ -190,8 +262,12 @@
       }
     },
     "vshamru": {
+      "bm": [
+        "amidah.vshamru"
+      ],
       "pages": {
-        "morning": 17
+        "morning": 17,
+        "evening": 47
       },
       "teaching": {
         "text": "On weekdays, the middle of the Amidah is thirteen blessings of need, for healing, justice, a good year, freedom, the gap in the world named one request at a time. On Shabbat they fall away, and one blessing for the holiness of the day, K'dushat HaYom, takes their place. At its heart is V'shamru (Exodus 31:16–17), the Torah's own words: Shabbat is a sign, the day on which even the Creator rested and *vayinafash*, \"caught breath.\" The rabbis heard *nefesh*, soul, in that word. On Shabbat this blessing is about a world where everyone deserves rest, not as something earned but as something everyone is owed. To keep Shabbat is to live, for one day, as if that world were already here, and to remember everyone who is still denied it.",
@@ -200,8 +276,12 @@
       }
     },
     "avodah": {
+      "bm": [
+        "amidah.avodah"
+      ],
       "pages": {
-        "morning": 18
+        "morning": 18,
+        "evening": 48
       },
       "teaching": {
         "text": "R'tzei, \"take pleasure,\" opens the three closing blessings. Its other name, Avodah, means \"service,\" and it once meant the service of the Temple: the blessing asked for the sacrifices to be restored. Many Reform siddurim set that plea aside and keep the longing beneath it, that our prayer be received and that the *Shechinah*, the indwelling Presence, come home. We hear it as a prayer about what we do. Having stood in the gap between the world as it is and the world we are obliged to create, we ask that the things we do because we believe them to be for the good actually are for the good. It is our prayer that our impact matches our intentions. To say R'tzei is to hold our good intentions up to the light, and to be willing to learn we were wrong.",
@@ -210,8 +290,12 @@
       }
     },
     "hodaah": {
+      "bm": [
+        "amidah.hodaah"
+      ],
       "pages": {
-        "morning": 19
+        "morning": 19,
+        "evening": 49
       },
       "teaching": {
         "text": "Modim, \"we give thanks,\" is the blessing of thanksgiving, and it is plainly about the ordinary: our lives, our souls, the miracles \"that are with us every day,\" evening, morning and noon. It does not wait for something extraordinary. Some of us bow at its first word. When the Amidah is repeated aloud, tradition does not let the room simply listen; each person says a quieter Modim of their own, *Modim D'Rabbanan*, because gratitude, unlike a request, cannot be handed to someone else to say for you. Gratitude is also the beginning of obligation: to notice what we were given is to know we owe something back. To say Modim is to count what is already here before we go back to work on what is not.",
@@ -220,6 +304,9 @@
       }
     },
     "sim-shalom": {
+      "bm": [
+        "amidah.sim-shalom"
+      ],
       "pages": {
         "morning": 20
       },
@@ -230,8 +317,13 @@
       }
     },
     "oseh-shalom": {
+      "bm": [
+        "amidah.silent-meditation",
+        "amidah.oseh-shalom"
+      ],
       "pages": {
-        "morning": 20
+        "morning": 20,
+        "evening": 50
       },
       "teaching": {
         "text": "After the fixed blessings, the Amidah opens into silence. Elohai N'tzor, \"my God, guard,\" is a private meditation; the Talmud records it as what Mar bar Ravina said when he finished praying (Berakhot 17a). It turns from the \"we\" of the fixed blessings to a single \"I,\" asking only to speak less harm and hold less pride. It ends with Psalm 19:15, \"may the words of my mouth,\" and then Oseh Shalom, the same plea for peace that closes the Kaddish. Many versions widen that peace: for us, for all Israel, and *v'al kol yosh'vei tevel*, for all who dwell on earth. This is also the place for our own words, or for none. Some of us take three steps back and bow as we finish. We leave the Amidah as we entered it, one person at a time, and take its peace back out into the world.",
@@ -240,13 +332,22 @@
       }
     },
     "torah-service": {
+      "bm": [
+        "torah.hakafot"
+      ],
       "pages": {
-        "morning": 21
+        "morning": 21,
+        "evening": 51
       },
       "teaching": {
         "text": "The Torah service begins when the ark is opened and the scroll is carried out. It is the most theatrical part of the morning, and it is meant to be: we celebrate the pageantry and majesty of text. The verses sung as the ark opens are gathered from the psalms. Vay'hi Binso'a is what Moses said each time the ark set out in the wilderness (Numbers 10:35), so words that once moved the ark through the desert now move it across the room. The Sh'ma is sung again, this time to a raised scroll, and the leader calls, *gadlu*, \"magnify with me\" (Psalm 34:4). Then comes the hakafah, the procession through the people. Some of us touch the scroll with the corner of a tallit or a prayer book as it passes, and bring it to our lips. The Torah does not wait at the front of the room; it comes to where we are.",
         "approved": "2026-10-24",
         "from": "A3-DRAFTS/23-38-torah-service-to-close.md"
+      },
+      "eveningTeaching": {
+        "text": "The Torah service begins when the ark is opened and the scroll is carried out. It is the most theatrical part of the service, and it is meant to be: we celebrate the pageantry and majesty of text. Then comes the hakafah, the procession through the people. Some of us touch the scroll with the corner of a tallit or a prayer book as it passes, and bring it to our lips. The Torah does not wait at the front of the room; it comes to where we are.",
+        "approved": "2026-10-24",
+        "from": "A3-DRAFTS/evening-33-63.md"
       }
     },
     "torah-before": {
@@ -254,7 +355,8 @@
         "torah.blessing-before-the-torah-reading"
       ],
       "pages": {
-        "morning": 22
+        "morning": 22,
+        "evening": 52
       },
       "teaching": {
         "text": "An aliyah, a \"going up\" to the Torah, opens with a blessing. The one called up repeats Bar'chu, the same call that opened the service, now a doorway into the words themselves, and the congregation answers. The blessing then speaks of being chosen; we hear that choosing as a calling rather than a ranking, a responsibility to these words rather than a claim over anyone else. Being called up by name is one of the oldest honors in the service: before anyone reads, a person is asked to stand with the scroll and take responsibility for what is about to be heard.",
@@ -263,13 +365,22 @@
       }
     },
     "torah-reading": {
+      "bm": [
+        "torah.reading-of-the-torah"
+      ],
       "pages": {
-        "morning": 22
+        "morning": 22,
+        "evening": 52
       },
       "teaching": {
         "text": "At the center of the Torah service is the reading itself. Each week has its portion, its parashah, and the traditional cycle moves through all five books in a year; many Reform congregations read a selection from each week's portion. The scroll is written by hand, with no vowels and no cantillation marks, so the reader learns the chant in advance from a printed text and then reads from the scroll, following the words with a *yad*, a pointer, so that no hand touches the letters. The reading is broken into aliyot, as person after person is called up to bless it. When Ezra read the Torah to the whole people, men, women and all who could understand stood to hear it (Nehemiah 8:2–3). Reading aloud, in public, makes the Torah belong to everyone in the room. To read it is to add one more voice to a chain more than two thousand years long.",
         "approved": "2026-10-24",
         "from": "A3-DRAFTS/23-38-torah-service-to-close.md"
+      },
+      "eveningTeaching": {
+        "text": "At the center of the Torah service is the reading itself. Each week has its portion, its parashah, and the traditional cycle moves through all five books in a year; many Reform congregations read a selection from each week's portion. At a Shabbat afternoon service the tradition reads only a short passage, three aliyot from the opening of the coming week's portion; the Talmud credits Ezra with setting that reading (Bava Kamma 82a). The scroll is written by hand, with no vowels and no cantillation marks, so the reader learns the chant in advance from a printed text and then reads from the scroll, following the words with a *yad*, a pointer, so that no hand touches the letters. The reading is broken into aliyot, as person after person is called up to bless it. Reading aloud, in public, makes the Torah belong to everyone in the room. To read it is to add one more voice to a chain more than two thousand years long.",
+        "approved": "2026-10-24",
+        "from": "A3-DRAFTS/evening-33-63.md"
       }
     },
     "torah-after": {
@@ -277,7 +388,8 @@
         "torah.blessing-following-the-torah-reading"
       ],
       "pages": {
-        "morning": 22
+        "morning": 22,
+        "evening": 52
       },
       "teaching": {
         "text": "After the reading comes a second blessing, and its verb is in the present tense: *noten*, the one who gives the Torah, not gave. The tradition insists that the giving was not a single event at Sinai but happens each time a community reads these words aloud. To say this blessing is to stand in that line, one more person to whom the Torah is being given, now. It also gives thanks for \"a Torah of truth\" and for \"eternal life planted within us\": the words do not stay on the scroll; they take root in the people who read them.",
@@ -286,8 +398,12 @@
       }
     },
     "mi-shebeirach": {
+      "bm": [
+        "torah.mi-shebeirach-healing"
+      ],
       "pages": {
-        "morning": 23
+        "morning": 23,
+        "evening": 53
       },
       "teaching": {
         "text": "Mi Shebeirach, \"the one who blessed,\" takes its name from its first words, which call on the blessing given to our ancestors. While the Torah is still on the reading table, we pause to name the people in our lives who are ill, and ask for *r'fuah sh'leimah*, a complete healing, of body and of spirit. Those are two different things, and the prayer knows it: not every body can be cured, but no one has to be left alone with what they are carrying. Saying a name aloud in a full room turns a private worry into a shared one, and a shared worry becomes an obligation: to call, to visit, to show up. Behind it stands the oldest healing prayer in the Torah, Moses' five Hebrew words for his sister Miriam, *El na r'fa na lah* (Numbers 12:13). Healing here is something we ask for and something we do.",
@@ -300,7 +416,8 @@
         "torah.blessing-before-the-haftarah-reading"
       ],
       "pages": {
-        "morning": 23
+        "morning": 23,
+        "evening": 53
       },
       "teaching": {
         "text": "The haftarah, a \"concluding\" reading, is a selection from the prophets, most weeks chosen to echo something in the Torah portion. Before it, the reader blesses the prophets themselves, *n'vi'ei ha'emet v'hatzedek*, \"prophets of truth and justice.\" That pairing is the heart of prophecy as Jews have kept it: the prophets stood before kings and crowds and named the gap between the world as it is and the world we are obliged to create. The blessing uses the language of choosing again, as the Torah blessing does, and we hear it the same way, as a calling. To chant the haftarah is to lend your voice, for a few minutes, to people who insisted on justice when it was unwelcome.",
@@ -309,13 +426,22 @@
       }
     },
     "haftarah-reading": {
+      "bm": [
+        "torah.reading-of-the-haftarah"
+      ],
       "pages": {
-        "morning": 24
+        "morning": 24,
+        "evening": 54
       },
       "teaching": {
         "text": "The haftarah is the reading from the prophets, chanted after the Torah. It is usually read from a printed book rather than a scroll, and it has its own melody: the same cantillation marks as the Torah, sung to a different tune. Most weeks it is chosen to echo something in the Torah portion, a word, a theme, a story; some weeks the calendar chooses it instead. The prophets are the tradition's most uncomfortable voices. They named the gap between the world as it is and the world we are obliged to create, and they named it to kings, to priests and to crowds who did not want to hear it. When a student chants the haftarah, those words come back into a room of people who still have to decide what to do about them.",
         "approved": "2026-10-24",
         "from": "A3-DRAFTS/23-38-torah-service-to-close.md"
+      },
+      "eveningTeaching": {
+        "text": "The haftarah is the reading from the prophets, chanted after the Torah. It is usually read from a printed book rather than a scroll, and it has its own melody: the same cantillation marks as the Torah, sung to a different tune. Most weeks it is chosen to echo something in the Torah portion, a word, a theme, a story; some weeks the calendar chooses it instead. On Shabbat the tradition reads a haftarah only in the morning; adding one to this service gives the student the prophets to chant as well. The prophets are the tradition's most uncomfortable voices. They named the gap between the world as it is and the world we are obliged to create, and they named it to kings, to priests and to crowds who did not want to hear it. When a student chants the haftarah, those words come back into a room of people who still have to decide what to do about them.",
+        "approved": "2026-10-24",
+        "from": "A3-DRAFTS/evening-33-63.md"
       }
     },
     "haftarah-after": {
@@ -323,7 +449,8 @@
         "torah.blessing-following-the-haftarah-reading"
       ],
       "pages": {
-        "morning": 24
+        "morning": 24,
+        "evening": 54
       },
       "teaching": {
         "text": "After the haftarah come blessings that move outward in rings: the prophet's words are true, so may the promises they carry be kept; then hopes for Zion and for redemption; and finally thanks for Shabbat itself. The hope for a descendant of David is old royal language. We can hear it as the tradition's refusal to let an unkept promise die, an insistence on holding an image of a redeemed world even, and perhaps especially, when it is hard to believe it can come. The blessings end where we are standing, in the holiness of this Shabbat, a taste of that world now.",
@@ -332,8 +459,13 @@
       }
     },
     "commentary": {
+      "bm": [
+        "torah.commentary",
+        "torah.presentation-from-the-congregation"
+      ],
       "pages": {
-        "morning": 25
+        "morning": 25,
+        "evening": 55
       },
       "teaching": {
         "text": "After the readings, the student who has just chanted them speaks about them. This is the d'var Torah, \"a word of Torah\": a short teaching on what the portion says and what the student makes of it. The reading has never been left to stand alone. When Ezra read the Torah to the people, the Levites helped them understand it, giving the sense of what was read (Nehemiah 8:7–8). Every commentary since, from the rabbis of the Talmud to the notes at the bottom of a modern Chumash, continues that work. The student's words join that conversation as one more voice in it, free to question what came before. This part of the service also makes room for a presentation from the congregation, the community's own word to the student.",
@@ -342,8 +474,12 @@
       }
     },
     "eitz-chayim": {
+      "bm": [
+        "torah.eitz-chayim"
+      ],
       "pages": {
-        "morning": 25
+        "morning": 25,
+        "evening": 55
       },
       "teaching": {
         "text": "When the reading is done, the scroll is carried back to the ark, often in a second procession through the room. The verses sung as it returns gather lines from Numbers, Psalms and Proverbs. Eitz Chayim comes from Proverbs (3:17–18), where wisdom is \"a tree of life to those who hold fast to it,\" and all its paths are peace. A tree, not a monument: something living, that grows, gives shade and puts out new branches as each generation reads it. The last line, *hashiveinu*, \"turn us back… renew our days as of old,\" is from Lamentations (5:21), the verse the tradition repeats after that book's bleak final line so it does not end in ruin. We borrow it to close the ark. The scroll goes home, and we ask to be turned back toward what it teaches.",
@@ -352,8 +488,12 @@
       }
     },
     "aleinu": {
+      "bm": [
+        "concluding.aleinu"
+      ],
       "pages": {
-        "morning": 26
+        "morning": 26,
+        "evening": 56
       },
       "teaching": {
         "text": "Aleinu, \"it is upon us,\" began as part of the Rosh HaShanah service, a coronation prayer, and by the Middle Ages it had become the close of every service. Its language is royal: bending the knee, a sovereign over all, a day when every people will acknowledge the One. Those words were sung for centuries by Jews who had no power at all, and we hear them as a fantasy of power in times of powerlessness. Beneath the crown is something we can keep: a vision of a world where everyone could see themselves as obligated to each other, and to the same oneness. Its second paragraph gave the tradition the phrase *l'taken olam*, to repair the world. Some of us bow at *va'anachnu kor'im*. The prayer's first word already says whose work that repair is.",
@@ -362,8 +502,12 @@
       }
     },
     "mourners-kaddish": {
+      "bm": [
+        "concluding.mourners-kaddish"
+      ],
       "pages": {
-        "morning": 28
+        "morning": 28,
+        "evening": 58
       },
       "teaching": {
         "text": "The Kaddish, \"holy,\" is a prayer of praise in Aramaic, the everyday language many Jews once spoke, and it never mentions death. It praises God's great name, *sh'mei raba*, hopes for a world made whole, and ends in peace. It has become the prayer of mourners, said after a death and each year on the yahrzeit, the anniversary. Why a prayer that does not speak of loss? Perhaps because grief can make praise feel impossible, and the Kaddish asks a mourner to say it anyway, in the company of others. It needs a minyan, and its heart is not the mourner's words but the congregation's answer, *y'hei sh'mei raba m'varach*. The mourner speaks; the room answers. No one says the Kaddish alone, and no one grieves alone.",
@@ -372,6 +516,9 @@
       }
     },
     "adon-olam": {
+      "bm": [
+        "concluding.adon-olam"
+      ],
       "pages": {
         "morning": 30
       },
@@ -382,8 +529,13 @@
       }
     },
     "parents-blessing": {
+      "bm": [
+        "concluding.parents-blessing",
+        "havdalah.parents-blessing"
+      ],
       "pages": {
-        "morning": 31
+        "morning": 31,
+        "evening": 63
       },
       "teaching": {
         "text": "Near the end of the service comes a moment that belongs to the family: the student's parents bless their child. An old midrash records very different words for this age. A father whose son reached thirteen was to say, \"Blessed is the One who has released me from responsibility for this one\" (Genesis Rabbah 63:10). A parent's blessing turns that around. It does not hand the child off. It says, out loud and in front of the community, what we hope for them, and it promises that our obligation to them keeps running forward, into a future we will not fully see. A child growing up does not end that bond; it changes its shape. To be blessed by the people who raised you is to hear, in public, that you were never carrying any of this alone.",
@@ -392,13 +544,161 @@
       }
     },
     "closing-blessing": {
+      "bm": [
+        "concluding.closing-blessing",
+        "havdalah.closing-blessing"
+      ],
       "pages": {
-        "morning": 31
+        "morning": 31,
+        "evening": 63
       },
       "teaching": {
         "text": "The service closes with Birkat Kohanim, the priestly blessing (Numbers 6:24–26), the words Aaron and his sons were told to place upon the people. For most of Jewish history it belonged to the kohanim, who rose to bless everyone else, and in many communities they still do. It is a CRC tradition to end with it as a collective blessing that we give to each other: we turn to face one another, and the whole room blesses the whole room. In Hebrew its three lines grow, three words, then five, then seven, as if the blessing widens each time it is said, and it ends, like so many of our prayers, in *shalom*. No one here is only blessed, and no one only blesses.",
         "approved": "2026-10-24",
         "from": "A3-DRAFTS/23-38-torah-service-to-close.md"
+      }
+    },
+    "maariv-aravim": {
+      "bm": [
+        "shma.maariv-aravim"
+      ],
+      "pages": {
+        "evening": 37
+      },
+      "teaching": {
+        "text": "Ma'ariv Aravim, \"who brings on evening,\" is the first of the two blessings before the evening Sh'ma, the night's counterpart to the morning's Yotzeir Or. It praises not one act of creation long ago but the sky's daily turning: day rolling into night, the seasons changing, the stars set in their courses. Like its morning twin, it is a moment to take a cosmic perspective and feel our radical smallness. We are star dust, floating on a small pale blue speck; we are not the center of the story but a small puzzle piece. In its traditional words it closes by calling God living and enduring, unchanging through all time, and Jews have long called that unchanging order God. Darkness here is not the day's failure; it belongs to the same order as the light. To bless the evening is to trust the night as well as the day.",
+        "approved": "2026-10-24",
+        "from": "A3-DRAFTS/evening-33-63.md"
+      }
+    },
+    "ahavat-olam": {
+      "bm": [
+        "shma.ahavat-olam"
+      ],
+      "pages": {
+        "evening": 38
+      },
+      "teaching": {
+        "text": "Ahavat Olam, \"everlasting love,\" is the second blessing before the evening Sh'ma, the evening's form of the morning's Ahavah Rabbah. It names Torah and mitzvot, laws and judgments, as the shape love takes: to be taught is to be loved. Placed just before the Sh'ma, it makes the command to love an answer; we love because we were loved first. Love here means seeing ourselves as mutually obligated, to the past, to the present and most of all to the future. The blessing even borrows the Sh'ma's own words, promising to speak of these things when we lie down and when we rise up, so that study is not only for daylight. To say Ahavat Olam as night falls is to go into the dark already bound to one another.",
+        "approved": "2026-10-24",
+        "from": "A3-DRAFTS/evening-33-63.md"
+      }
+    },
+    "hashkiveinu": {
+      "bm": [
+        "shma.hashkiveinu"
+      ],
+      "pages": {
+        "evening": 42
+      },
+      "teaching": {
+        "text": "Hashkiveinu, \"lay us down,\" belongs only to the evening. In Ma'ariv the Sh'ma is wrapped in two blessings before and two after (Mishnah Berakhot 1:4), and this is the second after, a prayer to lie down in peace and rise again to life. It is a nighttime prayer, a prayer for when the darkness is so thick that it's hard to remember that there is light. But there is a light, even if we can't always see it. Its central image is the *sukkat shalom*, a shelter of peace spread over us. A sukkah has no solid roof; its shelter is real because people build it together. Hashkiveinu is a prayer of hope and comfort and belief in the possibility of shelter and peace in a world where sometimes it's hard to believe.",
+        "approved": "2026-10-24",
+        "from": "A3-DRAFTS/evening-33-63.md"
+      }
+    },
+    "shalom-rav": {
+      "bm": [
+        "amidah.shalom-rav"
+      ],
+      "pages": {
+        "evening": 50
+      },
+      "teaching": {
+        "text": "Shalom Rav, \"abundant peace,\" is the last blessing of the Amidah, the place it has been reaching all along. *Shalom* comes from the root for wholeness: not only the absence of war but a world with nothing missing. The evening uses this shorter Shalom Rav; the morning uses the longer Sim Shalom. It asks for abundant peace for all time, and some siddurim widen it from Israel to *kol yosh'vei tevel*, all who dwell on earth. Of all the gaps this prayer has named, this is the widest. To pray for peace is to agree to be one of the people who make it.",
+        "approved": "2026-10-24",
+        "from": "A3-DRAFTS/evening-33-63.md"
+      }
+    },
+    "yayin": {
+      "bm": [
+        "havdalah.the-wine"
+      ],
+      "pages": {
+        "evening": 60
+      },
+      "teaching": {
+        "text": "Havdalah, \"separation,\" is the ceremony that ends Shabbat, and it begins, as Shabbat began, with a cup of wine. The rabbis heard in the Torah's command to \"remember\" Shabbat a call to mark it with words of holiness at both ends: Kiddush as it arrives, Havdalah as it leaves (Maimonides, Mishneh Torah, Shabbat 29:1). The blessing itself is the simplest there is, thanks for the fruit of the vine, the same words said over every cup. Wine in Jewish life is the drink of celebration, and so the week does not slip back in unnoticed; we lift a cup to the day we are letting go. Some of us fill the cup until it spills over, a hope for a week of overflowing blessing. The first thing we do with an ending is honor what it held.",
+        "approved": "2026-10-24",
+        "from": "A3-DRAFTS/evening-33-63.md"
+      }
+    },
+    "bsamim": {
+      "bm": [
+        "havdalah.the-spices"
+      ],
+      "pages": {
+        "evening": 60
+      },
+      "teaching": {
+        "text": "The second blessing of Havdalah is over spices, *b'samim*, passed hand to hand so everyone can smell them. The rabbis imagined that each Shabbat brings a *n'shamah y'teirah*, an extra soul, which leaves as the day ends (Beitzah 16a), and the tradition offers fragrance to comfort us as it goes. Smell is the most physical of the blessings, and the most personal. We can hear the extra soul as what Shabbat makes possible: a day of rest owed to everyone, time that no one can take from us. As it leaves, we breathe it in once more, so that some of it comes with us into the week. Some of us keep the spice box open a moment longer than we need to.",
+        "approved": "2026-10-24",
+        "from": "A3-DRAFTS/evening-33-63.md"
+      }
+    },
+    "eish": {
+      "bm": [
+        "havdalah.the-light-of-the-fire"
+      ],
+      "pages": {
+        "evening": 61
+      },
+      "teaching": {
+        "text": "The third blessing is over fire, *borei m'orei ha'eish*, \"who creates the lights of fire.\" Kindling a flame is one of the kinds of work set aside on Shabbat, so this flame is the week's first act of making. A midrash says that on the first Saturday night, as darkness fell, the first human being was given the knowledge to strike two stones together and make fire (Pesachim 54a). Because the blessing names \"lights\" in the plural, the Havdalah candle is braided from several wicks into one flame. And because a blessing over light needs its use (Berakhot 53b), some of us hold our hands up to it and look at the light on our fingernails. The fire that would have broken Shabbat now begins the week. What we make this week can light or burn; the choice is ours.",
+        "approved": "2026-10-24",
+        "from": "A3-DRAFTS/evening-33-63.md"
+      }
+    },
+    "havdalah": {
+      "bm": [
+        "havdalah.the-blessing-of-separation"
+      ],
+      "pages": {
+        "evening": 61
+      },
+      "teaching": {
+        "text": "The last blessing is Havdalah itself, *hamavdil bein kodesh l'chol*, \"who separates holy from ordinary.\" It names the borders one by one: holy and ordinary, light and darkness, Israel and the peoples, the seventh day and the six days of making. The line about Israel can sound like ranking; we hear it, as in the Torah blessing, as a calling rather than a claim over anyone else. Judaism has always cared about lines in time, because a line is what lets a day be holy at all. The day was holy. The night is ordinary. Both are true, and we say so out loud. Some of us put out the flame in the last of the wine. Shabbat has shown us a world where everyone rests; the six days are where we are obliged to build it.",
+        "approved": "2026-10-24",
+        "from": "A3-DRAFTS/evening-33-63.md"
+      }
+    },
+    "eliyahu": {
+      "bm": [
+        "havdalah.eliyahu-hanavi"
+      ],
+      "pages": {
+        "evening": 62
+      },
+      "teaching": {
+        "text": "Eliyahu HaNavi, \"Elijah the prophet,\" is sung as soon as Havdalah ends. In the Bible's telling Elijah never died; he went up in a whirlwind (2 Kings 2:11), and the prophet Malachi promised he would return before a great day, to turn the hearts of parents to their children and the hearts of children to their parents (Malachi 3:23–24). The Talmud assumes he will not come on Shabbat itself (Eruvin 43b), so Saturday night is the first moment he might, and we sing for him then. He is the herald of a redeemed world. We keep singing for that world even when we have trouble believing it is coming. At a Beit Mitzvah, with parents and children standing together, Malachi's promise is already happening in the room.",
+        "approved": "2026-10-24",
+        "from": "A3-DRAFTS/evening-33-63.md"
+      }
+    },
+    "miryam": {
+      "bm": [
+        "havdalah.miryam-hanviah"
+      ],
+      "pages": {
+        "evening": 62
+      },
+      "teaching": {
+        "text": "Miryam HaN'viah, \"Miriam the prophet,\" is a modern song that sets Miriam beside Elijah at the end of Shabbat. The Torah calls her a prophet (Exodus 15:20); she led the women with a timbrel and song at the sea. The rabbis taught that a well followed the Israelites through the wilderness for her sake, and when she died, the water stopped (Ta'anit 9a). Elijah looks forward to a redeemed world; Miriam is a memory of what sustained the people on the way there. Adding her voice is part of a larger work, making sure everyone can see themselves in the tradition. Singing her name does not replace Elijah. It insists that the story of redemption has always had more than one prophet in it.",
+        "approved": "2026-10-24",
+        "from": "A3-DRAFTS/evening-33-63.md"
+      }
+    },
+    "shavua-tov": {
+      "bm": [
+        "havdalah.shavua-tov"
+      ],
+      "pages": {
+        "evening": 62
+      },
+      "teaching": {
+        "text": "Shavua Tov, \"a good week,\" is how Shabbat ends: not with a blessing over anything, but with a wish we say to each other. Its words are the most ordinary in the service, and that is the point. Havdalah has just named the border between holy and ordinary, and now we step across it together. The week ahead is not lesser time; it is where the work happens, the six days of making in which the world as it is might become a little more like the world we are obliged to create. Some of us sing it, hug, and say it person to person around the room. To wish someone a good week is to promise, quietly, to help make it one.",
+        "approved": "2026-10-24",
+        "from": "A3-DRAFTS/evening-33-63.md"
       }
     }
   }

@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { studyRangePlan } from "../src/components/portal/workspace/study/api";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
+import { openMore } from "./more-sheet";
 import { TANAKH_VERSE_COUNTS } from "../src/lib/readings/catalog";
 import { expandReadingRanges } from "../src/lib/readings/ranges";
 
@@ -56,7 +57,8 @@ test("signed out, / and /read ask nothing of accounts.google.com or any other si
   await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveAttribute("href", "/sign-in?return=%2Faccount");
   await page.goto(`/read?date=2026-10-24`);
   await expect(page.getByRole("heading", { level: 1, name: "Vayeilech", exact: true })).toBeVisible();
-  // Signed out from the start: Sign in to save, without asking the server about an account.
+  // Signed out from the start: Sign in to save (in the More sheet), without asking the server about an account.
+  await openMore(page);
   await expect(page.getByRole("link", { name: "Sign in to save", exact: true })).toBeVisible();
   await expect(page.getByText("Sign in to keep this reading, your place and your preferred commentaries. Everything on this page is open to anyone.", { exact: true })).toBeVisible();
   await page.goto("/sign-in");
@@ -99,7 +101,7 @@ test("Save, then sign in, comes back to the same reading with the same selection
   await page.route("**/api/auth/sign-in/code", route => { codes.push(route.request().postDataJSON()); signedIn = true; return json(route, 200, { ok: true, next: posted.at(-1)?.return ?? "/" }); });
   await page.goto(`/read?ref=${encodeURIComponent(PORTION)}&kind=torah&lens=study`);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  await page.getByRole("button", { name: "Choose verses", exact: true }).click();
+  await (await openMore(page)).getByRole("button", { name: "Choose verses", exact: true }).click();
   await verse(page, 2).click();
   await verse(page, 5).click({ modifiers: ["Shift"] });
   await verse(page, 9).click();
@@ -152,6 +154,7 @@ test("back from a Google sign-in straight onto a reading, Save asks once and sho
   await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
   await expect(page).toHaveURL(`${ORIGIN}/read?date=2026-10-31`);
   await expect(page.getByRole("heading", { level: 1, name: "Vayeilech", exact: true })).toBeVisible();
+  await openMore(page);
   await expect(page.getByRole("button", { name: "Save", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Sign in to save", exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => localStorage.getItem("crc-torah:signed-in/v1"))).toBe("1");

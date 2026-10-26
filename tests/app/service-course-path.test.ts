@@ -29,12 +29,12 @@ describe("mapping a plan to lessons", () => {
       { id: "shma.vahavta@bm-maariv", page: 40 }, { id: "torah.blessing-before-the-torah-reading@bm-shacharit", page: 0 }]))
       .toEqual([{ lesson: "vahavta", page: 11 }, { lesson: "shma", page: 10 }, { lesson: "torah-before" }]);
   });
-  it("gives the default six the learner's own pages: the morning's, the morning's for an unset slot, and none the file lacks for the evening", () => {
+  it("gives the default six the learner's own pages: the morning's, the morning's for an unset slot, and the evening's (2.0 SC7) for an evening student", () => {
     const morning = defaultItems(CRC_TENANT, "morning");
     expect(morning.map(item => item.lesson)).toEqual(CRC_TENANT.defaultPath);
     expect(morning.map(item => item.page)).toEqual([10, 11, 22, 22, 23, 24]);
     expect(defaultItems(CRC_TENANT, "unknown")).toEqual(morning);
-    expect(defaultItems(CRC_TENANT, "havdalah").every(item => item.page === undefined)).toBe(true);
+    expect(defaultItems(CRC_TENANT, "havdalah").map(item => item.page)).toEqual([39, 40, 52, 52, 53, 54]);
   });
 });
 

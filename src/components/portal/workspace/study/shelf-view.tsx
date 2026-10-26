@@ -25,9 +25,9 @@ function SourceText({ reference, language }: { reference: string; language: "he"
     : <p className={styles.status} role="status">This text isn’t available right now. <button type="button" onClick={() => setRetry(value => value + 1)}>Try again</button></p>;
   const { segments, editions, sefariaUrl } = current.value;
   return <div className={styles.sourceText}>
-    {segments.map((segment, index) => <CommentaryEntry key={index} comment={segment} words={[]} verseRef={reference} language={language} />)}
+    {segments.map((segment, index) => <CommentaryEntry key={index} comment={segment} words={[]} verseRef={reference} language={language} englishTag />)}
     <p className={styles.compareCredit}>
-      {editions.map(edition => <span key={edition.language} className={styles.creditLine}>{edition.language === "he" ? "Hebrew" : "English"}: <a href={edition.url} target="_blank" rel="noopener noreferrer">{edition.credit}</a></span>)}
+      {[...editions].sort((a, b) => Number(b.language === "en") - Number(a.language === "en")).map(edition => <span key={edition.language} className={styles.creditLine}>{edition.language === "he" ? "Hebrew" : "English"}: <a href={edition.url} target="_blank" rel="noopener noreferrer">{edition.credit}</a></span>)}
       <a className={styles.creditLine} href={sefariaUrl} target="_blank" rel="noopener noreferrer"><bdi dir="ltr">{reference}</bdi> on Sefaria</a>
     </p>
   </div>;

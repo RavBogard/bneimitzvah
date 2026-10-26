@@ -24,12 +24,12 @@ const has = (problems: string[], part: string) => problems.some(problem => probl
 const U1 = ["shma", "vahavta", "torah-before", "torah-after", "haftarah-before", "haftarah-after"];
 
 describe("the real course files", () => {
-  it("validate, and hold the 37 morning lessons, the six fluency lessons and the seven units", () => {
-    expect(SERVICE_COURSE.lessons).toHaveLength(43);
-    expect(SERVICE_COURSE.lessons.filter(lesson => lesson.kind !== "fluency")).toHaveLength(37);
+  it("validate, and hold the 37 morning lessons, the six fluency lessons, the 11 evening lessons (2.0 SC7) and the nine units", () => {
+    expect(SERVICE_COURSE.lessons).toHaveLength(54);
+    expect(SERVICE_COURSE.lessons.filter(lesson => lesson.kind !== "fluency")).toHaveLength(48);
     expect(SERVICE_COURSE.lessons.filter(lesson => lesson.kind === "fluency").map(lesson => lesson.id)).toEqual(["f1", "f2", "f3", "f4", "f5", "f6"]);
     expect(SERVICE_COURSE.lessons.filter(lesson => lesson.kind === "moment").map(lesson => lesson.id).sort()).toEqual(["commentary", "haftarah-reading", "parents-blessing", "torah-reading", "torah-service"]);
-    expect(SERVICE_COURSE.units.map(unit => unit.id)).toEqual(["reading", "leads", "waking", "shma", "amidah", "torah", "closing"]);
+    expect(SERVICE_COURSE.units.map(unit => unit.id)).toEqual(["reading", "leads", "waking", "shma", "amidah", "torah", "closing", "evening", "havdalah"]);
     expect(SERVICE_COURSE.units.find(unit => unit.id === "leads")!.lessons).toEqual(U1);
     expect(serviceOrder()).toHaveLength(37);
     expect(TENANTS).toHaveLength(1);
@@ -38,19 +38,22 @@ describe("the real course files", () => {
     expect(SERVICE_COURSE.features).toEqual({ recordings: false, fluency: true });
     expect(SERVICE_COURSE.lessons.every(lesson => lesson.hear === null)).toBe(true);
     // 30 of the 37 morning lessons read public text (A4 2.1); the moments, P'sukei D'zimrah and the mixed Mi Shebeirach link to the siddur.
-    const reading = SERVICE_COURSE.lessons.filter(lesson => lesson.read).map(lesson => lesson.id);
+    // The 11 evening lessons read the CRC siddur's own Saturday-evening units (2.0 SC7), through their own route.
+    const reading = SERVICE_COURSE.lessons.filter(lesson => lesson.read && !lesson.read.unit.endsWith("@bm-maariv")).map(lesson => lesson.id);
     expect(reading).toHaveLength(30);
+    expect(SERVICE_COURSE.lessons.filter(lesson => lesson.read?.unit.endsWith("@bm-maariv"))).toHaveLength(11);
     expect(SERVICE_COURSE.lessons.filter(lesson => lesson.kind === "prayer" && !lesson.read).map(lesson => lesson.id).sort()).toEqual(["mi-shebeirach", "psukei-dzimrah"]);
     expect(SERVICE_TEXT_UNITS.size).toBe(30);
     for (const unit of SERVICE_TEXT_UNITS) { expect(unit).toMatch(/@shabbat-(?:shacharit|maariv)$/); expect(unit).not.toMatch(/mi-shebeirach|legacy|bm-/); }
-    for (const lesson of SERVICE_COURSE.lessons.filter(row => row.read)) {
+    // Shavua Tov is one line of two words (2.0 SC7): two key words and no Check; every other Read has three to six and a Check.
+    for (const lesson of SERVICE_COURSE.lessons.filter(row => row.read && row.id !== "shavua-tov")) {
       expect(lesson.keyWords.length, lesson.id).toBeGreaterThanOrEqual(3); expect(lesson.keyWords.length, lesson.id).toBeLessThanOrEqual(6);
       expect(lesson.check?.items, lesson.id).toBeGreaterThanOrEqual(3);
     }
     expect(lessonById("shma")!.read).toEqual({ unit: "shma.the-shma@shabbat-shacharit", blocks: [0, 1], torahRef: { ref: "Deuteronomy 6:4", kind: "torah", block: 0, words: [0, 5] } });
     expect(lessonById("shma")!.goal).toBe("After this you can read the Sh’ma’s first line and say what its key words mean.");
-    expect(SERVICE_COURSE.lessons.filter(lesson => lessonOpen(lesson))).toHaveLength(43);
-    expect(homeUnits().map(unit => unit.id)).toEqual(["reading", "leads", "waking", "shma", "amidah", "torah", "closing"]);
+    expect(SERVICE_COURSE.lessons.filter(lesson => lessonOpen(lesson))).toHaveLength(54);
+    expect(homeUnits().map(unit => unit.id)).toEqual(["reading", "leads", "waking", "shma", "amidah", "torah", "closing", "evening", "havdalah"]);
   });
   it("keep every lesson inside the limits the units and lessons promise, and every goal in the course's form", () => {
     for (const lesson of SERVICE_COURSE.lessons) {
@@ -87,7 +90,7 @@ describe("the congregation file", () => {
       expect(teaching, lesson.id).toBeTruthy(); expect(teaching.approved).toBe("2026-10-24");
       const words = teaching.text.trim().split(/\s+/).length; expect(words, lesson.id).toBeGreaterThanOrEqual(60); expect(words).toBeLessThanOrEqual(200);
     }
-    expect(Object.keys(CRC_TENANT.lessons)).toHaveLength(37); expect(Object.keys(CRC_TENANT.lessons).join(" ")).not.toMatch(/vzot|zot/);
+    expect(Object.keys(CRC_TENANT.lessons)).toHaveLength(48); expect(Object.keys(CRC_TENANT.lessons).join(" ")).not.toMatch(/vzot|zot/);
   });
   it("holds each teaching verbatim from the approved draft files (only the NEW marks on the two split Torah blessings are dropped)", () => {
     const dir = new URL("../../docs/planning/2026-10-24-release-2-0/cowork/A3-DRAFTS/", import.meta.url);
@@ -270,7 +273,12 @@ describe("the validator, rule by rule (A4 5.3)", () => {
     expect(has(problemsOf(course => { course.lessons.find((lesson: { id: string }) => lesson.id === "f5").check = { items: 3 }; }), "fluency lesson has no read")).toBe(true);
   });
   it("is itself unable to ship the licensed siddur: no unit id, key or value names the licensed volume", () => {
-    const all = JSON.stringify([rawCourse, { ...rawCrc, siddurBook: "", lessons: Object.fromEntries(Object.entries(rawCrc.lessons).map(([id, row]) => [id, { ...row, teaching: undefined }])) }]);
+    // Since 2.0 SC7 the evening lessons name Saturday-evening units of the CRC siddur by id (ids and block indices only, never text),
+    // and the congregation file names each lesson's units by id; nothing else in either file names the licensed book, or JPS.
+    const evening = (rawCourse.lessons as Json[]).map(lesson => lesson.read?.unit).filter((unit): unit is string => typeof unit === "string" && unit.endsWith("@bm-maariv"));
+    expect(evening).toHaveLength(11);
+    const all = JSON.stringify([{ ...rawCourse, lessons: (rawCourse.lessons as Json[]).map(lesson => ({ ...lesson, read: lesson.read?.unit.endsWith("@bm-maariv") ? null : lesson.read })) },
+      { ...rawCrc, siddurBook: "", lessons: Object.fromEntries(Object.entries(rawCrc.lessons).map(([id, row]) => [id, { ...row, bm: undefined, teaching: undefined, eveningTeaching: undefined }])) }]);
     expect(all).not.toMatch(/legacy-beit-mitzvah|@bm-|JPS|Jewish Publication/);
   });
 });
@@ -322,10 +330,13 @@ describe("browser progress", () => {
     expect(lessonAfter(progress, "modeh-ani")!.id).toBe("tallit");
     expect(courseDone(progress)).toBe(false);
     for (const lesson of serviceOrder()) progress = completeLesson(progress, lesson, 1);
+    // The morning done, CRC's course goes on to Saturday evening and Havdalah (2.0 SC7), and is done once those are.
+    expect(nextLesson(progress)!.id).toBe("maariv-aravim"); expect(courseDone(progress)).toBe(false);
+    for (const lesson of SERVICE_COURSE.lessons.filter(row => row.section === "evening" || row.section === "havdalah")) progress = completeLesson(progress, lesson, 1);
     expect(nextLesson(progress)).toBeNull(); expect(courseDone(progress)).toBe(true);
     expect(nextLesson(emptyProgress(), CRC_TENANT, ["f1", "torah-reading"])!.id).toBe("torah-reading");
   });
-  it("never offers the fluency strand as Next", () => { const all = serviceOrder().reduce((p, lesson) => completeLesson(p, lesson, 1), emptyProgress()); expect(nextLesson(all)).toBeNull(); });
+  it("never offers the fluency strand as Next", () => { const all = SERVICE_COURSE.lessons.filter(lesson => lesson.kind !== "fluency").reduce((p, lesson) => completeLesson(p, lesson, 1), emptyProgress()); expect(nextLesson(all)).toBeNull(); });
   it("reads and writes the browser store with every access guarded", () => {
     const memory = new Map<string, string>();
     const storage = { getItem: (key: string) => memory.get(key) ?? null, setItem: (key: string, value: string) => { memory.set(key, value); } } as unknown as Storage;

@@ -9,6 +9,7 @@ import { DISCUSSION_LABELS } from "../../../../lib/discussions/labels";
 import { WordPanelBody, type WordPanelHost } from "./word-panel";
 import { focusKey, moveWord, requestPanel, type PanelOpen, type VersePanelKind } from "./verse-panel-state";
 import { useStudyLens } from "../study-lens";
+import { useReadingPrefs } from "../reading-prefs";
 import { Button, Sheet } from "../../../ui";
 import styles from "./commentary.module.css";
 
@@ -124,14 +125,14 @@ const titleOf = (open: Open) => open.kind === "discussion" ? `${DISCUSSION_LABEL
 
 /** What the sheet holds for the open panel. After Previous word or Next word the button pressed may have become disabled: focus then goes to the sheet's title, never to the page. */
 function PanelBody({ open }: { open: Open }) {
-  const body = useRef<HTMLDivElement | null>(null), lens = useStudyLens(), scope = usePanel();
+  const body = useRef<HTMLDivElement | null>(null), lens = useStudyLens(), scope = usePanel(), size = useReadingPrefs().size;
   useEffect(() => {
     if (open.kind !== "word") return;
     const at = document.activeElement;
     if ((at instanceof HTMLButtonElement && at.disabled) || at === document.body) body.current?.closest("dialog")?.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
   });
   const word = open.kind === "word" ? scope?.host.current : null;
-  return <div id={open.id} ref={body} className={styles.versePanel} data-verse-panel={open.verse}>
+  return <div id={open.id} ref={body} className={styles.versePanel} data-verse-panel={open.verse} data-size={size}>
     {open.kind === "compare" ? <CompareView verse={open.verse} />
       : open.kind === "discussion" ? <DiscussionPanelBody verse={open.verse} />
       : open.kind === "word" ? word && open.word !== undefined && scope ? <WordPanelBody key={word.scopeKey} host={word} verse={open.verse} word={open.word} onMove={scope.moveWord} onGone={scope.close} /> : null

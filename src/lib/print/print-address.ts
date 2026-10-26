@@ -35,6 +35,12 @@ export function printAddress(target: PrintTarget, format: SheetFormat = DEFAULT_
   return query ? `${PRINT_PATH}?${query}` : PRINT_PATH;
 }
 
+/** The /read address of what a print sheet shows ("Back to the reading", 1.9 N5): the same reading and, for a Shabbat, the same part of it. */
+export function readAddressOfPrint(target: PrintTarget, today: string | null): string {
+  const read: ReadTarget = target.mode === "week" ? { mode: "week", date: target.date, kind: target.kind } : target;
+  return readAddress(read, { today, pick: target.mode === "week" ? target.pick : null });
+}
+
 /** A /read address (what the reading chooser opens) as a print target, keeping nothing but the reading. */
 export function printTargetFromRead(address: string): PrintTarget | null {
   const search = address.includes("?") ? address.slice(address.indexOf("?")) : "";

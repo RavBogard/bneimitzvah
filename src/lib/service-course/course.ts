@@ -1,7 +1,7 @@
 import rawCourse from "./course.json";
 import rawCrc from "./tenants/crc.json";
 import { toneProblems } from "../learn/tone";
-import { REFUSED_UNIT } from "./text";
+import { EVENING_UNIT, REFUSED_UNIT } from "./text";
 
 /**
  * The service course (Learn the service, release 2.0): units, lessons and per-congregation files, parsed and
@@ -11,6 +11,11 @@ import { REFUSED_UNIT } from "./text";
  * word, Hebrew or English, and never a page number. `tenants/<tenant>.json` holds what is congregation-specific:
  * the siddur book and the printed pages, the approved teaching, the credit and the default path. Licensed text is
  * never in either file; the course reaches the siddur only through `siddurPageLink`.
+ *
+ * Saturday evening and Havdalah (2.0 SC7): the evening units' lessons read units of the congregation's own Beit Mitzvah siddur
+ * (`@bm-maariv` ids, block indices only, never text), served on the CRC site only (MISSION, amended 2026-10-25). `evening` is that
+ * service in the book's order: its own lessons and the morning lessons it repeats, each at its evening page. A congregation file
+ * turns the evening on with `evening: true`, which only CRC's may do; a reused lesson may carry an `eveningTeaching` its slot picks.
  */
 export const SERVICE_COURSE_SCHEMA = "service-course/v1" as const;
 export type LessonKind = "fluency" | "prayer" | "moment";
@@ -29,11 +34,14 @@ export type Letter = Readonly<{ id: string; name: string; char: string }>;
 export type Mark = Readonly<{ id: string; name: string; mark: string }>;
 export type Alphabet = Readonly<{ letters: readonly Letter[]; finals: readonly Letter[]; marks: readonly Mark[] }>;
 export type Course = Readonly<{ schema: typeof SERVICE_COURSE_SCHEMA; features: Readonly<{ recordings: boolean; fluency: boolean }>; units: readonly Unit[];
-  lessons: readonly Lesson[]; service: readonly string[]; alphabet: Alphabet }>;
+  lessons: readonly Lesson[]; service: readonly string[]; evening: readonly string[]; alphabet: Alphabet }>;
 export type Teaching = Readonly<{ text: string; approved: string; from?: string }>;
-export type TenantLesson = Readonly<{ bm?: readonly string[]; pages: Readonly<{ morning?: number; evening?: number }>; teaching?: Teaching }>;
-export type Tenant = Readonly<{ tenant: string; enabled: boolean; siddurBook: string; publicVolume: string; credit: string; defaultPath: readonly string[];
+export type TenantLesson = Readonly<{ bm?: readonly string[]; pages: Readonly<{ morning?: number; evening?: number }>; teaching?: Teaching; eveningTeaching?: Teaching }>;
+export type Tenant = Readonly<{ tenant: string; enabled: boolean; evening: boolean; siddurBook: string; publicVolume: string; credit: string; defaultPath: readonly string[];
   lessons: Readonly<Record<string, TenantLesson>> }>;
+/** The congregations whose own siddur text the evening lessons may show (Daniel, 2026-10-25: CRC only; a second congregation is 2.5). */
+export const EVENING_TEXT_TENANTS: readonly string[] = Object.freeze(["crc"]);
+export const eveningTextTenant = (tenantId: unknown): boolean => typeof tenantId === "string" && EVENING_TEXT_TENANTS.includes(tenantId);
 
 export class CourseError extends Error {
   constructor(readonly problems: readonly string[]) { super(`The service course is invalid: ${problems.slice(0, 5).join("; ")}`); }
@@ -68,7 +76,8 @@ export function hebrewOutsideAlphabet(value: unknown, path = "course"): string[]
 function parseRead(value: unknown, where: string, fail: Fail): Read | undefined {
   if (!isObject(value)) { fail(`${where}: read`); return undefined; }
   exactKeys(value, ["unit", "blocks", "torahRef"], where, fail);
-  if (typeof value.unit !== "string" || !PUBLIC_UNIT.test(value.unit)) fail(`${where}: read unit`);
+  // A public unit, or (for an evening lesson only, checked once the units are known) a Saturday-evening unit of the siddur.
+  if (typeof value.unit !== "string" || !(PUBLIC_UNIT.test(value.unit) || EVENING_UNIT.test(value.unit))) fail(`${where}: read unit`);
   // The mixed Mi Shebeirach is never read, whatever its suffix (A2 discrepancy 13): the lesson links to the siddur instead.
   else if (REFUSED_UNIT.test(value.unit)) fail(`${where}: read unit is refused`);
   const blocks = value.blocks;
@@ -123,7 +132,7 @@ export function validateServiceCourse(courseValue: unknown, tenantValues: readon
     strings.push([where, field]); return field;
   };
   if (!isObject(courseValue)) throw new CourseError(["course is not an object"]);
-  exactKeys(courseValue, ["schema", "features", "units", "lessons", "service", "alphabet"], "course", fail);
+  exactKeys(courseValue, ["schema", "features", "units", "lessons", "service", "evening", "alphabet"], "course", fail);
   // Rule 1.
   if (courseValue.schema !== SERVICE_COURSE_SCHEMA) fail("schema id");
   // Rule 9: no Hebrew outside the alphabet table, so prayer text, licensed or public, cannot enter the repo through this file.
@@ -157,6 +166,8 @@ export function validateServiceCourse(courseValue: unknown, tenantValues: readon
       if (kind !== "fluency" || !Array.isArray(row.corpus) || row.corpus.length < 1 || row.corpus.length > 3) fail(`${where}: corpus`);
       else for (const [i, entry] of row.corpus.entries()) {
         const parsed = isObject(entry) && entry.torahRef === undefined ? parseRead(entry, `${where} corpus ${i}`, fail) : (fail(`${where}: corpus ${i}`), undefined);
+        // The fluency strand reads the public volume only, never the siddur's own text.
+        if (parsed && !PUBLIC_UNIT.test(parsed.unit)) fail(`${where}: corpus ${i} is not a public unit`);
         if (parsed) corpus.push(Object.freeze({ unit: parsed.unit, blocks: parsed.blocks }));
       }
     }
@@ -179,7 +190,9 @@ export function validateServiceCourse(courseValue: unknown, tenantValues: readon
     if (kind === "fluency" && (read || keyWords.length || check)) fail(`${where}: a fluency lesson has no read, keyWords or check; its text is its corpus`);
     if ((keyWords.length || check) && !read) fail(`${where}: keyWords and check need a read`);
     // A Read step brings three to six key words and a Check (A4 3.1); each gloss once, so a meaning item never offers two right answers.
-    if (read && (keyWords.length < 3 || !check)) fail(`${where}: a read needs three to six key words and a check`);
+    // A Read of one short line (Shavua Tov, 2.0 SC7) may have one or two key words and no Check: it has no more words to ask about.
+    const oneLine = !!read && read.blocks[0] === read.blocks[1];
+    if (read && !(oneLine && keyWords.length >= 1 && keyWords.length <= 2 && !check) && (keyWords.length < 3 || !check)) fail(`${where}: a read needs three to six key words and a check`);
     if (new Set(keyWords.map(word => word.gloss)).size !== keyWords.length) fail(`${where}: two key words share a gloss`);
     if (new Set(keyWords.map(word => `${word.block}:${word.word}`)).size !== keyWords.length) fail(`${where}: a key word is listed twice`);
     // Rule 7: the 2.1 slot.
@@ -222,22 +235,34 @@ export function validateServiceCourse(courseValue: unknown, tenantValues: readon
     if (lesson.kind === "fluency" ? section.map : !section.map) fail(`lesson ${lesson.id}: section ${section.id} is the wrong kind of unit`);
   }
   for (const unit of units) if (unit.map) for (const id of unit.lessons) if (byId.get(id)?.section !== unit.id) fail(`unit ${unit.id}: lesson ${id} has another section`);
-  // The service order: every prayer and moment once, and each section's lessons stay together.
+  // The evening lessons (2.0 SC7) are those whose section is an evening unit: they read the siddur's Saturday-evening units, and only they do.
+  const eveningLesson = (lesson: Lesson) => unitById.get(lesson.section)?.phase === "evening";
+  for (const lesson of lessons) if (lesson.read && (eveningLesson(lesson) ? !EVENING_UNIT.test(lesson.read.unit) : !PUBLIC_UNIT.test(lesson.read.unit)))
+    fail(`lesson ${lesson.id}: ${eveningLesson(lesson) ? "an evening lesson reads a Saturday-evening unit" : "a morning lesson reads a public unit"}`);
+  // The service order: every morning prayer and moment once, and each section's lessons stay together.
   const service = Array.isArray(courseValue.service) && courseValue.service.every(id => typeof id === "string") ? courseValue.service as string[] : (fail("service"), []);
-  const serviceLessons = lessons.filter(lesson => lesson.kind !== "fluency");
-  if (new Set(service).size !== service.length || service.length !== serviceLessons.length || serviceLessons.some(lesson => !service.includes(lesson.id))) fail("service: must list every prayer and moment lesson exactly once");
+  const serviceLessons = lessons.filter(lesson => lesson.kind !== "fluency" && !eveningLesson(lesson));
+  if (new Set(service).size !== service.length || service.length !== serviceLessons.length || serviceLessons.some(lesson => !service.includes(lesson.id))) fail("service: must list every morning prayer and moment lesson exactly once");
   const sectionsSeen: string[] = [];
   for (const id of service) { const section = byId.get(id)?.section; if (section && sectionsSeen[sectionsSeen.length - 1] !== section) { if (sectionsSeen.includes(section)) fail(`service: section ${section} is split`); sectionsSeen.push(section); } }
+  // The evening service in the book's order: every evening lesson once, plus the morning prayers and moments it repeats; no strand lesson.
+  const evening = Array.isArray(courseValue.evening) && courseValue.evening.every(id => typeof id === "string") ? courseValue.evening as string[] : (fail("evening"), []);
+  if (new Set(evening).size !== evening.length || evening.some(id => !byId.has(id) || byId.get(id)!.kind === "fluency")
+    || lessons.some(lesson => eveningLesson(lesson) && !evening.includes(lesson.id))) fail("evening: must list every evening lesson once, and only prayers and moments");
 
   // Rules 8 and 10: the congregation files.
   const tenants: Tenant[] = [], tenantIds = new Set<string>();
   for (const [n, value] of tenantValues.entries()) {
     if (!isObject(value) || typeof value.tenant !== "string" || !TENANT_ID.test(value.tenant)) { fail(`tenant ${n}: id`); continue; }
     const tenant = value.tenant, where = `tenant ${tenant}`;
-    exactKeys(value, ["tenant", "enabled", "siddurBook", "publicVolume", "credit", "defaultPath", "lessons"], where, fail);
+    exactKeys(value, ["tenant", "enabled", "evening", "siddurBook", "publicVolume", "credit", "defaultPath", "lessons"], where, fail);
     if (tenantIds.has(tenant)) fail(`${where}: duplicate`); tenantIds.add(tenant);
     for (const path of hebrewOutsideAlphabet(value, where)) fail(`Hebrew in ${path}`);
     if (typeof value.enabled !== "boolean") fail(`${where}: enabled`);
+    // The evening reads the congregation's own siddur, which Daniel allowed for CRC only (2026-10-25); every other file keeps it off.
+    if (typeof value.evening !== "boolean") fail(`${where}: evening`);
+    else if (value.evening && !eveningTextTenant(tenant)) fail(`${where}: the evening lessons are for CRC only`);
+    const eveningOn = value.evening === true;
     const siddurBook = typeof value.siddurBook === "string" && SLUG.test(value.siddurBook) ? value.siddurBook : (fail(`${where}: siddurBook`), "");
     const publicVolume = typeof value.publicVolume === "string" && SLUG.test(value.publicVolume) ? value.publicVolume : (fail(`${where}: publicVolume`), "");
     if (siddurBook && siddurBook === publicVolume) fail(`${where}: the siddur book and the public volume must differ`);
@@ -250,35 +275,47 @@ export function validateServiceCourse(courseValue: unknown, tenantValues: readon
       const here = `${where} lesson ${id.slice(0, 40)}`, lesson = byId.get(id);
       if (!lesson) { fail(`${here}: not a lesson of the course`); continue; }
       if (!isObject(row)) { fail(here); continue; }
-      exactKeys(row, ["bm", "pages", "teaching"], here, fail);
+      exactKeys(row, ["bm", "pages", "teaching", "eveningTeaching"], here, fail);
       const bm = row.bm === undefined ? undefined : Array.isArray(row.bm) && row.bm.length >= 1 && row.bm.every(unit => typeof unit === "string" && BM_UNIT.test(unit)) ? row.bm as string[] : (fail(`${here}: bm unit ids`), undefined);
       const pagesIn = isObject(row.pages) ? row.pages : (fail(`${here}: pages`), {} as Record<string, unknown>);
       exactKeys(pagesIn, ["morning", "evening"], `${here} pages`, fail);
       const pages: { morning?: number; evening?: number } = {};
       for (const slot of ["morning", "evening"] as const) if (pagesIn[slot] !== undefined) { if (integer(pagesIn[slot], 1, 9999)) pages[slot] = pagesIn[slot] as number; else fail(`${here}: ${slot} page`); }
       if ((bm || lesson.kind !== "fluency") && pages.morning === undefined && pages.evening === undefined) fail(`${here}: needs at least one page`);
-      let teaching: Teaching | undefined;
-      if (row.teaching !== undefined) {
-        const t = row.teaching;
-        if (!isObject(t) || typeof t.approved !== "string" || !DATE.test(t.approved) || (t.from !== undefined && typeof t.from !== "string")) fail(`${here}: teaching`);
-        else {
-          exactKeys(t, ["text", "approved", "from"], `${here} teaching`, fail);
-          const body = text(`${here} teaching`, t.text, 2400);
-          if (body && (wordCount(body) < COURSE_LIMITS.teachingWords.min || wordCount(body) > COURSE_LIMITS.teachingWords.max)) fail(`${here}: teaching is ${wordCount(body)} words, not ${COURSE_LIMITS.teachingWords.min} to ${COURSE_LIMITS.teachingWords.max}`);
-          teaching = Object.freeze({ text: body, approved: t.approved, ...(t.from !== undefined ? { from: t.from as string } : {}) });
-        }
-      }
-      rows[id] = Object.freeze({ ...(bm ? { bm: Object.freeze(bm) } : {}), pages: Object.freeze(pages), ...(teaching ? { teaching } : {}) });
+      const teachingOfRow = (field: "teaching" | "eveningTeaching"): Teaching | undefined => {
+        const t = row[field];
+        if (t === undefined) return undefined;
+        if (!isObject(t) || typeof t.approved !== "string" || !DATE.test(t.approved) || (t.from !== undefined && typeof t.from !== "string")) { fail(`${here}: ${field}`); return undefined; }
+        exactKeys(t, ["text", "approved", "from"], `${here} ${field}`, fail);
+        const body = text(`${here} ${field}`, t.text, 2400);
+        if (body && (wordCount(body) < COURSE_LIMITS.teachingWords.min || wordCount(body) > COURSE_LIMITS.teachingWords.max)) fail(`${here}: ${field} is ${wordCount(body)} words, not ${COURSE_LIMITS.teachingWords.min} to ${COURSE_LIMITS.teachingWords.max}`);
+        return Object.freeze({ text: body, approved: t.approved, ...(t.from !== undefined ? { from: t.from as string } : {}) });
+      };
+      const teaching = teachingOfRow("teaching"), eveningTeaching = teachingOfRow("eveningTeaching");
+      // An evening version is for a morning lesson the evening repeats; an evening lesson has only the one teaching.
+      if (eveningTeaching && (eveningLesson(lesson) || !evening.includes(id))) fail(`${here}: an evening teaching belongs to a morning lesson the evening repeats`);
+      if (eveningLesson(lesson) && pages.morning !== undefined) fail(`${here}: an evening lesson has no morning page`);
+      rows[id] = Object.freeze({ ...(bm ? { bm: Object.freeze(bm) } : {}), pages: Object.freeze(pages), ...(teaching ? { teaching } : {}), ...(eveningTeaching ? { eveningTeaching } : {}) });
     }
-    // Rule 8: every prayer and moment lesson of an enabled tenant has an approved teaching.
-    if (value.enabled === true) for (const lesson of lessons) if (lesson.kind !== "fluency" && !rows[lesson.id]?.teaching) fail(`${where}: lesson ${lesson.id} has no approved teaching`);
-    tenants.push(Object.freeze({ tenant, enabled: value.enabled === true, siddurBook, publicVolume, credit, defaultPath: Object.freeze(defaultPath), lessons: Object.freeze(rows) }));
+    // Rule 8: every prayer and moment lesson of an enabled tenant has an approved teaching; the evening's lessons, when its evening is on.
+    if (value.enabled === true) for (const lesson of lessons) if (lesson.kind !== "fluency" && (eveningOn || !eveningLesson(lesson)) && !rows[lesson.id]?.teaching) fail(`${where}: lesson ${lesson.id} has no approved teaching`);
+    // With the evening on, every lesson of the evening has its evening page, and the pages follow the book's order.
+    if (eveningOn) {
+      let last = 0;
+      for (const id of evening) {
+        const page = rows[id]?.pages.evening;
+        if (page === undefined) { fail(`${where}: lesson ${id} has no evening page`); continue; }
+        if (page < last) fail(`${where}: lesson ${id} is out of the book's order`);
+        last = page;
+      }
+    }
+    tenants.push(Object.freeze({ tenant, enabled: value.enabled === true, evening: eveningOn, siddurBook, publicVolume, credit, defaultPath: Object.freeze(defaultPath), lessons: Object.freeze(rows) }));
   }
   // Rule 10: the tone rule on every learner-facing string, the approved teachings included.
   for (const [where, string] of strings) for (const problem of toneProblems(string)) fail(`${where}: tone, ${problem}`);
   if (problems.length) throw new CourseError(problems);
   return { course: Object.freeze({ schema: SERVICE_COURSE_SCHEMA, features: Object.freeze({ recordings, fluency: fluencyOn }), units: Object.freeze(units), lessons: Object.freeze(lessons),
-    service: Object.freeze(service), alphabet }), tenants: Object.freeze(tenants) };
+    service: Object.freeze(service), evening: Object.freeze(evening), alphabet }), tenants: Object.freeze(tenants) };
 }
 
 const PARSED = validateServiceCourse(rawCourse, [rawCrc]);
@@ -291,32 +328,53 @@ const BY_ID = new Map(SERVICE_COURSE.lessons.map(lesson => [lesson.id, lesson]))
 const UNIT_BY_ID = new Map(SERVICE_COURSE.units.map(unit => [unit.id, unit]));
 export const lessonById = (id: string): Lesson | null => BY_ID.get(id) ?? null;
 export const unitById = (id: string): Unit | null => UNIT_BY_ID.get(id) ?? null;
-/** Whether a lesson is reachable now: the fluency strand stays closed until SC3 turns its flag on. */
-export const lessonOpen = (lesson: Lesson, course: Course = SERVICE_COURSE) => lesson.kind !== "fluency" || course.features.fluency;
-/** Units a learner sees on the home, in order; the fluency unit only when its flag is on. */
-export const homeUnits = (course: Course = SERVICE_COURSE): readonly Unit[] =>
-  course.units.filter(unit => unit.phase === "morning" && (course.features.fluency || !unit.lessons.every(id => BY_ID.get(id)?.kind === "fluency")));
+export type Phase = "morning" | "evening";
+export type ServiceSlot = "morning" | "havdalah" | "unknown";
+/** An evening lesson (2.0 SC7): its section is one of the Saturday-evening units, so it reads the siddur's own evening text. */
+export const isEveningLesson = (lesson: Lesson, course: Course = SERVICE_COURSE): boolean => course.units.find(unit => unit.id === lesson.section)?.phase === "evening";
+/**
+ * Whether a lesson is reachable now: the fluency strand stays closed until SC3 turns its flag on, and an evening lesson is offered
+ * only by a congregation whose evening is on (CRC's, Daniel 2026-10-25); anywhere else it does not exist.
+ */
+export const lessonOpen = (lesson: Lesson, course: Course = SERVICE_COURSE, tenant: Tenant = CRC_TENANT) =>
+  (lesson.kind !== "fluency" || course.features.fluency) && (!isEveningLesson(lesson, course) || tenant.evening);
+/** Units a learner sees on the home, in order; the fluency unit only when its flag is on, the evening's only when the evening is on. */
+export const homeUnits = (course: Course = SERVICE_COURSE, tenant: Tenant = CRC_TENANT): readonly Unit[] =>
+  course.units.filter(unit => (unit.phase === "morning" || tenant.evening) && (course.features.fluency || !unit.lessons.every(id => BY_ID.get(id)?.kind === "fluency")));
 /** The morning service in printed order: every prayer and moment once. */
 export const serviceOrder = (course: Course = SERVICE_COURSE): readonly Lesson[] => course.service.map(id => BY_ID.get(id)!);
-/** The prayer before and after a lesson in the service, or null at either end. */
-export function serviceNeighbours(id: string, course: Course = SERVICE_COURSE): { before: Lesson | null; after: Lesson | null } {
-  const at = course.service.indexOf(id);
-  return { before: at > 0 ? BY_ID.get(course.service[at - 1])! : null, after: at >= 0 && at < course.service.length - 1 ? BY_ID.get(course.service[at + 1])! : null };
+/** The Saturday evening service with Havdalah in the book's order: its own lessons and the morning lessons it repeats. */
+export const eveningOrder = (course: Course = SERVICE_COURSE): readonly Lesson[] => course.evening.map(id => BY_ID.get(id)!);
+/** Which service a lesson's Where step follows: the evening for an evening lesson, the morning for every other. */
+export const phaseOf = (lesson: Lesson, course: Course = SERVICE_COURSE): Phase => isEveningLesson(lesson, course) ? "evening" : "morning";
+/** The prayer before and after a lesson in the service (the morning's, or the evening's in the book's order), or null at either end. */
+export function serviceNeighbours(id: string, course: Course = SERVICE_COURSE, phase: Phase = "morning"): { before: Lesson | null; after: Lesson | null } {
+  const order = phase === "evening" ? course.evening : course.service, at = order.indexOf(id);
+  return { before: at > 0 ? BY_ID.get(order[at - 1])! : null, after: at >= 0 && at < order.length - 1 ? BY_ID.get(order[at + 1])! : null };
 }
 /** The lessons of one Where section in service order (the section's own units plus parts the section borrows from another unit). */
-export const sectionLessons = (sectionId: string, course: Course = SERVICE_COURSE): readonly Lesson[] => serviceOrder(course).filter(lesson => lesson.section === sectionId);
-/** The Where map's sections, in service order. */
-export const mapSections = (course: Course = SERVICE_COURSE): readonly Unit[] => course.units.filter(unit => unit.map);
-export const teachingOf = (tenant: Tenant, id: string): Teaching | null => tenant.lessons[id]?.teaching ?? null;
-/** The printed page for a lesson in the learner's service; signed out and unknown slot are the morning. */
-export const pageOf = (tenant: Tenant, id: string, slot: "morning" | "havdalah" | "unknown" = "morning"): number | undefined => {
+export const sectionLessons = (sectionId: string, course: Course = SERVICE_COURSE, phase: Phase = "morning"): readonly Lesson[] =>
+  (phase === "evening" ? eveningOrder(course) : serviceOrder(course)).filter(lesson => lesson.section === sectionId);
+/** The Where map's sections, in service order: the morning's, or the evening's two. */
+export const mapSections = (course: Course = SERVICE_COURSE, phase: Phase = "morning"): readonly Unit[] => course.units.filter(unit => unit.map && unit.phase === phase);
+/** The approved teaching for the learner's slot: a Havdalah-slot learner reads the evening version of a repeated prayer where there is one. */
+export const teachingOf = (tenant: Tenant, id: string, slot: ServiceSlot = "morning"): Teaching | null =>
+  (slot === "havdalah" ? tenant.lessons[id]?.eveningTeaching : undefined) ?? tenant.lessons[id]?.teaching ?? null;
+/** The printed page for a lesson in the learner's service; signed out and unknown slot are the morning. An evening lesson has only its evening page. */
+export const pageOf = (tenant: Tenant, id: string, slot: ServiceSlot = "morning"): number | undefined => {
   const pages = tenant.lessons[id]?.pages;
-  return (slot === "havdalah" ? pages?.evening : pages?.morning) ?? pages?.morning;
+  return slot === "havdalah" ? pages?.evening ?? pages?.morning : pages?.morning ?? pages?.evening;
 };
 /**
- * The public units a Read step may ask `/api/public/service-text` for: exactly the units course.json names, nothing else. The
+ * The public units a Read step may ask `/api/public/service-text` for: exactly the public units course.json names, nothing else. The
  * route refuses any other unit before it opens the database, so the public text it serves is the course's and only the course's.
  */
-export const SERVICE_TEXT_UNITS: ReadonlySet<string> = new Set(SERVICE_COURSE.lessons.flatMap(lesson => [...(lesson.read ? [lesson.read.unit] : []), ...(lesson.corpus ?? []).map(entry => entry.unit)]));
+export const SERVICE_TEXT_UNITS: ReadonlySet<string> = new Set(SERVICE_COURSE.lessons.flatMap(lesson => [...(lesson.read ? [lesson.read.unit] : []), ...(lesson.corpus ?? []).map(entry => entry.unit)])
+  .filter(unit => !EVENING_UNIT.test(unit)));
+/**
+ * The siddur's Saturday-evening units the evening lessons may ask `/api/public/evening-text` for (2.0 SC7): exactly the units the
+ * evening lessons name. The route refuses any other unit before it opens the database.
+ */
+export const EVENING_TEXT_UNITS: ReadonlySet<string> = new Set(SERVICE_COURSE.lessons.flatMap(lesson => lesson.read && EVENING_UNIT.test(lesson.read.unit) ? [lesson.read.unit] : []));
 /** About how long a lesson takes: the teaching and the map, plus a minute to read and a minute for its words; 3 to 6. */
 export const lessonMinutes = (lesson: Lesson): number => Math.min(6, 3 + (lesson.read ? 1 : 0) + (lesson.keyWords.length >= 4 ? 1 : 0));

@@ -13,6 +13,7 @@ import type { StudyVerse } from "./api";
 import { useOfflineWording } from "../../offline/status";
 import { PLAN as OFFLINE } from "../../../../lib/offline/copy";
 import { StarButton, useOwnLayer } from "./own-layer";
+import { Chip } from "../../../ui";
 import styles from "./commentary.module.css";
 
 /** Hebrew quoted inside English text: its own language and face, so a screen reader says it in Hebrew and the English face never has to draw it. */
@@ -60,12 +61,14 @@ const CLAMP_SLACK = 2;
  * When the quoted words are found once in the verse, pointing at the comment
  * underlines them there; tapping the quoted words keeps them underlined.
  */
-export function CommentaryEntry({ comment, words, verseRef, onLink, pinned, language = "he", star }: {
+export function CommentaryEntry({ comment, words, verseRef, onLink, pinned, language = "he", star, englishTag = false }: {
   comment: CommentaryComment; words: readonly string[]; verseRef: string; onLink?: LinkHandler; pinned?: boolean;
   /** A member's star on this comment (their own saved reading only), first in the comment's controls. */
   star?: ReactNode;
   /** The language of the non-English text: Hebrew, or Aramaic for a Targum or the Talmud (same direction and font). */
   language?: "he" | "arc";
+  /** Names the English text with an "English" tag (More on this verse, 1.9 N5): the English leads, and the Hebrew or Aramaic is behind its own button. */
+  englishTag?: boolean;
 }) {
   const id = useId(), parts = useMemo(() => commentaryParts(comment), [comment]);
   const linkable = Boolean(onLink), match = useMemo(() => linkable ? matchDibbur(parts.dibbur, words) : null, [linkable, parts.dibbur, words]);
@@ -96,6 +99,7 @@ export function CommentaryEntry({ comment, words, verseRef, onLink, pinned, lang
     onFocus={match ? () => onLink?.("focus", match) : undefined}
     onBlur={match ? event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onLink?.("focus", null); } : undefined}
     onClick={match ? event => { if ((event.target as Element).closest("a, button") || window.getSelection()?.toString()) return; onLink?.("pin", pinned ? null : match); } : undefined}>
+    {englishTag && !leadsInHebrew && <div className={styles.languageTag}><Chip>English</Chip></div>}
     {leadsInHebrew
       ? <p ref={body} id={`${id}-text`} lang={language} dir="rtl" className={`${styles.text} ${styles.hebrewText} ${expanded ? "" : styles.clamped}`}>{match ? <>{lead}{parts.hebrew && " "}{parts.hebrew && <Runs runs={parts.hebrew} />}</> : hebrewText}</p>
       : <p ref={body} id={`${id}-text`} lang="en" dir="ltr" className={`${styles.text} ${expanded ? "" : styles.clamped}`}>{lead}{lead && " "}{lemma}{lemma && english && " "}{english && <Runs runs={english} mixed />}</p>}

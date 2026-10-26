@@ -12,6 +12,7 @@ import { projectStudyVerse } from "../../src/lib/hebrew/study-tokens";
 import { expandReadingRanges } from "../../src/lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
+import { openMore } from "./more-sheet";
 import { browserFixture } from "./fixture";
 import { createSefariaCommentaryReader } from "../../src/server/study/commentary";
 import { syntheticCommentaryFetch } from "../helpers/commentary";
@@ -122,7 +123,7 @@ it("the public API answers the visitor directly, with noindex and no cookie, and
   await tab.goto("/read", { waitUntil: "domcontentloaded" });
   await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
   const result = await tab.evaluate(async () => {
-    const date = document.querySelector(".reading-hero time")!.getAttribute("datetime");
+    const date = document.querySelector("main header time")!.getAttribute("datetime");
     const week = await fetch(`/api/public/reading?date=${date}`, { credentials: "omit" });
     const finkel = await fetch(`/api/public/reference/finkel/media/${"0".repeat(64)}.mp3`, { credentials: "omit" });
     const session = await fetch("/api/public/session", { credentials: "omit" });
@@ -156,6 +157,7 @@ it("any reading: a named reading, a deep-linked verse that plays from the player
     await ui(reading(tab).getByRole("heading", { name: "Isaiah 42:5", exact: true })).toBeVisible();
     await ui(tab).toHaveURL(/\/read\?reading=bereshit&passage=2$/);
     // The chooser opens another reading in place of this one.
+    await openMore(tab);
     await tab.getByRole("button", { name: "Choose a reading", exact: true }).click();
     const chooser = tab.getByRole("region", { name: "Choose a reading", exact: true });
     await chooser.getByLabel("Holidays and special Shabbatot", { exact: true }).selectOption("shabbat-shekalim");

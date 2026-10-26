@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { FULL, longestEvent, mockVayera, TRIENNIAL, VAYERA_DATE, versesOf, VAYERA } from "./aliyot-fixture";
+import { closeMore, moreSheet, openMore } from "./more-sheet";
 
 // Release 1.9 N3 exit tests on the built, unconfigured production server: Vayera's aliyot in Lein and Study, one aliyah to a page, the picker and
 // `&pick=` carried to Print and Save, the festival Saturday with no aliyot, Choose verses' second tap and its Print, and the speed of the lens switch.
@@ -55,7 +56,9 @@ test("&pick=aliyah-4 opens aliyah 4 and survives Print and Save", async ({ page 
   await reading(page, false);
   await expect(tab(page, "Aliyah 4")).toHaveAttribute("aria-selected", "true");
   await expect.poll(() => refs(page, false)).toEqual(sectionVerses("Genesis 19:21-21:4"));
+  await openMore(page);
   await expect(page.getByLabel("Portion", { exact: true })).toHaveValue("aliyah-4");
+  await closeMore(page);
   // Study keeps the pick too.
   await page.getByRole("button", { name: "Study", exact: true }).click();
   await expect(page.locator("[data-study-rows] [data-verse-ref]").first()).toBeVisible();
@@ -63,6 +66,7 @@ test("&pick=aliyah-4 opens aliyah 4 and survives Print and Save", async ({ page 
   expect(new URL(page.url()).searchParams.get("pick")).toBe("aliyah-4");
   expect(new URL(page.url()).searchParams.get("lens")).toBe("study");
   // Save, signed out: the way back from sign-in is this reading, this aliyah.
+  await openMore(page);
   const save = page.getByRole("link", { name: "Sign in to save", exact: true });
   await save.hover();
   const back = new URL(decodeURIComponent(new URL((await save.getAttribute("href"))!, page.url()).searchParams.get("return")!), page.url());
@@ -83,17 +87,22 @@ test("the Portion picker offers Full, the triennial year, each aliyah and the Ma
   const mocked = await mockVayera(page);
   await page.goto(week);
   await reading(page, false);
+  // The control is in the More sheet; choosing closes the sheet and shows the reading chosen.
   const picker = page.getByLabel("Portion", { exact: true });
+  await openMore(page);
   await expect(picker.locator("option")).toHaveText(["Full calendar portion", "Triennial portion (year 2)", "Aliyah 1", "Aliyah 2", "Aliyah 3", "Aliyah 4", "Aliyah 5", "Aliyah 6", "Aliyah 7", "Maftir"]);
   await expect(picker).toHaveValue("full");
   await picker.selectOption("aliyah-6");
+  await expect(moreSheet(page)).toBeHidden();
   await expect(tab(page, "Aliyah 6")).toHaveAttribute("aria-selected", "true");
   await expect.poll(() => refs(page, false)).toEqual(sectionVerses("Genesis 21:22-34"));
   // Full goes back to the whole portion from its start; it is the same pages, so the address drops the pick.
+  await openMore(page);
   await picker.selectOption("full");
   await expect.poll(() => refs(page, false)).toEqual(sectionVerses("Genesis 18:1-14"));
   expect(new URL(page.url()).searchParams.has("pick")).toBe(false);
   // The triennial reading is its own passage, read in its own sections.
+  await openMore(page);
   await picker.selectOption("triennial");
   await expect(tabs(page).getByRole("tab")).toHaveText(["Aliyah 1", "Aliyah 2", "Aliyah 3", "Aliyah 4", "Aliyah 5", "Aliyah 6", "Aliyah 7", "Maftir"]);
   await expect(tab(page, "Aliyah 5")).toBeVisible();
@@ -130,8 +139,12 @@ for (const mode of ["none", "fail"] as const) {
     await page.goto(`${week}&pick=aliyah-4`);
     await reading(page, false);
     await expect(tabs(page)).toHaveCount(0);
+    await openMore(page);
     await expect(page.getByLabel("Portion", { exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Next section", exact: true })).toHaveCount(0);
+    // Print says Full: its link is in the More sheet.
+    expect(await page.getByRole("link", { name: "Print", exact: true }).getAttribute("href")).toBe(`/print?date=${VAYERA_DATE}`);
+    await closeMore(page);
     // The server's own pages: 100 verses, then the rest.
     await expect(page.getByText(`Verses 1–100 of ${all.length}`, { exact: true })).toBeVisible();
     expect((await refs(page, false)).length).toBe(100);
@@ -139,7 +152,6 @@ for (const mode of ["none", "fail"] as const) {
     await expect(page.getByText(`Verses 101–${all.length} of ${all.length}`, { exact: true })).toBeVisible();
     // The pick it cannot honour is not kept in the address, and Print says Full.
     expect(new URL(page.url()).searchParams.has("pick")).toBe(mode === "fail" ? true : false);
-    expect(await page.getByRole("link", { name: "Print", exact: true }).getAttribute("href")).toBe(`/print?date=${VAYERA_DATE}`);
   });
 }
 
@@ -147,7 +159,7 @@ test("a second tap after one verse makes the range, the empty bar says how to ch
   await mockVayera(page);
   await page.goto(`${week}&pick=aliyah-1`);
   await reading(page, false);
-  await page.getByRole("button", { name: "Choose verses", exact: true }).click();
+  await (await openMore(page)).getByRole("button", { name: "Choose verses", exact: true }).click();
   const bar = page.locator("[data-choose-bar]"), line = bar.locator("[data-choose-line]");
   await expect(line).toHaveText("Tap verse numbers to choose them.");
   await page.getByRole("button", { name: "Select Genesis 18:1", exact: true }).click();

@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { eq, inArray } from "drizzle-orm";
+import { openMore } from "./more-sheet";
 import { browserFixture } from "./fixture";
 import { assertBrowserStartupAllowed, BROWSER_ORIGIN, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
@@ -59,6 +60,7 @@ it("a tutor-and-parent saves this week's Torah from /read and finds it under My 
     await tab.goto("/read", { waitUntil: "domcontentloaded" });
     await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
     // Never signed in here: Save is Sign in to save from the start (F4, N20), and nothing was asked.
+    await openMore(tab);
     await ui(tab.getByRole("link", { name: "Sign in to save", exact: true })).toBeVisible();
     await ui(tab.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
     // Signed out in a browser that never signed in here, /read never asks about the account.
@@ -78,6 +80,7 @@ it("a tutor-and-parent saves this week's Torah from /read and finds it under My 
     expect(seen).toEqual([]);
     // Having signed in here, /read asks for the account's preferences, and only that.
     await expect.poll(() => prefs).toEqual(["GET /api/saved/preferences"]);
+    await openMore(tab);
     await tab.getByRole("button", { name: "Save", exact: true }).click();
     const form = tab.getByRole("form", { name: "Save this reading" });
     await ui(form.getByLabel("Name")).toHaveValue("Synthetic portion · Torah");
@@ -102,7 +105,7 @@ it("Save, then sign in with the emailed code, comes back to the same reading wit
   const { tab, seen } = await visitor(390);
   await tab.goto("/read?lens=study", { waitUntil: "domcontentloaded" });
   await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
-  await tab.getByRole("button", { name: "Choose verses", exact: true }).click();
+  await (await openMore(tab)).getByRole("button", { name: "Choose verses", exact: true }).click();
   await tab.getByRole("button", { name: "Select Genesis 1:2", exact: true }).click();
   await tab.getByRole("button", { name: "Select Genesis 1:4", exact: true }).click({ modifiers: ["Shift"] });
   const bar = tab.locator("[data-choose-bar]"), line = bar.locator("[data-choose-line]");
@@ -140,6 +143,7 @@ it("an account without saved readings is pointed to /account, and its front door
   expect(prefs).toEqual([]);
   await tab.goto("/read", { waitUntil: "domcontentloaded" });
   await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
+  await openMore(tab);
   await tab.getByRole("button", { name: "Save", exact: true }).click();
   await ui(tab.getByRole("link", { name: "Ask for an account to save readings", exact: true })).toHaveAttribute("href", "/account");
   await ui(tab.getByRole("form", { name: "Save this reading" })).toHaveCount(0);
@@ -151,6 +155,7 @@ it("the member opens the saved reading from My readings, marks a verse that stay
   await signIn(tab, "pg-admin@example.test");
   await tab.goto("/read", { waitUntil: "domcontentloaded" });
   await ui(tab.locator(".study-verses")).toBeVisible();
+  await openMore(tab);
   await tab.getByRole("button", { name: "Save", exact: true }).click();
   const form = tab.getByRole("form", { name: "Save this reading" });
   await form.getByLabel("Name").fill("Admin creation");
@@ -208,6 +213,7 @@ it("on their own saved reading a member sees stored translation and note text re
   await ui(tab.locator(".study-verses")).toBeVisible();
   // A public reading never shows Yours or stars: it does not ask about the account.
   await ui(tab.locator("[data-yours-ref], [data-star]")).toHaveCount(0);
+  await openMore(tab);
   await tab.getByRole("button", { name: "Save", exact: true }).click();
   await tab.getByRole("form", { name: "Save this reading" }).getByLabel("Name").fill("Admin study");
   await tab.getByRole("form", { name: "Save this reading" }).getByRole("button", { name: "Save reading", exact: true }).click();

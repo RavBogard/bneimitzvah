@@ -226,6 +226,33 @@ describe("another account signed in in another tab (2.0 SC4 review)", () => {
     expect(r.sync.account.state).toBe("not-eligible");
     expect(r.state.progress).toEqual(doc({ "barchu": T2 }));
   });
+  it("freezes a tab refused naming another account until its next start, so B's work there never lands in A's unsent copy", async () => {
+    const { r, mine } = await switched();
+    r.state.status = 403; r.state.refusal = { error: "forbidden", owner: B };
+    r.timers.shift()!(); for (let i = 0; i < 8; i++) await settle();
+    expect(r.sync.account.state).toBe("not-eligible");
+    expect(r.sync.writable).toBe(false);
+    // B, at this tab, changes something: the page may not save it, and changed() marks and schedules nothing.
+    const sent = r.calls.length;
+    r.sync.changed(); r.sync.flush(); for (let i = 0; i < 8; i++) await settle();
+    expect(r.timers).toHaveLength(0);
+    expect(r.calls.length).toBe(sent);
+    expect(r.store.load()).toEqual(mine);
+    expect(r.marker()).toMatchObject({ owner: A, dirty: true });
+    // The next start learns B is signed in, and the tab writes for B again.
+    r.state.status = 200;
+    await r.sync.start(); for (let i = 0; i < 8; i++) await settle();
+    expect(r.sync.writable).toBe(true);
+  });
+  it("does not freeze a tab refused as its own account: a member without a grant keeps saving on this device", async () => {
+    const r = rig({ progress: doc({ "aleinu": T1 }), version: 3 }, { owner: A, version: 3, dirty: false }, doc({ "aleinu": T1 }));
+    await r.sync.start();
+    r.state.status = 403; r.state.refusal = { error: "forbidden", owner: A };
+    r.store.save(doc({ "aleinu": T1, "vahavta": T2 })); r.sync.changed();
+    r.timers.shift()!(); for (let i = 0; i < 8; i++) await settle();
+    expect(r.sync.account.state).toBe("not-eligible");
+    expect(r.sync.writable).toBe(true);
+  });
   it("never merges A's progress into B on a 409 that names B, even from a server that does not check the owner", async () => {
     const { r, mine, later } = await switched();
     r.timers.shift()!(); for (let i = 0; i < 8; i++) await settle();
