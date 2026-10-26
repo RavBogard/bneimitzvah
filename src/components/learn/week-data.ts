@@ -75,13 +75,18 @@ function useOwnVerses(kind: Melody, ranges: readonly string[] | null, retry: num
   return state;
 }
 
-export function useReadingVerses(kind: Melody, retry = 0): ReadingVerses {
+/**
+ * `weekFallback: false` (N19a: a lesson that starts on a course verse) never asks for this week's reading: without a usable own
+ * reading the answer is "none", and the page goes straight to the course's own verses.
+ */
+export function useReadingVerses(kind: Melody, retry = 0, weekFallback = true): ReadingVerses {
   const own = useOwnReading(), reading = own.status === "ready" ? own[kind] : null;
   const mine = useOwnVerses(kind, reading ? reading.ranges : null, retry);
-  const useWeek = own.status === "none" || own.status === "ready" && (!reading || mine.status === "failed");
+  const useWeek = weekFallback && (own.status === "none" || own.status === "ready" && (!reading || mine.status === "failed"));
   const week = useWeekVerses(kind, retry, useWeek);
   if (own.status === "pending") return { status: "loading" };
   if (reading && mine.status === "ready") return { status: "ready", source: "own", ref: mine.ref, date: "", shifted: false, verses: mine.verses, recorded: true, refs: mine.refs };
   if (reading && mine.status !== "failed") return { status: "loading" };
+  if (!weekFallback) return { status: "none" };
   return week;
 }

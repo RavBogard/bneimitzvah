@@ -205,6 +205,8 @@ a.stepLink:hover { background: var(--color-hover); color: var(--color-ink); }
 .stopLink { justify-self: center; display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 0.75rem; border: 0; background: transparent;
   color: var(--color-action); font-size: 1rem; font-weight: 650; text-decoration: underline; text-underline-offset: 0.2em; }
 .stopLink:hover { color: var(--color-action-hover); }
+/* Quick ten's position line (T3 P4-3 and P4-4): quiet, under the bar. */
+.position { color: var(--color-muted); font-size: 0.9375rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* ---------- the one celebration: the verse on the lake sheet ---------- */
 .sheet { position: fixed; inset: 0; z-index: 20; display: grid; grid-template-rows: minmax(0, 1fr) auto; background: var(--lake); color: #fff; overflow-y: auto; }

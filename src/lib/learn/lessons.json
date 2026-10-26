@@ -443,7 +443,7 @@
       "id": "u4-your-first-verse",
       "melody": "torah",
       "title": "Your first verse",
-      "summary": "Lein one verse of this week's reading.",
+      "summary": "Lein Genesis 1:1, one part at a time.",
       "lessons": [
         "torah-first-verse"
       ]
@@ -2329,12 +2329,12 @@
       "family": null,
       "accents": [],
       "title": "Your first verse",
-      "summary": "Lein one verse of this week's reading",
-      "goal": "After this you have leined one verse of this week's Torah reading.",
+      "summary": "Lein the Torah's first verse, Genesis 1:1",
+      "goal": "After this you have leined Genesis 1:1, one part at a time and then whole.",
       "body": [
-        "You can hear all ten phrases. Now put them together on one verse from this week's reading. The app picks a short one; you can choose another.",
-        "First hear each phrase on its own, in order. Then hear the verse whole. Then chant along with the recording, slowly at first, then at full speed. Breathe at the rest and at the end.",
-        "If your verse is the last one in its aliyah, the ending changes a little; the recording shows you how. The reader's version is one good version. If your cantor or tutor sings a phrase differently, theirs wins."
+        "You can hear all ten phrases. Now put them together on one verse: Genesis 1:1, the first verse of the Torah. It has two parts, and you have learned every mark in it.",
+        "Learn it one part at a time. Hear the first part, chant it back, then try it without the recording. Do the same with the second part, then connect the two and chant the whole verse. Breathe at the rest and at the end.",
+        "The reader's version is one good version. If your cantor or tutor sings a phrase differently, theirs wins. For another verse after this one, try Exodus 25:8. It is shorter."
       ],
       "listenFor": "Your own voice landing the rest and the ending where the reader does.",
       "examples": [
@@ -2346,7 +2346,7 @@
           ],
           "firstWord": "בְּרֵאשִׁ֖ית",
           "lastWord": "הָאָֽרֶץ׃",
-          "why": "Fallback verse if this week's reading has no word-ready verse: two phrases only.",
+          "why": "The starter verse: two phrases, a rest and the ending.",
           "phrases": [
             {
               "family": "etnachta",
@@ -2360,6 +2360,32 @@
               "words": [
                 3,
                 6
+              ]
+            }
+          ]
+        },
+        {
+          "ref": "Exodus 25:8",
+          "words": [
+            0,
+            4
+          ],
+          "firstWord": "וְעָ֥שׂוּ",
+          "lastWord": "בְּתוֹכָֽם׃",
+          "why": "The prepared alternative: shorter, two phrases, a rest and the ending.",
+          "phrases": [
+            {
+              "family": "etnachta",
+              "words": [
+                0,
+                2
+              ]
+            },
+            {
+              "family": "sof-pasuk",
+              "words": [
+                3,
+                4
               ]
             }
           ]
@@ -2421,9 +2447,9 @@
         {
           "type": "first-verse",
           "params": {
-            "source": "this-week",
+            "source": "course",
             "kind": "torah",
-            "pick": "shortest-word-ready",
+            "pick": "course-order",
             "maxWords": 12,
             "steps": [
               "phrases",

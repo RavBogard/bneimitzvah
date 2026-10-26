@@ -45,6 +45,14 @@ test("public chart covers the catalog with the local Hebrew font and printable l
     await expect(page.locator("[data-chart-accent]")).toHaveCount(30);
     await expect(page.locator("[data-chart-family]")).toHaveCount(11);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    // T3 P4-1: ole, dehi, iluy and atnach hafukh sit in a closed "Other signs" section, with the Psalms, Proverbs and Job line.
+    const poetic = page.locator("[data-chart-poetic]");
+    await expect(poetic).not.toHaveAttribute("open", "");
+    await expect(poetic.locator("summary")).toHaveText("Other signs");
+    await expect(poetic.locator("[data-chart-accent]")).toHaveCount(4);
+    await poetic.locator("summary").click();
+    await expect(poetic).toContainText("These signs mark Psalms, Proverbs and Job. They don't appear in a Torah or haftarah reading.");
+    await expect(page.getByText("Conjunctive signs take their phrase's color. Both zarka forms are shown.")).toBeVisible();
     for (const mark of await page.locator('[data-chart-accent] [lang="he"]').all()) await expect(mark).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("trope-chart-phone-200-percent.png"), fullPage: true });
   }

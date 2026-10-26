@@ -41,9 +41,11 @@ function PathList({ melody, progress, next, after }: { melody: Melody; progress:
 /**
  * 1.9 N17: a signed-in student's first phrase, a path row like Quick ten after the endings. It opens the existing passage preparation
  * on the first verse of their own assigned reading, so it adds no lesson and no progress key. Signed-out visitors and everyone
- * without an assignment see no row (the signed-out wording is not approved).
+ * without an assignment see "This week's first phrase" (T3 CUR-1, Daniel 2026-10-25), which opens this week's reading on its first part;
+ * nothing shows while the account answer is pending, so a student never first sees the week's row.
  */
 export function FirstPhraseRow({ own, melody }: { own: OwnReading; melody: Melody }) {
+  if (own.status === "none") return <a className={styles.review} href={melody === "haftarah" ? "/learn/prepare?kind=haftarah" : "/learn/prepare"} data-first-phrase={melody} data-first-phrase-source="week"><span>This week's first phrase</span>{icons.arrow}</a>;
   const reading = own.status === "ready" ? own[melody] : null;
   if (!reading) return null;
   return <a className={styles.review} href={preparationHref(firstVerseOf(reading), melody)} data-first-phrase={melody}><span>First phrase of your verse</span>{icons.arrow}</a>;

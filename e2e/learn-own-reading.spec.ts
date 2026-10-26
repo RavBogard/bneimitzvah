@@ -35,16 +35,25 @@ test("Noa, assigned Genesis 23:1, gets a first-verse lesson on Genesis 23:1 and 
   expect(seen).toContain("/api/students");
 });
 
-test("a signed-out visitor sees this week's verse as before and no account request beyond the progress check", async ({ page }) => {
+test("a signed-out visitor gets Genesis 1:1, then Exodus 25:8, and no account request beyond the progress check", async ({ page }) => {
   const seen: string[] = []; page.on("request", request => { const path = new URL(request.url()).pathname; if (path.startsWith("/api/")) seen.push(path); });
+  const weekAsked: string[] = []; page.on("request", request => { const url = new URL(request.url()); if (url.pathname === "/api/public/reading" && url.searchParams.has("date")) weekAsked.push(url.search); });
   await page.route("**/api/learn/progress**", route => json(route, { error: "unauthenticated" }, 401));
   await page.goto("/learn/torah-first-verse");
-  await expect(page.getByText("One verse from this week's reading.", { exact: true })).toBeVisible();
+  // N19a: the first-verse lesson is fixed on Genesis 1:1 (T3 N19a-7 line), never this week's shortest verse.
+  await expect(page.getByText("The first verse of the Torah.", { exact: true })).toBeVisible();
+  await expect(refOf(page)).toHaveText("Genesis 1:1");
+  await expect(page.getByText("From the course's own verses while this week's recording is not ready.")).toHaveCount(0);
   await expect(page.getByText("In your reading", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Back to my reading" })).toHaveCount(0);
+  expect(weekAsked).toEqual([]);
   expect(seen.filter(path => path.startsWith("/api/students") || path === "/api/session")).toEqual([]);
   await page.goto("/learn");
-  await expect(page.locator("[data-first-phrase]")).toHaveCount(0);
+  // CUR-1: both paths carry "This week's first phrase", opening this week's reading on its first part.
+  await expect(page.locator("[data-first-phrase=torah]")).toHaveText("This week's first phrase");
+  await expect(page.locator("[data-first-phrase=torah]")).toHaveAttribute("href", "/learn/prepare");
+  await expect(page.locator("[data-first-phrase=haftarah]")).toHaveText("This week's first phrase");
+  await expect(page.locator("[data-first-phrase=haftarah]")).toHaveAttribute("href", "/learn/prepare?kind=haftarah");
   expect(seen.filter(path => path.startsWith("/api/students") || path === "/api/session")).toEqual([]);
 });
 

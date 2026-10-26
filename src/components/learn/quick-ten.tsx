@@ -6,7 +6,7 @@ import { drillItems, itemCard, poolOf, seededRandom, type DrillItem, type NameIt
 import { heardFamilies, practiceOpen, quickTenDrill } from "../../lib/learn/practice";
 import { cardId, localDay, recordAnswer } from "../../lib/learn/progress";
 import { answerRun, currentItem, runDone, startRun, type Run } from "../../lib/learn/run";
-import { DRAFTED, NEW } from "./activity-copy";
+import { DRAFTED, NEW, POSITION } from "./activity-copy";
 import { icons, LoadFailure, revealAnswer } from "./bits";
 import { useCourseVerses } from "./course-data";
 import { HearAndName } from "./drills";
@@ -83,6 +83,8 @@ function QuickTenRun({ practice, families, pools, frame, main, back }: { practic
     moved.current.add(id);
     update(value => recordAnswer(value, id, right, localDay(Date.now()), { until }));
   };
-  return frame(<HearAndName key={`${item.key}:${shown.n}`} item={item} pools={pools} melody={practice.melody} contrast={contrast} onAnswer={answer} />,
+  // T3 P4-3 and P4-4: a position in the run, never a count of right answers. A missed phrase comes back after the planned ten, so "11 of 10" never shows.
+  const position = shown.n < items.length ? POSITION.quickTen(shown.n + 1) : POSITION.quickTenAgain;
+  return frame(<><p className={styles.position} data-quick-ten-position>{position}</p><HearAndName key={`${item.key}:${shown.n}`} item={item} pools={pools} melody={practice.melody} contrast={contrast} onAnswer={answer} /></>,
     <button ref={none} type="button" className={styles.stopLink} onClick={() => { player.stop(); setFinished(true); }}>{copy.stop}</button>);
 }
