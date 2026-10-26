@@ -330,9 +330,11 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary }:
   // On a learner's phone the row waits under the reading, as the lens switch does, so the first verse stays above the fold.
   const tabRow = tabbed && <div role="tablist" aria-label="Student page" className="page-tabs" onKeyDown={tabKeys}>{pageTabs.map(([value, label]) => <button key={value} type="button" role="tab" id={tabId(value)} aria-controls={panelId(value)} aria-selected={tab === value} tabIndex={tab === value ? 0 : -1} className="page-tab" onClick={() => setTab(value, true)}>{label}</button>)}</div>;
   // Learners (students, child practice, parents) always open in Lein; staff open in the lens they last used.
-  return <TutorPracticeScope value={concealed ? null : tutorPractice}><ReadingPrefsScope studentId={studentId} englishOnWide={!staff}><StudyLensScope storageKey={staff ? LENS_STORAGE.staff : null}><DepartureReview coordinator={work} /><div className="reading-workspace reading-with-work" hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
+  return <TutorPracticeScope value={concealed ? null : tutorPractice}><ReadingPrefsScope studentId={studentId} englishOnWide={!staff}><StudyLensScope storageKey={staff ? LENS_STORAGE.staff : null}><DepartureReview coordinator={work} />
+    {/* 1.9 N16 re-measure (CLS): while the reading loads it keeps a screen of room, so what follows it never jumps into view and out again. */}
+    {current?.loading && <div className="reading-loading-space" aria-hidden="true" />}<div className="reading-workspace reading-with-work" hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
     <section aria-label="Assigned reading">
-      {!student ? <div className="workspace-state" aria-live="polite"><h2>{current?.error ? "Reading unavailable" : "Loading the assigned reading"}</h2>
+      {!student ? <div className={`workspace-state${current?.error ? "" : " reading-loading-space"}`} aria-live="polite"><h2>{current?.error ? "Reading unavailable" : "Loading the assigned reading"}</h2>
         <p>{current?.error === 404 || current?.error === 403 ? "This reading is no longer available in the selected role. Choose another available student." : current?.error ? "We couldn’t load the confirmed assignment. No previous student’s reading is being shown." : "Checking the selected student and confirmed references."}</p>
         {current?.error && <button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload reading</button>}</div> : <>
       {song ? <><header className={`reading-hero${learner ? " reading-current-assignment" : ""}`} aria-labelledby="reading-heading">

@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { startTransition, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { PortalRequestError } from "../api";
 import { RATE_LIMITED_MESSAGE } from "./rate-limited";
@@ -154,11 +154,11 @@ export function Shell({ title, children, signedIn = false, back, settled = true 
     <main id="public-reading-main" className="workspace-main">
       <div className="reading-workspace reading-with-work"><section aria-labelledby="public-reading-title">
         {children}
-        {!signedIn && settled && <aside className={styles.signIn} aria-labelledby="public-sign-in-heading">
+        {!signedIn && settled && <section className={styles.signIn} aria-labelledby="public-sign-in-heading">
           <h2 id="public-sign-in-heading">Save this reading</h2>
           <p>Sign in to keep this reading, your place and your preferred commentaries. Everything on this page is open to anyone.</p>
           <ReturnSignInLink className="button-start" back={back}>Sign in</ReturnSignInLink>
-        </aside>}
+        </section>}
       </section></div>
     </main>
   </div>;
@@ -428,6 +428,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   const windows = useMemo<readonly PageWindow[]>(() => sections.length ? sections.map((row, at) => ({ start: row.start, end: row.end, section: at }))
     : passage.pages.map((row, at) => ({ start: row.offset, end: passage.pages[at + 1]?.offset ?? passage.verseCount, section: -1 })), [sections, passage]);
   const windowAt = (position: number) => Math.max(0, sections.length ? sectionIndexAt(sections, position) : windows.findIndex(row => position >= row.start && position < row.end));
+  const [pendingTab, setPendingTab] = useState<string | null>(null);
   const [win, setWin] = useState(() => { const asked = section ? sections.findIndex(row => row.n === section) : -1; return asked >= 0 ? asked : linkedIndex !== null ? windowAt(linkedIndex) : 0; });
   // Told another section (a pick from the Portion control) after the page is open: go to it; told none (the whole portion): back to the first.
   const askedSection = useRef(section);
@@ -561,7 +562,9 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     if (target.section >= 0) onSection?.(sections[target.section].n);
     if (next === win) return;
     if (linkedIndex !== null) onVerseLeft();
-    setDrillTarget(null); setWin(next);
+    // 1.9 N16 re-measure (INP): the tab answers the tap at once; the new section's verses render as a transition behind it.
+    setDrillTarget(null); setPendingTab(target.section >= 0 ? sections[target.section].n : null);
+    startTransition(() => { setWin(next); setPendingTab(null); });
   };
   const previousWin = win > 0 ? win - 1 : undefined, nextStart = nextWin === null ? null : windows[nextWin].start;
   // The haftarah's last verse takes the closing (sof haftarah) melody, as in the assigned reading.
@@ -648,7 +651,10 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     <SourcesButton />
     {sources.length > 1 && !more && <p className={`field-help ${styles.passageNote}`}><bdi dir="ltr">{displayRange(passage.ranges)}</bdi></p>}
     {/* The section chips (N3): a tab for each aliyah, in the sticky bar above the text. The page below changes with the tab, so one panel serves them all. */}
-    {sections.length > 0 && <SectionTabs sticky label="Reading sections" panelId={`${group}-section`} current={sections[range.section]?.n ?? null}
+    {/* 1.9 N16 re-measure (axe heading-order): the outline above the verses' own level-4 headings, said only to assistive technology. */}
+    <h2 className="sr-only">{kind === "torah" ? "Torah" : "Haftarah"}</h2>
+    <h3 className="sr-only">{sections[range.section]?.label ?? displayRange(passage.ranges)}</h3>
+    {sections.length > 0 && <SectionTabs sticky label="Reading sections" panelId={`${group}-section`} current={pendingTab ?? sections[range.section]?.n ?? null}
       tabs={sections.map(row => ({ id: row.n, label: row.label }))} onSelect={n => changeWin(sections.findIndex(row => row.n === n))} />}
     <div className="reading-passage-layout" data-reading-text="" id={sections.length > 0 ? `${group}-section` : undefined} role={sections.length > 0 ? "tabpanel" : undefined} aria-label={sections.length > 0 ? sections[range.section]?.label : undefined} ref={textAnchor} tabIndex={-1}>
       <ReadingToolbar englishHidden={Boolean(drillVerse)} listeningEnabled={listening} tikkunAvailable={kind === "torah"} worksCorpus={corpus} onHear={listening && page ? () => hear(focus ?? 0) : undefined} />

@@ -255,7 +255,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
       </div>
       {task}
     </main>
-    <div className="portal-footer"><span>Learning at Central Reform Congregation</span><span>Your account and reading stay private.</span></div>
+    <section className="portal-footer" aria-label="About this portal"><span>Learning at Central Reform Congregation</span><span>Your account and reading stay private.</span></section>
     <TabBar roles={shellRoles} />
   </div>;
 }
