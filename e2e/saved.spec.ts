@@ -149,7 +149,7 @@ test("with none saved it says how to save one; signed out or student-only, the f
     saved.length = 0;
     await page.unroute("**/api/session"); await page.route("**/api/session", route => json(route, answer.status, answer.body));
     await page.goto("/");
-    await expect(page.getByRole("heading", { level: 2, name: "Beit Mitzvah", exact: true })).toBeVisible();
+    await expect(page.locator('[data-door="beit-mitzvah"]').getByRole("heading", { level: 2 })).toBeVisible();
     await expect(page.locator("[data-my-readings]")).toHaveCount(0);
     expect(saved).toEqual([]);
   }

@@ -143,7 +143,7 @@ it("serializes service and unknown-note guards, and canceling the later decision
   // An explicit departure clears the unknown local copy and unmounts both
   // modal owners; this must not resurrect the suspended reading sheet.
   await closeVerseTools(tab); // the role links are behind the sheet
-  await safe(() => tab.getByRole("navigation", { name: "Workspace roles", exact: true }).getByRole("link", { name: "Parent", exact: true }).click());
+  await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "Account", exact: true }).click(); await tab.getByRole("list", { name: "Roles" }).getByRole("link", { name: /^Parent/ }).click(); })());
   await ui(workGuard(tab)).toBeVisible(); expect(await modalCount(tab)).toBe(1); await click(tab, "Leave without confirming");
   await ui(tab.getByRole("list", { name: "Child", exact: true })).toBeVisible(); expect(await modalCount(tab)).toBe(0);
   expect(await tab.locator("dialog.editor-sheet, .service-plan-editor").count()).toBe(0);
@@ -169,7 +169,7 @@ it("clears pending service and reading modals after real session expiry or relat
     expect(await tab.evaluate(() => !document.body.textContent?.includes("Keep this service draft?") && !document.body.textContent?.includes("Synthetic part 1") && !JSON.stringify({ local: { ...localStorage }, tab: { ...sessionStorage } }).includes("Genesis 1:1-2"))).toBe(true);
     expect(writes).toEqual({ confirm: 0, note: 0 }); await hold.remove();
     if (failure === "session") { await safe(() => tab.getByRole("link", { name: "Sign in", exact: true }).click()); await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/sign-in`); }
-    else { await safe(() => tab.getByRole("navigation", { name: "Workspace roles", exact: true }).getByRole("link", { name: "Parent", exact: true }).click()); await ui(tab.getByRole("list", { name: "Child", exact: true })).toBeVisible(); expect(await modalCount(tab)).toBe(0); }
+    else { await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "Account", exact: true }).click(); await tab.getByRole("list", { name: "Roles" }).getByRole("link", { name: /^Parent/ }).click(); })()); await ui(tab.getByRole("list", { name: "Child", exact: true })).toBeVisible(); expect(await modalCount(tab)).toBe(0); }
     await safe(() => tab.context().close());
   }
 });

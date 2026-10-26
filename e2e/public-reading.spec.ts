@@ -26,9 +26,9 @@ test("the public reading is open to signed-out visitors, never asks for a sessio
   if (testInfo.project.name === "phone") await page.screenshot({ path: testInfo.outputPath("public-reading-phone-unconfigured.png"), fullPage: true });
   const robots = await request.get("/robots.txt");
   expect(robots.status()).toBe(200);
-  // Beta (Daniel, 2026-10-26): the three public routes are allowed, everything else stays disallowed.
+  // Beta (Daniel, 2026-10-26): the four public routes are allowed, everything else stays disallowed.
   const robotsText = await robots.text();
-  for (const path of ["/read", "/learn", "/trope-chart"]) expect(robotsText).toMatch(new RegExp(`^Allow: ${path}$`, "im"));
+  for (const path of ["/read", "/learn", "/trope-chart", "/about"]) expect(robotsText).toMatch(new RegExp(`^Allow: ${path}$`, "im"));
   expect(robotsText).toMatch(/^Disallow: \/$/im);
   const home = await page.goto("/");
   expect(home?.headers()["x-robots-tag"]).toBe("noindex, nofollow");

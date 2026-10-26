@@ -133,10 +133,10 @@ describe("My readings on the front door", () => {
   });
   it("appears on the front door, under This week, only for an account that keeps saved readings", () => {
     const door = (account: Parameters<typeof FrontDoor>[0]["account"]) => renderToStaticMarkup(createElement(FrontDoor, { account, children: createElement("p", null, "Synthetic task") }));
-    const member = door({ kind: "account", saved: true });
+    const member = door({ kind: "account", saved: true, roles: ["tutor"] });
     expect(member).toContain("data-my-readings");
     expect(member.indexOf('id="this-week-title"')).toBeLessThan(member.indexOf("data-my-readings"));
     expect(member.indexOf("data-my-readings")).toBeLessThan(member.indexOf('data-door="beit-mitzvah"'));
-    for (const account of [{ kind: "account", saved: false } as const, { kind: "sign-in" } as const, null]) expect(door(account)).not.toContain("data-my-readings");
+    for (const account of [{ kind: "account", saved: false, roles: [] } as const, { kind: "sign-in" } as const, null]) expect(door(account)).not.toContain("data-my-readings");
   });
 });

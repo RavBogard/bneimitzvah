@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import Home, { generateMetadata } from "../../src/app/page";
 import AcceptInvitationPage from "../../src/app/invitations/accept/page";
-import AccountPage from "../../src/app/account/page";
+import AccountRoute from "../../src/app/account/page";
 import SignInPage from "../../src/app/sign-in/page";
 import { metadata as rootMetadata } from "../../src/app/layout";
 import { frontDoorAccount, PortalEntry } from "../../src/components/portal/entry";
@@ -35,10 +35,11 @@ test("the home is CRC Torah's front door: This week, then the Beit Mitzvah door,
   expect(markup).toContain("Hear the phrases, then lein a verse of this week&#x27;s reading.");
   expect(markup).toMatch(/href="\/learn"[^>]*>Start<\/a>/);
   expect(markup).toContain('href="/trope-chart">Trope chart</a>');
-  // The existing sign-in task sits inside the Beit Mitzvah door, a level under the door's own heading.
-  expect(markup.indexOf('<h3 id="entry-title"')).toBeGreaterThan(beit);
-  expect(markup.indexOf('<h3 id="entry-title"')).toBeLessThan(learn);
-  expect(markup).toContain("Checking your access");
+  // While access is checked the Beit Mitzvah door says so and holds its height; the sign-in form is not on the home at all.
+  expect(markup).toContain('data-door-state="loading"');
+  expect(markup).toContain("One moment while we check your access.");
+  expect(markup).not.toContain('id="entry-title"');
+  expect(markup).not.toContain('name="email"');
   // The footer is the layout's one footer, not the home's (signed-in-shell.test.ts); the home draws none of its own.
   expect(markup).not.toMatch(/<footer\b/);
   // The earlier single-purpose entry copy is gone from the home, and no pep talk arrived with the doors.
@@ -103,11 +104,10 @@ test("on a Saturday the home leads with the next Shabbat: its label, its own add
   expect(plain).not.toContain('>This Shabbat</a>');
 });
 
-test("invitation, sign-in and account entry stay plain pages with no doors, even if asked for them", async () => {
+test("invitation and sign-in entry stay plain pages with no doors, even if asked for them; Account is its own list page", async () => {
   const pages = [
     renderToStaticMarkup(createElement(AcceptInvitationPage)),
     renderToStaticMarkup(createElement(PortalEntry, { invitation: true, frontDoor: true })),
-    renderToStaticMarkup(createElement(AccountPage)),
     renderToStaticMarkup(await SignInPage({ searchParams: Promise.resolve({}) })),
   ];
   for (const markup of pages) {
@@ -120,13 +120,20 @@ test("invitation, sign-in and account entry stay plain pages with no doors, even
   }
   expect(pages[0]).toContain("Join your congregation’s practice");
   expect(pages[0]).not.toContain('href="/read"');
+  // The sign-in form is /sign-in alone: it no longer carries the reader button.
+  expect(pages[1]).not.toContain("Read this week’s Torah and haftarah");
+  const account = renderToStaticMarkup(createElement(AccountRoute));
+  expect(account).not.toContain("data-door");
+  expect(account).not.toContain('id="entry-title"');
+  expect(account).toContain(">Account</h1>");
 });
 
 test("a signed-in account that is refused still gets the same site bar; the door itself offers Sign out", () => {
-  expect(frontDoorAccount({ kind: "forbidden" })).toBeNull();
+  expect(frontDoorAccount({ kind: "forbidden" })).toEqual({ kind: "task", signedIn: undefined });
+  expect(frontDoorAccount({ kind: "unavailable" })).toEqual({ kind: "task", signedIn: false });
   expect(frontDoorAccount({ kind: "loading" })).toBeNull();
   expect(frontDoorAccount({ kind: "sign-in" })).toEqual({ kind: "sign-in" });
-  expect(frontDoorAccount({ kind: "signed-in", summary: { membershipAvailable: true, roles: ["tutor"], saved: true, approver: false, sessionBinding: "A".repeat(43) } })).toEqual({ kind: "account", saved: true });
+  expect(frontDoorAccount({ kind: "signed-in", summary: { membershipAvailable: true, roles: ["tutor"], saved: true, approver: false, sessionBinding: "A".repeat(43) } })).toEqual({ kind: "account", saved: true, roles: ["tutor"] });
   const bar = (account: ReturnType<typeof frontDoorAccount>) => {
     const markup = renderToStaticMarkup(createElement(FrontDoor, { account, children: createElement("p", null, "Synthetic task") }));
     return markup.slice(markup.indexOf("<header"), markup.indexOf("</header>"));
@@ -136,5 +143,5 @@ test("a signed-in account that is refused still gets the same site bar; the door
   // The home's Sign in is a plain link to the sign-in page; there is no scroll-to-door behaviour or role-name label.
   expect(bar({ kind: "sign-in" })).toContain('href="/sign-in"');
   expect(bar({ kind: "sign-in" })).not.toContain("beit-mitzvah");
-  expect(bar({ kind: "account", saved: false })).toContain('href="/account"');
+  expect(bar({ kind: "account", saved: false, roles: [] })).toContain('href="/account"');
 });

@@ -65,12 +65,11 @@ afterAll(async () => { await Promise.all(contexts.map(context => context.close()
 it("opens authorized card and copied direct routes, captures tutor home and phone reading, and guards canceled and confirmed card departure", async () => {
   const tab = await page(); await navigate(tab, "/workspace/tutor"); await ui(card(tab, fixture.student.id)).toBeVisible(); await capture(tab, "desktop-home");
   await safe(() => tab.setViewportSize({ width: 390, height: 844 })); await capture(tab, "phone-home");
-  await safe(() => tab.getByRole("navigation", { name: "Workspace roles", exact: true }).getByRole("link", { name: "Parent", exact: true }).click());
+  await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "Account", exact: true }).click(); await tab.getByRole("list", { name: "Roles" }).getByRole("link", { name: /^Parent/ }).click(); })());
   await ui(tab.getByRole("list", { name: "Child", exact: true })).toBeVisible(); await capture(tab, "phone-parent-home");
-  await safe(() => tab.getByRole("navigation", { name: "Workspace roles", exact: true }).getByRole("link", { name: "Tutor", exact: true }).click());
+  await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "Account", exact: true }).click(); await tab.getByRole("list", { name: "Roles" }).getByRole("link", { name: /^Tutor/ }).click(); })());
   await safe(() => card(tab, fixture.student.id).focus()); await safe(() => tab.keyboard.press("Enter")); await loaded(tab, "Genesis 1:1");
   await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/workspace/tutor/${fixture.student.id}`);
-  await ui(tab.getByRole("navigation", { name: "Workspace roles", exact: true }).getByRole("link", { name: "Tutor", exact: true })).toHaveAttribute("aria-current", "page");
   await capture(tab, "phone-reading");
   await safe(() => tab.setViewportSize({ width: 1440, height: 1000 })); await capture(tab, "desktop-reading");
   const copied = await tab.context().newPage(); await navigate(copied, `/workspace/tutor/${fixture.student.id}`); await loaded(copied, "Genesis 1:1");
@@ -111,7 +110,7 @@ it("does not substitute another reading for foreign or unknown routes and reject
   await fixture.ownerDb.update(s.tutorStudent).set({ revokedAt: new Date() }).where(eq(s.tutorStudent.id, fixture.link.id));
   await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
   await ui(tab.getByRole("heading", { name: "Student not found", exact: true })).toBeVisible(); expect(await tab.locator(".study-verses, .verse-work").count()).toBe(0);
-  await safe(() => tab.getByRole("navigation", { name: "Workspace roles", exact: true }).getByRole("link", { name: "Parent", exact: true }).click());
+  await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "Account", exact: true }).click(); await tab.getByRole("list", { name: "Roles" }).getByRole("link", { name: /^Parent/ }).click(); })());
   await safe(() => tab.getByRole("list", { name: "Child", exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(tab, "Genesis 1:1");
   expect(await tab.getByRole("link", { name: "Change verses", exact: true }).count()).toBe(0);
   await navigate(tab, `/workspace/tutor/${fixture.student.id}`); await ui(tab.getByRole("heading", { name: "Student not found", exact: true })).toBeVisible(); expect(await tab.locator(".study-verses, .verse-work").count()).toBe(0);

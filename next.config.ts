@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
   async headers() {
     // Pages only: API, discovery and the reviewed landing handlers (honoree, e-mail and invitation
     // links) set their own exact CSP and frame headers.
-    // PUBLIC_INDEXING is on (src/lib/site/indexing.ts; Daniel, 2026-10-26): only /read, /learn and /trope-chart lose this header; the root layout's
+    // PUBLIC_INDEXING is on (src/lib/site/indexing.ts; Daniel, 2026-10-26): only /read, /learn, /trope-chart and /about lose this header; the root layout's
     // robots meta and /robots.txt keep everything else noindex.
     // The public reading API sets the header itself as well.
     return [noindexHeaderRule(),

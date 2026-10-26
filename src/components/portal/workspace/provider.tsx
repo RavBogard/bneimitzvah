@@ -4,7 +4,7 @@ import { createDepartureGuards, type DeparturePurpose } from "./departure-guards
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { parseSession, PortalRequestError, requestPortal, roleNames, type SessionSummary } from "../api";
+import { parseSession, PortalRequestError, requestPortal, type SessionSummary } from "../api";
 import { workspaceApi, type Assigned, type Context, type ReadingMode } from "./api";
 import { PracticeCoordinator } from "./practice";
 import { fetchStudyPage, type StudyKind, type StudyPage, type StudyVerse } from "./study/api";
@@ -35,8 +35,9 @@ import { fetchShortExplorationPage, checkShortExplorationExpectation } from "./s
 import { createShortExplorationOwner as composeShortExplorationOwner, type ShortExplorationOwner } from "./study/short-exploration-owner";
 import { SiteBar } from "../../site/site-bar";
 import { rememberSignedIn } from "../signed-in-hint";
+import { rolePaths } from "../shell/role-home";
 
-export const rolePaths = { student: "/workspace/student", parent: "/workspace/parent", tutor: "/workspace/tutor", admin: "/workspace/admin/students" } as const;
+export { rolePaths };
 type WorkLifecycle = { pause(): void; clear(): void; settle(): Promise<void>; hasUnsaved(): boolean; reveal(): void };
 type Workspace = {
   summary: SessionSummary; context: Context | null; epoch: number; busy: boolean; notice: string;
@@ -586,7 +587,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>
         <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readExploration, readExplorationPage, readReference, createShortReferenceOwner, createShortExplorationOwner, readWordAids, readWordDetails, createSources, createSourceContent, readWork, readProgress, readGuide, readServiceMetadata, readServiceFinished,readMyService,readMyServiceMaterial,requestMyService,readServiceUnit, readLessons, readPracticeCalendar, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, registerQuiet, concealed: checking || failure !== null }}>
-          {summary.roles.length > 1 && <nav className="workspace-role-nav" aria-label="Workspace roles">{summary.roles.map(role => <Link key={role} href={rolePaths[role]} onClick={event => controlledLink(event, rolePaths[role])} aria-current={pathname === rolePaths[role] || pathname.startsWith(`${rolePaths[role]}/`) ? "page" : undefined}>{roleNames[role]}</Link>)}</nav>}
           {visibleNotice && <p className="workspace-notice" role="status">{visibleNotice}</p>}
           {workNotice && <p className="workspace-notice" role="status">{workNotice}</p>}
           {children}

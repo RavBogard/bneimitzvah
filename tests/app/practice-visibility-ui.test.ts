@@ -59,7 +59,7 @@ test("the student's disclosure renders only with the release gate open, the same
   expect(account).toContain('data-practice-disclosure="account"'); expect(account).toContain('role="note"');
   expect(renderToStaticMarkup(createElement(PracticeDisclosure, { place: "learn", from: "2026-10-27" }))).toContain('data-practice-disclosure="learn"');
   // Account shows it to a student; Learn to a signed-in student; and the server's read path imports the same gate.
-  expect(source("components/portal/entry.tsx")).toMatch(/view\.summary\.roles\.includes\("student"\) && <PracticeDisclosure place="account" \/>/);
+  expect(source("components/portal/account-page.tsx")).toMatch(/student && <PracticeDisclosure place="account" \/>/);
   expect(source("components/learn/home.tsx")).toMatch(/<LearnPracticeDisclosure signedIn=\{account\.state === "synced"\} isStudent=\{isStudent\} \/>/);
   expect(source("server/practice-visibility/service.ts")).toMatch(/import \{ practiceVisibilityFrom \} from "..\/..\/lib\/practice-visibility\/release"/);
   expect(source("components/portal/practice-visibility/disclosure.tsx")).toMatch(/import \{ PRACTICE_VISIBILITY_FROM, practiceVisibilityFrom \} from "..\/..\/..\/lib\/practice-visibility\/release"/);
@@ -87,6 +87,6 @@ test("a child who practises only with a parent is told in child practice, and a 
   expect(renderToStaticMarkup(createElement(ParentAccountDisclosureList, { names: [{ id: "a", firstName: "Noa" }], from: null }))).toBe("");
   // The practice bar shows it for the child being practised with; the parent's Account shows it for each linked child.
   expect(source("components/portal/workspace/students.tsx")).toMatch(/\{child && <ChildPracticeDisclosure name=\{child\.firstName\} place="child-practice" \/>\}/);
-  expect(source("components/portal/entry.tsx")).toMatch(/view\.summary\.roles\.includes\("parent"\) && <ParentAccountDisclosure load=\{parentChildren\} \/>/);
-  expect(source("components/portal/entry.tsx")).toMatch(/const parentChildren = \(\) => workspaceApi\.students\("parent"\);/);
+  expect(source("components/portal/account-page.tsx")).toMatch(/roles\.includes\("parent"\) && <ParentAccountDisclosure load=\{parentChildren\} \/>/);
+  expect(source("components/portal/account-page.tsx")).toMatch(/const parentChildren = \(\) => workspaceApi\.students\("parent"\);/);
 });
