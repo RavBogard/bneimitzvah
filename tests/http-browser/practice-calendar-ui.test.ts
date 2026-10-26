@@ -121,7 +121,7 @@ it("shows the student's week, reports explicit inline verse visits on the server
     await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:2"] [data-word-index="0"]').first().click());
     expect(seen.posts).toHaveLength(2);
     await ui.poll(() => seen.acks).toEqual([200, 200]);
-    const after = await rows(); expect(after.days).toBe(1); expect(after.events - before.events).toBe(2);
+    await ui.poll(async () => (await rows()).events - before.events).toBe(2); const after = await rows(); expect(after.days).toBe(1); expect(after.events - before.events).toBe(2);
     // Same-authority quiet verification retains the calendar and sends no visit.
     let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
     const hold = async (route: Route) => { held = true; await gate; await route.fallback().catch(() => undefined); };
