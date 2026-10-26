@@ -34,15 +34,16 @@ function progressHub() {
  * One local change: the stored copy is the working copy (another tab may have saved since this one last read it). A tab another
  * account has taken the device from saves nothing, so whoever uses that tab next cannot write into the other account's copy.
  */
-export function writeLocal(store: ProgressStore, sync: Pick<ProgressSync, "writable" | "changed">, change: (value: Progress) => Progress): Progress | null {
+export function writeLocal(store: ProgressStore, sync: Pick<ProgressSync, "writable" | "changed" | "stamp">, change: (value: Progress, stamp: string | null) => Progress): Progress | null {
   if (!sync.writable) return null;
-  const next = change(store.load());
+  // `stamp`: the account a lesson done now counts for, or null (2.0 SC5a, progress-sync.ts).
+  const next = change(store.load(), sync.stamp);
   store.save(next); sync.changed();
   return next;
 }
 export function useServiceProgress() {
   const { progress, account } = useSyncExternalStore(listener => { const h = progressHub(); h.listeners.add(listener); return () => { h.listeners.delete(listener); }; }, () => progressHub().state, () => UNLOADED);
-  const update = useCallback((change: (value: Progress) => Progress) => {
+  const update = useCallback((change: (value: Progress, stamp: string | null) => Progress) => {
     const h = progressHub(), next = writeLocal(h.store, h.sync, change);
     if (!next) return;
     h.state = Object.freeze({ ...h.state, progress: next });

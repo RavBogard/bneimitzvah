@@ -6,6 +6,10 @@ import { withLessonCards } from "./cards";
  * reading slices, review cards in boxes. Pure; the clock is always passed in. Signed out it lives in this browser
  * only, under its own key: Learn to lein's progress and this course's do not share a document (A4 8.1).
  * It holds lessons done and, from 2.0 SC3, review cards (cards.ts plants them when a lesson is done).
+ *
+ * Count only signed-in (Daniel, 2026-10-26, 2.0 SC5a): a lesson done while this page was synced as an account carries that
+ * account's owner name as `by`. Only such a lesson can become the per-part finished mark a tutor sees (server/service-course/
+ * finished.ts); a lesson done signed out has no `by`, and a document without any (an older browser's) still syncs as progress.
  */
 export const PROGRESS_SCHEMA = "service-course-progress/v1" as const;
 export const PROGRESS_KEY = "crc-torah:service-progress/v1";
@@ -13,10 +17,12 @@ export const PROGRESS_KEY = "crc-torah:service-progress/v1";
 const BOXES = 6;
 export const PROGRESS_LIMITS = Object.freeze({ bytes: 64 * 1024, cards: 250 });
 export type Card = Readonly<{ box: number; due: string }>;
-export type Progress = Readonly<{ schema: typeof PROGRESS_SCHEMA; lessons: Readonly<Record<string, Readonly<{ done: string }>>>; cards: Readonly<Record<string, Card>> }>;
+/** `by`: the owner name (progress-access.ts `serviceCourseOwnerName`) of the account this lesson was done under, when it was. */
+export type LessonDone = Readonly<{ done: string; by?: string }>;
+export type Progress = Readonly<{ schema: typeof PROGRESS_SCHEMA; lessons: Readonly<Record<string, LessonDone>>; cards: Readonly<Record<string, Card>> }>;
 export const emptyProgress = (): Progress => Object.freeze({ schema: PROGRESS_SCHEMA, lessons: Object.freeze({}), cards: Object.freeze({}) });
 
-const DATE = /^\d{4}-\d{2}-\d{2}$/, INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
+const OWNER = /^[a-f0-9]{32}$/, DATE = /^\d{4}-\d{2}-\d{2}$/, INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
 const CARD_ID = /^(?:(?:letter|vowel):[a-z][a-z-]{1,20}:(?:name|sound)|word:[a-z][a-z0-9-]{1,40}:(?:read|meaning))$/;
 const realDate = (value: unknown): value is string => typeof value === "string" && DATE.test(value) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
 const realInstant = (value: unknown): value is string => typeof value === "string" && INSTANT.test(value) && Number.isFinite(Date.parse(value));
@@ -29,14 +35,17 @@ export function parseProgress(value: unknown): Progress | null {
     if (Object.keys(row).length !== 3 || row.schema !== PROGRESS_SCHEMA) return null;
     const lessonsIn = row.lessons, cardsIn = row.cards;
     if (!lessonsIn || typeof lessonsIn !== "object" || Array.isArray(lessonsIn) || !cardsIn || typeof cardsIn !== "object" || Array.isArray(cardsIn)) return null;
-    const lessons: Record<string, { done: string }> = {}, cards: Record<string, Card> = {};
+    const lessons: Record<string, LessonDone> = {}, cards: Record<string, Card> = {};
     const lessonEntries = Object.entries(lessonsIn), cardEntries = Object.entries(cardsIn);
     if (lessonEntries.length > SERVICE_COURSE.lessons.length || cardEntries.length > PROGRESS_LIMITS.cards) return null;
     // An entry the course no longer knows (a lesson renamed or removed later) is dropped, never fatal, so a stored
     // document always opens; a malformed entry still refuses the whole document.
     for (const [id, entry] of lessonEntries) {
-      if (!entry || typeof entry !== "object" || Array.isArray(entry) || Object.keys(entry).length !== 1 || !realInstant((entry as { done?: unknown }).done) || id.length > 80) return null;
-      if (lessonById(id)) lessons[id] = Object.freeze({ done: (entry as { done: string }).done });
+      if (!entry || typeof entry !== "object" || Array.isArray(entry) || !realInstant((entry as { done?: unknown }).done) || id.length > 80) return null;
+      // `{ done }`, or `{ done, by }` with an owner name: nothing else.
+      const keys = Object.keys(entry), by = (entry as { by?: unknown }).by;
+      if (!(keys.length === 1 || keys.length === 2 && Object.hasOwn(entry, "by") && typeof by === "string" && OWNER.test(by))) return null;
+      if (lessonById(id)) lessons[id] = lessonDone((entry as { done: string }).done, keys.length === 2 ? by as string : null);
     }
     for (const [id, entry] of cardEntries) {
       const card = entry as { box?: unknown; due?: unknown };
@@ -46,6 +55,14 @@ export function parseProgress(value: unknown): Progress | null {
     return Object.freeze({ schema: PROGRESS_SCHEMA, lessons: Object.freeze(lessons), cards: Object.freeze(cards) });
   } catch { return null; }
 }
+const lessonDone = (done: string, by: string | null): LessonDone => Object.freeze(by ? { done, by } : { done });
+/** The lessons done under the account named `owner`: the only ones that can become finished marks (2.0 SC5a). */
+export const lessonsDoneBy = (progress: Progress, owner: string) => Object.keys(progress.lessons).filter(id => progress.lessons[id].by === owner);
+/** The document with every `by` that does not name `owner` (every `by`, for null) taken off; the lessons stay done. */
+export function onlyStampedBy(progress: Progress, owner: string | null): Progress {
+  const lessons = Object.fromEntries(Object.entries(progress.lessons).map(([id, entry]) => [id, lessonDone(entry.done, owner !== null && entry.by === owner ? owner : null)]));
+  return Object.freeze({ schema: PROGRESS_SCHEMA, lessons: Object.freeze(lessons), cards: progress.cards });
+}
 export function serializeProgress(progress: Progress): string | null {
   const text = JSON.stringify({ schema: PROGRESS_SCHEMA, lessons: progress.lessons, cards: progress.cards });
   return new TextEncoder().encode(text).length <= PROGRESS_LIMITS.bytes ? text : null;
@@ -54,13 +71,15 @@ export function serializeProgress(progress: Progress): string | null {
 /**
  * Two copies of one learner's progress (the browser's and the account's) made one, for the first sign-in and for a conflict
  * between devices (2.0 SC4), by Learn to lein's rule: every lesson either copy finished, with its earliest done; every card at the
- * higher box of the two, with that copy's due date (on a tie, the sooner due).
+ * higher box of the two, with that copy's due date (on a tie, the sooner due). A lesson done under an account (with `by`) wins over
+ * the same lesson done without one, so a merge never loses that it was done signed in (2.0 SC5a).
  */
 export function mergeProgress(a: Progress, b: Progress): Progress {
-  const lessons: Record<string, { done: string }> = {}, cards: Record<string, Card> = {};
+  const lessons: Record<string, LessonDone> = {}, cards: Record<string, Card> = {};
   for (const source of [a, b]) for (const [id, entry] of Object.entries(source.lessons)) {
     const known = lessons[id];
-    lessons[id] = Object.freeze({ done: !known || Date.parse(entry.done) < Date.parse(known.done) ? entry.done : known.done });
+    const take = !known || (!!entry.by !== !!known.by ? !!entry.by : Date.parse(entry.done) < Date.parse(known.done));
+    if (take) lessons[id] = lessonDone(entry.done, entry.by ?? null);
   }
   for (const source of [a, b]) for (const [id, card] of Object.entries(source.cards)) {
     const known = cards[id];
@@ -74,9 +93,12 @@ export const isDone = (progress: Progress, id: string) => Object.hasOwn(progress
 /**
  * Marks a lesson done. Done is done: a second visit keeps the first instant. The lesson's review cards enter box 1 with it (2.0 SC3),
  * and a lesson finished before they existed gets them the next time its Done screen opens; a card the learner already has keeps its place.
+ * `by` is the owner name of the account the page is synced as, or null (2.0 SC5a): a lesson done again under that account, after it
+ * was done without it, is done now under it.
  */
-export function completeLesson(progress: Progress, lesson: Lesson, now: number): Progress {
-  const marked = isDone(progress, lesson.id) ? progress : Object.freeze({ ...progress, lessons: Object.freeze({ ...progress.lessons, [lesson.id]: Object.freeze({ done: new Date(now).toISOString() }) }) });
+export function completeLesson(progress: Progress, lesson: Lesson, now: number, by: string | null = null): Progress {
+  const keep = isDone(progress, lesson.id) && (by === null || progress.lessons[lesson.id].by === by);
+  const marked = keep ? progress : Object.freeze({ ...progress, lessons: Object.freeze({ ...progress.lessons, [lesson.id]: lessonDone(new Date(now).toISOString(), by) }) });
   return withLessonCards(marked, lesson, now);
 }
 /**

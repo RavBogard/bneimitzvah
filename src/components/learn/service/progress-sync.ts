@@ -1,4 +1,4 @@
-import { emptyProgress, mergeProgress, parseProgress, serializeProgress, type Progress, type ProgressStore } from "../../../lib/service-course/progress";
+import { emptyProgress, mergeProgress, onlyStampedBy, parseProgress, PROGRESS_LIMITS, serializeProgress, type Progress, type ProgressStore } from "../../../lib/service-course/progress";
 
 /**
  * Signed-in progress in the service course (2.0 SC4), forked from Learn to lein's progress-sync.ts (A4 5.4) and pointed at
@@ -26,8 +26,15 @@ import { emptyProgress, mergeProgress, parseProgress, serializeProgress, type Pr
  * And because storage is shared by every tab, an answer that arrives after another tab took the device over (the marker
  * now names another account, or was dropped at a sign-out) is not folded in either: the tab re-reads the marker before it
  * loads or saves anything, under the marker's Web Lock where the browser has one, and stops (2.0 SC4 review, as #102).
+ *
+ * Count only signed-in (Daniel, 2026-10-26, 2.0 SC5a), which replaces the first-sign-in merge above for this course: progress made
+ * signed out never leaves the device. At a first sign-in in this browser it is set aside under GUEST_KEY, untouched and unsent, and
+ * the account's copy is taken; when the device is next cleared at a sign-out, it comes back for signed-out use. A lesson done while
+ * this page is synced carries the account's owner name (`stamp`), and only such a lesson becomes a finished mark on the server.
  */
 export const SYNC_KEY = "crc-torah:service-sync/v1";
+/** This browser's signed-out progress, set aside while an account's copy is on the device (2.0 SC5a). Never sent. */
+export const GUEST_KEY = "crc-torah:service-guest-progress/v1";
 export type Account = Readonly<{ state: "unknown" | "signed-out" | "not-eligible" } | { state: "synced"; until: string | null }>;
 type Marker = Readonly<{ owner: string; version: number; dirty: boolean }>;
 type Remote = Readonly<{ owner: string; progress: Progress | null; version: number; until: string | null }>;
@@ -46,6 +53,14 @@ function readMarker(storage: Storage | null): Marker | null {
 function writeMarker(storage: Storage | null, marker: Marker): boolean { try { storage?.setItem(SYNC_KEY, JSON.stringify(marker)); return !!storage; } catch { return false; } }
 function dropMarker(storage: Storage | null) { try { storage?.removeItem(SYNC_KEY); } catch { /* Nothing to clear. */ } }
 const same = (a: Progress, b: Progress) => serializeProgress(a) === serializeProgress(b);
+function readGuest(storage: Storage | null): Progress | null {
+  try { const text = storage?.getItem(GUEST_KEY); if (!text || text.length > PROGRESS_LIMITS.bytes) return null; return parseProgress(JSON.parse(text)); } catch { return null; }
+}
+function writeGuest(storage: Storage | null, progress: Progress): boolean {
+  try { const text = serializeProgress(progress); if (!text || !storage) return false; storage.setItem(GUEST_KEY, text); return true; } catch { return false; }
+}
+function dropGuest(storage: Storage | null) { try { storage?.removeItem(GUEST_KEY); } catch { /* Nothing to clear. */ } }
+const blank = (progress: Progress) => !Object.keys(progress.lessons).length && !Object.keys(progress.cards).length;
 
 /** The account's answer, strictly: anything unexpected is no answer. */
 export function parseRemote(value: unknown): Remote | null {
@@ -123,11 +138,31 @@ export function createProgressSync(io: SyncIo) {
     if (remote.owner !== owner) { otherAccount(remote.owner); return; }
     await locked(async () => {
       if (sent !== null && !stillOurs(expected)) { displaced(); return; }
-      const server = remote.progress ?? emptyProgress(), now = io.store.load(), moved = sent !== null && !same(now, sent);
-      const progress = moved ? mergeProgress(server, now) : server;
-      if (!io.store.save(progress) || !writeMarker(io.storage(), { owner: remote.owner, version: remote.version, dirty: moved })) { setAccount({ state: "unknown" }); return; }
-      io.onProgress(progress); setAccount({ state: "synced", until: remote.until });
-      if (moved) queueMicrotask(() => { void push(); });
+      adopt(remote, sent);
+    });
+  }
+  /** settle's work, with the lock already held. */
+  function adopt(remote: Remote, sent: Progress | null) {
+    const server = remote.progress ?? emptyProgress(), now = io.store.load(), moved = sent !== null && !same(now, sent);
+    const progress = moved ? mergeProgress(server, now) : server;
+    if (!io.store.save(progress) || !writeMarker(io.storage(), { owner: remote.owner, version: remote.version, dirty: moved })) { setAccount({ state: "unknown" }); return; }
+    io.onProgress(progress); setAccount({ state: "synced", until: remote.until });
+    if (moved) queueMicrotask(() => { void push(); });
+  }
+  /**
+   * A first sign-in in this browser (no marker, read under the lock): the copy here was made signed out. It is set aside under
+   * GUEST_KEY with no account's name on any lesson, joined to anything set aside before, and the account's copy is taken; nothing
+   * of it is sent (2.0 SC5a). False when another tab wrote a marker first. If it cannot be set aside, the device is left as it is.
+   */
+  async function firstSignIn(remote: Remote): Promise<boolean> {
+    return locked(async () => {
+      const marker = readMarker(io.storage());
+      // Another tab signed in while this answer was out. Another account's: that tab owns the device, and this answer is stale.
+      if (marker) { if (marker.owner === remote.owner) return false; displaced(); return true; }
+      const here = onlyStampedBy(io.store.load(), null), before = readGuest(io.storage());
+      if (!blank(here) && !writeGuest(io.storage(), before ? mergeProgress(before, here) : here)) { setAccount({ state: "unknown" }); return true; }
+      adopt(remote, null);
+      return true;
     });
   }
   /**
@@ -140,8 +175,12 @@ export function createProgressSync(io: SyncIo) {
     // until its next start, so nothing done here is saved into the copy kept for this tab's account (as Learn's sync, #102).
     if (status === 403 && owner !== null && refusedOwner(value) !== owner) frozen = true;
     const marker = readMarker(io.storage());
-    // The marker goes only once the empty copy is saved: a marker dropped over a copy still holding progress would hand it to the next account.
-    if (marker && !marker.dirty && !(status === 403 && refusedOwner(value) === marker.owner) && io.store.save(emptyProgress())) { dropMarker(io.storage()); io.onProgress(emptyProgress()); }
+    // The marker goes only once the copy is saved over: a marker dropped over a copy still holding progress would hand it to the next
+    // account. What the device had signed out before its first sign-in comes back in its place (2.0 SC5a), or nothing.
+    if (marker && !marker.dirty && !(status === 403 && refusedOwner(value) === marker.owner)) {
+      const guest = readGuest(io.storage()) ?? emptyProgress();
+      if (io.store.save(guest)) { dropMarker(io.storage()); dropGuest(io.storage()); io.onProgress(guest); }
+    }
     setAccount({ state: status === 401 ? "signed-out" : "not-eligible" });
   }
   /** An answer for another account than the one this browser writes for: treated as that account's refusal, never folded in. */
@@ -185,16 +224,26 @@ export function createProgressSync(io: SyncIo) {
     get account() { return account; },
     /** False once another tab owns the device: the page then saves nothing to the shared copy and applies nothing from it. */
     get writable() { return writable(); },
+    /**
+     * The owner name a lesson done now is marked with (2.0 SC5a): this page's account, only while it is synced, not frozen, and the
+     * device's marker names it. Otherwise null: signed out, refused, not yet answered or offline, a lesson counts for no account.
+     */
+    get stamp(): string | null {
+      if (frozen || account.state !== "synced" || owner === null) return null;
+      return readMarker(io.storage())?.owner === owner ? owner : null;
+    },
     /** Once per page: learn whose this browser's progress is, and bring the two copies together. */
     async start() {
+      const before = readMarker(io.storage());
       const answer = await call("/api/learn/service/progress");
       if (answer.status !== 200) { refused(answer.status, answer.value); return; }
       const remote = parseRemote(answer.value); if (!remote) return;
       // The account signed in now is the one this page writes for, until the next start.
       owner = remote.owner; frozen = false;
+      // First sign-in in this browser: what is here was made signed out. It is set aside, never merged or sent (2.0 SC5a).
+      if (!before && await firstSignIn(remote)) return;
       const marker = readMarker(io.storage());
-      // First sign-in in this browser: merge its progress into the account's.
-      if (!marker) { await merge(io.store.load(), null); return; }
+      if (!marker) return;
       // Another account's copy (a shared device): take this account's, fold nothing in.
       if (marker.owner !== remote.owner) { await settle(remote, null); return; }
       if (marker.dirty) {

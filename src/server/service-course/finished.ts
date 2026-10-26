@@ -7,7 +7,7 @@ import { lockRoleGrant, lockStudent, lockStudentRelationship } from "../data/aut
 import * as data from "../data/service-part-finished";
 import { lessonForUnit, tenantFile } from "../../lib/service-course/path";
 import type { Tenant } from "../../lib/service-course/course";
-import type { Progress } from "../../lib/service-course/progress";
+import { lessonsDoneBy, type Progress } from "../../lib/service-course/progress";
 
 /**
  * The per-part "finished" mark (2.0 SC5, A4 9; Daniel, Batch 3 Q12 and Batch 3b Q18). This widens ruling 45 for the service
@@ -37,14 +37,15 @@ export function assignedLessons(tenant: Tenant, unitIds: readonly string[]): str
 }
 
 /**
- * After the member's own progress is stored: every lesson the stored document has done that is one of the member's own student's
+ * After the member's own progress is stored: every lesson the stored document has done under this account (its `by` is `stamp`, the
+ * member's own owner name; Daniel, 2026-10-26, "Count only signed-in", 2.0 SC5a) that is one of the member's own student's
  * assigned parts, and is not yet marked, is marked now (finished_at is the server's now()). A side effect of sync, not a request of
- * its own: a member without a live student grant and link (a parent, a tutor, an approved Member), a student with no plan, and every
+ * its own: a lesson done signed out, or sent by an older browser (no `by`), a member without a live student grant and link (a parent, a tutor, an approved Member), a student with no plan, and every
  * lesson outside the plan (fluency, Review, any other prayer) write nothing. Runs in a savepoint of the sync's own transaction, so a
  * failure here never loses the student's progress; the next sync marks what this one could not, from the whole stored document.
  */
-export async function markFinishedParts<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, owner: Owner, progress: Progress): Promise<readonly string[]> {
-  const tenant = tenantFile(owner.tenantId), done = Object.keys(progress.lessons);
+export async function markFinishedParts<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, owner: Owner, progress: Progress, stamp: string): Promise<readonly string[]> {
+  const tenant = tenantFile(owner.tenantId), done = lessonsDoneBy(progress, stamp);
   if (!tenant || !done.length) return [];
   try {
     return await tx.transaction(async sp => {

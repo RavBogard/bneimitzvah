@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { browserProgressStore, emptyProgress, mergeProgress, parseProgress, PROGRESS_KEY, type Progress } from "../../src/lib/service-course/progress";
-import { createProgressSync, SYNC_KEY, type SyncIo } from "../../src/components/learn/service/progress-sync";
+import { createProgressSync, GUEST_KEY, SYNC_KEY, type SyncIo } from "../../src/components/learn/service/progress-sync";
 import { writeLocal } from "../../src/components/learn/service/progress";
 
 // 2.0 SC4 review (as #102 for Learn to lein): two tabs share one browser's storage. Tab 1's request for A is still out when A signs
@@ -14,11 +14,15 @@ const tick = async () => { for (let i = 0; i < 12; i++) await new Promise(r => s
 
 function browser(options: { conflict?: boolean; lock?: SyncIo["lock"] } = {}) {
   const accounts: Record<string, { progress: Progress | null; version: number }> = { [A]: { progress: doc({ shma: T1 }), version: 3 }, [B]: { progress: doc({ barchu: T2 }), version: 7 } };
-  const state = { cookie: A, hold: null as null | (() => Promise<void>), conflict: options.conflict ?? false };
+  const state = { cookie: A, hold: null as null | (() => Promise<void>), holdRead: null as null | (() => Promise<void>), conflict: options.conflict ?? false };
   const view = (who: string) => ({ ok: true, owner: who, progress: accounts[who].progress, version: accounts[who].version, until: null });
   const fetcher = (async (path: string, init?: RequestInit) => {
     const who = state.cookie, body = init?.body ? JSON.parse(String(init.body)) : undefined;
-    if (path === "/api/learn/service/progress") return reply(200, view(who));
+    if (path === "/api/learn/service/progress") {
+      const answer = reply(200, view(who));
+      if (state.holdRead) { const hold = state.holdRead; state.holdRead = null; await hold(); }
+      return answer;
+    }
     if (body.owner !== who) return reply(403, { error: "forbidden", owner: who });
     let answer: Response;
     if (path.endsWith("/put")) {
@@ -77,18 +81,21 @@ describe("two tabs, one browser, an account switch while a request is out", () =
     expect(t1.sync.account.state).toBe("not-eligible");
   });
 
-  it("a first sign-in's merge for A, answered after B took the device, saves nothing of A's over B's copy", async () => {
+  it("a first sign-in's answer for A, arriving after B took the device, saves nothing of A's over B's copy (2.0 SC5a)", async () => {
     const b = browser();
     b.store.save(doc({ vahavta: T1 }));
     const t1 = b.tab();
-    b.switchToB();
+    b.state.holdRead = async () => { b.state.cookie = B; await b.tab().sync.start(); };
     await t1.sync.start(); await tick();
-    // Tab 2's own first sign-in folds the signed-out copy into B, as it should; A's answer then changes nothing on the device.
-    expect(b.marker()).toMatchObject({ owner: B });
-    expect(lessons(b.store.load())).toEqual(lessons(b.accounts[B].progress));
-    expect(lessons(b.store.load())).not.toContain("shma");
-    expect(lessons(b.accounts[B].progress)).not.toContain("shma");
+    // Tab 2's own first sign-in sets the signed-out copy aside and takes B's; A's stale answer then changes nothing on the device.
+    expect(b.marker()).toEqual({ owner: B, version: 7, dirty: false });
+    expect(lessons(b.store.load())).toEqual(["barchu"]);
+    expect(lessons(b.accounts[A].progress)).toEqual(["shma"]);
+    expect(lessons(b.accounts[B].progress)).toEqual(["barchu"]);
+    expect(lessons(parseProgress(JSON.parse(b.storage.getItem(GUEST_KEY) ?? "null")))).toEqual(["vahavta"]);
     expect(t1.sync.account.state).toBe("not-eligible");
+    expect(t1.sync.writable).toBe(false);
+    expect(t1.sync.stamp).toBeNull();
   });
 
   it("drops the marker at a sign-out only once the device's copy is emptied", async () => {

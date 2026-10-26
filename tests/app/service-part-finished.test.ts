@@ -17,6 +17,9 @@ afterEach(async () => { await Promise.all(opened.splice(0).map(f => f.client.clo
 type Who = "admin" | "multi" | "learner" | "recipient" | "anonymous";
 const T1 = "2026-10-20T10:00:00.000Z";
 const doc = (...lessons: string[]) => ({ schema: PROGRESS_SCHEMA, lessons: Object.fromEntries(lessons.map(id => [id, { done: T1 }])), cards: {} });
+// 2.0 SC5a: a lesson done while synced carries the account's owner name; merge and put below stamp with the caller's own unless told.
+type Doc = ReturnType<typeof doc>;
+const stamped = (progress: Doc, by: string | null) => by === null ? progress : { ...progress, lessons: Object.fromEntries(Object.entries(progress.lessons).map(([id, entry]) => [id, { ...entry, by }])) };
 const chicagoToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
 async function setup(options: { plan?: boolean } = { plan: true }) {
@@ -45,13 +48,13 @@ async function setup(options: { plan?: boolean } = { plan: true }) {
     return { status: response.status, text, json: (text ? JSON.parse(text) : null) as Record<string, any> }; // eslint-disable-line @typescript-eslint/no-explicit-any
   };
   const owner = async (who: Who) => (await call("/api/learn/service/progress", who)).json as { owner: string; version: number };
-  const merge = async (who: Who, progress: unknown) => call("/api/learn/service/progress/merge", who, { body: { progress, owner: (await owner(who)).owner } });
-  const put = async (who: Who, progress: unknown) => { const o = await owner(who); return call("/api/learn/service/progress/put", who, { body: { progress, owner: o.owner, expectedVersion: o.version } }); };
+  const merge = async (who: Who, progress: Doc, by?: string | null) => { const o = await owner(who); return call("/api/learn/service/progress/merge", who, { body: { progress: stamped(progress, by === undefined ? o.owner : by), owner: o.owner } }); };
+  const put = async (who: Who, progress: Doc, by?: string | null) => { const o = await owner(who); return call("/api/learn/service/progress/put", who, { body: { progress: stamped(progress, by === undefined ? o.owner : by), owner: o.owner, expectedVersion: o.version } }); };
   const rows = () => f.owner(async () => (await f.db.select().from(s.servicePartFinished)).map(r => ({ student: r.studentId === own.id ? "own" : r.studentId === sibling.id ? "sibling" : "else", lesson: r.lessonId, at: r.finishedAt.toISOString() }))
     .sort((a, b) => `${a.student}${a.lesson}`.localeCompare(`${b.student}${b.lesson}`)));
   const audits = () => f.owner(async () => (await f.db.select().from(s.auditEvent).where(eq(s.auditEvent.action, "service-part.finish"))).map(r => ({ student: r.actingStudentId, target: r.targetId, type: r.targetType, mode: r.mode, grant: r.roleGrantId })));
   const read = (who: Who, studentId: string, mode = "tutor", headers: Record<string, string> = {}) => call(`/api/students/${studentId}/service-finished?mode=${mode}`, who, { headers });
-  return { f, call, merge, put, rows, audits, read, plan, parts, content, catalogId, own, sibling, unrelated };
+  return { f, call, merge, put, owner, rows, audits, read, plan, parts, content, catalogId, own, sibling, unrelated };
 }
 
 describe("the finished mark is written only from the student's own sync, for the student's own assigned parts", () => {
@@ -104,6 +107,55 @@ describe("the finished mark is written only from the student's own sync, for the
     const saved = await t.put("learner", doc("vahavta", "torah-before"));
     expect(saved.status).toBe(200);
     expect(Object.keys(saved.json.progress.lessons).sort()).toEqual(["torah-before", "vahavta"]);
+    expect(await t.rows()).toEqual([]);
+  });
+});
+
+describe("count only signed-in (Daniel, 2026-10-26, 2.0 SC5a)", () => {
+  it("an older browser's document, with no account's name on its lessons, still syncs as progress and writes no mark", async () => {
+    const t = await setup();
+    const merged = await t.merge("learner", doc("vahavta"), null);
+    expect(merged.status).toBe(200);
+    expect(merged.json.progress.lessons).toEqual({ vahavta: { done: T1 } });
+    const put = await t.put("learner", doc("vahavta", "torah-before"), null);
+    expect(put.status).toBe(200);
+    expect(Object.keys(put.json.progress.lessons).sort()).toEqual(["torah-before", "vahavta"]);
+    expect(await t.rows()).toEqual([]);
+    expect(await t.audits()).toEqual([]);
+    // The same lesson, done again under the account, marks it.
+    expect((await t.put("learner", doc("vahavta"))).status).toBe(200);
+    expect((await t.rows()).map(r => `${r.student}:${r.lesson}`)).toEqual(["own:vahavta"]);
+  });
+
+  it("a lesson carrying another account's name counts for nobody: it is stored as done, without the name, and marks nothing", async () => {
+    const t = await setup();
+    const other = (await t.owner("multi")).owner, mine = (await t.owner("learner")).owner;
+    expect(other).not.toBe(mine);
+    for (const by of [other, "c".repeat(32)]) {
+      const merged = await t.merge("learner", doc("vahavta", "torah-before"), by);
+      expect(merged.status).toBe(200);
+      expect(merged.json.progress.lessons).toEqual({ "torah-before": { done: T1 }, vahavta: { done: T1 } });
+      const put = await t.put("learner", doc("vahavta"), by);
+      expect(put.status).toBe(200);
+      expect(put.json.progress.lessons).toEqual({ vahavta: { done: T1 } });
+    }
+    expect(await t.rows()).toEqual([]);
+    // The learner's own name on one lesson marks that lesson only.
+    const mixed = { ...doc("vahavta"), lessons: { vahavta: { done: T1, by: mine }, "torah-before": { done: T1, by: other } } };
+    const answer = await t.call("/api/learn/service/progress/merge", "learner", { body: { progress: mixed, owner: mine } });
+    expect(answer.status).toBe(200);
+    expect(answer.json.progress.lessons).toEqual({ "torah-before": { done: T1 }, vahavta: { done: T1, by: mine } });
+    expect((await t.rows()).map(r => `${r.student}:${r.lesson}`)).toEqual(["own:vahavta"]);
+  });
+
+  it("refuses an owner name of any other shape on a lesson, and stores nothing", async () => {
+    const t = await setup();
+    const mine = (await t.owner("learner")).owner;
+    for (const by of ["x", mine.toUpperCase(), 1, null]) {
+      const progress = { ...doc("vahavta"), lessons: { vahavta: { done: T1, by } } };
+      expect((await t.call("/api/learn/service/progress/merge", "learner", { body: { progress, owner: mine } })).status, String(by)).toBe(400);
+    }
+    expect((await t.owner("learner")).version).toBe(0);
     expect(await t.rows()).toEqual([]);
   });
 });
