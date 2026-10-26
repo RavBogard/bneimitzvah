@@ -15,6 +15,7 @@ import { serviceSlotLine, standardSlotName } from "../service-slot";
 import { useCongregation } from "../settings/links";
 import type { ServiceSettings } from "../settings/api";
 import styles from "./honors.module.css";
+import { honorsRowLine, savedSections } from "../staff/model";
 
 function ContextReview({ previous, current, state, owner, blocked, canReview, services }: { services: ServiceSettings; previous: HonorsContextView; current: HonorsContextView; state: HonorsState; owner: HonorsOwner; blocked: boolean; canReview(): boolean }) {
   const [mapping, setMapping] = useState<Record<string, string | null>>({});
@@ -38,10 +39,25 @@ export function HonorsNote() {
 }
 /** focusOnShow: the parent's Honors tab brings this heading into focus when the row appears (1.9 N10.1). */
 export function HonorsEntry({ studentId, name, mode = "parent", focusOnShow = false }: { studentId: string; name: string; mode?: "parent" | "student"; focusOnShow?: boolean }) {
-  const [open, setOpen] = useState(false), { busy, context } = useWorkspace(), origin = useRef<HTMLButtonElement>(null), heading = useRef<HTMLHeadingElement>(null);
+  const [open, setOpen] = useState(false), { busy, context, verifyServiceSession } = useWorkspace(), origin = useRef<HTMLButtonElement>(null), heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { if (focusOnShow) { heading.current?.focus({ preventScroll: true }); heading.current?.scrollIntoView({ block: "start" }); } }, [focusOnShow]);
-  return <><section className={styles.entry} aria-label="Family honors"><div><h2 id="family-honors" ref={heading} tabIndex={-1}>Family honors</h2><p>Choose the people who will take part in the ceremony.</p></div><button ref={origin} type="button" className="button-secondary" disabled={busy || !!context} onClick={() => setOpen(true)}>Open the honors form</button></section>
-    {open && <HonorsSheet studentId={studentId} name={name} mode={mode} onClose={() => { setOpen(false); origin.current?.focus(); }} />}</>;
+  // 1.9 N13 (TP-15): once a form is saved, the row says how far it has got ("Family honors · 6 of 7 sections saved · Edit").
+  // The saved form is read before the form opens, and again each time it closes; until then (or if the read fails) the row
+  // keeps the interim "Open the honors form".
+  const [saved, setSaved] = useState<{ key: string; sections: number } | null>(null), [readTurn, setReadTurn] = useState(0), key = `${mode}:${studentId}`;
+  useEffect(() => {
+    if (open || context) return;
+    const request = new AbortController();
+    let api: ReturnType<typeof createHonorsClient>;
+    try { api = createHonorsClient({ studentId, mode, verify: verifyServiceSession, denied: () => undefined }); } catch { return; }
+    api.read(request.signal).then(value => { if (!request.signal.aborted) setSaved(value.saved ? { key, sections: savedSections(value.saved.form) } : null); }, () => undefined);
+    return () => request.abort();
+  }, [open, context, studentId, mode, key, verifyServiceSession, readTurn]);
+  const progress = saved?.key === key && saved.sections > 0 ? saved.sections : null;
+  return <><section className={styles.entry} aria-label="Family honors" data-honors-sections={progress ?? undefined}>
+    {progress === null ? <><div><h2 id="family-honors" ref={heading} tabIndex={-1}>Family honors</h2><p>Choose the people who will take part in the ceremony.</p></div><button ref={origin} type="button" className="button-secondary" disabled={busy || !!context} onClick={() => setOpen(true)}>Open the honors form</button></>
+      : <><div><h2 id="family-honors" ref={heading} tabIndex={-1}>{honorsRowLine(progress)}</h2></div><button ref={origin} type="button" className="button-secondary" disabled={busy || !!context} onClick={() => setOpen(true)}><span aria-hidden="true">· </span>Edit</button></>}</section>
+    {open && <HonorsSheet studentId={studentId} name={name} mode={mode} onClose={() => { setOpen(false); setReadTurn(value => value + 1); origin.current?.focus(); }} />}</>;
 }
 export function HonorsSheet({ studentId, name, mode, onClose }: { studentId: string; name: string; mode: "parent" | "admin" | "student"; onClose(): void }) {
   const { summary, context, verifyServiceSession, serviceAuthorityFailed, registerDeparture, registerWork, registerReload, registerQuiet } = useWorkspace();

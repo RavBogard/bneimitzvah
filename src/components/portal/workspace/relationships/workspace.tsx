@@ -6,8 +6,11 @@ import { icons } from "../study/lift";
 import { PeopleNav } from "../../shell/people-nav";
 import { identityLabels, makeReview, relationshipApi, type Action, type Relationships, type Review, type Tutor } from "./api";
 import { AccessReview } from "./review";
+import { staffApi, type Teaching } from "../staff/api";
+import { teachesLine } from "../staff/model";
 
-type Snapshot = { relationships: Relationships | null; tutors: Tutor[] };
+// teaching: on the Tutors page, each tutor's current students (1.9 N15, G11), or null where it isn't read or couldn't be.
+type Snapshot = { relationships: Relationships | null; tutors: Tutor[]; teaching: Map<string, Teaching["students"]> | null };
 /** A roster button's visible words, and its accessible name, which begins with them (WCAG 2.5.3) and then says whom it removes. */
 export const removeText = (firstName: string) => `Remove from ${firstName}`;
 export const removeLabel = (firstName: string, name: string) => `${removeText(firstName)}: ${name}`;
@@ -17,13 +20,16 @@ function Access({ studentId }: { studentId?: string }) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null), [loading, setLoading] = useState(true), [failed, setFailed] = useState(false);
   const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]), cursor = cursors[cursors.length - 1];
   const [selected, setSelected] = useState(""), [review, setReview] = useState<Review | null>(null), [pending, setPending] = useState(false), [blocked, setBlocked] = useState(false), [message, setMessage] = useState("");
+  // G11: the tutor chosen to take over a departing tutor's students, and the students the review listed.
+  const [destination, setDestination] = useState(""), [handOverIds, setHandOverIds] = useState<string[]>([]);
   const request = useRef<AbortController | null>(null), sequence = useRef(0), alive = useRef(true), latch = useRef(false), mutation = useRef<Promise<void> | null>(null);
   const load = useCallback(async () => {
     request.current?.abort(); const controller = new AbortController(), turn = ++sequence.current; request.current = controller; setLoading(true); setFailed(false);
     try {
-      const [relationships, tutors] = await Promise.all([studentId ? relationshipApi.inspect(studentId, controller.signal) : Promise.resolve(null), relationshipApi.tutors(cursor, controller.signal)]);
+      const [relationships, tutors, teaching] = await Promise.all([studentId ? relationshipApi.inspect(studentId, controller.signal) : Promise.resolve(null), relationshipApi.tutors(cursor, controller.signal),
+        studentId ? Promise.resolve(null) : staffApi.teaching(controller.signal).catch(() => null)]);
       if (controller.signal.aborted || turn !== sequence.current || !alive.current) throw new Error("Access read replaced");
-      const next = { relationships, tutors }; setSnapshot(next); return next;
+      const next = { relationships, tutors, teaching: teaching ? new Map(teaching.map(row => [row.tutorGrantId, row.students])) : null }; setSnapshot(next); return next;
     } catch (error) { if (!controller.signal.aborted && turn === sequence.current && alive.current) { setSnapshot(null); setReview(null); setFailed(true); } throw error; }
     finally { if (!controller.signal.aborted && turn === sequence.current && alive.current) setLoading(false); }
   }, [studentId, cursor]);
@@ -36,7 +42,7 @@ function Access({ studentId }: { studentId?: string }) {
   }, [snapshot, review, loading]);
   function choose(action: Action) {
     if (!snapshot || pending || blocked || loading) return;
-    try { setReview(makeReview(action, snapshot.relationships, snapshot.tutors)); setMessage(""); }
+    try { setReview(makeReview(action, snapshot.relationships, snapshot.tutors)); setMessage(""); setDestination(""); setHandOverIds(departing(action, snapshot).map(row => row.id)); }
     catch { setReview(null); setMessage("That change isn’t available for the current access. Reload access to check it."); }
   }
   function confirm() {
@@ -48,7 +54,15 @@ function Access({ studentId }: { studentId?: string }) {
         const fresh = await load(); if (!alive.current) return;
         let current: Review; try { current = makeReview(checked.action, fresh.relationships, fresh.tutors); } catch { throw new Error("Reviewed target changed"); }
         if (current.fingerprint !== checked.fingerprint) { setReview(null); setMessage("Something changed for this person since you opened the review. Check the current access and try again."); return; }
-        posted = true; await relationshipApi.mutate(current); if (!alive.current) return;
+        // G11: the reviewed students must still be exactly the tutor's students; the server checks the same in its transaction.
+        const moving = destination && handOverIds.length ? departing(checked.action, fresh).map(row => row.id) : [];
+        if (moving.length && (moving.length !== handOverIds.length || moving.some((id, i) => id !== handOverIds[i]) || !fresh.tutors.some(row => row.id === destination))) {
+          setReview(null); setMessage("Something changed for this person since you opened the review. Check the current access and try again."); return;
+        }
+        posted = true;
+        if (moving.length) await staffApi.handOver({ id: current.grantId, revision: Number(current.body.expectedRevision) }, destination, moving);
+        else await relationshipApi.mutate(current);
+        if (!alive.current) return;
         setReview(null); setSelected("");
         try { await load(); if (alive.current) setMessage("Saved. Access is up to date."); }
         catch { if (alive.current) { setBlocked(true); setMessage("Saved, but the current access couldn’t be refreshed. Reload access before another change."); } }
@@ -138,14 +152,16 @@ function Access({ studentId }: { studentId?: string }) {
             {data.identities.map(row => person(studentLabels.get(row.studentGrantId)!, "Student sign-in", act("Remove as a student", studentLabels.get(row.studentGrantId)!, { kind: "grant", group: "identities", linkId: row.id, grantId: row.studentGrantId }, true), `wider-${row.id}`))}
           </ul></section>
         </details>}
-      </> : snapshot.tutors.length ? <section className="people-card" aria-label="Tutors"><ul className="people-list">{snapshot.tutors.map(row => person(tutorLabels.get(row.id)!, row.isCantor ? <span className="roster-chip">Cantor</span> : "Tutor",
+      </> : snapshot.tutors.length ? <section className="people-card" aria-label="Tutors"><ul className="people-list">{snapshot.tutors.map(row => person(tutorLabels.get(row.id)!, <>{row.isCantor ? <span className="roster-chip">Cantor</span> : "Tutor"}{snapshot.teaching?.get(row.id)?.length ? <span className="tutor-teaches" data-testid="tutor-teaches"><bdi dir="auto">{teachesLine(snapshot.teaching.get(row.id)!.map(student => student.firstName))}</bdi></span> : null}</>,
           <>{act(row.isCantor ? "Remove cantor flag" : "Mark as cantor", tutorLabels.get(row.id)!, { kind: "cantor", grantId: row.id, enabled: !row.isCantor })}{act("Remove as a tutor", tutorLabels.get(row.id)!, { kind: "grant", grantId: row.id }, true)}</>, row.id))}</ul></section>
         : <div className="admin-empty"><p className="admin-empty-title">No tutors yet</p><p>Invite a tutor from Invitations. They appear here once they accept.</p></div>}
       {(cursors.length > 1 || snapshot.tutors.length === 100) && <nav className="roster-pages" aria-label="Tutor pages"><button className="button-secondary admin-pill" disabled={disabled || cursors.length === 1} onClick={() => { setReview(null); setSelected(""); setCursors(previous => previous.slice(0, -1)); }}>Previous tutor page</button><button className="button-secondary admin-pill" disabled={disabled || snapshot.tutors.length !== 100} onClick={() => { setReview(null); setSelected(""); setCursors(previous => [...previous, snapshot.tutors[snapshot.tutors.length - 1].id]); }}>Next tutor page</button></nav>}
     </>}
     <dialog ref={sheet} className="roster-sheet access-sheet" aria-labelledby="access-review-heading" closedby={pending ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); if (!pending) setReview(null); }} onClose={sheetClosed}>
       <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close access review" disabled={pending} onClick={() => setReview(null)}>{icons.close}</button></div>
-      {review && <AccessReview review={review} pending={pending} confirm={confirm} cancel={() => setReview(null)} />}
+      {review && <AccessReview review={review} pending={pending} confirm={confirm} cancel={() => setReview(null)}
+        handOver={snapshot && handOverIds.length ? { names: departing(review.action, snapshot).map(student => student.firstName), value: destination, onChange: setDestination,
+          options: snapshot.tutors.filter(row => row.id !== review.grantId).map(row => ({ id: row.id, label: tutorLabels.get(row.id) ?? row.displayName })) } : undefined} />}
     </dialog>
   </section>;
 }
@@ -170,5 +186,9 @@ function SetupSummary({ data }: { data: Relationships }) {
   </section>;
 }
 
+/** The students a "Remove as a tutor" on the Tutors page would leave without this tutor (G11), in id order. */
+function departing(action: Action, snapshot: Snapshot) {
+  return action.kind === "grant" && !action.group && snapshot.teaching ? [...snapshot.teaching.get(action.grantId) ?? []].sort((a, b) => a.id.localeCompare(b.id)) : [];
+}
 const initial = (name: string) => (name.trim().match(/\p{L}|\p{N}/u)?.[0] ?? "?").toLocaleUpperCase();
 const reloadIcon = <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;

@@ -240,7 +240,9 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
       const rows=await data.roster(tx,actor.tenantId);
       if(rows.length>5000)throw new AccessDenied(403);
       // N21: the instant each student's ceremony was marked done, or null; the admin's Students page lists those apart.
-      const done=new Map((await ceremonyDoneRows(tx,actor.tenantId)).map(row=>[row.studentId,row.setAt]));
+      // The same refusal as the roster above: liveRows reads at most 5001 rows, so more than 5000 is refused, never cut short.
+      const doneRows=await ceremonyDoneRows(tx,actor.tenantId);if(doneRows.length>5000)throw new AccessDenied(403);
+      const done=new Map(doneRows.map(row=>[row.studentId,row.setAt]));
       return rows.map(({id,firstName,lastName,ceremonyDate,rehearsal1,rehearsal2,serviceSlot,studentKind,parentEmail,ownEmail,hebrewName,secondParentEmail,importMetadata,disabledAt,revision})=>({id,firstName,lastName,ceremonyDate,rehearsal1,rehearsal2,serviceSlot,studentKind,parentEmail,ownEmail,hebrewName,secondParentEmail,importMetadata,disabledAt,ceremonyDoneAt:done.get(id)??null,revision}));
     });
   }

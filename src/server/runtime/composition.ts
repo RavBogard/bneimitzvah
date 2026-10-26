@@ -22,6 +22,7 @@ import { createStudentService } from "../students/service";
 import { createPracticeService } from "../practice/service";
 import { createPortalService } from "../portal/service";
 import { createRelationshipService } from "../relationships/service";
+import { createStaffService } from "../staff/service";
 import { createPendingInvitations } from "../http/pending-invitations";
 import { createGoogleChallenges } from "../http/google-challenge";
 import { createPersistentReadingCache } from "../data/reading-cache";
@@ -253,6 +254,8 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const servicePartFinished = createServicePartFinished({ access });
   // 1.9 N21: "Ceremony done", set and reversed only by admins (rabbis are admins); setting it ends every tutor assignment.
   const ceremonyDone = createCeremonyDoneService({ access });
+  // 1.9 N14/N15: Needs you, the tutor hand-over, the tutor's family line and Confirm reading is still right.
+  const staff = createStaffService({ access });
   const pendingInvitations = createPendingInvitations({ secret: config.authSecret, origin: config.origin, environment: config.deployment.environment as "local" | "preview" | "production" });
   const googleChallenges = createGoogleChallenges({ db, origin: config.origin, secret: purposeSecret(config, "google-challenges") });
   // An eventual auth handler must resolve the request host BEFORE invoking auth.
@@ -261,7 +264,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, signInCodeCap, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved, offline, courseProgress, verseReview, serviceCourseProgress, serviceCoursePath, servicePartFinished, ceremonyDone, accounts });
+  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, signInCodeCap, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved, offline, courseProgress, verseReview, serviceCourseProgress, serviceCoursePath, servicePartFinished, ceremonyDone, staff, accounts });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;
