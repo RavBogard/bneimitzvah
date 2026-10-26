@@ -45,7 +45,7 @@ beforeAll(async () => {
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
 
 it("an admin opens Congregation settings from More, fixes a refused link, saves, and is told when someone else saved first", async () => {
-  const tab = await page("admin"); await navigate(tab, "/workspace/admin/students");
+  const tab = await page("admin"); await navigate(tab, "/workspace/admin/students?tab=students");
   await safe(() => tab.getByRole("navigation", { name: "Workspace", exact: true }).getByRole("link", { name: "More", exact: true }).click());
   await safe(() => main(tab).getByRole("link", { name: "Settings", exact: true }).click());
   await ui(tab.getByRole("heading", { name: "Congregation settings", level: 1, exact: true })).toBeVisible();

@@ -62,7 +62,7 @@ it("a person asks, an admin sees the count and approves, and the new member save
   for (const width of [360, 1280]) {
     const admin = await tab(width);
     await signIn(admin, "pg-admin@example.test");
-    await admin.goto("/workspace/admin/students", { waitUntil: "domcontentloaded" });
+    await admin.goto("/workspace/admin/students?tab=students", { waitUntil: "domcontentloaded" });
     const line = admin.getByRole("link", { name: "Account requests (1) · Review", exact: true });
     await ui(line).toBeVisible();
     await line.click();

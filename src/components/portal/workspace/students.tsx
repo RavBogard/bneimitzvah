@@ -11,7 +11,7 @@ import { TutorCardLine } from "./staff/practice";
 import { RequireRole, rolePaths, statusOf, useWorkspace, WorkspaceLink } from "./provider";
 import { ceremonyCountdown, ReadingPanel } from "./reading";
 import { reconcileSelectedStudent, sortStudentsByCeremony } from "./student-label";
-import { HonorsEntry, HonorsNote } from "./honors/sheet";
+import { HonorsCardLine, HonorsEntry, HonorsNote } from "./honors/sheet";
 import { DocumentTitle } from "./document-title";
 import { StudentToday } from "./today/today";
 
@@ -25,12 +25,14 @@ export function StudentWorkspace({ mode, studentId }: { mode: "student" | "paren
 }
 
 /** A student as a card: name first, then the date and how far away it is. */
-function StudentCardBody({ row, practice = false }: { row: Student; practice?: boolean }) {
+function StudentCardBody({ row, practice = false, honors = false }: { row: Student; practice?: boolean; honors?: boolean }) {
   const countdown = ceremonyCountdown(row.ceremonyDate);
   return <><span className="student-card-name"><bdi dir="auto">{row.firstName} {row.lastName}</bdi></span>
     <span className="student-card-date"><time dateTime={row.ceremonyDate}>{countdown.label}</time>{countdown.phrase && <span className="student-card-days">{countdown.phrase}</span>}</span>
     {/* 1.9 N23 (TP-11): the assigned tutor's roster card line, behind the release gate. */}
-    {practice && <TutorCardLine studentId={row.id} />}</>;
+    {practice && <TutorCardLine studentId={row.id} />}
+    {/* A parent with several children sees each child's honors status under the date. */}
+    {honors && <HonorsCardLine studentId={row.id} />}</>;
 }
 
 function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "student" | "parent" | "tutor"; switching?: boolean; routeStudentId?: string }) {
@@ -74,7 +76,7 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
         return known ? reconcileSelectedStudent(values, selectedRef.current, known) : values;
       }); setMore(page.length === 100);
       // A route id is only honoured when it is in this account's authorized list.
-      setSelected(previous => previous && values.some(row => row.id === previous) ? previous : routeStudentId && values.some(row => row.id === routeStudentId) ? routeStudentId : mode === "student" && values.length === 1 ? values[0].id : null);
+      setSelected(previous => previous && values.some(row => row.id === previous) ? previous : routeStudentId && values.some(row => row.id === routeStudentId) ? routeStudentId : (mode === "student" || mode === "parent") && values.length === 1 ? values[0].id : null);
     } catch (error) { if (!request.signal.aborted && turn === sequence.current) { setError(true); throw error; } }
     finally { if (!request.signal.aborted && turn === sequence.current) setLoading(false); }
   }, [mode, routeStudentId]);
@@ -114,14 +116,16 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
   const heading = mode === "student" ? "Your assigned reading" : mode === "parent" ? "Your children’s readings" : "Your assigned students";
   const focused = Boolean(routeStudentId);
   // On a student's own page the h1 is the student's name (and so is the tab title), once the list has said who that is.
-  const named = focused ? rows.find(row => row.id === selected) : undefined, studentName = named ? `${named.firstName} ${named.lastName}` : null;
+  // A parent with one child has no list to choose from: the page is that child's summary, headed with the child's name.
+  const onlyChild = mode === "parent" && !more && rows.length === 1;
+  const named = focused || onlyChild ? rows.find(row => row.id === selected) : undefined, studentName = named ? `${named.firstName} ${named.lastName}` : null;
   return <section className={`role-workspace${focused ? " role-workspace-focused" : ""}`}>{studentName ? <><h1 className="sr-only"><bdi dir="auto">{studentName}</bdi></h1><DocumentTitle heading={studentName} /></> : <h1 className="sr-only">{heading}</h1>}
     {mode !== "student" && !focused && !selected && <p className="selection-lede">{mode === "parent" ? "Choose a child to see their reading." : "Who are you teaching today?"}</p>}
     {loading ? <p role="status">Loading available students…</p> : error ? <div role="alert"><p>Students couldn’t be loaded. No previous selection is being shown.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload students</button></div>
       : !rows.length ? <p>No student is currently linked to this role. Ask the congregation for help with your assignment.</p>
         : <>{(mode !== "student" || rows.length !== 1) && <><ul ref={strip} className={`student-cards${focused || selected ? " student-cards-compact" : ""}`} aria-label={mode === "parent" ? "Child" : "Student"}>{ordered.map(row => <li key={row.id}>
             {mode === "tutor" ? <WorkspaceLink href={`/workspace/tutor/${row.id}${viewTab ? `?tab=${viewTab}` : ""}`} className="student-card" data-student-id={row.id} aria-current={selected === row.id ? "page" : undefined}><StudentCardBody row={row} practice={!focused && !selected} /></WorkspaceLink>
-              : <button type="button" className="student-card" data-student-id={row.id} aria-pressed={selected === row.id} onClick={() => { void guardDeparture().then(leave => { if (leave) setSelected(row.id); }); }}><StudentCardBody row={row} /></button>}
+              : <button type="button" className="student-card" data-student-id={row.id} aria-pressed={selected === row.id} onClick={() => { void guardDeparture().then(leave => { if (leave) setSelected(row.id); }); }}><StudentCardBody row={row} honors={mode === "parent" && rows.length > 1 && !focused && !selected} /></button>}
           </li>)}</ul>{more && <button className="button-text" disabled={paging} onClick={() => void loadMore()}>{paging ? "Loading students…" : "Load more students"}</button>}</>}
           {focused && !selected && <div className="workspace-state"><h2>Student not found</h2><p>This student isn’t in your list. Choose one of your students above.</p></div>}
           {selected && <ReadingPanel mode={mode} studentId={selected} onStudentReload={reconcileStudent} afterSummary={selectedHonors} />}
