@@ -3,6 +3,7 @@ import { expandReadingRanges } from "../src/lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../src/lib/readings/catalog";
 import { studyRangePlan } from "../src/components/portal/workspace/study/api";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
+import { moreSheet, openMore } from "./more-sheet";
 
 // Release 1.8.2 P2 on the built, unconfigured production server: the signed-out reader's layout. Every reading and text answer is a
 // synthetic route fulfilment (invented syllables, numbered English) that arrives after a short delay, as a real network would,
@@ -17,11 +18,14 @@ function passageOf(ranges: string[], kind: "torah" | "haftarah") {
 // A whole parashah is more than one text page (a page is 100 verses), as a real week is.
 const week = { torah: ["Genesis 1:1-6:8"], haftarah: ["Isaiah 42:5-43:10"] };
 const LATENCY = 120;
-async function mock(page: Page, latency = LATENCY) {
+// The week's calendar divisions, for the pages that show the chips (the Torah's aliyot, 1.9 N3): inside the synthetic week, with the maftir repeating the seventh.
+const ALIYOT = [["1", "Genesis 1:1-2:3"], ["2", "Genesis 2:4-19"], ["3", "Genesis 2:20-3:21"], ["4", "Genesis 3:22-4:18"], ["5", "Genesis 4:19-5:24"], ["6", "Genesis 5:25-6:4"], ["7", "Genesis 6:5-8"], ["M", "Genesis 6:5-8"]];
+async function mock(page: Page, latency = LATENCY, aliyot = false) {
   await page.route("**/api/public/**", async route => {
     const url = new URL(route.request().url()), q = url.searchParams;
     await new Promise(resolve => setTimeout(resolve, latency));
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) }).catch(() => {});
+    if (url.pathname === "/api/public/aliyot") return aliyot ? json({ date: q.get("date"), parashah: "Synthetic", full: ALIYOT.map(([n, ref]) => ({ n, ref })), triennial: null }) : json({ error: "unavailable" }, 503);
     const kind = q.get("kind") as "torah" | "haftarah", ranges = q.has("ref") ? q.get("ref")!.split("; ") : week[kind];
     if (url.pathname === "/api/public/reading") {
       if (q.has("date")) return json({ date: q.get("date"), parashah: "Synthetic", fetchedAt: 0, listening: { pocketTorah: false }, torah: passageOf(week.torah, "torah"), haftarah: passageOf(week.haftarah, "haftarah") });
@@ -60,12 +64,12 @@ function cls(shifts: readonly Shift[]): number {
   }
   return worst;
 }
-async function measure(page: Page, address: string) {
+async function measure(page: Page, address: string, aliyot = false) {
   test.setTimeout(90_000); // Four times slower CPU, on a busy machine.
   const client = await page.context().newCDPSession(page);
   await client.send("Emulation.setCPUThrottlingRate", { rate: 4 });
   await watchShifts(page);
-  await mock(page);
+  await mock(page, LATENCY, aliyot);
   await page.goto(address);
   await expect(page.locator(".study-verses [data-verse-ref]").first()).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "Save this reading", exact: true })).toBeAttached({ timeout: 30_000 });
@@ -85,6 +89,16 @@ test("/read in Study does not jump while the week, the reading and the text arri
   expect(value, JSON.stringify(shifts)).toBeLessThan(0.1);
 });
 
+// With the week's aliyot (the chips) the header, the lenses, the chips and the text come in two steps, and none of them moves what is on screen.
+for (const [name, address] of [["Lein", "/read"], ["Study", "/read?lens=study"]]) {
+  test(`/read with the aliyah chips in ${name} does not jump while the week, the aliyot, the reading and the text arrive (CLS below 0.1 at 4x CPU)`, async ({ page }) => {
+    const { shifts, value } = await measure(page, address, true);
+    await expect(page.getByRole("tablist", { name: "Reading sections" })).toBeVisible();
+    console.log(`CLS with chips in ${name}:`, value.toFixed(4));
+    expect(value, JSON.stringify(shifts)).toBeLessThan(0.1);
+  });
+}
+
 test("at a 200% root font on a Pixel 7 the reading, its Find a date row and the reading chooser are no wider than the screen", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "phone", "A phone-width check");
   await mock(page);
@@ -93,17 +107,24 @@ test("at a 200% root font on a Pixel 7 the reading, its Find a date row and the 
   await expect(page.locator(".study-verses [data-verse-ref]").first()).toBeVisible();
   // The screen is the configured device width: on a phone the browser widens its own layout viewport to fit overflowing content, so innerWidth would agree with the overflow.
   const screen = testInfo.project.use.viewport!.width, fits = () => page.evaluate(() => ({ scroll: document.documentElement.scrollWidth })).then(size => ({ ...size, view: screen }));
-  const picker = page.getByLabel("Find a date", { exact: true });
-  await expect(picker).toBeVisible();
-  const box = await picker.boundingBox();
-  expect(box && box.x >= 0 && box.x + box.width <= (await fits()).view, "the date field is inside the screen").toBe(true);
-  let size = await fits(); expect(size.scroll, "Lein").toBeLessThanOrEqual(size.view);
+  let size = await fits(); expect(size.scroll, "the header and Lein").toBeLessThanOrEqual(size.view);
+  for (const name of ["More", "Previous week", "Next week"]) {
+    const control = await page.getByRole("button", { name, exact: true }).boundingBox();
+    expect(control && control.x >= 0 && control.x + control.width <= size.view, `${name} is inside the screen`).toBe(true);
+  }
   await page.getByRole("button", { name: "Study", exact: true }).click();
   await expect(page.locator("[data-study-rows]")).toBeVisible();
   size = await fits(); expect(size.scroll, "Study").toBeLessThanOrEqual(size.view);
-  await page.getByRole("button", { name: "Choose a reading", exact: true }).click();
+  // Find a date and the reading chooser are in the More sheet.
+  const sheet = await openMore(page), picker = page.getByLabel("Find a date", { exact: true });
+  await expect(picker).toBeVisible();
+  const box = await picker.boundingBox();
+  expect(box && box.x >= 0 && box.x + box.width <= (await fits()).view, "the date field is inside the screen").toBe(true);
+  await sheet.getByRole("button", { name: "Choose a reading", exact: true }).click();
   await expect(page.getByRole("region", { name: "Choose a reading", exact: true })).toBeVisible();
   size = await fits(); expect(size.scroll, "the reading chooser").toBeLessThanOrEqual(size.view);
+  const panel = await page.getByRole("region", { name: "Choose a reading", exact: true }).boundingBox();
+  expect(panel && panel.x >= 0 && panel.x + panel.width <= size.view, "the chooser is inside the screen").toBe(true);
 });
 
 const active = (page: Page) => page.evaluate(() => {
@@ -114,13 +135,17 @@ const active = (page: Page) => page.evaluate(() => {
 test("Start reading moves focus into the reading, in Lein and in Study", async ({ page }) => {
   await mock(page);
   await page.goto("/read");
+  // Start reading is first in the More sheet; it closes the sheet and then puts focus in the reading, so the sheet's own return of focus does not win.
+  await openMore(page);
   const start = page.getByRole("button", { name: "Start reading", exact: true });
   await expect(start).toBeEnabled();
   await start.click();
+  await expect(moreSheet(page)).toBeHidden();
   await expect.poll(() => active(page).then(state => state.reading)).toBe(true);
   expect(await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))).toBe("Hebrew reading");
   await page.getByRole("button", { name: "Study", exact: true }).click();
   await expect(page.locator("[data-study-rows]")).toBeVisible();
+  await openMore(page);
   await page.getByRole("button", { name: "Start reading", exact: true }).click();
   await expect.poll(() => active(page).then(state => state.reading)).toBe(true);
   expect(await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))).toBe("Hebrew reading, verse by verse");
@@ -145,6 +170,7 @@ test("choosing a reading from the chooser lands focus on the new reading's headi
   // The next page is slow to arrive, so this one is still running when its week answers.
   await page.route("**/read?reading=*", async route => { await new Promise(resolve => setTimeout(resolve, 1500)); await route.continue(); });
   await page.goto("/read");
+  await openMore(page);
   await page.getByRole("button", { name: "Choose a reading", exact: true }).click();
   await page.getByLabel("Parashah", { exact: true }).selectOption({ label: "Noach" });
   await page.getByRole("region", { name: "Choose a reading", exact: true }).getByRole("button", { name: "Open", exact: true }).first().click();
@@ -153,6 +179,7 @@ test("choosing a reading from the chooser lands focus on the new reading's headi
   await expect.poll(() => active(page).then(state => state.id)).toBe("public-reading-title");
   // A plain visit starts nowhere in particular: nothing grabs focus.
   await page.goto("/read");
+  await openMore(page);
   await expect(page.getByRole("button", { name: "Start reading", exact: true })).toBeEnabled();
   expect((await active(page)).id).not.toBe("public-reading-title");
 });
@@ -160,6 +187,7 @@ test("choosing a reading from the chooser lands focus on the new reading's headi
 test("the haftarah blessings link says where on page 23 the blessing is", async ({ page }) => {
   await mock(page);
   await page.goto("/read");
+  await openMore(page);
   await expect(page.getByRole("link", { name: "Haftarah blessings: siddur page 23, after Mi Shebeirach" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Torah blessings: siddur page 22" })).toBeVisible();
 });

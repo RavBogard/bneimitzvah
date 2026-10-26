@@ -17,6 +17,21 @@ async function week(page: Page) {
   });
 }
 const noHorizontalScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
+// Every test but the Saturday one runs on a Wednesday, so the home's links do not depend on the day the suite runs.
+test.beforeEach(async ({ page }) => { await page.clock.setFixedTime(new Date("2026-10-21T15:00:00Z")); });
+
+test("on a Saturday the home leads with next Shabbat: its parashah and date, Lein and Study open it, and this Shabbat is one link away (N5)", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-10-24T15:00:00Z"));
+  await session(page, signedOut); await week(page);
+  await page.goto("/");
+  await expect(page.getByText("Next Shabbat", { exact: true })).toBeVisible();
+  await expect(page.getByText("This Shabbat", { exact: true })).toBeVisible(); // the link back to the day's own reading
+  await expect(page.getByRole("heading", { level: 1, name: "Noach", exact: true })).toBeVisible();
+  await expect(page.locator("time")).toHaveAttribute("datetime", "2026-10-31");
+  await expect(page.getByRole("link", { name: "Lein", exact: true })).toHaveAttribute("href", "/read?date=2026-10-31");
+  await expect(page.getByRole("link", { name: "Study", exact: true })).toHaveAttribute("href", "/read?date=2026-10-31&lens=study");
+  await expect(page.getByRole("link", { name: "This Shabbat", exact: true })).toHaveAttribute("href", "/read");
+});
 
 test("the home is a front door to This week, Beit Mitzvah and Learn to lein", async ({ page }, testInfo) => {
   await session(page, signedOut); await week(page);

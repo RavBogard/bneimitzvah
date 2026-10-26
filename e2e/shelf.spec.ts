@@ -137,3 +137,27 @@ test("an opened Targum or Talmud text is marked Aramaic; a midrash stays Hebrew"
   await expect(panel(page).locator('p[lang="he"][dir="rtl"]').filter({ hasText: "הוּ זַח" })).toBeVisible();
   await expect(panel(page).locator('[lang="arc"]')).toHaveCount(0);
 });
+
+test("a text opened in More on this verse names its English, leads with it, credits it first, and its Hebrew follows the size control (N5)", async ({ page }) => {
+  await mock(page);
+  await page.goto("/read?lens=study");
+  await more(page, "Genesis 1:2").click();
+  await panel(page).getByRole("button", { name: "Ramban on Genesis 1:2 · 3 comments", exact: true }).click();
+  // The segment with English leads in English under an "English" tag; the segment with Hebrew only has no tag.
+  await expect(panel(page).getByText("English", { exact: true })).toHaveCount(1);
+  const credits = (await panel(page).locator("p", { hasText: "Synthetic English Edition" }).first().textContent())!;
+  expect(credits.indexOf("English:"), credits).toBeLessThan(credits.indexOf("Hebrew:"));
+  // The Hebrew behind its button grows with the size control: the Sheet carries the same four steps as the page.
+  const sizeOf = async (id: string) => {
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: /^Text size/ }).click();
+    await page.locator(`.toolbar-menu [data-size="${id}"]`).click();
+    await more(page, "Genesis 1:2").click();
+    const ramban = panel(page).getByRole("button", { name: "Ramban on Genesis 1:2 · 3 comments", exact: true });
+    if ((await ramban.getAttribute("aria-expanded")) !== "true") await ramban.click();
+    const hebrew = panel(page).locator('p[lang="he"]').filter({ hasText: "הוּ זַח" });
+    return hebrew.evaluate(node => parseFloat(getComputedStyle(node).fontSize));
+  };
+  const small = await sizeOf("small"), huge = await sizeOf("huge");
+  expect(huge).toBeGreaterThan(small * 1.5);
+});

@@ -3,6 +3,7 @@ import { studyRangePlan } from "../src/components/portal/workspace/study/api";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
 import { TANAKH_VERSE_COUNTS } from "../src/lib/readings/catalog";
 import { expandReadingRanges } from "../src/lib/readings/ranges";
+import { moreButton, openMore } from "./more-sheet";
 
 // Release 1.7 Choose verses, Change verses and Whole portion in the built, unconfigured production server. The session, readings and saved-readings
 // answers are synthetic route fulfilments, so the page's own client code is under test. Vayeilech (a short parashah) stands in; invented names only.
@@ -49,11 +50,13 @@ test("choose verses from the text, separated groups with the live count, then sa
   await page.route("**/api/saved/readings/create", route => { posted.push(route.request().postDataJSON()); return json(route, 200, { ok: true, reading: base }); });
   await page.goto(`/read?ref=${encodeURIComponent(PORTION)}&kind=torah`);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  // Choose verses, with Save and Print, is in the More sheet (N5).
+  await openMore(page);
   await expect(page.getByRole("button", { name: "Choose verses", exact: true })).toBeVisible();
   // Not choosing: a word still plays in Lein, and nothing offers a selection.
   await expect(bar(page)).toHaveCount(0);
   await expect(page.locator(".study-verses [data-word-index][role=\"button\"]").first()).toBeVisible();
-  // The hero Save (whole passage) is there until choosing starts.
+  // The passage's own Save (whole passage) is in More until choosing starts.
   const anySave = page.getByRole("button", { name: "Save", exact: true });
   await expect(anySave).toHaveCount(1);
   await expect(bar(page)).toHaveCount(0);
@@ -99,15 +102,16 @@ test("choose verses from the text, separated groups with the live count, then sa
   // Done leaves choosing, and the words are exactly as they were.
   await bar(page).getByRole("button", { name: "Done", exact: true }).click();
   await expect(bar(page)).toHaveCount(0);
-  await expect(anySave).toHaveCount(1);
-  await expect(page.getByRole("button", { name: "Choose verses", exact: true })).toBeFocused();
+  // The sheet is closed, so More has the focus again and Choose verses and Save are in it.
+  await expect(anySave).toHaveCount(0);
+  await expect(moreButton(page)).toBeFocused();
   await expect(page.locator(".study-verses [data-word-index][role=\"button\"]").first()).toBeVisible();
 });
 
 test("a verse chosen in Study shows the check, leaves the word card shut, and Cancel restores it", async ({ page }) => {
   await openRoutes(page);
   await page.goto(`/read?ref=${encodeURIComponent(PORTION)}&kind=torah&lens=study`);
-  await page.getByRole("button", { name: "Choose verses", exact: true }).click();
+  await (await openMore(page)).getByRole("button", { name: "Choose verses", exact: true }).click();
   await verse(page, 2).click();
   await expect(page.locator("[data-study-rows] [data-verse-ref=\"Deuteronomy 31:2\"]")).toHaveAttribute("data-verse-picked", "true");
   await expect(page.locator("[data-study-rows] [data-word-index][role=\"button\"]")).toHaveCount(0);
@@ -203,14 +207,14 @@ test("Whole portion marks the selection and Back to selection returns to it; Can
 test("a selection opens inside its whole portion with the verses marked, and the way back opens the selection", async ({ page }) => {
   await openRoutes(page);
   await page.goto(`/read?ref=${encodeURIComponent("Deuteronomy 31:5-8")}&kind=torah`);
-  await page.getByRole("link", { name: "Whole portion", exact: true }).click();
+  await (await openMore(page)).getByRole("link", { name: "Whole portion", exact: true }).click();
   await expect(page).toHaveURL(/mark=Deuteronomy\+31%3A5-8/);
   await expect(page.locator(".study-verses [data-verse-ref]")).toHaveCount(30);
   await expect(page.locator(".study-verses [data-verse-marked]")).toHaveCount(4);
   // Choosing from here starts with the marked verses.
-  await page.getByRole("button", { name: "Choose verses", exact: true }).click();
+  await (await openMore(page)).getByRole("button", { name: "Choose verses", exact: true }).click();
   await expect(line(page)).toHaveText("4 verses: Deuteronomy 31:5–8");
   await bar(page).getByRole("button", { name: "Cancel", exact: true }).click();
-  await page.getByRole("link", { name: "Back to selection", exact: true }).click();
+  await (await openMore(page)).getByRole("link", { name: "Back to selection", exact: true }).click();
   await expect(page.locator(".study-verses [data-verse-ref]")).toHaveCount(4);
 });

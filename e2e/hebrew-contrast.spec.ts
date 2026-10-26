@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { commentaryCandidates, commentaryEditionUrl, parseCommentaryChapter } from "../src/lib/readings/commentary";
 import { PHRASE_FAMILIES } from "../src/lib/trope/chart-catalog";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
+import { openMore } from "./more-sheet";
 
 // 1.8.2 P1: Hebrew text, contrast and dark mode, measured in the browser on the built, unconfigured production server.
 // Every reading, commentary and print answer is a synthetic route fulfilment: invented syllables and numbered English only,
@@ -227,7 +228,7 @@ async function focused(page: Page, selector: string) {
 test("D5: the focus ring on a word and on a verse number is at least 3:1 on white and on every phrase fill (light)", async ({ page }) => {
   await open(page, gen18, { width: 412, size: "standard", colors: true });
   const values = [await focused(page, WORD)];
-  await page.getByRole("button", { name: "Choose verses", exact: true }).click();
+  await (await openMore(page)).getByRole("button", { name: "Choose verses", exact: true }).click();
   values.push(await focused(page, NUMBER));
   for (const value of values) {
     expect(value.style).toBe("solid");
@@ -245,7 +246,7 @@ test("F2: in dark mode every /read verse number and its focus ring are at least 
   const ringed = [await focused(page, WORD)];
   // Verse numbers are plain superscripts until they can be chosen; both kinds are measured on what they sit on.
   const plain = await numbers();
-  await page.getByRole("button", { name: "Choose verses", exact: true }).click();
+  await (await openMore(page)).getByRole("button", { name: "Choose verses", exact: true }).click();
   ringed.push(await focused(page, NUMBER));
   const buttons = await numbers();
   expect(plain).toHaveLength(14);
@@ -288,6 +289,7 @@ test("D6: with forced colors, pressed Torah/Haftarah, Lein/Study and Colors diff
   const off = await look(colors);
   await colors.click();
   expect(await look(colors), "Colors on differs from Colors off").not.toBe(off);
+  await openMore(page);
   const start = page.getByRole("button", { name: "Start reading", exact: true });
   expect(await start.evaluate(node => { const style = getComputedStyle(node); return `${style.borderTopStyle}|${parseFloat(style.borderTopWidth)}`; })).toBe("solid|1");
 });
