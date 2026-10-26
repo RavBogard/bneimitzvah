@@ -113,8 +113,60 @@ describe("Copy link", () => {
     await f.owner(async () => {
       const audits = await f.db.select().from(s.auditEvent);
       expect(audits.some(row => row.action === "invite.revoke" && row.targetId === original.inviteId)).toBe(true);
-      expect(audits.some(row => row.action === "invite.issue" && row.targetId === copied.inviteId)).toBe(true);
+      expect(audits.some(row => row.action === "invite.copy" && row.targetId === copied.inviteId)).toBe(true);
     });
+  });
+
+  it("records a copy as copied, never unconfirmed, and audits it apart from Send again", async () => {
+    const f = await invites();
+    const first = await f.invitations.issue(f.request("admin"), parent(f.students[0].id));
+    const second = await f.invitations.issue(f.request("admin"), parent(f.students[1].id));
+    const copied = await f.invitations.copyLink(f.request("admin"), { mode: "admin", inviteId: first.inviteId });
+    const resent = await f.invitations.reissue(f.request("admin"), { mode: "admin", inviteId: second.inviteId });
+    const rows = await f.invitations.list(f.request("admin", undefined, {}, "GET"), { mode: "admin" });
+    const copiedRow = rows.find(row => row.id === copied.inviteId)!;
+    expect(copiedRow.status).toBe("pending");
+    expect(copiedRow.delivery.status).toBe("copied");
+    expect(copiedRow.delivery.attemptedAt).not.toBeNull();
+    await f.owner(async () => {
+      const audits = await f.db.select().from(s.auditEvent);
+      const actionsFor = (id: string) => audits.filter(row => row.targetId === id).map(row => row.action).sort();
+      expect(actionsFor(copied.inviteId)).toEqual(["invite.copy"]);
+      expect(actionsFor(resent.inviteId)).toContain("invite.issue");
+      expect(actionsFor(resent.inviteId)).not.toContain("invite.copy");
+      // The copied row's state is final: a later delivery receipt cannot turn it back into pending or sent.
+      await expect(f.db.update(s.invite).set({ deliveryStatus: "sent" }).where(eq(s.invite.id, copied.inviteId))).rejects.toThrow();
+    });
+  });
+
+  it("two copies racing: one wins, and only its link works", async () => {
+    const f = await invites();
+    const original = await f.invitations.issue(f.request("admin"), parent(f.students[0].id)), previous = f.token();
+    const results = await Promise.allSettled([0, 1].map(() => f.invitations.copyLink(f.request("admin"), { mode: "admin", inviteId: original.inviteId })));
+    const won = results.filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof f.invitations.copyLink>>> => r.status === "fulfilled");
+    expect(won).toHaveLength(1);
+    expect(results.some(r => r.status === "rejected" && r.reason instanceof AccessDenied && r.reason.status === 404)).toBe(true);
+    const token = new URLSearchParams(new URL(won[0].value.url).hash.slice(1)).get("token")!;
+    expect(await denied(() => f.invitations.accept(f.request("recipient"), { token: previous }))).toBe(true);
+    await f.invitations.accept(f.request("recipient"), { token });
+    await f.owner(async () => { expect((await f.db.select().from(s.invite).where(sql`${s.invite.acceptedAt} is not null`)).length).toBe(1); });
+  });
+
+  it("a copy racing an accept of the old link: only one link ever works", async () => {
+    const f = await invites();
+    const original = await f.invitations.issue(f.request("admin"), parent(f.students[0].id)), previous = f.token();
+    const [copy, accept] = await Promise.allSettled([
+      f.invitations.copyLink(f.request("admin"), { mode: "admin", inviteId: original.inviteId }),
+      f.invitations.accept(f.request("recipient"), { token: previous }),
+    ]);
+    let later = false;
+    if (copy.status === "fulfilled") {
+      const token = new URLSearchParams(new URL(copy.value.url).hash.slice(1)).get("token")!;
+      later = await f.invitations.accept(f.request("recipient"), { token }).then(() => true, () => false);
+    }
+    expect([accept.status === "fulfilled", later].filter(Boolean)).toHaveLength(1);
+    expect(accept.status === "fulfilled" ? copy.status === "rejected" : copy.status === "fulfilled").toBe(true);
+    await f.owner(async () => { expect((await f.db.select().from(s.invite).where(sql`${s.invite.acceptedAt} is not null`)).length).toBe(1); });
   });
 
   it("refuses a tutor, a learner, a stale sign-in and another congregation's admin, and changes nothing", async () => {
@@ -149,6 +201,25 @@ describe("Copy link", () => {
     expect(body.url).toMatch(/^http:\/\/localhost:3000\/invitations\/open#token=[A-Za-z0-9_-]{43}$/);
     const list = await (await f.call("/api/admin/invitations", { who: "admin" })).json();
     expect(JSON.stringify(list).includes(body.url.split("=")[1])).toBe(false);
+    expect(list.invitations.find((row: { id: string }) => row.id === body.inviteId).delivery.status).toBe("copied");
+  });
+
+  it("over HTTP, the Needs a parent invitation list is admin only, private and no-store, and refuses POST", async () => {
+    const f = await routes();
+    await f.owner(async () => {
+      await f.db.update(s.student).set({ parentEmail: " Routes-Recipient@Example.test " }).where(eq(s.student.id, f.students[2].id));
+      const [member] = await f.db.insert(s.membership).values({ tenantId: "crc", userId: f.identities.recipient.id }).returning();
+      await f.db.insert(s.tenantMember).values({ tenantId: "crc", membershipId: member.id, userId: f.identities.recipient.id, displayName: "Synthetic Parent", approvedByMembershipId: f.adminMember.id });
+    });
+    const response = await f.call("/api/admin/invitations/needed", { who: "admin" }), body = await response.json();
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(body.needed).toHaveLength(1);
+    expect(Object.keys(body.needed[0]).sort()).toEqual(["email", "memberId", "name", "student"]);
+    expect(body.needed[0]).toMatchObject({ email: "routes-recipient@example.test", student: { id: f.students[2].id } });
+    expect((await f.call("/api/admin/invitations/needed", { who: "admin", body: {} })).status).toBe(405);
+    expect((await f.call("/api/admin/invitations/needed", { who: "multi" })).status).toBe(403);
+    expect((await f.call("/api/admin/invitations/needed?x=1", { who: "admin" })).status).toBe(400);
   });
 });
 

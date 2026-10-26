@@ -22,7 +22,7 @@ function Invitations() {
   const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]), cursor = cursors[cursors.length - 1];
   const [draft, setDraft] = useState<InviteDraft>({ role: "parent", email: "", studentId: "" }), [review, setReview] = useState<InvitationReview | null>(null);
   const [pending, setPending] = useState(false), [blocked, setBlocked] = useState(false), [message, setMessage] = useState(""), [accessError, setAccessError] = useState(false);
-  const [outcome, setOutcome] = useState<{ kind: "issue" | "reissue" | "revoke" | "copy"; receipt?: Receipt; unknown?: boolean } | null>(null);
+  const [outcome, setOutcome] = useState<{ kind: "issue" | "reissue" | "revoke" | "copy"; receipt?: Receipt; unknown?: boolean; copied?: boolean } | null>(null);
   // A copied link the clipboard refused, shown once so it can be copied by hand; any other action clears it.
   const [manualCopy, setManualCopy] = useState<string | null>(null);
   const request = useRef<AbortController | null>(null), generation = useRef(0), gate = useRef(false), alive = useRef(true);
@@ -86,7 +86,7 @@ function Invitations() {
       let copied = false;
       try { if (clipboard) await clipboard; else await navigator.clipboard.writeText(link.url); copied = true; } catch { copied = false; }
       if (!alive.current) return;
-      setOutcome({ kind: "copy" }); if (!copied) setManualCopy(link.url);
+      setOutcome({ kind: "copy", copied }); if (!copied) setManualCopy(link.url);
       try { await load(); } catch { if (alive.current) { setBlocked(true); setMessage("Done, but the list couldn’t be refreshed. Reload before anything else."); } }
     } catch (error) {
       if (!alive.current) return;
@@ -151,6 +151,8 @@ function Invitations() {
   function openIssue() { if (reviewIssue()) origin.current = document.querySelector<HTMLElement>(".invitation-review-button"); }
   const outcomeText = outcome && (outcome.unknown ? "We couldn’t confirm whether the last action went through. Reload to see what was recorded; don’t treat it as a resend."
     : outcome.kind === "revoke" ? "Invitation revoked. The link no longer works."
+    // Daniel, N22: shown once the clipboard has the new link.
+    : outcome.kind === "copy" && outcome.copied ? "Link copied."
     : outcome.kind === "reissue" || outcome.kind === "copy" ? "A new invitation replaced the old one. The old link no longer works; the new one may be on another page."
     : "Invitation created. It may be on another page of the list.");
   const mailText = outcome?.receipt && (outcome.receipt.delivery === "sent" ? "The email went to the mail service. We can’t see whether it reached their inbox."

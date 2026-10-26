@@ -47,17 +47,20 @@ export const SIGN_IN_CODE_LINES = Object.freeze({
 const CODE = /^\d{6}$/;
 export type InvitationMailRole = "parent" | "student" | "tutor";
 const INVITATION_ROLES: readonly string[] = ["parent", "student", "tutor"];
-/** The invitation's expiry as the email states it, in the congregation's time (America/Chicago, as everywhere else). */
+/**
+ * The invitation's expiry as the email states it (Daniel, N22): the date only, no clock time, e.g. "Monday, November 2".
+ * It is the calendar date of the expiry instant in the congregation's time zone (America/Chicago, as everywhere else),
+ * so it is never a date later than the real expiry.
+ */
 export function invitationExpiryText(expiresAt: Date): string {
   if (!(expiresAt instanceof Date) || !Number.isFinite(expiresAt.getTime())) throw 0;
-  return new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(expiresAt)
-    // ICU versions differ on the space before AM/PM (some use a narrow no-break space); plain text gets a plain space.
+  return new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", weekday: "long", month: "long", day: "numeric" }).format(expiresAt)
     .replace(/[  ]/g, " ");
 }
 /**
  * The invitation email (decision 12; G13): it names the congregation, the role and the expiry, and never a student.
- * It is given no student at all, so no child's name can reach the subject or the body. The parent line is Daniel's
- * approved wording; the student and tutor lines are the same sentence without the parent clause.
+ * It is given no student at all, so no child's name can reach the subject or the body. The parent, student and tutor
+ * lines are Daniel's approved wording.
  */
 export function invitationMailText(input: Readonly<{ congregation: string; productName: string; role: InvitationMailRole; expiresAt: Date; link: string }>) {
   const until = invitationExpiryText(input.expiresAt);

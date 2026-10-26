@@ -4,7 +4,7 @@ import { identifier, type RosterStudent } from "../api";
 export type InviteRole = "parent" | "student" | "tutor";
 export type Invitation = { id: string; role: InviteRole; recipientEmail: string; student: { id: string; firstName: string; lastName: string } | null;
   status: "pending" | "accepted" | "revoked" | "expired"; createdAt: string; expiresAt: string; expiresTomorrow: boolean; acceptedAt: string | null; revokedAt: string | null;
-  delivery: { status: "pending" | "sent" | "failed"; attemptedAt: string | null } };
+  delivery: { status: "pending" | "sent" | "failed" | "copied"; attemptedAt: string | null } };
 export type InviteDraft = { role: InviteRole; email: string; studentId: string };
 export type IssueSelection = { role: InviteRole; email: string; studentId?: string };
 export type Receipt = { inviteId: string; delivery: "sent" | "failed" | "unknown" };
@@ -43,7 +43,7 @@ export function parseInvitationPage(value: unknown, afterId?: string): Invitatio
     if (row.student !== null) { const s = object(row.student, ["id", "firstName", "lastName"]); student = { id: identifier(s.id), firstName: name(s.firstName), lastName: name(s.lastName) }; }
     if ((row.role === "tutor") !== (student === null)) return bad();
     const d = object(row.delivery, ["status", "attemptedAt"]), attemptedAt = d.attemptedAt === null ? null : instant(d.attemptedAt);
-    if (!["pending", "sent", "failed"].includes(String(d.status)) || (d.status === "pending") !== (attemptedAt === null) || attemptedAt !== null && Date.parse(attemptedAt) < Date.parse(createdAt)) return bad();
+    if (!["pending", "sent", "failed", "copied"].includes(String(d.status)) || (d.status === "pending") !== (attemptedAt === null) || attemptedAt !== null && Date.parse(attemptedAt) < Date.parse(createdAt)) return bad();
     return { id, role: row.role as InviteRole, recipientEmail: email, student, status: row.status as Invitation["status"], createdAt, expiresAt, expiresTomorrow: row.expiresTomorrow, acceptedAt, revokedAt, delivery: { status: d.status as Invitation["delivery"]["status"], attemptedAt } };
   });
 }

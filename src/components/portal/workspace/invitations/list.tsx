@@ -5,7 +5,8 @@ import { inviteRoleNames, type Invitation } from "./api";
 const day = (value: string) => { const date = new Date(value); return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", ...(date.getFullYear() === new Date().getFullYear() ? {} : { year: "numeric" }) }).format(date); };
 const stamp = (label: string, value: string) => <span>{label} <time dateTime={value} title={new Date(value).toLocaleString()}>{day(value)}</time></span>;
 const statusNames = { pending: "Not accepted yet", accepted: "Accepted", expired: "Expired", revoked: "Revoked" } as const;
-const mailNames = { sent: "Email sent", failed: "Email failed", pending: "Email unconfirmed" } as const;
+// "Link copied, not emailed" is a placeholder pending Daniel's end-of-wave wording.
+const mailNames = { sent: "Email sent", failed: "Email failed", pending: "Email unconfirmed", copied: "Link copied, not emailed" } as const;
 
 export function InvitationList({ rows, pending, blocked, select, copy }: { rows: Invitation[]; pending: boolean; blocked: boolean; select(kind: "reissue" | "revoke", row: Invitation, opener: HTMLElement): void; copy(row: Invitation): void }) {
   return <ol className="invitation-records people-list">{rows.map(row => {

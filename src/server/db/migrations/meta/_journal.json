@@ -351,6 +351,13 @@
       "when": 1793001108321,
       "tag": "0049_ceremony_done",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1793008733628,
+      "tag": "0051_invitation_copy",
+      "breakpoints": true
     }
   ]
 }

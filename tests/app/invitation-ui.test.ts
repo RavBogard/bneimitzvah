@@ -26,6 +26,9 @@ it("rejects malformed or leaking pages atomically, unsupported durable unknown, 
 
 it("enforces bounded ordered cursor pages without duplicates, earlier rows or arbitrary profile fields", () => {
   expect(parseInvitationPage({ invitations: [row(2)] }, id(1))).toHaveLength(1);
+  // A copied link (N22) is its own final delivery state, with its copy time.
+  expect(parseInvitationPage({ invitations: [{ ...row(3), delivery: { status: "copied", attemptedAt: attempted } }] })[0].delivery.status).toBe("copied");
+  expect(() => parseInvitationPage({ invitations: [{ ...row(3), delivery: { status: "copied", attemptedAt: null } }] })).toThrow(PortalRequestError);
   for (const values of [[row(1)], [row(3), row(2)], [row(2), row(2)], Array.from({ length: 26 }, (_, n) => row(n + 2))])
     expect(() => parseInvitationPage({ invitations: values }, id(1))).toThrow(PortalRequestError);
 });
