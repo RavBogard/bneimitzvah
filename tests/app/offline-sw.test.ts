@@ -275,7 +275,14 @@ describe("N24: the beitmitzvah origin (decision 14) works exactly like torah", (
     }
     expect((await w.request(CLIP))!.headers.get(OFFLINE_HEADER)).toBe("1");
     // The private endpoint that names the learner's readings, and every other signed-in route, are the browser's own business.
-    for (const path of ["/api/offline/packs", "/api/session", "/api/students", "/api/learn/progress"]) expect(await w.request(path), path).toBeNull();
+    for (const path of ["/api/offline/packs", "/api/session", "/api/students", "/api/learn/progress", "/api/portion-summary?reading=vayera"]) expect(await w.request(path), path).toBeNull();
+  });
+  test("with the network cut, This week's aliyot and approved portion summary open from the public pack", async () => {
+    const ALIYOT = "/api/public/aliyot?date=2026-10-24", SUMMARY = "/api/public/portion-summary?reading=vayera";
+    const caches = new FakeCaches(BEIT_MITZVAH_ORIGIN);
+    await seed(caches, [pack(Date.now(), [DATA, ALIYOT, SUMMARY])], { [ALIYOT]: json({ aliyot: true }), [SUMMARY]: json({ reading: "vayera", summary: null }) });
+    const w = await load({ origin: BEIT_MITZVAH_ORIGIN, caches });
+    for (const path of [ALIYOT, SUMMARY]) { const hit = await w.request(path); expect(hit?.status, path).toBe(200); expect(hit!.headers.get(OFFLINE_HEADER), path).toBe("1"); }
   });
   test("after the sign-out purge, or with another account's index, nothing of the learner's is served", async () => {
     const w = await installedOnBeit(A);

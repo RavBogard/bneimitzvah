@@ -52,8 +52,11 @@ export const STATIC_PATH = /^\/(?:_next\/static|fonts)\//;
 export const STATIC_UNSAFE = /%2f|%5c|%2e|\/\.\.?(?:\/|$)|\/\//i;
 /** PocketTorah short clips only (G3): exactly the content-addressed short-v1 path, no query. */
 export const CLIP_PATH = /^\/reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$/;
-/** The public reading routes a pack may hold (§3.2): reading, text and short-reference pages, and (2.0 SC7) the evening lessons' text. */
-export const PACK_DATA_PATH = /^\/api\/public\/(?:reading|text|reference\/short|evening-text)$/;
+/**
+ * The public reading routes a pack may hold (§3.2): reading, text and short-reference pages, (2.0 SC7) the evening lessons' text, and
+ * (1.9 N24) the week's calendar aliyot and its approved portion summary, the public route that never serves a draft.
+ */
+export const PACK_DATA_PATH = /^\/api\/public\/(?:reading|text|reference\/short|evening-text|aliyot|portion-summary)$/;
 /**
  * A route only an owner pack may hold (2.0 SC7): the CRC siddur's evening text. Daniel, 2026-10-25: "Yes, for signed-in CRC people";
  * a signed-out visitor's device keeps none of it. The private /api/offline/packs names the evening pack only for a signed-in CRC person,
