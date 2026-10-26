@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type MutableRefObject, type ReactNode } from "react";
 import type { Assigned } from "../api";
-import { useWorkspace } from "../provider";
+import { useWorkspace, WorkspaceLink } from "../provider";
 import { useReadingPrefs } from "../reading-prefs";
 import { useStudyLens } from "../study-lens";
 import { LensSwitch } from "../lens-switch";
@@ -37,6 +37,9 @@ export function ExplorationContent({ state, group, retry, page, refresh, audio }
       {lens.available && <div className="reading-lens-row" data-learner=""><LensSwitch onChange={() => leinLink.clear()} /></div>}</header>
     {state.error ? <div role="status"><p>{state.error === 409 ? "The reading changed. Refresh it to continue." : [401, 403, 404].includes(state.error) ? "This reading is no longer available in the selected role." : "The Torah portion couldn’t be loaded. Try again in a moment."}</p>
       <button className="button-secondary" onClick={state.error === 409 ? refresh : retry}>{state.error === 409 ? "Refresh reading" : "Try again"}</button></div>
+      : unresolved && unresolved.reason === "unknown-slot" && unresolved.mode === "admin" ? <div role="status" data-testid="admin-slot-line"><p>Choose a service for this student, then the reading can be shown</p>
+        {/* 1.9 N14 (AD-02, tier A): the admin is the one who sets the service, so the line says so and opens the student's details. */}
+        <WorkspaceLink className="button-secondary" href={`/workspace/admin/students?tab=students&edit=${encodeURIComponent(unresolved.studentId)}`}>Edit details</WorkspaceLink></div>
       : unresolved ? <div role="status"><p>{explorationReasons[unresolved.reason]}</p><button className="button-secondary" onClick={retry}>Try again</button></div>
       : !current || !prepared ? <p role="status">Loading the Torah portion…</p> : <>
         {study ? <>

@@ -8,6 +8,10 @@ import { ceremonyCountdown } from "./reading";
 import { icons } from "./study/lift";
 import { HonorsSheet } from "./honors/sheet";
 import { MavenLinkPanel } from "./maven-link";
+import { useSearchParams } from "next/navigation";
+import { staffApi } from "./staff/api";
+import { byCeremony, isSunday, needsYouRows, statusChips, type NeedsYouStudent, type StudentStatus } from "./staff/model";
+import { NeedsYou } from "./staff/needs-you";
 
 const empty: StudentInput = { firstName: "", lastName: "", ceremonyDate: "", rehearsal1: null, rehearsal2: null, studentKind: "child", serviceSlot: "unknown", parentEmail: "", ownEmail: null };
 function draft(row: RosterStudent): StudentInput { return { firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate, rehearsal1: row.rehearsal1 ?? null, rehearsal2: row.rehearsal2 ?? null, studentKind: row.studentKind, serviceSlot: row.serviceSlot, parentEmail: row.parentEmail, ownEmail: row.ownEmail }; }
@@ -27,6 +31,11 @@ function Roster() {
   const [current, setCurrent] = useState<RosterStudent | null>(null), [form, setForm] = useState<StudentInput>(empty), [editing, setEditing] = useState(false);
   const [pending, setPending] = useState(false), [message, setMessage] = useState(""), [conflict, setConflict] = useState(false), [confirmDisable, setConfirmDisable] = useState(false), [page, setPage] = useState(0);
   const [query, setQuery] = useState(""), [confirmDone, setConfirmDone] = useState(false);
+  // 1.9 N14: each active student's setup facts (Needs you and the row chips), and the student just added (its three next steps).
+  const [neededInvites, setNeededInvites] = useState<ReadonlySet<string>>(new Set());
+  const [statuses, setStatuses] = useState<Map<string, StudentStatus> | null>(null), [added, setAdded] = useState<{ id: string; firstName: string } | null>(null);
+  // This week (the admin's home) shows Needs you; Students (?tab=students) is the plain list. ?edit= opens one student's details.
+  const params = useSearchParams(), thisWeek = params.get("tab") !== "students", editTarget = params.get("edit"), editOpened = useRef<string | null>(null);
   // Closing a changed form asks Keep editing / Discard changes, like lesson notes and honors.
   const [discarding, setDiscarding] = useState(false), departure = useRef<((leave: boolean) => void) | null>(null), keepEditing = useRef<HTMLButtonElement>(null);
   const [honorsStudent, setHonorsStudent] = useState<RosterStudent | null>(null), honorsOrigin = useRef<HTMLButtonElement | null>(null);
@@ -36,11 +45,14 @@ function Roster() {
   const load = useCallback(async (preserve = false) => {
     const generation = ++turn.current; abort.current?.abort(); const request = new AbortController(); abort.current = request;
     setUnavailable(false);
-    if (!preserve) { setLoading(true); setRows([]); setCurrent(null); setEditing(false); setForm(empty); setConflict(false); setConfirmDisable(false); setConfirmDone(false); setMessage(""); }
+    if (!preserve) { setLoading(true); setRows([]); setCurrent(null); setEditing(false); setForm(empty); setConflict(false); setConfirmDisable(false); setConfirmDone(false); setMessage(""); setAdded(null); }
     try {
-      const values = await workspaceApi.roster(request.signal);
+      // The setup facts are a second, separate read: if it fails the roster still shows, without Needs you or chips.
+      // N22: the students the invitations service says need a parent invitation; without it, Needs you still asks for families with none.
+      const [values, facts, needed] = await Promise.all([workspaceApi.roster(request.signal), staffApi.status(request.signal).catch(() => null), staffApi.needed(request.signal).catch(() => new Set<string>())]);
       if (generation === turn.current && !request.signal.aborted) {
         setRows(values); if (!preserve) setPage(0);
+        setStatuses(facts ? new Map(facts.map(row => [row.id, row])) : null); setNeededInvites(needed);
         const selected = currentRef.current;
         if (preserve && selected) {
           const next = values.find(row => row.id === selected.id);
@@ -127,14 +139,16 @@ function Roster() {
     if (gate.current || conflict) return;
     if (!disable && form.ownEmail?.trim() && form.parentEmail?.trim() && form.ownEmail.trim().toLowerCase() === form.parentEmail.trim().toLowerCase()) { setMessage("The student’s own email must be different from their parent’s email."); return; }
     if (!disable && !rehearsalsFit(form)) { setMessage("Rehearsal dates need to be in order and on or before the ceremony date."); return; }
-    gate.current = true; setPending(true); setMessage(""); const generation = lifetime.current;
+    gate.current = true; setPending(true); setMessage(""); setAdded(null); const generation = lifetime.current;
     try {
       const result = disable && current ? await workspaceApi.disable(current) : await workspaceApi.save(form, current ?? undefined);
       if (generation !== lifetime.current) return;
       const review = "readingNeedsReview" in result && result.readingNeedsReview;
-      const name = fullName(form), saved = disable && current ? `${fullName(current)} is disabled. Their record stays in the list.` : review ? `Saved ${name}. The date or service changed, so both readings need review.` : current ? `Saved ${name}.` : `Added ${name}. No invitation has been sent. Use People to invite family and choose a tutor.`;
+      const name = fullName(form), created = !disable && !current, saved = disable && current ? `${fullName(current)} is disabled. Their record stays in the list.` : review ? `Saved ${name}. The date or service changed, so both readings need review.` : current ? `Saved ${name}.` : "";
       let refreshed = true; try { await load(); } catch { refreshed = false; }
-      if (generation === lifetime.current) setMessage(saved + (refreshed ? "" : " The list couldn’t be refreshed. Reload it to check the current record."));
+      // A new student: "Added Noa. Next: choose a tutor, invite a parent, assign the reading", each step a link (1.9 N14, AD-02).
+      if (generation === lifetime.current && created) setAdded({ id: result.id, firstName: form.firstName.trim() });
+      if (generation === lifetime.current && (saved || !refreshed)) setMessage(saved + (refreshed ? "" : `${saved ? " " : ""}The list couldn’t be refreshed. Reload it to check the current record.`));
     } catch (error) {
       if (generation !== lifetime.current) return;
       const status = statusOf(error);
@@ -146,7 +160,15 @@ function Roster() {
   }
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void mutate(false); }
   // N21: a student whose ceremony is done leaves the active roster for the Ceremony done list (a disabled one stays as Disabled).
-  const listed = useMemo(() => rows.filter(row => !row.ceremonyDoneAt || row.disabledAt), [rows]);
+  // 1.9 N14: the roster reads soonest ceremony first.
+  const listed = useMemo(() => byCeremony(rows.filter(row => !row.ceremonyDoneAt || row.disabledAt)), [rows]);
+  const needsYou = useMemo(() => statuses ? needsYouRows(rows as NeedsYouStudent[], statuses, new Date(), neededInvites) : null, [rows, statuses, neededInvites]);
+  // ?edit=<id> (the reading page's "Edit details") opens that student's details once the roster has loaded.
+  useEffect(() => {
+    if (loading || unavailable || conflict || !editTarget || editOpened.current === editTarget) return;
+    const row = rows.find(value => value.id === editTarget && !value.disabledAt && !value.ceremonyDoneAt); editOpened.current = editTarget;
+    if (row) { origin.current = addButton.current; lastFocus.current = null; setCurrent(row); setForm(draft(row)); setEditing(true); setMessage(""); setConfirmDisable(false); setConfirmDone(false); }
+  }, [loading, unavailable, conflict, editTarget, rows]);
   const doneRows = useMemo(() => rows.filter(row => row.ceremonyDoneAt && !row.disabledAt), [rows]);
   const matches = useMemo(() => { const words = searchable(query).split(/\s+/).filter(Boolean); return words.length ? listed.filter(row => { const name = searchable(fullName(row)); return words.every(word => name.includes(word)); }) : listed; }, [listed, query]);
   const pageCount = Math.max(1, Math.ceil(matches.length / PAGE)), pageRows = matches.slice(page * PAGE, page * PAGE + PAGE);
@@ -155,7 +177,9 @@ function Roster() {
   const input = (name: "firstName" | "lastName" | "ceremonyDate" | "parentEmail" | "ownEmail") => <div key={name} className="roster-field">
     <label htmlFor={`roster-${name}`}>{label(name)}</label>
     <input id={`roster-${name}`} name={name} type={name === "ceremonyDate" ? "date" : name.endsWith("Email") ? "email" : "text"} maxLength={name.endsWith("Email") ? 254 : 100} required={name === "parentEmail" ? form.studentKind === "child" : name === "ownEmail" ? form.studentKind === "adult" : true} disabled={pending || conflict}
-      value={form[name] ?? ""} onChange={event => setForm(previous => ({ ...previous, [name]: event.target.value }))} autoComplete="off" />
+      value={form[name] ?? ""} onChange={event => setForm(previous => ({ ...previous, [name]: event.target.value }))} autoComplete="off" aria-describedby={name === "ceremonyDate" && isSunday(form.ceremonyDate) ? "roster-sunday" : undefined} />
+    {/* AD-12: a ceremony on a Sunday is usually a typo. A hint only; the date still saves. */}
+    {name === "ceremonyDate" && isSunday(form.ceremonyDate) && <p id="roster-sunday" className="field-help" data-testid="sunday-hint">This is a Sunday. Is that right?</p>}
   </div>;
   // Optional; clearing the field clears the saved date. Usually about three weeks and one week before the ceremony.
   const rehearsal = (name: "rehearsal1" | "rehearsal2") => <div key={name} className="roster-field">
@@ -164,7 +188,10 @@ function Roster() {
       min={name === "rehearsal2" ? form.rehearsal1 || undefined : undefined} max={(name === "rehearsal1" ? form.rehearsal2 || form.ceremonyDate : form.ceremonyDate) || undefined}
       onChange={event => { const value = event.target.value || null; setForm(previous => ({ ...previous, [name]: value })); }} />
   </div>;
-  const notice = message && <p className={conflict ? "request-error roster-message" : "workspace-notice roster-message"} role={conflict ? "alert" : "status"}>{message}</p>;
+  const notice = message ? <p className={conflict ? "request-error roster-message" : "workspace-notice roster-message"} role={conflict ? "alert" : "status"}>{message}</p>
+    : added && <p className="workspace-notice roster-message" role="status" data-testid="roster-added">Added <bdi dir="auto">{added.firstName}</bdi>. Next: <WorkspaceLink href={`/workspace/admin/students/${encodeURIComponent(added.id)}/access`}>choose a tutor</WorkspaceLink>, <WorkspaceLink href={`/workspace/admin/invitations?student=${encodeURIComponent(added.id)}&role=parent`}>invite a parent</WorkspaceLink>, <WorkspaceLink href={`/workspace/admin/students/${encodeURIComponent(added.id)}/reading`}>assign the reading</WorkspaceLink></p>;
+  const openHonors = (student: NeedsYouStudent, event: { currentTarget: HTMLElement }) => { const row = rows.find(value => value.id === student.id); if (!row || pending || editing || honorsStudent) return; honorsOrigin.current = event.currentTarget as HTMLButtonElement; setHonorsStudent(row); };
+  const openDetails = (student: NeedsYouStudent, event: { currentTarget: HTMLElement }) => { const row = rows.find(value => value.id === student.id); if (row) choose(row, event); };
   const reloadIcon = <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
   return <section className="role-workspace admin-workspace">
     <AccountRequestsLine mode="admin" />
@@ -172,6 +199,7 @@ function Roster() {
     {!sheetOpen && notice}{!sheetOpen && conflict && <button type="button" className="button-secondary admin-pill roster-reload-inline" onClick={() => void load().catch(() => undefined)}>Reload roster</button>}
     {loading ? <p role="status">Loading students…</p> : unavailable ? <div className="admin-state" role="alert"><h2>Students unavailable</h2><p>The full list couldn’t be loaded, so none of it is shown. Access may have changed, or the list may be too large to load at once.</p><button className="button-secondary admin-pill" onClick={() => void load().catch(() => undefined)}>Reload roster</button></div>
       : <>
+        {thisWeek && needsYou && <NeedsYou rows={needsYou} disabled={pending || conflict || editing || !!honorsStudent} onEdit={openDetails} onHonors={openHonors} />}
         {listed.length > 0 && <div className="roster-tools">
           <label className="roster-search"><span className="sr-only">Find a student</span><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M16 16l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg><input type="search" placeholder="Find a student" value={query} onChange={event => { setQuery(event.target.value); setPage(0); }} autoComplete="off" /></label>
           <p className="roster-count" aria-live="polite">{query.trim() ? `${matches.length} of ${listed.length} ${listed.length === 1 ? "student" : "students"}` : `${activeCount} ${activeCount === 1 ? "student" : "students"}${disabledCount ? ` · ${disabledCount} disabled` : ""}`}{pageCount > 1 ? ` · page ${page + 1} of ${pageCount}` : ""}</p>
@@ -179,7 +207,8 @@ function Roster() {
         </div>}
         {pageRows.length > 0 && <ul className="roster-list" aria-label="Students">{pageRows.map(row => {
           const when = ceremonyCountdown(row.ceremonyDate), slot = slotNames[row.serviceSlot], name = fullName(row);
-          const body = <><span className="roster-row-name"><bdi dir="auto">{name}</bdi>{row.disabledAt && <span className="roster-chip">Disabled</span>}</span>
+          const chips = statusChips(row, statuses?.get(row.id));
+          const body = <><span className="roster-row-name"><bdi dir="auto">{name}</bdi>{row.disabledAt && <span className="roster-chip">Disabled</span>}{chips.map(chip => <span key={chip} className="roster-chip" data-status-chip="">{chip}</span>)}</span>
             <span className="roster-row-meta"><time dateTime={row.ceremonyDate}>{when.label}</time>{!row.disabledAt && when.phrase && <span className="roster-row-days">{when.days > 1 ? `${when.days} days` : when.phrase}</span>}<span>{row.studentKind === "adult" ? "Adult" : "Child"}</span>{slot && <span>{slot}</span>}</span></>;
           return <li key={row.id} className={`roster-row${row.disabledAt ? " roster-row-disabled" : ""}`}>
             {row.disabledAt ? <div className="roster-row-main">{body}</div> : <WorkspaceLink className="roster-row-main" href={`/workspace/admin/students/${row.id}/reading`}>{body}</WorkspaceLink>}
@@ -207,7 +236,7 @@ function Roster() {
           : <form onSubmit={submit} className="roster-form">
             <div className="roster-form-grid">{input("firstName")}{input("lastName")}</div>
             <fieldset className="roster-choice" disabled={pending || conflict}><legend>Student kind</legend>{(["child", "adult"] as const).map(kind => <label key={kind}><input type="radio" name="studentKind" value={kind} checked={form.studentKind === kind} onChange={() => setForm(previous => ({ ...previous, studentKind: kind }))} />{kind === "child" ? "Child" : "Adult"}</label>)}</fieldset>
-            <div className="roster-form-grid">{input("ceremonyDate")}<div className="roster-field"><label htmlFor="roster-serviceSlot">Service slot</label><select id="roster-serviceSlot" value={form.serviceSlot} disabled={pending || conflict} onChange={event => setForm(previous => ({ ...previous, serviceSlot: event.target.value as StudentInput["serviceSlot"] }))}><option value="unknown">Not set yet</option><option value="morning">Morning (10:00)</option><option value="havdalah">Havdalah / afternoon (4:00)</option></select></div></div>
+            <div className="roster-form-grid">{input("ceremonyDate")}<div className="roster-field"><label htmlFor="roster-serviceSlot">Service (needed to suggest the reading)</label><select id="roster-serviceSlot" value={form.serviceSlot} disabled={pending || conflict} onChange={event => setForm(previous => ({ ...previous, serviceSlot: event.target.value as StudentInput["serviceSlot"] }))}><option value="unknown">Not set yet</option><option value="morning">Morning (10:00)</option><option value="havdalah">Havdalah / afternoon (4:00)</option></select></div></div>
             <div className="roster-form-grid">{rehearsal("rehearsal1")}{rehearsal("rehearsal2")}</div>
             <div className="roster-form-grid">{form.studentKind === "child" ? <>{input("parentEmail")}{input("ownEmail")}</> : <>{input("ownEmail")}{input("parentEmail")}</>}</div>
             <p className="field-help">{form.studentKind === "child" ? "Children need a parent email." : "Adults need their own email."} Saving doesn’t send an invitation or change who can sign in; use People for that.{current ? " Changing the date or service keeps the verses and marks both readings for review." : ""}</p>

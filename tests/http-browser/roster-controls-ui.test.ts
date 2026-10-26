@@ -76,7 +76,7 @@ afterAll(async () => { await Promise.all(contexts.map(context => context.close()
 it("creates adults without parent contact, requires the contact for each kind and preserves explicit access across kind edits", async () => {
   const tab = await page(); await navigate(tab, "/workspace/admin/students");
   await ui(tab.getByRole("button", { name: "Add student", exact: true })).toBeEnabled(); await click(tab, "Add student");
-  await ui(tab.getByLabel("Service slot", { exact: true })).toHaveValue("unknown");
+  await ui(tab.getByLabel("Service (needed to suggest the reading)", { exact: true })).toHaveValue("unknown");
   await safe(() => tab.getByRole("radio", { name: "Adult", exact: true }).check());
   await safe(() => tab.getByLabel("First name", { exact: true }).fill("Synthetic"));
   await safe(() => tab.getByLabel("Last name", { exact: true }).fill("AdultContact"));
@@ -88,12 +88,12 @@ it("creates adults without parent contact, requires the contact for each kind an
   const contact = { firstName: "Synthetic", lastName: "AdultContact", ceremonyDate: "2027-01-02", studentKind: "adult", parentEmail: null, ownEmail: "synthetic-adult@example.test" };
   expect((await api(tab, "/api/admin/students", { student: { ...contact, ownEmail: null } })).status).toBe(403);
   await safe(() => tab.getByLabel("Student email", { exact: true }).fill(contact.ownEmail)); await capture(tab, "roster-adult-contact-desktop");
-  await click(tab, "Save student"); await ui(tab.getByText("Added Synthetic AdultContact. No invitation has been sent. Use People to invite family and choose a tutor.", { exact: true })).toBeVisible();
+  await click(tab, "Save student"); await ui(tab.getByTestId("roster-added").getByRole("link", { name: "choose a tutor", exact: true })).toBeVisible();
   let row = (await api(tab, "/api/admin/students")).data.students.find((row: { lastName: string }) => row.lastName === contact.lastName);
   expect(row.serviceSlot === "unknown" && row.studentKind === "adult" && row.parentEmail === null && row.ownEmail === contact.ownEmail).toBe(true);
   const originalRevision = row.revision;
   await click(tab, "Edit details for Synthetic AdultContact"); await safe(() => tab.getByRole("radio", { name: "Child", exact: true }).check());
-  await safe(()=>tab.getByLabel("Service slot",{exact:true}).selectOption("havdalah"));
+  await safe(()=>tab.getByLabel("Service (needed to suggest the reading)",{exact:true}).selectOption("havdalah"));
   await ui(tab.getByLabel("Parent email", { exact: true })).toHaveJSProperty("required", true);
   await ui(tab.getByLabel("Student email (optional)", { exact: true })).toHaveValue(contact.ownEmail);
   await click(tab, "Save student");

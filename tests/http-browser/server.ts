@@ -28,6 +28,7 @@ import { accountsRouteMethods } from "../../src/server/http/accounts";
 import { courseProgressRouteMethods } from "../../src/server/http/course-progress";
 import { serviceCourseRouteMethods } from "../../src/server/http/service-course-progress";
 import { verseReviewRouteMethods } from "../../src/server/http/verse-review";
+import { staffRouteMethods } from "../../src/server/http/staff";
 import { closeNextDevelopment } from "./next-lifecycle";
 
 // Parallel local worktrees may choose their own loopback port; CI keeps the default.
@@ -117,7 +118,7 @@ export async function startBrowserServer(withRuntime: HttpRuntimeScope, withPubl
       if (referenceReviewRouteMethods(pathname)
         // Signed-out reading: the dispatcher's exact allowlist serves its routes and refuses every other /api/public path.
         || publicReadingRouteMethods(pathname) || isPublicReadingPath(pathname)) { await send(res, await dispatch(request)); return; }
-      if (!serviceEcosystemRouteMethods(pathname) && !honoreeManagementRouteMethods(pathname) && !honorsRouteMethods(pathname) && !sourceContentRouteMethods(pathname) && !sourceAssignmentsRouteMethods(pathname) && !authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname) && !serviceLearningRouteMethods(pathname) && !progressRouteMethods(pathname) && !lessonLogRouteMethods(pathname) && !practiceCalendarRouteMethods(pathname) && !studyGuidesRouteMethods(pathname) && !congregationSettingsRouteMethods(pathname) && !claudeConnectionsRouteMethods(pathname) && !notificationsRouteMethods(pathname) && !savedRouteMethods(pathname) && !offlineRouteMethods(pathname) && !accountsRouteMethods(pathname) && !courseProgressRouteMethods(pathname) && !serviceCourseRouteMethods(pathname) && !verseReviewRouteMethods(pathname)) { await nextHandler(req, res); return; }
+      if (!serviceEcosystemRouteMethods(pathname) && !honoreeManagementRouteMethods(pathname) && !honorsRouteMethods(pathname) && !sourceContentRouteMethods(pathname) && !sourceAssignmentsRouteMethods(pathname) && !authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname) && !serviceLearningRouteMethods(pathname) && !progressRouteMethods(pathname) && !lessonLogRouteMethods(pathname) && !practiceCalendarRouteMethods(pathname) && !studyGuidesRouteMethods(pathname) && !congregationSettingsRouteMethods(pathname) && !claudeConnectionsRouteMethods(pathname) && !notificationsRouteMethods(pathname) && !savedRouteMethods(pathname) && !offlineRouteMethods(pathname) && !accountsRouteMethods(pathname) && !courseProgressRouteMethods(pathname) && !serviceCourseRouteMethods(pathname) && !verseReviewRouteMethods(pathname) && !staffRouteMethods(pathname)) { await nextHandler(req, res); return; }
       await send(res, await dispatch(request));
     } catch { if (!res.headersSent) await send(res, new Response(null, { status: 503 })); else res.destroy(); }
   });
