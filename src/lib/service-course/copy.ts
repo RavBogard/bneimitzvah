@@ -14,7 +14,7 @@ export const COPY = Object.freeze({
     minutes: "about {n} minutes", // home.next.minutes
     allHeading: "The whole service", // home.all.heading
     done: "Done. Review when you like.", // home.done
-    saved: "Progress is saved on this device. Sign in to keep it.", // home.saved
+    saved: "Progress is saved on this device.", // home.saved
     about: "About", // home.about
     lein: "Learn to lein", // home.lein
     dotDone: ", done", // home.state.dot.done
@@ -154,7 +154,7 @@ export const COPY = Object.freeze({
     title: "About this course", // ab.title
     p1: "Each lesson teaches one prayer: what it is, where it sits in the service, how to read it, and a few words to know. The teaching on each prayer is by Rabbi Daniel Bogard.", // ab.p1
     p2: "The Hebrew here comes from Shirei Tfilah, a public siddur. Your own siddur may differ in places, so each lesson links to its page there.", // ab.p2
-    p3: "Nothing here records you. Progress stays on this device unless you sign in.", // ab.p3
+    p3: "Signed out, progress stays on this device.", // ab.p3
   }),
 });
 
