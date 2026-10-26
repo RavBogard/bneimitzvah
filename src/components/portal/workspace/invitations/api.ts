@@ -3,11 +3,15 @@ import { identifier, type RosterStudent } from "../api";
 
 export type InviteRole = "parent" | "student" | "tutor";
 export type Invitation = { id: string; role: InviteRole; recipientEmail: string; student: { id: string; firstName: string; lastName: string } | null;
-  status: "pending" | "accepted" | "revoked" | "expired"; createdAt: string; expiresAt: string; acceptedAt: string | null; revokedAt: string | null;
-  delivery: { status: "pending" | "sent" | "failed"; attemptedAt: string | null } };
+  status: "pending" | "accepted" | "revoked" | "expired"; createdAt: string; expiresAt: string; expiresTomorrow: boolean; acceptedAt: string | null; revokedAt: string | null;
+  delivery: { status: "pending" | "sent" | "failed" | "copied"; attemptedAt: string | null } };
 export type InviteDraft = { role: InviteRole; email: string; studentId: string };
 export type IssueSelection = { role: InviteRole; email: string; studentId?: string };
 export type Receipt = { inviteId: string; delivery: "sent" | "failed" | "unknown" };
+/** A copied link: shown once to the admin who asked, never stored here beyond the moment it is copied. */
+export type CopiedLink = { inviteId: string; url: string; expiresAt: string };
+/** How long a link lasts, by role (decision 12): a parent's 7 days; every other role keeps 72 hours. */
+export const inviteLifetimeText = (role: InviteRole) => role === "parent" ? "7 days" : "72 hours";
 export const inviteRoleNames = { parent: "Parent", student: "Student", tutor: "Tutor" } as const;
 export const INVITATION_PAGE_SIZE = 25;
 const bad = (): never => { throw new PortalRequestError(503); };
@@ -27,19 +31,20 @@ export function parseInvitationPage(value: unknown, afterId?: string): Invitatio
   if (!Array.isArray(values) || values.length > INVITATION_PAGE_SIZE) return bad();
   let previous = afterId?.toLowerCase() ?? "";
   return values.map(value => {
-    const row = object(value, ["id", "role", "recipientEmail", "student", "status", "createdAt", "expiresAt", "acceptedAt", "revokedAt", "delivery"]);
+    const row = object(value, ["id", "role", "recipientEmail", "student", "status", "createdAt", "expiresAt", "expiresTomorrow", "acceptedAt", "revokedAt", "delivery"]);
     const id = identifier(row.id); if (id.toLowerCase() <= previous) return bad(); previous = id.toLowerCase();
     if (!["parent", "student", "tutor"].includes(String(row.role)) || !["pending", "accepted", "revoked", "expired"].includes(String(row.status)) || typeof row.recipientEmail !== "string") return bad();
     let email: string; try { email = recipient(row.recipientEmail); } catch { return bad(); } if (email !== row.recipientEmail) return bad();
     const createdAt = instant(row.createdAt), expiresAt = instant(row.expiresAt), acceptedAt = row.acceptedAt === null ? null : instant(row.acceptedAt), revokedAt = row.revokedAt === null ? null : instant(row.revokedAt);
     if (Date.parse(expiresAt) <= Date.parse(createdAt) || (acceptedAt !== null && (Date.parse(acceptedAt) < Date.parse(createdAt) || Date.parse(acceptedAt) >= Date.parse(expiresAt))) || (revokedAt !== null && Date.parse(revokedAt) < Date.parse(createdAt))
       || (row.status === "accepted") !== (acceptedAt !== null) || (row.status === "revoked") !== (revokedAt !== null) || acceptedAt !== null && revokedAt !== null) return bad();
+    if (typeof row.expiresTomorrow !== "boolean" || (row.expiresTomorrow && row.status !== "pending")) return bad();
     let student: Invitation["student"] = null;
     if (row.student !== null) { const s = object(row.student, ["id", "firstName", "lastName"]); student = { id: identifier(s.id), firstName: name(s.firstName), lastName: name(s.lastName) }; }
     if ((row.role === "tutor") !== (student === null)) return bad();
     const d = object(row.delivery, ["status", "attemptedAt"]), attemptedAt = d.attemptedAt === null ? null : instant(d.attemptedAt);
-    if (!["pending", "sent", "failed"].includes(String(d.status)) || (d.status === "pending") !== (attemptedAt === null) || attemptedAt !== null && Date.parse(attemptedAt) < Date.parse(createdAt)) return bad();
-    return { id, role: row.role as InviteRole, recipientEmail: email, student, status: row.status as Invitation["status"], createdAt, expiresAt, acceptedAt, revokedAt, delivery: { status: d.status as Invitation["delivery"]["status"], attemptedAt } };
+    if (!["pending", "sent", "failed", "copied"].includes(String(d.status)) || (d.status === "pending") !== (attemptedAt === null) || attemptedAt !== null && Date.parse(attemptedAt) < Date.parse(createdAt)) return bad();
+    return { id, role: row.role as InviteRole, recipientEmail: email, student, status: row.status as Invitation["status"], createdAt, expiresAt, expiresTomorrow: row.expiresTomorrow, acceptedAt, revokedAt, delivery: { status: d.status as Invitation["delivery"]["status"], attemptedAt } };
   });
 }
 export function issueReview(draft: InviteDraft, students: RosterStudent[]) {
@@ -75,5 +80,11 @@ export const invitationApi = {
   async list(afterId?: string, signal?: AbortSignal) { return parseInvitationPage(await request(`/api/admin/invitations?limit=${INVITATION_PAGE_SIZE}${afterId ? `&afterId=${identifier(afterId)}` : ""}`, undefined, signal), afterId); },
   async issue(selection: IssueSelection) { return receipt(await request("/api/admin/invitations", selection)); },
   async reissue(id: string) { const value = receipt(await request(`/api/admin/invitations/${identifier(id)}/reissue`, {})); if (value.inviteId === id) return bad(); return value; },
+  /** Rotates the invitation: the previous link stops working, and the new one comes back once, for this admin to copy. */
+  async copyLink(id: string): Promise<CopiedLink> {
+    const row = object(await request(`/api/admin/invitations/${identifier(id)}/copy`, {}), ["inviteId", "url", "expiresAt"]), inviteId = identifier(row.inviteId);
+    if (inviteId === id || typeof row.url !== "string" || !/^\/invitations\/open#token=[A-Za-z0-9_-]{43}$/.test(row.url.slice(window.location.origin.length)) || !row.url.startsWith(`${window.location.origin}/`)) return bad();
+    return { inviteId, url: row.url, expiresAt: instant(row.expiresAt) };
+  },
   async revoke(id: string) { const row = object(await request(`/api/admin/invitations/${identifier(id)}/revoke`, {}), ["inviteId"]); if (identifier(row.inviteId) !== id) return bad(); return { inviteId: id }; },
 };

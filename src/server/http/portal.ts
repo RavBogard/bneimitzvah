@@ -19,7 +19,7 @@ import { requireCookieMutation } from "./mutations";
 import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
 
 type Kind = "short-explore-page" | "short-reference-page" | "explore-prepare" | "explore-page" | "preview-prepare" | "preview-page" | "session" | "students" | "student" | "reading" | "study-text" | "study-word-aids" | "study-word-details" | "study-sources" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
-  | "admin-students" | "edit" | "disable" | "ceremony-done" | "ceremony-reverse" | "csv-preview" | "csv-confirm" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "pending" | "accept"
+  | "admin-students" | "edit" | "disable" | "ceremony-done" | "ceremony-reverse" | "csv-preview" | "csv-confirm" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "invite-copy" | "invite-needed" | "pending" | "accept"
   | "eligible-tutors" | "relationships" | "tutor-assign" | "tutor-unassign" | "guardian-revoke" | "identity-revoke" | "guardian-practice" | "grant-revoke" | "cantor";
 type Route = { kind: Kind; methods: readonly string[]; id?: string; linkId?: string };
 const exact: Record<string, Route> = {
@@ -31,6 +31,7 @@ const exact: Record<string, Route> = {
   "/api/admin/tutors": { kind: "eligible-tutors", methods: ["GET"] },
   "/api/admin/students/import/preview": { kind: "csv-preview", methods: ["POST"] }, "/api/admin/students/import/confirm": { kind: "csv-confirm", methods: ["POST"] },
   "/api/admin/invitations": { kind: "invite-issue", methods: ["GET", "POST"] },
+  "/api/admin/invitations/needed": { kind: "invite-needed", methods: ["GET"] },
   "/api/invitations/pending": { kind: "pending", methods: ["GET"] }, "/api/invitations/accept": { kind: "accept", methods: ["POST"] },
 };
 function route(pathname: string): Route | null {
@@ -69,8 +70,8 @@ function route(pathname: string): Route | null {
     : grant[1] === "tutors" && grant[3] === "cantor" ? { kind: "cantor", methods: ["POST"], id: grant[2] } : null;
   const admin = /^\/api\/admin\/students\/([^/]+)\/(edit|disable|ceremony-done|ceremony-reverse)$/.exec(pathname);
   if (admin) return { kind: admin[2] as "edit" | "disable" | "ceremony-done" | "ceremony-reverse", methods: ["POST"], id: admin[1] };
-  const invite = /^\/api\/admin\/invitations\/([^/]+)\/(reissue|revoke)$/.exec(pathname);
-  if (invite) return { kind: invite[2] === "reissue" ? "invite-reissue" : "invite-revoke", methods: ["POST"], id: invite[1] };
+  const invite = /^\/api\/admin\/invitations\/([^/]+)\/(reissue|revoke|copy)$/.exec(pathname);
+  if (invite) return { kind: invite[2] === "reissue" ? "invite-reissue" : invite[2] === "copy" ? "invite-copy" : "invite-revoke", methods: ["POST"], id: invite[1] };
   return null;
 }
 export const portalRouteMethods = (pathname: string): readonly string[] | null => route(pathname)?.methods ?? null;
@@ -504,13 +505,25 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
           const rows = await runtime.invitations.list(request, { mode: "admin", afterId: query.has("afterId") ? identifier(query.get("afterId")) : undefined, limit: limit === null ? undefined : Number(limit) });
           return privateJson({ invitations: rows.map(row => ({ id: row.id, role: row.role, recipientEmail: row.recipientEmail,
             student: row.student ? { id: row.student.id, firstName: row.student.firstName, lastName: row.student.lastName } : null, status: row.status,
-            createdAt: row.createdAt, expiresAt: row.expiresAt, acceptedAt: row.acceptedAt, revokedAt: row.revokedAt,
+            createdAt: row.createdAt, expiresAt: row.expiresAt, expiresTomorrow: row.expiresTomorrow, acceptedAt: row.acceptedAt, revokedAt: row.revokedAt,
             delivery: { status: row.delivery.status, attemptedAt: row.delivery.attemptedAt } })) });
         }
         uniqueQuery(request.url, []); const body = await objectBody(request, ["role", "email"], ["studentId"]);
         if (body.role !== "parent" && body.role !== "student" && body.role !== "tutor") throw new HttpBoundaryError();
         const value = await runtime.invitations.issue(request, { mode: "admin", role: body.role, email: text(body.email, 254), studentId: body.studentId === undefined ? undefined : identifier(body.studentId) });
         return privateJson({ inviteId: value.inviteId, delivery: value.delivery }, 201);
+      }
+      case "invite-needed": {
+        uniqueQuery(request.url, []);
+        const rows = await runtime.invitations.parentInvitationsNeeded(request, { mode: "admin" });
+        return privateJson({ needed: rows.map(row => ({ memberId: row.memberId, name: row.name, email: row.email,
+          student: { id: row.student.id, firstName: row.student.firstName, lastName: row.student.lastName } })) });
+      }
+      case "invite-copy": {
+        // The new link goes only to this admin, in this no-store response; it is never logged, stored or emailed.
+        uniqueQuery(request.url, []); await objectBody(request, []);
+        const value = await runtime.invitations.copyLink(request, { mode: "admin", inviteId: id! });
+        return privateJson({ inviteId: value.inviteId, url: value.url, expiresAt: value.expiresAt });
       }
       case "invite-reissue": case "invite-revoke": {
         uniqueQuery(request.url, []); await objectBody(request, []);

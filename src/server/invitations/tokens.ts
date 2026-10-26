@@ -3,6 +3,11 @@ import { createHash, randomBytes } from "node:crypto";
 import { AccessDenied } from "../access/errors";
 
 export const INVITATION_LIFETIME_MS = 72 * 60 * 60_000;
+/** Decision 12 (G13): a parent invitation lasts 7 days; every other role keeps 72 hours. The server sets and enforces it. */
+export const PARENT_INVITATION_LIFETIME_MS = 7 * 24 * 60 * 60_000;
+export function invitationLifetimeMs(role: "parent" | "student" | "tutor"): number {
+  return role === "parent" ? PARENT_INVITATION_LIFETIME_MS : INVITATION_LIFETIME_MS;
+}
 export function createInvitationSecret() {
   const token = randomBytes(32).toString("base64url");
   return { token, tokenHash: hashInvitationToken(token) };

@@ -182,8 +182,15 @@ describe("private portal read DTOs and recipient invitation review", () => {
     expect(await denied(() => f.invitations.preview(f.http("recipient"), { token: expiring.token }), 403)).toBe(true);
     await f.owner(async () => { await f.db.update(s.user).set({ emailVerified: true }).where(eq(s.user.id, f.identities.recipient.id)); });
     const pending = await f.invitations.preview(f.http("recipient"), { token: expiring.token });
+    // A parent link lasts 7 days (N22), as long as a session: sign in again at each instant so the refusal is the invitation's
+    // own expiry (404), never the old session's (401). One millisecond before expiry it still previews; at expiry it is dead.
+    const fresh = async () => (await f.owner(() => f.signIn("portal-recipient@example.test"))).cookie;
+    vi.setSystemTime(new Date(Date.parse(pending.expiresAt) - 1));
+    expect((await f.invitations.preview(f.http("recipient", undefined, { cookie: await fresh() }), { token: expiring.token })).expiresAt).toBe(pending.expiresAt);
     vi.setSystemTime(new Date(pending.expiresAt));
-    expect(await denied(() => f.invitations.preview(f.http("recipient"), { token: expiring.token }))).toBe(true);
+    const cookie = await fresh();
+    expect(await denied(() => f.invitations.preview(f.http("recipient", undefined, { cookie }), { token: expiring.token }))).toBe(true);
+    expect(await denied(() => f.invitations.accept(f.http("recipient", undefined, { method: "POST", cookie }), { token: expiring.token }))).toBe(true);
   });
 
   it("denies old pending guardian invites after unlink but previews and accepts a fresh explicit reinvite", async () => {

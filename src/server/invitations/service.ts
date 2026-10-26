@@ -2,19 +2,23 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAccessService } from "../access/service";
-import type { AccessDatabase, AccessRequest, ActiveMode, Actor, VerifiedIdentity } from "../access/types";
+import type { AccessDatabase, AccessRequest, AccessTransaction, ActiveMode, Actor, VerifiedIdentity } from "../access/types";
 import { AccessDenied, AccessUnavailable } from "../access/errors";
 import { requireCookieMutation } from "../http/mutations";
 import type { CookieMutationRequest } from "../http/mutations";
 import { withTenantTransaction } from "../db/runtime";
 import * as data from "../data/invitations";
+import { isCeremonyDone } from "../data/ceremony-done";
 import type { InvitedRole } from "../data/invitations";
-import { createInvitationSecret, hashInvitationToken, INVITATION_LIFETIME_MS, normalizedInvitationEmail } from "./tokens";
+import { createInvitationSecret, hashInvitationToken, invitationLifetimeMs, normalizedInvitationEmail } from "./tokens";
 
-export type InvitationTransport = (message: Readonly<{ email: string; url: string; tenantId: string }>) => Promise<void>;
-export type InvitationDeliveryStatus = "pending" | "sent" | "failed";
+// The transport is given the role and the expiry so the email can name them; it is never given a student, so no
+// child's name can reach a subject or a body (decision 12).
+export type InvitationTransport = (message: Readonly<{ email: string; url: string; tenantId: string; role: InvitedRole; expiresAt: Date }>) => Promise<void>;
+export type InvitationDeliveryStatus = "pending" | "sent" | "failed" | "copied";
 type Delivery = Readonly<{ inviteId: string; delivery: "sent" | "failed" | "unknown" }>;
 const REVIEW_LIFETIME_MS = 5 * 60_000;
+const DAY_MS = 24 * 60 * 60_000;
 function assertUsableInvitation(invitation: data.IssuedInvitation | undefined, identity: VerifiedIdentity, now: Date): asserts invitation is data.IssuedInvitation & { role: InvitedRole } {
   if (!invitation || invitation.acceptedAt || invitation.revokedAt || invitation.expiresAt <= now || invitation.email !== normalizedInvitationEmail(identity.email) || invitation.role === "admin") throw new AccessDenied(404);
 }
@@ -36,7 +40,7 @@ function invitationListRow(row: Awaited<ReturnType<typeof data.listInvitations>>
   const attempted = row.deliveryAttemptedAt === null ? null : timestamp(row.deliveryAttemptedAt);
   if (expires <= created || (accepted !== null && (accepted < created || accepted >= expires)) || (revoked !== null && revoked < created)
     || (accepted !== null && revoked !== null) || (attempted !== null && attempted < created)
-    || !["pending", "sent", "failed"].includes(row.deliveryStatus) || (row.deliveryStatus === "pending") !== (attempted === null)) throw new AccessUnavailable();
+    || !["pending", "sent", "failed", "copied"].includes(row.deliveryStatus) || (row.deliveryStatus === "pending") !== (attempted === null)) throw new AccessUnavailable();
   let student: Readonly<{ id: string; firstName: string; lastName: string }> | null = null;
   if (row.role === "tutor") {
     if (row.studentId !== null || row.targetId !== null || row.firstName !== null || row.lastName !== null) throw new AccessUnavailable();
@@ -45,7 +49,9 @@ function invitationListRow(row: Awaited<ReturnType<typeof data.listInvitations>>
     student = Object.freeze({ id: row.studentId, firstName: name(row.firstName), lastName: name(row.lastName) });
   }
   const status = accepted !== null ? "accepted" as const : revoked !== null ? "revoked" as const : expires <= now ? "expired" as const : "pending" as const;
-  return Object.freeze({ id: row.id, role: row.role as InvitedRole, recipientEmail: email, student, status,
+  // "Expires tomorrow" (G13): a pending link with a day or less left.
+  const expiresTomorrow = status === "pending" && expires - now <= DAY_MS;
+  return Object.freeze({ id: row.id, role: row.role as InvitedRole, recipientEmail: email, student, status, expiresTomorrow,
     createdAt: row.createdAt.toISOString(), expiresAt: row.expiresAt.toISOString(), acceptedAt: row.acceptedAt?.toISOString() ?? null, revokedAt: row.revokedAt?.toISOString() ?? null,
     delivery: Object.freeze({ status: row.deliveryStatus, attemptedAt: row.deliveryAttemptedAt?.toISOString() ?? null }) });
 }
@@ -94,7 +100,8 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
     try {
       // Issue/reissue committed before this call. Provider diagnostics and the
       // token stay private; crashes leave the durable initial state pending.
-      await input.transport({ email: pending.invitation.email, url: url.toString(), tenantId: pending.actor.tenantId });
+      await input.transport({ email: pending.invitation.email, url: url.toString(), tenantId: pending.actor.tenantId,
+        role: pending.invitation.role as InvitedRole, expiresAt: pending.invitation.expiresAt });
     } catch { outcome = "failed"; }
     try {
       await withTenantTransaction(input.db, { tenantId: pending.actor.tenantId }, (tx) => data.recordDeliveryOutcome(tx, pending.invitation, pending.actor, outcome));
@@ -116,12 +123,14 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
       if (selection.studentId) {
         const student = await data.lockInvitationStudent(tx, actor.tenantId, selection.studentId);
         if (!student || student.disabledAt) throw new AccessDenied(404);
+        // N21: no parent or student invitation for a student whose ceremony is done (the UI hides it; the server refuses it).
+        if (await isCeremonyDone(tx, actor.tenantId, student.id)) throw new AccessDenied(404);
         if (selection.role === "student" && (studentParentContactMatches(student, email) || await data.mailboxHasParentIdentity(tx, actor.tenantId, email))) throw new AccessDenied(403);
       }
       const now = new Date();
       await data.consumeInvitationBudget(tx, actor, email, input.throttleSecret, now.getTime());
       const invitation = await data.insertInvitation(tx, { tenantId: actor.tenantId, tokenHash: secret.tokenHash, email, role: selection.role,
-        studentId: selection.studentId ?? null, inviterMembershipId: actor.membershipId, createdAt: now, expiresAt: new Date(now.getTime() + INVITATION_LIFETIME_MS) });
+        studentId: selection.studentId ?? null, inviterMembershipId: actor.membershipId, createdAt: now, expiresAt: new Date(now.getTime() + invitationLifetimeMs(selection.role)) });
       await data.writeInvitationAudit(tx, actor, "invite.issue", invitation.id);
       return { invitation, actor, token: secret.token };
     });
@@ -140,28 +149,87 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
     });
   }
 
+  /**
+   * Rotation, shared by "Send again" and "Copy link": the old link is revoked and a new invitation for the same person,
+   * role and student is issued, with a fresh lifetime for its role, in one transaction. A copy is born in the final
+   * delivery state "copied" (never "pending", so the list can't call it unconfirmed) and is audited as invite.copy, not
+   * invite.issue. Audits name invitation ids only; the audit row has no column that could hold a token.
+   */
+  async function rotate(tx: AccessTransaction<Q>, actor: Actor, inviteId: string, tokenHash: string, copied: boolean) {
+    if (!uuid.test(inviteId)) throw new AccessDenied(404);
+    const previous = await data.lockInvitation(tx, actor.tenantId, inviteId);
+    if (!previous || previous.acceptedAt || previous.revokedAt || previous.role === "admin") throw new AccessDenied(404);
+    if (previous.studentId) {
+      const student = await data.lockInvitationStudent(tx, actor.tenantId, previous.studentId);
+      if (!student || student.disabledAt) throw new AccessDenied(404);
+      // N21: Send again and Copy link are refused, like a new invitation, once the student's ceremony is done.
+      if (await isCeremonyDone(tx, actor.tenantId, student.id)) throw new AccessDenied(404);
+      if (previous.role === "student" && (studentParentContactMatches(student, previous.email) || await data.mailboxHasParentIdentity(tx, actor.tenantId, previous.email))) throw new AccessDenied(403);
+    }
+    const now = new Date();
+    await data.consumeInvitationBudget(tx, actor, previous.email, input.throttleSecret, now.getTime());
+    if (!await data.revokeInvitation(tx, actor.tenantId, previous.id, now)) throw new AccessDenied(404);
+    const invitation = await data.insertInvitation(tx, { tenantId: actor.tenantId, tokenHash, email: previous.email, role: previous.role,
+      studentId: previous.studentId, inviterMembershipId: actor.membershipId, createdAt: now, expiresAt: new Date(now.getTime() + invitationLifetimeMs(previous.role as InvitedRole)),
+      ...(copied ? { deliveryStatus: "copied" as const, deliveryAttemptedAt: now } : {}) });
+    await data.writeInvitationAudit(tx, actor, "invite.revoke", previous.id);
+    await data.writeInvitationAudit(tx, actor, copied ? "invite.copy" : "invite.issue", invitation.id);
+    return invitation;
+  }
+
   async function reissue(request: CookieMutationRequest, selection: { mode: ActiveMode; inviteId: string }) {
     const secret = createInvitationSecret();
     const pending = await input.access.withAdminCapability(request, { mode: selection.mode, capability: "manage-invites" }, async (tx, actor) => {
       requireCookieMutation(request, actor.origin);
-      if (!uuid.test(selection.inviteId)) throw new AccessDenied(404);
-      const previous = await data.lockInvitation(tx, actor.tenantId, selection.inviteId);
-      if (!previous || previous.acceptedAt || previous.revokedAt || previous.role === "admin") throw new AccessDenied(404);
-      if (previous.studentId) {
-        const student = await data.lockInvitationStudent(tx, actor.tenantId, previous.studentId);
-        if (!student || student.disabledAt) throw new AccessDenied(404);
-        if (previous.role === "student" && (studentParentContactMatches(student, previous.email) || await data.mailboxHasParentIdentity(tx, actor.tenantId, previous.email))) throw new AccessDenied(403);
-      }
-      const now = new Date();
-      await data.consumeInvitationBudget(tx, actor, previous.email, input.throttleSecret, now.getTime());
-      if (!await data.revokeInvitation(tx, actor.tenantId, previous.id, now)) throw new AccessDenied(404);
-      const invitation = await data.insertInvitation(tx, { tenantId: actor.tenantId, tokenHash: secret.tokenHash, email: previous.email, role: previous.role,
-        studentId: previous.studentId, inviterMembershipId: actor.membershipId, createdAt: now, expiresAt: new Date(now.getTime() + INVITATION_LIFETIME_MS) });
-      await data.writeInvitationAudit(tx, actor, "invite.revoke", previous.id);
-      await data.writeInvitationAudit(tx, actor, "invite.issue", invitation.id);
+      const invitation = await rotate(tx, actor, selection.inviteId, secret.tokenHash, false);
       return { invitation, actor, token: secret.token };
     });
     return deliver(pending);
+  }
+
+  /**
+   * "Copy link" (decision 12): tokens are stored hashed, so a copy rotates the invitation and the previous link stops
+   * working. Only an admin who may manage invitations, in their own congregation, with a fresh sign-in. The new link
+   * is returned once, in this response to this admin, and is never emailed, stored, logged or audited; nothing is sent.
+   */
+  async function copyLink(request: CookieMutationRequest, selection: { mode: ActiveMode; inviteId: string }) {
+    const secret = createInvitationSecret();
+    const copied = await input.access.withAdminCapability(request, { mode: selection.mode, capability: "manage-invites" }, async (tx, actor) => {
+      requireCookieMutation(request, actor.origin);
+      const invitation = await rotate(tx, actor, selection.inviteId, secret.tokenHash, true);
+      return { inviteId: invitation.id, expiresAt: invitation.expiresAt, origin: actor.origin };
+    });
+    const url = new URL("/invitations/open", copied.origin);
+    url.hash = `token=${secret.token}`;
+    return Object.freeze({ inviteId: copied.inviteId, url: url.href, expiresAt: copied.expiresAt.toISOString() });
+  }
+
+  /**
+   * "Needs a parent invitation" (G13), after an account request: approved members whose verified address is a roster
+   * parent contact of an active student, who are not yet that student's parent here and have no live parent invitation
+   * for that student. Admin only, read-only, in the admin's own congregation.
+   */
+  async function parentInvitationsNeeded(request: AccessRequest, selection: { mode: ActiveMode }) {
+    return input.access.withAdminCapability(request, { mode: selection.mode, capability: "read-invites" }, async (tx, actor) => {
+      const { members, students, links, invites } = await data.parentInvitationCandidates(tx, actor.tenantId, new Date());
+      // Every address on every side goes through normalizedInvitationEmail; a malformed one matches nothing.
+      const normal = (value: string | null) => { if (value === null) return null; try { return normalizedInvitationEmail(value); } catch { return null; } };
+      const linked = new Set(links.map(link => `${link.studentId}|${link.membershipId}`));
+      const invited = new Set(invites.flatMap(row => { const email = normal(row.email); return email && row.studentId ? [`${row.studentId}|${email}`] : []; }));
+      const out: Readonly<{ memberId: string; name: string; email: string; student: Readonly<{ id: string; firstName: string; lastName: string }> }>[] = [];
+      for (const member of members) {
+        const email = normal(member.email);
+        if (!email) continue;
+        for (const student of students) {
+          if (out.length >= 100) break;
+          if (normal(student.parentEmail) !== email && normal(student.secondParentEmail) !== email) continue;
+          if (linked.has(`${student.id}|${member.membershipId}`) || invited.has(`${student.id}|${email}`)) continue;
+          if (!uuid.test(member.memberId) || !uuid.test(student.id)) throw new AccessUnavailable();
+          out.push(Object.freeze({ memberId: member.memberId, name: member.name, email, student: Object.freeze({ id: student.id, firstName: student.firstName, lastName: student.lastName }) }));
+        }
+      }
+      return Object.freeze(out);
+    });
   }
 
   async function preview(request: AccessRequest, selection: { token: string }) {
@@ -217,7 +285,7 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
       return { inviteId: invitation.id, role: invitation.role, studentId: invitation.studentId };
     });
   }
-  return Object.freeze({ issue, revoke, reissue, preview, list,
+  return Object.freeze({ issue, revoke, reissue, copyLink, parentInvitationsNeeded, preview, list,
     // Private compatibility/composition API; HTTP must exclusively use the
     // reviewed path, with raw token obtained only from its encrypted pending cookie.
     accept: (request: CookieMutationRequest, selection: { token: string }) => acceptCore(request, selection, false),

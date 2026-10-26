@@ -9,7 +9,7 @@ import { YoursRowView, YOURS_STRINGS } from "../../src/components/portal/saved/y
 import { conflictWork, fetchSavedStars, parseSavedStars, saveSavedWork, savedText, SavedRequestError, setSavedStar } from "../../src/components/portal/saved/api";
 import { Shell } from "../../src/components/portal/public-reading/view";
 import { ReadingToolbar } from "../../src/components/portal/workspace/reading-toolbar";
-import { APPROVER_HELP_LINE } from "../../src/components/portal/workspace/accounts/workspace";
+import { APPROVER_HELP_LINE, APPROVER_PARENT_LINE } from "../../src/components/portal/workspace/accounts/workspace";
 
 // Release 1.4 PR 3: the Yours row, stars and the translate drill. Synthetic text only.
 const ID = "00000000-0000-4000-8000-000000000001", stamp = "2026-10-23T00:00:00.000Z";
@@ -176,5 +176,6 @@ describe("stars and the Yours row", () => {
 describe("the approvers' help line", () => {
   it("is Daniel's approved wording, verbatim", () => {
     expect(APPROVER_HELP_LINE).toBe("Anyone who asks in good faith can have an account, member or not. Decline only spam or abuse.");
+    expect(APPROVER_PARENT_LINE).toBe("Asking about a child? Approve, then ask the office to send a parent invitation.");
   });
 });

@@ -6,6 +6,8 @@ import { accountsApi, type AccountRequest, type ApproverMode, type ApproversView
 
 /** Daniel's approved approver help line (F1, wording approved 2026-10-23). */
 export const APPROVER_HELP_LINE = "Anyone who asks in good faith can have an account, member or not. Decline only spam or abuse.";
+/** Daniel's approved approver line (G13, TP-06): an account is never a parent's access; the office sends a parent invitation. */
+export const APPROVER_PARENT_LINE = "Asking about a child? Approve, then ask the office to send a parent invitation.";
 /** Proposed wording, not yet approved by Daniel: a designated tutor approving someone an admin ended (Decided here, 2026-10-23). */
 export const ADMIN_REAPPROVAL_LINE = "An admin ended this person’s membership, so only an admin can approve them again. The request is kept.";
 /** Proposed wording, not yet approved by Daniel: an approver's own request is approved by another approver (Decided here, 2026-10-23). */
@@ -88,7 +90,8 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
       : <>
         <section className="people-card" aria-labelledby="accounts-requests"><div className="people-card-head"><h2 id="accounts-requests">Requests</h2>
           <p>Approving gives the person an account and sends them one email. Declining removes the request and sends nothing.</p>
-          <p>{APPROVER_HELP_LINE}</p></div>
+          <p>{APPROVER_HELP_LINE}</p>
+          <p data-testid="approver-parent-line">{APPROVER_PARENT_LINE}</p></div>
           {requests.length ? <ul className="people-list">{requests.map(row => <li key={row.id} className="people-row account-request-row">
             <span className="people-avatar" aria-hidden="true">{initial(row.name)}</span>
             <div className="people-body">

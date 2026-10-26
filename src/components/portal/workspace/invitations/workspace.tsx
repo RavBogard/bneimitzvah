@@ -4,7 +4,7 @@ import { workspaceApi, type RosterStudent } from "../api";
 import { RequireRole, statusOf, useWorkspace, useWorkspaceModal, WorkspaceLink } from "../provider";
 import { icons } from "../study/lift";
 import { PeopleNav } from "../../shell/people-nav";
-import { invitationApi, invitationTargetFingerprint, issueReview, INVITATION_PAGE_SIZE, type InviteDraft, type Invitation, type Receipt } from "./api";
+import { invitationApi, invitationTargetFingerprint, issueReview, INVITATION_PAGE_SIZE, type CopiedLink, type InviteDraft, type Invitation, type Receipt } from "./api";
 import { InvitationForm } from "./form";
 import { InvitationList } from "./list";
 import { InvitationActionReview, type InvitationReview } from "./review";
@@ -22,7 +22,9 @@ function Invitations() {
   const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]), cursor = cursors[cursors.length - 1];
   const [draft, setDraft] = useState<InviteDraft>({ role: "parent", email: "", studentId: "" }), [review, setReview] = useState<InvitationReview | null>(null);
   const [pending, setPending] = useState(false), [blocked, setBlocked] = useState(false), [message, setMessage] = useState(""), [accessError, setAccessError] = useState(false);
-  const [outcome, setOutcome] = useState<{ kind: "issue" | "reissue" | "revoke"; receipt?: Receipt; unknown?: boolean } | null>(null);
+  const [outcome, setOutcome] = useState<{ kind: "issue" | "reissue" | "revoke" | "copy"; receipt?: Receipt; unknown?: boolean; copied?: boolean } | null>(null);
+  // A copied link the clipboard refused, shown once so it can be copied by hand; any other action clears it.
+  const [manualCopy, setManualCopy] = useState<string | null>(null);
   const request = useRef<AbortController | null>(null), generation = useRef(0), gate = useRef(false), alive = useRef(true);
   const load = useCallback(async () => {
     request.current?.abort(); const controller = new AbortController(); request.current = controller; const turn = ++generation.current;
@@ -65,10 +67,41 @@ function Invitations() {
     catch { if (alive.current) setMessage("Invitations couldn’t be loaded. Nothing was resent."); }
     finally { gate.current = false; if (alive.current) setPending(false); }
   }
+  /**
+   * "Copy link" (decision 12): tokens are stored hashed, so copying asks the server for a new link, and the old one
+   * stops working. The clipboard is given the request's promise so the click still counts as the user's gesture.
+   */
+  async function copy(row: Invitation) {
+    if (gate.current || blocked || loading || !snapshot || review) return;
+    gate.current = true; setPending(true); setMessage(""); setAccessError(false); setOutcome(null); setManualCopy(null);
+    let link: CopiedLink | undefined;
+    try {
+      const requested = invitationApi.copyLink(row.id);
+      let clipboard: Promise<void> | null = null;
+      try {
+        clipboard = typeof ClipboardItem === "function" && navigator.clipboard?.write
+          ? navigator.clipboard.write([new ClipboardItem({ "text/plain": requested.then(value => new Blob([value.url], { type: "text/plain" })) })]) : null;
+      } catch { clipboard = null; }
+      link = await requested;
+      let copied = false;
+      try { if (clipboard) await clipboard; else await navigator.clipboard.writeText(link.url); copied = true; } catch { copied = false; }
+      if (!alive.current) return;
+      setOutcome({ kind: "copy", copied }); if (!copied) setManualCopy(link.url);
+      try { await load(); } catch { if (alive.current) { setBlocked(true); setMessage("Done, but the list couldn’t be refreshed. Reload before anything else."); } }
+    } catch (error) {
+      if (!alive.current) return;
+      const status = statusOf(error); setBlocked(true);
+      if ([400, 401, 403, 404, 409, 429].includes(status)) {
+        setAccessError(status === 401 || status === 403);
+        setMessage(status === 401 || status === 403 ? "This isn’t allowed right now. You may need to sign in again, or the person may not be eligible. Check your account, then reload and review again."
+          : "The invitation was rejected or has changed. Reload before reviewing again.");
+      } else { setOutcome({ kind: "copy", unknown: true }); setMessage("We couldn’t confirm whether this went through. It may have. Reload before trying again; nothing is retried automatically."); }
+    } finally { gate.current = false; if (alive.current) setPending(false); }
+  }
   async function confirm() {
     if (gate.current || !review || !snapshot || !valid || blocked) return;
     gate.current = true; const action = review; let submitted = false;
-    setPending(true); setMessage(""); setAccessError(false); setOutcome(null);
+    setPending(true); setMessage(""); setAccessError(false); setOutcome(null); setManualCopy(null);
     try {
       const fresh = await load();
       if (!alive.current) return;
@@ -118,7 +151,9 @@ function Invitations() {
   function openIssue() { if (reviewIssue()) origin.current = document.querySelector<HTMLElement>(".invitation-review-button"); }
   const outcomeText = outcome && (outcome.unknown ? "We couldn’t confirm whether the last action went through. Reload to see what was recorded; don’t treat it as a resend."
     : outcome.kind === "revoke" ? "Invitation revoked. The link no longer works."
-    : outcome.kind === "reissue" ? "A new invitation replaced the old one. The old link no longer works; the new one may be on another page."
+    // Daniel, N22: shown once the clipboard has the new link.
+    : outcome.kind === "copy" && outcome.copied ? "Link copied."
+    : outcome.kind === "reissue" || outcome.kind === "copy" ? "A new invitation replaced the old one. The old link no longer works; the new one may be on another page."
     : "Invitation created. It may be on another page of the list.");
   const mailText = outcome?.receipt && (outcome.receipt.delivery === "sent" ? "The email went to the mail service. We can’t see whether it reached their inbox."
     : outcome.receipt.delivery === "failed" ? "The email failed to send. Nothing is resent automatically; use Send again if you want to try once more."
@@ -129,10 +164,10 @@ function Invitations() {
     {message && !review && <p className={blocked ? "request-error roster-message" : "workspace-notice roster-message"} role={blocked ? "alert" : "status"}>{message}</p>}
     {blocked && <button type="button" className="button-secondary admin-pill roster-reload-inline" disabled={pending || loading} onClick={() => void reloadExplicitly()}>Reload invitations</button>}
     {accessError && <p><WorkspaceLink href="/">Check account and sign in again</WorkspaceLink></p>}
-    {outcome && <section className={`invitation-outcome${outcome.unknown || outcome.receipt?.delivery === "failed" ? " invitation-outcome-warn" : ""}`} aria-label="Latest invitation action" role="status"><p className="invitation-outcome-title">{outcomeText}</p>{mailText && <p>{mailText}</p>}</section>}
+    {outcome && <section className={`invitation-outcome${outcome.unknown || outcome.receipt?.delivery === "failed" ? " invitation-outcome-warn" : ""}`} aria-label="Latest invitation action" role="status"><p className="invitation-outcome-title">{outcomeText}</p>{mailText && <p>{mailText}</p>}{manualCopy && <label className="field invitation-copied-link">Copy link<input data-testid="invite-copied-link" readOnly value={manualCopy} onFocus={event => event.currentTarget.select()} /></label>}</section>}
     <section className="invitation-list-section" aria-labelledby="invite-list-title"><div className="people-card-head invitation-list-head"><h2 id="invite-list-title">Sent invitations</h2><p>An invitation isn’t access. Once someone accepts, they appear on the student’s People page, or under Tutors.</p></div>
       {loading ? <p role="status">Checking current invitation records…</p> : failure ? <div className="admin-state" role="alert"><p>The invitations or the student list couldn’t be loaded, so none of it is shown.</p><button className="button-secondary admin-pill" disabled={pending} onClick={() => void reloadExplicitly()}>Reload</button></div>
-        : snapshot && <>{snapshot.rows.length ? <div className="people-card"><InvitationList rows={snapshot.rows} pending={pending} blocked={blocked} select={reviewRow} /></div> : <div className="admin-empty"><p className="admin-empty-title">No invitations{cursors.length > 1 ? " on this page" : " yet"}</p><p>Invitations you send appear here with their status.</p></div>}
+        : snapshot && <>{snapshot.rows.length ? <div className="people-card"><InvitationList rows={snapshot.rows} pending={pending} blocked={blocked} select={reviewRow} copy={row => void copy(row)} /></div> : <div className="admin-empty"><p className="admin-empty-title">No invitations{cursors.length > 1 ? " on this page" : " yet"}</p><p>Invitations you send appear here with their status.</p></div>}
           {(cursors.length > 1 || snapshot.rows.length === INVITATION_PAGE_SIZE) && <nav className="roster-pages" aria-label="Invitation pages"><span className="roster-count">Page {cursors.length}</span><button className="button-secondary admin-pill" disabled={pending || blocked || cursors.length === 1} onClick={() => page(false)}>Previous invitations</button><button className="button-secondary admin-pill" disabled={pending || blocked || snapshot.rows.length < INVITATION_PAGE_SIZE} onClick={() => page(true)}>Next invitations</button></nav>}</>}
     </section>
     <dialog ref={sheet} className="roster-sheet access-sheet" aria-labelledby="invite-action-title" closedby={pending ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); if (!pending) setReview(null); }} onClose={sheetClosed}>

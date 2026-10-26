@@ -23,6 +23,28 @@ export async function listInvitations<Q extends PgQueryResultHKT>(tx: AccessTran
     .orderBy(s.invite.id).limit(limit).for("share", { of: s.invite });
 }
 
+/**
+ * "Needs a parent invitation" (G13): the four plain reads the service matches. Addresses are compared in the service with
+ * normalizedInvitationEmail on every side, never in SQL. Never selects a token hash, a session or anything saved.
+ */
+export async function parentInvitationCandidates<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, now: Date) {
+  // Approved, live members with a verified address.
+  const members = await tx.select({ memberId: s.tenantMember.id, membershipId: s.tenantMember.membershipId, name: s.tenantMember.displayName, email: s.user.email })
+    .from(s.tenantMember).innerJoin(s.user, eq(s.user.id, s.tenantMember.userId))
+    .where(and(eq(s.tenantMember.tenantId, tenantId), isNull(s.tenantMember.revokedAt), eq(s.user.emailVerified, true))).orderBy(s.tenantMember.id).limit(500);
+  // Enabled students' roster parent contacts.
+  const students = await tx.select({ id: s.student.id, firstName: s.student.firstName, lastName: s.student.lastName, parentEmail: s.student.parentEmail, secondParentEmail: s.student.secondParentEmail })
+    .from(s.student).where(and(eq(s.student.tenantId, tenantId), isNull(s.student.disabledAt))).orderBy(s.student.id);
+  // Live guardian links through a live parent grant, by membership.
+  const links = await tx.select({ studentId: s.guardian.studentId, membershipId: s.roleGrant.membershipId }).from(s.guardian)
+    .innerJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.guardian.tenantId), eq(s.roleGrant.id, s.guardian.parentGrantId)))
+    .where(and(eq(s.guardian.tenantId, tenantId), isNull(s.guardian.revokedAt), isNull(s.roleGrant.revokedAt)));
+  // Live, unexpired parent invitations.
+  const invites = await tx.select({ studentId: s.invite.studentId, email: s.invite.email }).from(s.invite)
+    .where(and(eq(s.invite.tenantId, tenantId), eq(s.invite.role, "parent"), isNull(s.invite.acceptedAt), isNull(s.invite.revokedAt), gt(s.invite.expiresAt, now)));
+  return { members, students, links, invites };
+}
+
 export async function consumeInvitationBudget<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: Actor, email: string, secret: string, now: number) {
   const bucketStart = Math.floor(now / HOUR) * HOUR;
   for (const [scope, value, limit] of [["actor", actor.membershipId, 20], ["recipient", email, 5]] as const) {
@@ -113,7 +135,7 @@ export async function linkInvitedStudent<Q extends PgQueryResultHKT>(tx: AccessT
   return { id: link.id, created: true };
 }
 
-export async function writeInvitationAudit<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: Actor, action: "invite.issue" | "invite.accept" | "invite.revoke" | "invite.delivery-sent" | "invite.delivery-failed" | "grant.issue" | "guardian.link" | "identity.link", targetId: string) {
+export async function writeInvitationAudit<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: Actor, action: "invite.issue" | "invite.copy" | "invite.accept" | "invite.revoke" | "invite.delivery-sent" | "invite.delivery-failed" | "grant.issue" | "guardian.link" | "identity.link", targetId: string) {
   await tx.insert(s.auditEvent).values({ tenantId: actor.tenantId, actorUserId: actor.userId, actorMembershipId: actor.membershipId, roleGrantId: actor.roleGrantId,
     mode: actor.mode, action, targetType: action === "grant.issue" ? "role_grant" : action === "guardian.link" ? "guardian" : action === "identity.link" ? "student_identity" : "invitation", targetId, requestId: crypto.randomUUID() });
 }

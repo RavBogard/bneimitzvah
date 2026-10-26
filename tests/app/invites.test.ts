@@ -7,7 +7,7 @@ import { createAccessService } from "../../src/server/access/service";
 import { createInvitationService } from "../../src/server/invitations/service";
 import { AccessDenied } from "../../src/server/access/errors";
 import { withTenantTransaction } from "../../src/server/db/runtime";
-import { INVITATION_LIFETIME_MS } from "../../src/server/invitations/tokens";
+import { PARENT_INVITATION_LIFETIME_MS } from "../../src/server/invitations/tokens";
 import * as s from "../../src/server/db/index";
 
 const fixtures: Awaited<ReturnType<typeof invitesFixture>>[] = [];
@@ -19,7 +19,7 @@ async function denied(action: () => Promise<unknown>, status = 404) {
 const parent = (studentId: string, email = "recipient@example.test") => ({ mode: "admin" as const, role: "parent" as const, studentId, email });
 
 describe("explicit invitation service", () => {
-  it("stores only a 256-bit token hash for72hours, commits before delivery and grants nothing from contact alone", async () => {
+  it("stores only a 256-bit token hash for 7 days (a parent's), commits before delivery and grants nothing from contact alone", async () => {
     const f = await fixture();
     await f.owner(async () => { await f.db.update(s.student).set({ parentEmail: "recipient@example.test" }).where(eq(s.student.id, f.students[0].id)); });
     expect(await denied(() => f.service.listStudents(f.request("recipient"), { mode: "parent" }), 403)).toBe(true);
@@ -34,7 +34,7 @@ describe("explicit invitation service", () => {
       const [row] = await f.db.select().from(s.invite).where(eq(s.invite.id, result.inviteId));
       expect(/^[a-f0-9]{64}$/.test(row.tokenHash) && !JSON.stringify(row).includes(token)).toBe(true);
       expect(row.deliveryStatus === "sent" && row.deliveryAttemptedAt instanceof Date).toBe(true);
-      expect(row.expiresAt.getTime() - row.createdAt.getTime() === INVITATION_LIFETIME_MS).toBe(true);
+      expect(row.expiresAt.getTime() - row.createdAt.getTime() === PARENT_INVITATION_LIFETIME_MS).toBe(true);
       expect((await f.db.select().from(s.membership).where(eq(s.membership.userId, f.identities.recipient.id))).length === 0).toBe(true);
     });
     expect(!JSON.stringify(result).includes(token) && !JSON.stringify(result).includes("@")).toBe(true);
@@ -103,7 +103,8 @@ describe("explicit invitation service", () => {
     expect(await denied(() => f.invitations.reissue(f.request("admin"), { mode: "admin", inviteId: original.inviteId }))).toBe(true);
     await f.invitations.revoke(f.request("admin"), { mode: "admin", inviteId: replacement.inviteId });
     expect(await denied(() => f.invitations.accept(f.request("recipient"), { token: fresh }))).toBe(true);
-    await f.invitations.issue(f.request("admin"), parent(f.students[1].id));
+    // A tutor link keeps 72 hours (a parent's lasts 7 days: invitations-lifetime-copy.test.ts).
+    await f.invitations.issue(f.request("admin"), { mode: "admin", role: "tutor", email: "recipient@example.test" });
     const expired = f.token();
     vi.setSystemTime(new Date(Date.now() + 73 * 3600_000));
     expect(await denied(() => f.invitations.accept(f.request("recipient"), { token: expired }))).toBe(true);

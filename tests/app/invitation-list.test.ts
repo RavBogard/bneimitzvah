@@ -44,7 +44,7 @@ describe("private admin invitation status listing", () => {
     expect(pending.status === "pending" && pending.delivery.status === "pending" && pending.delivery.attemptedAt === null).toBe(true);
     expect(expired.status === "expired" && expired.role === "student").toBe(true);
     expect(rows.every(row => typeof row.recipientEmail === "string" && row.recipientEmail.includes("@"))).toBe(true);
-    expect(Object.keys(accepted).sort()).toEqual(["id", "role", "recipientEmail", "student", "status", "createdAt", "expiresAt", "acceptedAt", "revokedAt", "delivery"].sort());
+    expect(Object.keys(accepted).sort()).toEqual(["id", "role", "recipientEmail", "student", "status", "createdAt", "expiresAt", "expiresTomorrow", "acceptedAt", "revokedAt", "delivery"].sort());
     expect(Object.keys(accepted.student).sort()).toEqual(["firstName", "id", "lastName"]);
     expect(Object.keys(accepted.delivery).sort()).toEqual(["attemptedAt", "status"]);
     const encoded = JSON.stringify(result);
