@@ -356,7 +356,7 @@ The mark is Siona Benjamin's floor mural at Central Reform Congregation (CRC has
 - Header: a 28px disc, 8px before the name, inside the brand link. It is decoration (`alt=""`); the link's name stays "CRC Torah". The disc and the name never hide; the Beta chip hides under 375px.
 - App icons (manifest "any", maskable, Apple touch) put the disc on full-bleed lake; the maskable one keeps the disc at 78% inside the safe circle. The favicon is the bare disc.
 - Share card: lake background, the disc at its native 512px cropped off the right edge, title and name in white on the left, a 56px disc beside the name.
-- Credit Siona Benjamin on /about when that page exists.
+- Credit Siona Benjamin on /about, first among the credits.
 - The palette stays as it is with the mural (Daniel, 2026-10-26): lake already matches the mural's cobalt, the mural's crimson rim frames it on lake, and marigold, forest and canvas are unchanged. The mural's earths and crimson stay in the painting, never in the interface.
 
 ## Do's and Don'ts

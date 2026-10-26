@@ -47,7 +47,7 @@ const PUBLIC_SURFACES: Readonly<Record<string, string>> = {
 /** Files that name a cache header only to forbid caching (privateHeaders, no-store); a positive directive here still fails the first test. */
 const NO_STORE_ONLY = new Set(["src/server/http/responses.ts", "src/server/http/page-views.ts", "src/server/http/reference-review.ts", "src/lib/navigation/canonical.ts"]);
 /** Static public pages (the signed-out reader, print sheet, Learn course and trope chart, and their share images): no cookie, no session, built once. */
-const STATIC_PUBLIC = (file: string) => ["learn", "read", "print", "trope-chart"].some(dir => file.startsWith(`src/app/${dir}/`)) || /^src\/app\/sw\.js\//.test(file);
+const STATIC_PUBLIC = (file: string) => ["about", "learn", "read", "print", "trope-chart"].some(dir => file.startsWith(`src/app/${dir}/`)) || /^src\/app\/sw\.js\//.test(file);
 
 test("a positive cache directive appears only in the deliberately public surfaces, and in mcp.ts only on the discovery metadata", () => {
   const positive = new Set<string>(), named = new Set<string>(), staticCached = new Set<string>();
