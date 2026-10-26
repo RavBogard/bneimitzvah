@@ -73,11 +73,18 @@ export const OWNER_ONLY_PATH = /^\/api\/public\/evening-text$/;
 const pathOf = (asset: string) => { const query = asset.indexOf("?"); return query < 0 ? asset : asset.slice(0, query); };
 export const ownerOnlyAsset = (asset: string): boolean => typeof asset === "string" && OWNER_ONLY_PATH.test(pathOf(asset));
 
+const EXACT_QUERY: Readonly<Record<string, RegExp>> = Object.freeze({
+  "/api/public/portion-summary": /^\?reading=[a-z0-9]{1,80}(?:-[a-z0-9]{1,80}){0,8}$/,
+  "/api/public/aliyot": /^\?date=\d{4}-\d{2}-\d{2}$/,
+});
 /** May this same-origin path (with its query) ever enter a pack? The G3 and private-data guard. */
 export function packAssetAllowed(asset: string): boolean {
   if (typeof asset !== "string" || !asset.startsWith("/") || asset.startsWith("//") || asset.length > 2048 || /[\s#\\]/.test(asset)) return false;
   const query = asset.indexOf("?"), path = query < 0 ? asset : asset.slice(0, query), search = query < 0 ? "" : asset.slice(query);
   if (CLIP_PATH.test(path)) return search === "";
+  // 1.9 N24: these two take exactly one known parameter, as the reader asks for them: a parashah slug, or a date.
+  const exact = EXACT_QUERY[path];
+  if (exact) return exact.test(search);
   return PACK_DATA_PATH.test(path) && search.length > 1;
 }
 

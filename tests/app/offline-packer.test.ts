@@ -192,12 +192,17 @@ test("a course pack from an older set of fixed passages is not current, so the n
 
 test("only PocketTorah short-v1 clips and the named public data routes can ever be pack assets (G3)", () => {
   for (const asset of ["/reference-audio/short-v1/" + "a".repeat(64) + ".mp3", "/api/public/reading?date=2026-10-24", "/api/public/text?ref=Genesis+1%3A1&kind=torah&offset=0", "/api/public/reference/short?date=2026-10-24&kind=torah&offset=0",
-    "/api/public/aliyot?date=2026-10-24", "/api/public/portion-summary?reading=vayera"])
+    "/api/public/aliyot?date=2026-10-24", "/api/public/portion-summary?reading=vayera", "/api/public/portion-summary?reading=lech-lecha"])
     expect(packAssetAllowed(asset), asset).toBe(true);
   for (const asset of ["/reference-audio/generated/" + "a".repeat(64) + ".mp3", "/reference-audio/short-v1/" + "A".repeat(64) + ".mp3", "/reference-audio/short-v1/" + "a".repeat(64) + ".mp3?x=1",
     "/reference-audio/voice/alto.mp3", "/api/public/reference/finkel/media/" + "a".repeat(64) + ".mp3", "/api/public/word-aids?date=2026-10-24&kind=torah&verse=0", "/api/public/commentary?work=rashi&chapter=Genesis+1",
     "/api/students/s1/recordings", "/api/session", "/api/learn/progress", "/api/public/reading", "/api/public/aliyot", "/api/public/portion-summary",
-    "/api/admin/portion-summary?reading=vayera", "/api/portion-summary?reading=vayera", "/api/public/portion-summary/draft?reading=vayera", "/api/public/discussions?reading=vayera", "//evil.test/api/public/reading?date=1", "https://evil.test/x", "/api/public/text?x=1#y"])
+    "/api/admin/portion-summary?reading=vayera", "/api/portion-summary?reading=vayera", "/api/public/portion-summary/draft?reading=vayera", "/api/public/discussions?reading=vayera",
+    // Exactly one known parameter: no extra one (a draft or revision selector), no repeat, no other spelling.
+    "/api/public/portion-summary?reading=vayera&status=draft", "/api/public/portion-summary?reading=vayera&revision=1", "/api/public/portion-summary?reading=vayera&reading=noach",
+    "/api/public/portion-summary?status=draft&reading=vayera", "/api/public/portion-summary?reading=Vayera", "/api/public/portion-summary?reading=vayera%26status%3Ddraft", "/api/public/portion-summary?reading=",
+    "/api/public/portion-summary?reading=-vayera", "/api/public/portion-summary?ref=Genesis+18%3A1", "/api/public/aliyot?date=2026-10-24&date=2026-10-31", "/api/public/aliyot?date=2026-10-24&x=1",
+    "/api/public/aliyot?date=2026-10-24T00", "/api/public/aliyot?ref=Genesis+1%3A1", "//evil.test/api/public/reading?date=1", "https://evil.test/x", "/api/public/text?x=1#y"])
     expect(packAssetAllowed(asset), asset).toBe(false);
 });
 
