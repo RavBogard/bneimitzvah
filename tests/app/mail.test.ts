@@ -58,7 +58,7 @@ test("both mail kinds use the fixed Resend endpoint and plain text with no track
     } else {
       // Daniel's approved subject and parent line (decision 12), word for word.
       expect(body.subject).toBe("Central Reform Congregation invited you to CRC Torah");
-      expect(body.text).toBe(`Central Reform Congregation invited you as a parent on CRC Torah, to follow your child's Beit Mitzvah preparation. The link works until Monday, November 2.\n\nOpen this link to review your invitation:\n\n${url}\n\nIf you did not request this message, you can ignore it.`);
+      expect(body.text).toBe(`Central Reform Congregation invited you as a parent on CRC Torah, to follow your child's Beit Mitzvah preparation. The link works through Sunday, November 1.\n\nOpen this link to review your invitation:\n\n${url}\n\nIf you did not request this message, you can ignore it.`);
     }
     expect((capture.init.headers as Record<string, string>).authorization === `Bearer ${apiKey}`).toBe(true);
   }
@@ -158,8 +158,8 @@ test("an invitation names the congregation, the role and the expiry, and needs a
   for (const role of ["tutor", "student"] as const) await send("invitation", { email, productName, url: link("invitation"), ...invite, role });
   expect(sent.map(mail => mail.subject)).toEqual(["Central Reform Congregation invited you to CRC Torah", "Central Reform Congregation invited you to CRC Torah"]);
   // Daniel's approved student and tutor lines (N22), word for word.
-  expect(sent[0].text.startsWith("Central Reform Congregation invited you as a tutor on CRC Torah. The link works until Monday, November 2.\n\n")).toBe(true);
-  expect(sent[1].text.startsWith("Central Reform Congregation invited you as a student on CRC Torah. The link works until Monday, November 2.\n\n")).toBe(true);
+  expect(sent[0].text.startsWith("Central Reform Congregation invited you as a tutor on CRC Torah. The link works through Sunday, November 1.\n\n")).toBe(true);
+  expect(sent[1].text.startsWith("Central Reform Congregation invited you as a student on CRC Torah. The link works through Sunday, November 1.\n\n")).toBe(true);
   for (const extra of [{ role: undefined }, { role: "admin" }, { expiresAt: undefined }, { expiresAt: new Date(Number.NaN) }, { congregation: undefined }, { congregation: "Congregation <b>" }]) {
     expect(await safeFailure(() => send("invitation", { email, productName, url: link("invitation"), ...invite, ...extra } as never))).toBe(true);
   }
@@ -167,14 +167,17 @@ test("an invitation names the congregation, the role and the expiry, and needs a
   expect(sent).toHaveLength(2);
 });
 
-test("an invitation's date is the expiry's own date in the congregation's time zone, never a later one, with no clock time", () => {
-  // 11:30 PM Central on Monday, November 2 (05:30 UTC on the 3rd) is still November 2.
-  expect(invitationExpiryText(new Date("2026-11-03T05:30:00Z"))).toBe("Monday, November 2");
-  expect(invitationExpiryText(new Date("2026-11-03T06:30:00Z"))).toBe("Tuesday, November 3");
+test("an invitation names the last full day the link works: the day before the expiry's own date in Central time, with no clock time", () => {
+  // 11:30 PM Central on Monday, November 2 (05:30 UTC on the 3rd) expires on November 2, so the link works through November 1.
+  expect(invitationExpiryText(new Date("2026-11-03T05:30:00Z"))).toBe("Sunday, November 1");
+  expect(invitationExpiryText(new Date("2026-11-03T06:30:00Z"))).toBe("Monday, November 2");
+  // Across a month and a year boundary.
+  expect(invitationExpiryText(new Date("2026-12-01T18:00:00Z"))).toBe("Monday, November 30");
+  expect(invitationExpiryText(new Date("2027-01-01T18:00:00Z"))).toBe("Thursday, December 31");
   for (const instant of ["2026-11-01T06:59:00Z", "2026-03-08T07:59:00Z", "2026-12-31T23:59:00Z", "2027-01-01T05:59:00Z"]) {
     const expiry = new Date(instant), shown = invitationExpiryText(expiry);
     expect(shown).not.toMatch(/\d:\d|AM|PM|C[SD]T/);
-    const central = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago" }).format(expiry);
-    expect(Number(shown.split(" ").at(-1))).toBe(Number(central.slice(8)));
+    const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago" }).format(expiry).split("-").map(Number);
+    expect(Number(shown.split(" ").at(-1))).toBe(new Date(Date.UTC(y, m - 1, d - 1)).getUTCDate());
   }
 });

@@ -29,16 +29,32 @@ export function parseTeaching(value: unknown): Teaching[] {
     return { tutorGrantId: identifier(row.tutorGrantId), students: list(row.students, 5000).map(student => { const s = object(student, ["id", "firstName", "lastName"]); return { id: identifier(s.id), firstName: name(s.firstName), lastName: name(s.lastName) }; }) };
   });
 }
-export type Family = { kind: "child" | "adult"; joined: string[]; invited: boolean };
+export type Family = { kind: "child" | "adult"; joined: string[]; invited: boolean; neverInvited: boolean };
 export function parseFamily(value: unknown): Family {
-  const row = object(value, ["kind", "joined", "invited"]);
-  if ((row.kind !== "child" && row.kind !== "adult") || typeof row.invited !== "boolean") return bad();
+  const row = object(value, ["kind", "joined", "invited", "neverInvited"]);
+  if ((row.kind !== "child" && row.kind !== "adult") || typeof row.invited !== "boolean" || typeof row.neverInvited !== "boolean") return bad();
   const joined = list(row.joined, 8).map(name);
-  if (joined.length && row.invited) return bad();
-  return { kind: row.kind, joined, invited: row.invited };
+  if (joined.length && (row.invited || row.neverInvited) || row.invited && row.neverInvited || row.neverInvited && row.kind !== "child") return bad();
+  return { kind: row.kind, joined, invited: row.invited, neverInvited: row.neverInvited };
+}
+
+/**
+ * N22's "Needs a parent invitation" (GET /api/admin/invitations/needed, admin only): members whose address matches a student's
+ * parent contact, not yet that student's parent and not invited. Only the students' ids are kept here; the members' names and
+ * addresses are checked for shape and then dropped, never shown on Needs you.
+ */
+export function parseNeeded(value: unknown): Set<string> {
+  const ids = list(object(value, ["needed"]).needed, 100).map(item => {
+    const row = object(item, ["memberId", "name", "email", "student"]);
+    identifier(row.memberId); if (typeof row.name !== "string" || typeof row.email !== "string") return bad();
+    const student = object(row.student, ["id", "firstName", "lastName"]);
+    return identifier(student.id);
+  });
+  return new Set(ids);
 }
 
 export const staffApi = {
+  async needed(signal?: AbortSignal) { return parseNeeded(await call("/api/admin/invitations/needed", undefined, undefined, signal)); },
   async status(signal?: AbortSignal) { return parseStatuses(await call("/api/admin/student-status", undefined, undefined, signal, 2 * 1024 * 1024)); },
   async teaching(signal?: AbortSignal) { return parseTeaching(await call("/api/admin/tutor-students", undefined, undefined, signal, 2 * 1024 * 1024)); },
   async family(mode: "tutor" | "admin", studentId: string, signal?: AbortSignal) { return parseFamily(await call(`/api/students/${identifier(studentId)}/family?mode=${mode}`, undefined, undefined, signal)); },

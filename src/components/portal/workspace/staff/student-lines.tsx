@@ -31,7 +31,7 @@ export function StaffStudentLines({ mode, baseline, onSetDivisions, reload }: { 
     if (pending) return;
     setPending(reading.id); setError("");
     try { await staffApi.reconfirm(mode, studentId, reading); await reload().catch(() => undefined); }
-    catch (failure) { if (statusOf(failure) === 409) { setError("The reading changed. Refresh it to continue."); await reload().catch(() => undefined); } }
+    catch (failure) { if (statusOf(failure) === 409) { setError("The reading changed. Refresh it to continue."); await reload().catch(() => undefined); } else setError("Couldn't confirm the reading. Try again."); }
     finally { setPending(null); }
   }
   const lines = known ? familyLine(known) : [];

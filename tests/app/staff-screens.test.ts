@@ -54,6 +54,10 @@ describe("Needs you (N14)", () => {
     expect([...statuses.keys()].sort()).toEqual([t.own.id, t.sibling.id, t.unrelated.id].sort());
     expect(statuses.get(t.unrelated.id)).toEqual({ id: t.unrelated.id, tutors: 0, family: "none", reading: "none", honors: false });
     expect(statuses.get(t.own.id)).toMatchObject({ tutors: 1, family: "joined" });
+    // A parent whose address is unverified has not joined, by the same rule as the tutor's family line.
+    await t.f.owner(() => t.f.db.update(s.user).set({ emailVerified: false }).where(eq(s.user.id, t.f.identities.multi.id)));
+    expect((await t.call("/api/admin/student-status", "admin")).json.students.find((row: StudentStatus) => row.id === t.own.id).family).toBe("none");
+    await t.f.owner(() => t.f.db.update(s.user).set({ emailVerified: true }).where(eq(s.user.id, t.f.identities.multi.id)));
     const roster = (await t.call("/api/admin/students", "admin")).json.students;
     const rows = needsYouRows(roster, statuses).filter(row => row.student.id === t.unrelated.id);
     const tutorRows = rows.filter(row => row.condition === "no-tutor");
@@ -102,7 +106,7 @@ describe("Family line (N15, G7 TP-12)", () => {
     const family = (who: Who, id: string, mode = "tutor") => t.call(`/api/students/${id}/family?mode=${mode}`, who);
     const joined = await family("multi", t.own.id);
     expect(joined.status).toBe(200);
-    expect(Object.keys(joined.json).sort()).toEqual(["invited", "joined", "kind"]);
+    expect(Object.keys(joined.json).sort()).toEqual(["invited", "joined", "kind", "neverInvited"]);
     expect(joined.json.joined).toHaveLength(1);
     expect(joined.json.invited).toBe(false);
     expect(joined.text).not.toMatch(/@/);
@@ -111,14 +115,15 @@ describe("Family line (N15, G7 TP-12)", () => {
     expect((await family("multi", t.other.id)).status).toBe(404);
     expect((await family("multi", t.own.id, "parent")).status).toBe(400);
     expect((await family("learner", t.own.id)).status).toBe(403);
-    // An open parent invitation, nobody joined yet: the line says so, still without the address it went to.
+    // Nobody invited yet; then an open parent invitation, nobody joined: the line says so, still without the address it went to.
+    await t.f.owner(() => t.f.db.insert(s.tutorStudent).values({ tenantId: "crc", studentId: t.unrelated.id, tutorGrantId: t.f.tutorGrant.id }));
+    expect((await family("multi", t.unrelated.id)).json).toEqual({ kind: "child", joined: [], invited: false, neverInvited: true });
     await t.f.owner(async () => {
-      await t.f.db.insert(s.tutorStudent).values({ tenantId: "crc", studentId: t.unrelated.id, tutorGrantId: t.f.tutorGrant.id });
       await t.f.db.insert(s.invite).values({ tenantId: "crc", tokenHash: "f".repeat(64), email: "invited-parent@example.test", role: "parent", studentId: t.unrelated.id,
         inviterMembershipId: t.f.adminMember.id, expiresAt: new Date(Date.now() + 3 * 86_400_000) });
     });
     const invited = await family("multi", t.unrelated.id);
-    expect(invited.json).toEqual({ kind: "child", joined: [], invited: true });
+    expect(invited.json).toEqual({ kind: "child", joined: [], invited: true, neverInvited: false });
     expect(invited.text).not.toMatch(/invited-parent/);
   });
 });
@@ -161,11 +166,59 @@ describe("Tutor hand-over (N15, G11)", () => {
     expect(await t.liveTutors(t.other.id)).toEqual([]);
   });
 
+  it("refuses a destination tutor whose grant is revoked, whose membership is disabled or whose address is unverified, and the departing tutor keeps the student", async () => {
+    const t = await setup();
+    const base = { expectedRevision: 1, toTutorGrantId: t.secondTutor.id, studentIds: [t.own.id] };
+    // A revoked grant can never be restored (0002's trigger), so it goes last.
+    const cases: [string, () => Promise<unknown>, () => Promise<unknown>][] = [
+      ["disabled membership", () => t.f.db.update(s.membership).set({ disabledAt: new Date() }).where(eq(s.membership.id, t.secondTutor.membershipId)), () => t.f.db.update(s.membership).set({ disabledAt: null }).where(eq(s.membership.id, t.secondTutor.membershipId))],
+      ["unverified address", () => t.f.db.update(s.user).set({ emailVerified: false }).where(eq(s.user.id, t.f.identities.recipient.id)), () => t.f.db.update(s.user).set({ emailVerified: true }).where(eq(s.user.id, t.f.identities.recipient.id))],
+      ["revoked grant", () => t.f.db.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, t.secondTutor.id)), async () => undefined],
+    ];
+    for (const [label, spoil, restore] of cases) {
+      await t.f.owner(spoil);
+      expect((await handOver(t, base)).status, label).toBe(404);
+      expect(await t.liveTutors(t.own.id), label).toEqual([t.f.tutorGrant.id]);
+      expect((await t.grantOf(t.f.tutorGrant.id)).revokedAt, label).toBeNull();
+      await t.f.owner(restore);
+    }
+  });
+
+  it("refuses an admin whose sign-in is older than 15 minutes, and nothing changes", async () => {
+    const t = await setup();
+    await t.f.owner(() => t.f.db.update(s.session).set({ createdAt: new Date(Date.now() - 16 * 60_000) }).where(eq(s.session.id, t.f.identities.admin.sessionId)));
+    expect((await handOver(t, { expectedRevision: 1, toTutorGrantId: t.secondTutor.id, studentIds: [t.own.id] })).status).toBe(403);
+    expect(await t.liveTutors(t.own.id)).toEqual([t.f.tutorGrant.id]);
+    expect((await t.grantOf(t.f.tutorGrant.id)).revokedAt).toBeNull();
+  });
+
   it("refuses a student whose ceremony is done (N21) and grants nothing", async () => {
     const t = await setup();
     expect((await t.call(`/api/admin/students/${t.own.id}/ceremony-done`, "admin", { expectedRevision: await t.revisionOf(t.own.id) })).status).toBe(200);
     expect((await handOver(t, { expectedRevision: 1, toTutorGrantId: t.secondTutor.id, studentIds: [t.own.id] })).status).toBe(409);
     expect(await t.liveTutors(t.own.id)).toEqual([]);
     expect((await t.grantOf(t.f.tutorGrant.id)).revokedAt).toBeNull();
+  });
+});
+
+describe("The staff routes are closed and never cached", () => {
+  const someId = "00000000-0000-4000-8000-000000000001";
+  it.each([
+    ["/api/admin/student-status", "GET"], ["/api/admin/tutor-students", "GET"], [`/api/admin/tutors/${someId}/hand-over`, "POST"],
+    [`/api/students/${someId}/family?mode=tutor`, "GET"], [`/api/students/${someId}/reading/reconfirm`, "POST"],
+  ])("%s answers only %s, names it in allow on a 405, and every answer is no-store", async (path, method) => {
+    const t = await setup();
+    const dispatch = createHttpDispatcher(async action => action(t.f.runtime));
+    const send = (verb: string) => dispatch(new Request(`${ORIGIN}${path}`, { method: verb, headers: { cookie: t.f.identities.admin.cookie, origin: ORIGIN, "content-type": "application/json" },
+      body: verb === "GET" ? undefined : "{}" }));
+    for (const wrong of ["GET", "POST", "PUT", "DELETE"].filter(verb => verb !== method)) {
+      const response = await send(wrong);
+      expect(response.status, wrong).toBe(405);
+      expect(response.headers.get("allow"), wrong).toBe(method);
+      expect(response.headers.get("cache-control"), wrong).toContain("no-store");
+    }
+    const answer = await send(method);
+    expect(answer.status).not.toBe(405);
+    expect(answer.headers.get("cache-control")).toContain("no-store");
   });
 });

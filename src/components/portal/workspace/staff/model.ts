@@ -98,9 +98,10 @@ export function teachesLine(names: readonly string[]) {
   return `Teaches ${names.length} ${names.length === 1 ? "student" : "students"}: ${names.join(", ")}`;
 }
 /** TP-12: the family line on the tutor's student page. Names come from the server already sanitized; never an address. */
-export function familyLine(value: { joined: readonly string[]; invited: boolean }) {
+export function familyLine(value: { kind?: "child" | "adult"; joined: readonly string[]; invited: boolean; neverInvited?: boolean }) {
   if (value.joined.length) return value.joined.map(name => `Family: ${name} (joined)`);
-  return value.invited ? ["Family: invitation sent, not yet accepted"] : [];
+  // "Family: not joined yet" (decided here): invited before, but that invitation expired or was withdrawn.
+  return value.invited ? ["Family: invitation sent, not yet accepted"] : value.neverInvited ? ["Family: not invited yet"] : value.kind === "child" ? ["Family: not joined yet"] : [];
 }
 /**
  * G12 (TP-05): a child's family can't name aliyah honorees until the Torah reading is divided into aliyot. Worked out only from

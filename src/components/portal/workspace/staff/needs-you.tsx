@@ -7,13 +7,12 @@ import { NEEDS_YOU_TEXT, type NeedsYouRow, type NeedsYouStudent } from "./model"
 type Open = (student: NeedsYouStudent, event: { currentTarget: HTMLElement }) => void;
 /**
  * "Needs you" (1.9 N14, G10): ceremonies within eight weeks with something left to set up, soonest first, one row per thing
- * and one verb per row. Nothing is shown when nothing is left (that empty state has no approved words yet).
+ * and one verb per row. With nothing left, it says so (Daniel's wording). It is not shown at all when the facts couldn't be read.
  */
 export function NeedsYou({ rows, disabled, onEdit, onHonors }: { rows: readonly NeedsYouRow[]; disabled: boolean; onEdit: Open; onHonors: Open }) {
-  if (!rows.length) return null;
   return <section className="needs-you" aria-labelledby="needs-you-heading" data-testid="needs-you">
     <h2 id="needs-you-heading">Needs you</h2>
-    <ul className="roster-list">{rows.map(row => {
+    {!rows.length ? <p className="needs-you-empty">Nothing needs you this week.</p> : <ul className="roster-list">{rows.map(row => {
       const { student, condition } = row, id = encodeURIComponent(student.id), when = ceremonyCountdown(student.ceremonyDate), copy = NEEDS_YOU_TEXT[condition];
       let verb: ReactNode;
       if (condition === "no-tutor") verb = <WorkspaceLink href={`/workspace/admin/students/${id}/access`}>{copy.verb}</WorkspaceLink>;
@@ -25,6 +24,6 @@ export function NeedsYou({ rows, disabled, onEdit, onHonors }: { rows: readonly 
           <span className="roster-row-meta"><time dateTime={student.ceremonyDate}>{when.label}</time>{when.phrase && <span className="roster-row-days">{when.days > 1 ? `${when.days} days` : when.phrase}</span>}</span>
           <span className="needs-you-task">{copy.text && <>{copy.text} </>}{verb}</span></div>
       </li>;
-    })}</ul>
+    })}</ul>}
   </section>;
 }

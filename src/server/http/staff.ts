@@ -50,7 +50,7 @@ export async function handleStaffRequest(request: Request, runtime: HttpRuntime)
       case "family": {
         const query = uniqueQuery(request.url, ["mode"]);
         const value = await runtime.staff.family(request, { mode: staffMode(query.get("mode")), studentId: found.id! });
-        return privateJson({ kind: value.kind, joined: [...value.joined], invited: value.invited });
+        return privateJson({ kind: value.kind, joined: [...value.joined], invited: value.invited, neverInvited: value.neverInvited });
       }
       case "reconfirm": {
         uniqueQuery(request.url, []); requireCookieMutation(request, runtime.origin);

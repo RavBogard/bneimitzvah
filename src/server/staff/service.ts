@@ -129,7 +129,9 @@ export function createStaffService<Q extends PgQueryResultHKT>(input: { access: 
       const parents = await data.joinedParents(tx, actor.tenantId, student.id);
       const joined = parents.slice(0, 8).map(row => displayName(row.name, "Parent"));
       const invited = !joined.length && await data.parentInvitePending(tx, actor.tenantId, student.id, new Date(now()));
-      return Object.freeze({ kind, joined: Object.freeze(joined), invited });
+      // "Family: not invited yet" is for a child whose family nobody has invited at all (not one whose invitation lapsed).
+      const neverInvited = kind === "child" && !joined.length && !invited && !await data.parentEverInvited(tx, actor.tenantId, student.id);
+      return Object.freeze({ kind, joined: Object.freeze(joined), invited, neverInvited });
     });
   }
 

@@ -12,7 +12,7 @@ import { LiftedLine } from "../../src/components/portal/workspace/study/lift";
 import { ExplorationContent } from "../../src/components/portal/workspace/study/exploration-view";
 import { NeedsYou } from "../../src/components/portal/workspace/staff/needs-you";
 import { familyLine, isSunday, needsYouRows, savedSections, statusChips, stillWorkingLine, teachesLine, verseList, waitingForDivisions, waitingLine, type StudentStatus } from "../../src/components/portal/workspace/staff/model";
-import { parseFamily, parseStatuses } from "../../src/components/portal/workspace/staff/api";
+import { parseFamily, parseNeeded, parseStatuses } from "../../src/components/portal/workspace/staff/api";
 import { explorationPrepared } from "./exploration-client-helper";
 
 type Node = DefaultTreeAdapterMap["node"];
@@ -54,6 +54,14 @@ describe("Needs you and the roster chips (N14)", () => {
     expect(needsYouRows(students, statuses, today).map(row => row.condition)).toEqual(["needs-invitation"]);
     expect(needsYouRows(students, statuses, today, new Set([id(2)])).map(row => row.condition)).toEqual(["needs-invitation", "needs-invitation"]);
   });
+  it("says so when nothing needs the admin, and takes only student ids from the invitations service", () => {
+    const empty = renderToStaticMarkup(createElement(NeedsYou, { rows: [], disabled: false, onEdit() {}, onHonors() {} }));
+    expect(empty).toContain("Nothing needs you this week.");
+    const row = { memberId: id(9), name: "Synthetic Parent", email: "synthetic-parent@example.test", student: { id: id(1), firstName: "Synthetic", lastName: "Student" } };
+    expect([...parseNeeded({ needed: [row] })]).toEqual([id(1)]);
+    expect(() => parseNeeded({ needed: [{ ...row, extra: 1 }] })).toThrow();
+    expect(() => parseNeeded({ needed: [{ ...row, student: { ...row.student, id: "x" } }] })).toThrow();
+  });
   it("flags a Sunday ceremony only", () => { expect(isSunday("2026-11-08")).toBe(true); expect(isSunday("2026-11-07")).toBe(false); expect(isSunday("")).toBe(false); });
   it("refuses a status page with unknown keys or states", () => {
     const row = { id: id(1), tutors: 0, family: "none", reading: "none", honors: false };
@@ -84,8 +92,7 @@ describe("Practice up close verse picker (N14, G7)", () => {
     const options = nodes(picker).filter(node => "tagName" in node && node.tagName === "option");
     expect(options.map(text)).toEqual(verses.map(verse => verse.ref));
     expect(attr(options.find(option => text(option) === "Genesis 23:10")!, "value")).toBe("3");
-    // The picker is named by the verse count ("Verse 1 of 5"): no new words.
-    expect(text(nodes(root).find(node => attr(node, "id") === attr(picker, "aria-labelledby"))!)).toBe("Verse 1 of 5");
+    expect(attr(picker, "aria-label")).toBe("Choose a verse");
   });
 });
 
@@ -93,9 +100,13 @@ describe("Tutor lines and honors row (N13, N15)", () => {
   it("words the tutor's lines from approved strings with no address", () => {
     expect(familyLine({ joined: ["Dana Levin"], invited: false })).toEqual(["Family: Dana Levin (joined)"]);
     expect(familyLine({ joined: [], invited: true })).toEqual(["Family: invitation sent, not yet accepted"]);
-    expect(familyLine({ joined: [], invited: false })).toEqual([]);
-    expect(() => parseFamily({ kind: "child", joined: ["dana@example.test"], invited: false })).toThrow();
-    expect(() => parseFamily({ kind: "child", joined: [], invited: false, email: "x" })).toThrow();
+    expect(familyLine({ kind: "child", joined: [], invited: false, neverInvited: true })).toEqual(["Family: not invited yet"]);
+    expect(familyLine({ kind: "child", joined: [], invited: false, neverInvited: false })).toEqual(["Family: not joined yet"]);
+    expect(familyLine({ kind: "adult", joined: [], invited: false, neverInvited: false })).toEqual([]);
+    expect(parseFamily({ kind: "child", joined: [], invited: false, neverInvited: true })).toEqual({ kind: "child", joined: [], invited: false, neverInvited: true });
+    expect(() => parseFamily({ kind: "child", joined: ["dana@example.test"], invited: false, neverInvited: false })).toThrow();
+    expect(() => parseFamily({ kind: "child", joined: [], invited: false, neverInvited: false, email: "x" })).toThrow();
+    expect(() => parseFamily({ kind: "adult", joined: [], invited: false, neverInvited: true })).toThrow();
     expect(teachesLine(["Noa", "Eli", "Leah"])).toBe("Teaches 3 students: Noa, Eli, Leah");
     expect(stillWorkingLine("Noa", ["Genesis 23:1", "Genesis 23:10", "Genesis 24:7"])).toBe("Noa is still working on 3 verses: Gen 23:1, 23:10, 24:7");
     expect(verseList(["Genesis 50:26", "Exodus 1:1"])).toBe("Gen 50:26, Exod 1:1");

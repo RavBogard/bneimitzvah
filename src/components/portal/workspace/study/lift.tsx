@@ -105,7 +105,7 @@ export function LiftedLine({ verses, assignment, index, total, offset, onIndex, 
       <button type="button" className="lift-icon" onClick={onClose} aria-label="Close practice view">{icons.close}</button>
       <p className="lift-count" id={`${id}-count`} aria-live="polite">Verse {number} of {total}{phrases.length > 1 && <span className="lift-count-phrase"> · phrase {currentPhrase + 1} of {phrases.length}</span>}</p>
       {/* 1.9 N14 (G7): a verse picker, so any verse on this page is two taps away (open the list, choose the verse). */}
-      {verses.length > 1 && <select className="lift-pick" aria-labelledby={`${id}-count`} data-testid="lift-verse-picker" value={index} onChange={event => { playback.current?.suspend(); setPlayingWord(null); onIndex(Number(event.target.value)); }}>
+      {verses.length > 1 && <select className="lift-pick" aria-label="Choose a verse" data-testid="lift-verse-picker" value={index} onChange={event => { playback.current?.suspend(); setPlayingWord(null); onIndex(Number(event.target.value)); }}>
         {verses.map((row, position) => <option key={row.ref} value={position}>{row.ref}</option>)}
       </select>}
       <button type="button" className="lift-icon" aria-pressed={prefs.colors} aria-label="Phrase colors" onClick={() => setReadingPrefs({ colors: !prefs.colors })}>{icons.colors}</button>

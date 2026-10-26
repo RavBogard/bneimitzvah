@@ -19,12 +19,16 @@ export async function liveTutorCounts<Q extends PgQueryResultHKT>(tx: Tx<Q>, ten
     .where(and(eq(s.tutorStudent.tenantId, tenantId), isNull(s.tutorStudent.revokedAt), isNull(s.roleGrant.revokedAt), isNull(s.membership.disabledAt)))
     .groupBy(s.tutorStudent.studentId).limit(LIMIT);
 }
-/** Students with at least one joined parent: a live guardian row, grant and membership. */
+/**
+ * Students with at least one joined parent: a live guardian row, grant and membership, and a verified address. The same rule as
+ * joinedParents below, so Needs you and the tutor's family line never disagree about who has joined.
+ */
 export async function joinedFamilies<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string) {
   return tx.selectDistinct({ studentId: s.guardian.studentId }).from(s.guardian)
     .innerJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.guardian.tenantId), eq(s.roleGrant.id, s.guardian.parentGrantId)))
     .innerJoin(s.membership, and(eq(s.membership.tenantId, s.roleGrant.tenantId), eq(s.membership.id, s.roleGrant.membershipId)))
-    .where(and(eq(s.guardian.tenantId, tenantId), isNull(s.guardian.revokedAt), isNull(s.roleGrant.revokedAt), isNull(s.membership.disabledAt))).limit(LIMIT);
+    .innerJoin(s.user, eq(s.user.id, s.membership.userId))
+    .where(and(eq(s.guardian.tenantId, tenantId), isNull(s.guardian.revokedAt), isNull(s.roleGrant.revokedAt), isNull(s.membership.disabledAt), eq(s.user.emailVerified, true))).limit(LIMIT);
 }
 /** Parent invitations not accepted and not revoked: only their student and expiry (no address, no token). */
 export async function openParentInvites<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string) {
@@ -70,6 +74,11 @@ export async function joinedParents<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenan
 export async function parentInvitePending<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, studentId: string, now: Date) {
   const [row] = await tx.select({ id: s.invite.id }).from(s.invite).where(and(eq(s.invite.tenantId, tenantId), eq(s.invite.studentId, studentId), eq(s.invite.role, "parent"),
     isNull(s.invite.acceptedAt), isNull(s.invite.revokedAt), gt(s.invite.expiresAt, now))).limit(1);
+  return row !== undefined;
+}
+/** Whether any parent invitation was ever issued for the student (open, expired, revoked or accepted). */
+export async function parentEverInvited<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, studentId: string) {
+  const [row] = await tx.select({ id: s.invite.id }).from(s.invite).where(and(eq(s.invite.tenantId, tenantId), eq(s.invite.studentId, studentId), eq(s.invite.role, "parent"))).limit(1);
   return row !== undefined;
 }
 export async function studentKind<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, studentId: string) {

@@ -32,6 +32,7 @@ function Roster() {
   const [pending, setPending] = useState(false), [message, setMessage] = useState(""), [conflict, setConflict] = useState(false), [confirmDisable, setConfirmDisable] = useState(false), [page, setPage] = useState(0);
   const [query, setQuery] = useState(""), [confirmDone, setConfirmDone] = useState(false);
   // 1.9 N14: each active student's setup facts (Needs you and the row chips), and the student just added (its three next steps).
+  const [neededInvites, setNeededInvites] = useState<ReadonlySet<string>>(new Set());
   const [statuses, setStatuses] = useState<Map<string, StudentStatus> | null>(null), [added, setAdded] = useState<{ id: string; firstName: string } | null>(null);
   // This week (the admin's home) shows Needs you; Students (?tab=students) is the plain list. ?edit= opens one student's details.
   const params = useSearchParams(), thisWeek = params.get("tab") !== "students", editTarget = params.get("edit"), editOpened = useRef<string | null>(null);
@@ -47,10 +48,11 @@ function Roster() {
     if (!preserve) { setLoading(true); setRows([]); setCurrent(null); setEditing(false); setForm(empty); setConflict(false); setConfirmDisable(false); setConfirmDone(false); setMessage(""); setAdded(null); }
     try {
       // The setup facts are a second, separate read: if it fails the roster still shows, without Needs you or chips.
-      const [values, facts] = await Promise.all([workspaceApi.roster(request.signal), staffApi.status(request.signal).catch(() => null)]);
+      // N22: the students the invitations service says need a parent invitation; without it, Needs you still asks for families with none.
+      const [values, facts, needed] = await Promise.all([workspaceApi.roster(request.signal), staffApi.status(request.signal).catch(() => null), staffApi.needed(request.signal).catch(() => new Set<string>())]);
       if (generation === turn.current && !request.signal.aborted) {
         setRows(values); if (!preserve) setPage(0);
-        setStatuses(facts ? new Map(facts.map(row => [row.id, row])) : null);
+        setStatuses(facts ? new Map(facts.map(row => [row.id, row])) : null); setNeededInvites(needed);
         const selected = currentRef.current;
         if (preserve && selected) {
           const next = values.find(row => row.id === selected.id);
@@ -160,7 +162,7 @@ function Roster() {
   // N21: a student whose ceremony is done leaves the active roster for the Ceremony done list (a disabled one stays as Disabled).
   // 1.9 N14: the roster reads soonest ceremony first.
   const listed = useMemo(() => byCeremony(rows.filter(row => !row.ceremonyDoneAt || row.disabledAt)), [rows]);
-  const needsYou = useMemo(() => statuses ? needsYouRows(rows as NeedsYouStudent[], statuses) : [], [rows, statuses]);
+  const needsYou = useMemo(() => statuses ? needsYouRows(rows as NeedsYouStudent[], statuses, new Date(), neededInvites) : null, [rows, statuses, neededInvites]);
   // ?edit=<id> (the reading page's "Edit details") opens that student's details once the roster has loaded.
   useEffect(() => {
     if (loading || unavailable || conflict || !editTarget || editOpened.current === editTarget) return;
@@ -197,7 +199,7 @@ function Roster() {
     {!sheetOpen && notice}{!sheetOpen && conflict && <button type="button" className="button-secondary admin-pill roster-reload-inline" onClick={() => void load().catch(() => undefined)}>Reload roster</button>}
     {loading ? <p role="status">Loading students…</p> : unavailable ? <div className="admin-state" role="alert"><h2>Students unavailable</h2><p>The full list couldn’t be loaded, so none of it is shown. Access may have changed, or the list may be too large to load at once.</p><button className="button-secondary admin-pill" onClick={() => void load().catch(() => undefined)}>Reload roster</button></div>
       : <>
-        {thisWeek && <NeedsYou rows={needsYou} disabled={pending || conflict || editing || !!honorsStudent} onEdit={openDetails} onHonors={openHonors} />}
+        {thisWeek && needsYou && <NeedsYou rows={needsYou} disabled={pending || conflict || editing || !!honorsStudent} onEdit={openDetails} onHonors={openHonors} />}
         {listed.length > 0 && <div className="roster-tools">
           <label className="roster-search"><span className="sr-only">Find a student</span><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M16 16l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg><input type="search" placeholder="Find a student" value={query} onChange={event => { setQuery(event.target.value); setPage(0); }} autoComplete="off" /></label>
           <p className="roster-count" aria-live="polite">{query.trim() ? `${matches.length} of ${listed.length} ${listed.length === 1 ? "student" : "students"}` : `${activeCount} ${activeCount === 1 ? "student" : "students"}${disabledCount ? ` · ${disabledCount} disabled` : ""}`}{pageCount > 1 ? ` · page ${page + 1} of ${pageCount}` : ""}</p>
