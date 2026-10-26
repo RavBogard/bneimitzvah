@@ -5,6 +5,8 @@ import { and, eq, inArray } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
 import { parseRelatedMetadata } from "../../src/server/study/sources/metadata";
 import { closeMcpFixtures, mcpFixture } from "./mcp-fixture";
+import { createInvitationService } from "../../src/server/invitations/service";
+import { withTenantTransaction } from "../../src/server/db/runtime";
 
 afterEach(async () => { vi.restoreAllMocks(); await closeMcpFixtures(); });
 
@@ -229,6 +231,45 @@ describe("student setup through the portal MCP", () => {
     expect(await issued()).toHaveLength(1);
     // The address and the link never come back to the conversation.
     for (const text of texts) { expect(text).not.toMatch(/@/); expect(text).not.toMatch(/token|invitations\/open/); }
+  });
+
+  it("holds students for an invited tutor: they become the tutor's on accepting, move with Send again, skip a disabled student, and nothing else can hold", async () => {
+    const { t, json, owner, crc, unrelated, other } = await setup();
+    const sibling = t.f.students[1];
+    const holds = (inviteId: string) => owner(async () => (await t.f.db.select().from(s.tutorInviteHold).where(eq(s.tutorInviteHold.inviteId, inviteId))).map(r => r.studentId).sort());
+    // A student who is not an active student here refuses the whole call: no invitation, no email.
+    expect(await json("invite_tutor", { email: "held.tutor@example.test", studentIds: [unrelated.id, other.id] })).toMatchObject({ ok: false, code: "student-not-found" });
+    expect(t.mail).toHaveLength(0);
+    expect(await owner(() => t.f.db.select().from(s.invite).where(eq(s.invite.email, "held.tutor@example.test")))).toHaveLength(0);
+    const made = await json("invite_tutor", { email: "held.tutor@example.test", studentIds: [unrelated.id] });
+    expect(made).toMatchObject({ ok: true, delivery: "sent", studentsHeld: 1 });
+    expect(await holds(made.inviteId)).toEqual([unrelated.id]);
+    // Asked again with more students: nothing is sent, and they are held on the same invitation.
+    expect(await json("invite_tutor", { email: "held.tutor@example.test", studentIds: [unrelated.id, sibling.id, crc.id] })).toMatchObject({ ok: true, alreadyInvited: true, inviteId: made.inviteId, studentsHeld: 2 });
+    expect(t.mail).toHaveLength(1);
+    expect(await holds(made.inviteId)).toEqual([crc.id, sibling.id, unrelated.id].sort());
+    // Send again rotates the link; the holds move with it (minus a student disabled since).
+    await owner(async () => { await t.f.db.update(s.student).set({ disabledAt: new Date() }).where(eq(s.student.id, sibling.id)); });
+    const invitations = createInvitationService({ db: t.f.db, access: t.f.service, throttleSecret: "x".repeat(48), transport: async message => { t.mail.push({ email: message.email, url: message.url, role: message.role }); } });
+    const post = (cookie: string) => ({ url: "http://localhost:3000/invitations", method: "POST", headers: new Headers({ cookie, origin: "http://localhost:3000" }) });
+    const again = await invitations.reissue(post(t.f.identities.admin.cookie), { mode: "admin", inviteId: made.inviteId });
+    expect(await holds(again.inviteId)).toEqual([crc.id, unrelated.id].sort());
+    // Accepting makes the tutor links through the portal's tutor write; the disabled student gets none.
+    const tutor = await owner(() => t.f.signIn("held.tutor@example.test"));
+    const token = new URLSearchParams(new URL(t.mail[t.mail.length - 1].url).hash.slice(1)).get("token")!;
+    await invitations.accept(post(tutor.cookie), { token });
+    const links = await owner(() => t.f.db.select().from(s.tutorStudent).innerJoin(s.roleGrant, eq(s.roleGrant.id, s.tutorStudent.tutorGrantId))
+      .innerJoin(s.membership, eq(s.membership.id, s.roleGrant.membershipId)).innerJoin(s.user, eq(s.user.id, s.membership.userId)).where(eq(s.user.email, "held.tutor@example.test")));
+    expect(links.map(l => l.tutor_student.studentId).sort()).toEqual([crc.id, unrelated.id].sort());
+    expect(links.every(l => l.tutor_student.revokedAt === null && l.role_grant.role === "tutor")).toBe(true);
+    expect(await owner(() => t.f.db.select().from(s.auditEvent).where(eq(s.auditEvent.action, "tutor.assign")))).toHaveLength(2);
+    // Row security: a hold needs a live admin grant, a live tutor invitation and an enabled student, and is never updated or deleted.
+    const tryInsert = (values: Partial<typeof s.tutorInviteHold.$inferInsert>) => withTenantTransaction(t.f.db, { tenantId: "crc" }, tx =>
+      tx.insert(s.tutorInviteHold).values({ tenantId: "crc", inviteId: again.inviteId, studentId: crc.id, heldByGrantId: t.f.adminGrant.id, ...values } as typeof s.tutorInviteHold.$inferInsert)).then(() => "ok", () => "refused");
+    expect(await tryInsert({ heldByGrantId: t.f.tutorGrant.id })).toBe("refused");
+    expect(await tryInsert({})).toBe("refused");
+    expect(await withTenantTransaction(t.f.db, { tenantId: "crc" }, tx => tx.delete(s.tutorInviteHold)).then(() => "ok", () => "refused")).toBe("refused");
+    expect(await withTenantTransaction(t.f.db, { tenantId: "other" }, tx => tx.select().from(s.tutorInviteHold))).toHaveLength(0);
   });
 
   it("takes a student off the roster through the portal's Disable, keeping the record, with a conflict on a stale revision and nothing in another congregation", async () => {

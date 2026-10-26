@@ -15,6 +15,8 @@ import { displayName, writeTutorAssignment, writeTutorRevocation } from "../rela
 import { preferredFirst } from "../settings/validation";
 import { writeNewStudent, writeStudentDisable, writeStudentEdit } from "../students/service";
 import { normalizedInvitationEmail } from "../invitations/tokens";
+import { writeTutorHolds } from "../invitations/service";
+import { MAX_HELD_STUDENTS } from "../data/tutor-invite-holds";
 import { rehearsalsFit, studentInput } from "../students/validation";
 import { lockRabbi } from "../study-guides/authority";
 import { currentVerseCapture } from "../study/current-verse-context";
@@ -347,8 +349,9 @@ export function createSetupTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>
     },
     {
       name: "invite_tutor", roles, scope, annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-      description: "Invite a person to be a tutor here, as the portal's Invitations page does: the portal emails them its invitation, with a link to sign in and accept. Only on the rabbi's instruction in this conversation, naming the person. It needs a fresh sign-in, like adding a tutor: within 15 minutes of connecting Claude. If that address already has a live tutor invitation, nothing new is sent and that invitation comes back. Once they accept, they appear in list_tutors and set_student_tutor assigns their students. The address is never shown back.",
-      inputSchema: closed({ email: { type: "string", maxLength: 254, description: "The tutor's email address." } }, ["email"]),
+      description: "Invite a person to be a tutor here, as the portal's Invitations page does: the portal emails them its invitation, with a link to sign in and accept. Only on the rabbi's instruction in this conversation, naming the person. It needs a fresh sign-in, like adding a tutor: within 15 minutes of connecting Claude. Optional studentIds holds students for the tutor: they become the tutor's the moment the invitation is accepted. If that address already has a live tutor invitation, nothing new is sent, that invitation comes back, and any studentIds are held on it. Without held students, set_student_tutor assigns them after the tutor accepts. The address is never shown back.",
+      inputSchema: closed({ email: { type: "string", maxLength: 254, description: "The tutor's email address." },
+        studentIds: { type: "array", maxItems: 50, items: { type: "string", pattern: UUID.source }, description: "Optional: students to hold for this tutor, by id from list_students. They become the tutor's when the invitation is accepted." } }, ["email"]),
       handler: async (input, ctx) => inviteTutor(input, ctx),
     },
   ] satisfies Tool<Q>[]);
@@ -473,25 +476,49 @@ async function inviteTutor<Q extends PgQueryResultHKT>(input: Record<string, unk
   if (!ctx.invitations) return { ok: false, code: "invitations-unavailable", hint: "Invitations can't be sent from this connection; invite the tutor from the portal's Invitations page." };
   let email: string;
   try { if (typeof input.email !== "string") throw new Error("email"); email = normalizedInvitationEmail(input.email); } catch { return { ok: false, code: "invalid-input", hint: "That is not an email address the portal can invite." }; }
+  const studentIds = input.studentIds === undefined ? [] : uuids(input.studentIds, MAX_HELD_STUDENTS);
+  if (!studentIds) return { ok: false, code: "invalid-input", hint: `studentIds is a list of at most ${MAX_HELD_STUDENTS} distinct student ids from list_students.` };
   const stale = { ok: false, code: "fresh-sign-in-required", hint: "Inviting a tutor needs a fresh sign-in. Reconnect Claude to the portal, then invite within 15 minutes." };
-  // Where a refusal came from: a 403 once the write has begun is the send budget; one before it is the connection's authority.
-  let writing = false;
+  const missing = { ok: false, code: "student-not-found", hint: "A student in studentIds is not an active student here (or the ceremony is done); nothing was saved or sent. Check list_students." };
+  // The portal's fresh sign-in rule for invitations (manage-invites), as set_student_tutor applies it for adding a tutor.
+  const fresh = (live: McpActor) => { if (ctx.mcp.now() - live.approvedAt >= GOOGLE_CONSENT_WINDOW_MS) throw new Refusal(stale); };
+  const openInvite = async (tx: AccessTransaction<Q>, tenantId: string) => (await tx.select({ id: s.invite.id, expiresAt: s.invite.expiresAt }).from(s.invite)
+    .where(and(eq(s.invite.tenantId, tenantId), eq(s.invite.email, email), eq(s.invite.role, "tutor"), isNull(s.invite.acceptedAt), isNull(s.invite.revokedAt), gt(s.invite.expiresAt, new Date()))).limit(1))[0];
+  // Students held for the invitation, in the caller's transaction; one that isn't an active student here refuses the whole call.
+  const hold = async (tx: AccessTransaction<Q>, portal: Actor, inviteId: string) => {
+    try { return await writeTutorHolds(tx, portal, inviteId, studentIds); }
+    catch (error) { if (error instanceof AccessDenied && error.status === 404) throw new Refusal(missing); if (error instanceof AccessDenied && error.status === 403) throw new Refusal({ ok: false, code: "too-many-students", hint: `An invitation holds at most ${MAX_HELD_STUDENTS} students.` }); throw error; }
+  };
+  try {
+    // A resent call (or a second ask) finds the live invitation and sends nothing more; "Send again" in the portal re-sends. Students
+    // asked for are held on that invitation too. authority-write locks this connection's row and admin grant FOR UPDATE, so two
+    // deliveries of one call take turns.
+    const existing = await asAdmin(ctx, "authority-write", async (tx, live, portal, alive) => {
+      fresh(live);
+      const open = await openInvite(tx, live.tenantId);
+      if (!open) return null;
+      alive();
+      const added = await hold(tx, portal, open.id);
+      return { ok: true, alreadyInvited: true, inviteId: open.id, expiresAt: open.expiresAt.toISOString(), invitationsSent: 0, studentsHeld: added,
+        next: "This address already has a live tutor invitation, so nothing new was sent; the students asked for are held on it. The portal's Invitations page can send it again." };
+    });
+    if (existing) return existing;
+  } catch (error) { if (error instanceof Refusal) return error.result; throw error; }
+  // Where a refusal came from: a 403 once the invitation write has begun is the send budget; one before it is the connection's authority.
+  let writing = false, held = 0;
   try {
     const sent = await ctx.invitations.issueAs(work => asAdmin(ctx, "authority-write", async (tx, live, portal, alive) => {
-      // The portal's fresh sign-in rule for invitations (manage-invites), as set_student_tutor applies it for adding a tutor.
-      if (ctx.mcp.now() - live.approvedAt >= GOOGLE_CONSENT_WINDOW_MS) throw new Refusal(stale);
-      // A resent call (or a second ask) finds the live invitation and sends nothing more; "Send again" in the portal re-sends.
-      // authority-write locks this connection's row and admin grant FOR UPDATE, so two deliveries of one call take turns here.
-      const [open] = await tx.select({ id: s.invite.id, expiresAt: s.invite.expiresAt }).from(s.invite).where(and(eq(s.invite.tenantId, live.tenantId), eq(s.invite.email, email),
-        eq(s.invite.role, "tutor"), isNull(s.invite.acceptedAt), isNull(s.invite.revokedAt), gt(s.invite.expiresAt, new Date()))).limit(1);
-      if (open) throw new Refusal({ ok: true, alreadyInvited: true, inviteId: open.id, expiresAt: open.expiresAt.toISOString(), invitationsSent: 0,
-        next: "This address already has a live tutor invitation, so nothing new was sent. The portal's Invitations page can send it again." });
+      fresh(live);
+      if (await openInvite(tx, live.tenantId)) throw new Refusal({ ok: false, code: "conflict", hint: "A tutor invitation for this address was just made by another call; nothing more was sent. Call invite_tutor again to hold the students on it." });
       alive();
       writing = true;
-      return work(tx, portal);
+      const pending = await work(tx, portal);
+      writing = false;
+      held = await hold(tx, portal, pending.invitation.id);
+      return pending;
     }), { role: "tutor", email });
-    return { ok: true, inviteId: sent.inviteId, delivery: sent.delivery, expiresAt: sent.expiresAt, invitationsSent: sent.delivery === "sent" ? 1 : 0,
-      next: sent.delivery === "sent" ? "The invitation email went out. Once the tutor accepts, they appear in list_tutors; then set_student_tutor assigns their students."
+    return { ok: true, inviteId: sent.inviteId, delivery: sent.delivery, expiresAt: sent.expiresAt, invitationsSent: sent.delivery === "sent" ? 1 : 0, studentsHeld: held,
+      next: sent.delivery === "sent" ? (held ? "The invitation email went out. When the tutor accepts, the held students become theirs; nothing more is needed." : "The invitation email went out. Once the tutor accepts, they appear in list_tutors; then set_student_tutor assigns their students.")
         : "The invitation was made, but its email may not have gone out. The portal's Invitations page shows it and can send it again." };
   } catch (error) {
     if (error instanceof Refusal) return error.result;
