@@ -70,7 +70,7 @@ test("the current link: Read on /read*, Learn on /learn* and the trope chart, Ac
 test("the bar's wording is the approved wording and nothing else", () => {
   expect(links(bar({ signedIn: true })).map(([, text]) => text)).toEqual(["CRC Torah", "Read", "Learn", "Account"]);
   expect(links(bar()).map(([, text]) => text)).toEqual(["CRC Torah", "Read", "Learn", "Sign in"]);
-  expect(renderToStaticMarkup(createElement(SiteFooter))).toBe('<footer class="site-footer"><p>Central Reform Congregation · Your account and reading stay private.</p><p>A project of <a href="https://danielbogard.com" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Rabbi Daniel Bogard</a></p></footer>');
+  expect(renderToStaticMarkup(createElement(SiteFooter))).toBe('<footer class="site-footer"><p>Central Reform Congregation · <a href="/about">About</a> · Your account and reading stay private.</p><p>A project of <a href="https://danielbogard.com" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Rabbi Daniel Bogard</a></p></footer>');
 });
 
 const sourceFiles = (dir: string): string[] => readdirSync(dir).flatMap(name => {

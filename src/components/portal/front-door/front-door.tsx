@@ -10,9 +10,32 @@ import { SavedLine } from "../offline/status";
 import { startAccountPreferences } from "../workspace/account-preferences";
 import styles from "./front-door.module.css";
 import { SiteBar } from "../../site/site-bar";
+import type { Role } from "../api";
+import { homeRole, rolePaths } from "../shell/role-home";
+import { rememberedRole } from "../shell/role-memory";
+import { signInAddress } from "../../../lib/site/return-address";
 
-/** What the front door knows of the visitor: nothing while access is being checked or when a signed-in account is refused (the site bar then uses this browser's hint), signed out, or a signed-in account. `saved`: the account keeps saved readings, so My readings shows. */
-export type FrontDoorAccount = null | Readonly<{ kind: "sign-in" }> | Readonly<{ kind: "account"; saved: boolean }>;
+/**
+ * What the front door knows of the visitor: nothing while access is being checked (the Beit Mitzvah door holds its height), signed out,
+ * a signed-in account with its roles, or `task`: the door shows the entry task itself (a refused account, which is signed in and so has
+ * no Sign in; or sign-in that is unavailable, which keeps its Try again). `signedIn` is what the site bar shows for it, left undefined
+ * when this browser's hint decides. `saved`: the account keeps saved readings, so My readings shows.
+ */
+export type FrontDoorAccount = null | Readonly<{ kind: "sign-in" }> | Readonly<{ kind: "account"; saved: boolean; roles: readonly Role[] }> | Readonly<{ kind: "task"; signedIn: boolean | undefined }>;
+
+/** What a signed-in person's door says. `reading` and `children` are used when the session summary carries them; it does not yet, so the fallbacks show. */
+export type DoorFacts = Readonly<{ reading?: Readonly<{ parashah: string; date: string }> | null; children?: readonly string[] }>;
+export type SignedInDoor = Readonly<{ title: string; line: string | null; action: string }>;
+/** "Ari", "Ari and Dana", "Ari, Dana and Eli". */
+export const joinNames = (names: readonly string[]) => names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+export function signedInDoor(role: Role, facts: DoorFacts = {}): SignedInDoor {
+  switch (role) {
+    case "student": return { title: "Your reading", line: facts.reading ? `${facts.reading.parashah} · ${longDate(facts.reading.date)}` : "Your parts and what's next.", action: "Open Today" };
+    case "parent": return { title: "Your family", line: facts.children?.length ? joinNames(facts.children) : null, action: "Open Today" };
+    case "tutor": return { title: "Your students", line: "Who are you teaching today?", action: "Open This week" };
+    case "admin": return { title: "This week", line: "Needs you, ceremonies and rehearsals.", action: "Open This week" };
+  }
+}
 
 const displayRange = (ranges: readonly string[]) => ranges.join("; ").replace(/(\d)-(\d)/g, "$1–$2");
 const longDate = (date: string) => new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
@@ -55,9 +78,36 @@ function ThisWeek() {
   return <ThisWeekView state={state} />;
 }
 
+const DOOR_LINE = "For students, families and tutors preparing a Beit Mitzvah.";
+
 /**
- * The CRC Torah home: This week, My readings for an account that keeps them, then the Beit Mitzvah door (the existing sign-in task, passed in
- * whole so every entry state and behaviour stays in PortalEntry) and the Learn to lein door.
+ * The Beit Mitzvah door. Signed out: Sign in and the way to ask for an account (the form lives on /sign-in alone). Signed in: the door of
+ * the role the person was last in, else the highest. While access is checked it holds the height it takes afterwards, so the Learn door
+ * and the page below do not move. An account with no role, a refused account or an unavailable sign-in keeps the entry task, passed in
+ * whole (request a role, Sign out, Try again).
+ */
+function BeitMitzvahDoor({ account, children }: { account: FrontDoorAccount; children: ReactNode }) {
+  const role = account?.kind === "account" ? homeRole(account.roles, rememberedRole()) : null;
+  const door = role ? signedInDoor(role) : null;
+  const task = account?.kind === "task" || (account?.kind === "account" && !role);
+  const state = account === null ? "loading" : task ? "task" : role ? "role" : "sign-in";
+  return <section id="beit-mitzvah" className={styles.door} aria-labelledby="beit-mitzvah-title" data-door="beit-mitzvah" data-door-state={state} aria-busy={account === null}>
+    <h2 id="beit-mitzvah-title" className={styles.doorTitle}>{door ? door.title : "Beit Mitzvah"}</h2>
+    {door ? door.line && <p className={styles.doorLine}>{door.line}</p> : <p className={styles.doorLine}>{DOOR_LINE}</p>}
+    {account === null && <p className={styles.doorWait} role="status">One moment while we check your access.</p>}
+    {account?.kind === "sign-in" && <>
+      <a className={`button-hero-secondary ${styles.doorAction}`} href="/sign-in" aria-describedby="beit-mitzvah-title">Sign in</a>
+      <p className={styles.doorMore}><a href={signInAddress("/account")}>Ask for an account</a></p>
+    </>}
+    {role && door && <a className={`button-hero-secondary ${styles.doorAction}`} href={rolePaths[role]} aria-describedby="beit-mitzvah-title">{door.action}</a>}
+    {task && <div className={styles.task}>{children}</div>}
+  </section>;
+}
+
+/**
+ * The CRC Torah home: This week, My readings for an account that keeps them, then the Beit Mitzvah door and the Learn to lein door.
+ * `children` is the entry task (PortalEntry keeps every entry state and behaviour), shown in the Beit Mitzvah door only when the
+ * account has no role or the door cannot say who is there.
  */
 export function FrontDoor({ account, children }: { account: FrontDoorAccount; children: ReactNode }) {
   const keeps = account?.kind === "account" && account.saved;
@@ -65,21 +115,17 @@ export function FrontDoor({ account, children }: { account: FrontDoorAccount; ch
   useEffect(() => { if (keeps) startAccountPreferences(true); }, [keeps]);
   return <div className="portal-shell">
     <a className="skip-link" href="#front-door-main">Skip to main content</a>
-    <SiteBar signedIn={account === null ? undefined : account.kind === "account"} />
+    <SiteBar signedIn={account === null ? undefined : account.kind === "task" ? account.signedIn : account.kind === "account"} />
     <main id="front-door-main" className={styles.main}>
       <ThisWeek />
       <SavedLine />
       {account?.kind === "account" && account.saved && <MyReadings />}
       <div className={styles.doors}>
-        <section id="beit-mitzvah" className={styles.door} aria-labelledby="beit-mitzvah-title" data-door="beit-mitzvah">
-          <h2 id="beit-mitzvah-title" className={styles.doorTitle}>Beit Mitzvah</h2>
-          <p className={styles.doorLine}>For students, families and tutors preparing a Beit Mitzvah.</p>
-          <div className={styles.task}>{children}</div>
-        </section>
+        <BeitMitzvahDoor account={account}>{children}</BeitMitzvahDoor>
         <section className={styles.door} aria-labelledby="learn-title" data-door="learn">
           <h2 id="learn-title" className={styles.doorTitle}>Learn to lein</h2>
           <p className={styles.doorLine}>Hear the phrases, then lein a verse of this week's reading.</p>
-          <a className={`button-start ${styles.doorAction} ${styles.doorStart}`} href="/learn" aria-describedby="learn-title">Start</a>
+          <a className={`button-hero-secondary ${styles.doorAction}`} href="/learn" aria-describedby="learn-title">Start</a>
           <p className={styles.doorMore}><a href="/trope-chart">Trope chart</a></p>
         </section>
       </div>

@@ -68,12 +68,12 @@ test("parents, tutors, admins and students are not offered a request on /account
   await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: [] }));
   await page.route("**/api/account/request", route => json(route, 200, { ok: true, state: "requestable", suggestedName: "", productName: "CRC Torah" }));
   await page.goto("/account");
-  await expect(page.getByRole("list", { name: "Available roles" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Roles" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Ask for an account", exact: true })).toHaveCount(0);
   expect(asked).toEqual([]);
   roles = ["student"]; saved = false;
   await page.reload();
-  await expect(page.getByRole("list", { name: "Available roles" }).getByRole("link", { name: "Student", exact: true })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Roles" }).getByRole("link", { name: /^Student/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Ask for an account", exact: true })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveCount(0);
   expect(asked).toEqual([]);
@@ -84,7 +84,8 @@ test("signed out, /, /sign-in and /account each show the way to ask for an accou
   await page.route("**/api/session", route => json(route, 401, { error: "authentication-required" }));
   for (const path of ["/", "/sign-in", "/account"]) {
     await page.goto(path);
-    await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
+    // The home's Beit Mitzvah door is Sign in and this link; the form is on /sign-in and, signed out, on /account.
+    if (path !== "/") await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
     const ask = page.getByRole("link", { name: "Ask for an account", exact: true });
     await expect(ask).toHaveAttribute("href", "/sign-in?return=%2Faccount");
     const box = await ask.boundingBox(); expect(box && box.height >= 44).toBe(true);

@@ -1,7 +1,7 @@
-import { RoleChoice } from "../../components/portal/workspace/students";
+import { WorkspaceHomeRedirect } from "../../components/portal/workspace/home-redirect";
 import type { Metadata } from "next";
 import { signedInTitle } from "../../lib/site/signed-in-title";
 
-export const metadata: Metadata = { title: signedInTitle("Choose your workspace") };
+export const metadata: Metadata = { title: signedInTitle("Your account") };
 
-export default function WorkspacePage() { return <RoleChoice />; }
+export default function WorkspacePage() { return <WorkspaceHomeRedirect />; }

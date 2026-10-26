@@ -17,9 +17,9 @@ import type { PublicRuntimeScope } from "../../src/server/http/public-reading";
 afterEach(() => { forgetPublicProductName(); vi.doUnmock("../../src/server/public-site/names"); vi.doUnmock("../../src/lib/site/indexing"); vi.resetModules(); });
 
 const ORIGIN = CANONICAL_ORIGINS[1];
-const THE_THREE = ["/read", "/learn", "/trope-chart"];
+const THE_THREE = ["/read", "/learn", "/trope-chart", "/about"];
 
-test("the indexing switch ships on (Daniel, 2026-10-26) and names exactly the three public routes", () => {
+test("the indexing switch ships on (Daniel, 2026-10-26) and names exactly the four public routes", () => {
   expect(PUBLIC_INDEXING).toBe(true);
   expect([...INDEXABLE_PATHS]).toEqual(THE_THREE);
 });
@@ -40,7 +40,7 @@ test("off stays available as the rollback: header on every path, noindex meta, r
 test("on indexes only the three routes: the header skips exactly them, robots.txt allows them and names the sitemap", () => {
   const rule = noindexHeaderRule(true), match = pathToRegexp(rule.source);
   expect(rule.headers).toEqual([{ key: "X-Robots-Tag", value: "noindex, nofollow" }]);
-  for (const path of [...THE_THREE, "/read/", "/learn/", "/trope-chart/"]) expect(match.test(path), path).toBe(false);
+  for (const path of [...THE_THREE, "/read/", "/learn/", "/trope-chart/", "/about/"]) expect(match.test(path), path).toBe(false);
   for (const path of ["/", "/sign-in", "/account", "/workspace", "/workspace/students", "/connect", "/learn/about", "/learn/review", "/learn/noach", "/read/x", "/api/public/reading", "/api/auth/session", "/honoree/x", "/invitations/open", "/sitemap.xml", "/reading"]) expect(match.test(path), path).toBe(true);
   expect(publicRobots(true)).toEqual({ index: true, follow: true });
   expect(robotsTxt(ORIGIN, true)).toEqual({ rules: { userAgent: "*", allow: THE_THREE, disallow: "/" }, sitemap: `${ORIGIN}/sitemap.xml` });
@@ -96,9 +96,9 @@ test("the product name comes from the public runtime, falls back without it, and
 
 test("the sitemap lists the three routes and the weekly parashot on the canonical origin, and nothing signed-in", () => {
   const paths = sitemapPaths();
-  expect(paths.slice(0, 3)).toEqual(THE_THREE);
+  expect(paths.slice(0, 4)).toEqual(THE_THREE);
   expect(new Set(paths).size).toBe(paths.length);
-  const readings = paths.slice(3);
+  const readings = paths.slice(4);
   expect(readings.length).toBeGreaterThanOrEqual(50);
   for (const path of readings) {
     const slug = new URLSearchParams(path.split("?")[1]).get("reading")!;

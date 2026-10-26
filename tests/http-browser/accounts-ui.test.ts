@@ -33,13 +33,13 @@ async function tab(width: number) {
   return context.newPage();
 }
 async function signIn(page: Page, email: string) {
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto("/sign-in", { waitUntil: "domcontentloaded" });
   await ui(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
   await page.getByLabel("Email address", { exact: true }).fill(email);
   await page.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
   await ui(page.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
   await openAuthMail(page, fixture.takeMail(email));
-  await ui(page.getByRole("heading", { name: "You’re signed in", exact: true })).toBeVisible();
+  await ui(page.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
 }
 const noHorizontalScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 async function controlsAtLeast44(page: Page, scope: string) {

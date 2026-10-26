@@ -8,7 +8,7 @@ import Link from "next/link";
 import { workspaceApi, type Student } from "./api";
 import { ChildPracticeDisclosure } from "../practice-visibility/disclosure";
 import { TutorCardLine } from "./staff/practice";
-import { RequireRole, rolePaths, statusOf, useWorkspace, WorkspaceLink } from "./provider";
+import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "./provider";
 import { ceremonyCountdown, ReadingPanel } from "./reading";
 import { reconcileSelectedStudent, sortStudentsByCeremony } from "./student-label";
 import { HonorsCardLine, HonorsEntry, HonorsNote } from "./honors/sheet";
@@ -143,11 +143,4 @@ export function PracticeWorkspace({ studentId }: { studentId: string }) {
     <StudentSelection mode="parent" switching />
     <ReadingPanel mode="child-practice" studentId={studentId} />
   </section></RequireRole>;
-}
-
-export function RoleChoice() {
-  const { summary } = useWorkspace(), router = useRouter();
-  // One role leaves nothing to choose: go straight to that role's workspace (fixed paths, never a supplied address).
-  useEffect(() => { if (summary.roles.length === 1) router.replace(rolePaths[summary.roles[0]]); }, [summary, router]);
-  return <section className="role-workspace"><h1>Choose your workspace</h1><p>Use one role at a time. Your available roles are shown above.</p>{summary.roles.length === 0 && <p>No congregation role is linked to this account. Open your invitation email, or ask the congregation for an invitation.</p>}</section>;
 }
