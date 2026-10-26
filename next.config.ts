@@ -15,6 +15,12 @@ const nextConfig: NextConfig = {
   // Auth/invitation query strings must not enter framework request logs.
   // Fetch URL logging remains disabled (no fetches logging configuration).
   logging: { incomingRequests: false },
+  // The old generated icon URLs keep working for anything that cached them; the files are now Siona Benjamin's CRC floor under /brand.
+  async redirects() {
+    return [["/apple-touch-icon.png", "/brand/apple-180.png"], ["/favicon.ico", "/brand/favicon.ico"], ["/icons/icon-192.png", "/brand/icon-192.png"], ["/icons/icon-512.png", "/brand/icon-512.png"],
+      ["/icons/maskable-512.png", "/brand/maskable-512.png"], ["/icons/apple-180.png", "/brand/apple-180.png"], ["/icons/favicon-48.png", "/brand/favicon-48.png"]]
+      .map(([source, destination]) => ({ source, destination, permanent: false }));
+  },
   // No portal page is ever framed (an overlaid click on the Claude consent page, among others).
   async headers() {
     // Pages only: API, discovery and the reviewed landing handlers (honoree, e-mail and invitation

@@ -74,7 +74,7 @@ export function startOfflineRuntime() {
   const platform = browserPlatform();
   if (!platform.origin) return;
   link("manifest", MANIFEST_PATH);
-  link("apple-touch-icon", "/apple-touch-icon.png", { sizes: "180x180" });
+  link("apple-touch-icon", "/brand/apple-180.png", { sizes: "180x180" });
   if (!("serviceWorker" in navigator) || typeof caches === "undefined") return;
   if (!ENABLED) { void disable(); return; }
   if (!platform.installed) return;

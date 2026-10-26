@@ -55,7 +55,7 @@ export const SHELL_BASE_PAGES: readonly string[] = Object.freeze(["/read", "/off
   // 2.0 SC6 (A4 10): the service course's home, About, Review and Quick ten; shell.ts adds one page per open lesson.
   "/learn/service", "/learn/service/about", "/learn/service/review", "/learn/service/practice/quick-ten"]);
 /** App code: cache-first into the shell cache. */
-export const STATIC_PATH = /^\/(?:_next\/static|fonts)\//;
+export const STATIC_PATH = /^\/(?:_next\/static|fonts|brand)\//;
 /** Never app code, whatever its prefix: an encoded slash, backslash or dot segment. */
 export const STATIC_UNSAFE = /%2f|%5c|%2e|\/\.\.?(?:\/|$)|\/\//i;
 /** PocketTorah short clips only (G3): exactly the content-addressed short-v1 path, no query. */

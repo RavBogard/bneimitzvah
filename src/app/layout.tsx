@@ -4,7 +4,9 @@ import "./globals.css";
 import { OfflineRuntime } from "../components/portal/offline/runtime";
 import { SiteFooter } from "../components/site/site-footer";
 
-export const metadata: Metadata = { title: "CRC Torah", referrer: "no-referrer", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "CRC Torah", referrer: "no-referrer", robots: { index: false, follow: false },
+  // Siona Benjamin's CRC floor, served from public/brand. The Apple touch icon is linked by the offline runtime, on the torah origin only.
+  icons: { icon: [{ url: "/brand/favicon.ico", sizes: "any" }, { url: "/brand/favicon-48.png", sizes: "48x48", type: "image/png" }] } };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   // The site's one footer: the congregation line and Daniel's standard credit. No page draws a second.
