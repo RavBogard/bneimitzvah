@@ -31,6 +31,7 @@ import { PrintDocument, type SheetHeading, type SheetText } from "./document";
 import styles from "./print.module.css";
 // The Hebrew face's @font-face, which the sheet's own type needs whatever else the page loads.
 import "../../../styles/hebrew-font.module.css";
+import "../../../styles/stam-font.module.css";
 
 const MAX_PAGES = 10; // A passage is at most 1,000 verses, 100 to a text page.
 const kindName = (kind: "torah" | "haftarah") => kind === "torah" ? "Torah" : "Haftarah";
@@ -97,10 +98,16 @@ async function loadSheet(target: PrintTarget, today: string, signal: AbortSignal
   return { heading: { title: saved.name, passage: `${kindName(saved.kind)} ${displayRange([saved.ranges])}`, date: saved.date }, text: await loadText(source, signal), markers: new Map(), week: null, passage: passageOf(source) };
 }
 
-/** Printing waits for the Hebrew face, as the practice sheet does: a fallback serif would misplace the trope. */
-async function fontsReady() {
-  const loaded = await document.fonts.load('400 32px "CRC Noto Serif Hebrew"', "אבג");
-  if (!loaded.length || !loaded.every(font => font.status === "loaded")) throw new Error("Sheet font unavailable");
+/**
+ * Printing waits for the Hebrew face, as the practice sheet does: a fallback serif would misplace the trope. The reading text is Taamey
+ * Frank (vowels and trope, vowels only), "Letters only" is set in the Torah-scroll face, and Noto Serif Hebrew sets the commentary appendix.
+ */
+async function fontsReady(script: SheetFormat["script"]) {
+  const faces = script === "letters" ? ['400 32px "CRC Stam Ashkenaz"', '400 32px "CRC Noto Serif Hebrew"'] : ['400 32px "CRC Taamey Frank"', '400 32px "CRC Noto Serif Hebrew"'];
+  for (const face of faces) {
+    const loaded = await document.fonts.load(face, "אבג");
+    if (!loaded.length || !loaded.every(font => font.status === "loaded")) throw new Error("Sheet font unavailable");
+  }
 }
 
 /** One choice of several, as a row of pills made of real radio buttons. */
@@ -206,7 +213,7 @@ export function PrintSheetPage() {
   async function print() {
     if (gate.current || !sheet || commentaryPending) return;
     gate.current = true; setPrinting("preparing");
-    try { await fontsReady(); setPrinting("idle"); window.print(); }
+    try { await fontsReady(format.script); setPrinting("idle"); window.print(); }
     catch { setPrinting("error"); }
     finally { gate.current = false; }
   }

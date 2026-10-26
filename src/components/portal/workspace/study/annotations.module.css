@@ -1,11 +1,13 @@
 .word { background: var(--phrase-color); color: #13202f; border-radius: 0.18em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+/* The last word of a phrase carries a bar of the fixed dark ink at its end (the left edge of Hebrew), so a phrase end never depends on colour (1.9 N8, G18). */
+.word[data-phrase-end] { box-shadow: inset 0.14em 0 0 0 #13202f; }
 .legend { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .legend > li { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.75rem 0.25rem 0.25rem; border-radius: 999px; background: var(--color-surface); border: 1px solid var(--color-rule); font-size: 0.875rem; overflow-wrap: anywhere; }
 .chip { display: inline-block; padding: 0.125rem 0.625rem; border-radius: 999px; background: var(--phrase-color); color: #13202f; font-weight: 600; }
 .wordRange { color: var(--color-muted); font-variant-numeric: tabular-nums; }
 
 .flow { max-width: 72rem; margin-inline: auto; }
-.flowParagraph { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: var(--hebrew-size, 2rem); line-height: 2.15; margin-block: 1rem; text-align: start; overflow-wrap: anywhere; }
+.flowParagraph { font-family: "CRC Taamey Frank", "Taamey Frank CLM", "CRC Noto Hebrew Fallback", "Noto Serif Hebrew", serif; font-size: var(--hebrew-size, 2rem); line-height: 2.15; margin-block: 1rem; text-align: start; overflow-wrap: anywhere; }
 .inlineHebrew[lang="he"] { display: inline; font-size: inherit; line-height: inherit; margin: 0; }
 .flowVerse { display: inline; }
 .flowEnglish { display: block; margin-block: 0.25rem 1rem; margin-inline: 0; max-inline-size: 62ch; font: 400 1rem/1.7 "Bricolage Grotesque", sans-serif; text-align: start; unicode-bidi: isolate; }
@@ -17,6 +19,7 @@
 /* Keyboard focus on a word or a verse number: the ring colour of the whole app (lake-deep on light, marigold on dark; at least 3:1 on the page and on every phrase fill),
    with a halo of the surface colour between the ring and the word so the ring never sits on a neighbour's fill. */
 .verseNumber:focus-visible, .playable [data-word-index]:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-surface); }
+.playable .word[data-phrase-end]:focus-visible { box-shadow: 0 0 0 2px var(--color-surface), inset 0.14em 0 0 0 #13202f; }
 /* Dark mode: the verse number takes the action blue that reads on the night canvas (lake-deep is 1.9:1 there). */
 @media (prefers-color-scheme: dark) { .verseNumber { color: var(--color-action); } }
 /* Choose verses: the verse number is a 44px toggle; a chosen verse carries a check as well as the filled number, so it never depends on colour. */
@@ -35,6 +38,9 @@
 /* A maqaf phrase is one chanted unit and moves to the next line whole. It is an inline block no wider than the line, so a phrase wider than the whole line (320px at Huge) still wraps inside itself instead of reaching past the screen. */
 .chain { display: inline-block; max-inline-size: 100%; }
 .closedGap { display: inline-block; inline-size: 4.5em; }
+/* A verse that ends a paragraph says so on screen with the scroll's own letter, small and quiet: samekh for a closed paragraph, pe for an open one. */
+.openMark { display: inline-block; inline-size: 1.5em; }
+.closedGap > :global(.study-paragraph-mark), .openMark > :global(.study-paragraph-mark) { font-size: 0.625em; }
 .flowHebrew { display: inline; }
 /* S16: on wide screens each verse becomes a row, Hebrew on the left and its English beside it. */
 @media (min-width: 1001px) {
@@ -86,10 +92,25 @@
 .flowVerse[data-tk-rows] > .flowTikkun { display: grid; grid-template-rows: subgrid; grid-row: 1 / span var(--tk-lines, 1); text-align: start; }
 .flowVerse[data-tk-rows] > .flowEnglish { grid-row: auto; }
 /* A closed paragraph keeps its spoken label; there is no room to draw the gap inside a row. */
-.flowVerse[data-tk-rows] > .flowHebrew > .closedGap { grid-column: 1; grid-row: 1; inline-size: 0; block-size: 0; overflow: hidden; }
+.flowVerse[data-tk-rows] > .flowHebrew > :is(.closedGap, .openMark) { grid-column: 1; grid-row: 1; inline-size: 0; block-size: 0; overflow: hidden; }
 @media (min-width: 1001px) {
   /* Wide screens set the scroll column like a scroll: every row but the last of a verse runs the full width. */
   .flowVerse[data-tk-rows] > .flowTikkun .tkLine:not(:last-child) { justify-content: space-between; }
+}
+/* 1.9 N8 (G18): on a phone at Large and Huge a half-width column cannot hold a word, so the two texts stack instead of being squeezed (and the
+   type is no longer held at the Standard size). They keep their shared lines: line 1 of the pointed text, then line 1 of the scroll, then line 2 of
+   each, so the same words are still on the same pair of lines. Each scroll line is its own light strip, so it never covers the pointed line above it. */
+@media (max-width: 640px) {
+  :global(.assigned-study):is([data-size="large"], [data-size="huge"]) .flowParagraph:has(.flowTikkun) { font-size: var(--hebrew-size, 2rem); }
+  :global(.assigned-study):is([data-size="large"], [data-size="huge"]) .flowParagraph:has(.flowTikkun) .flowVerse { grid-template-columns: minmax(0, 1fr); }
+  :global(.assigned-study):is([data-size="large"], [data-size="huge"]) .flowParagraph:has(.flowTikkun) .flowTikkun { grid-column: 1; grid-row: 2; font-size: calc(var(--hebrew-size, 2rem) * 0.92 * var(--tk-fit, 1)); }
+  :global(.assigned-study):is([data-size="large"], [data-size="huge"]) .flowParagraph:has(.flowTikkun) .flowEnglish { grid-row: 3; }
+  :global(.assigned-study):is([data-size="large"], [data-size="huge"]) .flowParagraph:has(.flowTikkun) .flowVerse[data-tk-rows] { grid-template-rows: repeat(calc(var(--tk-lines, 1) * 2), auto); }
+  :global(.assigned-study):is([data-size="large"], [data-size="huge"]) .flowParagraph:has(.flowTikkun) .flowVerse[data-tk-rows] > .flowHebrew,
+  :global(.assigned-study):is([data-size="large"], [data-size="huge"]) .flowParagraph:has(.flowTikkun) .flowVerse[data-tk-rows] > .flowHebrew > .inlineHebrew[lang="he"] { grid-row: 1 / span calc(var(--tk-lines, 1) * 2); }
+  :global(.assigned-study):is([data-size="large"], [data-size="huge"]) .flowParagraph:has(.flowTikkun) .flowVerse[data-tk-rows] > .flowHebrew .tkLine { grid-row: calc(var(--tk-i, 0) * 2 + 1); }
+  :global(.assigned-study):is([data-size="large"], [data-size="huge"]) .flowParagraph:has(.flowTikkun) .flowVerse[data-tk-rows] > .flowTikkun { grid-column: 1; grid-row: 1 / span calc(var(--tk-lines, 1) * 2); padding: 0; background: none; box-shadow: none; border-radius: 0; }
+  :global(.assigned-study):is([data-size="large"], [data-size="huge"]) .flowParagraph:has(.flowTikkun) .flowVerse[data-tk-rows] > .flowTikkun .tkLine { grid-row: calc(var(--tk-i, 0) * 2 + 2); padding-inline: 0.5rem; background: var(--color-surface); box-shadow: inset 1px 0 0 var(--color-rule), inset -1px 0 0 var(--color-rule); }
 }
 /* The comment-to-word link: the quoted words are underlined while their comment is pointed at.
    An underline that appears, never an animation; it sits below the lowest vowels. */

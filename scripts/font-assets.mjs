@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
-// Approval boundary: exact upstream bytes (plus the one recorded derivative, the Bricolage Latin WOFF2 subset whose tool,
-// command and input hash are in public/fonts/PROVENANCE.md) and their adjacent notice,
+// Approval boundary: exact upstream bytes (plus the recorded derivatives: the Bricolage Latin WOFF2 subset and the Hebrew WOFF2 subsets
+// of Noto Serif Hebrew and Taamey Frank CLM, whose tool, command, input hash and output hash are in public/fonts/PROVENANCE.md) and their adjacent notice,
 // paired per family: a font never ships without its own notice. A GPL family
 // also ships its unchanged upstream source ("source"), which like the font is
 // accepted only byte for byte; its embedded author notice is not re-scanned.
@@ -10,6 +10,8 @@ import { createHash } from "node:crypto";
 export const FONT_ASSETS = Object.freeze([
   Object.freeze({ path: "public/fonts/noto-serif-hebrew/NotoSerifHebrew.ttf", family: "noto-serif-hebrew", kind: "font", size: 183600,
     sha256: "93caef921360788dc3b0e32136bb26f16bc57717ec482d48fc7fd43820617165" }),
+  Object.freeze({ path: "public/fonts/noto-serif-hebrew/NotoSerifHebrew-hebrew.woff2", family: "noto-serif-hebrew", kind: "font", size: 67412,
+    sha256: "73b1f64236b7a25085805602ad48f6af2a53be96444a4d6e0f8556cc3e360ff5" }),
   Object.freeze({ path: "public/fonts/noto-serif-hebrew/OFL.txt", family: "noto-serif-hebrew", kind: "license", size: 4382,
     sha256: "9b9fe028b5ba74d231659a1bbaf0ed09b11e759d1ca6a070999e16d151616b47" }),
   Object.freeze({ path: "public/fonts/bricolage-grotesque/BricolageGrotesque.ttf", family: "bricolage-grotesque", kind: "font", size: 408496,
@@ -26,6 +28,8 @@ export const FONT_ASSETS = Object.freeze([
     sha256: "ff23748b1b9df2bb1f5e26b8928342eee87ead160bdff535a505aed0f7294c45" }),
   Object.freeze({ path: "public/fonts/taamey-frank-clm/TaameyFrankCLM.ttf", family: "taamey-frank-clm", kind: "font", size: 105076,
     sha256: "f558d3564d385a6a512ce938705f47236e71457e8aa4ad9eaf6cebc3e17b991c" }),
+  Object.freeze({ path: "public/fonts/taamey-frank-clm/TaameyFrankCLM-hebrew.woff2", family: "taamey-frank-clm", kind: "font", size: 26168,
+    sha256: "9c89b3a4eda041db2cc287d83351d570e7655d51fa6ce3719b3090d0b8f2e9f1" }),
   Object.freeze({ path: "public/fonts/taamey-frank-clm/LICENSE.txt", family: "taamey-frank-clm", kind: "license", size: 18092,
     sha256: "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643" }),
   Object.freeze({ path: "public/fonts/taamey-frank-clm/TaameyFrankCLM.sfd", family: "taamey-frank-clm", kind: "source", size: 566990,

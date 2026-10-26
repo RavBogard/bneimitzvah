@@ -220,3 +220,27 @@ test("an assigned reading's verses open on the sheet as one canonical ref, whate
   expect(refFromVerses([], "torah")).toBeNull();
   expect(refFromVerses(["not a verse"], "torah")).toBeNull();
 });
+
+// 1.9 N8 (G18): a ketiv and its qere on paper. The qere is chanted, so it is set full size and flagged "read", the ketiv follows small; "Letters only"
+// is the scroll's own lettering in the Stam face and drops the apparatus: the ketiv alone, no qere, no chip.
+const qereVerse = (ref: string): StudyVerse => {
+  const before = cp(BET, PATAH, ALEF), written = cp(GIMEL, QAMATS), read = cp(ALEF, PATAH, BET), after = cp(BET, PATAH, SOF_PASUQ);
+  return { ref, english: "Synthetic English.", hebrew: { text: `${before} ${written} ${after}`.normalize("NFC"), readingText: `${before} ${read} ${after}`.normalize("NFC"), paragraphAfter: null,
+    segments: [{ kind: "text", text: `${before} ` }, { kind: "alternative", written: written.normalize("NFC"), read: read.normalize("NFC") }, { kind: "text", text: ` ${after}` }] } };
+};
+test("on paper the qere is full size and flagged, the ketiv small after it, and Letters only drops the apparatus and uses the scroll face", () => {
+  const verses = [qereVerse("Genesis 1:1")], ketiv = cp(GIMEL, QAMATS).normalize("NFC"), qere = cp(ALEF, PATAH, BET).normalize("NFC");
+  for (const script of ["full", "vowels"] as const) {
+    const html = render({ script }, verses);
+    expect(html).toMatch(new RegExp(`<span>${qere}</span> <span class="[^"]*qere[^"]*" lang="en" dir="ltr">read<span class="sr-only">\\. Chant this word \\(qere\\)\\. The scroll writes it differently \\(ketiv\\)\\.</span></span> <span class="[^"]*written[^"]*">${ketiv}</span>`));
+    expect(html).not.toContain("read / qere:");
+    expect(html).toContain(`data-script="${script}"`);
+  }
+  const letters = render({ script: "letters" }, verses);
+  expect(letters).toContain('data-script="letters"');
+  expect(letters).toContain(sheetHebrew(ketiv, "letters"));
+  expect(letters).not.toContain(sheetHebrew(qere, "letters")); // the read word is not on the scroll
+  expect(letters).not.toMatch(/>read</);
+  expect(letters).not.toContain("Chant this word");
+  expect(letters).not.toMatch(/class="[^"]*alternative/);
+});

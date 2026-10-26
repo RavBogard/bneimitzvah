@@ -10,6 +10,6 @@ import styles from "./next-section.module.css";
 export function NextSection({ onNext, preview }: { onNext(): void; preview: StudyVerse | null | undefined }) {
   return <div className={styles.next} data-next-section="">
     <button type="button" className="button-secondary" onClick={onNext}>Next section</button>
-    {preview && <p className={`${hebrewStyles.hebrew} ${styles.preview}`} lang="he" dir="rtl" aria-hidden="true">{preview.hebrew.text}</p>}
+    {preview && <p className={`${hebrewStyles.reading} ${styles.preview}`} lang="he" dir="rtl" aria-hidden="true">{preview.hebrew.text}</p>}
   </div>;
 }

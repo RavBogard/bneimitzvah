@@ -43,8 +43,11 @@ function Hebrew({ verse, script }: { verse: StudyVerse; script: SheetFormat["scr
   const segments = verse.hebrew.segments, last = segments.length - 1;
   return <>{segments.map((segment, index) => {
     if (segment.kind === "text") return <Fragment key={index}>{chained(sheetHebrew(segment.text, script))}</Fragment>;
+    // "Letters only" is the scroll's own text: the ketiv alone, with none of the apparatus (no qere, no chip).
+    if (segment.kind === "alternative" && script === "letters") return <Fragment key={index}>{chained(sheetHebrew(segment.written, script))}</Fragment>;
+    // The qere is what is chanted, so it is set full size and flagged "read"; the ketiv, which the scroll writes, follows small (as on screen).
     if (segment.kind === "alternative") return <span key={index} className={styles.alternative}>
-      <span className={styles.written}>{chained(sheetHebrew(segment.written, script))}</span> <span className={styles.read}>[<span className={styles.qere} lang="en" dir="ltr">read / qere:</span> {chained(sheetHebrew(segment.read, script))}]</span>
+      <span>{chained(sheetHebrew(segment.read, script))}</span> <span className={styles.qere} lang="en" dir="ltr">read<span className="sr-only">. Chant this word (qere). The scroll writes it differently (ketiv).</span></span> <span className={styles.written}>{chained(sheetHebrew(segment.written, script))}</span>
     </span>;
     if (segment.kind === "gap") return index === last && verse.hebrew.paragraphAfter ? null : <span key={index} className={styles.paragraph}> {PARAGRAPH[segment.break]} </span>;
     return <span key={index} role="img" aria-label="Inverted nun, Masoretic sign">׆</span>;
@@ -107,7 +110,7 @@ export function PrintDocument({ heading, text, markers, format, productName, app
   const verseCells = (verse: StudyVerse, label: string) => format.show === "both" ? <>{englishCell(verse)}{number(label)}{hebrewCell(verse)}{notesCell}</>
     : format.show === "hebrew" ? <>{hebrewCell(verse)}{number(label)}{notesCell}</> : <>{number(label)}{englishCell(verse)}{notesCell}</>;
   const cols = format.show === "both" ? ["english", ...(numbers ? ["number"] : []), "hebrew"] : format.show === "hebrew" ? ["hebrew", ...(numbers ? ["number"] : [])] : [...(numbers ? ["number"] : []), "english"];
-  return <article className={styles.sheet} style={style} data-print-sheet-document data-show={format.show} data-size={format.size} data-spacing={format.spacing}
+  return <article className={styles.sheet} style={style} data-print-sheet-document data-show={format.show} data-script={format.script} data-size={format.size} data-spacing={format.spacing}
     data-notes={format.notes} data-numbers={numbers ? "on" : "off"} data-aliyot={format.aliyot} data-orientation={format.orientation}>
     <table className={styles.table}>
       <colgroup>{[...cols, ...(notes ? ["notes"] : [])].map(col => <col key={col} className={styles[`col-${col}`]} />)}</colgroup>

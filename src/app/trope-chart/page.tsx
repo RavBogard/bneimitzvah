@@ -4,7 +4,7 @@ import Link from "next/link";
 import { PrintChart } from "../../components/portal/trope-chart/print";
 import { WorkspaceLink } from "../../components/portal/trope-chart/workspace-link";
 import { COURSE } from "../../lib/learn/course";
-import { accentLabel, accentSample, CHART_ACCENTS, ENDING_SAMPLE, LEGARMEH_SAMPLE, PHRASE_FAMILIES, type ChartAccent } from "../../lib/trope/chart-catalog";
+import { accentLabel, BARE_ENDING_SAMPLE, BARE_LEGARMEH_SAMPLE, bareSample, CHART_ACCENTS, PHRASE_FAMILIES, phraseFill, type ChartAccent } from "../../lib/trope/chart-catalog";
 import hebrew from "../../styles/hebrew-font.module.css";
 import styles from "./chart.module.css";
 import { pageTitle } from "../../lib/site/product-name";
@@ -22,7 +22,7 @@ const POETIC_SIGNS: readonly string[] = ["ole", "dehi", "iluy", "atnach-hafukh"]
 const lessonFor = (family: string) => COURSE.lessons.find(lesson => lesson.family === family && lesson.melody === "torah") ?? COURSE.lessons.find(lesson => lesson.family === family);
 function Mark({ accent }: { accent: ChartAccent }) {
   return <li className={styles.mark} data-chart-accent={accent.codepoint} title={`U+${accent.codepoint}`}>
-    <span className={`${styles.sample} ${hebrew.hebrew}`} lang="he" dir="rtl" aria-label={`${accentLabel(accent)} on a sample letter`}>{accentSample(accent)}</span>
+    <span className={`${styles.sample} ${hebrew.reading}`} lang="he" dir="rtl" aria-label={`${accentLabel(accent)} on a sample letter`}>{bareSample(accent)}</span>
     <span className={styles.markName}>{accentLabel(accent)}</span>
   </li>;
 }
@@ -38,10 +38,10 @@ export default function TropeChartPage() {
     <main id="trope-chart-main" className={styles.main}>
       <div className={styles.introduction}><h1 className={styles.title}>Trope chart</h1><p>Find the signs, their names and the phrase families used in your reading.</p><PrintChart /></div>
       <section aria-labelledby="phrase-families-heading"><h2 id="phrase-families-heading" className={styles.sectionHeading}>Phrase families</h2><p className={styles.explanation}>Color belongs to a whole phrase, ending at its closing sign. It does not give every sign its own permanent color or melody.</p>
-        <ol className={styles.families}>{PHRASE_FAMILIES.map(family => <li className={styles.family} key={family.id} data-chart-family={family.id} style={{ "--family-color": family.color } as CSSProperties}>
+        <ol className={styles.families}>{PHRASE_FAMILIES.map(family => <li className={styles.family} key={family.id} data-chart-family={family.id} style={{ "--family-color": phraseFill(family.id) } as CSSProperties}>
           <h3><FamilyHeading family={family} /></h3><ul className={styles.marks}>{CHART_ACCENTS.filter(accent => accent.family === family.id).map(accent => <Mark key={accent.codepoint} accent={accent} />)}
-          {(family.id === "sof-pasuk" || family.id === "sof-haftarah") && <li className={styles.mark}><span className={`${styles.sample} ${hebrew.hebrew}`} lang="he" dir="rtl">{ENDING_SAMPLE}</span><span className={styles.markName}>{family.id === "sof-pasuk" ? "silluq / sof pasuk" : "same signs, final haftarah verse"}</span></li>}
-          {family.id === "revia" && <li className={styles.mark}><span className={`${styles.sample} ${hebrew.hebrew}`} lang="he" dir="rtl">{LEGARMEH_SAMPLE}</span><span className={styles.markName}>munach + paseq (legarmeh)</span></li>}
+          {(family.id === "sof-pasuk" || family.id === "sof-haftarah") && <li className={styles.mark}><span className={`${styles.sample} ${hebrew.reading}`} lang="he" dir="rtl">{BARE_ENDING_SAMPLE}</span><span className={styles.markName}>{family.id === "sof-pasuk" ? "silluq / sof pasuk" : "same signs, final haftarah verse"}</span></li>}
+          {family.id === "revia" && <li className={styles.mark}><span className={`${styles.sample} ${hebrew.reading}`} lang="he" dir="rtl">{BARE_LEGARMEH_SAMPLE}</span><span className={styles.markName}>munach + paseq (legarmeh)</span></li>}
           </ul></li>)}</ol>
       </section>
       <section aria-labelledby="other-signs-heading" className={styles.other}><h2 id="other-signs-heading" className={styles.sectionHeading}>Signs that follow phrase context</h2><p className={styles.explanation}>Tipcha, pashta, yetiv and zarka join the following phrase. Conjunctive signs take their phrase's color. Both zarka forms are shown.</p>
@@ -50,7 +50,7 @@ export default function TropeChartPage() {
       <details className={styles.poetic} data-chart-poetic><summary className={styles.poeticSummary}>Other signs</summary><p className={styles.explanation}>These signs mark Psalms, Proverbs and Job. They don't appear in a Torah or haftarah reading.</p>
         <ul className={styles.otherMarks}>{CHART_ACCENTS.filter(accent => POETIC_SIGNS.includes(accent.name)).map(accent => <Mark key={accent.codepoint} accent={accent} />)}</ul>
       </details>
-      <footer className={styles.sources}><p>Samples use an invented letter and vowel, not a verse. The final-haftarah family is an ending context, not a separate accent.</p><p>Hebrew: Noto Serif Hebrew 2.004, © 2022 The Noto Project Authors, <a href="/fonts/noto-serif-hebrew/OFL.txt">SIL Open Font License 1.1</a>.</p></footer>
+      <footer className={styles.sources}><p>Samples use an invented letter, not a verse. The final-haftarah family is an ending context, not a separate accent.</p><p>Hebrew: Taamey Frank CLM, © 2009–2010 Yoram Gnat, <a href="/fonts/taamey-frank-clm/LICENSE.txt">GNU General Public License version 2 with the font exception</a>.</p></footer>
     </main>
   </div>;
 }

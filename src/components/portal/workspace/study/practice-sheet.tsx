@@ -57,7 +57,7 @@ export function PracticeSheetDocument({ student, reading, text, tikkun, aliyahBr
   </article>;
 }
 
-const faces = ['400 32px "CRC Noto Serif Hebrew"', '400 32px "CRC Stam Ashkenaz"'];
+const faces = ['400 32px "CRC Taamey Frank"', '400 32px "CRC Stam Ashkenaz"'];
 async function fontsReady(tikkun: boolean) {
   for (const face of tikkun ? faces : faces.slice(0, 1)) {
     const loaded = await document.fonts.load(face, "\u05d0\u05d1\u05d2");

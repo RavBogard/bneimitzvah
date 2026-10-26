@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import { HEBREW_FONT_PROOF } from "../../../lib/trope/chart-catalog";
 
-const face = '400 32px "CRC Noto Serif Hebrew"';
+// The samples are set in the reading face (the signs a student sees in the reading); the chart has no other Hebrew.
+const face = '400 32px "CRC Taamey Frank"';
 async function ready() {
   const loaded = await document.fonts.load(face, HEBREW_FONT_PROOF);
   if (!loaded.length || !loaded.every(font => font.status === "loaded") || !document.fonts.check(face, HEBREW_FONT_PROOF)) throw new Error("Chart font unavailable");

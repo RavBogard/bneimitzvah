@@ -37,8 +37,8 @@ function rendered(v: StudyVerse, colored: boolean) {
 }
 function expectedVisible(source: HebrewSource) {
   return source.segments.map((segment, index) => segment.kind === "text" ? segment.text
-    : segment.kind === "alternative" ? `${segment.written} [read / qere: ${segment.read}]`
-      : segment.kind === "inverted-nun" ? "׆" : source.paragraphAfter && index === source.segments.length - 1 ? "" : `[${segment.break === "petuchah" ? "open" : "closed"} paragraph]`).join("");
+    : segment.kind === "alternative" ? `${segment.read} read. Chant this word (qere). The scroll writes it differently (ketiv). ${segment.written}`
+      : segment.kind === "inverted-nun" ? "׆" : source.paragraphAfter && index === source.segments.length - 1 ? "" : `${segment.break === "petuchah" ? "פ" : "ס"}[${segment.break === "petuchah" ? "open" : "closed"} paragraph]`).join("");
 }
 
 it("renders canonical word indices with identical Hebrew and apparatus in both color modes", () => {
@@ -64,7 +64,7 @@ it("indexes read qere only and preserves literal maqaf outside the canonical rea
   expect(wordNodes(plain).map(text)).toEqual(["אָב", "גָ", "קָרִי", "דָבָר", "הָ"]);
   expect(wordNodes(plain).map(text).some(value => value.includes("־") || value.includes("כָתָב"))).toBe(false);
   const alternative = nodes(plain).find(node => attr(node, "class") === "study-alternative")!;
-  const written = children(alternative)[0];
+  const written = children(alternative).find(node => attr(node, "class") === "study-ketiv")!;
   expect(text(written)).toBe("כָתָב");
   expect(wordNodes(written)).toHaveLength(0);
   expect(text(plain)).toBe(expectedVisible(v.hebrew));
