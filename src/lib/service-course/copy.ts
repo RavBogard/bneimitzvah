@@ -154,7 +154,7 @@ export const COPY = Object.freeze({
     title: "About this course", // ab.title
     p1: "Each lesson teaches one prayer: what it is, where it sits in the service, how to read it, and a few words to know. The teaching on each prayer is by Rabbi Daniel Bogard.", // ab.p1
     p2: "The Hebrew here comes from Shirei Tfilah, a public siddur. Your own siddur may differ in places, so each lesson links to its page there.", // ab.p2
-    p3: "Signed out, progress stays on this device.", // ab.p3
+    p3: "Signed out, progress stays on this device. Nothing here records you.", // ab.p3
   }),
 });
 

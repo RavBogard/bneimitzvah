@@ -195,7 +195,7 @@ test("About names the teacher and the text, and goes back to the course", async 
   expect(response?.status()).toBe(200); expect(response?.headers()["x-robots-tag"]).toBe("noindex, nofollow");
   await expect(page.getByRole("heading", { level: 1, name: "About this course" })).toBeVisible();
   await expect(page.getByText("The teaching on each prayer is by Rabbi Daniel Bogard.")).toBeVisible();
-  await expect(page.getByText("Signed out, progress stays on this device.")).toBeVisible();
+  await expect(page.getByText("Signed out, progress stays on this device. Nothing here records you.")).toBeVisible();
   expect(await noHorizontalScroll(page)).toBe(true);
   await page.getByRole("link", { name: "Back to the course" }).click();
   await expect(page).toHaveURL(/\/learn\/service$/);
