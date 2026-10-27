@@ -12,7 +12,7 @@ import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import { browserFixture } from "./fixture";
 import { assertBrowserStartupAllowed, BROWSER_ORIGIN, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
-import { openAuthMail } from "./auth-navigation";
+import { openAuthMail, switchRole } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { normalizeHebrew } from "../../src/server/study/normalize";
 import type { StudyRequest } from "../../src/server/study/types";
@@ -386,7 +386,7 @@ it("backgrounding pauses/cancels without erasing text or resuming on return; rol
   await ui(reading).toBeVisible(); await sameOwner(tab, owner); expect(state.requests).toBe(1);
   await idle(); // The return starts a quiet access check; let it answer before the next word is played.
   await word(tab, 1, 1).click(); await playing(tab); expect(state.requests).toBe(2); await sameOwner(tab, owner); // Scope suspension cleared private metadata and compressed ownership.
-  await tab.getByRole("link", { name: "Parent", exact: true }).click(); await expect.poll(async () => (await native(tab)).revoked, POLL_OPTIONS).toBe(2); expect(await native(tab)).toMatchObject({ paused: true, allClean: true });
+  await switchRole(tab, "Parent"); await expect.poll(async () => (await native(tab)).revoked, POLL_OPTIONS).toBe(2); expect(await native(tab)).toMatchObject({ paused: true, allClean: true });
   await ui(tab.getByLabel("Child", { exact: true })).toBeVisible(); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click();
   await ui(tab.locator(".study-verses")).toBeVisible(); const childOwner = await settledOwner(tab); await word(tab, 1, 0).click(); await playing(tab); await sameOwner(tab, childOwner);
   await tab.getByRole("button", { name: "Switch to Synthetic Sibling", exact: true }).click(); await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();

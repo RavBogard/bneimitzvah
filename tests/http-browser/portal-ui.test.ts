@@ -62,7 +62,9 @@ async function signIn(tab: Page, email: string, invitation = false) {
   await ui(tab.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
   const link = fixture.takeMail(email), token = new URLSearchParams(new URL(link).hash.slice(1)).get("token")!;
   await openAuthMail(tab, link);
-  await ui(tab.getByRole("heading", { name: invitation ? "Review your invitation" : "You’re signed in", exact: true })).toBeVisible();
+  // An invitation link lands on its review page; a plain sign-in link lands on the front door, now signed in (its header offers Account).
+  if (invitation) await ui(tab.getByRole("heading", { name: "Review your invitation", exact: true })).toBeVisible();
+  else { await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible(); await ui(tab.getByRole("banner").getByRole("link", { name: "Account", exact: true })).toBeVisible(); }
   await clean(tab, [email, token]);
 }
 async function api(tab: Page, path: string, body?: unknown) {

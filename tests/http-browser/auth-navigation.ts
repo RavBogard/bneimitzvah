@@ -12,3 +12,9 @@ export async function openAuthMail(tab: Page, link: string) {
     ]);
   } catch { throw new Error("Synthetic mail confirmation failed; details withheld"); }
 }
+
+/** Roles are switched on the Account page's Roles list (the old role pills are gone): open Account from the header, then choose the role. */
+export async function switchRole(tab: Page, role: "Parent" | "Tutor" | "Student") {
+  await tab.getByRole("banner").getByRole("link", { name: "Account", exact: true }).click();
+  await tab.getByRole("list", { name: "Roles" }).getByRole("link", { name: new RegExp(`^${role}`) }).click();
+}

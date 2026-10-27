@@ -143,8 +143,10 @@ it("serializes service and unknown-note guards, and canceling the later decision
   // An explicit departure clears the unknown local copy and unmounts both
   // modal owners; this must not resurrect the suspended reading sheet.
   await closeVerseTools(tab); // the role links are behind the sheet
-  await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "Account", exact: true }).click(); await tab.getByRole("list", { name: "Roles" }).getByRole("link", { name: /^Parent/ }).click(); })());
+  // Leaving for Account (where roles are switched) is the departure the guard stops.
+  await safe(() => tab.getByRole("banner").getByRole("link", { name: "Account", exact: true }).click());
   await ui(workGuard(tab)).toBeVisible(); expect(await modalCount(tab)).toBe(1); await click(tab, "Leave without confirming");
+  await safe(() => tab.getByRole("list", { name: "Roles" }).getByRole("link", { name: /^Parent/ }).click());
   await ui(tab.getByRole("list", { name: "Child", exact: true })).toBeVisible(); expect(await modalCount(tab)).toBe(0);
   expect(await tab.locator("dialog.editor-sheet, .service-plan-editor").count()).toBe(0);
   expect(await tab.evaluate(value => !document.body.textContent?.includes(value), text)).toBe(true); expect(writes).toEqual({ confirm: 0, note: 1 });

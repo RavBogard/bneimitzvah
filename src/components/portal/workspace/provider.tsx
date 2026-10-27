@@ -128,6 +128,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     return () => { quietScopes.current.delete(verify); quietRevision.current++; };
   }, []);
   if (currentPath.current !== pathname) { currentPath.current = pathname; routeRevision.current++; }
+  // Leaving the workspace altogether (the Account page, where roles are switched, sits outside it) is a route change too: a late answer must not navigate from a page that is gone.
+  useEffect(() => () => { routeRevision.current++; }, []);
   const visibleNotice = isParentPath(pathname) ? notice : "";
 
   const refresh = useCallback(() => {

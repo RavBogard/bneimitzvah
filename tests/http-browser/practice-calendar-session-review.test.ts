@@ -6,7 +6,7 @@ import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
-import { openAuthMail } from "./auth-navigation";
+import { openAuthMail, switchRole } from "./auth-navigation";
 import { countPageFetches, pageFetchesSettled } from "./fetch-settle";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
@@ -70,7 +70,7 @@ async function page() {
 async function globallyGone(tab: Page) {
   await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible();
   expect(await tab.locator(".practice-day, .study-verses, [data-word-index], dialog[open]").count()).toBe(0);
-  expect(await tab.getByRole("link", { name: "Parent", exact: true }).count()).toBe(0);
+  expect(await tab.getByRole("list", { name: "Roles" }).count()).toBe(0);
   await pageFetchesSettled(tab);
 }
 beforeAll(async () => {
@@ -131,7 +131,7 @@ it("ignores a held old calendar 401 after a real role and child-context replacem
   await tab.route(eventPath(tab), hold);
   try {
     await click(tab, "View Genesis 1:1 up close"); await ui.poll(() => held).toBe(true); await click(tab, "Close practice view");
-    await tab.getByRole("link", { name: "Parent", exact: true }).click(); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${sibling.id}"]`).click();
+    await switchRole(tab, "Parent"); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${sibling.id}"]`).click();
     await click(tab, "Practice with Synthetic"); await ready(tab,1,sibling.id,"child-practice"); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 2:1"]')).toBeVisible();
   } finally { release(); }
   await completed; await pageFetchesSettled(tab); await ready(tab,1,sibling.id,"child-practice");

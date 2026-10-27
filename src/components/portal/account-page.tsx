@@ -77,8 +77,9 @@ export function AccountPage() {
     const visible = () => { if (document.visibilityState === "visible" && !gate.current) check(); };
     // A page restored from the back-forward cache (after signing out on a shared device) checks its session again.
     const restored = (event: PageTransitionEvent) => { if (event.persisted) check(); };
-    document.addEventListener("visibilitychange", visible); window.addEventListener("pageshow", restored);
-    return () => { controller.current?.abort(); document.removeEventListener("visibilitychange", visible); window.removeEventListener("pageshow", restored); };
+    // Returning to the window checks too (a sign-out made in another window leaves this one visible), as the sign-in page always has.
+    document.addEventListener("visibilitychange", visible); window.addEventListener("focus", visible); window.addEventListener("pageshow", restored);
+    return () => { controller.current?.abort(); document.removeEventListener("visibilitychange", visible); window.removeEventListener("focus", visible); window.removeEventListener("pageshow", restored); };
   }, [check]);
 
   if (state.kind === "signed-out") return <PortalEntry returnTo="/account" after={<InstallHint place="account" />} />;

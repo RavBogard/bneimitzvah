@@ -88,7 +88,8 @@ it("fits a phone, and a tutor finds the page from the account page and sees only
   await ui(main(phone).getByRole("region", { name: "Other staff", exact: true }).getByRole("listitem")).toHaveCount(1);
   await capture(phone, "claude-connections-mobile");
   const tutor = await page("tutor", true); await navigate(tutor, "/account");
-  await safe(() => tutor.getByRole("link", { name: "Claude connections", exact: true }).click());
+  // A row on the Account list is named by its title and its one-line description.
+  await safe(() => tutor.getByRole("list", { name: "Your account", exact: true }).getByRole("link", { name: /^Claude connections/ }).click());
   await ui(tutor.getByRole("heading", { name: "Claude connections", level: 1, exact: true })).toBeVisible();
   await ui(main(tutor).getByRole("region", { name: "Your connections", exact: true }).getByRole("listitem")).toHaveCount(1);
   expect(await main(tutor).getByRole("region", { name: "Other staff", exact: true }).count()).toBe(0);

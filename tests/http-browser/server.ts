@@ -58,6 +58,8 @@ async function isolatedNextProject() {
       await mkdir(join(dir, fontDirectory), { recursive: true });
       for (const file of [font, license, ...(family === "bricolage-grotesque" ? ["BricolageGrotesque-latin.woff2"] : family === "noto-serif-hebrew" ? ["NotoSerifHebrew-hebrew.woff2"] : family === "taamey-frank-clm" ? ["TaameyFrankCLM-hebrew.woff2"] : [])]) await cp(join(source, fontDirectory, file), join(dir, fontDirectory, file));
     }
+    // The site bar and the offline shell name the brand images (/brand/...); without them the installing worker's fetches never settle.
+    await cp(join(source, "public", "brand"), join(dir, "public", "brand"), { recursive: true });
     for (const file of ["package.json", "next.config.ts", "tsconfig.json"]) await cp(join(source, file), join(dir, file));
     return { dir };
   } catch {

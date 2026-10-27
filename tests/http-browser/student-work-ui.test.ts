@@ -117,7 +117,7 @@ async function capture(tab: Page, name: string) {
   } finally { await tab.evaluate(() => { document.documentElement.style.removeProperty("font-size"); }); if (original) await tab.setViewportSize(original); }
 }
 async function accountReady(tab: Page) {
-  await ui(tab.getByRole("heading", { name: "Your account", exact: true })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: "Account", level: 1, exact: true })).toBeVisible();
   await ui(tab.getByRole("button", { name: "Sign out", exact: true })).toBeEnabled();
   expect(new URL(tab.url()).pathname).toBe("/account");
 }

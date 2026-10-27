@@ -13,7 +13,7 @@ import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import { browserFixture } from "./fixture";
 import { assertBrowserStartupAllowed, BROWSER_ORIGIN, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
-import { openAuthMail } from "./auth-navigation";
+import { openAuthMail, switchRole } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { normalizeHebrew } from "../../src/server/study/normalize";
 import type { StudyRequest } from "../../src/server/study/types";
@@ -164,7 +164,7 @@ it("fences out-of-order held responses and dismissal; quiet unchanged return ret
 });
 it("clears selected private tools on actual assignment and child-context changes", async () => {
   const { tab } = await page(false, "tutor"); await openTools(tab);
-  await tab.getByRole("link", { name: "Parent", exact: true }).click(); await ui(tools(tab)).toHaveCount(0);
+  await switchRole(tab, "Parent"); await ui(tools(tab)).toHaveCount(0);
   await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(tab.locator(".study-verses")).toBeVisible(); await openTools(tab);
   await tab.getByRole("button", { name: "Switch to Synthetic Sibling", exact: true }).click(); await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   await ui(tools(tab).getByRole("button", { name: "Word tools", exact: true })).toHaveAttribute("aria-expanded", "false"); await ui(tools(tab).getByText("Synthetic dictionary sense", { exact: true })).toHaveCount(0);
