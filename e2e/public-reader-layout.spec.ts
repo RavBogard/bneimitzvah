@@ -99,7 +99,7 @@ for (const [name, address] of [["Lein", "/read"], ["Study", "/read?lens=study"]]
   });
 }
 
-test("at a 200% root font on a Pixel 7 the reading, its Find a date row and the Readings index are no wider than the screen", async ({ page }, testInfo) => {
+test("at a 200% root font on a Pixel 7 the reading, its Find a reading field and the Readings index are no wider than the screen", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "phone", "A phone-width check");
   await mock(page);
   await page.goto("/read");
@@ -108,19 +108,19 @@ test("at a 200% root font on a Pixel 7 the reading, its Find a date row and the 
   // The screen is the configured device width: on a phone the browser widens its own layout viewport to fit overflowing content, so innerWidth would agree with the overflow.
   const screen = testInfo.project.use.viewport!.width, fits = () => page.evaluate(() => ({ scroll: document.documentElement.scrollWidth })).then(size => ({ ...size, view: screen }));
   let size = await fits(); expect(size.scroll, "the header and Lein").toBeLessThanOrEqual(size.view);
-  for (const name of ["More", "Previous week", "Next week"]) {
+  for (const name of ["Change", "Previous week", "Next week"]) {
     const control = await page.getByRole("button", { name, exact: true }).boundingBox();
     expect(control && control.x >= 0 && control.x + control.width <= size.view, `${name} is inside the screen`).toBe(true);
   }
   await page.getByRole("button", { name: "Study", exact: true }).click();
   await expect(page.locator("[data-study-rows]")).toBeVisible();
   size = await fits(); expect(size.scroll, "Study").toBeLessThanOrEqual(size.view);
-  // Find a date and the reading chooser are in the More sheet.
-  const sheet = await openMore(page), picker = page.getByLabel("Find a date", { exact: true });
-  await expect(picker).toBeVisible();
-  const box = await picker.boundingBox();
-  expect(box && box.x >= 0 && box.x + box.width <= (await fits()).view, "the date field is inside the screen").toBe(true);
-  await sheet.getByRole("link", { name: "Choose a reading", exact: true }).click();
+  // Find a reading and the way to the index are in the Change sheet.
+  const sheet = await openMore(page), field = sheet.getByRole("combobox", { name: "Find a reading", exact: true });
+  await expect(field).toBeVisible();
+  const box = await field.boundingBox();
+  expect(box && box.x >= 0 && box.x + box.width <= (await fits()).view, "the Find a reading field is inside the screen").toBe(true);
+  await sheet.getByRole("link", { name: "Every parashah, holiday and passage", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Readings", exact: true })).toBeVisible();
   await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
   size = await fits(); expect(size.scroll, "the Readings index").toBeLessThanOrEqual(size.view);

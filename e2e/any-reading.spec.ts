@@ -45,9 +45,9 @@ test("the Readings index opens a parashah, a holiday and a custom passage of the
   await expect(page.getByRole("heading", { level: 1, name: "Synthetic", exact: true })).toBeVisible();
   await expect(page).toHaveTitle("This week’s reading | CRC Torah");
   await expect(page.getByRole("button", { name: "Previous week", exact: true })).toBeVisible();
-  // Choose a reading is a link in the More sheet to /readings (B5); B6 replaces it with Find a reading.
+  // The Change sheet's "Every parashah, holiday and passage" is the way to the index.
   await openMore(page);
-  await page.getByRole("link", { name: "Choose a reading", exact: true }).click();
+  await page.getByRole("link", { name: "Every parashah, holiday and passage", exact: true }).click();
   await expect(page).toHaveURL(/\/readings$/);
   await expect(page.getByRole("heading", { level: 1, name: "Readings", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Hebcal", exact: true })).toHaveAttribute("href", "https://www.hebcal.com/");
@@ -64,7 +64,7 @@ test("the Readings index opens a parashah, a holiday and a custom passage of the
   await expect(verse(page, "Genesis 6:9")).toBeVisible();
   await expect(passageButton(page, "Torah")).toHaveAttribute("aria-pressed", "true");
   await openMore(page);
-  await expect(page.getByRole("button", { name: "This week", exact: true })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Find a reading", exact: true })).toBeVisible();
   await closeMore(page);
   await expect(page.getByRole("button", { name: "Previous week", exact: true })).toHaveCount(0);
   await passageButton(page, "Haftarah").click();
