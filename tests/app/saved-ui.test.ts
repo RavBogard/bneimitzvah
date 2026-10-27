@@ -71,7 +71,9 @@ describe("Save on /read", () => {
     // Signed out, Save is "Sign in to save" (F4), a link in Save's own place; no Save button beside it.
     expect(view("signed-out")).toContain('<a class="button-hero-secondary" href="/sign-in">Sign in to save</a>');
     expect(view("signed-out")).not.toContain(">Save</button>");
-    expect(view("not-eligible")).toContain('<a href="/account">Ask for an account to save readings</a>');
+    // Plan D2: every signed-in account saves; "not-eligible" is only a membership turned off, told so with nothing to ask for.
+    expect(view("not-eligible")).toContain("Saving isn’t available for this account.");
+    expect(view("not-eligible")).not.toContain("/account");
     expect(view("unavailable")).toContain("Saving isn’t available right now. Try again.");
     const saved = view("saved");
     expect(saved).toContain('Saved to <a href="/">My readings</a>.');

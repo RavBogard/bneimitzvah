@@ -110,7 +110,8 @@ describe("the saved reading page's parts", () => {
   it("says plainly why a saved reading cannot open", () => {
     const state = (status: Parameters<typeof SavedReadingState>[0]["status"]) => renderToStaticMarkup(createElement(SavedReadingState, { status, onRetry: () => {} }));
     expect(state("signed-out")).toContain('href="/sign-in">Sign in</a>');
-    expect(state("not-eligible")).toContain('href="/account">Ask for an account</a>');
+    expect(state("not-eligible")).toContain("Saving isn’t available for this account.");
+    expect(state("not-eligible")).not.toContain("/account");
     expect(state("missing")).toContain("This reading isn’t in your saved readings");
     expect(state("missing")).toContain('href="/read">Go to this week</a>');
     expect(state("failed")).toContain(">Try again</button>");

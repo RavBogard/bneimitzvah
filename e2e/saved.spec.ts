@@ -62,7 +62,8 @@ test("Save on /read asks about the account only when pressed, and answers signed
   await seenSignedIn(page); await page.reload();
   await openMore(page);
   await save.click();
-  await expect(page.getByRole("link", { name: "Ask for an account to save readings", exact: true })).toHaveAttribute("href", "/account");
+  // Refused (a membership turned off, plan D2): told so inline, with no form and nothing to ask for.
+  await expect(page.getByRole("status").filter({ hasText: "Saving isn’t available for this account." })).toBeVisible();
   await expect(page.getByRole("form", { name: "Save this reading" })).toHaveCount(0);
   await closeMore(page);
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -137,7 +138,7 @@ test("the front door shows My readings under This week for a member: five, then 
   }
 });
 
-test("with none saved it says how to save one; signed out or student-only, the front door is unchanged and never asks", async ({ page }) => {
+test("with none saved it says how to save one; signed out, or with a summary that keeps no shelf, the front door is unchanged and never asks", async ({ page }) => {
   const saved: string[] = [];
   page.on("request", request => { if (new URL(request.url()).pathname.startsWith("/api/saved/")) saved.push(new URL(request.url()).pathname); });
   await week(page);

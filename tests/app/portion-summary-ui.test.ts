@@ -4,7 +4,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import { fetchPortionSummary, parsePortionSummary } from "../../src/components/portal/workspace/study/portion-summary-api";
 import { PortionSummaryBlock, StudySummary } from "../../src/components/portal/workspace/study/portion-summary";
 import { parashahSlug, portionSummaryPath } from "../../src/lib/portion-summary/reading";
-import { SaveReadingView, STUDENT_LINE } from "../../src/components/portal/saved/save-reading";
+import { NOT_AVAILABLE_LINE, SaveReadingView } from "../../src/components/portal/saved/save-reading";
 
 // The portion summary on screen (1.9 N7). Synthetic text only: invented summary lines and a made-up emphasis; no real summary anywhere.
 const CREDIT = "Rabbi Daniel Bogard";
@@ -87,13 +87,10 @@ test("nothing is drawn until an approved summary has come (and never for a readi
   expect(renderToStaticMarkup(createElement(StudySummary, { slug: null, active: true }))).toBe("");
 });
 
-test("a signed-in student pressing Save is told why and where their reading is, with the approved wording (N20-1, N20-2)", () => {
-  const view = (student: boolean) => renderToStaticMarkup(createElement(SaveReadingView, { step: "not-eligible", problem: null, name: "Noach · Torah", date: "", panelId: "p", student,
+test("the one account that cannot save (a membership turned off, plan D2) is told so in one status line; the student-only lines are gone (N20-1, N20-2 retired)", () => {
+  const view = renderToStaticMarkup(createElement(SaveReadingView, { step: "not-eligible", problem: null, name: "Noach · Torah", date: "", panelId: "p",
     onSave: () => {}, onName: () => {}, onDate: () => {}, onSubmit: () => {}, onCancel: () => {} }));
-  expect(STUDENT_LINE).toBe("Student accounts don’t save other readings. Your assigned reading is always under Reading.");
-  expect(view(true)).toContain("Student accounts don’t save other readings. Your assigned reading is always under Reading. <a href=\"/workspace/student?tab=reading\">Open your reading</a>");
-  expect(view(true)).not.toContain("Ask for an account");
-  // Any other account that cannot save keeps the way to ask.
-  expect(view(false)).toContain('<a href="/account">Ask for an account to save readings</a>');
-  expect(view(false)).not.toContain("Student accounts");
+  expect(NOT_AVAILABLE_LINE).toBe("Saving isn’t available for this account.");
+  expect(view).toContain(`role="status">${NOT_AVAILABLE_LINE}</p>`);
+  for (const gone of ["Student accounts", "Ask for an account", "/workspace/student", "/account"]) expect(view).not.toContain(gone);
 });
