@@ -8,8 +8,8 @@ import type { AccessRequest, AccessTransaction } from "../access/types";
 import * as data from "../data/saved";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import { expandReadingRanges } from "../../lib/readings/ranges";
-import { createSavedAccess } from "./access";
-import type { SavedOwner } from "./access";
+import { createSavedAccess, createSavedViewerAccess } from "./access";
+import type { SavedOwner, SavedScope } from "./access";
 import * as validate from "./validation";
 
 /** Per-member caps (accounts plan §2a), checked under the member's write lock. Over a cap is 409 `limit`. */
@@ -46,16 +46,37 @@ function versesOf(row: data.SavedReadingRow) {
 
 export function createSavedService<Q extends PgQueryResultHKT>(input: { access: Pick<ReturnType<typeof createAccessService<Q>>, "withVerifiedIdentity"> }) {
   const withSavedOwner = createSavedAccess<Q>(input);
+  // Readings for everyone (plan D4): the read-only staff path to a learner's shelf, and the directory's counts.
+  const { withSavedViewer, withDirectory } = createSavedViewerAccess<Q>(input);
   // Every write takes the member's write lock first: caps and version checks see every earlier write of this member.
   const write = <T>(request: Request, action: (tx: AccessTransaction<Q>, owner: SavedOwner) => Promise<T>) =>
     withSavedOwner<T>(request, "data-write", async (tx, owner) => { await data.lockOwnerWrites(tx, owner); return action(tx, owner); });
-  const ownReading = async (tx: AccessTransaction<Q>, owner: SavedOwner, id: string) => {
+  const ownReading = async (tx: AccessTransaction<Q>, owner: SavedScope, id: string) => {
     const row = await data.reading(tx, owner, id);
     // Missing, another member's and another congregation's readings are the same 404.
     if (!row) throw new AccessDenied(404);
     return row;
   };
   const requireVerse = (row: data.SavedReadingRow, verseRef: string) => { if (!versesOf(row).includes(verseRef)) throw new AccessDenied(404); };
+  /** The reading plus up to ten verses from `offset`, each with the scope's translation, note and mark: the owner's own page, or a bound viewer's read of a learner's. */
+  const pageOf = async (tx: AccessTransaction<Q>, scope: SavedScope, id: string, offset: number) => {
+    const row = await ownReading(tx, scope, id), verses = versesOf(row);
+    // Inside the access callback a boundary error would read as 503; a past-the-end page is a closed 400 result instead.
+    if (offset >= verses.length) return { ok: false as const, code: "invalid-request" as const };
+    const page = verses.slice(offset, offset + PAGE_VERSES);
+    const work = await data.workForVerses(tx, scope, row.id, page), marks = await data.marksForVerses(tx, scope, row.id, page);
+    const rows: { ref: string; translation: ReturnType<typeof workView> | null; note: ReturnType<typeof workView> | null; mark: ReturnType<typeof markView> | null }[] = [];
+    for (const ref of page) {
+      const find = (stream: validate.WorkStream) => work.find(item => item.verseRef === ref && item.stream === stream);
+      const translation = find("translation"), note = find("note"), mark = marks.find(item => item.verseRef === ref);
+      const entry = { ref, translation: translation ? workView(translation) : null, note: note ? workView(note) : null, mark: mark ? markView(mark) : null };
+      // Keep a page inside the transport bound by stopping at a verse boundary.
+      if (rows.length && Buffer.byteLength(JSON.stringify([...rows, entry])) > PAGE_BYTES) break;
+      rows.push(entry);
+    }
+    return { ok: true as const, reading: readingView(row), offset, totalVerses: verses.length,
+      nextOffset: offset + rows.length < verses.length ? offset + rows.length : null, verses: rows };
+  };
 
   return Object.freeze({
     /** 401 signed out, 403 not eligible: the client learns its own state from this. */
@@ -99,24 +120,28 @@ export function createSavedService<Q extends PgQueryResultHKT>(input: { access: 
     /** The reading plus up to ten verses from `offset`, each with the member's translation, note and mark. */
     async reading(request: Request, suppliedId: unknown, suppliedOffset: unknown) {
       const id = validate.uuid(suppliedId), offset = validate.integer(suppliedOffset, 0, 999);
-      return withSavedOwner(request, "read", async (tx, owner) => {
-        const row = await ownReading(tx, owner, id), verses = versesOf(row);
-        // Inside the access callback a boundary error would read as 503; a past-the-end page is a closed 400 result instead.
-        if (offset >= verses.length) return { ok: false as const, code: "invalid-request" as const };
-        const page = verses.slice(offset, offset + PAGE_VERSES);
-        const work = await data.workForVerses(tx, owner, row.id, page), marks = await data.marksForVerses(tx, owner, row.id, page);
-        const rows: { ref: string; translation: ReturnType<typeof workView> | null; note: ReturnType<typeof workView> | null; mark: ReturnType<typeof markView> | null }[] = [];
-        for (const ref of page) {
-          const find = (stream: validate.WorkStream) => work.find(item => item.verseRef === ref && item.stream === stream);
-          const translation = find("translation"), note = find("note"), mark = marks.find(item => item.verseRef === ref);
-          const entry = { ref, translation: translation ? workView(translation) : null, note: note ? workView(note) : null, mark: mark ? markView(mark) : null };
-          // Keep a page inside the transport bound by stopping at a verse boundary.
-          if (rows.length && Buffer.byteLength(JSON.stringify([...rows, entry])) > PAGE_BYTES) break;
-          rows.push(entry);
-        }
-        return { ok: true as const, reading: readingView(row), offset, totalVerses: verses.length,
-          nextOffset: offset + rows.length < verses.length ? offset + rows.length : null, verses: rows };
-      });
+      return withSavedOwner(request, "read", (tx, owner) => pageOf(tx, owner, id, offset));
+    },
+    /**
+     * Readings for everyone (plan D4, D5): a learner's shelf as a staff viewer sees it, read-only, the same bodies as the owner's
+     * own list and page. The learner is bound by withSavedViewer only after canView; a learner the viewer may not see, a missing one
+     * and another congregation's are the same 404. Nothing on this path can write: the owner is never bound here.
+     */
+    async listReadingsOf(request: Request, learner: unknown) {
+      const learnerMembershipId = validate.uuid(learner);
+      return withSavedViewer(request, learnerMembershipId, async (tx, scope) => ({ ok: true as const, readings: (await data.listReadings(tx, scope, SAVED_CAPS.readings)).map(readingView) }));
+    },
+    async readingOf(request: Request, learner: unknown, suppliedId: unknown) {
+      const learnerMembershipId = validate.uuid(learner), id = validate.uuid(suppliedId);
+      return withSavedViewer(request, learnerMembershipId, (tx, scope) => pageOf(tx, scope, id, 0));
+    },
+    async pageOf(request: Request, learner: unknown, suppliedId: unknown, suppliedOffset: unknown) {
+      const learnerMembershipId = validate.uuid(learner), id = validate.uuid(suppliedId), offset = validate.integer(suppliedOffset, 0, 999);
+      return withSavedViewer(request, learnerMembershipId, (tx, scope) => pageOf(tx, scope, id, offset));
+    },
+    /** The directory's counts and nearest dates for every membership that keeps a reading (plan D5), for a live admin or tutor; the learners service adds the names. */
+    async directory(request: Request) {
+      return withDirectory(request, async (tx, actor) => ({ ok: true as const, actor, rows: await data.directoryRows(tx, actor.tenantId) }));
     },
     async work(request: Request, supplied: unknown) {
       const value = validate.work(supplied);
