@@ -8,6 +8,7 @@ import { identifier, revision } from "../students/validation";
 import * as roster from "../data/roster";
 import { isCeremonyDone, liveRows as ceremonyDoneRows } from "../data/ceremony-done";
 import * as relationships from "../relationships/data";
+import { auditClaim, liveClaimsOfGrant, revokeClaim } from "../learners/data";
 import { displayName, writeTutorAssignment } from "../relationships/service";
 import { assignmentNeedsReview } from "../../lib/readings/review";
 import { readingDate } from "../../lib/readings/reading-date";
@@ -116,6 +117,11 @@ export function createStaffService<Q extends PgQueryResultHKT>(input: { access: 
       if (!updated) throw new Error("Hand-over unavailable");
       await relationships.revokeContexts(tx, actor.tenantId, { kind: "grant", id: fromId }, at);
       await relationships.audit(tx, actor, "grant.revoke", fromId);
+      // Readings for everyone: the departing grant's claims end with it, as the admin's act, exactly as "Remove as a tutor" ends them,
+      // so no claim is left live on a revoked grant (which would block the learner's next tutor behind the one-claim key).
+      for (const claim of await liveClaimsOfGrant(tx, actor.tenantId, fromId)) {
+        if (await revokeClaim(tx, actor.tenantId, claim.id, "admin", actor.membershipId)) await auditClaim(tx, actor, "learner.unclaim", claim.id);
+      }
       return Object.freeze({ ok: true as const, id: fromId, revision: updated.revision, moved: plan.length });
     });
   }
