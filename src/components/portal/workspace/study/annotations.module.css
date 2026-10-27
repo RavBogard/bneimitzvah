@@ -1,6 +1,6 @@
 .word { background: var(--phrase-color); color: #13202f; border-radius: 0.18em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
-/* The last word of a phrase carries a bar of the fixed dark ink at its end (the left edge of Hebrew), so a phrase end never depends on colour (1.9 N8, G18). */
-.word[data-phrase-end] { box-shadow: inset 0.14em 0 0 0 #13202f; }
+/* A phrase ends in a wider breath of space after its last word (the left in Hebrew), so a phrase end never depends on colour (1.9 N8, G18) and draws no mark of its own (Daniel 2026-10-27: the dark end bar read as a stray parenthesis). */
+.word[data-phrase-end] { margin-inline-end: 0.3em; }
 .legend { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .legend > li { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.75rem 0.25rem 0.25rem; border-radius: 999px; background: var(--color-surface); border: 1px solid var(--color-rule); font-size: 0.875rem; overflow-wrap: anywhere; }
 .chip { display: inline-block; padding: 0.125rem 0.625rem; border-radius: 999px; background: var(--phrase-color); color: #13202f; font-weight: 600; }
@@ -19,7 +19,6 @@
 /* Keyboard focus on a word or a verse number: the ring colour of the whole app (lake-deep on light, marigold on dark; at least 3:1 on the page and on every phrase fill),
    with a halo of the surface colour between the ring and the word so the ring never sits on a neighbour's fill. */
 .verseNumber:focus-visible, .playable [data-word-index]:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-surface); }
-.playable .word[data-phrase-end]:focus-visible { box-shadow: 0 0 0 2px var(--color-surface), inset 0.14em 0 0 0 #13202f; }
 /* Dark mode: the verse number takes the action blue that reads on the night canvas (lake-deep is 1.9:1 there). */
 @media (prefers-color-scheme: dark) { .verseNumber { color: var(--color-action); } }
 /* Choose verses: the verse number is a 44px toggle; a chosen verse carries a check as well as the filled number, so it never depends on colour. */

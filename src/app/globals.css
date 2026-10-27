@@ -717,8 +717,6 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 .study-read-chip { display: inline-block; padding: 0.0625rem 0.4375rem; border-radius: 999px; background: var(--lake-tint); color: var(--color-ink); font: 600 0.75rem/1.4 "Bricolage Grotesque", sans-serif; letter-spacing: 0; vertical-align: 0.7em; white-space: nowrap; user-select: none; }
 .lift .study-read-chip { background: rgb(255 255 255 / 0.2); color: #fff; font-size: 0.875rem; }
 .lift .study-alternative [data-word-index] { font: inherit; }
-/* The phrase-end bar belongs to the phrase being practised only; the words that stepped back have no fill to carry it. */
-.lift .lift-phrasing [data-phrase-end] { box-shadow: none; }
 .reading-hero { max-width: 52rem; }
 /* The one compact practice bar (1.9 N13): "Practising with Noa", a switch for each other child, Done, and the coaching line under them. */
 .practice-bar { display: grid; gap: 0.5rem; margin-bottom: 0.75rem; }
