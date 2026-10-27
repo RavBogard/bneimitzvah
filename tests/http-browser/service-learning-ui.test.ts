@@ -432,18 +432,16 @@ it("retains superseded source readability but removes withdrawn material on auth
 
 it("remembers the view in ?tab= for a student and keeps it on a reload", async () => {
   const tab = await page("student"); await workspace(tab, "student", "reading");
-  const nav = tab.getByRole("navigation", { name: "Workspace", exact: true });
-  await ui(nav.getByRole("link", { name: "Reading", exact: true })).toHaveAttribute("aria-current", "page");
+  // A student has no tab bar now (Area A); the view lives in ?tab= alone.
+  await ui(tab.getByRole("navigation", { name: "Workspace", exact: true })).toHaveCount(0);
   await safe(() => tab.getByRole("tab", { name: "Lessons", exact: true }).click());
   await ui(tab.getByRole("tab", { name: "Lessons", exact: true })).toHaveAttribute("aria-selected", "true");
   expect(new URL(tab.url()).searchParams.get("tab")).toBe("lessons");
   await safe(() => tab.reload({ waitUntil: "domcontentloaded" }));
   await ui(tab.getByRole("tab", { name: "Lessons", exact: true })).toHaveAttribute("aria-selected", "true");
-  await ui(nav.getByRole("link", { name: "Reading", exact: true })).toHaveAttribute("aria-current", "page");
   // The reading page's own tab writes the address too; with no ?tab= a student is on Today (1.9 N11).
   await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click());
   expect(new URL(tab.url()).searchParams.get("tab")).toBe("reading");
   await safe(() => tab.goto("/workspace/student", { waitUntil: "domcontentloaded" }));
   await ui(tab.locator("[data-today]")).toBeVisible();
-  await ui(nav.getByRole("link", { name: "Today", exact: true })).toHaveAttribute("aria-current", "page");
 });

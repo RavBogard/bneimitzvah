@@ -117,6 +117,9 @@ async function capture(tab: Page, name: string) {
   } finally { await tab.evaluate(() => { document.documentElement.style.removeProperty("font-size"); }); if (original) await tab.setViewportSize(original); }
 }
 async function accountReady(tab: Page) {
+  // Leaving by the bar lands on My Readings (Area A); Account is one link from there.
+  await ui.poll(() => ["/mine", "/account"].includes(new URL(tab.url()).pathname)).toBe(true);
+  if (new URL(tab.url()).pathname === "/mine") await tab.getByTestId("mine-account").click();
   await ui(tab.getByRole("heading", { name: "Account", level: 1, exact: true })).toBeVisible();
   await ui(tab.getByRole("button", { name: "Sign out", exact: true })).toBeEnabled();
   expect(new URL(tab.url()).pathname).toBe("/account");
@@ -241,7 +244,7 @@ it("guards controlled leave, explicit reload barriers and quiet retained reading
   try {
   const tab = await page("student"); await learner(tab); const panel = await tools(tab, "Genesis 1:4");
   await safe(() => panel.getByRole("textbox").fill("Synthetic departure edit")); await closeVerseTools(tab); // the page's links sit behind the sheet; closing it loses no text
-  await safe(() => tab.getByRole("navigation", { name: "Site", exact: true }).getByRole("link", { name: "Account", exact: true }).click()); await ui(tab.getByRole("dialog")).toBeVisible(); await ui(tab.getByRole("dialog").getByRole("button", { name: "Keep working", exact: true })).toBeFocused(); await click(tab, "Keep working"); await ui(tab.getByRole("navigation", { name: "Site", exact: true }).getByRole("link", { name: "Account", exact: true })).toBeFocused(); await tools(tab, "Genesis 1:4"); await ui(panel.getByRole("textbox")).toHaveValue("Synthetic departure edit");
+  await safe(() => tab.getByRole("navigation", { name: "Site", exact: true }).getByRole("link", { name: "My Readings", exact: true }).click()); await ui(tab.getByRole("dialog")).toBeVisible(); await ui(tab.getByRole("dialog").getByRole("button", { name: "Keep working", exact: true })).toBeFocused(); await click(tab, "Keep working"); await ui(tab.getByRole("navigation", { name: "Site", exact: true }).getByRole("link", { name: "My Readings", exact: true })).toBeFocused(); await tools(tab, "Genesis 1:4"); await ui(panel.getByRole("textbox")).toHaveValue("Synthetic departure edit");
   phase = "explicit-text-outage";
   // Pause before debounce, then verify all three independent reads hold the reveal barrier.
   // Dispatch only these deliberate reloads without moving focus: a real pointer
@@ -279,7 +282,7 @@ it("guards controlled leave, explicit reload barriers and quiet retained reading
   // An unfinished composition stays unsent even when the ordinary link click blurs the field.
   await safe(() => leaving.getByRole("textbox").dispatchEvent("compositionstart")); await safe(() => leaving.getByRole("textbox").fill(discarded));
   await closeVerseTools(tab);
-  await safe(() => tab.getByRole("navigation", { name: "Site", exact: true }).getByRole("link", { name: "Account", exact: true }).click()); await ui(tab.getByRole("dialog")).toBeVisible(); await click(tab, "Discard unsent edits and continue");
+  await safe(() => tab.getByRole("navigation", { name: "Site", exact: true }).getByRole("link", { name: "My Readings", exact: true }).click()); await ui(tab.getByRole("dialog")).toBeVisible(); await click(tab, "Discard unsent edits and continue");
   await ui(tab.getByRole("dialog")).toBeHidden(); await accountReady(tab);
   // A fresh access check must keep sign-out available, rather than briefly visiting / and returning to the reading.
   phase = "account-session-check";

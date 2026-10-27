@@ -19,8 +19,8 @@ export function entryTask(tab: Page, state: EntryState, step?: "address" | "code
   return tab.locator(`[data-testid="entry-task"][data-entry-state="${state}"]${step ? `[data-entry-step="${step}"]` : ""}`);
 }
 
-/** Roles are switched on the Account page's Roles list (the old role pills are gone): open Account from the header, then choose the role by its route. */
+/** Roles are reached from My Readings (Area A interim rows): open it from the header, then choose the role by its route. */
 export async function switchRole(tab: Page, role: "Parent" | "Tutor" | "Student") {
-  await tab.getByRole("banner").getByRole("link", { name: "Account", exact: true }).click();
-  await tab.getByTestId("account-roles").locator(`a[href="/workspace/${role.toLowerCase()}"]`).click();
+  await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click();
+  await tab.locator(`a[href="/workspace/${role.toLowerCase()}"]`).click();
 }

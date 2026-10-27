@@ -133,7 +133,8 @@ it("opens a student's page with the staff tabs and verse sheet, and links to the
     const tab = await page(mobile); await navigate(tab, "/workspace/admin/students?tab=students");
     await safe(() => roster(tab).getByRole("link", { name: /^Synthetic Learner/ }).click());
     await ui(tab.getByRole("heading", { name: "Synthetic Learner", level: 2, exact: true })).toBeVisible();
-    await ui(tab.getByRole("navigation", { name: "Workspace", exact: true }).getByRole("link", { name: "Students", exact: true })).toHaveAttribute("aria-current", "page");
+    // Decision 20: the admin's per-student reading page carries no tab bar.
+    await ui(tab.getByRole("navigation", { name: "Workspace", exact: true })).toHaveCount(0);
     const tabs = tab.getByRole("tablist", { name: "Student page", exact: true });
     await ui(tabs.getByRole("tab")).toHaveText(["Reading", "Service parts", "Lessons"]);
     await ui(tab.getByRole("button", { name: /^(Assign|Change) verses$/ })).toBeVisible();

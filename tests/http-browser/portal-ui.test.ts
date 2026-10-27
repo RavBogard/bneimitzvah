@@ -171,11 +171,13 @@ it("single-submits a real magic link, shows separate genuine roles without fake 
   await navigate(tab, "/account");
   const roles = tab.getByTestId("account-roles");
   // Two genuine roles, each a link to its own workspace and nothing else.
-  await ui(roles.locator('a[href="/workspace/parent"]')).toBeVisible(); await ui(roles.locator('a[href="/workspace/tutor"]')).toBeVisible();
+  await ui(roles.getByRole("link").first()).toBeVisible();
   expect(await roles.getByRole("link").count()).toBe(2);
-  await roles.locator('a[href="/workspace/parent"]').click(); await ui.poll(() => new URL(tab.url()).pathname).toBe("/workspace/parent");
+  // Both roles open My Readings (Area A); the role pages are reached from its rows.
+  await roles.getByRole("link").first().click(); await ui.poll(() => new URL(tab.url()).pathname).toBe("/mine");
+  await ui(tab.getByTestId("mine-interim-parent")).toBeVisible(); await ui(tab.getByTestId("mine-interim-tutor")).toBeVisible();
+  await tab.locator('a[href="/workspace/parent"]').click(); await ui.poll(() => new URL(tab.url()).pathname).toBe("/workspace/parent");
   // The old role pills are gone; the workspace brand is an actual controlled Next router link.
-  await ui(tab.getByRole("navigation", { name: "Workspace", exact: true })).toBeVisible();
   await tab.evaluate(() => { (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument = true; });
   await tab.getByTestId("site-brand").click();
   await ui.poll(() => new URL(tab.url()).pathname).toBe("/"); await referrerPolicy(tab, "strict-origin-when-cross-origin");
@@ -314,6 +316,9 @@ it("keeps invitation landing nonaccepting and accepts one reviewed binding only,
   await ui(entryTask(recipient, "accepted")).toBeVisible();
   await clean(recipient, [token, email]);
   await safe(() => recipient.getByTestId("invitation-continue").click());
+  // Continue lands on My Readings (Area A); the student's pages open from its interim row.
+  await ui(recipient.getByTestId("mine-interim-student")).toBeVisible();
+  await recipient.locator('a[href="/workspace/student"]').click();
   await ui(recipient.locator("[data-today]")).toBeVisible();
   expect(new URL(recipient.url()).pathname === "/workspace/student").toBe(true);
   expect(await recipient.getByTestId("entry-task").count()).toBe(0);

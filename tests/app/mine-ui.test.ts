@@ -76,8 +76,18 @@ describe("the shelf's sections", () => {
   });
   it("the Learn row opens Learn, the pinned card opens the pinned reading, and Account is a plain link", () => {
     expect(renderToStaticMarkup(createElement(LearnSection, { learn }))).toContain('href="/learn"');
-    expect(renderToStaticMarkup(createElement(PinnedSection, { pinned: { name: "Noa", ceremony: "Beit Mitzvah, Sat, May 1, 2027", done: 2, total: 9, href: "/mine/reading" } }))).toContain('href="/mine/reading"');
+    expect(renderToStaticMarkup(createElement(PinnedSection, { pinned: { name: "Noa", ceremony: "Beit Mitzvah, Sat, May 1, 2027", done: 2, total: 9, href: "/mine/reading" }, roles: [] }))).toContain('href="/mine/reading"');
     expect(renderToStaticMarkup(createElement(AccountSection))).toMatch(/<a href="\/account"[^>]*>Account<\/a>/);
+  });
+  it("interim: a student, a parent and a tutor each get a row to their Beit Mitzvah pages", () => {
+    const markup = renderToStaticMarkup(createElement(PinnedSection, { pinned: null, roles: ["student", "parent", "tutor", "admin"] }));
+    for (const [role, href] of [["student", "/workspace/student"], ["parent", "/workspace/parent"], ["tutor", "/workspace/tutor"]]) {
+      expect(markup).toContain(`data-testid="mine-interim-${role}"`);
+      expect(markup).toContain(`href="${href}"`);
+    }
+    expect(renderToStaticMarkup(createElement(PinnedSection, { pinned: null, roles: ["admin"] }))).not.toContain("mine-interim");
+    expect(model({ status: "ready", readings: [] }).sections).toEqual(["learn", "account"]);
+    expect(shelfModel({ summary: { ...summary, roles: ["tutor"] }, own: { status: "hidden" }, pinned: null, learn }).sections).toEqual(["pinned", "learn", "account"]);
   });
   it("the page has exactly one h1 and a link named Account", () => {
     const markup = renderToStaticMarkup(createElement(Shelf));

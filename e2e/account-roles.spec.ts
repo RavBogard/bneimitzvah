@@ -35,7 +35,7 @@ test("Account lists the roles with the current one marked, and choosing a role o
 test("the old role pills and the chooser are gone from the workspace", async ({ page }) => {
   await session(page, ["parent", "tutor"]);
   await page.goto("/workspace/tutor");
-  await expect(page.getByRole("navigation", { name: "Workspace", exact: true })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Workspace", exact: true })).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "Workspace roles", exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Choose your workspace", exact: true })).toHaveCount(0);
 });

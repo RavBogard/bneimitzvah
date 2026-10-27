@@ -98,7 +98,7 @@ export const statusOf = (error: unknown) => error instanceof PortalRequestError 
 export const DENIAL_REFRESH_LIMIT = 3, DENIAL_REFRESH_WINDOW_MS = 60_000;
 /** Said when a parent's practice access ends; the notice also carries its kind, for a test or a style. */
 const PRACTICE_ACCESS_CHANGED = "Practice access changed. Choose an available child again.";
-const isParentPath = (path: string) => path === rolePaths.parent || path.startsWith("/workspace/practice/");
+const isParentPath = (path: string) => path === "/workspace/parent" || path.startsWith("/workspace/practice/");
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const router = useRouter(), pathname = usePathname();

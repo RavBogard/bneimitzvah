@@ -13,7 +13,7 @@ async function students(page: Page, rows: { id: string; firstName: string; lastN
 const fits = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
 const SIGNED_IN = [
-  "/mine", `/workspace/tutor/${ID_A}`,
+  "/mine", "/workspace/student", "/workspace/parent", "/workspace/tutor", `/workspace/tutor/${ID_A}`,
   "/workspace/accounts", "/workspace/claude", "/workspace/email", "/workspace/more", "/workspace/admin/invitations", "/workspace/admin/reference-review",
   "/workspace/admin/settings", "/workspace/admin/students", "/workspace/admin/students/import", `/workspace/admin/students/${ID_A}/reading`,
   `/workspace/admin/students/${ID_A}/access`, "/workspace/admin/tutors", "/account", "/connect", "/invitations/accept",

@@ -1,12 +1,12 @@
 "use client";
 
-import { courseDone, emptyProgress } from "../../../lib/learn/progress";
+import { useEffect, useState } from "react";
+import { browserProgressStore, courseDone, emptyProgress, type Progress } from "../../../lib/learn/progress";
 import { recommendedLesson } from "../../../lib/learn/recommendation";
-import { useProgress } from "../../learn/services";
 import { ButtonLink, List, ListRow, PageHeader } from "../../ui";
 import { AccountRequest } from "../account-request";
 import { useWorkspace } from "../workspace/provider";
-import { shelfModel, type LearnRowState, type PinnedState, type ShelfSection } from "./model";
+import { interimRows, shelfModel, type LearnRowState, type PinnedState, type ShelfSection } from "./model";
 import { OwnReadings, useOwnReadings } from "./own-readings";
 import styles from "./shelf.module.css";
 
@@ -26,9 +26,14 @@ export const SHELF_STRINGS = Object.freeze({
 });
 
 /** The student's pinned reading, first on the shelf. Task E1 fills `pinned`; until then the section is never drawn. */
-export function PinnedSection({ pinned }: { pinned: PinnedState }) {
+export function PinnedSection({ pinned, roles }: { pinned: PinnedState | null; roles: readonly string[] }) {
+  // Interim rows to the role pages: Area E replaces them with E1 (the student's pinned reading), E2 and D7 (the parent's and tutor's views).
+  const rows = interimRows(roles);
   return <section className={styles.section} aria-label="Your assigned reading" data-testid="mine-pinned">
-    <List><ListRow title={pinned.name} meta={[pinned.ceremony, pinned.total ? `${pinned.done} of ${pinned.total} verses` : null].filter(Boolean).join(" · ") || undefined} href={pinned.href} /></List>
+    <List>
+      {pinned && <ListRow title={pinned.name} meta={[pinned.ceremony, pinned.total ? `${pinned.done} of ${pinned.total} verses` : null].filter(Boolean).join(" · ") || undefined} href={pinned.href} />}
+      {rows.map(row => <ListRow key={row.role} title={row.title} meta={<span data-testid={`mine-interim-${row.role}`}>{row.action ?? "Open"}</span>} href={row.href} />)}
+    </List>
   </section>;
 }
 
@@ -63,9 +68,11 @@ export function EmptyShelf({ line, linkable }: { line: string | null; linkable: 
 
 export function ShelfFoot() { return <p className={styles.foot}>{SHELF_STRINGS.foot}</p>; }
 
-/** Where the person is in the course, read from the same stored progress Learn uses; no network. */
+/** Where the person is in the course, read from this browser's stored progress only: the shelf never syncs or writes Learn progress. */
 function useLearnRow(): LearnRowState {
-  const { progress: loaded } = useProgress(), progress = loaded ?? emptyProgress();
+  const [loaded, setLoaded] = useState<Progress | null>(null);
+  useEffect(() => { try { setLoaded(browserProgressStore().load()); } catch { setLoaded(null); } }, []);
+  const progress = loaded ?? emptyProgress();
   if (courseDone(progress)) return { meta: null };
   const next = recommendedLesson(progress), started = Object.keys(progress.lessons).length > 0;
   return { meta: started && next ? next.title : SHELF_STRINGS.learnStart };
@@ -76,7 +83,7 @@ export function Shelf() {
   // The pinned reading arrives with Task E1.
   const pinned: PinnedState | null = null;
   const view = shelfModel({ summary, own, pinned, learn });
-  const part = (section: ShelfSection) => section === "pinned" ? (pinned && <PinnedSection key={section} pinned={pinned} />)
+  const part = (section: ShelfSection) => section === "pinned" ? <PinnedSection key={section} pinned={pinned} roles={summary.roles} />
     : section === "own" ? <OwnReadings key={section} state={own} onRetry={retry} />
       : section === "learn" ? <LearnSection key={section} learn={learn} /> : <AccountSection key={section} />;
   return <section className="role-workspace" data-testid="shelf" aria-busy={own.status === "loading"}>

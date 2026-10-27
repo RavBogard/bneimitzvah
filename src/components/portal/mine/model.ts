@@ -16,6 +16,16 @@ export type ShelfView = Readonly<{
   empty: null | Readonly<{ line: string | null }>;
 }>;
 
+export type InterimRow = Readonly<{ role: "student" | "parent" | "tutor"; title: string; href: string; action: string | null }>;
+/** The interim rows, in role order. Existing words only. */
+export function interimRows(roles: readonly string[]): InterimRow[] {
+  const rows: InterimRow[] = [];
+  if (roles.includes("student")) rows.push({ role: "student", title: "Beit Mitzvah", href: "/workspace/student", action: "Open" });
+  if (roles.includes("parent")) rows.push({ role: "parent", title: "Beit Mitzvah", href: "/workspace/parent", action: "Open" });
+  if (roles.includes("tutor")) rows.push({ role: "tutor", title: "Your students", href: "/workspace/tutor", action: null });
+  return rows;
+}
+
 export const EMPTY_LINE = "You’re signed in. Nothing is saved yet.";
 
 /** Dated readings first, earliest date first; undated ones last, in the order the server gave them (most recent first). */
@@ -30,7 +40,8 @@ export function shelfModel(input: { summary: SessionSummary; own: OwnReadingsSta
   const settled = own.status === "ready" || own.status === "hidden";
   const empty = settled && !keeps && !pinned ? { line: own.status === "ready" ? EMPTY_LINE : null } : null;
   const sections: ShelfSection[] = [];
-  if (pinned) sections.push("pinned");
+  // Interim: a student, parent or tutor gets a row to their Beit Mitzvah pages until Area E (E1, E2, D7) replaces it.
+  if (pinned || interimRows(input.summary.roles).length) sections.push("pinned");
   if (own.status === "loading" || own.status === "failed" || keeps) sections.push("own");
   sections.push("learn", "account");
   return { sections, empty };

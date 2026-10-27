@@ -19,6 +19,7 @@ import { assertBrowserStartupAllowed, BROWSER_ORIGIN, startBrowserServer } from 
 import { syntheticCourseRoutes } from "../../e2e/learn-synthetic";
 import { finishLesson } from "../../e2e/learn-drill";
 import { rateLimit } from "../../src/server/db/auth-schema";
+import { courseProgressTable } from "../../src/server/db/course-progress-schema";
 import * as s from "../../src/server/db/index";
 import { eq } from "drizzle-orm";
 vi.mock("server-only", () => ({}));
@@ -172,6 +173,8 @@ it("A2: a student's own confirmed reading is packed under its owner, and another
     await fixture.ownerDb.delete(s.assignment).where(eq(s.assignment.id, assignment.id));
     await fixture.ownerDb.delete(s.studentIdentity).where(eq(s.studentIdentity.id, link.id));
     await fixture.ownerDb.delete(s.roleGrant).where(eq(s.roleGrant.id, grant.id));
+    // Landing on My Readings syncs the learner's course progress, which keeps a row for the member.
+    await fixture.ownerDb.delete(courseProgressTable).where(eq(courseProgressTable.membershipId, member.id));
     await fixture.ownerDb.delete(s.membership).where(eq(s.membership.id, member.id));
   }
 }, 300_000);
