@@ -44,6 +44,8 @@ export type ChoosePlan = Readonly<{
   extra?: ReactNode;
   /** Told when choosing starts and ends, so the page can put away its own Save of the whole passage while the bar's Save is the one. */
   onChoosing?(choosing: boolean): void;
+  /** Hands the page the way to start choosing (null while choosing), for the Save sheet's Choose verses row. */
+  register?(begin: (() => void) | null): void;
   /** The verse the reader is on, as it changes, so a whole portion (or the way back) opens at the same place. */
   onPlace?(ref: string | null): void;
 }>;
@@ -77,6 +79,9 @@ export function useVerseChoice(plan: ChoosePlan | undefined, order: readonly str
     if (plan.onBegin) { plan.onBegin(); return; }
     change(selectionFromRanges(plan.start, kind) ?? new Set()); setAnchor(null); setRangeMode(false); setNote(""); setChoosing(true);
   };
+  const registered = useRef(plan?.register); registered.current = plan?.register;
+  useEffect(() => { registered.current?.(plan && !choosing ? begin : null); });
+  useEffect(() => () => registered.current?.(null), []);
   const leave = () => { restore.current = true; setChoosing(false); setRangeMode(false); setNote(""); plan?.onClose?.(); };
   useEffect(() => { if (choosing && !entered.current) { entered.current = true; bar.current?.focus({ preventScroll: true }); } if (!choosing) entered.current = false; }, [choosing]);
   // Back to the button that began it; with a More sheet that button is inside the closed sheet, so More itself takes the focus.

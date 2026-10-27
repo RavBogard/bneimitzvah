@@ -45,7 +45,7 @@ import { positionInRef, selectionPlace, wholePortionFor } from "../../../lib/rea
 import { printAddress } from "../../../lib/print/print-address";
 import { useProductName } from "./product-name";
 import { pageTitle } from "../../../lib/site/product-name";
-import { SaveReading } from "../saved/save-reading";
+import { SaveSelectionButton, useSaveReading } from "../saved/save-reading";
 import { SavedReadingPage } from "../saved/saved-reading";
 import { OfflineExpiryNote, OfflinePill } from "../offline/status";
 import { DRILL_STRINGS, drillNext, TranslateDrillPanel } from "./translate-drill";
@@ -257,24 +257,29 @@ function WeekReading({ initial, verse, saveReturn, pick: initialPick }: { initia
   const back = useReturn(saveReturn, at => date && today ? readAddress({ mode: "week", date, kind: kind === "haftarah" ? "haftarah" : null }, { today, verse: at ?? linked, study: lens.lens === "study", pick: addressPick }) : null, shown);
   // Choose verses: the Shabbat's own passage is the whole portion already, so a selection from it only needs Save.
   // Back from "Sign in to save" with a selection, choosing opens with it.
-  const choosePlan: ChoosePlan | undefined = current ? { label: CHOOSE_STRINGS.choose, start: saveReturn.choose ?? [], autoStart: Boolean(saveReturn.choose), onChoosing: setChoosing, onPlace: ref => { back.place.current = ref; },
-    save: (selection, saved) => <SaveReading passage={{ title: current.parashah, label: selection.line, kind: selection.kind, ranges: selection.ranges, date: current.date }} onSaved={saved} back={back.forSave(selection.ranges)} offer={back.choiceOffer} /> } : undefined;
   const weekShown = Boolean(week && week.date === date && (week.value || week.error));
   useHeadingFocus(weekShown);
   const savePassage = current && shown ? { title: current.parashah, label: effectivePick !== "full" ? PORTION_LABELS[effectivePick] : shown.kind === "torah" ? "Torah" : "Haftarah", kind: shown.kind, ranges: picked ? picked.split("; ") : shown.ranges, date: current.date } : null;
+  const chooser = useRef<(() => void) | null>(null);
+  const wholeRanges = shown && current ? (shown.kind === "torah" ? current.torah?.ranges : current.haftarah?.ranges) ?? shown.ranges : null;
+  const save = useSaveReading({ passage: sources.length > 0 ? savePassage : null, whole: wholeRanges, back: back.forSave(), offer: back.passageOffer, onChoose: () => chooser.current?.() });
+  const choosePlan: ChoosePlan | undefined = current ? { label: CHOOSE_STRINGS.choose, start: saveReturn.choose ?? [], autoStart: Boolean(saveReturn.choose), onChoosing: setChoosing, onPlace: ref => { back.place.current = ref; },
+    register: begin => { chooser.current = begin; },
+    save: (selection, saved) => <SaveSelectionButton save={save} passage={{ title: current.parashah, label: selection.line, kind: selection.kind, ranges: selection.ranges, date: current.date }} onSaved={saved} back={back.forSave(selection.ranges)} offer={back.choiceOffer} /> } : undefined;
+
   const printHref = date && shown ? printAddress({ mode: "week", date, kind: shown.kind === "haftarah" ? "haftarah" : null, pick: effectivePick }, undefined, { today }) : undefined;
   // The Torah's rare tropes this week, for the reader's note (N5, G17).
   const rareNote = useMemo(() => current?.torah ? rareTropeNote(rareTropesIn(expandReadingRanges(current.torah.ranges, "torah", TANAKH_VERSE_COUNTS))) : null, [current]);
-  return <MoreScope initiallyOpen={saveReturn.offer && !saveReturn.choose}><Shell title={WEEK_TITLE} back={back.here} settled={weekShown}>
-    <ReadHeader name={current ? current.parashah ?? "Shabbat reading" : week?.error ? "Reading unavailable" : "Loading the reading"} loading={!current && !week?.error}
+  return <MoreScope><Shell title={WEEK_TITLE} back={back.here} settled={weekShown}>
+    <ReadHeader name={current ? current.parashah ?? "Shabbat reading" : week?.error ? "Reading unavailable" : "Loading the reading"} loading={!current && !week?.error} pills={choosing || !save.pill ? [] : [save.pill]} note={save.note}
       line={date ? <><time dateTime={date}>{longDate(date)}</time>{current?.torah && <> · Torah <bdi dir="ltr">{displayRange(current.torah.ranges)}</bdi></>}{current?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(current.haftarah.ranges)}</bdi></>}<OfflinePill /></> : ""}
       rest={<>
         {sources.length > 0 && <MoreStart ready={starter.ready} onStart={starter.start} />}
         {sources.length > 0 && printHref && <a className="button-hero-secondary" href={printHref}>Print</a>}
-        {sources.length > 0 && savePassage && !choosing && <SaveReading passage={savePassage} back={back.forSave()} offer={back.passageOffer} />}
         <a className="button-hero-secondary" href="/trope-chart">Trope chart</a>
         {current && sources.length > 0 && <SiddurBlessings torah={Boolean(current.torah)} haftarah={Boolean(current.haftarah)} />}
       </>} />
+    {save.sheet}
     <ReadingBlock reserve={!week?.error && !(current && !sources.length)}>
     {week?.error && <div className="workspace-state" role="status"><h2>{week.error === 400 ? "That date isn’t available" : "The reading didn’t load"}</h2>
       <p>{week.error === 400 ? "Choose a Shabbat within the next few years, or go back to this week." : week.error === 429 ? RATE_LIMITED_MESSAGE : "Check your connection and try again."}</p>
@@ -335,21 +340,25 @@ function ChosenReading({ target, verse, saveReturn }: { target: Extract<ReadTarg
       href={at => readAddress({ mode: "ref", ref: portion.ref, kind: portion.kind, mark: refTarget.ref }, { study, verse: positionInRef(portion.ref, portion.kind, at) })}>{CHOOSE_STRINGS.wholePortion}</PlaceLink> : null;
   const shownPassage = sources[index]?.source.passage;
   const back = useReturn(saveReturn, at => readAddress(target.mode === "named" ? { mode: "named", slug: target.slug, passage: index + 1 } : target, { verse: at ?? linked, study }), shownPassage);
+  const chooser = useRef<(() => void) | null>(null);
+  const chosen = sources[index] ? { title: named ? named.name : title, label: passages[index]?.label ?? null, kind: sources[index].source.passage.kind, ranges: sources[index].source.passage.ranges, date: null } : null;
+  const save = useSaveReading({ passage: chosen, whole: portion ? portion.ref.split("; ") : chosen?.ranges, back: back.forSave(), offer: back.passageOffer, onChoose: () => chooser.current?.() });
   // Back from "Sign in to save" with a selection, choosing opens with it (in place of a marked selection's own verses).
   const choosePlan: ChoosePlan | undefined = sources.length > 0 ? { label: CHOOSE_STRINGS.choose, start: saveReturn.choose ?? (refTarget?.mark ? refTarget.mark.split("; ") : []), autoStart: Boolean(saveReturn.choose), marked: refTarget?.mark ? refTarget.mark.split("; ") : undefined,
     extra: links, onPlace: ref => { place.current = ref; back.place.current = ref; }, onChoosing: setChoosing,
-    save: (selection, saved) => <SaveReading passage={{ title, label: selection.line, kind: selection.kind, ranges: selection.ranges, date: null }} onSaved={saved} back={back.forSave(selection.ranges)} offer={back.choiceOffer} /> } : undefined;
+    register: begin => { chooser.current = begin; },
+    save: (selection, saved) => <SaveSelectionButton save={save} passage={{ title, label: selection.line, kind: selection.kind, ranges: selection.ranges, date: null }} onSaved={saved} back={back.forSave(selection.ranges)} offer={back.choiceOffer} /> } : undefined;
   useHeadingFocus(loaded !== null);
-  return <MoreScope initiallyOpen={saveReturn.offer && !saveReturn.choose}><Shell title={title} back={back.here} settled={loaded !== null}>
-    <ReadHeader name={loaded?.error ? "Reading unavailable" : title} loading={loaded === null}
+  return <MoreScope><Shell title={title} back={back.here} settled={loaded !== null}>
+    <ReadHeader name={loaded?.error ? "Reading unavailable" : title} loading={loaded === null} pills={choosing || !save.pill ? [] : [save.pill]} note={save.note}
       line={named ? <>{GROUP_EYEBROW[named.group]} · {passages.map((row, at) => <span key={at}>{at > 0 && " · "}{row.label} <bdi dir="ltr">{displayRange([row.ref])}</bdi></span>)}</>
         : <>Any reading · {passages.map((row, at) => <span key={at}>{at > 0 && " · "}<bdi dir="ltr">{displayRange([row.ref])}</bdi></span>)}</>}
       rest={<>
         {sources.length > 0 && <MoreStart ready={starter.ready} onStart={starter.start} />}
         {sources.length > 0 && <a className="button-hero-secondary" href={printAddress(target.mode === "named" ? { mode: "named", slug: target.slug, passage: index + 1 } : target)}>Print</a>}
-        {sources[index] && !choosing && <SaveReading passage={{ title: named ? named.name : title, label: passages[index]?.label ?? null, kind: sources[index].source.passage.kind, ranges: sources[index].source.passage.ranges, date: null }} back={back.forSave()} offer={back.passageOffer} />}
         <a className="button-hero-secondary" href="/trope-chart">Trope chart</a>
       </>} />
+    {save.sheet}
     <ReadingBlock reserve={!loaded?.error}>
     {loaded?.error && <div className="workspace-state" role="status"><h2>{loaded.error === 400 ? "That reading isn’t available" : "The reading didn’t load"}</h2>
       <p>{loaded.error === 400 ? "Choose another reading, or go back to this week." : loaded.error === 429 ? RATE_LIMITED_MESSAGE : "Check your connection and try again."}</p>

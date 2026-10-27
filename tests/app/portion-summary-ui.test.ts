@@ -88,8 +88,8 @@ test("nothing is drawn until an approved summary has come (and never for a readi
 });
 
 test("a signed-in student pressing Save is told why and where their reading is, with the approved wording (N20-1, N20-2)", () => {
-  const view = (student: boolean) => renderToStaticMarkup(createElement(SaveReadingView, { step: "not-eligible", problem: null, name: "Noach · Torah", date: "", panelId: "p", student,
-    onSave: () => {}, onName: () => {}, onDate: () => {}, onSubmit: () => {}, onCancel: () => {} }));
+  const view = (student: boolean) => renderToStaticMarkup(createElement(SaveReadingView, { step: "not-eligible", open: true, problem: null, name: "Noach · Torah", date: "", panelId: "p", student, verses: "screen", screenLine: "Torah", wholeLine: null, canChoose: false,
+    onName: () => {}, onDate: () => {}, onVerses: () => {}, onSubmit: () => {}, onClose: () => {} }));
   expect(STUDENT_LINE).toBe("Student accounts don’t save other readings. Your assigned reading is always under Reading.");
   expect(view(true)).toContain("Student accounts don’t save other readings. Your assigned reading is always under Reading. <a href=\"/workspace/student?tab=reading\">Open your reading</a>");
   expect(view(true)).not.toContain("Ask for an account");

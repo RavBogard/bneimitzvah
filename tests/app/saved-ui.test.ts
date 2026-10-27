@@ -61,37 +61,39 @@ describe("the saved-readings client", () => {
   });
 });
 
-describe("Save on /read", () => {
-  const view = (step: SaveStep, problem: Parameters<typeof SaveReadingView>[0]["problem"] = null) => renderToStaticMarkup(createElement(SaveReadingView, { step, problem, name: "Noach · Torah", date: "2026-10-24",
-    panelId: "save-panel", onSave: () => {}, onName: () => {}, onDate: () => {}, onSubmit: () => {}, onCancel: () => {} }));
-  it("is a quiet Save until pressed, then answers by the account's state, inline", () => {
-    expect(view("idle")).toContain('<button type="button" class="button-hero-secondary" aria-expanded="false">Save</button>');
-    expect(view("idle")).not.toContain("<form");
-    expect(view("checking")).toMatch(/disabled="">Save<\/button>/);
-    // Signed out, Save is "Sign in to save" (F4), a link in Save's own place; no Save button beside it.
-    expect(view("signed-out")).toContain('<a class="button-hero-secondary" href="/sign-in">Sign in to save</a>');
-    expect(view("signed-out")).not.toContain(">Save</button>");
+describe("Save on /read (Add to My Readings)", () => {
+  const view = (step: SaveStep, problem: Parameters<typeof SaveReadingView>[0]["problem"] = null, extra: Partial<Parameters<typeof SaveReadingView>[0]> = {}) => renderToStaticMarkup(createElement(SaveReadingView, { step, open: true, problem, name: "Noach · Torah", date: "2026-10-24",
+    panelId: "save-panel", verses: "screen", screenLine: "Torah · Genesis 6:9–11:32", wholeLine: "Genesis 6:9–11:32", canChoose: true,
+    onName: () => {}, onDate: () => {}, onVerses: () => {}, onSubmit: () => {}, onClose: () => {}, ...extra }));
+  it("is a sheet that answers by the account's state, and says why when an account cannot save", () => {
+    expect(view("form")).toContain(">Add to My Readings</h");
     expect(view("not-eligible")).toContain('<a href="/account">Ask for an account to save readings</a>');
+    expect(view("not-eligible")).not.toContain("<form");
     expect(view("unavailable")).toContain("Saving isn’t available right now. Try again.");
-    const saved = view("saved");
-    expect(saved).toContain('Saved to <a href="/">My readings</a>.');
-    expect(saved).not.toContain(">Save</button>");
+    expect(renderToStaticMarkup(createElement(SaveReadingView, { step: "form", open: false, problem: null, name: "", date: "", panelId: "p", verses: "screen", screenLine: "", wholeLine: null, canChoose: false,
+      onName: () => {}, onDate: () => {}, onVerses: () => {}, onSubmit: () => {}, onClose: () => {} }))).not.toContain("<form");
   });
-  it("opens an inline form with the name and the Shabbat filled in, never a dialog", () => {
+  it("has the name and the Shabbat filled in, three ways to choose the verses with what is on screen checked, and one button, Add", () => {
     const form = view("form");
-    expect(form).toContain('aria-expanded="true" aria-controls="save-panel"');
     expect(form).toContain('<form id="save-panel"');
     expect(form).toContain('value="Noach · Torah"');
-    expect(form).toContain('type="date" name="date" value="2026-10-24"');
-    expect(form).toContain("(optional)");
-    expect(form).toContain(">Save reading</button>");
-    expect(form).toContain(">Cancel</button>");
-    expect(form).not.toMatch(/dialog|aria-modal/);
-    expect(view("saving")).toMatch(/disabled="">Save reading<\/button>/);
+    expect(form).toMatch(/type="date" name="date" value="2026-10-24"/);
+    expect((form.match(/type="radio"/g) ?? []).length).toBe(3);
+    expect(form).toMatch(/checked="" value="screen"/);
+    expect(form).not.toMatch(/checked="" value="(whole|choose)"/);
+    expect(form).toContain(">Add</button>");
+    expect(form).not.toMatch(/Save reading|Cancel/);
+    expect(view("saving")).toMatch(/disabled="">Add<\/button>/);
     expect(view("form", "limit")).toContain("You have 100 saved readings, the most an account keeps. Remove one to save another.");
     expect(view("form", "invalid")).toContain('role="alert"');
-    // No pep talk anywhere in the Save copy.
-    for (const step of ["idle", "signed-out", "not-eligible", "form", "saved", "unavailable"] as const) expect(view(step)).not.toMatch(/!/);
+    // A selection from the Choose verses bar is the only choice.
+    const selection = view("form", null, { wholeLine: null, canChoose: false });
+    expect((selection.match(/type="radio"/g) ?? []).length).toBe(1);
+    for (const step of ["not-eligible", "form", "unavailable"] as const) expect(view(step)).not.toMatch(/!/);
+  });
+  it("wording (the one deliberate wording test for the sheet)", () => {
+    const form = view("form");
+    for (const text of ["Add to My Readings", "Date you’re reading it (optional)", "Verses", "Whole portion", "Choose verses", "Torah · Genesis 6:9–11:32", "Marks, notes and your translation stay with this reading. Your tutor and the rabbi can see them."]) expect(form, text).toContain(text);
   });
   it("names the reading after its parashah and kind, within 80 characters", () => {
     expect(suggestedName({ title: "Noach", label: null, kind: "torah", ranges: ["Genesis 6:9-11:32"], date: "2026-10-24" })).toBe("Noach · Torah");
