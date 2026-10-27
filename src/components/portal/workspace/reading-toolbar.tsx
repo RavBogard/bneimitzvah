@@ -5,6 +5,7 @@ import { textSizes, tikkunViews, useReadingPrefs, useSetReadingPrefs } from "./r
 import { MAX_INLINE_WORKS, STUDY_WORKS, useStudyLens } from "./study-lens";
 import { COMMENTARY_WORKS } from "../../../lib/readings/commentary";
 import { icons } from "./study/lift";
+import { SourcesDockItem } from "./study/verse-panel";
 
 /** Short names for the Works menu; the full title and edition are in each work's credit. */
 export const WORK_LABELS: Readonly<Record<string, string>> = Object.freeze({ rashi: "Rashi", womens: "Women’s Commentary", ramban: "Ramban", "ibn-ezra": "Ibn Ezra",
@@ -65,6 +66,7 @@ export function ReadingToolbar({ onHear, listeningEnabled = false, tikkunAvailab
         })}
       </div>
     </>}
+    <SourcesDockItem />
     <button type="button" className="toolbar-item" popoverTarget={menu} aria-label={`Text size: ${size.label}`}>{icons.size}<span>{size.label}</span></button>
     <div id={menu} popover="auto" className="toolbar-menu" role="group" aria-label="Hebrew text size">
       {textSizes.map(row => <button type="button" key={row.id} aria-pressed={prefs.size === row.id} data-size={row.id}

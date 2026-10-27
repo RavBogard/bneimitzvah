@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { conflictMark, fetchSavedPage, parseSavedPage, removeSavedReading, SavedRequestError, setSavedMark, updateSavedReading } from "../../src/components/portal/saved/api";
-import { SavedReadingEdit, SavedReadingState, SavedVerseMarks, type EditStep } from "../../src/components/portal/saved/saved-reading";
+import { SavedReadingPage, SavedReadingEdit, SavedReadingState, SavedVerseMarks, type EditStep } from "../../src/components/portal/saved/saved-reading";
 import { parseReadAddress, readAddress } from "../../src/components/portal/public-reading/urls";
 
 // Synthetic saved readings only.
@@ -114,5 +114,14 @@ describe("the saved reading page's parts", () => {
     expect(state("missing")).toContain("This reading isn’t in your saved readings");
     expect(state("missing")).toContain('href="/read">Go to this week</a>');
     expect(state("failed")).toContain(">Try again</button>");
+  });
+});
+
+describe("the saved reading's header (Readings for everyone C1)", () => {
+  it("is the reader's title block with Change, and its eyebrow MY READING is gone", () => {
+    const markup = renderToStaticMarkup(createElement(SavedReadingPage, { id: ID, verse: null }));
+    expect(markup).toContain('id="public-reading-title"');
+    expect(markup).toMatch(/data-more-button=""[^>]*>Change/);
+    expect(markup).not.toMatch(/MY READING|class="[^"]*eyebrow/i);
   });
 });

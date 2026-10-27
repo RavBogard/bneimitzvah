@@ -16,7 +16,7 @@ import { LensSwitch } from "../workspace/lens-switch";
 import { LENS_STORAGE, lensFromSearch, StudyLensScope, useStudyLens, type Lens } from "../workspace/study-lens";
 import { StudyRows } from "../workspace/study/study-rows";
 import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi, workStatuses } from "../workspace/study/commentary-view";
-import { DiscussionList, SourcesButton, VersePanelScope, WordPanelSource } from "../workspace/study/verse-panel";
+import { DiscussionList, VersePanelScope, WordPanelSource } from "../workspace/study/verse-panel";
 import { PortionSummaryBlock, usePortionSummary } from "../workspace/study/portion-summary";
 import type { ApprovedPortionSummary } from "../../../lib/portion-summary/credit";
 import { parashahSlug } from "../../../lib/portion-summary/reading";
@@ -33,7 +33,7 @@ import { fetchPublicAliyot } from "../print/api";
 import { PortionPicker } from "./portion-picker";
 import { SectionTabs } from "../../ui";
 import { NextSection } from "../workspace/study/next-section";
-import { addDays, thisShabbat } from "../../../lib/readings/public-shabbat";
+import { thisShabbat } from "../../../lib/readings/public-shabbat";
 import { fetchPublicRefReading, fetchPublicShortPage, fetchPublicText, fetchPublicWeek, fetchPublicWordAids, fetchPublicWordDetails, refSource, weekSource,
   type PublicShortPage, type PublicSource, type PublicWeek } from "./api";
 import { parseReadAddress, parseSaveReturn, readAddress, saveReturnAddress, selectorKey, type ReadAddress, type ReadTarget, type SaveReturn } from "./urls";
@@ -83,7 +83,7 @@ export function PublicReading() {
   const [address, setAddress] = useState<ReadAddress | null>(null), [query, setQuery] = useState<Lens | null>(null), [back, setBack] = useState<SaveReturn>(NO_SAVE_RETURN);
   useEffect(() => { setQuery(lensFromSearch(window.location.search)); setAddress(parseReadAddress(window.location.search)); setBack(parseSaveReturn(window.location.search)); }, []);
   return <StudyLensScope storageKey={LENS_STORAGE.weekly} query={query}>
-    {!address ? <Shell title={WEEK_TITLE} settled={false}><ReadHeader eyebrow="Torah and haftarah" title="Loading the reading" previous={{ label: "Previous week", disabled: true, onClick: () => {} }} next={{ label: "Next week", disabled: true, onClick: () => {} }} /><ReadingBlock /></Shell>
+    {!address ? <Shell title={WEEK_TITLE} settled={false}><ReadHeader name="Loading the reading" line="" loading /><ReadingBlock /></Shell>
       : address.target?.mode === "week" ? <WeekReading initial={address.target} verse={address.verse} saveReturn={back} pick={address.pick} />
         : address.target?.mode === "saved" ? <SavedReadingPage id={address.target.id} verse={address.verse} />
         : address.target ? <ChosenReading target={address.target} verse={address.verse} saveReturn={back} />
@@ -244,7 +244,7 @@ function WeekReading({ initial, verse, saveReturn, pick: initialPick }: { initia
   const triennialSource = triennialNow?.source;
   const sources = useMemo(() => current ? (["torah", "haftarah"] as const).flatMap(row => { const source = row === "torah" && triennialSource ? triennialSource : weekSource(current, row); return source ? [{ label: row === "torah" ? "Torah" : "Haftarah", source }] : []; }) : [], [current, triennialSource]);
   const change = (next: string) => { if (next !== date) { setDate(next); setKind(null); setLinked(null); setPick("full"); } };
-  const index = Math.max(0, sources.findIndex(row => row.source.passage.kind === kind)), isThisWeek = date !== null && date === today;
+  const index = Math.max(0, sources.findIndex(row => row.source.passage.kind === kind));
   const shown = sources[index]?.source.passage;
   // The parashah's approved summary (N7), asked for only while Study shows its Torah.
   const summary = usePortionSummary(shown?.kind === "torah" ? parashahSlug(current?.parashah) : null, lens.lens === "study");
@@ -266,14 +266,8 @@ function WeekReading({ initial, verse, saveReturn, pick: initialPick }: { initia
   // The Torah's rare tropes this week, for the reader's note (N5, G17).
   const rareNote = useMemo(() => current?.torah ? rareTropeNote(rareTropesIn(expandReadingRanges(current.torah.ranges, "torah", TANAKH_VERSE_COUNTS))) : null, [current]);
   return <MoreScope initiallyOpen={saveReturn.offer && !saveReturn.choose}><Shell title={WEEK_TITLE} back={back.here} settled={weekShown}>
-    <ReadHeader eyebrow={date && today ? <><span data-read-week={isThisWeek ? "this" : "other"}>{isThisWeek ? "This Shabbat" : "Shabbat"}</span> · <time dateTime={date}>{shortDate(date, today)}</time><OfflinePill /></> : "Torah and haftarah"}
-      title={current ? current.parashah ?? "Shabbat reading" : week?.error ? "Reading unavailable" : "Loading the reading"}
-      previous={{ label: "Previous week", disabled: !date, onClick: () => { if (date) change(addDays(date, -7)); } }}
-      next={{ label: "Next week", disabled: !date, onClick: () => { if (date) change(addDays(date, 7)); } }}
-      top={<>
-        {date && <p className="field-help" data-reading-ranges=""><time dateTime={date}>{longDate(date)}</time>{current?.torah && <> · Torah <bdi dir="ltr">{displayRange(current.torah.ranges)}</bdi></>}{current?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(current.haftarah.ranges)}</bdi></>}</p>}
-        {rareNote && <p className="field-help" data-rare-trope="">{rareNote}</p>}
-      </>}
+    <ReadHeader name={current ? current.parashah ?? "Shabbat reading" : week?.error ? "Reading unavailable" : "Loading the reading"} loading={!current && !week?.error}
+      line={date ? <><time dateTime={date}>{longDate(date)}</time>{current?.torah && <> · Torah <bdi dir="ltr">{displayRange(current.torah.ranges)}</bdi></>}{current?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(current.haftarah.ranges)}</bdi></>}<OfflinePill /></> : ""}
       rest={<>
         {sources.length > 0 && <MoreStart ready={starter.ready} onStart={starter.start} />}
         {sources.length > 0 && printHref && <a className="button-hero-secondary" href={printHref}>Print</a>}
@@ -347,10 +341,9 @@ function ChosenReading({ target, verse, saveReturn }: { target: Extract<ReadTarg
     save: (selection, saved) => <SaveReading passage={{ title, label: selection.line, kind: selection.kind, ranges: selection.ranges, date: null }} onSaved={saved} back={back.forSave(selection.ranges)} offer={back.choiceOffer} /> } : undefined;
   useHeadingFocus(loaded !== null);
   return <MoreScope initiallyOpen={saveReturn.offer && !saveReturn.choose}><Shell title={title} back={back.here} settled={loaded !== null}>
-    <ReadHeader eyebrow={named ? GROUP_EYEBROW[named.group] : "Any reading"} title={loaded?.error ? "Reading unavailable" : title}
-      top={<>
-        <p className="field-help" data-reading-ranges="">{passages.map((row, at) => <span key={at}>{at > 0 && " · "}{row.label} <bdi dir="ltr">{displayRange([row.ref])}</bdi></span>)}</p>
-      </>}
+    <ReadHeader name={loaded?.error ? "Reading unavailable" : title} loading={loaded === null}
+      line={named ? <>{GROUP_EYEBROW[named.group]} · {passages.map((row, at) => <span key={at}>{at > 0 && " · "}{row.label} <bdi dir="ltr">{displayRange([row.ref])}</bdi></span>)}</>
+        : <>Any reading · {passages.map((row, at) => <span key={at}>{at > 0 && " · "}<bdi dir="ltr">{displayRange([row.ref])}</bdi></span>)}</>}
       rest={<>
         {sources.length > 0 && <MoreStart ready={starter.ready} onStart={starter.start} />}
         {sources.length > 0 && <a className="button-hero-secondary" href={printAddress(target.mode === "named" ? { mode: "named", slug: target.slug, passage: index + 1 } : target)}>Print</a>}
@@ -627,8 +620,13 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   return <VersePanelScope passage={discussionPassage}>
     <WordPanelSource host={wordHost} />
     <div className="reading-lens-row">
-      {sources.length > 1 && <div className="study-kind-choice" role="group" aria-label="Reading text selection">
-        {sources.map((row, at) => <button key={at} type="button" className="button-secondary" aria-pressed={at === index} onClick={() => changeIndex(at)}>{row.label}</button>)}
+      {sources.length > 1 && <div className={styles.passageTabs} role="tablist" aria-label="Reading text selection">
+        {sources.map((row, at) => <button key={at} type="button" role="tab" id={`${group}-passage-${at}`} className={styles.passageTab} aria-selected={at === index} tabIndex={at === index ? 0 : -1} data-passage-tab={row.source.passage.kind}
+          onKeyDown={event => {
+            const to = event.key === "ArrowRight" ? (at + 1) % sources.length : event.key === "ArrowLeft" ? (at + sources.length - 1) % sources.length : event.key === "Home" ? 0 : event.key === "End" ? sources.length - 1 : null;
+            if (to === null) return;
+            event.preventDefault(); changeIndex(to); requestAnimationFrame(() => document.getElementById(`${group}-passage-${to}`)?.focus());
+          }} onClick={() => changeIndex(at)}>{row.label}{row.source.passage.kind === "haftarah" && <small dir="ltr">{displayRange(row.source.passage.ranges)}</small>}</button>)}
       </div>}
       <LensSwitch onChange={() => leinLink.clear()} />
     </div>
@@ -643,7 +641,6 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     {/* The portion summary (1.9 N7): atop Study, only an approved one, only on a parashah's Torah. Its outline goes to an aliyah where the page has it as a section. */}
     {study && kind === "torah" && summary && <PortionSummaryBlock summary={summary} aliyot={summaryJump ? sections.map(row => row.n) : undefined} onAliyah={goAliyah} />}
     {/* Curated discussions (1.7 M6b), in Study, only where this passage has any: one tap to the Sheet here; on a laptop they are the column beside the verses, below. */}
-    <SourcesButton />
     {sources.length > 1 && !more && <p className={`field-help ${styles.passageNote}`}><bdi dir="ltr">{displayRange(passage.ranges)}</bdi></p>}
     {/* The section chips (N3): a tab for each aliyah, in the sticky bar above the text. The page below changes with the tab, so one panel serves them all. */}
     {/* 1.9 N16 re-measure (axe heading-order): the outline above the verses' own level-4 headings, said only to assistive technology. */}
