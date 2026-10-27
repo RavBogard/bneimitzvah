@@ -136,6 +136,8 @@ describe("Claim as my student and its undo", () => {
     expect((await t.claims())[0].revokedAt).not.toBeNull();
     expect((await t.links(t.f.students[2].id))[0].revokedAt).not.toBeNull();
     expect((await t.audits("learner.unclaim")).map(row => [row.mode, row.actorMembershipId, row.targetId])).toEqual([["student", t.extra.bare.membershipId, claim.id]]);
+    // The link's end is audited too, under the learner's own grant, in the learner's own mode.
+    expect((await t.audits("tutor.revoke")).map(row => [row.mode, row.actorMembershipId, row.targetType, row.targetId, row.actingStudentId])).toEqual([["student", t.extra.bare.membershipId, "tutor_student", link.id, t.f.students[2].id]]);
     expect((await t.call(`/api/saved/learner/readings?learner=${t.extra.bare.membershipId}`, "second")).status).toBe(404);
     expect((await t.call(`/api/saved/learner/reading?learner=${t.extra.bare.membershipId}&id=${reading.id}`, "second")).status).toBe(404);
     expect((await t.call(`/api/saved/learner/page?learner=${t.extra.bare.membershipId}&id=${reading.id}&offset=0`, "second")).status).toBe(404);
@@ -175,6 +177,27 @@ describe("Claim as my student and its undo", () => {
     expect((await t.call("/api/learners/unclaim", "second", { learner: t.extra.bare.membershipId })).status).toBe(200);
     expect((await t.links(t.f.students[2].id)).map(row => row.revokedAt === null)).toEqual([false, false]);
     expect((await t.audits("tutor.revoke")).map(row => row.mode)).toEqual(["admin", "tutor"]);
+  });
+
+  it("revoking a tutor's grant on the access page ends the claims it holds, as the admin's act: the learner's tutor is gone and another tutor may claim", async () => {
+    const t = await setup();
+    expect((await t.call("/api/learners/claim", "second", { learner: t.extra.bare.membershipId })).json.created).toBe(true);
+    expect((await t.call("/api/mine/tutor", "bare")).json.tutor).toEqual({ name: "Synthetic Second", claimed: true });
+    expect((await t.call(`/api/admin/grants/${t.extra.second.grantId}/revoke`, "admin", { expectedRevision: 1, expectedState: "active" })).status).toBe(200);
+    expect((await t.claims())[0]).toMatchObject({ revokedBy: "admin", revokedByMembershipId: t.f.adminMember.id });
+    expect((await t.claims())[0].revokedAt).not.toBeNull();
+    expect((await t.audits("learner.unclaim")).map(row => [row.mode, row.roleGrantId, row.actorMembershipId])).toEqual([["admin", t.f.adminGrant.id, t.f.adminMember.id]]);
+    expect((await t.call("/api/mine/tutor", "bare")).json).toEqual({ ok: true, tutor: null });
+    expect(learnerOf(await t.call("/api/learners", "multi"), t.extra.bare.membershipId)).toMatchObject({ tutor: null });
+    expect((await t.call("/api/learners/claim", "multi", { learner: t.extra.bare.membershipId })).json).toEqual({ ok: true, learner: t.extra.bare.membershipId, created: true });
+    // Belt and braces: a live claim row whose grant is revoked behind the service's back counts for nothing either.
+    await t.f.owner(() => t.f.db.update(s.learnerClaim).set({ revokedAt: new Date(), revokedBy: "admin", revokedByMembershipId: t.f.adminMember.id }).where(eq(s.learnerClaim.tutorGrantId, t.f.tutorGrant.id)));
+    const [regrant] = await t.f.owner(() => t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: t.extra.second.membershipId, role: "tutor" }).returning());
+    await t.f.owner(() => t.f.db.insert(s.learnerClaim).values({ tenantId: "crc", learnerMembershipId: t.extra.bare.membershipId, tutorGrantId: regrant.id }));
+    await t.f.owner(() => t.f.db.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, regrant.id)));
+    expect((await t.call("/api/mine/tutor", "bare")).json).toEqual({ ok: true, tutor: null });
+    expect(learnerOf(await t.call("/api/learners", "multi"), t.extra.bare.membershipId)).toMatchObject({ tutor: null });
+    expect((await t.call(`/api/saved/learner/readings?learner=${t.extra.bare.membershipId}`, "second")).status).toBe(404);
   });
 
   it("refuses a claim by anyone without a live tutor grant, on oneself, on a disabled, missing or other-congregation membership, and without the exact Origin", async () => {

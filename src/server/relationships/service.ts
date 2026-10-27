@@ -7,7 +7,7 @@ import { requireCookieMutation, type CookieMutationRequest } from "../http/mutat
 import { identifier, revision } from "../students/validation";
 import * as data from "./data";
 import { isCeremonyDone } from "../data/ceremony-done";
-import { auditClaim, liveClaimForLink, revokeClaim } from "../learners/data";
+import { auditClaim, liveClaimForLink, liveClaimsOfGrant, revokeClaim } from "../learners/data";
 import type { AdminSelection, EligibleTutor, FlagSelection, LinkSelection } from "./types";
 
 const conflict = () => Object.freeze({ ok: false as const, code: "stale-state" as const });
@@ -150,6 +150,10 @@ export function createRelationshipService<Q extends PgQueryResultHKT>(input: { a
       if (!updated) return conflict();
       await data.revokeContexts(tx, actor.tenantId, { kind: "grant", id: grantId }, now);
       await data.audit(tx, actor, "grant.revoke", grantId);
+      // Readings for everyone: a revoked tutor grant ends every claim it holds, as the admin's act, so the learner's line clears and another tutor may claim.
+      for (const claim of await liveClaimsOfGrant(tx, actor.tenantId, grantId)) {
+        if (await revokeClaim(tx, actor.tenantId, claim.id, "admin", actor.membershipId)) await auditClaim(tx, actor, "learner.unclaim", claim.id);
+      }
       return Object.freeze({ ok: true as const, id: grantId, revision: updated.revision });
     });
   }

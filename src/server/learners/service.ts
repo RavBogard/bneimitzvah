@@ -10,7 +10,7 @@ import { membershipOf } from "../data/portal";
 import { closedObject } from "../http/query";
 import { requireCookieMutation } from "../http/mutations";
 import { HttpBoundaryError } from "../http/responses";
-import { revokeTutor } from "../relationships/data";
+import { audit as auditRelationship, revokeTutor } from "../relationships/data";
 import { displayName, writeTutorAssignment, writeTutorRevocation } from "../relationships/service";
 import type { SavedService } from "../saved/service";
 import * as data from "./data";
@@ -61,11 +61,15 @@ export function createLearnersService<Q extends PgQueryResultHKT>(input: { acces
   }
   /** The learner's tutor, from the claim (undoable) or, for a linked student, the first tutor link (the rabbi's assignment). */
   async function tutorOf(tx: AccessTransaction<Q>, tenantId: string, learnerMembershipId: string) {
+    // The claim's grant is live (activeClaimOf checks); a link's tutor grant may not be: a revoked tutor is nobody's tutor.
     const claim = await activeClaimOf(tx, tenantId, learnerMembershipId);
-    const grantId = claim?.tutorGrantId ?? (await liveTutorLinksOf(tx, tenantId, learnerMembershipId))[0]?.tutorGrantId ?? null;
-    if (!grantId) return null;
-    const holder = await data.grantHolder(tx, tenantId, grantId);
-    return Object.freeze({ grantId, name: displayName(holder?.name ?? "", "Tutor"), claimed: claim !== null, claimId: claim?.id ?? null });
+    const candidates = claim ? [claim.tutorGrantId] : (await liveTutorLinksOf(tx, tenantId, learnerMembershipId)).map(link => link.tutorGrantId);
+    for (const grantId of candidates) {
+      const holder = await data.grantHolder(tx, tenantId, grantId);
+      if (!holder || holder.revokedAt) continue;
+      return Object.freeze({ grantId, name: displayName(holder.name, "Tutor"), claimed: claim !== null, claimId: claim?.id ?? null });
+    }
+    return null;
   }
   /** Ends a claim as a tutor or admin: the link it made goes first, through the one tutor-revocation write, whose hook ends the claim and audits it; a claim with no live link is ended here. */
   async function endClaim(tx: AccessTransaction<Q>, actor: Actor, claim: { id: string; tutorLinkId: string | null }) {
@@ -168,12 +172,15 @@ export function createLearnersService<Q extends PgQueryResultHKT>(input: { acces
         const claim = await activeClaimOf(tx, identity.tenantId, me, "update");
         if (!claim) { if ((await liveTutorLinksOf(tx, identity.tenantId, me)).length) return failed("assigned"); throw new AccessDenied(404); }
         if (!await data.revokeClaim(tx, identity.tenantId, claim.id, "learner", me)) throw new AccessDenied(404);
+        const grant = await data.anyLiveGrant(tx, identity.tenantId, me);
+        const actor: Actor | null = grant ? Object.freeze({ tenantId: identity.tenantId, origin: identity.origin, userId: identity.userId, authSessionId: identity.authSessionId, membershipId: me,
+          roleGrantId: grant.id, roleGrantRevision: grant.revision, mode: grant.role, authorityRevision: identity.membership.authorityRevision, authSessionExpiresAt: identity.sessionExpiresAt.getTime() }) : null;
         if (claim.tutorLinkId) {
           const link = await data.tutorLinkRow(tx, identity.tenantId, claim.tutorLinkId);
-          if (link && !link.revokedAt) await revokeTutor(tx, identity.tenantId, link.id, new Date());
+          // The link the claim made ends too, audited as tutor.revoke under the learner's own grant when they hold one.
+          if (link && !link.revokedAt && await revokeTutor(tx, identity.tenantId, link.id, new Date()) && actor) await auditRelationship(tx, actor, "tutor.revoke", link.id, link.studentId);
         }
-        const grant = await data.anyLiveGrant(tx, identity.tenantId, me);
-        if (grant) await data.auditClaim(tx, { tenantId: identity.tenantId, userId: identity.userId, membershipId: me, roleGrantId: grant.id, mode: grant.role }, "learner.unclaim", claim.id);
+        if (actor) await data.auditClaim(tx, actor, "learner.unclaim", claim.id);
         return { ok: true as const };
       });
     },

@@ -42,9 +42,14 @@ export async function liveStudentOf<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenan
   return row ?? null;
 }
 
-/** The account name behind a grant of this tenant, raw (the caller applies displayName), with the grant's membership; null for another tenant's grant. */
+/** The live, unrevoked claims a tutor grant holds, locked for update: revoking the grant ends them all. */
+export async function liveClaimsOfGrant<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, tutorGrantId: string) {
+  return tx.select({ id: s.learnerClaim.id }).from(s.learnerClaim)
+    .where(and(eq(s.learnerClaim.tenantId, tenantId), eq(s.learnerClaim.tutorGrantId, tutorGrantId), isNull(s.learnerClaim.revokedAt))).orderBy(asc(s.learnerClaim.id)).for("update");
+}
+/** The account name behind a grant of this tenant, raw (the caller applies displayName), with the grant's membership and whether the grant is revoked; null for another tenant's grant. */
 export async function grantHolder<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, grantId: string) {
-  const [row] = await tx.select({ name: s.user.name, membershipId: s.membership.id }).from(s.roleGrant)
+  const [row] = await tx.select({ name: s.user.name, membershipId: s.membership.id, revokedAt: s.roleGrant.revokedAt }).from(s.roleGrant)
     .innerJoin(s.membership, and(eq(s.membership.tenantId, s.roleGrant.tenantId), eq(s.membership.id, s.roleGrant.membershipId)))
     .innerJoin(s.user, eq(s.user.id, s.membership.userId)).where(and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.id, grantId))).limit(1);
   return row ?? null;
@@ -82,7 +87,7 @@ export async function tutorLinkRow<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenant
 }
 /** Any live grant of a membership, for the audit row of a learner's own undo (student first); null for a membership with none. */
 export async function anyLiveGrant<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, membershipId: string) {
-  const [row] = await tx.select({ id: s.roleGrant.id, role: s.roleGrant.role }).from(s.roleGrant)
+  const [row] = await tx.select({ id: s.roleGrant.id, role: s.roleGrant.role, revision: s.roleGrant.revision }).from(s.roleGrant)
     .where(and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.membershipId, membershipId), isNull(s.roleGrant.revokedAt))).orderBy(sql`${s.roleGrant.role} = 'student' desc`, asc(s.roleGrant.role), asc(s.roleGrant.id)).limit(1).for("share");
   return row ?? null;
 }

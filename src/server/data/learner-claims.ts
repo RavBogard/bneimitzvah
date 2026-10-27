@@ -22,11 +22,16 @@ export async function liveStaffGrant<Q extends PgQueryResultHKT>(tx: Tx<Q>, tena
   return grant ? Object.freeze({ id: grant.id, role: grant.role as StaffRole }) : null;
 }
 
-/** The learner's live, unrevoked claim, if any, share-locked (or locked for update when a write follows). */
+/**
+ * The learner's live, unrevoked claim, if any, share-locked (or locked for update when a write follows). A claim whose tutor grant
+ * was revoked no longer counts (revokeRoleGrant ends such claims too; this is the belt to that brace), so the learner's line clears
+ * and another tutor may claim.
+ */
 export async function activeClaimOf<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, learnerMembershipId: string, lock: "share" | "update" = "share") {
-  const [row] = await tx.select().from(s.learnerClaim)
-    .where(and(eq(s.learnerClaim.tenantId, tenantId), eq(s.learnerClaim.learnerMembershipId, learnerMembershipId), isNull(s.learnerClaim.revokedAt))).limit(1).for(lock);
-  return row ?? null;
+  const [row] = await tx.select({ claim: s.learnerClaim }).from(s.learnerClaim)
+    .innerJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.learnerClaim.tenantId), eq(s.roleGrant.id, s.learnerClaim.tutorGrantId), isNull(s.roleGrant.revokedAt)))
+    .where(and(eq(s.learnerClaim.tenantId, tenantId), eq(s.learnerClaim.learnerMembershipId, learnerMembershipId), isNull(s.learnerClaim.revokedAt))).limit(1).for(lock, { of: s.learnerClaim });
+  return row?.claim ?? null;
 }
 
 /**
