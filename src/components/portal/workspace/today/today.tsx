@@ -168,7 +168,7 @@ function NextCard({ row, started, dates }: { row: ReturnType<typeof readingRows>
     <ButtonLink variant="primary" block href={READING_HREF}>{started ? "Start where you left off" : <>Practice verses&nbsp;<bdi dir="ltr" className={styles.nobreak} data-nobreak>{range}</bdi></>}</ButtonLink>
     {dates.status === "ready" ? <div className={styles.dots}>
       <ol className="practice-week" aria-labelledby={caption}>{lastSevenDays(dates.serverDay, dates.dates).map(day =>
-        <li key={day.date} className={`practice-day${day.practised ? " practice-day-done" : ""}${day.today ? " practice-day-today" : ""}`}>
+        <li key={day.date} data-testid="practice-day" className={`practice-day${day.practised ? " practice-day-done" : ""}${day.today ? " practice-day-today" : ""}`}>
           <span aria-hidden="true" className="practice-day-letter">{weekdayLetters[day.weekday]}</span>
           <span className="practice-day-dot" aria-hidden="true" />
           <span className="sr-only">{weekdayNames[day.weekday]}{day.today ? ", today" : ""}: {day.practised ? "practised" : "not practised"}</span>

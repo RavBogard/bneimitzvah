@@ -81,7 +81,7 @@ export function UnitsText({ verse, units, look = () => "plain", className = "", 
 export function PlayTile({ id, requests, label = "Hear it", iconOnly = false, rate, onPlayed }: { id: string; requests: readonly PhraseRequest[]; label?: string; iconOnly?: boolean; rate?: number; onPlayed?(): void }) {
   const { player } = useLearnServices(), state = usePlayerState();
   const mine = state.id === id, playing = mine && state.status === "playing", loading = mine && state.status === "loading", paused = mine && state.status === "paused";
-  return <button type="button" className={`${styles.play}${iconOnly ? ` ${styles.playIcon}` : ""}`} data-state={playing ? "playing" : loading ? "loading" : "idle"} aria-label={iconOnly ? label : undefined}
+  return <button type="button" data-testid="play-tile" className={`${styles.play}${iconOnly ? ` ${styles.playIcon}` : ""}`} data-state={playing ? "playing" : loading ? "loading" : "idle"} aria-label={iconOnly ? label : undefined}
     disabled={!requests.length} onClick={() => { if (playing) player.stop(); else if (paused) void player.resume(); else void player.play(id, requests, { rate }).then(done => { if (done) onPlayed?.(); }); }}>
     {playing ? icons.stop : icons.play}{!iconOnly && <span>{label}</span>}
   </button>;
@@ -89,14 +89,14 @@ export function PlayTile({ id, requests, label = "Hear it", iconOnly = false, ra
 /** The one audio failure line (COPY.md), for the tile that failed. */
 export function AudioError({ id }: { id: string | readonly string[] }) {
   const state = usePlayerState(), ids = typeof id === "string" ? [id] : id;
-  return state.status === "error" && state.id && ids.includes(state.id) ? <p role="status" className={styles.feedback}>The recording did not load. Try again.</p> : null;
+  return state.status === "error" && state.id && ids.includes(state.id) ? <p role="status" className={styles.feedback} data-testid="recording-failed">The recording did not load. Try again.</p> : null;
 }
 /**
  * A lesson, drill or review that could not load its verses. A rate limit (429) says so (2.0 F1); anything else keeps the
  * recording line (COPY.md), because the recordings travel with the verses.
  */
 export function LoadFailure({ rateLimited = false, onRetry }: { rateLimited?: boolean; onRetry(): void }) {
-  return <div role="status" className={styles.state}><p>{rateLimited ? RATE_LIMITED_MESSAGE : "The recording did not load. Try again."}</p><button type="button" className="button-secondary" onClick={onRetry}>Try again</button></div>;
+  return <div role="status" className={styles.state} data-testid="recording-failed"><p>{rateLimited ? RATE_LIMITED_MESSAGE : "The recording did not load. Try again."}</p><button type="button" className="button-secondary" onClick={onRetry}>Try again</button></div>;
 }
 /** After an answer: bring the revealed answer fully into view above the thumb's band, then hand focus to Next. */
 export function revealAnswer(next: { current: HTMLButtonElement | null }) {

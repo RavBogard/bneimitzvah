@@ -24,9 +24,9 @@ export const YOURS_STRINGS = Object.freeze({
 export type VerseWork = Readonly<{ translation: SavedWork | null; note: SavedWork | null }>;
 
 /** One stored own text, read-only; shown only when there is some. */
-function Stored({ label, text }: { label: string; text: string | undefined }) {
+function Stored({ label, stream, text }: { label: string; stream: "translation" | "note"; text: string | undefined }) {
   if (!text?.trim()) return null;
-  return <div className={styles.yoursField} data-yours-stored={label}>
+  return <div className={styles.yoursField} data-yours-stored={label} data-yours-stream={stream}>
     <p className={styles.yoursWork}>{label}</p>
     <p className={styles.yoursText} dir="auto">{text}</p>
   </div>;
@@ -38,11 +38,11 @@ export function YoursRowView({ verseRef, open, onToggle, translation, note, star
 }) {
   const id = useId();
   return <section className={styles.yours} aria-label={`${YOURS_STRINGS.row} on ${verseRef}`} data-yours-ref={verseRef}>
-    <button type="button" className={styles.yoursToggle} aria-expanded={open} aria-controls={open ? `${id}-panel` : undefined} onClick={onToggle}>{YOURS_STRINGS.row}</button>
+    <button type="button" className={styles.yoursToggle} data-testid="yours-toggle" aria-expanded={open} aria-controls={open ? `${id}-panel` : undefined} onClick={onToggle}>{YOURS_STRINGS.row}</button>
     {open && <div id={`${id}-panel`} className={styles.yoursPanel}>
       <p className={styles.yoursPrivacy}>{YOURS_STRINGS.privacy}</p>
-      <Stored label={YOURS_STRINGS.translation} text={translation} />
-      <Stored label={YOURS_STRINGS.notes} text={note} />
+      <Stored label={YOURS_STRINGS.translation} stream="translation" text={translation} />
+      <Stored label={YOURS_STRINGS.notes} stream="note" text={note} />
       {starred}
     </div>}
   </section>;
@@ -57,7 +57,7 @@ function StarredComments({ verse, works, stars, list }: { verse: StudyVerse; wor
     return shown.length ? [{ work, comments: shown.map(star => ({ index: star.comment - 1, comment: state.comments[star.comment - 1] })) }] : [];
   });
   if (!groups.length) return null;
-  return <section className={styles.yoursStarred} aria-label={`${YOURS_STRINGS.starred} on ${verse.ref}`}>
+  return <section className={styles.yoursStarred} data-testid="yours-starred" aria-label={`${YOURS_STRINGS.starred} on ${verse.ref}`}>
     <h5 className={styles.yoursHeading}>{YOURS_STRINGS.starred}</h5>
     {groups.map(group => <div key={group.work} data-work={group.work}>
       <p className={styles.yoursWork}>{workLabel(group.work)}</p>

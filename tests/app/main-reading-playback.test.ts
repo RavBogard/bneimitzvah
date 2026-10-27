@@ -153,7 +153,7 @@ it("flows consecutive Hebrew without verse cards, while preserving actual breaks
   expect(studyFlowGroups([{ ...verses[0], hebrew: { ...verses[0].hebrew, paragraphAfter: "petuchah" } }, ...verses.slice(1)])).toEqual([[0],[1],[2],[3]]);
   const markup = renderToStaticMarkup(createElement(FlowingStudyText, { verses, assignment: { kind: "torah", confirmed: true, verses: verses.map(value => value.ref) }, group: "synthetic", onVerse() {}, onWord() {}, activeWord: { verse: 0, index: 1 } }));
   expect(markup).not.toContain("verse-card"); expect(markup).not.toContain("<article"); expect(markup).not.toContain("<dialog");
-  expect(markup).toContain('aria-label="Hear Genesis 1:1"'); expect(markup).toContain(">Hear whole verse; select word for tools</span>"); expect(markup).toContain('data-reference-active="true"'); expect(markup).toMatch(/<span class="study-read-alternative">[^]*?<\/span> <span class="study-read-chip"[^>]*>read<span class="sr-only">[^<]*<\/span><\/span> <span class="study-ketiv">זָח<\/span>/);
+  expect(markup).toContain('aria-label="Hear Genesis 1:1"'); expect(markup).toContain(">Hear whole verse; select word for tools</span>"); expect(markup).toContain('data-reference-active="true"'); expect(markup).toMatch(/<span class="study-read-alternative">[^]*?<\/span> <span class="study-read-chip"[^>]*>read<span class="sr-only">[^<]*<\/span><\/span> <span class="study-ketiv"[^>]*>זָח<\/span>/);
   const load = vi.fn(); renderToStaticMarkup(createElement(ReadingPlayer, { scopeKey: "synthetic", verses, active: true, load, register() {}, onActiveWord() {} })); expect(load).not.toHaveBeenCalled();
 });
 

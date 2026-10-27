@@ -28,7 +28,7 @@ export function AccountView({ summary, current, signingOut, problem, onRole, onS
     <PageHeader title="Account" description="You’re signed in" />
     {roles.length > 0 && <section className="account-section" aria-labelledby="account-roles">
       <h2 id="account-roles">Roles</h2>
-      <List label="Roles">{roles.map(role => <ListRow key={role} title={roleNames[role]} meta={roleTasks[role]} href={rolePaths[role]} onNavigate={() => onRole(role)} trailing={role === current ? <Chip tone="info">Current</Chip> : undefined} />)}</List>
+      <List label="Roles" testId="account-roles">{roles.map(role => <ListRow key={role} title={roleNames[role]} meta={roleTasks[role]} href={rolePaths[role]} onNavigate={() => onRole(role)} trailing={role === current ? <Chip tone="info">Current</Chip> : undefined} />)}</List>
     </section>}
     {roles.length > 0 && <section className="account-section">
       <List label="Your account">

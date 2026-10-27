@@ -65,7 +65,7 @@ export function SiteBarView({ mode = "site", signedIn = false, back, onNavigate,
   const current = currentSiteLink(pathname);
   const link = (key: SiteLink, href: string, children: ReactNode, extra = "") => <a className={`site-bar-link${extra}`} href={href} aria-current={current === key ? "page" : undefined} onClick={onNavigate ? event => onNavigate(event, href) : undefined}>{children}</a>;
   return <header className={`portal-header app-bar site-bar${className ? ` ${className}` : ""}`} data-site-bar={mode}>
-    <div className="portal-brand-group"><a className="portal-brand" href="/" onClick={onNavigate ? event => onNavigate(event, "/") : undefined}><BrandMark />{productName ?? "CRC Torah"}</a><BetaMark /></div>
+    <div className="portal-brand-group"><a className="portal-brand" data-testid="site-brand" href="/" onClick={onNavigate ? event => onNavigate(event, "/") : undefined}><BrandMark />{productName ?? "CRC Torah"}</a><BetaMark /></div>
     {mode === "site" && <nav className="site-bar-nav" aria-label="Site">
       {link("read", "/read", <span className="site-bar-text">Read</span>)}
       {link("learn", "/learn", <span className="site-bar-text">Learn</span>)}

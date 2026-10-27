@@ -93,7 +93,7 @@ export function useVerseChoice(plan: ChoosePlan | undefined, order: readonly str
   // In the More sheet the sheet closes first, so the bar that opens is the one that takes focus.
   const button = plan && !choosing ? <button type="button" ref={opener} className="button-secondary" onClick={() => more && !plan.onBegin ? more.close(begin) : begin()}>{plan.label}</button> : null;
   const live = rangeMode && anchor !== null ? `${countLine(count, ranges)}. ${CHOOSE_STRINGS.rangeFrom}` : count < 1 ? CHOOSE_STRINGS.hint : countLine(count, ranges);
-  const barView = plan && choosing ? <ChooseBar barRef={bar} label={plan.label} line={live} note={note} rangeMode={rangeMode} canRange={anchor !== null} empty={count < 1} saved={saved}
+  const barView = plan && choosing ? <ChooseBar barRef={bar} label={plan.label} line={live} note={note} rangeMode={rangeMode} canRange={anchor !== null} empty={count < 1} count={count} saved={saved}
     onRange={() => setRangeMode(value => !value)} onClear={() => { change(new Set()); setAnchor(null); setRangeMode(false); setNote(""); }} onCancel={leave}
     save={count > 0 ? plan.save({ kind, ranges, count, line: selectionLine(ranges) }, () => setSaved(true)) : null}
     print={count > 0 ? printAddress({ mode: "ref", ref: ranges.join("; "), kind }) : null} /> : null;
@@ -110,14 +110,14 @@ export function PlaceLink({ base, href, place, children }: { base: string; href(
 }
 
 /** The bar that stays in view while choosing: the live count and references, range, clear, save and cancel. */
-function ChooseBar({ barRef, label, line, note, rangeMode, canRange, empty, saved, onRange, onClear, onCancel, save, print }: {
-  barRef: { current: HTMLElement | null }; label: string; line: string; note: string; rangeMode: boolean; canRange: boolean; empty: boolean; saved: boolean;
+function ChooseBar({ barRef, label, line, note, rangeMode, canRange, empty, count, saved, onRange, onClear, onCancel, save, print }: {
+  barRef: { current: HTMLElement | null }; label: string; line: string; note: string; rangeMode: boolean; canRange: boolean; empty: boolean; count: number; saved: boolean;
   onRange(): void; onClear(): void; onCancel(): void; save: ReactNode;
   /** The print sheet of exactly the chosen verses (F4): /print names them by ref, so it prints those verses and nothing else. */
   print: string | null;
 }) {
   const id = useId();
-  return <section ref={barRef} tabIndex={-1} className={styles.bar} aria-labelledby={`${id}-name`} data-choose-bar="">
+  return <section ref={barRef} tabIndex={-1} className={styles.bar} aria-labelledby={`${id}-name`} data-choose-bar="" data-choose-count={count}>
     <h2 id={`${id}-name`} className={styles.name}>{label}</h2>
     <p className={styles.line} role="status" aria-live="polite" aria-atomic="true" data-choose-line=""><bdi dir="ltr">{line}</bdi></p>
     {note && <p className={styles.note} role="alert">{note}</p>}

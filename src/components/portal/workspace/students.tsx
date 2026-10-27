@@ -99,7 +99,7 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
     const child = rows.find(row => row.id === context?.studentId), others = ordered.filter(row => row.id !== context?.studentId);
     return <section className="practice-bar" aria-label="Practice">
       <div className="practice-bar-row">
-        {child ? <h1 className="practice-bar-title">Practising with <bdi dir="auto">{child.firstName}</bdi></h1> : <h1 className="sr-only">Practice</h1>}
+        {child ? <h1 className="practice-bar-title" data-testid="practice-bar-title">Practising with <bdi dir="auto">{child.firstName}</bdi></h1> : <h1 className="sr-only">Practice</h1>}
         {others.length > 0 && <ul className="practice-switches">{others.map(row => <li key={row.id}><button className="button-secondary" aria-label={`Switch to ${row.firstName} ${row.lastName}`} disabled={busy} onClick={() => void selectChild(row.id)}>Switch to <bdi dir="auto">{row.firstName}</bdi></button></li>)}</ul>}
         <button className="button-hero-secondary practice-done" disabled={busy} onClick={() => void exitPractice()}>{busy ? "Closing practice…" : "Done"}</button>
       </div>
@@ -127,7 +127,7 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
             {mode === "tutor" ? <WorkspaceLink href={`/workspace/tutor/${row.id}${viewTab ? `?tab=${viewTab}` : ""}`} className="student-card" data-student-id={row.id} aria-current={selected === row.id ? "page" : undefined}><StudentCardBody row={row} practice={!focused && !selected} /></WorkspaceLink>
               : <button type="button" className="student-card" data-student-id={row.id} aria-pressed={selected === row.id} onClick={() => { void guardDeparture().then(leave => { if (leave) setSelected(row.id); }); }}><StudentCardBody row={row} honors={mode === "parent" && rows.length > 1 && !focused && !selected} /></button>}
           </li>)}</ul>{more && <button className="button-text" disabled={paging} onClick={() => void loadMore()}>{paging ? "Loading students…" : "Load more students"}</button>}</>}
-          {focused && !selected && <div className="workspace-state"><h2>Student not found</h2><p>This student isn’t in your list. Choose one of your students above.</p></div>}
+          {focused && !selected && <div className="workspace-state" data-testid="student-not-found"><h2>Student not found</h2><p>This student isn’t in your list. Choose one of your students above.</p></div>}
           {selected && <ReadingPanel mode={mode} studentId={selected} onStudentReload={reconcileStudent} afterSummary={selectedHonors} />}
           {/* An adult's own honors entry sits after the reading (G20). A parent's sits right after the summary, inside the panel (above). */}
           {selected && !context && mode === "student" && selectedRow?.ownAdultHonors === true && <HonorsEntry key={`student:${selected}`} mode="student" studentId={selected} name={selectedName} />}

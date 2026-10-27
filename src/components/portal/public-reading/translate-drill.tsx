@@ -50,14 +50,14 @@ export function TranslateDrillPanel({ verseRef, english, revealed, hint, last, a
     {!revealed ? <>
       <p className={styles.hidden}>{s.hidden}</p>
       <p className={styles.prompt}>{s.prompt}</p>
-      {hint && <p className={styles.hint}>{s.hint}</p>}
+      {hint && <p className={styles.hint} data-testid="drill-hint">{s.hint}</p>}
       <div className={styles.actions}>
         <button type="button" className="button-primary" ref={revealRef} onClick={onReveal}>{s.reveal}</button>
         <button type="button" className={styles.quiet} onClick={onEnd}>{s.end}</button>
       </div>
     </> : <>
       <h5 className={styles.label} ref={jpsRef} tabIndex={-1}>{s.jps}</h5>
-      <p className={`study-english ${styles.english}`} lang="en" dir="ltr">{english ?? s.noJps}</p>
+      <p className={`study-english ${styles.english}`} data-testid="drill-english" data-english-available={english ? "true" : "false"} lang="en" dir="ltr">{english ?? s.noJps}</p>
       <p className={styles.line}>{s.compare}</p>
       {last && <p className={styles.line}>{s.last}</p>}
       <div className={styles.actions}>

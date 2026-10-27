@@ -27,7 +27,7 @@ type View = "selection" | "portion" | "change";
 
 /** What the member's own reading says above the passage: the state that keeps it from showing, if any. */
 export function SavedReadingState({ status, onRetry }: { status: "signed-out" | "not-eligible" | "missing" | "failed"; onRetry: () => void }) {
-  return <div className="workspace-state" role="status">
+  return <div className="workspace-state" role="status" data-testid="saved-reading-state" data-saved-state={status}>
     {status === "signed-out" ? <><h2>Sign in to open this reading</h2><p>Saved readings belong to the account that saved them.</p><ReturnSignInLink className="button-secondary">Sign in</ReturnSignInLink></>
       : status === "not-eligible" ? <><h2>This account doesn’t keep saved readings</h2><p>An account can save readings and keep its own marks on them.</p><a className="button-secondary" href="/account">Ask for an account</a></>
         : status === "missing" ? <><h2>This reading isn’t in your saved readings</h2><p>It may have been removed. Everything else on this page is open to anyone.</p><a className="button-secondary" href="/read">Go to this week</a></>

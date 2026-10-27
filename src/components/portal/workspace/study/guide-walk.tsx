@@ -35,7 +35,7 @@ export function GuideWalk({ view, lookup, onClose }: { view: StudentGuideView; l
   const close = () => onClose(lastVerse.current);
   const verse = step.kind === "verse" ? lookup(step.note.verseRef) : null;
   const themeNumber = steps.slice(0, index + 1).filter(s => s.kind === "theme").length, themeCount = steps.filter(s => s.kind === "theme").length;
-  return <dialog ref={dialog} className="lift guide-walk" aria-labelledby={`${id}-title`} onCancel={event => { event.preventDefault(); close(); }}
+  return <dialog ref={dialog} className="lift guide-walk" data-testid="guide-walk" aria-labelledby={`${id}-title`} onCancel={event => { event.preventDefault(); close(); }}
     onKeyDown={event => { if (event.target instanceof HTMLElement && event.target.closest("a")) return;
       if (event.key === "ArrowRight" || event.key === "ArrowDown") { event.preventDefault(); setIndex(i => Math.min(i + 1, steps.length - 1)); }
       if (event.key === "ArrowLeft" || event.key === "ArrowUp") { event.preventDefault(); setIndex(i => Math.max(i - 1, 0)); } }}>
@@ -46,11 +46,11 @@ export function GuideWalk({ view, lookup, onClose }: { view: StudentGuideView; l
     </div>
     <div className="lift-stage">
       {step.kind === "theme" ? <>
-        <h2 id={`${id}-title`} className="lift-ref" dir="auto">{step.theme.title}</h2>
+        <h2 id={`${id}-title`} className="lift-ref" data-testid="guide-walk-heading" data-walk-step="theme" dir="auto">{step.theme.title}</h2>
         <MarkdownLite text={step.theme.intro} className={styles.prose} heClass={styles.he} />
       </> : <>
         <p className={styles.noteTheme} dir="auto">{step.theme.title}</p>
-        <h2 id={`${id}-title`} className="lift-ref"><bdi dir="ltr">{step.note.verseRef}</bdi></h2>
+        <h2 id={`${id}-title`} className="lift-ref" data-testid="guide-walk-heading" data-walk-step="verse"><bdi dir="ltr">{step.note.verseRef}</bdi></h2>
         {verse && <StudyHebrew key={verse.ref} verse={verse} colors={null} id={`${id}-v`} activeWord={null} toolsAvailable={false} className="lift-hebrew" />}
         {verse && prefs.translation && <p className="lift-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p>}
         <MarkdownLite text={step.note.body} className={styles.prose} heClass={styles.he} />

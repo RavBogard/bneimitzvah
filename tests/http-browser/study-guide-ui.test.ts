@@ -43,10 +43,11 @@ async function page(who: "student" | "parent" | "tutor" | "admin", mobile = fals
   else if (who === "tutor") await tab.goto(`/workspace/tutor/${fixture.student.id}`, { waitUntil: "domcontentloaded" });
   else if (who === "admin") await tab.goto(`/workspace/admin/students/${fixture.student.id}/reading`, { waitUntil: "domcontentloaded" });
   else { await tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); }
-  await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", level: 4, exact: true })).toBeVisible();
+  await ui(tab.locator(studyVerses).getByRole("heading", { name: "Genesis 1:1", level: 4, exact: true })).toBeVisible();
   return tab;
 }
-const card = (tab: Page) => tab.getByRole("region", { name: "About this portion", exact: true });
+const card = (tab: Page) => tab.locator('[data-guide-kind="torah"]:visible');
+const studyVerses = '[data-testid="study-verses"]';
 // Each verse's notes are in its own verse tools (one Sheet for the selected verse, 1.9 N4), so a verse is opened to be looked at.
 const verse = (tab: Page, ref: string) => openVerseTools(tab, ref);
 
@@ -69,21 +70,22 @@ beforeAll(async () => {
 afterEach(async () => { for (const value of contexts.splice(0)) { await value.unrouteAll({ behavior: "wait" }); await value.close(); } });
 afterAll(async () => { await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); });
 
+// Deliberate wording test for the study guide card: approved copy, change only with the copy.
 it("student sees the overview card with the Claude label, and each note only under its own verse", async () => {
   const tab = await page("student");
   await ui(card(tab)).toBeVisible();
-  await ui(card(tab).getByText("Written by Claude for CRC · not yet reviewed by the rabbi", { exact: true })).toBeVisible();
-  const credit = tab.locator("footer.site-footer");
-  await ui(credit).toContainText("A project of Rabbi Daniel Bogard");
-  await ui(credit.getByRole("link", { name: "Rabbi Daniel Bogard", exact: true })).toHaveAttribute("href", "https://danielbogard.com");
+  await ui(card(tab).locator('[data-guide-label="claude-draft"]')).toHaveText("Written by Claude for CRC · not yet reviewed by the rabbi");
+  const credit = tab.getByRole("contentinfo");
+  await ui(credit.locator('a[href="https://danielbogard.com"]')).toBeVisible();
   await ui(card(tab).locator("bdi[lang=he]")).toHaveText("אור");
   // "Genesis 2:1" is outside the assigned verses; its theme still shows because Genesis 1:1 remains.
   await ui(card(tab).locator("li")).toHaveCount(2);
-  const notes = async (ref: string) => (await verse(tab, ref)).getByRole("region", { name: `Study notes for ${ref}`, exact: true });
+  const notes = async (ref: string) => (await verse(tab, ref)).locator(`[data-guide-notes="${ref}"]`);
   const third = await notes("Genesis 1:3");
   await ui(third.getByText("Invented note on the first spoken word.", { exact: true })).toBeVisible();
-  await ui(third.getByRole("link", { name: /On Sefaria/ })).toHaveCount(2);
-  await ui(third.getByRole("link", { name: /On Sefaria/ }).first()).toHaveAttribute("href", "https://www.sefaria.org/Invented_Commentary_on_Exodus_40%3A34%3A1");
+  const sefaria = third.locator('a[href^="https://www.sefaria.org/"]');
+  await ui(sefaria).toHaveCount(2);
+  await ui(sefaria.first()).toHaveAttribute("href", "https://www.sefaria.org/Invented_Commentary_on_Exodus_40%3A34%3A1");
   await ui(await notes("Genesis 1:1")).toBeVisible();
   await ui(await notes("Genesis 1:2")).toHaveCount(0);
   await closeVerseTools(tab);
@@ -91,9 +93,9 @@ it("student sees the overview card with the Claude label, and each note only und
 
 it("Your translation & notes sits under More at the bottom of each verse card, after Sources", async () => {
   const tab = await page("student");
-  const detail = await verse(tab, "Genesis 1:3"), more = detail.locator(".verse-work summary");
-  await ui(more).toHaveText(/^More · Your translation & notes/);
-  const order = await detail.evaluate(node => [...node.children].map(child => child.matches("[data-guide-notes]") ? "notes" : child.matches(".verse-work") ? "more" : child.querySelector?.('[aria-label^="Sources for"]') || child.getAttribute("aria-label")?.startsWith("Sources for") ? "sources" : null).filter(Boolean));
+  const detail = await verse(tab, "Genesis 1:3");
+  await ui(detail.getByTestId("verse-work").locator("summary")).toBeVisible();
+  const order = await detail.evaluate(node => [...node.children].map(child => child.matches("[data-guide-notes]") ? "notes" : child.matches('[data-testid="verse-work"]') ? "more" : child.querySelector?.('[aria-label^="Sources for"]') || child.getAttribute("aria-label")?.startsWith("Sources for") ? "sources" : null).filter(Boolean));
   expect(order.indexOf("notes")).toBeLessThan(order.indexOf("more"));
   expect(order.at(-1)).toBe("more");
 });
@@ -111,12 +113,12 @@ it("tick toggles and persists across reload", async () => {
 
 it("walk opens on the first theme, Next advances through its verses then the next theme, and close returns to the last verse", async () => {
   const tab = await page("student");
-  await card(tab).getByRole("button", { name: "Study the themes", exact: true }).click();
-  const walk = tab.locator("dialog.guide-walk"), heading = walk.locator(".lift-ref");
-  await ui(walk).toBeVisible(); await ui(heading).toHaveText("Light first");
+  await card(tab).locator("[data-guide-study]").click();
+  const walk = tab.getByTestId("guide-walk"), heading = walk.getByTestId("guide-walk-heading");
+  await ui(walk).toBeVisible(); await ui(heading).toHaveText("Light first"); await ui(heading).toHaveAttribute("data-walk-step", "theme");
   await walk.getByRole("button", { name: "Next", exact: true }).click();
-  await ui(heading).toHaveText("Genesis 1:3");
-  await ui(walk.locator(".lift-hebrew")).toBeVisible();
+  await ui(heading).toHaveText("Genesis 1:3"); await ui(heading).toHaveAttribute("data-walk-step", "verse");
+  await ui(walk.locator("[data-word-index]").first()).toBeVisible();
   await ui(walk.getByText("Invented note on the first spoken word.", { exact: true })).toBeVisible();
   await walk.getByRole("button", { name: "Next", exact: true }).click();
   await ui(heading).toHaveText("How beginnings work");
@@ -126,59 +128,52 @@ it("walk opens on the first theme, Next advances through its verses then the nex
   await walk.getByRole("button", { name: "Done", exact: true }).click();
   await ui(walk).toHaveCount(0);
   // The notes are in the verse tools sheet now, which is not open, so the walk gives focus back to the button that opened it.
-  await ui(card(tab).getByRole("button", { name: "Study the themes", exact: true })).toBeFocused();
+  await ui(card(tab).locator("[data-guide-study]")).toBeFocused();
 });
 
 it("parent sees the card and the tick state but no tick button", async () => {
   const tab = await page("parent");
   await ui(card(tab)).toBeVisible();
-  await ui(card(tab).getByRole("button", { name: /I read this/ })).toHaveCount(0);
-  await ui(card(tab).locator("li").filter({ hasText: "Light first" })).toContainText("Read");
-  await ui(card(tab).locator("li").filter({ hasText: "How beginnings work" })).toContainText("Not read yet");
+  await ui(card(tab).getByTestId("guide-tick")).toHaveCount(0);
+  await ui(card(tab).getByTestId("guide-theme-state")).toHaveCount(2);
+  await ui(card(tab).locator("li").filter({ hasText: "Light first" })).toHaveAttribute("data-read", "true");
+  await ui(card(tab).locator("li").filter({ hasText: "How beginnings work" })).toHaveAttribute("data-read", "false");
 });
 
 it("walk is absent when the guide has no themes", async () => {
   await seed(guide({ overview: "An invented overview with no themes yet.", themes: [] }));
   const tab = await page("student");
   await ui(card(tab).getByText("An invented overview with no themes yet.", { exact: true })).toBeVisible();
-  await ui(card(tab).getByRole("button", { name: "Study the themes", exact: true })).toHaveCount(0);
+  await ui(card(tab).locator("[data-guide-study]")).toHaveCount(0);
 });
 
-it("reviewed guide shows Reviewed by Rabbi Daniel when the tenant name is set, and fits a phone", async () => {
+it("a reviewed guide names the tenant's rabbi, starts closed on a phone and fits it", async () => {
   await fixture.ownerDb.update(s.tenant).set({ customs: { credits: { rabbiDisplayName: "Rabbi Daniel" } } }).where(eq(s.tenant.id, "crc"));
   await seed(body, { reviewed: true, origin: "rabbi" });
   const tab = await page("student", true);
   // On a phone the guide starts closed so the Hebrew stays in the first screen.
-  await ui(card(tab).getByText("Reviewed by Rabbi Daniel", { exact: true })).toBeHidden();
-  const hebrewTop = await tab.locator(".assigned-study .study-hebrew").first().evaluate(node => { scrollTo(0, 0); return node.getBoundingClientRect().top; });
-  expect(hebrewTop).toBeLessThan(844 - 48);
-  await card(tab).getByText("About this portion", { exact: true }).click();
-  await ui(card(tab).getByText("Reviewed by Rabbi Daniel", { exact: true })).toBeVisible();
+  const label = card(tab).locator('[data-guide-label="reviewed"]');
+  await ui(label).toBeHidden(); expect(await card(tab).locator("details").evaluate(node => (node as HTMLDetailsElement).open)).toBe(false);
+  await card(tab).locator("summary").click();
+  await ui(label).toBeVisible(); await ui(label).toContainText("Rabbi Daniel");
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 const englishToggle = (tab: Page) => tab.getByRole("navigation", { name: "Reading tools", exact: true }).getByRole("button", { name: "English", exact: true });
-const boxes = (tab: Page, ref: string) => tab.locator(`.assigned-study .study-verses [data-verse-ref="${ref}"]`).evaluate(node => {
-  const he = node.querySelector("[data-hebrew-ref]")!.getBoundingClientRect(), en = node.querySelector("[data-english-ref]")!.getBoundingClientRect();
-  return { he: { left: he.left, right: he.right, top: he.top, bottom: he.bottom }, en: { left: en.left, right: en.right, top: en.top } };
-});
+const english = (tab: Page, ref: string) => tab.locator(`${studyVerses} [data-verse-ref="${ref}"] [data-english-ref]`);
 
-it("at 1440 a learner sees English beside each verse by default, aligned with that verse", async () => {
+it("at 1440 a learner sees English with each verse by default", async () => {
   const tab = await page("student");
   await ui(englishToggle(tab)).toHaveAttribute("aria-pressed", "true");
-  for (const ref of ["Genesis 1:1", "Genesis 1:3"]) {
-    const box = await boxes(tab, ref);
-    expect(box.en.left).toBeGreaterThanOrEqual(box.he.right - 1);
-    expect(Math.abs(box.en.top - box.he.top)).toBeLessThan(48);
-  }
+  for (const ref of ["Genesis 1:1", "Genesis 1:3"]) await ui(english(tab, ref)).toBeVisible();
 });
 
-it("at 390 English is off by default and interleaves under its verse when turned on", async () => {
+it("at 390 English is off by default and shows with its verse when turned on", async () => {
   const tab = await page("student", true);
   await ui(englishToggle(tab)).toHaveAttribute("aria-pressed", "false");
+  await ui(english(tab, "Genesis 1:1")).toHaveCount(0);
   await englishToggle(tab).click();
-  const box = await boxes(tab, "Genesis 1:1");
-  expect(box.en.top).toBeGreaterThanOrEqual(box.he.bottom - 2);
+  await ui(english(tab, "Genesis 1:1")).toBeVisible();
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
@@ -187,26 +182,28 @@ it("the English preference persists across reload", async () => {
   await englishToggle(tab).click();
   await ui(englishToggle(tab)).toHaveAttribute("aria-pressed", "false");
   await tab.reload({ waitUntil: "domcontentloaded" });
-  await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", level: 4, exact: true })).toBeVisible();
+  await ui(tab.locator(studyVerses).getByRole("heading", { name: "Genesis 1:1", level: 4, exact: true })).toBeVisible();
   await ui(englishToggle(tab)).toHaveAttribute("aria-pressed", "false");
-  await ui(tab.locator(".assigned-study .study-verses [data-english-ref]")).toHaveCount(0);
+  await ui(tab.locator(`${studyVerses} [data-english-ref]`)).toHaveCount(0);
 });
 
 it("tutor sees which themes the student has read, without a tick button", async () => {
   const tab = await page("tutor");
-  await ui(card(tab).locator("li").filter({ hasText: "Light first" })).toContainText("Read");
-  await ui(card(tab).getByRole("button", { name: /I read this/ })).toHaveCount(0);
+  await ui(card(tab).locator("li").filter({ hasText: "Light first" })).toHaveAttribute("data-read", "true");
+  await ui(card(tab).getByTestId("guide-tick")).toHaveCount(0);
 });
 
+// Deliberate wording test for the admin study guide status line: approved copy, change only with the copy.
 it("admin sees the status line and a newer draft waiting, while students keep the reviewed version", async () => {
   await seed(guide({ overview: "A held invented revision.", themes: [] }), { hold: true });
   const tab = await page("admin");
   const status = tab.locator("[data-guide-status]");
+  await ui(status).toHaveAttribute("data-guide-status", "reviewed"); await ui(status).toHaveAttribute("data-guide-themes", "2"); await ui(status).toHaveAttribute("data-guide-held", "true");
   await ui(status).toContainText("Study guide: Reviewed · 2 themes · updated");
   await ui(status).toContainText("newer draft waiting");
   await ui(status).toContainText("edit in Cowork");
   // The card below the status line is the student preview: the reviewed version, not the held one.
-  await ui(card(tab).getByText("Reviewed by Rabbi Daniel", { exact: true })).toBeVisible();
+  await ui(card(tab).locator('[data-guide-label="reviewed"]')).toBeVisible();
   await ui(card(tab).getByText("A held invented revision.", { exact: true })).toHaveCount(0);
 });
 

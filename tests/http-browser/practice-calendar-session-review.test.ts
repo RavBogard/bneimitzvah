@@ -19,10 +19,12 @@ type ServiceRead = { studentId: string; mode: string; started: number; responseM
 const serviceReads = new WeakMap<Page,ServiceRead[]>();
 const selectedReads = (tab: Page, studentId=fixture.student.id, mode="student") => serviceReads.get(tab)?.filter(read=>read.studentId===studentId&&read.mode===mode)??[];
 const safe = async <T>(action: () => Promise<T>): Promise<T> => { try { return await action(); } catch { throw new Error("Synthetic calendar session review failed; details withheld"); } };
-const week = (tab: Page) => tab.getByRole("list", { name: "Practice this week", exact: true });
+const week = (tab: Page) => tab.getByTestId("practice-week");
+const signedOutState = '[data-testid="workspace-state"][data-workspace-state="signed-out"]';
+const studyVerses = '[data-testid="study-verses"]';
 const click = (tab: Page, name: string) => safe(() => tab.getByRole("button", { name, exact: true }).click());
 async function ready(tab: Page, expectedServiceReads=1, studentId=fixture.student.id, mode="student") {
-  const initialUi = await tab.evaluate(() => ({ visible: document.visibilityState === "visible", reading: Boolean(document.querySelector(".study-verses")), service: Boolean(document.querySelector("[data-my-service]")), signIn: [...document.querySelectorAll("h1")].some(node => node.textContent === "Sign in to continue") }));
+  const initialUi = await tab.evaluate(() => ({ visible: document.visibilityState === "visible", reading: Boolean(document.querySelector('[data-testid="study-verses"]')), service: Boolean(document.querySelector("[data-my-service]")), signIn: Boolean(document.querySelector('[data-workspace-state="signed-out"]')) }));
   await ui(week(tab).getByRole("listitem")).toHaveCount(7);
   // This fixture has no connected ceremony. A completed successful read and
   // the resulting absent panel prove its post-authority probe settled too.
@@ -65,12 +67,12 @@ async function page() {
   await safe(() => tab.goto("/", { waitUntil: "domcontentloaded" }));
   expect(await tab.evaluate(async () => (await fetch("/api/auth/sign-in/magic-link", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "pg-tutor@example.test" }) })).status)).toBe(200);
   await openAuthMail(tab, fixture.takeMail("pg-tutor@example.test")); await tab.goto("/workspace/student?tab=reading", { waitUntil: "domcontentloaded" });
-  await ready(tab); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 1:1"]')).toBeVisible(); await pageFetchesSettled(tab); return tab;
+  await ready(tab); await ui(tab.locator(`${studyVerses} [data-verse-ref="Genesis 1:1"]`)).toBeVisible(); await pageFetchesSettled(tab); return tab;
 }
 async function globallyGone(tab: Page) {
-  await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible();
-  expect(await tab.locator(".practice-day, .study-verses, [data-word-index], dialog[open]").count()).toBe(0);
-  expect(await tab.getByRole("list", { name: "Roles" }).count()).toBe(0);
+  await ui(tab.locator(signedOutState)).toBeVisible();
+  expect(await tab.locator(`[data-testid="practice-day"], ${studyVerses}, [data-word-index], dialog[open]`).count()).toBe(0);
+  expect(await tab.getByTestId("account-roles").count()).toBe(0);
   await pageFetchesSettled(tab);
 }
 beforeAll(async () => {
@@ -114,8 +116,8 @@ it("keeps calendar 403 and 404 local but makes a direct POST 401 globally termin
   const tab = await page(), seen = traffic(tab);
   for (const status of [403, 404]) {
     await tab.route(eventPath(tab), route => route.fulfill({ status, contentType: "application/json", body: "{}" }));
-    await click(tab, "View Genesis 1:1 up close"); await ui(week(tab)).toHaveCount(0); await ui(tab.locator(".study-verses")).toBeVisible();
-    expect(await tab.getByRole("heading", { name: "Sign in to continue", exact: true }).count()).toBe(0);
+    await click(tab, "View Genesis 1:1 up close"); await ui(week(tab)).toHaveCount(0); await ui(tab.locator(studyVerses)).toBeVisible();
+    expect(await tab.locator(signedOutState).count()).toBe(0);
     await click(tab, "Close practice view"); await pageFetchesSettled(tab); expect(seen.sessions).toEqual([200]);
     await tab.unroute(eventPath(tab));const expectedServiceReads=selectedReads(tab).length+1;
     await click(tab, "Refresh reading"); await ready(tab,expectedServiceReads); await pageFetchesSettled(tab); seen.sessions.length = 0;
@@ -132,16 +134,16 @@ it("ignores a held old calendar 401 after a real role and child-context replacem
   try {
     await click(tab, "View Genesis 1:1 up close"); await ui.poll(() => held).toBe(true); await click(tab, "Close practice view");
     await switchRole(tab, "Parent"); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${sibling.id}"]`).click();
-    await click(tab, "Practice with Synthetic"); await ready(tab,1,sibling.id,"child-practice"); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 2:1"]')).toBeVisible();
+    await click(tab, "Practice with Synthetic"); await ready(tab,1,sibling.id,"child-practice"); await ui(tab.locator(`${studyVerses} [data-verse-ref="Genesis 2:1"]`)).toBeVisible();
   } finally { release(); }
   await completed; await pageFetchesSettled(tab); await ready(tab,1,sibling.id,"child-practice");
-  await ui(tab.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeVisible(); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 2:1"]')).toBeVisible();
-  expect(await tab.getByRole("heading", { name: "Sign in to continue", exact: true }).count()).toBe(0); expect(seen.events).toEqual(["POST"]);
+  await ui(tab.getByTestId("practice-bar-title")).toBeVisible(); await ui(tab.locator(`${studyVerses} [data-verse-ref="Genesis 2:1"]`)).toBeVisible();
+  expect(await tab.locator(signedOutState).count()).toBe(0); expect(seen.events).toEqual(["POST"]);
   // A stale refusal cannot clear this rightful selection, but a real revoked
   // relationship still fails the existing authoritative focus/session check.
   await fixture.ownerDb.update(s.guardian).set({ revokedAt: new Date(), revision: 2 }).where(eq(s.guardian.studentId, sibling.id));
   const denied = tab.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${sibling.id}/reading`);
   await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); expect([403, 404]).toContain((await denied).status());
-  await ui(tab.getByLabel("Child", { exact: true })).toBeVisible(); expect(await tab.locator(".practice-day, .study-verses, [data-word-index]").count()).toBe(0);
+  await ui(tab.getByLabel("Child", { exact: true })).toBeVisible(); expect(await tab.locator(`[data-testid="practice-day"], ${studyVerses}, [data-word-index]`).count()).toBe(0);
   expect(seen.events).toEqual(["POST"]); await tab.context().close();
 });

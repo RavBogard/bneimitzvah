@@ -27,8 +27,33 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run typecheck
+      # Ubuntu's build is the separate build job below, which the postgres and browser jobs reuse; only Windows builds here.
       - run: npm run build
+        if: matrix.os == 'windows-latest'
+  # The one Ubuntu build of the pull request. The postgres and browser jobs download .next instead of building it again.
+  # next start (the browser job and production-denial.test.ts) reads only .next plus the checkout; the output is not standalone.
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: |
+            .next
+            !.next/cache
+          include-hidden-files: true
+          retention-days: 1
   postgres:
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 45
     services:
@@ -107,7 +132,10 @@ jobs:
         with:
           path: ~/.cache/ci-apt-debs
           key: ci-apt-debs-postgres-${{ steps.keys.outputs.image }}-${{ steps.keys.outputs.playwright }}-${{ hashFiles('.github/scripts/ci-system-packages.sh') }}
-      - run: npm run build
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-build
+          path: .next
       - name: Exercise browser HTTP authority and built production denial
         run: npm run test:http:browser
         env:
@@ -118,6 +146,7 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: disposable-ci-only
   browser:
+    needs: build
     runs-on: ubuntu-latest
     env:
       NEXT_TELEMETRY_DISABLED: "1"
@@ -171,7 +200,10 @@ jobs:
         with:
           path: ~/.cache/ci-apt-debs
           key: ci-apt-debs-browser-${{ steps.keys.outputs.image }}-${{ steps.keys.outputs.playwright }}-${{ hashFiles('.github/scripts/ci-system-packages.sh') }}
-      - run: npm run build
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-build
+          path: .next
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: failure()

@@ -21,7 +21,8 @@ export function AdminImportWorkspace() { return <RequireRole role="admin"><Impor
 function Import() {
   const { registerReload } = useWorkspace();
   const [csv, setCsv] = useState(""), [duplicates, setDuplicates] = useState(false), [review, setReview] = useState<Review | null>(null);
-  const [pending, setPending] = useState(false), [loading, setLoading] = useState(true), [roster, setRoster] = useState<RosterRow[] | null>(null), [message, setMessage] = useState("");
+  const [pending, setPending] = useState(false), [loading, setLoading] = useState(true), [roster, setRoster] = useState<RosterRow[] | null>(null), [message, setMessageText] = useState(""), [messageKind, setMessageKind] = useState("");
+  const setMessage = useCallback((text: string, kind = "") => { setMessageText(text); setMessageKind(kind); }, []);
   const [blocked, setBlocked] = useState<"unknown" | "conflict" | "denied" | null>(null), [checkedRoster, setCheckedRoster] = useState(false), [receipt, setReceipt] = useState<number | null>(null);
   const alive = useRef(true), gate = useRef(false), generation = useRef(0), draftTurn = useRef(0), request = useRef<AbortController | null>(null), mutation = useRef<Promise<void> | null>(null), heading = useRef<HTMLHeadingElement>(null), fileInput = useRef<HTMLInputElement>(null);
   const load = useCallback(async () => {
@@ -39,7 +40,7 @@ function Import() {
   useEffect(() => { alive.current = true; void load().catch(() => undefined); return () => { alive.current = false; draftTurn.current++; generation.current++; request.current?.abort(); }; }, [load]);
   useEffect(() => {
     if (!review?.value.binding) return;
-    const timer = setTimeout(() => { draftTurn.current++; setReview(null); setMessage("The import review expired. Preview the current draft again before importing."); }, Math.max(0, review.expiresAt - Date.now()));
+    const timer = setTimeout(() => { draftTurn.current++; setReview(null); setMessage("The import review expired. Preview the current draft again before importing.", "expired"); }, Math.max(0, review.expiresAt - Date.now()));
     return () => clearTimeout(timer);
   }, [review]);
   function changeCsv(value: string) { if (pending || blocked === "unknown") return; draftTurn.current++; setCsv(value); setReview(null); setReceipt(null); }
@@ -61,7 +62,7 @@ function Import() {
     try {
       const value = await csvApi.preview(draft, allowDuplicates);
       if (!alive.current || turn !== draftTurn.current) return;
-      if (Date.now() >= started + REVIEW_TTL) { setMessage("The import review expired. Preview the draft again."); return; }
+      if (Date.now() >= started + REVIEW_TTL) { setMessage("The import review expired. Preview the draft again.", "expired"); return; }
       setReview({ csv: draft, allowDuplicates, value, expiresAt: started + REVIEW_TTL }); queueMicrotask(() => heading.current?.focus());
     } catch (error) {
       if (!alive.current || turn !== draftTurn.current) return;
@@ -72,7 +73,7 @@ function Import() {
   }
   function commit() {
     if (gate.current || blocked || !review?.value.canConfirm || !review.value.binding || csv !== review.csv || duplicates !== review.allowDuplicates) return;
-    if (Date.now() >= review.expiresAt) { setReview(null); setMessage("The import review expired. Preview the draft again."); return; }
+    if (Date.now() >= review.expiresAt) { setReview(null); setMessage("The import review expired. Preview the draft again.", "expired"); return; }
     const checked = review;
     run(async () => ({ ids: await csvApi.confirm(checked.csv, checked.allowDuplicates, checked.value), rest: "" }));
   }
@@ -80,7 +81,7 @@ function Import() {
    *  exactly what is imported; the rows to fix stay in the draft. */
   function importReady() {
     if (gate.current || blocked || !review || review.value.canConfirm || csv !== review.csv || duplicates !== review.allowDuplicates) return;
-    if (Date.now() >= review.expiresAt) { setReview(null); setMessage("The import review expired. Preview the draft again."); return; }
+    if (Date.now() >= review.expiresAt) { setReview(null); setMessage("The import review expired. Preview the draft again.", "expired"); return; }
     const rows = readyRows(review), parts = rows && rows.size ? splitDraft(review.csv, rows) : null, allowDuplicates = review.allowDuplicates;
     if (!parts || parts.readyCount !== rows?.size) return;
     run(async () => {
@@ -103,8 +104,8 @@ function Import() {
         if (!alive.current) return; setReview(null); setCheckedRoster(false);
         const status = statusOf(error);
         if ([401, 403, 404].includes(status)) { setBlocked("denied"); setRoster(null); setMessage("The import review or account access is no longer valid. Reload the roster and prepare a new preview after checking your account."); }
-        else if (status === 409 || status === 400 || status === 413) { setBlocked("conflict"); setMessage("The student list changed after this review, so nothing was imported. Reload the roster and preview again."); }
-        else { setBlocked("unknown"); setMessage("We couldn’t confirm whether this import saved, so the import outcome is unknown. It may have saved. Check what saved before importing again; nothing will be sent twice automatically."); }
+        else if (status === 409 || status === 400 || status === 413) { setBlocked("conflict"); setMessage("The student list changed after this review, so nothing was imported. Reload the roster and preview again.", "changed"); }
+        else { setBlocked("unknown"); setMessage("We couldn’t confirm whether this import saved, so the import outcome is unknown. It may have saved. Check what saved before importing again; nothing will be sent twice automatically.", "unknown"); }
       } finally { gate.current = false; if (alive.current) setPending(false); }
     })(); mutation.current = operation; void operation.finally(() => { if (mutation.current === operation) mutation.current = null; });
   }
@@ -119,9 +120,9 @@ function Import() {
   const issueText = (issue: Preview["issues"][number]) => { const text = hints.get(issue.row) ?? (issue.code === "invalid-columns" ? "the number of columns doesn’t match the column names. Check for a missing or extra comma." : "check this row against the template."); return text.charAt(0).toLocaleUpperCase() + text.slice(1); };
   return <section className="role-workspace csv-workspace admin-workspace"><div className="admin-crumbs"><WorkspaceLink href="/workspace/admin/students?tab=students">All students</WorkspaceLink></div>
     <PageHeader title="Import students" description="Add many students at once from a spreadsheet. Importing sends nothing: nobody is invited or given access, and no reading or tutor is assigned." />
-    {message && <p className={blocked || !receipt ? "request-error" : "workspace-notice"} role={blocked ? "alert" : "status"}>{message}</p>}
+    {message && <p data-testid="csv-message" data-message-kind={messageKind} className={blocked || !receipt ? "request-error" : "workspace-notice"} role={blocked ? "alert" : "status"}>{message}</p>}
     {blocked === "unknown" && !checkedRoster && <Button variant="primary" disabled={pending || loading} onClick={() => void reload()}>Check what saved</Button>}
-    {receipt !== null && <p role="status">{receipt} student {receipt === 1 ? "record created" : "records created"}. No invitations were sent.</p>}
+    {receipt !== null && <p role="status" data-testid="csv-receipt" data-created={receipt}>{receipt} student {receipt === 1 ? "record created" : "records created"}. No invitations were sent.</p>}
     <div className="csv-draft people-card"><h2 className="csv-step"><span aria-hidden="true">1</span>Add your list</h2>
       <p>Start from the template: keep its first line and put one student on each line below it. Every student needs a kind (child or adult), first and last name and ceremony date (<span className="csv-nowrap">YYYY-MM-DD</span>). A child needs a parent email; an adult needs their own. Other columns can stay empty. Save it as CSV (UTF-8).</p>
       <a className="button-secondary csv-template" href={`data:text/csv;charset=utf-8,${encodeURIComponent(CSV_TEMPLATE)}`} download="students-template.csv">Download the template</a>
@@ -139,14 +140,14 @@ function Import() {
       {sameName.length > 0 && <p className="csv-same-name" data-testid="csv-same-name">{rowList(sameName)} {sameName.length === 1 ? "has" : "have"} the same name and ceremony date as a student already on the roster or earlier in this file. {sameName.length === 1 ? "Check that it is a different student" : "Check that they are different students"} before importing.</p>}
       {review.value.tutorMatches && <><h3>Pending tutor proposals</h3>{(["matched","unmatched","ambiguous"] as const).map(status=>{const rows=review.value.tutorMatches!.filter(match=>match.status===status).map(match=>match.row);return <p key={status}>{status==="matched"?"Matched existing tutors":status==="unmatched"?"Unmatched tutor names":"Ambiguous tutor names"}: {rows.length?`rows ${rows.join(", ")}`:"none"}.</p>;})}<p>These are proposals only. No tutor is assigned and no account access is created by this import.</p></>}
       {!!review.value.missingSecondParentRows?.length && <p>Second parent name or email is missing in rows {review.value.missingSecondParentRows.join(", ")}. Records can be imported; contact details alone grant no guardian access.</p>}
-      {review.value.duplicateRows.length > 0 && <p className="csv-duplicates">Already on the roster or earlier in this file: rows {review.value.duplicateRows.join(", ")}. Importing them creates a second record; nothing is merged or updated. {review.allowDuplicates ? "You chose to create these additional records." : "Remove them from the list, or choose “Allow additional records for exact duplicates” and preview again if a second record is intended."}</p>}
+      {review.value.duplicateRows.length > 0 && <p className="csv-duplicates" data-testid="csv-duplicates" data-rows={review.value.duplicateRows.join(",")}>Already on the roster or earlier in this file: rows {review.value.duplicateRows.join(", ")}. Importing them creates a second record; nothing is merged or updated. {review.allowDuplicates ? "You chose to create these additional records." : "Remove them from the list, or choose “Allow additional records for exact duplicates” and preview again if a second record is intended."}</p>}
       {review.value.canConfirm ? <><p>This creates {review.value.validRows} student {review.value.validRows === 1 ? "record" : "records"} from the list above. Nothing is sent. Changing the list means previewing again, and this review lasts five minutes.</p><div className="form-actions"><Button variant="primary" disabled={locked} onClick={commit}>Import reviewed students</Button><Button disabled={pending} onClick={() => setReview(null)}>Cancel import review</Button></div></>
         : ready && ready.size > 0 ? <><p>Import the ready rows now and the rows to fix stay in the list, or fix every row and preview again. Nothing is sent, and this review lasts five minutes.</p>
           <div className="form-actions"><Button variant="primary" disabled={locked} onClick={importReady} data-testid="csv-import-ready">{`Import the ${ready.size} ready ${ready.size === 1 ? "row" : "rows"}`}</Button><Button disabled={pending} onClick={() => setReview(null)}>Cancel import review</Button></div></>
         : <p>Nothing is imported until every row is ready. Fix the rows above in your spreadsheet or here, then preview again.</p>}
     </section>}
     <Button variant="quiet" disabled={pending || loading} onClick={() => void reload()}>Reload roster for import</Button>
-    {loading ? <p role="status">Checking the current roster…</p> : !roster ? <p role="alert">The roster is unavailable. Check account access or reload.</p> : blocked === "unknown" && checkedRoster && <section className="csv-recovery"><h2>Inspect the current roster</h2><p>Check these records against your CSV before starting a new preview. A new import may create additional records. This list cannot prove which request created a record.</p><ul className="access-records">{roster.map(row => <li key={row.id}><Link href={`/workspace/admin/students/${row.id}/access`}><bdi dir="auto">{row.firstName} {row.lastName}</bdi></Link> · <time>{row.ceremonyDate}</time> · {row.disabledAt ? "Disabled" : "Active"}</li>)}</ul>{!roster.length && <p>The current roster has no student records.</p>}<Button onClick={() => { setBlocked(null); setCheckedRoster(false); setDuplicates(false); setMessage("Roster inspection acknowledged. A new preview is required; confirm only if another import is intended."); }}>I checked the roster; allow a new preview</Button></section>}
+    {loading ? <p role="status" data-testid="csv-roster-loading">Checking the current roster…</p> : !roster ? <p role="alert">The roster is unavailable. Check account access or reload.</p> : blocked === "unknown" && checkedRoster && <section className="csv-recovery" data-testid="csv-recovery"><h2>Inspect the current roster</h2><p>Check these records against your CSV before starting a new preview. A new import may create additional records. This list cannot prove which request created a record.</p><ul className="access-records">{roster.map(row => <li key={row.id}><Link href={`/workspace/admin/students/${row.id}/access`}><bdi dir="auto">{row.firstName} {row.lastName}</bdi></Link> · <time>{row.ceremonyDate}</time> · {row.disabledAt ? "Disabled" : "Active"}</li>)}</ul>{!roster.length && <p>The current roster has no student records.</p>}<Button onClick={() => { setBlocked(null); setCheckedRoster(false); setDuplicates(false); setMessage("Roster inspection acknowledged. A new preview is required; confirm only if another import is intended."); }}>I checked the roster; allow a new preview</Button></section>}
     <p className="field-help"><Link href="/">Check account and sign in again</Link></p>
   </section>;
 }

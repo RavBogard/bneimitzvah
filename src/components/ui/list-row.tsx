@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import styles from "./ui.module.css";
 
 /** Grouped rows for staff lists: one hairline surface, rows divided by hairlines. Put `ListRow`s (and only those) inside. */
-export function List({ children, label }: { children: ReactNode; label?: string }) {
-  return <ul className={styles.list} aria-label={label}>{children}</ul>;
+export function List({ children, label, testId }: { children: ReactNode; label?: string; testId?: string }) {
+  return <ul className={styles.list} aria-label={label} data-testid={testId}>{children}</ul>;
 }
 
 export type ListRowProps = {

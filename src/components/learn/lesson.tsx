@@ -69,7 +69,7 @@ function LessonFlow({ id }: { id: string }) {
     <header className={styles.bar}>
       <a className={styles.close} href="/learn" aria-label="Back to the path">{icons.close}</a>
       <h1 className={styles.barTitle}>{lesson.title}</h1>
-      <ol className={styles.rail} aria-label={`Step ${at + 1} of ${steps.length}`}>{steps.map((_, i) => <li key={i} data-state={i < at ? "past" : i === at ? "current" : undefined} />)}</ol>
+      <ol className={styles.rail} data-testid="lesson-rail" data-step-index={at + 1} data-step-count={steps.length} aria-label={`Step ${at + 1} of ${steps.length}`}>{steps.map((_, i) => <li key={i} data-state={i < at ? "past" : i === at ? "current" : undefined} />)}</ol>
     </header>
     <main id="lesson-main" ref={main} tabIndex={-1} className={styles.lesson} data-step={step.kind}>
       {step.kind === "first-verse" ? <FirstVerse lesson={lesson} onDone={() => go(doneIndex)} />
@@ -229,9 +229,9 @@ function Done({ lesson, complete, nextId, fallback }: { lesson: Lesson; complete
   return <>
     <div className={styles.doneHead}><h2 className={styles.doneTitle}>{lesson.title}</h2><p className={styles.doneWord}>Done</p></div>
     {/* A first verse leaves the Done line off rather than show a false or certifying sentence (CHANTING-RECONCILIATION.md, N17 amendment); its ending is "You can lein this verse.", gated on "Same as the reader". */}
-    {!lesson.activities.some(activity => activity.type === "first-verse") && <p className={styles.doneLine}>Return to this phrase whenever you need it. You can keep practising or use it in a reading.</p>}
+    {!lesson.activities.some(activity => activity.type === "first-verse") && <p className={styles.doneLine} data-testid="lesson-done-line">Return to this phrase whenever you need it. You can keep practising or use it in a reading.</p>}
     {week && <ThisWeekSection activity={week} lesson={lesson} fallback={fallback} />}
-    {next && <p className={styles.nextName}>Next: {next.title}</p>}
+    {next && <p className={styles.nextName} data-testid="next-lesson-name" data-lesson={next.id}>Next: {next.title}</p>}
     <Footer>
       {next && <a className="button-start" href={`/learn/${next.id}`}>Start next lesson</a>}
       <a className={styles.backLink} href="/learn">Back to the path</a>

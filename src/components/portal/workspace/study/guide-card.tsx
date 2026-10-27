@@ -13,6 +13,8 @@ export function guideLabelText(label: GuideLabel) {
   // Daniel, 2026-10-21: a draft the rabbi wrote himself is not labelled as Claude's.
   return label.origin === "rabbi" ? `Written by ${label.rabbiName} · draft` : `Written by Claude for CRC · not yet reviewed by ${label.rabbiName}`;
 }
+/** The review state as a stable word, for a test or a style, whatever the label says. */
+export const guideLabelState = (label: GuideLabel) => label.reviewed ? "reviewed" : label.origin === "rabbi" ? "rabbi-draft" : "claude-draft";
 export function useGuide(store: GuideStore, kind: StudyKind) {
   useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);
   return store.view(kind);
@@ -34,9 +36,9 @@ function ThemeRows({ store, kind, themes, tickable }: { store: GuideStore; kind:
         <span className={styles.themeIntro} dir="auto">{firstLine(theme.intro)}</span>
         {notice && <span className={styles.notice} role="status">{notice}</span>}</div>
       {tickable
-        ? <button type="button" className={styles.tick} aria-pressed={theme.read} disabled={pending} aria-label={`I read this: ${theme.title}`}
+        ? <button type="button" className={styles.tick} data-testid="guide-tick" aria-pressed={theme.read} disabled={pending} aria-label={`I read this: ${theme.title}`}
             onClick={() => void store.tick(kind, theme.id, !theme.read)}>{theme.read ? <>{check}Read</> : "I read this"}</button>
-        : <span className={styles.state} data-read={theme.read}>{theme.read ? "Read" : "Not read yet"}</span>}
+        : <span className={styles.state} data-testid="guide-theme-state" data-read={theme.read}>{theme.read ? "Read" : "Not read yet"}</span>}
     </li>;
   })}</ul>;
 }
@@ -62,12 +64,12 @@ export function GuideCard({ store, kind, firstName, learner, onStudy }: { store:
     {view.base && <>
       <MarkdownLite text={view.base.overview} className={styles.prose} heClass={styles.he} />
       {view.base.themes.length > 0 && <><h4>Themes</h4><ThemeRows store={store} kind={kind} themes={view.base.themes} tickable={view.tickable} /></>}
-      <p className={styles.label}>{guideLabelText(view.base.label)}</p>
+      <p className={styles.label} data-guide-label={guideLabelState(view.base.label)}>{guideLabelText(view.base.label)}</p>
     </>}
     {view.additions && view.additions.themes.length > 0 && <div className={styles.additions}>
       <h4>{learner ? "Added for you" : <>Added for <bdi dir="auto">{firstName}</bdi></>}</h4>
       <ThemeRows store={store} kind={kind} themes={view.additions.themes} tickable={view.tickable} />
-      <p className={styles.label}>{guideLabelText(view.additions.label)}</p>
+      <p className={styles.label} data-guide-label={guideLabelState(view.additions.label)}>{guideLabelText(view.additions.label)}</p>
     </div>}
     {sheetLink}
     {onStudy && themes.length > 0 && <div className={styles.actions}><button type="button" className={styles.study} data-guide-study onClick={onStudy}>Study the themes</button></div>}

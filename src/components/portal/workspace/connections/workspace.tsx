@@ -17,7 +17,7 @@ const day = (value: string) => new Intl.DateTimeFormat(undefined, { dateStyle: "
 export function ClaudeConnectionsWorkspace() {
   const { summary } = useWorkspace();
   if (!summary.roles.includes("admin") && !summary.roles.includes("tutor"))
-    return <section className="workspace-state"><h1>Role unavailable</h1><p>Claude connections are for the rabbi, administrators and tutors.</p><a href="/workspace">Choose a role</a></section>;
+    return <section className="workspace-state" data-testid="role-unavailable"><h1>Role unavailable</h1><p>Claude connections are for the rabbi, administrators and tutors.</p><a href="/workspace">Choose a role</a></section>;
   return <ConnectionsPage admin={summary.roles.includes("admin")} />;
 }
 

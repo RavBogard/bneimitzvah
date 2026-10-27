@@ -18,9 +18,9 @@ export function PracticeDays({ calendar }: { calendar: PracticeCalendar }) {
   if (state.status !== "ready") return <div className="practice-days" aria-busy={state.status === "loading"}>{state.status === "unavailable" && <p className="practice-days-note">Practice days couldn’t be loaded.</p>}</div>;
   const today = dayOrdinal(state.serverDay), start = today - weekday(today), practiced = (ordinal: number) => state.dates.has(dayString(ordinal));
   return <div className="practice-days">
-    <ol className="practice-week" aria-label="Practice this week">{Array.from({ length: 7 }, (_, index) => {
+    <ol className="practice-week" data-testid="practice-week" aria-label="Practice this week">{Array.from({ length: 7 }, (_, index) => {
       const ordinal = start + index, done = ordinal <= today && practiced(ordinal), future = ordinal > today;
-      return <li key={ordinal} className={`practice-day${done ? " practice-day-done" : ""}${ordinal === today ? " practice-day-today" : ""}${future ? " practice-day-future" : ""}`}>
+      return <li key={ordinal} data-testid="practice-day" className={`practice-day${done ? " practice-day-done" : ""}${ordinal === today ? " practice-day-today" : ""}${future ? " practice-day-future" : ""}`}>
         <span aria-hidden="true" className="practice-day-letter">{weekdays[weekday(ordinal)][0]}</span>
         <span className="practice-day-dot" aria-hidden="true">{done && check}</span>
         <span className="sr-only">{spoken(ordinal)}{ordinal === today ? ", today" : ""}: {future ? "not yet" : done ? "practiced" : "not practiced"}</span>

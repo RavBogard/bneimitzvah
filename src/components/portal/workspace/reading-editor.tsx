@@ -143,7 +143,7 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open }: 
   const label = kind === "torah" ? "Torah" : "Haftarah", ceremony = baseline?.student.ceremonyDate;
   let divisionStarts: string[] | null = null; try { divisionStarts = draftCuts(draft) ?? currentAssignment?.aliyahStarts ?? null; } catch { divisionStarts = null; }
   return <section className="reading-editor" aria-labelledby="reading-editor-title">
-    <h2 id="reading-editor-title">Set the assigned reading</h2>
+    <h2 id="reading-editor-title" data-testid="reading-editor-title">Set the assigned reading</h2>
     <p>Choose the verses, review them, then save the assignment.</p>
     <div className={styles.context} aria-live="polite">
       <p><strong>Ceremony: {ceremony ? longDate(ceremony) : "Checking date…"}</strong>{suggestions && <> · {slotLabel(suggestions.serviceSlot, congregation.services)}</>}</p>

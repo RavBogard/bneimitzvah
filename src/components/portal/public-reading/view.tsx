@@ -277,7 +277,7 @@ function WeekReading({ initial, verse, saveReturn, pick: initialPick }: { initia
   // The Torah's rare tropes this week, for the reader's note (N5, G17).
   const rareNote = useMemo(() => current?.torah ? rareTropeNote(rareTropesIn(expandReadingRanges(current.torah.ranges, "torah", TANAKH_VERSE_COUNTS))) : null, [current]);
   return <MoreScope initiallyOpen={saveReturn.offer && !saveReturn.choose}><Shell title={WEEK_TITLE} back={back.here} settled={weekShown}>
-    <ReadHeader eyebrow={date && today ? <><span>{isThisWeek ? "This Shabbat" : "Shabbat"}</span> · <time dateTime={date}>{shortDate(date, today)}</time><OfflinePill /></> : "Torah and haftarah"}
+    <ReadHeader eyebrow={date && today ? <><span data-read-week={isThisWeek ? "this" : "other"}>{isThisWeek ? "This Shabbat" : "Shabbat"}</span> · <time dateTime={date}>{shortDate(date, today)}</time><OfflinePill /></> : "Torah and haftarah"}
       title={current ? current.parashah ?? "Shabbat reading" : week?.error ? "Reading unavailable" : "Loading the reading"}
       previous={{ label: "Previous week", disabled: !date, onClick: () => { if (date) change(addDays(date, -7)); } }}
       next={{ label: "Next week", disabled: !date, onClick: () => { if (date) change(addDays(date, 7)); } }}
@@ -695,7 +695,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
           {!drillVerse && focus !== null && page.verses[focus] && <p className={styles.upClose}><button type="button" className="button-secondary" onClick={() => release(() => setLift({ index: focus, opening: ++openings.current, navigation: 0 }))}>{/* One span: the button is a flex box, which would drop the spaces between separate text items. */}<span>View <bdi dir="ltr">{page.verses[focus].ref}</bdi> up close</span></button>
             <span className="field-help">Up close shows each phrase of trope by name.</span></p>}
           {sections.length === 0 && (previousWin !== undefined || nextWin !== null) && <>
-            <p className="study-page-position">Verses {page.offset + 1}–{page.offset + page.verses.length} of {page.totalVerses}</p>
+            <p className="study-page-position" data-testid="page-position" data-page-first={page.offset + 1} data-page-last={page.offset + page.verses.length} data-page-total={page.totalVerses}>Verses {page.offset + 1}–{page.offset + page.verses.length} of {page.totalVerses}</p>
             <nav className="study-pages" aria-label="Text pages"><button type="button" className="button-secondary" disabled={previousWin === undefined} onClick={() => previousWin !== undefined && pagerTo(previousWin)}>Previous text page</button>
               <button type="button" className="button-secondary" disabled={nextWin === null} onClick={() => nextWin !== null && pagerTo(nextWin)}>Next text page</button></nav></>}
           {study && <CommentaryCredits works={works} refs={refs} />}

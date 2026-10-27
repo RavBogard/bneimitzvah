@@ -11,7 +11,7 @@ export type StudyChapter = { ref: string; sefariaUrl: string; fetchedAt: number;
 
 export function StudyCredits({ chapters, summary }: { chapters: StudyChapter[]; summary?: string }) {
   const editions = [...new Map(chapters.flatMap(chapter => chapter.editions).map(edition => [edition.key, edition])).values()];
-  return <details className="study-credits"><summary>{summary ?? "Text sources, licenses and changes"}</summary>
+  return <details className="study-credits" data-testid="study-credits"><summary data-testid="study-credits-toggle">{summary ?? "Text sources, licenses and changes"}</summary>
     {summary && <p>Hebrew: Miqra according to the Masorah. English: JPS 2023. No other edition is substituted.</p>}
     <p>Text is provided through Sefaria. These editions retain their own terms; the application’s code license does not replace them.</p>
     {editions.map(edition => <section key={edition.key}><h4>{edition.versionTitle}</h4><p>{edition.creator}</p><p><a href={edition.sourceUrl} target="_blank" rel="noopener noreferrer">Edition source</a> · <a href={edition.licenseUrl} target="_blank" rel="noopener noreferrer">{edition.license}</a></p><p>{edition.changes}</p></section>)}

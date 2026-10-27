@@ -273,7 +273,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     for (;;) { const plan = studyPlan(baseline!, kind, at); if (plan.nextOffset === null || plan.nextOffset > position) return at; at = plan.nextOffset; }
   }
   const goSection = (index: number) => { const target = sections[index]; if (target && target.start !== livePage?.offset) void explicitLoad(kind, target.start); };
-  return <section className="assigned-study" aria-label="Assigned text" data-size={prefs.size}>
+  return <section className="assigned-study" data-testid="assigned-text" aria-label="Assigned text" data-size={prefs.size}>
     <WordPanelSource host={wordHost} />
     {/* On a learner's phone the switch waits under the passage, so the first verse stays above the fold. */}
     {(baseline.readings.length > 1 || lens.available) && <div className="reading-lens-row" data-learner={learner ? "" : undefined}>
@@ -288,7 +288,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
         recorded the whole portion aliyah by aliyah (seven sections); a student's own divisions are not the calendar's, so then the outline is plain text. */}
     {study && kind === "torah" && <StudySummary slug={parashahSlug(assignment?.readingKey)} active={active && !concealed} aliyot={sections.length >= 7 ? sections.map(row => row.n) : undefined}
       onAliyah={n => { const target = sections.find(row => row.n === n); if (target && assignment) jumpTo(assignment.verses[target.start]); }} />}
-    {!current || current.loading ? <p role="status">Loading the assigned text…</p> : current.error ? <div role="status"><h4>{current.error === 409 ? "Assignment changed" : [401, 403, 404].includes(current.error) ? "Text access changed" : "Text unavailable"}</h4>
+    {!current || current.loading ? <p role="status">Loading the assigned text…</p> : current.error ? <div role="status" data-testid="study-text-state" data-text-state={current.error === 409 ? "assignment-changed" : [401, 403, 404].includes(current.error) ? "access-changed" : "unavailable"}><h4>{current.error === 409 ? "Assignment changed" : [401, 403, 404].includes(current.error) ? "Text access changed" : "Text unavailable"}</h4>
       <p>{current.error === 409 ? learner ? "Your reading was just updated. Load the new version to keep going." : "Refresh the reading metadata before loading this assignment’s text again." : learner ? "The verses didn’t load. Check your connection and try again." : "No previous text is being shown. Confirmed references and the reading review form remain separate."}</p>
       <button className="button-secondary" onClick={() => { if (current.error === 409) void reloadMetadata().catch(() => undefined); else void explicitLoad(kind, selection.current?.offset ?? 0); }}>{current.error === 409 ? "Refresh reading and text" : "Reload assigned text"}</button>
       {renderActiveWork?.()}
@@ -342,15 +342,15 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
           return place && place.kind === kind && place.offset === page.offset && place.turn === generation.current ? { ref: place.ref, wordIndex: place.wordIndex } : null; }} />}
       {/* The selected verse (1.9 N4): its tools are one Sheet, its mark and Up close beside it. Only this verse's tools are ever on the page, however long the section. */}
       {(() => { const index = Math.max(0, livePage.verses.findIndex(row => row.ref === picked)), verse = livePage.verses[index];
-        return <div className="study-verse-bar" data-selected-verse={verse.ref}>
+        return <div className="study-verse-bar" data-testid="study-verse-bar" data-selected-verse={verse.ref}>
           <button type="button" className="button-secondary" aria-haspopup="dialog" onClick={event => openTools(verse.ref, event.currentTarget)}>Verse tools · <bdi dir="ltr">{verse.ref}</bdi></button>
           <button type="button" className="button-text" onClick={() => open(livePage!, index)}>View {verse.ref} up close</button>
           {renderMark?.(kind, verse.ref)}
         </div>; })()}
       {toolsVerse && <Sheet open onClose={() => void closeTools()} title={`Verse tools · ${toolsVerse.ref}`} closeLabel="Close" returnFocusTo={() => toolsOpener.current}>
-        <div className="study-verse-detail" data-verse-ref={toolsVerse.ref}>
+        <div className="study-verse-detail" data-testid="study-verse-detail" data-verse-ref={toolsVerse.ref}>
           {renderMark && <div className="verse-card-head">{renderMark(kind, toolsVerse.ref)}</div>}
-          {!songSession && !study && <p className="study-english" lang="en" dir="ltr">{toolsVerse.english ?? "English reference unavailable for this verse."}</p>}
+          {!songSession && !study && <p className="study-english" data-testid="detail-english" lang="en" dir="ltr">{toolsVerse.english ?? "English reference unavailable for this verse."}</p>}
           <Apparatus verse={toolsVerse} learner={learner} />{renderGuide?.(kind, toolsVerse.ref)}
           {!study && <VerseRashi verse={toolsVerse} state={rashi.lookup.forVerse(toolsVerse.ref)} link={leinLink} retry={rashi.retry} />}
           {!concealed && <SourcesPanel key={`sources:${JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage!.offset, generation.current, toolsVerse.ref])}`}
@@ -358,7 +358,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
           {renderWork?.(kind, toolsVerse.ref)}
         </div>
       </Sheet>}
-      {!learner && kind==="torah" && assignment!.aliyahStarts===null && <p className="field-help">Aliyah boundaries have not been recorded for this assignment.</p>}
+      {!learner && kind==="torah" && assignment!.aliyahStarts===null && <p className="field-help" data-testid="aliyah-unrecorded">Aliyah boundaries have not been recorded for this assignment.</p>}
       {learner ? !single && <p className="study-page-position">Verses {livePage.offset + 1}–{livePage.offset + livePage.verses.length} of {livePage.totalVerses}</p>
         : <p role="status">Verses {livePage.offset + 1}–{livePage.offset + livePage.verses.length} of {livePage.totalVerses}. {livePage.translation.status === "partial" ? "The selected English edition is missing for some verses." : livePage.translation.status === "unavailable" ? "The selected English edition is unavailable on this page." : "Selected English edition available."}</p>}
       {!learner && <p className="field-help">Hebrew: Miqra according to the Masorah. English reference: JPS2023. No alternate edition is substituted.</p>}

@@ -14,12 +14,12 @@ const useStore = (store: ProgressStore) => useSyncExternalStore(store.subscribe,
 export function VerseMark({ store, kind, verseRef }: { store: ProgressStore; kind: StudyKind; verseRef: string }) {
   useStore(store);
   const verse = store.verse(kind, verseRef); if (!verse) return null;
-  if (store.unverified(kind, verseRef)) return <span className="verse-marks"><span className="verse-mark">Mark unverified</span></span>;
+  if (store.unverified(kind, verseRef)) return <span className="verse-marks"><span className="verse-mark" data-testid="verse-mark">Mark unverified</span></span>;
   // Staff and parents see both marks, each named; students see their own.
   const staff = store.stream !== "self-check", self = verse.selfCheck.state, assessment = verse.assessment.state;
   return <span className="verse-marks">
-    {self !== "unmarked" && <span className="verse-mark" data-state={self}>{self === "got-it" && check}{staff ? <StudentMark kind={kind} verseRef={verseRef} state={self} /> : selfLabels[self]}</span>}
-    {staff && assessment !== "not-started" && <span className="verse-mark" data-state={assessment}>{assessment === "solid" && check}{`Tutor: ${assessmentLabels[assessment].toLowerCase()}`}</span>}
+    {self !== "unmarked" && <span className="verse-mark" data-testid="verse-mark" data-state={self}>{self === "got-it" && check}{staff ? <StudentMark kind={kind} verseRef={verseRef} state={self} /> : selfLabels[self]}</span>}
+    {staff && assessment !== "not-started" && <span className="verse-mark" data-testid="verse-mark" data-state={assessment}>{assessment === "solid" && check}{`Tutor: ${assessmentLabels[assessment].toLowerCase()}`}</span>}
   </span>;
 }
 
