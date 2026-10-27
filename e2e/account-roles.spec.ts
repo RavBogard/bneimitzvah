@@ -75,5 +75,5 @@ test("an accepted invitation's Continue lands on the work, and Sign out on Accou
   await page.route("**/api/session", route => json(route, 401, { error: "authentication-required" }));
   await signOut.click();
   await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveCount(0);
 });

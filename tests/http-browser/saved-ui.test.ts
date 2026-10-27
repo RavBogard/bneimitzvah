@@ -50,6 +50,7 @@ async function signIn(tab: Page, email: string) {
   await tab.getByTestId("entry-email-submit").click();
   await ui(entryTask(tab, "sign-in", "code")).toBeVisible();
   await openAuthMail(tab, fixture.takeMail(email));
+  await tab.goto("/", { waitUntil: "domcontentloaded" }); // a plain sign-in lands on My Readings now; these flows start at the front door
   await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
 }
 const noHorizontalScroll = (tab: Page) => tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth);

@@ -44,7 +44,7 @@ test("every signed-in page sets its own title, ending with | CRC Torah", async (
   }
   expect(named).toEqual(["Student | CRC Torah", "Student | CRC Torah"]);
   expect(signedInTitle("Students")).toBe("Students | CRC Torah");
-  expect(await signInMetadata({ searchParams: Promise.resolve({}) })).toMatchObject({ title: "Open your reading | CRC Torah" });
+  expect(await signInMetadata({ searchParams: Promise.resolve({}) })).toMatchObject({ title: "Sign in | CRC Torah" });
 });
 
 test("a page whose h1 is fixed is titled with that h1", () => {

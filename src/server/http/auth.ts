@@ -22,10 +22,10 @@ const methods: Record<string, readonly string[]> = {
 export function authRouteMethods(pathname: string): readonly string[] | null {
   return Object.hasOwn(methods, pathname) ? methods[pathname] : null;
 }
-const successPaths = new Set(["/", "/invitations/accept", "/account"]);
+const successPaths = new Set(["/", "/mine", "/invitations/accept", "/account"]);
 // Where a redirect-mode Google sign-in may land. The SDK's own Location is never relayed.
-type GoogleReturn = "/" | "/invitations/accept" | "/account" | "/connect";
-const googleReturnPaths = new Set<string>(["/", "/invitations/accept", "/account", "/connect"]);
+type GoogleReturn = "/" | "/mine" | "/invitations/accept" | "/account" | "/connect";
+const googleReturnPaths = new Set<string>(["/", "/mine", "/invitations/accept", "/account", "/connect"]);
 const GOOGLE_AUTHORIZATION = "https://accounts.google.com/o/oauth2/v2/auth";
 // The only callback parameters the SDK reads; Google's others (scope, authuser, hd, prompt) are dropped.
 const googleCallbackKeys = ["code", "state", "error", "error_description", "iss"] as const;
@@ -220,7 +220,7 @@ export async function handleAuthRequest(request: Request, runtime: HttpRuntime):
       return response;
     } finally { discard(sdk); }
   }
-  const callback = runtime.pendingInvitations.hasPendingForSignIn(request) ? "/invitations/accept" : "/";
+  const callback = runtime.pendingInvitations.hasPendingForSignIn(request) ? "/invitations/accept" : "/mine";
   if (path === "/api/auth/sign-in/magic-link") {
     const body = closedObject(raw, ["email"], ["return"]);
     if (!mailbox(body.email)) throw new HttpBoundaryError();
@@ -251,7 +251,7 @@ export async function handleAuthRequest(request: Request, runtime: HttpRuntime):
       if (sdk.status === 429) return privateJson({ error: "rate-limited" }, 429);
       if (sdk.status === 200 && !sdk.headers.has("location")) {
         // A pending invitation still wins; otherwise the sealed return address, if this device asked for one.
-        const response = cookies(privateJson({ ok: true, next: callback === "/" && bound.back ? bound.back : callback }), sdk, runtime.origin);
+        const response = cookies(privateJson({ ok: true, next: callback === "/mine" && bound.back ? bound.back : callback }), sdk, runtime.origin);
         response.headers.append("set-cookie", runtime.signInCodes.clear());
         return response;
       }
@@ -284,7 +284,7 @@ export async function handleAuthRequest(request: Request, runtime: HttpRuntime):
     const clientId = runtime.auth.options.socialProviders?.google?.clientId;
     if (typeof clientId !== "string" || !clientId) return errorResponse(undefined);
     try {
-      const issued = await runtime.googleChallenges.issue(request, callback === "/invitations/accept" ? callback : body.intent === "account" ? "/account" : "/");
+      const issued = await runtime.googleChallenges.issue(request, callback === "/invitations/accept" ? callback : body.intent === "account" ? "/account" : "/mine");
       const response = privateJson({ ...issued.body, clientId });
       response.headers.append("set-cookie", issued.cookie);
       return response;
@@ -305,7 +305,7 @@ export async function handleAuthRequest(request: Request, runtime: HttpRuntime):
     catch (error) { if (error instanceof GoogleChallengeLimited) return privateJson({ error: "rate-limited" }, 429); throw error; }
     // The SDK keeps the destination in this sign-in's stored state (single use, bound to its signed state cookie and PKCE),
     // so it cannot be changed on the way back from Google; the return is checked again when the SDK names it.
-    const next: string = body.next === "connect" ? "/connect" : callback === "/invitations/accept" ? callback : body.next === "account" ? "/account" : back ?? "/";
+    const next: string = body.next === "connect" ? "/connect" : callback === "/invitations/accept" ? callback : body.next === "account" ? "/account" : back ?? "/mine";
     const sdk = await runtime.auth.handler(sdkRequest(request, { provider: "google", callbackURL: next, newUserCallbackURL: next, errorCallbackURL: "/sign-in", disableRedirect: true },
       runtime.origin, new URL("/api/auth/sign-in/social", runtime.origin).href));
     try {

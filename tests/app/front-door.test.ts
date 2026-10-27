@@ -143,5 +143,5 @@ test("a signed-in account that is refused still gets the same site bar; the door
   // The home's Sign in is a plain link to the sign-in page; there is no scroll-to-door behaviour or role-name label.
   expect(bar({ kind: "sign-in" })).toContain('href="/sign-in"');
   expect(bar({ kind: "sign-in" })).not.toContain("beit-mitzvah");
-  expect(bar({ kind: "account", saved: false, roles: [] })).toContain('href="/account"');
+  expect(bar({ kind: "account", saved: false, roles: [] })).toContain('href="/mine"');
 });

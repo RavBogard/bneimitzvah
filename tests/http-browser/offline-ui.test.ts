@@ -96,7 +96,7 @@ async function signIn(tab: Page, email: string, landing = true) {
   await tab.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
   await ui(tab.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
   await openAuthMail(tab, fixture.takeMail(email));
-  if (landing) await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
+  if (landing) { await tab.goto("/", { waitUntil: "domcontentloaded" }); await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible(); }
 }
 
 // Offline navigation (the shell, the pill, playback and expiry) is proven on the built server in e2e/installable.spec.ts:

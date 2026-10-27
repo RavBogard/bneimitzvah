@@ -97,16 +97,16 @@ test("a failed reading call still shows This week's reading with working Lein an
   await opened;
 });
 
-test("a single-role student at the root sees the front door, not the workspace, and reaches Today in one tap", async ({ page }) => {
+test("a single-role student at the root sees the front door, not the workspace, and reaches My Readings in one tap", async ({ page }) => {
   await session(page, roles(["student"])); await week(page);
   await page.goto("/");
   const door = page.locator('[data-door="beit-mitzvah"]');
   await expect(door).toHaveAttribute("data-door-role", "student");
   expect(new URL(page.url()).pathname).toBe("/");
-  await expect(door.getByTestId("door-action")).toHaveAttribute("href", "/workspace/student");
+  await expect(door.getByTestId("door-action")).toHaveAttribute("href", "/mine");
   await expect(page.getByRole("link", { name: "Lein", exact: true })).toHaveAttribute("href", "/read");
   await door.getByTestId("door-action").click();
-  await expect(page).toHaveURL(/\/workspace\/student$/);
+  await expect(page).toHaveURL(/\/mine$/);
 });
 
 test("signed in, the site bar shows My Readings and the Beit Mitzvah door is the highest role's door; the form is gone", async ({ page }) => {

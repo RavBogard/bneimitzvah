@@ -77,7 +77,7 @@ test("one sign-in email carries the link and a 6-digit code in its body only, an
 
     const signed = await f.enter(mail.code, binding);
     expect(signed.status).toBe(200);
-    expect(await signed.json()).toEqual({ ok: true, next: "/" });
+    expect(await signed.json()).toEqual({ ok: true, next: "/mine" });
     expect(signed.headers.getSetCookie().some(value => value.startsWith(`${f.bindingName}=;`) && value.includes("Max-Age=0"))).toBe(true);
     const session = cookieOf(signed);
     const proof = await f.runtime.auth.api.getSession({ headers: new Headers({ cookie: session }), query: { disableRefresh: true } });
@@ -204,7 +204,7 @@ test("latest code wins: a second email's code works and the first email's code i
     expect(old.status).toBe(400); expect(await old.json()).toEqual({ error: "code" });
   }
   const signed = await f.enter(second.mail.code, second.binding);
-  expect(signed.status).toBe(200); expect(await signed.json()).toEqual({ ok: true, next: "/" });
+  expect(signed.status).toBe(200); expect(await signed.json()).toEqual({ ok: true, next: "/mine" });
 });
 
 test("a code binds to the address that asked: another address's binding cannot use it", async () => {
@@ -273,7 +273,7 @@ test("a return address asked with the email is sealed with the address and is wh
     expect(signed.status).toBe(200); expect(await signed.json()).toEqual({ ok: true, next: back });
     // Without a return, the code lands on the default as before.
     const plain = await f.ask("plain@example.test"), done = await f.enter(plain.mail.code, plain.binding);
-    expect(await done.json()).toEqual({ ok: true, next: "/" });
+    expect(await done.json()).toEqual({ ok: true, next: "/mine" });
   }
   // A pending invitation still wins over a return address.
   const f = await fixture();

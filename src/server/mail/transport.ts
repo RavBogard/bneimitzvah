@@ -4,7 +4,7 @@ import { RuntimeUnavailable } from "../runtime/errors";
 
 type Kind = "invitation" | "magic-link";
 const paths = { invitation: "/invitations/open", "magic-link": "/auth/email" } as const;
-const redirects = new Set(["/", "/sign-in", "/invitations/accept"]);
+const redirects = new Set(["/", "/mine", "/sign-in", "/invitations/accept"]);
 
 function canonicalLink(value: string, origin: string, kind: Kind) {
   if (typeof value !== "string" || value.length > 2048 || /[\s\\\x00-\x1f\x7f]/.test(value)) throw 0;

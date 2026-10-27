@@ -49,10 +49,10 @@ describe("the root never leaves for the workspace", () => {
   test("on the front door a signed-in person stays, whatever the return address", () => {
     for (const back of [null, "/read", "/account", "/"]) expect(signedInDestination(true, back)).toBeNull();
   });
-  test("only the sign-in form leaves: back to the page the person left, else the front door", () => {
+  test("only the sign-in form leaves: back to the page the person left, else My Readings", () => {
     expect(signedInDestination(false, "/read?date=2026-10-31")).toBe("/read?date=2026-10-31");
     expect(signedInDestination(false, "/account")).toBe("/account");
-    expect(signedInDestination(false, null)).toBe("/");
+    expect(signedInDestination(false, null)).toBe("/mine");
   });
 });
 

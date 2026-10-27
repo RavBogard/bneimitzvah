@@ -64,7 +64,7 @@ async function signIn(tab: Page, email: string, invitation = false) {
   await openAuthMail(tab, link);
   // An invitation link lands on its review page; a plain sign-in link lands on the front door, now signed in (its header offers Account).
   if (invitation) await ui(entryTask(tab, "invitation")).toBeVisible();
-  else { await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible(); await ui(tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true })).toBeVisible(); }
+  else { await navigate(tab, "/"); await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible(); await ui(tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true })).toBeVisible(); }
   await clean(tab, [email, token]);
 }
 async function api(tab: Page, path: string, body?: unknown) {
@@ -164,7 +164,7 @@ it("single-submits a real magic link, shows separate genuine roles without fake 
   } finally { release(); }
   await ui(entryTask(tab, "sign-in", "code")).toBeVisible();
   const link = fixture.takeMail("pg-tutor@example.test"), token = new URLSearchParams(new URL(link).hash.slice(1)).get("token")!;
-  await openAuthMail(tab, link); await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
+  await openAuthMail(tab, link); await navigate(tab, "/"); await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
   // The front door is the highest role's door (a tutor who is also a parent); the roles themselves are on Account.
   await ui(tab.locator('[data-door="beit-mitzvah"]').getByTestId("door-action")).toHaveAttribute("href", "/workspace/tutor");
   await clean(tab, [token, "pg-tutor@example.test"]);
@@ -225,7 +225,7 @@ it("signs in with the typed code from the sign-in email, survives a relaunch, an
   await clean(tab, [first, email]);
   const second = await ask();
   await type(second);
-  await ui.poll(() => new URL(tab.url()).pathname).toBe("/");
+  await ui.poll(() => new URL(tab.url()).pathname).toBe("/mine"); await navigate(tab, "/");
   await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
   await clean(tab, [second, email]);
   expect(await tab.evaluate(() => localStorage.getItem("crc.signin.code-requested-at"))).toBeNull();
@@ -249,6 +249,7 @@ it("clears fragment history at both widths and waits for keyboard confirmation b
     await clean(tab, [token, email]); await capture(tab, "email-confirm");
     await safe(() => tab.getByTestId("auth-landing-continue").focus());
     await safe(() => tab.keyboard.press("Enter"));
+    await ui.poll(() => new URL(tab.url()).pathname).toBe("/mine"); await navigate(tab, "/");
     await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
     expect(posts === 1 && cleanRequests).toBe(true);
     await navigate(tab, link); await safe(() => tab.reload({ waitUntil: "domcontentloaded" }));
