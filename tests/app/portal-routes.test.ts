@@ -47,7 +47,9 @@ describe("private portal HTTP adapters over actual SDK and restricted tenant ser
   it("classifies owned paths, rejects unknown/methods and returns only private fixed errors", async () => {
     const f = await fixture();
     expect(await handlePortalRequest(f.request("/api/auth/unknown"), f.runtime) === null).toBe(true);
-    expect(portalRouteMethods("/api/session")?.join() === "GET" && portalRouteMethods("/api/admin/students")?.join() === "GET,POST").toBe(true);
+    expect(portalRouteMethods("/api/session")?.join() === "GET" && portalRouteMethods("/api/session/begin")?.join() === "POST" && portalRouteMethods("/api/admin/students")?.join() === "GET,POST").toBe(true);
+    const beginGet = await f.call("/api/session/begin", { method: "GET" });
+    expect(beginGet.status === 405 && beginGet.headers.get("allow") === "POST" && privateResponse(beginGet)).toBe(true);
     const unknown = await f.call("/api/students/unknown/missing"), method = await f.call("/api/session", { body: {} });
     expect(unknown.status === 404 && method.status === 405 && method.headers.get("allow") === "GET" && privateResponse(method) && privateResponse(unknown)).toBe(true);
     const bad = await f.call("/api/students?mode=parent&mode=tutor");
@@ -61,7 +63,22 @@ describe("private portal HTTP adapters over actual SDK and restricted tenant ser
     const f = await fixture();
     expect((await f.call("/api/session", { who: "anonymous" })).status === 401).toBe(true);
     const empty = await json(await f.call("/api/session", { who: "recipient" }));
-    expect(empty.membershipAvailable === false && empty.roles.length === 0).toBe(true);
+    expect(empty.membershipAvailable === false && empty.roles.length === 0 && empty.saved === false).toBe(true);
+    // Readings for everyone (plan D1): POST /api/session/begin makes the first membership once; the person then has a shelf and no role.
+    const memberships = () => f.owner(() => f.db.select().from(s.membership).where(eq(s.membership.userId, f.identities.recipient.id)));
+    expect((await f.call("/api/session/begin", { who: "recipient", body: { extra: true } })).status).toBe(400);
+    expect((await f.call("/api/session/begin", { who: "recipient", body: {}, headers: { origin: "https://evil.example.test" } })).status).toBe(403);
+    expect((await f.call("/api/session/begin", { who: "anonymous", body: {} })).status).toBe(401);
+    expect(await memberships()).toHaveLength(0);
+    const begun = await f.call("/api/session/begin", { who: "recipient", body: {} });
+    expect(begun.status === 200 && privateResponse(begun)).toBe(true);
+    expect(await json(begun)).toMatchObject({ membershipAvailable: true, roles: [], saved: true, approver: false });
+    expect(await memberships()).toHaveLength(1);
+    expect((await f.call("/api/session/begin", { who: "recipient", body: {} })).status).toBe(200);
+    expect(await memberships()).toHaveLength(1);
+    expect(await json(await f.call("/api/session", { who: "recipient" }))).toMatchObject({ membershipAvailable: true, roles: [], saved: true });
+    // A membership is not a role: nothing a role gates opens.
+    for (const mode of ["student", "parent", "tutor", "admin"]) expect((await f.call(`/api/students?mode=${mode}`, { who: "recipient" })).status, mode).toBe(403);
     for (const [who, mode, expected] of [["multi", "parent", 2], ["multi", "tutor", 1], ["admin", "admin", 3], ["learner", "student", 1]] as const) {
       const response = await f.call(`/api/students?mode=${mode}`, { who }), body = await json(response);
       expect(response.status === 200 && body.students.length === expected && privateResponse(response) && !JSON.stringify(body).includes("@")).toBe(true);

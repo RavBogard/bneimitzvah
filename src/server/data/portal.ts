@@ -9,6 +9,13 @@ export async function availableRoles<Q extends PgQueryResultHKT>(tx: AccessTrans
     eq(s.roleGrant.membershipId, membershipId), isNull(s.roleGrant.revokedAt))).orderBy(asc(s.roleGrant.role)).for("share");
 }
 
+/** One membership of this tenant, share-locked, with whether it is disabled; null when it is not this tenant's. */
+export async function membershipOf<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, membershipId: string) {
+  const [row] = await tx.select({ id: s.membership.id, authorityRevision: s.membership.authorityRevision, disabledAt: s.membership.disabledAt }).from(s.membership)
+    .where(and(eq(s.membership.tenantId, tenantId), eq(s.membership.id, membershipId))).limit(1).for("share");
+  return row ?? null;
+}
+
 export async function confirmedReadings<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, studentId: string) {
   // Lock the confirmed assignment versions before reading their verses. A
   // concurrent replacement cannot splice new verses into an old revision.

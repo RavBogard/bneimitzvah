@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { accessFixture } from "./access-fixture";
 import { createPortalService } from "../../src/server/portal/service";
 import { createPracticeService } from "../../src/server/practice/service";
@@ -69,8 +69,8 @@ describe("private portal read DTOs and recipient invitation review", () => {
     const summary = await f.portal.sessionSummary(f.http());
     expect(summary.membershipAvailable && summary.roles.join() === "parent,tutor" && summary.saved && !JSON.stringify(summary).includes("@")).toBe(true);
     const other = await f.portal.sessionSummary(f.http("multi", undefined, { origin: "http://localhost:3101" }));
-    // A student-only account keeps no saved layer (accounts plan choice B).
-    expect(other.membershipAvailable && other.roles.join() === "student" && !other.saved).toBe(true);
+    // Readings for everyone (Daniel, 2026-10-27): a student-only account keeps a saved layer like any other live membership.
+    expect(other.membershipAvailable && other.roles.join() === "student" && other.saved).toBe(true);
     for (const handle of ["", randomBytes(32).toString("base64url")]) expect(await denied(() => f.portal.sessionSummary(f.http("multi", handle)), 403)).toBe(true);
     await f.owner(async () => { await f.db.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, f.tutorGrant.id)); });
     expect((await f.portal.sessionSummary(f.http())).roles.join() === "parent").toBe(true);
@@ -79,6 +79,41 @@ describe("private portal read DTOs and recipient invitation review", () => {
     expect(await denied(() => f.portal.sessionSummary(f.http()), 403)).toBe(true);
     await f.owner(async () => { await f.db.update(s.user).set({ emailVerified: false }).where(eq(s.user.id, f.identities.recipient.id)); });
     expect(await denied(() => f.portal.sessionSummary(f.http("recipient")), 403)).toBe(true);
+  });
+
+  it("begins a session by making the first membership once, under the cookie-mutation rule, in the host's tenant only, never for a disabled or unverified account", async () => {
+    const f = await fixture();
+    const rows = (tenant: string) => f.owner(() => f.db.select().from(s.membership).where(and(eq(s.membership.tenantId, tenant), eq(s.membership.userId, f.identities.recipient.id))));
+    expect(await rows("crc")).toHaveLength(0);
+    // A GET, a POST without the exact Origin and a practice-context header are refused before anything is written.
+    expect(await denied(() => f.portal.beginSession(f.http("recipient")), 403)).toBe(true);
+    expect(await denied(() => f.portal.beginSession({ ...f.http("recipient", undefined, { method: "POST" }), headers: new Headers({ cookie: f.identities.recipient.cookie, origin: "https://evil.example" }) }), 403)).toBe(true);
+    expect(await denied(() => f.portal.beginSession(f.http("recipient", "", { method: "POST" })), 403)).toBe(true);
+    expect(await denied(() => f.portal.beginSession(f.http("recipient", undefined, { method: "POST", cookie: "" })), 401)).toBe(true);
+    expect(await rows("crc")).toHaveLength(0);
+    const begun = await f.portal.beginSession(f.http("recipient", undefined, { method: "POST" }));
+    expect(begun).toMatchObject({ membershipAvailable: true, roles: [], saved: true, approver: false });
+    expect(Object.keys(begun).sort().join()).toBe("approver,membershipAvailable,roles,saved,sessionBinding");
+    expect(!JSON.stringify(begun).includes("@")).toBe(true);
+    const [made] = await rows("crc");
+    expect(made).toMatchObject({ tenantId: "crc", disabledAt: null, authorityRevision: 1 });
+    // The summary now names the membership, so its binding differs from the empty one and agrees with a fresh GET.
+    const after = await f.portal.sessionSummary(f.http("recipient"));
+    expect(after.sessionBinding).toBe(begun.sessionBinding);
+    expect(after.membershipAvailable && after.saved).toBe(true);
+    // Again: nothing more is inserted, the same summary comes back.
+    expect((await f.portal.beginSession(f.http("recipient", undefined, { method: "POST" }))).sessionBinding).toBe(begun.sessionBinding);
+    expect(await rows("crc")).toHaveLength(1);
+    // The host decides the tenant: the other congregation's origin makes a membership there and touches none here.
+    expect(await rows("other")).toHaveLength(0);
+    expect((await f.portal.beginSession(f.http("recipient", undefined, { method: "POST", origin: "http://localhost:3101" }))).membershipAvailable).toBe(true);
+    expect(await rows("other")).toHaveLength(1); expect(await rows("crc")).toHaveLength(1);
+    // A disabled membership is refused, as everywhere; an unverified account is refused before a row exists.
+    await f.owner(async () => { await f.db.update(s.membership).set({ disabledAt: new Date() }).where(eq(s.membership.id, made.id)); });
+    expect(await denied(() => f.portal.beginSession(f.http("recipient", undefined, { method: "POST" })), 403)).toBe(true);
+    await f.owner(async () => { await f.db.update(s.user).set({ emailVerified: false }).where(eq(s.user.id, f.identities.recipient.id)); await f.db.delete(s.membership).where(eq(s.membership.id, made.id)); });
+    expect(await denied(() => f.portal.beginSession(f.http("recipient", undefined, { method: "POST" })), 403)).toBe(true);
+    expect(await rows("crc")).toHaveLength(0);
   });
 
   it("returns confirmed readings for each explicit authorized base mode and honest empty assignments", async () => {

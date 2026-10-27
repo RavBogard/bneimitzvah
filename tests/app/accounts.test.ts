@@ -74,12 +74,9 @@ describe("asking for an account", () => {
     const [row] = await t.f.owner(() => t.f.db.select().from(s.accountRequest));
     expect(row).toMatchObject({ displayName: "Ruth bat Naomi", purpose: "Learning to lein", notifyStatus: "sent" });
     expect((await requests(t)).json.requests).toEqual([{ id: row.id, name: "Ruth bat Naomi", purpose: "Learning to lein", email: "acct-asker@example.test", requestedAt: expect.any(String) }]);
-    // A student-only account may ask too; a parent, tutor or admin already keeps saved readings.
-    expect((await t.call("/api/account/request", "learner")).json.state).toBe("requestable");
-    for (const who of ["multi", "admin"]) {
-      expect((await t.call("/api/account/request", who)).json.state).toBe("member");
-      expect((await t.call("/api/account/request", who, { name: "Staff" })).json).toEqual({ ok: true, state: "member" });
-    }
+    // Anyone without an approved Member role may ask, staff and students included (a request asks to be linked, plan D6); only the approver's
+    // tenant_member row says "member" now that every membership keeps a shelf (plan D1).
+    for (const who of ["learner", "multi", "admin"]) expect((await t.call("/api/account/request", who)).json.state, who).toBe("requestable");
     expect(await t.f.owner(async () => (await t.f.db.select().from(s.accountRequest)).length)).toBe(1);
     // Requesting is not audited: the request row is the record.
     expect(await t.f.owner(async () => (await t.f.db.select().from(s.auditEvent)).map(row => row.action))).toEqual(["approver.designate"]);
@@ -216,7 +213,7 @@ describe("approving and declining", () => {
 });
 
 describe("members and approvers", () => {
-  it("lists members by name only, and ending one removes saved readings at once while keeping the rows", async () => {
+  it("lists members by name only, and ending one ends the Member role while the person's shelf and rows stay", async () => {
     const t = await setup();
     await t.person("kept");
     await t.call("/api/account/request", "kept", { name: "Kept" });
@@ -230,8 +227,10 @@ describe("members and approvers", () => {
     const memberId = list.json.members[0].id;
     expect((await t.call("/api/accounts/members/end", "multi", { memberId })).status).toBe(403);
     expect((await t.call("/api/accounts/members/end", "admin", { memberId })).json).toEqual({ ok: true });
-    expect((await t.call("/api/saved/readings", "kept")).status).toBe(403);
-    expect((await t.call("/api/session", "kept")).json.saved).toBe(false);
+    // Readings for everyone (plan D1): the shelf is the live membership's, so ending the Member role leaves it; the person may ask again.
+    expect((await t.call("/api/saved/readings", "kept")).status).toBe(200);
+    expect((await t.call("/api/session", "kept")).json).toMatchObject({ saved: true, membershipAvailable: true });
+    expect((await t.call("/api/account/request", "kept")).json.state).toBe("requestable");
     expect((await t.call("/api/accounts/members/end", "admin", { memberId })).status).toBe(404);
     expect((await t.audits("member.revoke")).map(audit => audit.targetId)).toEqual([memberId]);
     expect(await t.f.owner(async () => (await t.f.db.select().from(s.savedReading)).length)).toBe(1);
@@ -280,7 +279,7 @@ describe("members and approvers", () => {
     const refused = await t.call("/api/accounts/requests/approve", "multi", { mode: "tutor", requestId: again.id });
     expect(refused).toEqual({ status: 409, json: { ok: false, code: "admin-only" } });
     expect((await requests(t)).json.requests.map((row: { id: string }) => row.id)).toContain(again.id);
-    expect((await t.call("/api/saved/readings", "ended")).status).toBe(403);
+    expect((await t.call("/api/saved/readings", "ended")).status).toBe(200);
     expect(t.mail.filter(row => row.kind === "account-approved")).toHaveLength(1);
     // Someone never ended is still the tutor's to approve; the ended person is the admin's.
     expect((await t.call("/api/accounts/requests/approve", "multi", { mode: "tutor", requestId: fresh.id })).status).toBe(200);

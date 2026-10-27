@@ -8,7 +8,6 @@ import type { AccessDatabase, AccessRequest, AccessTransaction, Actor } from "..
 import { withTenantTransaction } from "../db/runtime";
 import { requireCookieMutation } from "../http/mutations";
 import type { AccountMailKind, AccountMailOutcome } from "../mail/transport";
-import { memberEligible as savedEligible } from "../access/eligibility";
 import * as s from "../db/index";
 import * as data from "./data";
 import * as validate from "./validation";
@@ -69,7 +68,7 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
         // The account's own name, when it is a plain name rather than an address.
         const shown = account ? validate.shownName(account.name) : "", suggestedName = shown === "Portal member" ? "" : shown;
         const { productName } = await data.tenantNames(tx, identity.tenantId);
-        if (identity.membership && await savedEligible(tx, identity.tenantId, identity.membership.id)) return { ok: true as const, state: "member" as const, suggestedName, productName };
+        if (identity.membership && await data.activeMember(tx, identity.tenantId, identity.membership.id)) return { ok: true as const, state: "member" as const, suggestedName, productName };
         const pending = await data.requestOf(tx, identity.tenantId, identity.userId);
         return { ok: true as const, state: pending ? "pending" as const : "requestable" as const, suggestedName, productName };
       });
@@ -79,7 +78,7 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
     async request(request: Request, supplied: unknown) {
       const value = validate.request(supplied);
       const result = await input.access.withVerifiedIdentity(request, { intent: "data-write", mutation: true }, async (tx, identity) => {
-        if (identity.membership && await savedEligible(tx, identity.tenantId, identity.membership.id)) return { ok: true as const, state: "member" as const, mail: null };
+        if (identity.membership && await data.activeMember(tx, identity.tenantId, identity.membership.id)) return { ok: true as const, state: "member" as const, mail: null };
         await data.lockRequestQueue(tx, identity.tenantId);
         if (await data.requestOf(tx, identity.tenantId, identity.userId)) return { ok: true as const, state: "pending" as const, mail: null };
         const at = now();

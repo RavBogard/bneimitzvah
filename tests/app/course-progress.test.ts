@@ -68,9 +68,10 @@ async function setup() {
 }
 
 describe("signed-in course progress", () => {
-  it("is 401 signed out and 403 without a membership, with a disabled membership or with every grant revoked; any live grant keeps it, students included", async () => {
+  it("is 401 signed out and 403 without a membership or with a disabled one; every live membership keeps it, students, revoked grants and ended Member roles included", async () => {
     const t = await setup();
-    for (const [who, status] of [["anonymous", 401], ["recipient", 403], ["disabled", 403], ["revoked", 403], ["ended", 403], ["member", 200], ["learner", 200], ["multi", 200], ["admin", 200]] as const)
+    // Readings for everyone (plan D1): a live membership is the whole rule; grants and the Member role no longer gate Learn sync.
+    for (const [who, status] of [["anonymous", 401], ["recipient", 403], ["disabled", 403], ["revoked", 200], ["ended", 200], ["member", 200], ["learner", 200], ["multi", 200], ["admin", 200]] as const)
       expect((await t.call("/api/learn/progress", who)).status, who).toBe(status);
   });
 
@@ -167,15 +168,14 @@ describe("signed-in course progress", () => {
     // The learner's document is untouched by the Member's writes, and neither sees the other's.
     expect((await t.call("/api/learn/progress", "learner")).json).toMatchObject({ version: 1, progress: theirs });
     expect((await t.call("/api/learn/progress", "member")).json).toMatchObject({ version: 2, progress: merged.json.progress });
-    // An ended membership is refused, naming only its own owner; no membership at all names none.
+    // An ended Member role no longer ends progress (plan D1): the membership keeps its own document, apart from everyone else's; no membership at all names no owner.
     const ended = await t.call("/api/learn/progress/put", "ended", { progress: mine, expectedVersion: 0 });
-    expect(ended.status).toBe(403);
-    expect(Object.keys(ended.json).sort()).toEqual(["error", "owner"]);
-    expect(ended.json.owner).toMatch(/^[a-f0-9]{32}$/);
-    expect([empty.json.owner, (await t.call("/api/learn/progress", "learner")).json.owner]).not.toContain(ended.json.owner);
-    expect((await t.call("/api/learn/progress", "ended")).json.owner).toBe(ended.json.owner);
+    expect(ended.json).toMatchObject({ ok: true, version: 1, progress: mine });
+    const endedOwner = (await t.call("/api/learn/progress", "ended")).json.owner;
+    expect(endedOwner).toMatch(/^[a-f0-9]{32}$/);
+    expect([empty.json.owner, (await t.call("/api/learn/progress", "learner")).json.owner]).not.toContain(endedOwner);
     for (const who of ["recipient", "disabled", "anonymous"] as const) expect(Object.keys((await t.call("/api/learn/progress", who)).json), who).toEqual(["error"]);
-    expect(await t.f.owner(async () => (await t.f.db.select().from(s.courseProgressTable)).length)).toBe(2);
+    expect(await t.f.owner(async () => (await t.f.db.select().from(s.courseProgressTable)).length)).toBe(3);
   });
 
   it("gives a signed-in student their own ceremony date for the known-date cap, and nobody else a date", async () => {
