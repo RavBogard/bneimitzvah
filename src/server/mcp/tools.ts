@@ -1,3 +1,4 @@
+import type { DelegatedInvitations } from "../invitations/service";
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
@@ -42,6 +43,8 @@ export type ToolContext<Q extends PgQueryResultHKT> = Readonly<{
   readings: ReturnType<typeof createReadingWork<Q>>; sources: ReturnType<typeof createDelegatedSourceAssignments<Q>>;
   /** Curated discussions and Claude translations (1.7 M6): admin, attended only. */
   discussions: DiscussionService<Q>;
+  /** The portal's invitation write and email, under the live admin connection (invite_tutor); null when not composed. */
+  invitations: DelegatedInvitations<Q> | null;
 }>;
 export type Tool<Q extends PgQueryResultHKT> = Readonly<{
   name: string; description: string; inputSchema: JsonSchema; annotations: Readonly<Record<string, unknown>>;

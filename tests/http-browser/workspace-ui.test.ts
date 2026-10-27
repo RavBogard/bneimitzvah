@@ -149,9 +149,13 @@ it("creates and edits a real roster record, blocks stale409 overwrite and leaves
   await safe(() => tab.getByRole("button", { name: "Confirm disable", exact: true }).click());
   const rows = tab.getByRole("list", { name: "Students", exact: true }).getByRole("listitem");
   const disabledRow = rows.filter({ has: tab.getByRole("button", { name: "Details for Synthetic revised Workspace", exact: true }) });
+  // A disabled student is hidden from the list until "Show disabled" brings it back to view.
+  await ui(tab.getByRole("status").filter({ hasText: "Synthetic revised Workspace is disabled" })).toBeVisible();
+  await ui(disabledRow).toHaveCount(0);
+  await safe(() => tab.getByTestId("roster-show-disabled").click());
+  await ui(tab.getByTestId("roster-show-disabled")).toHaveAttribute("aria-pressed", "true");
   await ui(disabledRow.getByText("Disabled", { exact: true })).toBeVisible();
   expect(await disabledRow.getByRole("link").filter({ hasText: "Synthetic revised Workspace" }).count()).toBe(0);
-  await ui(tab.getByText("Synthetic revised Workspace is disabled. Their record stays in the list.", { exact: true })).toBeVisible();
   await safe(() => tab.getByRole("button", { name: "Details for Synthetic revised Workspace", exact: true }).click());
   await ui(tab.getByText("This student is disabled. Their record is kept for reference; editing and reactivation aren’t offered here.", { exact: true })).toBeVisible();
   expect(await tab.getByRole("button", { name: "Save student", exact: true }).count()).toBe(0);

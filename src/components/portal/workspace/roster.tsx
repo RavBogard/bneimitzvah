@@ -147,7 +147,7 @@ function Roster() {
       const result = disable && current ? await workspaceApi.disable(current) : await workspaceApi.save(form, current ?? undefined);
       if (generation !== lifetime.current) return;
       const review = "readingNeedsReview" in result && result.readingNeedsReview;
-      const name = fullName(form), created = !disable && !current, saved = disable && current ? `${fullName(current)} is disabled. Their record stays in the list.` : review ? `Saved ${name}. The date or service changed, so both readings need review.` : current ? `Saved ${name}.` : "";
+      const name = fullName(form), created = !disable && !current, saved = disable && current ? `${fullName(current)} is disabled and hidden from the list. Their record is kept.` : review ? `Saved ${name}. The date or service changed, so both readings need review.` : current ? `Saved ${name}.` : "";
       let refreshed = true; try { await load(); } catch { refreshed = false; }
       // A new student: "Added Noa. Next: choose a tutor, invite a parent, assign the reading", each step a link (1.9 N14, AD-02).
       if (generation === lifetime.current && created) setAdded({ id: result.id, firstName: form.firstName.trim() });
@@ -162,9 +162,12 @@ function Roster() {
     } finally { gate.current = false; setPending(false); }
   }
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void mutate(false); }
-  // N21: a student whose ceremony is done leaves the active roster for the Ceremony done list (a disabled one stays as Disabled).
+  // N21: a student whose ceremony is done leaves the active roster for the Ceremony done list (a disabled one is counted with the disabled).
   // 1.9 N14: the roster reads soonest ceremony first.
-  const listed = useMemo(() => byCeremony(rows.filter(row => !row.ceremonyDoneAt || row.disabledAt)), [rows]);
+  // Daniel, 2026-10-26: a disabled student (a duplicate, or one who left) is hidden from the list; "Show disabled" brings them back to view.
+  const [showDisabled, setShowDisabled] = useState(false);
+  const roster = useMemo(() => byCeremony(rows.filter(row => !row.ceremonyDoneAt || row.disabledAt)), [rows]);
+  const listed = useMemo(() => showDisabled ? roster : roster.filter(row => !row.disabledAt), [roster, showDisabled]);
   const needsYou = useMemo(() => statuses ? needsYouRows(rows as NeedsYouStudent[], statuses, new Date(), neededInvites) : null, [rows, statuses, neededInvites]);
   // ?edit=<id> (the reading page's "Edit details") opens that student's details once the roster has loaded.
   useEffect(() => {
@@ -175,7 +178,7 @@ function Roster() {
   const doneRows = useMemo(() => rows.filter(row => row.ceremonyDoneAt && !row.disabledAt), [rows]);
   const matches = useMemo(() => { const words = searchable(query).split(/\s+/).filter(Boolean); return words.length ? listed.filter(row => { const name = searchable(fullName(row)); return words.every(word => name.includes(word)); }) : listed; }, [listed, query]);
   const pageCount = Math.max(1, Math.ceil(matches.length / PAGE)), pageRows = matches.slice(page * PAGE, page * PAGE + PAGE);
-  const disabledCount = listed.filter(row => row.disabledAt).length, activeCount = listed.length - disabledCount;
+  const disabledCount = roster.filter(row => row.disabledAt).length, activeCount = roster.length - disabledCount;
   const label = (name: keyof StudentInput) => name === "firstName" ? "First name" : name === "lastName" ? "Last name" : name === "ceremonyDate" ? "Ceremony date" : name === "parentEmail" ? (form.studentKind === "child" ? "Parent email" : "Parent email (optional)") : (form.studentKind === "adult" ? "Student email" : "Student email (optional)");
   const input = (name: "firstName" | "lastName" | "ceremonyDate" | "parentEmail" | "ownEmail") => <div key={name} className="roster-field">
     <label htmlFor={`roster-${name}`}>{label(name)}</label>
@@ -208,9 +211,10 @@ function Roster() {
           <ThisWeekLists students={rows} />
         </>}
         {!thisWeek && <>
-        {listed.length > 0 && <div className="roster-tools">
+        {roster.length > 0 && <div className="roster-tools">
           <label className="roster-search"><span className="sr-only">Find a student</span><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M16 16l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg><input type="search" placeholder="Find a student" value={query} onChange={event => { setQuery(event.target.value); setPage(0); }} autoComplete="off" /></label>
-          <p className="roster-count" aria-live="polite">{query.trim() ? `${matches.length} of ${listed.length} ${listed.length === 1 ? "student" : "students"}` : `${activeCount} ${activeCount === 1 ? "student" : "students"}${disabledCount ? ` · ${disabledCount} disabled` : ""}`}{pageCount > 1 ? ` · page ${page + 1} of ${pageCount}` : ""}</p>
+          <p className="roster-count" aria-live="polite">{query.trim() ? `${matches.length} of ${listed.length} ${listed.length === 1 ? "student" : "students"}` : `${activeCount} ${activeCount === 1 ? "student" : "students"}`}{pageCount > 1 ? ` · page ${page + 1} of ${pageCount}` : ""}</p>
+          {disabledCount > 0 && <button type="button" className="button-text roster-show-disabled" data-testid="roster-show-disabled" aria-pressed={showDisabled} onClick={() => { setShowDisabled(value => !value); setPage(0); }}>{showDisabled ? "Hide disabled" : `Show ${disabledCount} disabled`}</button>}
           <button type="button" className="hero-icon roster-reload" aria-label="Reload roster" disabled={pending} onClick={() => void load().catch(() => undefined)}>{reloadIcon}</button>
         </div>}
         {pageRows.length > 0 && <ul className="roster-list" aria-label="Students">{pageRows.map(row => {
@@ -223,7 +227,8 @@ function Roster() {
             <div className="roster-row-actions">{!row.disabledAt && <button type="button" className="roster-action" aria-label={`Honors for ${name}`} disabled={pending || editing || !!honorsStudent} onClick={event => { honorsOrigin.current = event.currentTarget; setHonorsStudent(row); }}>Honors</button>}<button type="button" className="roster-action" aria-label={`${row.disabledAt ? "Details" : "Edit details"} for ${name}`} disabled={pending || conflict} onClick={event => choose(row, event)}>{row.disabledAt ? "Details" : "Edit"}</button><WorkspaceLink className="roster-action" aria-label={`People for ${name}`} href={`/workspace/admin/students/${row.id}/access`}>People</WorkspaceLink></div>
           </li>;
         })}</ul>}
-        {!listed.length ? <div className="admin-empty"><p className="admin-empty-title">No students yet</p><p>Add a student, or import a list from a spreadsheet.</p><button type="button" className="button-text" onClick={() => void load().catch(() => undefined)}>Reload roster</button></div>
+        {!roster.length ? <div className="admin-empty"><p className="admin-empty-title">No students yet</p><p>Add a student, or import a list from a spreadsheet.</p><button type="button" className="button-text" onClick={() => void load().catch(() => undefined)}>Reload roster</button></div>
+          : !listed.length ? <div className="admin-empty"><p className="admin-empty-title">No active students</p><p>Every student here is disabled. Add a student, or show the disabled ones.</p></div>
           : !matches.length && <div className="admin-empty"><p className="admin-empty-title">No student matches “<bdi dir="auto">{query.trim()}</bdi>”</p><p>Check the spelling, or search by first or last name.</p></div>}
         {pageCount > 1 && <nav className="roster-pages" aria-label="Roster pages"><button className="button-secondary admin-pill" disabled={pending || page === 0} onClick={() => setPage(value => value - 1)}>Previous page</button><button className="button-secondary admin-pill" disabled={pending || page + 1 >= pageCount} onClick={() => setPage(value => value + 1)}>Next page</button></nav>}
         {doneRows.length > 0 && <section className="roster-ceremony-done" aria-labelledby="roster-ceremony-done-heading" data-testid="ceremony-done-list">
