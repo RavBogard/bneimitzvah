@@ -67,6 +67,72 @@ function studentParentContactMatches(student:{parentEmail:string|null;secondPare
   return first || second;
 }
 
+type Pending = { invitation: data.IssuedInvitation; actor: Actor; token: string };
+
+/**
+ * The one invitation-issue write, inside the caller's transaction and under an admin authority the caller has already
+ * established (the portal's manage-invites capability, or the portal MCP's live roster connection): the student checks,
+ * the send budget, the row and its audit. The raw token leaves only toward delivery; it is never stored, logged or returned.
+ */
+export async function writeIssuedInvitation<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: Actor,
+  selection: { role: InvitedRole; email: string; studentId?: string }, throttleSecret: string): Promise<Pending> {
+  const email = normalizedInvitationEmail(selection.email);
+  if (!["parent", "student", "tutor"].includes(selection.role)) throw new AccessDenied(403);
+  if (selection.role === "tutor" ? selection.studentId !== undefined : typeof selection.studentId !== "string" || !uuid.test(selection.studentId)) throw new AccessDenied(403);
+  const secret = createInvitationSecret();
+  if (selection.studentId) {
+    const student = await data.lockInvitationStudent(tx, actor.tenantId, selection.studentId);
+    if (!student || student.disabledAt) throw new AccessDenied(404);
+    // N21: no parent or student invitation for a student whose ceremony is done (the UI hides it; the server refuses it).
+    if (await isCeremonyDone(tx, actor.tenantId, student.id)) throw new AccessDenied(404);
+    if (selection.role === "student" && (studentParentContactMatches(student, email) || await data.mailboxHasParentIdentity(tx, actor.tenantId, email))) throw new AccessDenied(403);
+  }
+  const now = new Date();
+  await data.consumeInvitationBudget(tx, actor, email, throttleSecret, now.getTime());
+  const invitation = await data.insertInvitation(tx, { tenantId: actor.tenantId, tokenHash: secret.tokenHash, email, role: selection.role,
+    studentId: selection.studentId ?? null, inviterMembershipId: actor.membershipId, createdAt: now, expiresAt: new Date(now.getTime() + invitationLifetimeMs(selection.role)) });
+  await data.writeInvitationAudit(tx, actor, "invite.issue", invitation.id);
+  return { invitation, actor, token: secret.token };
+}
+
+/** Delivery after the issue committed: the email, then its outcome recorded. Shared by the portal and the portal MCP. */
+async function deliverInvitation<Q extends PgQueryResultHKT>(db: AccessDatabase<Q>, transport: InvitationTransport, pending: Pending): Promise<Delivery> {
+  const url = new URL("/invitations/open", pending.actor.origin);
+  url.hash = `token=${pending.token}`;
+  let outcome: "sent" | "failed" = "sent";
+  try {
+    // Issue/reissue committed before this call. Provider diagnostics and the
+    // token stay private; crashes leave the durable initial state pending.
+    await transport({ email: pending.invitation.email, url: url.toString(), tenantId: pending.actor.tenantId,
+      role: pending.invitation.role as InvitedRole, expiresAt: pending.invitation.expiresAt });
+  } catch { outcome = "failed"; }
+  try {
+    await withTenantTransaction(db, { tenantId: pending.actor.tenantId }, (tx) => data.recordDeliveryOutcome(tx, pending.invitation, pending.actor, outcome));
+    return { inviteId: pending.invitation.id, delivery: outcome };
+  } catch {
+    // Transport may have sent successfully. Never fabricate a confirmed
+    // outcome when its transaction failed (or its commit is uncertain).
+    return { inviteId: pending.invitation.id, delivery: "unknown" };
+  }
+}
+
+/**
+ * Invitations issued under a delegated authority (the portal MCP): `run` opens the caller's transaction under its
+ * live admin authority and hands over the tenant transaction and the portal actor. The same write and the same
+ * delivery as the portal's Invite button; the result carries the invitation's id and delivery outcome, never a link.
+ */
+export function createDelegatedInvitations<Q extends PgQueryResultHKT>(input: { db: AccessDatabase<Q>; transport: InvitationTransport; throttleSecret: string }) {
+  if (typeof input.transport !== "function" || typeof input.throttleSecret !== "string" || input.throttleSecret.length < 32) throw new AccessUnavailable();
+  return Object.freeze({
+    async issueAs(run: (work: (tx: AccessTransaction<Q>, actor: Actor) => Promise<Pending>) => Promise<Pending>, selection: { role: InvitedRole; email: string; studentId?: string }) {
+      const pending = await run((tx, actor) => writeIssuedInvitation(tx, actor, selection, input.throttleSecret));
+      const delivery = await deliverInvitation(input.db, input.transport, pending);
+      return Object.freeze({ ...delivery, expiresAt: pending.invitation.expiresAt.toISOString() });
+    },
+  });
+}
+export type DelegatedInvitations<Q extends PgQueryResultHKT> = ReturnType<typeof createDelegatedInvitations<Q>>;
+
 export function createInvitationService<Q extends PgQueryResultHKT>(input: {
   db: AccessDatabase<Q>; access: ReturnType<typeof createAccessService<Q>>; transport: InvitationTransport; throttleSecret: string;
 }) {
@@ -93,46 +159,16 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
       || !timingSafeEqual(supplied, reviewDigest(invitation, identity, expiry))) throw new AccessDenied(404);
   }
 
-  async function deliver(pending: { invitation: data.IssuedInvitation; actor: Actor; token: string }): Promise<Delivery> {
-    const url = new URL("/invitations/open", pending.actor.origin);
-    url.hash = `token=${pending.token}`;
-    let outcome: "sent" | "failed" = "sent";
-    try {
-      // Issue/reissue committed before this call. Provider diagnostics and the
-      // token stay private; crashes leave the durable initial state pending.
-      await input.transport({ email: pending.invitation.email, url: url.toString(), tenantId: pending.actor.tenantId,
-        role: pending.invitation.role as InvitedRole, expiresAt: pending.invitation.expiresAt });
-    } catch { outcome = "failed"; }
-    try {
-      await withTenantTransaction(input.db, { tenantId: pending.actor.tenantId }, (tx) => data.recordDeliveryOutcome(tx, pending.invitation, pending.actor, outcome));
-      return { inviteId: pending.invitation.id, delivery: outcome };
-    } catch {
-      // Transport may have sent successfully. Never fabricate a confirmed
-      // outcome when its transaction failed (or its commit is uncertain).
-      return { inviteId: pending.invitation.id, delivery: "unknown" };
-    }
-  }
+  const deliver = (pending: Pending) => deliverInvitation(input.db, input.transport, pending);
 
   async function issue(request: CookieMutationRequest, selection: { mode: ActiveMode; role: InvitedRole; email: string; studentId?: string }) {
-    const email = normalizedInvitationEmail(selection.email);
+    // Checked before any transaction, as before: a malformed address or role is refused without opening one.
+    normalizedInvitationEmail(selection.email);
     if (!["parent", "student", "tutor"].includes(selection.role)) throw new AccessDenied(403);
     if (selection.role === "tutor" ? selection.studentId !== undefined : typeof selection.studentId !== "string" || !uuid.test(selection.studentId)) throw new AccessDenied(403);
-    const secret = createInvitationSecret();
     const pending = await input.access.withAdminCapability(request, { mode: selection.mode, capability: "manage-invites" }, async (tx, actor) => {
       requireCookieMutation(request, actor.origin);
-      if (selection.studentId) {
-        const student = await data.lockInvitationStudent(tx, actor.tenantId, selection.studentId);
-        if (!student || student.disabledAt) throw new AccessDenied(404);
-        // N21: no parent or student invitation for a student whose ceremony is done (the UI hides it; the server refuses it).
-        if (await isCeremonyDone(tx, actor.tenantId, student.id)) throw new AccessDenied(404);
-        if (selection.role === "student" && (studentParentContactMatches(student, email) || await data.mailboxHasParentIdentity(tx, actor.tenantId, email))) throw new AccessDenied(403);
-      }
-      const now = new Date();
-      await data.consumeInvitationBudget(tx, actor, email, input.throttleSecret, now.getTime());
-      const invitation = await data.insertInvitation(tx, { tenantId: actor.tenantId, tokenHash: secret.tokenHash, email, role: selection.role,
-        studentId: selection.studentId ?? null, inviterMembershipId: actor.membershipId, createdAt: now, expiresAt: new Date(now.getTime() + invitationLifetimeMs(selection.role)) });
-      await data.writeInvitationAudit(tx, actor, "invite.issue", invitation.id);
-      return { invitation, actor, token: secret.token };
+      return writeIssuedInvitation(tx, actor, selection, input.throttleSecret);
     });
     return deliver(pending);
   }

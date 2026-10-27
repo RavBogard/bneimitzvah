@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { AccessDenied } from "../access/errors";
 import type { AccessTransaction, Actor, LockIntent, StudentAuthority } from "../access/types";
@@ -14,6 +14,7 @@ import * as relationships from "../relationships/data";
 import { displayName, writeTutorAssignment, writeTutorRevocation } from "../relationships/service";
 import { preferredFirst } from "../settings/validation";
 import { writeNewStudent, writeStudentDisable, writeStudentEdit } from "../students/service";
+import { normalizedInvitationEmail } from "../invitations/tokens";
 import { rehearsalsFit, studentInput } from "../students/validation";
 import { lockRabbi } from "../study-guides/authority";
 import { currentVerseCapture } from "../study/current-verse-context";
@@ -344,6 +345,12 @@ export function createSetupTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>
       inputSchema: closed({ studentId, expectedRevision: { type: "integer", minimum: 1, maximum: 2147483647, description: "The student's revision from get_student_setup." } }, ["studentId", "expectedRevision"]),
       handler: async (input, ctx) => disableStudent(input, ctx),
     },
+    {
+      name: "invite_tutor", roles, scope, annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+      description: "Invite a person to be a tutor here, as the portal's Invitations page does: the portal emails them its invitation, with a link to sign in and accept. Only on the rabbi's instruction in this conversation, naming the person. It needs a fresh sign-in, like adding a tutor: within 15 minutes of connecting Claude. If that address already has a live tutor invitation, nothing new is sent and that invitation comes back. Once they accept, they appear in list_tutors and set_student_tutor assigns their students. The address is never shown back.",
+      inputSchema: closed({ email: { type: "string", maxLength: 254, description: "The tutor's email address." } }, ["email"]),
+      handler: async (input, ctx) => inviteTutor(input, ctx),
+    },
   ] satisfies Tool<Q>[]);
 }
 
@@ -457,6 +464,40 @@ async function editStudent<Q extends PgQueryResultHKT>(input: Record<string, unk
     return { ok: true, studentId: id, revision: updated.revision, ...shownFields, rehearsal1: after.rehearsal1, rehearsal2: after.rehearsal2, serviceSlot: after.serviceSlot, readingsSentToReview: updated.readingNeedsReview,
       next: updated.readingNeedsReview ? "The date or slot changed, so the student's readings and service plan are marked for review: check the readings with get_student_setup." : "Nothing was sent to anyone." };
   });
+}
+
+/** invite_tutor: the portal's invitation write and email (writeIssuedInvitation) under the live admin roster connection. */
+async function inviteTutor<Q extends PgQueryResultHKT>(input: Record<string, unknown>, ctx: ToolContext<Q>) {
+  requireRoster(ctx.actor);
+  if (ctx.actor.unattended) return routine;
+  if (!ctx.invitations) return { ok: false, code: "invitations-unavailable", hint: "Invitations can't be sent from this connection; invite the tutor from the portal's Invitations page." };
+  let email: string;
+  try { if (typeof input.email !== "string") throw new Error("email"); email = normalizedInvitationEmail(input.email); } catch { return { ok: false, code: "invalid-input", hint: "That is not an email address the portal can invite." }; }
+  const stale = { ok: false, code: "fresh-sign-in-required", hint: "Inviting a tutor needs a fresh sign-in. Reconnect Claude to the portal, then invite within 15 minutes." };
+  // Where a refusal came from: a 403 once the write has begun is the send budget; one before it is the connection's authority.
+  let writing = false;
+  try {
+    const sent = await ctx.invitations.issueAs(work => asAdmin(ctx, "authority-write", async (tx, live, portal, alive) => {
+      // The portal's fresh sign-in rule for invitations (manage-invites), as set_student_tutor applies it for adding a tutor.
+      if (ctx.mcp.now() - live.approvedAt >= GOOGLE_CONSENT_WINDOW_MS) throw new Refusal(stale);
+      // A resent call (or a second ask) finds the live invitation and sends nothing more; "Send again" in the portal re-sends.
+      // authority-write locks this connection's row and admin grant FOR UPDATE, so two deliveries of one call take turns here.
+      const [open] = await tx.select({ id: s.invite.id, expiresAt: s.invite.expiresAt }).from(s.invite).where(and(eq(s.invite.tenantId, live.tenantId), eq(s.invite.email, email),
+        eq(s.invite.role, "tutor"), isNull(s.invite.acceptedAt), isNull(s.invite.revokedAt), gt(s.invite.expiresAt, new Date()))).limit(1);
+      if (open) throw new Refusal({ ok: true, alreadyInvited: true, inviteId: open.id, expiresAt: open.expiresAt.toISOString(), invitationsSent: 0,
+        next: "This address already has a live tutor invitation, so nothing new was sent. The portal's Invitations page can send it again." });
+      alive();
+      writing = true;
+      return work(tx, portal);
+    }), { role: "tutor", email });
+    return { ok: true, inviteId: sent.inviteId, delivery: sent.delivery, expiresAt: sent.expiresAt, invitationsSent: sent.delivery === "sent" ? 1 : 0,
+      next: sent.delivery === "sent" ? "The invitation email went out. Once the tutor accepts, they appear in list_tutors; then set_student_tutor assigns their students."
+        : "The invitation was made, but its email may not have gone out. The portal's Invitations page shows it and can send it again." };
+  } catch (error) {
+    if (error instanceof Refusal) return error.result;
+    if (writing && error instanceof AccessDenied && error.status === 403) return { ok: false, code: "send-limit", hint: "Too many invitations for this address or from this account in the last hour; nothing was sent. Try again later." };
+    throw error;
+  }
 }
 
 /** disable_student: the portal's Disable (writeStudentDisable) under the live admin roster connection. */

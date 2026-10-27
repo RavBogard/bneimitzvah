@@ -31,9 +31,13 @@ export const syntheticReading = async (date: string, calendar: Calendar): Promis
 export async function mcpFixture(enabled = true, now?: () => number, outside: { related?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; loadReading?: typeof syntheticReading; pinnedSource?: PinnedSourceReader } = {}) {
   const f = await accessFixture(); opened.push(f);
   const deployment = { environment: "test" as const, deployment: "suite" };
+  // The portal's invitation email, captured: invite_tutor sends through it and a test reads what would have gone out.
+  const mail: { email: string; url: string; role: string }[] = [];
+  const transport = async (message: { email: string; url: string; role: string }) => { mail.push({ email: message.email, url: message.url, role: message.role }); };
   const mcp = enabled ? createMcpEndpoint({ db: f.db, access: f.service, practice: createPracticeService({ access: f.service }), secret: randomBytes(48).toString("base64url"),
     loadText: async () => { throw new Error("no network"); }, related: outside.related ?? (async () => { throw new Error("no network"); }), loadReading: outside.loadReading ?? syntheticReading, now,
-    pinnedSource: outside.pinnedSource ?? (async () => { throw new SourceTextUnavailable("upstream"); }) }) : null;
+    pinnedSource: outside.pinnedSource ?? (async () => { throw new SourceTextUnavailable("upstream"); }),
+    invitations: { transport, throttleSecret: randomBytes(48).toString("base64url") } }) : null;
   // The staff Claude connections page and the roster's Maven link (release 1.1) share this dispatcher, so a test can end a
   // connection from the portal and watch its bearer stop working.
   const runtime = { origin: ORIGIN, mcp, resolveHost: (request: Request) => resolveTenantHost(f.db, request, deployment),
@@ -95,5 +99,5 @@ export async function mcpFixture(enabled = true, now?: () => number, outside: { 
     const result = body.result as { content: { text: string }[]; isError?: boolean };
     return { isError: !!result.isError, text: result.content[0].text, json: () => JSON.parse(result.content[0].text) };
   };
-  return { f, dispatch, google, get, postJson, postForm, consent, allow, register, connect, rpc, call };
+  return { f, dispatch, google, get, postJson, postForm, consent, allow, register, connect, rpc, call, mail };
 }
