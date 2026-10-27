@@ -171,7 +171,9 @@ it("initial parent-calendar guardian denial clears the accepted selected-child v
   try {
     await workspace(tab, "parent"); await ui.poll(() => ready).toBe(true); await ui(parentSummary(tab)).toBeVisible();
     for (const guardian of guardians) { await fixture.ownerDb.update(s.guardian).set({ revokedAt: new Date(), revision: sql`${s.guardian.revision}+1` }).where(eq(s.guardian.id, guardian.id)); revoked.push(guardian); } release();
-    await ui.poll(() => status).toBe(404); await ui(parentSummary(tab)).toHaveCount(0); await ui(tab.locator("#reading-heading")).toHaveCount(0); await ui(tab.locator(".lesson-entry")).toHaveCount(0);
+    // The denied child's view is cleared. The parent's other linked child (the sibling) may then open in its place; that is the parent's own access, so the check is that the denied child is gone.
+    const [denied] = await fixture.ownerDb.select({ firstName: s.student.firstName, lastName: s.student.lastName }).from(s.student).where(eq(s.student.id, fixture.student.id));
+    await ui.poll(() => status).toBe(404); await ui(parentSummary(tab)).toHaveCount(0); await ui(tab.locator("#reading-heading", { hasText: `${denied.firstName} ${denied.lastName}` })).toHaveCount(0); await ui(tab.locator(".lesson-entry")).toHaveCount(0);
   } finally {
     release(); try { await safe(() => tab.context().close()); } finally {
       // Revocation is permanent: only this test's formerly active pairs receive fresh grants.

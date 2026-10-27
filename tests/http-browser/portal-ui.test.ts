@@ -175,7 +175,7 @@ it("single-submits a real magic link, shows separate genuine roles without fake 
   expect(await roles.getByRole("link").count()).toBe(2);
   // Both roles open My Readings (Area A); the role pages are reached from its rows.
   await roles.getByRole("link").first().click(); await ui.poll(() => new URL(tab.url()).pathname).toBe("/mine");
-  await ui(tab.getByTestId("mine-interim-parent")).toBeVisible(); await ui(tab.getByTestId("mine-interim-tutor")).toBeVisible();
+  await ui(tab.getByTestId("mine-interim-parent")).toBeVisible(); await ui(tab.getByTestId("mine-students")).toBeVisible();
   await tab.locator('a[href="/workspace/parent"]').click(); await ui.poll(() => new URL(tab.url()).pathname).toBe("/workspace/parent");
   // The old role pills are gone; the workspace brand is an actual controlled Next router link.
   await tab.evaluate(() => { (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument = true; });
