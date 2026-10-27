@@ -8,6 +8,8 @@ import { requireCookieMutation } from "../http/mutations";
 import type { CookieMutationRequest } from "../http/mutations";
 import { withTenantTransaction } from "../db/runtime";
 import * as data from "../data/invitations";
+import * as holds from "../data/tutor-invite-holds";
+import { writeTutorAssignment } from "../relationships/service";
 import { isCeremonyDone } from "../data/ceremony-done";
 import type { InvitedRole } from "../data/invitations";
 import { createInvitationSecret, hashInvitationToken, invitationLifetimeMs, normalizedInvitationEmail } from "./tokens";
@@ -93,6 +95,23 @@ export async function writeIssuedInvitation<Q extends PgQueryResultHKT>(tx: Acce
     studentId: selection.studentId ?? null, inviterMembershipId: actor.membershipId, createdAt: now, expiresAt: new Date(now.getTime() + invitationLifetimeMs(selection.role)) });
   await data.writeInvitationAudit(tx, actor, "invite.issue", invitation.id);
   return { invitation, actor, token: secret.token };
+}
+
+/**
+ * Hold students for a live tutor invitation (Daniel, 2026-10-26: choose the students now; the tutor has them on accepting). Under
+ * the same admin authority as the issue, in the same transaction: each student must be an enabled student of this congregation
+ * whose ceremony is not done, or nothing is held (404). Holding grants nothing; acceptance makes the tutor links.
+ */
+export async function writeTutorHolds<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: Actor, inviteId: string, studentIds: readonly string[]) {
+  if (!uuid.test(inviteId) || studentIds.length > holds.MAX_HELD_STUDENTS || new Set(studentIds).size !== studentIds.length || studentIds.some(id => !uuid.test(id))) throw new AccessDenied(403);
+  const invitation = await data.lockInvitation(tx, actor.tenantId, inviteId);
+  if (!invitation || invitation.role !== "tutor" || invitation.acceptedAt || invitation.revokedAt || invitation.expiresAt <= new Date()) throw new AccessDenied(404);
+  for (const studentId of [...studentIds].sort()) {
+    const student = await data.lockInvitationStudent(tx, actor.tenantId, studentId, "read");
+    if (!student || student.disabledAt || await isCeremonyDone(tx, actor.tenantId, student.id)) throw new AccessDenied(404);
+  }
+  if ((await holds.heldStudents(tx, actor.tenantId, inviteId)).filter(id => !studentIds.includes(id)).length + studentIds.length > holds.MAX_HELD_STUDENTS) throw new AccessDenied(403);
+  return holds.insertHolds(tx, actor, inviteId, studentIds);
 }
 
 /** Delivery after the issue committed: the email, then its outcome recorded. Shared by the portal and the portal MCP. */
@@ -210,6 +229,16 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
       ...(copied ? { deliveryStatus: "copied" as const, deliveryAttemptedAt: now } : {}) });
     await data.writeInvitationAudit(tx, actor, "invite.revoke", previous.id);
     await data.writeInvitationAudit(tx, actor, copied ? "invite.copy" : "invite.issue", invitation.id);
+    // A tutor invitation's held students move to the new link, so "Send again" and "Copy link" keep them; the rotating admin holds them.
+    // A held student disabled since is left behind (the insert policy would refuse that row, and acceptance would skip it).
+    if (previous.role === "tutor") {
+      const kept: string[] = [];
+      for (const studentId of await holds.heldStudents(tx, actor.tenantId, previous.id)) {
+        const held = await data.lockInvitationStudent(tx, actor.tenantId, studentId, "read");
+        if (held && !held.disabledAt) kept.push(studentId);
+      }
+      await holds.insertHolds(tx, actor, invitation.id, kept);
+    }
     return invitation;
   }
 
@@ -315,6 +344,14 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
       if (invitation.studentId && invitation.role !== "tutor") {
         const link = await data.linkInvitedStudent(tx, identity.tenantId, invitation.studentId, grantId, invitation.role, invitation.id, invitation.createdAt);
         if (link.created) await data.writeInvitationAudit(tx, actor, invitation.role === "parent" ? "guardian.link" : "identity.link", link.id);
+      }
+      // The students the rabbi held for this tutor invitation become the tutor's, through the portal's own tutor write, in student-id
+      // order. A student since disabled, ceremony-done or already linked is skipped, and so is a hold whose admin is no longer live;
+      // nothing else about the acceptance changes. The tutor.assign audit names the accepting tutor, in tutor mode.
+      if (invitation.role === "tutor") for (const studentId of await holds.heldStudents(tx, identity.tenantId, invitation.id)) {
+        const held = await data.lockInvitationStudent(tx, identity.tenantId, studentId);
+        if (!held || held.disabledAt) continue;
+        await writeTutorAssignment(tx, actor, studentId, grantId);
       }
       if (!await data.consumeInvitation(tx, identity.tenantId, invitation.id, membershipId, now)) throw new AccessDenied(404);
       await data.writeInvitationAudit(tx, actor, "invite.accept", invitation.id);
