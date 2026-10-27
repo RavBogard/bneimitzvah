@@ -70,28 +70,26 @@ test("a saved reading restored with an ended session hides at once and says why"
   await expect(page.getByRole("banner").getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
 });
 
-test("My readings restored with an ended session hides at once, and so does the front door's signed-in state", async ({ page }) => {
+test("Also working on, restored with an ended session, hides at once", async ({ page }) => {
   const signedIn = { value: true };
   await routes(page, signedIn);
-  await page.goto("/");
-  await expect(page.getByRole("region", { name: "My readings" }).getByText("Private synthetic reading")).toBeVisible();
+  await page.goto("/mine");
+  await expect(page.getByRole("region", { name: "Also working on" }).getByText("Private synthetic reading")).toBeVisible();
   signedIn.value = false;
   await restoreEvent(page);
   await expect(page.locator("[data-my-readings]")).toHaveCount(0);
   await expect(page.getByText("Private synthetic reading")).toHaveCount(0);
-  await expect(page.locator('[data-door="beit-mitzvah"]').getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
 });
 
-test("Back after signing out hides My readings restored from the back-forward cache", async ({ page }) => {
+test("Back after signing out hides Also working on, restored from the back-forward cache", async ({ page }) => {
   const signedIn = { value: true };
   await routes(page, signedIn);
-  await page.goto("/");
-  await expect(page.getByRole("region", { name: "My readings" }).getByText("Private synthetic reading")).toBeVisible();
+  await page.goto("/mine");
+  await expect(page.getByRole("region", { name: "Also working on" }).getByText("Private synthetic reading")).toBeVisible();
   await page.goto("/trope-chart");
   signedIn.value = false;
   await page.goBack();
   test.info().annotations.push({ type: "bfcache", description: String(await restoredFromCache(page)) });
-  await expect(page.locator('[data-door="beit-mitzvah"]').getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
   await expect(page.locator("[data-my-readings]")).toHaveCount(0);
   await expect(page.getByText("Private synthetic reading")).toHaveCount(0);
 });

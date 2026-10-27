@@ -4,7 +4,7 @@ import { createSavedReading, fetchSavedReadings, type SavedKind } from "./api";
 import { parseSession, requestPortal } from "../api";
 import { rememberSignedIn, signedInHint, signInPending } from "../signed-in-hint";
 import { ReturnSignInLink } from "../return-sign-in-link";
-import { savedReadingHref } from "./my-readings";
+import { savedReadingHref } from "../mine/own-readings";
 import styles from "./saved.module.css";
 
 /** The passage on screen, as /read knows it: the page's title (a parashah, a named reading or a range; absent on a

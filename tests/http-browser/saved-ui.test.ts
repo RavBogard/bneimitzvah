@@ -73,8 +73,6 @@ it("a tutor-and-parent saves this week's Torah from /read and finds it under My 
     await expect.poll(() => tab.evaluate(() => { try { return JSON.parse(localStorage.getItem("crc-torah:preferences-sync/v1") ?? "null")?.active === true; } catch { return false; } }), { timeout: 15_000 }).toBe(true);
     prefs.length = 0;
     const mine = tab.locator("[data-my-readings]");
-    // Deliberate wording test for the saved readings screens: approved copy, change only with the copy.
-    if (width === 360) await ui(tab.getByTestId("my-readings-empty")).toHaveText("Save a reading from This week to see it here.");
     seen.length = 0;
     await tab.goto("/read", { waitUntil: "domcontentloaded" });
     await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();

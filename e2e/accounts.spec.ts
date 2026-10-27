@@ -56,7 +56,6 @@ test("a pending request says so, a full day or queue is refused plainly, and a m
   state = "member"; await page.reload();
   await expect(page.getByRole("heading", { name: "Your account can save readings", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "This week’s reading", exact: true })).toHaveAttribute("href", "/read");
-  await expect(page.getByRole("region", { name: "My readings" })).toBeVisible();
 });
 
 test("parents, tutors, admins and students are not offered a request on /account (G20: a student already has an account)", async ({ page }) => {

@@ -581,7 +581,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   // A checked session is what the site bar on the public pages remembers (the same hint the reader's Save uses).
   useEffect(() => { if (shellShown) rememberSignedIn(true); }, [shellShown]);
   return <div className="portal-shell workspace-shell" data-rail-pending={!shellShown && failure === null ? "" : undefined}>
-    <a className="skip-link" href="#workspace-main">Skip to workspace</a>
+    <a className="skip-link" href="#workspace-main">{pathname.startsWith("/mine") ? "Skip to main content" : "Skip to workspace"}</a>
     {shellShown && <TabSkipLink roles={summary!.roles} />}
     <SiteBar signedIn onNavigate={controlledLink} />
     <main id="workspace-main" className="workspace-main">

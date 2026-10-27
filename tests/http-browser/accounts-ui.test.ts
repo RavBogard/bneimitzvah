@@ -89,7 +89,6 @@ it("a person asks, an admin sees the count and approves, and the new member save
   // The new member: told, and saving a reading works.
   await asker.goto("/", { waitUntil: "domcontentloaded" });
   await ui(asker.getByRole("heading", { name: "Your account can save readings", exact: true })).toBeVisible();
-  await ui(asker.getByRole("region", { name: "My readings" })).toBeVisible();
   await asker.goto("/read", { waitUntil: "domcontentloaded" });
   await openMore(asker);
   await asker.getByRole("button", { name: "Save", exact: true }).click();

@@ -111,50 +111,6 @@ test("a member saves the passage on screen with its name and Shabbat filled in, 
   }
 });
 
-test("the front door shows My readings under This week for a member: five, then all of them inline", async ({ page }, testInfo) => {
-  for (const width of [360, 1280]) {
-    await page.setViewportSize({ width, height: 900 });
-    await page.unrouteAll({ behavior: "ignoreErrors" });
-    await week(page);
-    await page.route("**/api/session", route => json(route, 200, { membershipAvailable: true, roles: ["parent"], saved: true, approver: false, sessionBinding: binding }));
-    await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: Array.from({ length: 7 }, (_, i) => row(i + 1)) }));
-    await page.goto("/");
-    const mine = page.getByRole("region", { name: "My readings" });
-    await expect(mine).toBeVisible();
-    const top = (selector: string) => page.locator(selector).first().evaluate(node => node.getBoundingClientRect().top);
-    expect(await top("#this-week-title")).toBeLessThan(await top("[data-my-readings]"));
-    expect(await top("[data-my-readings]")).toBeLessThan(await top('[data-door="beit-mitzvah"]'));
-    await expect(mine.getByRole("listitem")).toHaveCount(5);
-    await expect(mine.getByRole("link", { name: /Synthetic reading 1\b/ })).toHaveAttribute("href", `/read?saved=${row(1).id}`);
-    const all = mine.getByRole("button", { name: "All my readings", exact: true });
-    await minSize(page, ["All my readings"]);
-    for (const box of await mine.getByRole("link").evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height))) expect(box).toBeGreaterThanOrEqual(44);
-    await all.click();
-    await expect(mine.getByRole("listitem")).toHaveCount(7);
-    await expect(mine.getByRole("button", { name: "Fewer readings", exact: true })).toHaveAttribute("aria-expanded", "true");
-    expect(await noHorizontalScroll(page)).toBe(true);
-    if (width === 360 && testInfo.project.name === "phone") await page.screenshot({ path: testInfo.outputPath("my-readings-360.png"), fullPage: true });
-  }
-});
-
-test("with none saved it says how to save one; signed out or student-only, the front door is unchanged and never asks", async ({ page }) => {
-  const saved: string[] = [];
-  page.on("request", request => { if (new URL(request.url()).pathname.startsWith("/api/saved/")) saved.push(new URL(request.url()).pathname); });
-  await week(page);
-  await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: [] }));
-  await page.route("**/api/session", route => json(route, 200, { membershipAvailable: true, roles: ["parent", "tutor"], saved: true, approver: false, sessionBinding: binding }));
-  await page.goto("/");
-  await expect(page.getByRole("region", { name: "My readings" }).getByText("Save a reading from This week to see it here.", { exact: true })).toBeVisible();
-  for (const answer of [{ status: 401, body: { error: "authentication-required" } }, { status: 200, body: { membershipAvailable: true, roles: ["student", "parent"], saved: false, approver: false, sessionBinding: binding } }]) {
-    saved.length = 0;
-    await page.unroute("**/api/session"); await page.route("**/api/session", route => json(route, answer.status, answer.body));
-    await page.goto("/");
-    await expect(page.locator('[data-door="beit-mitzvah"]').getByRole("heading", { level: 2 })).toBeVisible();
-    await expect(page.locator("[data-my-readings]")).toHaveCount(0);
-    expect(saved).toEqual([]);
-  }
-});
-
 // /read?saved=<id>: the member's own reading, its passage loaded by ref from the open routes.
 const syllables = ["אָבָ֑ג", "דֵּ֖ה", "וְזַ֥ח"];
 const verseOf = (ref: string) => { const text = `${syllables.join(" ")}׃`; return { ref, english: `Synthetic translation ${ref}`, hebrew: { text, readingText: text, paragraphAfter: null, segments: [{ kind: "text", text }] } }; };
@@ -235,7 +191,7 @@ test("a saved reading opens with its name and date, keeps Still working and Got 
     await page.getByRole("button", { name: "Keep it", exact: true }).click();
     await page.getByRole("button", { name: "Remove reading", exact: true }).click();
     await page.getByRole("button", { name: "Remove", exact: true }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/mine$/);
     expect(posts.remove).toEqual([{ id: savedRow.id, revision: 2 }]);
   }
 });

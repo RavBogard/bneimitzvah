@@ -4,7 +4,6 @@ import { useEffect, useState, type ReactNode } from "react";
 import { addDays, congregationToday, isSaturday, thisShabbat } from "../../../lib/readings/public-shabbat";
 import { fetchPublicWeek, type PublicWeek } from "../public-reading/api";
 import { readAddress } from "../public-reading/urls";
-import { MyReadings } from "../saved/my-readings";
 import { InstallHint } from "../offline/install-hint";
 import { SavedLine } from "../offline/status";
 import { startAccountPreferences } from "../workspace/account-preferences";
@@ -19,7 +18,7 @@ import { signInAddress } from "../../../lib/site/return-address";
  * What the front door knows of the visitor: nothing while access is being checked (the Beit Mitzvah door holds its height), signed out,
  * a signed-in account with its roles, or `task`: the door shows the entry task itself (a refused account, which is signed in and so has
  * no Sign in; or sign-in that is unavailable, which keeps its Try again). `signedIn` is what the site bar shows for it, left undefined
- * when this browser's hint decides. `saved`: the account keeps saved readings, so My readings shows.
+ * when this browser's hint decides. `saved`: the account keeps saved readings, so My Readings has a shelf.
  */
 export type FrontDoorAccount = null | Readonly<{ kind: "sign-in" }> | Readonly<{ kind: "account"; saved: boolean; roles: readonly Role[] }> | Readonly<{ kind: "task"; signedIn: boolean | undefined }>;
 
@@ -105,7 +104,7 @@ function BeitMitzvahDoor({ account, children }: { account: FrontDoorAccount; chi
 }
 
 /**
- * The CRC Torah home: This week, My readings for an account that keeps them, then the Beit Mitzvah door and the Learn to lein door.
+ * The CRC Torah home: This week, then the Beit Mitzvah door and the Learn to lein door.
  * `children` is the entry task (PortalEntry keeps every entry state and behaviour), shown in the Beit Mitzvah door only when the
  * account has no role or the door cannot say who is there.
  */
@@ -119,7 +118,6 @@ export function FrontDoor({ account, children }: { account: FrontDoorAccount; ch
     <main id="front-door-main" className={styles.main}>
       <ThisWeek />
       <SavedLine />
-      {account?.kind === "account" && account.saved && <MyReadings />}
       <div className={styles.doors}>
         <BeitMitzvahDoor account={account}>{children}</BeitMitzvahDoor>
         <section className={styles.door} aria-labelledby="learn-title" data-door="learn">
