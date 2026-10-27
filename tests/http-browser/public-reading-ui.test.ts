@@ -160,6 +160,8 @@ it("any reading: a named reading, a deep-linked verse that plays from the player
     await ui(tab).toHaveURL(/\/read\?reading=bereshit&passage=2$/);
     // The Readings index opens another reading in place of this one.
     await tab.goto("/readings", { waitUntil: "domcontentloaded" });
+    // Coming up settles first (here the calendar fails, and its six held rows give way to one line), so the click lands on the link it aimed at.
+    await ui(tab.getByTestId("readings-coming-up").locator('[aria-busy="true"]')).toHaveCount(0);
     await tab.getByRole("link", { name: "Shabbat Shekalim", exact: true }).click();
     await ui(tab.getByRole("heading", { level: 1, name: "Shabbat Shekalim", exact: true })).toBeVisible();
     await ui(reading(tab).getByRole("heading", { name: "Exodus 30:11", exact: true })).toBeVisible();
