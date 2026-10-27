@@ -274,9 +274,9 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
     {reading && text?.key === textKey && text.error && <div className="workspace-state" role="status"><h2>The text didn’t load</h2><p>Check your connection and try again.</p>
       <button type="button" className="button-secondary" onClick={() => setTextRetry(value => value + 1)}>Try again</button></div>}
     {reading && view === "selection" && sources && <OwnLayerScope value={own}><PassageReading key={textKey} sources={sources} index={0} onIndex={() => {}} verse={linked} onVerseLeft={() => setLinked(null)}
-      registerStart={starter.register} retry={textRetry} onRetry={() => setTextRetry(value => value + 1)} verseExtra={verseExtra} choose={plan} /></OwnLayerScope>}
+      registerStart={starter.register} retry={textRetry} onRetry={() => setTextRetry(value => value + 1)} verseExtra={verseExtra} choose={plan} print={printAddress({ mode: "saved", id })} /></OwnLayerScope>}
     {reading && view !== "selection" && frame && portionSources && <OwnLayerScope value={portionOwn}><PassageReading key={`portion:${view}:${frame.ref}`} sources={portionSources} index={0} onIndex={() => {}} verse={portionVerse} onVerseLeft={() => setPortionVerse(null)}
-      registerStart={starter.register} retry={textRetry} onRetry={() => setTextRetry(value => value + 1)} verseExtra={ref => inReading.has(ref) ? verseExtra(ref) : null} choose={plan} /></OwnLayerScope>}
+      registerStart={starter.register} retry={textRetry} onRetry={() => setTextRetry(value => value + 1)} verseExtra={ref => inReading.has(ref) ? verseExtra(ref) : null} choose={plan} print={printAddress({ mode: "saved", id })} /></OwnLayerScope>}
     {reading && view !== "selection" && frame && !portionSources && (portionText?.error
       ? <div className="workspace-state" role="status"><h2>The text didn’t load</h2><p>Check your connection and try again.</p>
         <div className="hero-actions"><button type="button" className="button-secondary" onClick={() => setTextRetry(value => value + 1)}>Try again</button>

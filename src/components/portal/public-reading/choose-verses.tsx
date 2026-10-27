@@ -96,7 +96,7 @@ export function useVerseChoice(plan: ChoosePlan | undefined, order: readonly str
   useEffect(() => { told.current?.(choosing); return () => told.current?.(false); }, [choosing]);
   const view: VerseChoiceView | undefined = plan ? { choosing, selected, marked, onToggle } : undefined;
   // In the More sheet the sheet closes first, so the bar that opens is the one that takes focus.
-  const button = plan && !choosing ? <button type="button" ref={opener} className="button-secondary" onClick={() => more && !plan.onBegin ? more.close(begin) : begin()}>{plan.label}</button> : null;
+  const button = plan && !choosing ? <button type="button" ref={opener} className="button-secondary" onClick={() => more ? more.close(begin) : begin()}>{plan.label}</button> : null;
   const live = rangeMode && anchor !== null ? `${countLine(count, ranges)}. ${CHOOSE_STRINGS.rangeFrom}` : count < 1 ? CHOOSE_STRINGS.hint : countLine(count, ranges);
   const barView = plan && choosing ? <ChooseBar barRef={bar} label={plan.label} line={live} note={note} rangeMode={rangeMode} canRange={anchor !== null} empty={count < 1} count={count} saved={saved}
     onRange={() => setRangeMode(value => !value)} onClear={() => { change(new Set()); setAnchor(null); setRangeMode(false); setNote(""); }} onCancel={leave}

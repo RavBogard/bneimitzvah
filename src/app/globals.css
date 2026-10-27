@@ -553,7 +553,7 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .study-kind-choice .button-secondary:hover { background: var(--color-hover); }
 .study-kind-choice [aria-pressed="true"], .study-kind-choice [aria-pressed="true"]:hover { background: var(--lake); color: #fff; border-color: transparent; }
 /* The text choice (Torah / Haftarah) and the lens (Lein / Study) share one row above the passage; on a phone they wrap. */
-.reading-lens-switch .button-secondary { display: inline-flex; align-items: center; gap: 0.375rem; }
+.reading-lens-switch .button-secondary { display: inline-flex; align-items: center; gap: 0.25rem; }
 .reading-lens-switch svg { width: 18px; height: 18px; flex: none; }
 .reading-lens-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-block: 1rem; }
 .reading-lens-row > .study-kind-choice { margin: 0; }

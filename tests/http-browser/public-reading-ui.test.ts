@@ -84,7 +84,7 @@ it("a signed-out visitor reads this week's portion, plays a verse and uses word 
     const response = await tab.goto("/read", { waitUntil: "domcontentloaded" });
     expect(response?.status()).toBe(200);
     await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
-    await ui(tab.locator('[data-read-week="this"]')).toBeVisible();
+    await ui(tab.locator("[data-reading-ranges]")).toBeVisible();
     await ui(tab.getByRole("link", { name: "Sign in", exact: true }).first()).toBeVisible();
     await ui(reading(tab).getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
     // Tapping a word plays its whole verse from the human recording.
@@ -99,7 +99,7 @@ it("a signed-out visitor reads this week's portion, plays a verse and uses word 
     // The second text page and the haftarah are one tap away.
     await tab.getByRole("button", { name: "Next text page", exact: true }).click();
     await ui(tab.getByTestId("page-position")).toHaveAttribute("data-page-first", "101"); await ui(tab.getByTestId("page-position")).toHaveAttribute("data-page-last", "146"); await ui(tab.getByTestId("page-position")).toHaveAttribute("data-page-total", "146");
-    await tab.getByRole("group", { name: "Reading text selection" }).getByRole("button", { name: "Haftarah", exact: true }).click();
+    await tab.getByRole("tablist", { name: "Reading text selection" }).getByRole("tab", { name: /^Haftarah/ }).click();
     await ui(reading(tab).getByRole("heading", { name: "Isaiah 1:1", exact: true })).toBeVisible();
     // Nothing on this page reached a signed-in route or carried a cookie.
     expect(seen.privateApi).toBe(false); expect(seen.cookie).toBe(false);
@@ -112,7 +112,7 @@ it("a signed-out visitor reads this week's portion, plays a verse and uses word 
       const target = resolve(capture), allowed = resolve(".local-logs") + sep;
       if (!target.startsWith(allowed)) throw Error("Capture directory refused");
       await mkdir(target, { recursive: true });
-      await tab.getByRole("group", { name: "Reading text selection" }).getByRole("button", { name: "Torah", exact: true }).click();
+      await tab.getByRole("tablist", { name: "Reading text selection" }).getByRole("tab", { name: /^Torah/ }).click();
       await ui(reading(tab).getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
       await tab.evaluate(() => scrollTo(0, 0));
       await tab.screenshot({ path: join(target, `public-reading-${mobile ? "phone" : "desktop"}.png`), fullPage: !mobile });
@@ -155,7 +155,7 @@ it("any reading: a named reading, a deep-linked verse that plays from the player
     await tab.goto("/read?reading=bereshit", { waitUntil: "domcontentloaded" });
     await ui(tab.getByRole("heading", { level: 1, name: "Bereshit", exact: true })).toBeVisible();
     await ui(reading(tab).getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
-    await tab.getByRole("group", { name: "Reading text selection" }).getByRole("button", { name: "Haftarah", exact: true }).click();
+    await tab.getByRole("tablist", { name: "Reading text selection" }).getByRole("tab", { name: /^Haftarah/ }).click();
     await ui(reading(tab).getByRole("heading", { name: "Isaiah 42:5", exact: true })).toBeVisible();
     await ui(tab).toHaveURL(/\/read\?reading=bereshit&passage=2$/);
     // The Readings index opens another reading in place of this one.

@@ -97,6 +97,20 @@ for (const width of [320, 390, 430]) {
   });
 }
 
+test("the dock is the only position: fixed element on /read at 390px, because Print, the trope chart and the blessings sit in a row after the last verse", async ({ page }, info) => {
+  test.skip(info.project.name !== "phone", "Widths are set by the test.");
+  await listening(page, 390);
+  const fixed = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>("body *")].filter(node => getComputedStyle(node).position === "fixed" && node.getClientRects().length > 0 && getComputedStyle(node).visibility !== "hidden")
+    .filter(node => !node.classList.contains("skip-link")) // the skip link is fixed but sits off screen until it is focused
+    .map(node => node.className.toString().split(" ")[0] || node.tagName));
+  expect(fixed, JSON.stringify(fixed)).toEqual(["reading-toolbar"]);
+  const foot = page.getByRole("navigation", { name: "After the reading", exact: true });
+  await expect(foot.getByRole("link", { name: "Print", exact: true })).toBeVisible();
+  await expect(foot.getByRole("link", { name: "Trope chart", exact: true })).toBeVisible();
+  // The foot comes after the verses, never before them.
+  expect(await page.evaluate(() => { const verses = [...document.querySelectorAll(".study-verses [data-verse-ref]")].at(-1)!, foot = document.querySelector("[data-reading-foot]")!; return Boolean(verses.compareDocumentPosition(foot) & Node.DOCUMENT_POSITION_FOLLOWING); })).toBe(true);
+});
+
 test("the Colors, English and size controls of the dock still do their work, and Size opens above it", async ({ page }, info) => {
   test.skip(info.project.name !== "phone", "A phone is the dock.");
   await listening(page);

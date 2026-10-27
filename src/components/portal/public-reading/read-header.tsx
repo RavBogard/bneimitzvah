@@ -41,7 +41,7 @@ export function MoreScope({ initiallyOpen = false, children }: { initiallyOpen?:
  * reading). The sheet holds Find a reading, then "In this reading": the passage's own Portion row, Choose verses and Go to verse, put in
  * its slot by the passage. With no scope above it (the page is still finding its address) Change is drawn inert.
  */
-export function ReadHeader({ name, line, pills = [], note, loading, rest }: { name: string; line: ReactNode; pills?: readonly Pill[]; note?: ReactNode; loading?: boolean; rest?: ReactNode }) {
+export function ReadHeader({ name, line, pills = [], note, loading }: { name: string; line: ReactNode; pills?: readonly Pill[]; note?: ReactNode; loading?: boolean }) {
   const host = useMore(), lens = useStudyLens();
   const change: Pill = { key: "change", label: "Change", icon: "chevron", haspopup: "dialog", disabled: !host, onClick: () => host?.show() };
   return <header className={styles.readHeader}>
@@ -52,7 +52,6 @@ export function ReadHeader({ name, line, pills = [], note, loading, rest }: { na
         {host.open && <FindReading place="sheet" study={lens.lens === "study"} onOpen={address => host.close(() => goToReading(address))} />}
         <h3 className={styles.changeGroup}>In this reading</h3>
         <div ref={host.setSlot} className={styles.moreList} data-more-slot="" />
-        {rest}
       </div>
     </Sheet>}
   </header>;

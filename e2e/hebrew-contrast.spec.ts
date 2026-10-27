@@ -279,8 +279,10 @@ test("D6: with forced colors, pressed Torah/Haftarah, Lein/Study and Colors diff
   const look = (locator: ReturnType<Page["getByRole"]>) => locator.evaluate(node => { const style = getComputedStyle(node); return `${style.backgroundColor}|${style.color}`; });
   const pairs: [string, string][] = [["Lein", "Study"], ["Torah", "Haftarah"]];
   for (const [on, off] of pairs) {
-    const pressed = page.getByRole("button", { name: on, exact: true }), other = page.getByRole("button", { name: off, exact: true });
-    await expect(pressed).toHaveAttribute("aria-pressed", "true");
+    // Lein | Study are pressed buttons; Torah | Haftarah are underline tabs, the selected one marked by aria-selected.
+    const tabs = on === "Torah", named = (name: string) => tabs ? page.getByRole("tab", { name: new RegExp(`^${name}`) }) : page.getByRole("button", { name, exact: true });
+    const pressed = named(on), other = named(off);
+    await expect(pressed).toHaveAttribute(tabs ? "aria-selected" : "aria-pressed", "true");
     expect(await look(pressed), `${on} differs from ${off}`).not.toBe(await look(other));
   }
   const colors = page.getByRole("button", { name: /^Colors/ });
@@ -289,7 +291,6 @@ test("D6: with forced colors, pressed Torah/Haftarah, Lein/Study and Colors diff
   const off = await look(colors);
   await colors.click();
   expect(await look(colors), "Colors on differs from Colors off").not.toBe(off);
-  await openMore(page);
   const start = page.getByRole("button", { name: "Start reading", exact: true });
   expect(await start.evaluate(node => { const style = getComputedStyle(node); return `${style.borderTopStyle}|${parseFloat(style.borderTopWidth)}`; })).toBe("solid|1");
 });

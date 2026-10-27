@@ -37,3 +37,14 @@ test("the Lein | Study switch has two pressed-state buttons with an icon each", 
   expect((markup.match(/aria-pressed=/g) ?? []).length).toBe(2);
   expect((markup.match(/<svg/g) ?? []).length).toBe(2);
 });
+
+// C3: Print, the trope chart and the blessings are a quiet row after the last verse.
+import { ReadingFoot } from "../../src/components/portal/public-reading/reading-foot";
+test("the foot row is a labelled navigation with Print, the trope chart and the blessings after the text", () => {
+  const markup = renderToStaticMarkup(createElement(ReadingFoot, { print: "/print?date=2026-10-31", blessings: createElement("p", { "data-siddur-blessings": "" }, "blessings") }));
+  expect(markup).toMatch(/<nav[^>]*aria-label="After the reading"/);
+  expect(markup).toContain('href="/print?date=2026-10-31"');
+  expect(markup).toContain('href="/trope-chart"');
+  expect(markup).toContain("data-siddur-blessings");
+  expect(renderToStaticMarkup(createElement(ReadingFoot, {}))).not.toContain(">Print<");
+});

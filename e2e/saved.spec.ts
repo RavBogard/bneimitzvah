@@ -1,7 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { studyRangePlan } from "../src/components/portal/workspace/study/api";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
-import { closeMore, openMore } from "./more-sheet";
 
 // Release 1.4 saved readings in the built, unconfigured production server. The session, reading and
 // saved-readings answers are synthetic route fulfilments, so the page's own client code is under test.
@@ -35,14 +34,12 @@ test("Save on /read asks about the account only when pressed, and answers signed
   // A browser never seen signed in here starts on Sign in to save (F4), still without asking.
   await page.goto("/read?date=2026-10-24");
   await expect(page.getByRole("heading", { level: 1, name: "Noach", exact: true })).toBeVisible();
-  await openMore(page);
   await expect(page.getByRole("link", { name: "Sign in to save", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Save to My Readings", exact: true })).toHaveCount(0);
   expect(saved).toEqual([]);
   await seenSignedIn(page); await page.reload();
   await expect(page.getByRole("heading", { level: 1, name: "Noach", exact: true })).toBeVisible();
-  await openMore(page);
-  const save = page.getByRole("button", { name: "Save", exact: true });
+  const save = page.getByRole("button", { name: "Save to My Readings", exact: true });
   await expect(save).toBeVisible();
   // Visiting the reading never asks about a session; this browser was seen signed in, so the site bar shows the account control, not Sign in.
   expect(saved).toEqual([]);
@@ -60,11 +57,10 @@ test("Save on /read asks about the account only when pressed, and answers signed
   expect(saved).toEqual(["/api/saved/readings"]);
   answer = { status: 403, body: { error: "forbidden" } };
   await seenSignedIn(page); await page.reload();
-  await openMore(page);
   await save.click();
   await expect(page.getByRole("link", { name: "Ask for an account to save readings", exact: true })).toHaveAttribute("href", "/account");
-  await expect(page.getByRole("form", { name: "Save this reading" })).toHaveCount(0);
-  await closeMore(page);
+  await expect(page.getByRole("form", { name: "Add this reading" })).toHaveCount(0);
+  await page.getByRole("dialog", { name: "Add to My Readings", exact: true }).getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
@@ -78,35 +74,35 @@ test("a member saves the passage on screen with its name and Shabbat filled in, 
     await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: [] }));
     await page.route("**/api/saved/readings/create", route => { posted.push(route.request().postDataJSON()); return json(route, createAnswer.status, createAnswer.body); });
     await page.goto("/read?date=2026-10-24");
-    await openMore(page);
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    const form = page.getByRole("form", { name: "Save this reading" });
+    await page.getByRole("button", { name: "Save to My Readings", exact: true }).click();
+    const form = page.getByRole("form", { name: "Add this reading" });
     await expect(form).toBeVisible();
-    await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByRole("dialog", { name: "Add to My Readings", exact: true })).toBeVisible();
+    // Three ways to choose the verses, with what is on screen chosen.
+    await expect(form.getByRole("radio")).toHaveCount(3);
+    await expect(form.getByRole("radio", { name: /^Torah · Genesis 6:9–11:32/ })).toBeChecked();
     await expect(form.getByLabel("Name")).toHaveValue("Noach · Torah");
-    await expect(form.getByLabel("Date (optional)")).toHaveValue("2026-10-24");
+    await expect(form.getByLabel("Date you’re reading it (optional)")).toHaveValue("2026-10-24");
     expect(await noHorizontalScroll(page)).toBe(true);
-    await minSize(page, ["Save", "Save reading", "Cancel"]);
+    await minSize(page, ["Save to My Readings", "Add"]);
     if (width === 360 && test.info().project.name === "phone") await page.screenshot({ path: test.info().outputPath("save-form-360.png"), fullPage: false });
     // Over the cap, the member is told plainly and the form stays.
     createAnswer = { status: 409, body: { ok: false, code: "limit" } };
-    await form.getByRole("button", { name: "Save reading", exact: true }).click();
+    await form.getByRole("button", { name: "Add", exact: true }).click();
     await expect(form.getByRole("alert")).toHaveText("You have 100 saved readings, the most an account keeps. Remove one to save another.");
     createAnswer = { status: 200, body: { ok: true, reading: row(1) } };
     await form.getByLabel("Name").fill("  My Noach  ");
-    await form.getByLabel("Date (optional)").fill("");
-    await form.getByRole("button", { name: "Save reading", exact: true }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Saved to My readings." })).toBeVisible();
-    await expect(page.getByRole("link", { name: "My readings", exact: true })).toHaveAttribute("href", "/");
+    await form.getByLabel("Date you’re reading it (optional)").fill("");
+    await form.getByRole("button", { name: "Add", exact: true }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Saved to My Readings." })).toBeVisible();
+    await expect(page.getByRole("link", { name: "My Readings", exact: true })).toHaveAttribute("href", "/");
     expect(posted.at(-1)).toEqual({ name: "My Noach", date: null, kind: "torah", ranges: "Genesis 6:9-11:32" });
     // The haftarah is its own passage: Save starts over for it, named for it.
-    await closeMore(page);
-    await page.getByRole("button", { name: "Haftarah", exact: true }).click();
-    await openMore(page);
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page.getByRole("form", { name: "Save this reading" }).getByLabel("Name")).toHaveValue("Noach · Haftarah");
-    await page.getByRole("button", { name: "Cancel", exact: true }).click();
-    await expect(page.getByRole("form", { name: "Save this reading" })).toHaveCount(0);
+    await page.getByRole("tab", { name: /^Haftarah/ }).click();
+    await page.getByRole("button", { name: "Save to My Readings", exact: true }).click();
+    await expect(page.getByRole("form", { name: "Add this reading" }).getByLabel("Name")).toHaveValue("Noach · Haftarah");
+    await page.getByRole("dialog", { name: "Add to My Readings", exact: true }).getByRole("button", { name: "Close", exact: true }).click();
+    await expect(page.getByRole("form", { name: "Add this reading" })).toHaveCount(0);
     expect(await noHorizontalScroll(page)).toBe(true);
   }
 });
@@ -192,15 +188,14 @@ test("a saved reading opens with its name and date, keeps Still working and Got 
     await page.route("**/api/session", route => json(route, 401, { error: "authentication-required" }));
     await page.goto(`/read?saved=${savedRow.id}`);
     await expect(page.getByRole("heading", { level: 1, name: "Synthetic reading 1", exact: true })).toBeVisible();
-    await expect(page.getByText("My reading", { exact: true })).toBeVisible();
     await expect(page.getByText("Saturday, October 24, 2026 · Torah Genesis 1:1–3")).toBeVisible();
     // The private name is on the page, never in the tab title or browser history; the app bar knows the owner is signed in.
     await expect(page).toHaveTitle("My reading | CRC Torah");
     await expect(page.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("href", "/account");
     await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: "Save this reading" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Add this reading" })).toHaveCount(0);
     await expect(page).toHaveURL(new RegExp(`/read\\?saved=${savedRow.id}$`));
-    await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Save to My Readings", exact: true })).toHaveCount(0);
     // Choosing a verse in Lein shows its mark; pressing again clears it.
     await firstWord(page, "Genesis 1:2").click();
     const marks = page.getByRole("group", { name: "How Genesis 1:2 is going" });

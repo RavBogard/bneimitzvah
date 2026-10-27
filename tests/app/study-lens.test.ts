@@ -94,7 +94,7 @@ test("Study opens with both works on, for the signed-out public page and for the
   const study = (storageKey: string | null) => renderToStaticMarkup(createElement(StudyLensScope, { storageKey, query: "study", children: createElement(ReadingToolbar, {}) }));
   for (const key of [null, LENS_STORAGE.weekly, LENS_STORAGE.staff]) expect(study(key)).toContain('aria-label="Works: Rashi, Women’s Commentary"');
   const lein = renderToStaticMarkup(createElement(StudyLensScope, { storageKey: null, children: createElement(LensSwitch) }));
-  expect(lein).toMatch(/aria-pressed="true" data-lens="lein">Lein/);
+  expect(lein).toMatch(/aria-pressed="true" data-lens="lein">(<svg.*?<\/svg>)?<span>Lein<\/span>/);
 });
 
 test("the Women's Commentary covers the Torah only: on a haftarah it is not offered, with no line and no error", () => {
@@ -277,8 +277,8 @@ test("the toolbar: Lein keeps Tikkun; Study drops it and adds Works, five items 
 test("the switch is Lein | Study with the current lens pressed, and absent outside a lens scope", () => {
   const markup = inLens(createElement(LensSwitch), "study");
   expect(markup).toContain('aria-label="Reading lens"');
-  expect(markup).toMatch(/aria-pressed="false" data-lens="lein">Lein<\/button>/);
-  expect(markup).toMatch(/aria-pressed="true" data-lens="study">Study<\/button>/);
-  expect(inLens(createElement(LensSwitch), null)).toMatch(/aria-pressed="true" data-lens="lein">Lein/);
+  expect(markup).toMatch(/aria-pressed="false" data-lens="lein"><svg.*?<\/svg><span>Lein<\/span><\/button>/);
+  expect(markup).toMatch(/aria-pressed="true" data-lens="study"><svg.*?<\/svg><span>Study<\/span><\/button>/);
+  expect(inLens(createElement(LensSwitch), null)).toMatch(/aria-pressed="true" data-lens="lein">(<svg.*?<\/svg>)?<span>Lein<\/span>/);
   expect(renderToStaticMarkup(createElement(LensSwitch))).toBe("");
 });
