@@ -21,27 +21,22 @@ export function PassagePreparation({ target }: { target: Target | null }) {
   return <div className={`portal-shell ${styles.shell}`}><a className="skip-link" href="#passage-main">Skip to passage preparation</a><LearnAppBar />
     <main id="passage-main" className={styles.main}><a href="/learn">Learn to lein</a><h1>Prepare a passage</h1>
       <p>Choose a short section. Learn its parts, connect the verses, then try without the recording.</p>
-      <LearnServices>{target ? <PassageSource key={`${target.kind}:${target.ref}`} target={target} /> : <div role="status"><p>This reference cannot be opened. Choose a Torah or haftarah reading.</p><a href="/learn/prepare">Use this week's Torah reading</a><p><a href="/read">Choose a reading in Lein</a></p></div>}</LearnServices>
+      <LearnServices>{target ? <PassageSource key={`${target.kind}:${target.ref}`} target={target} /> : <div role="status"><p>This reference cannot be opened. Choose a Torah or haftarah reading.</p><a href="/learn/prepare">Use this week's Torah reading</a><p><a href="/readings?for=prepare">Choose a reading</a></p></div>}</LearnServices>
     </main></div>;
 }
 
 function PassageSource({ target }: { target: Target }) {
   const [retry, setRetry] = useState(0), { player } = useLearnServices();
   const retryLoad = () => { player.stop(); setRetry(value => value + 1); };
-  return <><nav className={styles.actions} aria-label="Preparation reading"><a href="/learn/prepare" aria-current={target.kind === "torah" && !target.ref ? "page" : undefined}>This week's Torah</a><a href="/learn/prepare?kind=haftarah" aria-current={target.kind === "haftarah" && !target.ref ? "page" : undefined}>This week's haftarah</a><a href="/read">Choose another reading in Lein</a></nav>
-    {target.ref ? <ReferencePassage target={{ ...target, ref: target.ref }} retry={retry} onRetry={retryLoad} /> : <WeekPassage kind={target.kind} retry={retry} onRetry={retryLoad} />}
-    <details className={styles.help}><summary>Open a different public passage</summary><form action="/learn/prepare" method="get" className={styles.form}>
-      <label>Reference <input name="ref" required placeholder="Genesis 12:1-3" defaultValue={target.ref ?? ""} /></label>
-      <label>Melody <select name="kind" defaultValue={target.kind}><option value="torah">Torah</option><option value="haftarah">Haftarah</option></select></label>
-      <button className="button-secondary" type="submit">Open passage</button>
-    </form></details></>;
+  return <><nav className={styles.actions} aria-label="Preparation reading"><a href="/learn/prepare" aria-current={target.kind === "torah" && !target.ref ? "page" : undefined}>This week's Torah</a><a href="/learn/prepare?kind=haftarah" aria-current={target.kind === "haftarah" && !target.ref ? "page" : undefined}>This week's haftarah</a><a href="/readings?for=prepare">Choose a reading</a></nav>
+    {target.ref ? <ReferencePassage target={{ ...target, ref: target.ref }} retry={retry} onRetry={retryLoad} /> : <WeekPassage kind={target.kind} retry={retry} onRetry={retryLoad} />}</>;
 }
 
 function WeekPassage({ kind, retry, onRetry }: { kind: Melody; retry: number; onRetry(): void }) {
   const week = useWeekVerses(kind, retry);
   if (week.status === "loading") return <p role="status">Loading the reading…</p>;
   if (week.status === "error") return <><LoadFailure rateLimited={week.rateLimited} onRetry={onRetry} /><p><a href={`/read${kind === "haftarah" ? "?kind=haftarah" : ""}`}>Open the reading in Lein</a></p></>;
-  if (week.status === "none") return <div role="status"><p>No {kind === "haftarah" ? "haftarah" : "Torah"} passage is available for these weeks.</p><button type="button" className="button-secondary" onClick={onRetry}>Try again</button><p><a href="/read">Choose another reading in Lein</a></p></div>;
+  if (week.status === "none") return <div role="status"><p>No {kind === "haftarah" ? "haftarah" : "Torah"} passage is available for these weeks.</p><button type="button" className="button-secondary" onClick={onRetry}>Try again</button><p><a href="/readings?for=prepare">Choose a reading</a></p></div>;
   return <LoadedPassage key={`${kind}:${week.date}:${retry}`} data={weekData(week, kind)} onRetry={onRetry} />;
 }
 

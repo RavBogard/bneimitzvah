@@ -17,9 +17,10 @@ import type { PublicRuntimeScope } from "../../src/server/http/public-reading";
 afterEach(() => { forgetPublicProductName(); vi.doUnmock("../../src/server/public-site/names"); vi.doUnmock("../../src/lib/site/indexing"); vi.resetModules(); });
 
 const ORIGIN = CANONICAL_ORIGINS[1];
-const THE_THREE = ["/read", "/learn", "/trope-chart", "/about"];
+// The four public routes of 2026-10-26, and /readings (Readings for everyone, Area B), the index of every reading.
+const THE_THREE = ["/read", "/learn", "/trope-chart", "/about", "/readings"];
 
-test("the indexing switch ships on (Daniel, 2026-10-26) and names exactly the four public routes", () => {
+test("the indexing switch ships on (Daniel, 2026-10-26) and names exactly the public routes", () => {
   expect(PUBLIC_INDEXING).toBe(true);
   expect([...INDEXABLE_PATHS]).toEqual(THE_THREE);
 });
@@ -96,9 +97,9 @@ test("the product name comes from the public runtime, falls back without it, and
 
 test("the sitemap lists the three routes and the weekly parashot on the canonical origin, and nothing signed-in", () => {
   const paths = sitemapPaths();
-  expect(paths.slice(0, 4)).toEqual(THE_THREE);
+  expect(paths.slice(0, 5)).toEqual(THE_THREE);
   expect(new Set(paths).size).toBe(paths.length);
-  const readings = paths.slice(4);
+  const readings = paths.slice(5);
   expect(readings.length).toBeGreaterThanOrEqual(50);
   for (const path of readings) {
     const slug = new URLSearchParams(path.split("?")[1]).get("reading")!;

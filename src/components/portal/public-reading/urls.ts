@@ -117,3 +117,5 @@ export function saveReturnAddress(address: string, ranges?: readonly string[]): 
   params.set("save", "1");
   return `${path}?${params.toString()}`;
 }
+/** The public calendar: no query at all (a closed keyset of none). */
+export const publicCalendarPath = () => "/api/public/calendar";

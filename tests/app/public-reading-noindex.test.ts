@@ -16,7 +16,8 @@ test("with indexing on (Daniel, 2026-10-26) the public reading is indexable whil
   const rule = rules.find(item => item.headers.some(header => header.key === "X-Robots-Tag"));
   expect(rule?.headers).toEqual([{ key: "X-Robots-Tag", value: "noindex, nofollow" }]);
   expect(rule?.source).toBe(noindexHeaderRule(true).source);
-  expect(robots().rules).toEqual({ userAgent: "*", allow: ["/read", "/learn", "/trope-chart", "/about"], disallow: "/" });
+  // /readings is the public index of the readings Daniel indexed (/read, /learn, /trope-chart), so it is indexable with them.
+  expect(robots().rules).toEqual({ userAgent: "*", allow: ["/read", "/learn", "/trope-chart", "/about", "/readings"], disallow: "/" });
   expect(rootMetadata.robots).toEqual({ index: false, follow: false });
   const readMetadata = await readGenerateMetadata();
   expect(readMetadata.title).toBe("This week’s reading | CRC Torah");

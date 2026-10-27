@@ -11,9 +11,9 @@
  * the list, a query on a page that takes none, and anything the URL parser would rewrite (dot segments).
  */
 export const RETURN_ADDRESS_MAX = 1024;
-/** The pages sign-in may return to; only the reader keeps its query (the reading, the lens, the verse, a selection). */
-const PAGES = new Set(["/", "/account", "/read"]);
-const KEEPS_QUERY = new Set(["/read"]);
+/** The pages sign-in may return to; only the reader and the Readings index keep their query (the reading, the lens, the verse, a selection). */
+const PAGES = new Set(["/", "/account", "/read", "/readings"]);
+const KEEPS_QUERY = new Set(["/read", "/readings"]);
 const BASE = "https://return-address.invalid";
 
 export function returnAddress(value: unknown): string | null {

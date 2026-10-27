@@ -158,12 +158,9 @@ it("any reading: a named reading, a deep-linked verse that plays from the player
     await tab.getByRole("group", { name: "Reading text selection" }).getByRole("button", { name: "Haftarah", exact: true }).click();
     await ui(reading(tab).getByRole("heading", { name: "Isaiah 42:5", exact: true })).toBeVisible();
     await ui(tab).toHaveURL(/\/read\?reading=bereshit&passage=2$/);
-    // The chooser opens another reading in place of this one.
-    await openMore(tab);
-    await tab.getByRole("button", { name: "Choose a reading", exact: true }).click();
-    const chooser = tab.getByRole("region", { name: "Choose a reading", exact: true });
-    await chooser.getByLabel("Holidays and special Shabbatot", { exact: true }).selectOption("shabbat-shekalim");
-    await chooser.locator("form").nth(1).getByRole("button", { name: "Open", exact: true }).click();
+    // The Readings index opens another reading in place of this one.
+    await tab.goto("/readings", { waitUntil: "domcontentloaded" });
+    await tab.getByRole("link", { name: "Shabbat Shekalim", exact: true }).click();
     await ui(tab.getByRole("heading", { level: 1, name: "Shabbat Shekalim", exact: true })).toBeVisible();
     await ui(reading(tab).getByRole("heading", { name: "Exodus 30:11", exact: true })).toBeVisible();
     expect(seen.api.some(path => path === "/api/public/reading")).toBe(true);

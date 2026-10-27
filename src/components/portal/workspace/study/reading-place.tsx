@@ -4,9 +4,9 @@ import { chapterOf, readingChapters, topVisible } from "./reading-place-model";
 import { useOpenPanelVerse } from "./verse-panel";
 import styles from "./commentary.module.css";
 
-/** Brings a verse of the Study text to the top of the screen. */
+/** Brings a verse of the text (Study's rows, or Lein's flowing text) to the top of the screen. */
 export function scrollToVerse(ref: string): void {
-  try { document.querySelector(`[data-study-rows] [data-verse-ref="${CSS.escape(ref)}"]`)?.scrollIntoView({ block: "start" }); } catch { /* Stay where the page is. */ }
+  try { document.querySelector(`[data-study-rows] [data-verse-ref="${CSS.escape(ref)}"], .study-verses [data-verse-ref="${CSS.escape(ref)}"]`)?.scrollIntoView({ block: "start" }); } catch { /* Stay where the page is. */ }
 }
 
 /**

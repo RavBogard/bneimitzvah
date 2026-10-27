@@ -57,6 +57,11 @@ export async function mockVayera(page: Page, aliyot: Fixture["aliyot"] = { mode:
     }
     if (url.pathname === "/api/public/commentary") return json(route, 200, { work: q.get("work"), chapter: q.get("chapter"), verses: {}, editions: [] });
     if (url.pathname === "/api/public/discussions") return json(route, 200, { discussions: [], productName: null });
+    // Find a reading's calendar (B1): 66 Saturdays from 2026-10-24, the Saturday after the pinned clock (2026-10-21), every one a Vayera.
+    if (url.pathname === "/api/public/calendar") {
+      const rows = Array.from({ length: 66 }, (_, i) => ({ date: new Date(Date.UTC(2026, 9, 24 + 7 * i)).toISOString().slice(0, 10), name: "Vayera", kind: "regular" }));
+      return json(route, 200, { today: rows[0].date, rows });
+    }
     return json(route, 503, { error: "unavailable" });
   });
   return { calls, aliyot };
