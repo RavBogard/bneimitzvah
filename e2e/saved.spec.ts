@@ -199,7 +199,7 @@ test("a saved reading opens with its name and date, keeps Still working and Got 
 
 test("a saved reading that cannot be opened says why, and a malformed address is just unavailable", async ({ page }) => {
   await openRef(page);
-  for (const [status, heading] of [[401, "Sign in to open this reading"], [403, "This account doesn’t keep saved readings"], [404, "This reading isn’t in your saved readings"], [503, "Your reading didn’t load"]] as const) {
+  for (const [status, heading] of [[401, "Sign in to open this reading"], [403, "Saving isn’t available for this account."], [404, "This reading isn’t in your saved readings"], [503, "Your reading didn’t load"]] as const) {
     await page.unroute("**/api/saved/reading?*");
     await page.route("**/api/saved/reading?*", route => json(route, status, { error: "x" }));
     await page.goto(`/read?saved=${savedRow.id}`);
