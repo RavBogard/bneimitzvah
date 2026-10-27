@@ -28,8 +28,8 @@ test("Account lists the roles with the current one marked, and choosing a role o
   // The workspace's brand link moves inside the app, so the remembered role leads on the front door.
   await page.getByRole("link", { name: "CRC Torah", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(door(page).getByRole("heading", { level: 2, name: "Your family", exact: true })).toBeVisible();
-  await expect(door(page).getByRole("link", { name: "Open Today", exact: true })).toHaveAttribute("href", "/mine");
+  await expect(door(page).getByRole("heading", { level: 2, name: "Your readings", exact: true })).toBeVisible();
+  await expect(door(page).getByRole("link", { name: "Open My Readings", exact: true })).toHaveAttribute("href", "/mine");
 });
 
 test("the old role pills and the chooser are gone from the workspace", async ({ page }) => {

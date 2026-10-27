@@ -3,18 +3,19 @@ vi.mock("server-only", () => ({}));
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { signedInDestination } from "../../src/components/portal/entry";
-import { FrontDoor, joinNames, signedInDoor } from "../../src/components/portal/front-door/front-door";
+import { FrontDoor, signedInDoor } from "../../src/components/portal/front-door/front-door";
 import { AccountView } from "../../src/components/portal/account-page";
 import { homeRole, rolePaths, workspaceDestination } from "../../src/components/portal/shell/role-home";
 import { rememberedRole, rememberRole } from "../../src/components/portal/shell/role-memory";
 import type { Role, SessionSummary } from "../../src/components/portal/api";
 
 const summary = (roles: Role[], extra: Partial<SessionSummary> = {}): SessionSummary => ({ membershipAvailable: roles.length > 0, roles, saved: roles.length > 0, approver: false, sessionBinding: "A".repeat(43), ...extra });
-const door = (roles: Role[] | "signed-out" | "loading") => {
-  const account = roles === "loading" ? null : roles === "signed-out" ? { kind: "sign-in" } as const : { kind: "account", saved: roles.length > 0, roles } as const;
+type Pinned = NonNullable<NonNullable<Parameters<typeof signedInDoor>[1]>["pinned"]>;
+const door = (roles: Role[] | "signed-out" | "loading", count: number | null = null, pinned: Pinned | null = null) => {
+  const account = roles === "loading" ? null : roles === "signed-out" ? { kind: "sign-in" } as const : { kind: "account", saved: roles.length > 0, roles, count, pinned } as const;
   const markup = renderToStaticMarkup(createElement(FrontDoor, { account, children: createElement("p", null, "Synthetic task") }));
-  const start = markup.indexOf('data-door="beit-mitzvah"');
-  return markup.slice(markup.lastIndexOf("<section", start), markup.lastIndexOf("<section", markup.indexOf('data-door="learn"')));
+  const start = markup.lastIndexOf("<section", markup.indexOf('data-door="beit-mitzvah"'));
+  return markup.slice(start, markup.indexOf("</section>", start));
 };
 afterAll(() => { rememberRole("student"); });
 
@@ -57,22 +58,31 @@ describe("the root never leaves for the workspace", () => {
 });
 
 describe("the signed-in door", () => {
-  test("each role's heading, line and button", () => {
-    expect(signedInDoor("student")).toEqual({ title: "Your reading", line: "Your parts and what's next.", action: "Open Today" });
-    expect(signedInDoor("parent")).toEqual({ title: "Your family", line: null, action: "Open Today" });
-    expect(signedInDoor("tutor")).toEqual({ title: "Your students", line: "Who are you teaching today?", action: "Open This week" });
+  test("every role but the admin has Your readings, opening My Readings; the admin keeps This week", () => {
+    for (const role of ["student", "parent", "tutor"] as const) expect(signedInDoor(role)).toEqual({ title: "Your readings", line: null, action: "Open My Readings" });
     expect(signedInDoor("admin")).toEqual({ title: "This week", line: "Needs you, ceremonies and rehearsals.", action: "Open This week" });
   });
-  test("the student's line is the parashah and date when the summary has them; the parent's is the children's first names", () => {
-    expect(signedInDoor("student", { reading: { parashah: "Noach", date: "2026-10-24" } }).line).toBe("Noach · Saturday, October 24, 2026");
-    expect(signedInDoor("parent", { children: ["Ari", "Dana", "Eli"] }).line).toBe("Ari, Dana and Eli");
-    expect([joinNames([]), joinNames(["Ari"]), joinNames(["Ari", "Dana"])]).toEqual(["", "Ari", "Ari and Dana"]);
+  test("the line is the pinned reading when there is one, else how many are saved, else nothing", () => {
+    expect(signedInDoor("student", { pinned: { name: "Noa", ceremony: "2027-05-01", done: 3, total: 12 } }).line).toBe("Noa · Beit Mitzvah, Sat, May 1, 2027 · 3 of 12 verses");
+    expect(signedInDoor("tutor", { count: 3 }).line).toBe("3 saved");
+    expect(signedInDoor("tutor", { count: 0 }).line).toBeNull();
+    expect(signedInDoor("parent", { count: null }).line).toBeNull();
+  });
+  test("it leads the home, under the hero, once a reading is kept or pinned, and otherwise sits beside Learn", () => {
+    const place = (account: Parameters<typeof FrontDoor>[0]["account"]) => /data-door-place="(\w+)"/.exec(renderToStaticMarkup(createElement(FrontDoor, { account, children: null })))![1];
+    expect(place({ kind: "account", saved: true, roles: ["tutor"], count: 3, pinned: null })).toBe("hero");
+    expect(place({ kind: "account", saved: true, roles: ["student"], count: 0, pinned: { name: "Noa", ceremony: "2027-05-01", done: 0, total: 4 } })).toBe("hero");
+    expect(place({ kind: "account", saved: true, roles: ["tutor"], count: 0, pinned: null })).toBe("doors");
+    expect(place({ kind: "sign-in" })).toBe("doors");
+    const markup = renderToStaticMarkup(createElement(FrontDoor, { account: { kind: "account", saved: true, roles: ["tutor"], count: 3, pinned: null }, children: null }));
+    expect(markup.indexOf('id="this-week-title"')).toBeLessThan(markup.indexOf('data-door="beit-mitzvah"'));
+    expect(markup.indexOf('data-door="beit-mitzvah"')).toBeLessThan(markup.indexOf('data-door="learn"'));
   });
   test("it replaces the Beit Mitzvah door, leads with the role's home, and is not a second lake pill", () => {
     rememberRole("student");
     const student = door(["student"]);
-    expect(student).toContain(">Your reading</h2>");
-    expect(student).toMatch(/href="\/mine"[^>]*>Open Today<\/a>/);
+    expect(student).toContain(">Your readings</h2>");
+    expect(student).toMatch(/href="\/mine"[^>]*>Open My Readings<\/a>/);
     expect(student).not.toContain(">Beit Mitzvah</h2>");
     expect(student).not.toContain("button-start");
     // No remembered role among these: the highest leads.
@@ -80,9 +90,9 @@ describe("the signed-in door", () => {
     expect(both).toContain(">This week</h2>");
     expect(both).toMatch(/href="\/workspace\/admin\/students"[^>]*>Open This week<\/a>/);
     expect(both).not.toContain("Sign in");
-    // The role last in leads.
+    // The role last in leads: a parent who is also an admin, last in as a parent, gets the readings door.
     rememberRole("parent");
-    expect(door(["parent", "admin"])).toContain(">Your family</h2>");
+    expect(door(["parent", "admin"])).toContain(">Your readings</h2>");
     expect(door(["parent", "admin"])).not.toContain("<p class=\"_doorLine");
     rememberRole("student");
   });
@@ -90,16 +100,17 @@ describe("the signed-in door", () => {
     const none = door([]);
     expect(none).toContain(">Beit Mitzvah</h2>");
     expect(none).toContain("Synthetic task");
-    expect(none).not.toContain("Open Today");
+    expect(none).not.toContain("Open My Readings");
   });
 });
 
 describe("the signed-out door and the page's one lake pill", () => {
-  test("Sign in goes to /sign-in, Ask for an account to the existing request flow, and the form is not here", () => {
+  test("Sign in goes to /sign-in, How accounts work to About, Ask for an account is gone, and the form is not here", () => {
     const out = door("signed-out");
-    expect(out).toContain(">Beit Mitzvah</h2>");
+    expect(out).toContain(">Your readings</h2>");
     expect(out).toMatch(/href="\/sign-in"[^>]*>Sign in<\/a>/);
-    expect(out).toContain('href="/sign-in?return=%2Faccount">Ask for an account</a>');
+    expect(out).toContain('href="/about#accounts">How accounts work</a>');
+    expect(out).not.toContain("Ask for an account");
     for (const form of ["<form", "Continue with Google", "name=\"email\"", "Synthetic task"]) expect(out).not.toContain(form);
   });
   test("while access is checked the door says so and keeps its height", () => {
@@ -108,7 +119,7 @@ describe("the signed-out door and the page's one lake pill", () => {
     expect(wait).toContain('aria-busy="true"');
   });
   test("Lein is the only lake pill on the page; the Learn door's Start is the white secondary pill", () => {
-    for (const account of [null, { kind: "sign-in" } as const, { kind: "account", saved: true, roles: ["tutor"] } as const]) {
+    for (const account of [null, { kind: "sign-in" } as const, { kind: "account", saved: true, roles: ["tutor"], count: null, pinned: null } as const]) {
       const markup = renderToStaticMarkup(createElement(FrontDoor, { account, children: null }));
       expect(markup.match(/button-start/g)).toHaveLength(1);
       expect(markup).toContain('<a class="button-start" href="/read">Lein</a>');
@@ -147,13 +158,15 @@ describe("Account is a list: who is signed in, Roles with the current one marked
 const words = (markup: string) => markup.replace(/<svg[\s\S]*?<\/svg>/g, "").replace(/<[^>]+>/g, "|").split("|").map(part => part.replace(/&#x27;/g, "'").trim()).filter(Boolean);
 describe("wording", () => {
   test("the landing doors", () => {
-    expect(words(door("signed-out"))).toEqual(["Beit Mitzvah", "For students, families and tutors preparing a Beit Mitzvah.", "Sign in", "Ask for an account"]);
-    expect(words(door("loading"))).toEqual(["Beit Mitzvah", "For students, families and tutors preparing a Beit Mitzvah.", "One moment while we check your access."]);
+    const out = "Save the readings you’re working on, mark verses, keep notes. Beit Mitzvah students and families find their assigned reading and tutor here too.";
+    expect(words(door("signed-out"))).toEqual(["Your readings", out, "Sign in", "How accounts work"]);
+    expect(words(door("loading"))).toEqual(["Your readings", out, "One moment while we check your access."]);
     rememberRole("tutor");
-    expect(words(door(["tutor", "student"]))).toEqual(["Your students", "Who are you teaching today?", "Open This week"]);
+    expect(words(door(["tutor", "student"]))).toEqual(["Your readings", "Open My Readings"]);
+    expect(words(door(["tutor"], 3))).toEqual(["Your readings", "3 saved", "Open My Readings"]);
     rememberRole("student");
-    expect(words(door(["student"]))).toEqual(["Your reading", "Your parts and what's next.", "Open Today"]);
-    expect(words(door(["parent"]))).toEqual(["Your family", "Open Today"]);
+    expect(words(door(["student"], null, { name: "Noa", ceremony: "2027-05-01", done: 3, total: 12 }))).toEqual(["Your readings", "Noa · Beit Mitzvah, Sat, May 1, 2027 · 3 of 12 verses", "Open My Readings"]);
+    expect(words(door(["parent"]))).toEqual(["Your readings", "Open My Readings"]);
     rememberRole("admin");
     expect(words(door(["admin"]))).toEqual(["This week", "Needs you, ceremonies and rehearsals.", "Open This week"]);
     rememberRole("student");

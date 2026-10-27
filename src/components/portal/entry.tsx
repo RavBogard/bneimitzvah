@@ -22,7 +22,7 @@ export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invi
  */
 export const frontDoorAccount = (view: View): FrontDoorAccount => view.kind === "loading" ? null
   : view.kind === "forbidden" ? { kind: "task", signedIn: undefined } : view.kind === "unavailable" ? { kind: "task", signedIn: false }
-    : view.kind === "signed-in" ? { kind: "account", saved: view.summary.saved, roles: view.summary.roles } : { kind: "sign-in" };
+    : view.kind === "signed-in" ? { kind: "account", saved: view.summary.saved, roles: view.summary.roles, count: null, pinned: null } : { kind: "sign-in" };
 type Action = "google" | "email" | "code" | "accept" | "sign-out";
 /**
  * Only when this device last asked for a sign-in email, never the code or the address: an installed app that

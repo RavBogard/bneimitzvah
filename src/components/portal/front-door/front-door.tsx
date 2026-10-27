@@ -12,7 +12,6 @@ import { SiteBar } from "../../site/site-bar";
 import type { Role } from "../api";
 import { homeRole, rolePaths } from "../shell/role-home";
 import { rememberedRole } from "../shell/role-memory";
-import { signInAddress } from "../../../lib/site/return-address";
 
 /**
  * What the front door knows of the visitor: nothing while access is being checked (the Beit Mitzvah door holds its height), signed out,
@@ -20,21 +19,27 @@ import { signInAddress } from "../../../lib/site/return-address";
  * no Sign in; or sign-in that is unavailable, which keeps its Try again). `signedIn` is what the site bar shows for it, left undefined
  * when this browser's hint decides. `saved`: the account keeps saved readings, so My Readings has a shelf.
  */
-export type FrontDoorAccount = null | Readonly<{ kind: "sign-in" }> | Readonly<{ kind: "account"; saved: boolean; roles: readonly Role[] }> | Readonly<{ kind: "task"; signedIn: boolean | undefined }>;
+export type FrontDoorAccount = null | Readonly<{ kind: "sign-in" }> | Readonly<{ kind: "account"; saved: boolean; roles: readonly Role[]; count: number | null; pinned: DoorFacts["pinned"] }> | Readonly<{ kind: "task"; signedIn: boolean | undefined }>;
 
 /** What a signed-in person's door says. `reading` and `children` are used when the session summary carries them; it does not yet, so the fallbacks show. */
-export type DoorFacts = Readonly<{ reading?: Readonly<{ parashah: string; date: string }> | null; children?: readonly string[] }>;
+export type DoorFacts = Readonly<{
+  /** The pinned reading's student, the ceremony date and how many verses are got it; from the session summary once Task E3 provides it. */
+  pinned?: Readonly<{ name: string; ceremony: string; done: number; total: number }> | null;
+  /** How many readings the person keeps. */
+  count?: number | null;
+}>;
 export type SignedInDoor = Readonly<{ title: string; line: string | null; action: string }>;
-/** "Ari", "Ari and Dana", "Ari, Dana and Eli". */
-export const joinNames = (names: readonly string[]) => names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+/** "Sat, May 1, 2027". */
+const shortDate = (date: string) => new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
+/** The door of a signed-in person: My Readings for every role but the admin (decisions 12 and 22), This week for the admin. */
 export function signedInDoor(role: Role, facts: DoorFacts = {}): SignedInDoor {
-  switch (role) {
-    case "student": return { title: "Your reading", line: facts.reading ? `${facts.reading.parashah} · ${longDate(facts.reading.date)}` : "Your parts and what's next.", action: "Open Today" };
-    case "parent": return { title: "Your family", line: facts.children?.length ? joinNames(facts.children) : null, action: "Open Today" };
-    case "tutor": return { title: "Your students", line: "Who are you teaching today?", action: "Open This week" };
-    case "admin": return { title: "This week", line: "Needs you, ceremonies and rehearsals.", action: "Open This week" };
-  }
+  if (role === "admin") return { title: "This week", line: "Needs you, ceremonies and rehearsals.", action: "Open This week" };
+  const line = facts.pinned ? `${facts.pinned.name} · Beit Mitzvah, ${shortDate(facts.pinned.ceremony)} · ${facts.pinned.done} of ${facts.pinned.total} verses`
+    : facts.count ? `${facts.count} saved` : null;
+  return { title: "Your readings", line, action: "Open My Readings" };
 }
+/** Whether the door leads the home, under the hero: the person keeps a reading or has one pinned (decision 22). */
+export const doorLeads = (account: FrontDoorAccount): boolean => account?.kind === "account" && (account.pinned != null || (account.count ?? 0) > 0);
 
 const displayRange = (ranges: readonly string[]) => ranges.join("; ").replace(/(\d)-(\d)/g, "$1–$2");
 const longDate = (date: string) => new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
@@ -78,25 +83,26 @@ function ThisWeek() {
 }
 
 const DOOR_LINE = "For students, families and tutors preparing a Beit Mitzvah.";
+const SIGNED_OUT_LINE = "Save the readings you’re working on, mark verses, keep notes. Beit Mitzvah students and families find their assigned reading and tutor here too.";
 
 /**
- * The Beit Mitzvah door. Signed out: Sign in and the way to ask for an account (the form lives on /sign-in alone). Signed in: the door of
+ * The "Your readings" door. Signed out: Sign in and How accounts work (the form lives on /sign-in alone). Signed in: the door of
  * the role the person was last in, else the highest. While access is checked it holds the height it takes afterwards, so the Learn door
  * and the page below do not move. An account with no role, a refused account or an unavailable sign-in keeps the entry task, passed in
  * whole (request a role, Sign out, Try again).
  */
-function BeitMitzvahDoor({ account, children }: { account: FrontDoorAccount; children: ReactNode }) {
+function BeitMitzvahDoor({ account, children, place }: { account: FrontDoorAccount; children: ReactNode; place: "hero" | "doors" }) {
   const role = account?.kind === "account" ? homeRole(account.roles, rememberedRole()) : null;
-  const door = role ? signedInDoor(role) : null;
+  const door = role ? signedInDoor(role, account?.kind === "account" ? { pinned: account.pinned, count: account.count } : {}) : null;
   const task = account?.kind === "task" || (account?.kind === "account" && !role);
   const state = account === null ? "loading" : task ? "task" : role ? "role" : "sign-in";
-  return <section id="beit-mitzvah" className={styles.door} aria-labelledby="beit-mitzvah-title" data-door="beit-mitzvah" data-door-state={state} data-door-role={role ?? undefined} aria-busy={account === null}>
-    <h2 id="beit-mitzvah-title" className={styles.doorTitle}>{door ? door.title : "Beit Mitzvah"}</h2>
-    {door ? door.line && <p className={styles.doorLine}>{door.line}</p> : <p className={styles.doorLine}>{DOOR_LINE}</p>}
+  return <section id="beit-mitzvah" className={styles.door} aria-labelledby="beit-mitzvah-title" data-door="beit-mitzvah" data-door-place={place} data-door-state={state} data-door-role={role ?? undefined} aria-busy={account === null}>
+    <h2 id="beit-mitzvah-title" className={styles.doorTitle}>{door ? door.title : task ? "Beit Mitzvah" : "Your readings"}</h2>
+    {door ? door.line && <p className={styles.doorLine}>{door.line}</p> : <p className={styles.doorLine}>{task ? DOOR_LINE : SIGNED_OUT_LINE}</p>}
     {account === null && <p className={styles.doorWait} role="status">One moment while we check your access.</p>}
     {account?.kind === "sign-in" && <>
       <a className={`button-hero-secondary ${styles.doorAction}`} href="/sign-in" aria-describedby="beit-mitzvah-title">Sign in</a>
-      <p className={styles.doorMore}><a href={signInAddress("/account")}>Ask for an account</a></p>
+      <p className={styles.doorMore}><a href="/about#accounts">How accounts work</a></p>
     </>}
     {role && door && <a className={`button-hero-secondary ${styles.doorAction}`} data-testid="door-action" href={rolePaths[role]} aria-describedby="beit-mitzvah-title">{door.action}</a>}
     {task && <div className={styles.task}>{children}</div>}
@@ -109,7 +115,7 @@ function BeitMitzvahDoor({ account, children }: { account: FrontDoorAccount; chi
  * account has no role or the door cannot say who is there.
  */
 export function FrontDoor({ account, children }: { account: FrontDoorAccount; children: ReactNode }) {
-  const keeps = account?.kind === "account" && account.saved;
+  const keeps = account?.kind === "account" && account.saved, leads = doorLeads(account);
   // An account that keeps saved readings keeps this browser's preferred commentaries and reading settings too (release 1.7 M3b).
   useEffect(() => { if (keeps) startAccountPreferences(true); }, [keeps]);
   return <div className="portal-shell">
@@ -118,8 +124,9 @@ export function FrontDoor({ account, children }: { account: FrontDoorAccount; ch
     <main id="front-door-main" className={styles.main}>
       <ThisWeek />
       <SavedLine />
+      {leads && <BeitMitzvahDoor account={account} place="hero">{children}</BeitMitzvahDoor>}
       <div className={styles.doors}>
-        <BeitMitzvahDoor account={account}>{children}</BeitMitzvahDoor>
+        {!leads && <BeitMitzvahDoor account={account} place="doors">{children}</BeitMitzvahDoor>}
         <section className={styles.door} aria-labelledby="learn-title" data-door="learn">
           <h2 id="learn-title" className={styles.doorTitle}>Learn to lein</h2>
           <p className={styles.doorLine} data-testid="learn-door-line">Hear the phrases, then lein a verse of this week's reading.</p>

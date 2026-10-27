@@ -52,8 +52,8 @@ test("signed out, / and /read ask nothing of accounts.google.com or any other si
   await expect(page.locator('[data-door="beit-mitzvah"]').getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", "/sign-in");
   await expect(page.getByRole("button", { name: "Continue with Google", exact: true })).toHaveCount(0);
   await expect(page.locator('script[src*="accounts.google.com"], iframe[src*="accounts.google.com"]')).toHaveCount(0);
-  // F3: the way to the account request, before sign-in.
-  await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveAttribute("href", "/sign-in?return=%2Faccount");
+  // Decision 13: "Ask for an account" is retired; the door says how accounts work instead.
+  await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveCount(0);
   await page.goto(`/read?date=2026-10-24`);
   await expect(page.getByRole("heading", { level: 1, name: "Vayeilech", exact: true })).toBeVisible();
   // Signed out from the start: Sign in to save (in the More sheet), without asking the server about an account.

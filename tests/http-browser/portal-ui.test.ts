@@ -166,7 +166,7 @@ it("single-submits a real magic link, shows separate genuine roles without fake 
   const link = fixture.takeMail("pg-tutor@example.test"), token = new URLSearchParams(new URL(link).hash.slice(1)).get("token")!;
   await openAuthMail(tab, link); await navigate(tab, "/"); await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
   // The front door is the highest role's door (a tutor who is also a parent); the roles themselves are on Account.
-  await ui(tab.locator('[data-door="beit-mitzvah"]').getByTestId("door-action")).toHaveAttribute("href", "/workspace/tutor");
+  await ui(tab.locator('[data-door="beit-mitzvah"]').getByTestId("door-action")).toHaveAttribute("href", "/mine");
   await clean(tab, [token, "pg-tutor@example.test"]);
   await navigate(tab, "/account");
   const roles = tab.getByTestId("account-roles");

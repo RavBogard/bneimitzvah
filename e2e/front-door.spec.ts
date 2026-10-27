@@ -45,16 +45,18 @@ test("the home is a front door to This week, Beit Mitzvah and Learn to lein", as
   await expect(page.getByRole("link", { name: "Lein", exact: true })).toHaveAttribute("href", "/read");
   await expect(page.getByRole("link", { name: "Study", exact: true })).toHaveAttribute("href", "/read?lens=study");
   await expect(page.locator('[data-door="beit-mitzvah"]')).toBeVisible();
-  // Signed out, the door is Sign in and the way to ask for an account; the form itself lives on /sign-in alone.
+  // Signed out, the door is Your readings: Sign in and How accounts work; the form itself lives on /sign-in alone.
   const beit = page.locator('[data-door="beit-mitzvah"]');
+  await expect(beit.getByRole("heading", { level: 2, name: "Your readings", exact: true })).toBeVisible();
   await expect(beit.getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", "/sign-in");
-  await expect(beit.getByRole("link", { name: "Ask for an account", exact: true })).toHaveAttribute("href", "/sign-in?return=%2Faccount");
+  await expect(beit.getByRole("link", { name: "How accounts work", exact: true })).toHaveAttribute("href", "/about#accounts");
+  await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveCount(0);
   await expect(page.getByLabel("Email address")).toHaveCount(0);
   await expect(page.locator('[data-door="learn"]')).toBeVisible();
   await expect(page.getByRole("link", { name: "Start", exact: true })).toHaveAttribute("href", "/learn");
   await expect(page.getByTestId("learn-door-line")).toHaveText("Hear the phrases, then lein a verse of this week's reading.");
   await expect(page.getByRole("link", { name: "Trope chart", exact: true })).toHaveAttribute("href", "/trope-chart");
-  for (const [name, scope] of [["Lein", page], ["Study", page], ["Start", page], ["Sign in", beit], ["Ask for an account", beit]] as const) {
+  for (const [name, scope] of [["Lein", page], ["Study", page], ["Start", page], ["Sign in", beit], ["How accounts work", beit]] as const) {
     const box = await scope.getByRole("link", { name, exact: true }).boundingBox();
     expect(box && box.height >= 44 && box.width >= 44, `${name} is at least 44px`).toBe(true);
   }
@@ -116,7 +118,7 @@ test("signed in, the site bar shows My Readings and the Beit Mitzvah door is the
   await expect(door).toHaveAttribute("data-door-role", "tutor");
   await expect(page.getByRole("link", { name: "My Readings", exact: true })).toHaveAttribute("href", "/mine");
   await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveCount(0);
-  await expect(door.getByTestId("door-action")).toHaveAttribute("href", "/workspace/tutor");
+  await expect(door.getByTestId("door-action")).toHaveAttribute("href", "/mine");
   await expect(page.getByTestId("account-roles")).toHaveCount(0);
   await page.unroute("**/api/session"); await session(page, roles(["student", "parent", "tutor", "admin"]));
   await page.reload();
@@ -125,7 +127,9 @@ test("signed in, the site bar shows My Readings and the Beit Mitzvah door is the
   await page.unroute("**/api/session"); await session(page, roles(["parent"]));
   await page.reload();
   await expect(door).toHaveAttribute("data-door-role", "parent");
-  await expect(door.getByTestId("door-action")).toHaveAttribute("href", "/workspace/parent");
+  await expect(door.getByTestId("door-action")).toHaveAttribute("href", "/mine");
+  await expect(door.getByRole("heading", { level: 2, name: "Your readings", exact: true })).toBeVisible();
+  await expect(door.getByTestId("door-action")).toHaveText("Open My Readings");
 });
 
 test("the Beit Mitzvah door holds its height from the access check to the signed-in door, so nothing below it moves", async ({ page }) => {
