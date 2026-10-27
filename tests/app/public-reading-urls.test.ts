@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { parseReadAddress, publicReadingPath, publicShortPath, publicTextPath, publicWordAidsPath, publicWordDetailsPath, readAddress, selectorKey, type ReadTarget } from "../../src/components/portal/public-reading/urls";
-import { customRef, parashotByBook } from "../../src/components/portal/public-reading/reading-chooser";
+import { customRef, parashotByBook } from "../../src/lib/readings/named-groups";
 import { readingBooks } from "../../src/components/portal/workspace/reading-selection";
 import { NEVIIM_BOOKS } from "../../src/lib/readings/commentary";
 import { NAMED_READINGS } from "../../src/lib/readings/named-readings";

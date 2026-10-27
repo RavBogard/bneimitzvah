@@ -146,3 +146,46 @@ test("Hebcal's one-verse overcount at Numbers 25:10-26:4 is accepted and stored 
   for (const row of [{ k: "Numbers", b: "25:10", e: "26:4", v: 15 }, { k: "Numbers", b: "25:10", e: "26:4", v: 12 }, { k: "Numbers", b: "24:1", e: "24:5", v: 6 },
     { k: "Numbers", b: "26:1", e: "26:4", v: 5 }, { k: "Genesis", b: "1:1", e: "1:3", v: 4 }]) await expect(read(row)).rejects.toMatchObject({ code: "invalid-response" });
 });
+
+test("/api/public/calendar answers this Shabbat plus 65 weeks in date order, cached for a day, and refuses any query", async () => {
+  const SOON = Date.parse("2026-11-03T12:00:00Z"); // this Shabbat is 2026-11-07; the last row is 2028-02-05, inside the recording
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(SOON);
+  const c = calendar();
+  const reading = createPublicReadingService({ loadReading: c.loadReading, loadText: async () => { throw new Error("unused"); },
+    stepSource: { book: async () => Object.freeze([]), lexicon: async () => Object.freeze([]) }, pocketTorah: null, now: () => SOON });
+  const runtime: PublicRuntime = { resolveTenant: async () => undefined, reading, commentary: async () => { throw new Error("unused"); }, ...unavailableExtras };
+  const ask = (path: string) => handlePublicReadingRequest(new Request(`https://beitmitzvah.centralreform.org${path}`), action => action(runtime));
+  const response = await ask("/api/public/calendar");
+  expect(response.status).toBe(200);
+  expect(response.headers.get("cache-control")).toBe("public, max-age=3600");
+  expect(response.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=86400, stale-while-revalidate=86400");
+  const body = await response.json() as { today: string; rows: { date: string; name: string | null; kind: string }[] };
+  expect(body.today).toBe("2026-11-07");
+  expect(body.rows).toHaveLength(66);
+  expect(body.rows[0].date).toBe("2026-11-07");
+  expect(body.rows.map(row => row.date)).toEqual([...body.rows.map(row => row.date)].sort());
+  for (const row of body.rows) expect(isSaturday(row.date), row.date).toBe(true);
+  for (const row of body.rows) {
+    const want = primary(row.date);
+    expect(row.name, row.date).toBe(want.name);
+    // The classification of the snapshot: a festival on Shabbat is a holiday, a weekly portion is regular.
+    const classification = (await c.loadReading(row.date, "diaspora")).snapshot.classification;
+    expect(row.kind, row.date).toBe(classification === "regular" ? "regular" : classification === "holiday" ? "holiday" : "other");
+  }
+  expect(body.rows.some(row => row.kind === "holiday")).toBe(true);
+  expect(body.rows.some(row => row.kind === "regular")).toBe(true);
+  expect((await ask("/api/public/calendar?x=1")).status).toBe(400);
+});
+
+test("a week the resolver cannot answer is a row with no name, and never fails the calendar", async () => {
+  const SOON = Date.parse("2026-11-03T12:00:00Z");
+  const c = calendar();
+  let calls = 0;
+  const reading = createPublicReadingService({ loadReading: async (date, cal) => { if (++calls === 3) throw new Error("synthetic"); return c.loadReading(date, cal); },
+    loadText: async () => { throw new Error("unused"); }, stepSource: { book: async () => Object.freeze([]), lexicon: async () => Object.freeze([]) }, pocketTorah: null, now: () => SOON });
+  const { rows } = await reading.calendar();
+  expect(rows).toHaveLength(66);
+  expect(rows.filter(row => row.name === null && row.kind === "other")).toHaveLength(1);
+  expect(rows.map(row => row.date)).toEqual([...rows.map(row => row.date)].sort());
+});

@@ -71,7 +71,7 @@ export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Re
  * named by a Shabbat `date` (the weekly page) or, for "Any reading", by a canonical `ref` with its
  * `kind` (the 1.5 offline packer depends on these exact shapes).
  */
-type Route = Readonly<{ kind: "reading" | "aliyot" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations" | "related" | "source" | "manifest" | "discussions" | "service-text" | "evening-text" | "portion-summary"; keysets: readonly (readonly string[])[] }>;
+type Route = Readonly<{ kind: "reading" | "aliyot" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations" | "related" | "source" | "manifest" | "calendar" | "discussions" | "service-text" | "evening-text" | "portion-summary"; keysets: readonly (readonly string[])[] }>;
 const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/reading": { kind: "reading", keysets: [["date"], ["ref", "kind"]] },
   // The reader's print sheet (2026-10-23): a Shabbat's calendar aliyot, numbers and book names only.
@@ -86,6 +86,8 @@ const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/source": { kind: "source", keysets: [["ref"]] },
   // The installable app's manifest (1.5 A1): no query at all.
   "/api/public/manifest": { kind: "manifest", keysets: [[]] },
+  // The calendar (Readings for everyone B1): the next fifteen months of Shabbatot with each week's name, no query.
+  "/api/public/calendar": { kind: "calendar", keysets: [[]] },
   // Curated discussions (1.7 M6): a named reading from the list, or a canonical passage with its kind.
   "/api/public/discussions": { kind: "discussions", keysets: [["reading"], ["ref", "kind"]] },
   // The service course's Read step (2.0 SC2): one public unit the course names, by its stable id.
@@ -280,6 +282,10 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
             if (Buffer.byteLength(body) > 2 * 1024 * 1024) return failure(503);
             return new Response(body, { status: 200, headers: { ...common, "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=60",
               "vercel-cdn-cache-control": complete ? "public, s-maxage=300, stale-while-revalidate=3600" : "public, s-maxage=60, stale-while-revalidate=60" } });
+          }
+          case "calendar": {
+            const answer = await reading.calendar(signal);
+            return json({ today: answer.today, rows: answer.rows.map(row => ({ date: row.date, name: row.name, kind: row.kind })) }, 86400, KEPT);
           }
           case "manifest": {
             const name = plainProductName(await runtime.productName());

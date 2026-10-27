@@ -5,6 +5,7 @@ import { addDays, congregationToday, isSaturday, thisShabbat } from "../../../li
 import { fetchPublicWeek, type PublicWeek } from "../public-reading/api";
 import { readAddress } from "../public-reading/urls";
 import { InstallHint } from "../offline/install-hint";
+import { FindReading } from "../find-reading/find-reading";
 import { SavedLine } from "../offline/status";
 import { startAccountPreferences } from "../workspace/account-preferences";
 import styles from "./front-door.module.css";
@@ -110,7 +111,7 @@ function BeitMitzvahDoor({ account, children, place }: { account: FrontDoorAccou
 }
 
 /**
- * The CRC Torah home: This week, then the Beit Mitzvah door and the Learn to lein door.
+ * The CRC Torah home: This week, the door to Your readings when the person keeps one, Find a reading (any future parashah is one chip or two taps with the search), then the Beit Mitzvah door and the Learn to lein door.
  * `children` is the entry task (PortalEntry keeps every entry state and behaviour), shown in the Beit Mitzvah door only when the
  * account has no role or the door cannot say who is there.
  */
@@ -123,8 +124,9 @@ export function FrontDoor({ account, children }: { account: FrontDoorAccount; ch
     <SiteBar signedIn={account === null ? undefined : account.kind === "task" ? account.signedIn : account.kind === "account"} />
     <main id="front-door-main" className={styles.main}>
       <ThisWeek />
-      <SavedLine />
       {leads && <BeitMitzvahDoor account={account} place="hero">{children}</BeitMitzvahDoor>}
+      <div className={styles.find}><FindReading place="home" /></div>
+      <SavedLine />
       <div className={styles.doors}>
         {!leads && <BeitMitzvahDoor account={account} place="doors">{children}</BeitMitzvahDoor>}
         <section className={styles.door} aria-labelledby="learn-title" data-door="learn">

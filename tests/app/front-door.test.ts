@@ -146,3 +146,15 @@ test("a signed-in account that is refused still gets the same site bar; the door
   expect(bar({ kind: "sign-in" })).not.toContain("beit-mitzvah");
   expect(bar({ kind: "account", saved: false, roles: [], count: null, pinned: null })).toContain('href="/mine"');
 });
+
+test("Find a reading sits under the hero and above the doors, with the Coming up row holding its place while the calendar loads", async () => {
+  const markup = await home();
+  const week = markup.indexOf('id="this-week-title"'), find = markup.indexOf('data-testid="find-reading"'), beit = markup.indexOf('data-door="beit-mitzvah"');
+  expect(find).toBeGreaterThan(week);
+  expect(beit).toBeGreaterThan(find);
+  expect(markup).toContain('data-place="home"');
+  expect(markup).toMatch(/<label[^>]*>Find a reading<\/label>/);
+  // The hero's Lein and Study stay, and the chips are placeholders until the calendar arrives.
+  expect(markup).toContain('href="/read">Lein</a>');
+  expect(markup).toContain('data-state="loading"');
+});

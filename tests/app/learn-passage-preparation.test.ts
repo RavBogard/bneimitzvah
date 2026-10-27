@@ -50,3 +50,16 @@ describe("public passage preparation", () => {
     expect(preparationTarget({ ref: "Genesis 1:999" })).toBeNull();
   });
 });
+
+describe("the passage page's reading chooser", () => {
+  it("has one link to the Readings index for preparation and no in-page chooser", async () => {
+    const { createElement } = await import("react");
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { PassagePreparation } = await import("../../src/components/learn/passage-preparation");
+    const markup = renderToStaticMarkup(createElement(PassagePreparation, { target: { ref: null, kind: "torah" } }));
+    expect(markup.match(/href="\/readings\?for=prepare"/g)).toHaveLength(1);
+    expect(markup).not.toContain("<details");
+    expect(markup).not.toContain("Open a different public passage");
+    expect(markup).not.toContain("Choose another reading in Lein");
+  });
+});
