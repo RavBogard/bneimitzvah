@@ -116,8 +116,10 @@ The Learn course and its lessons; the admin's deep pages (roster, import, people
 
 ## Open items that wait on Daniel
 
-1. The week arrows. Today the reader's title row has two round arrow buttons, ‹ and ›, that step one Shabbat back or forward. The design removes them: the Change sheet's Coming up chips reach the next four weeks in one tap, and its date picker reaches any week. Keep the arrows if stepping week by week matters to you; they fit on the laptop row and would cost one more row on the phone.
+None. Both items below were answered on 2026-10-27 ("Your recommendations are approved"), and the implementation plan is `docs/superpowers/plans/2026-10-27-readings-for-everyone.md`.
 
-2. Parent and tutor tab bars. The full walk found that the parent's three tabs (Today, Practice, Honors) and the tutor's three (This week, Students, Lessons) all open the same list, so decision 17 folds both roles into My Readings (children's cards for a parent; Your students and Find a learner for a tutor) and keeps a tab bar only for the admin. The 2026-10-26 nav spec gave every role four tabs. Say "keep the tabs" to keep four tabs for parents and tutors; they would then need four real screens each (a Today of their own, Practice, Honors; This week, Students, Lessons), which is more to build and gives a parent with one child nothing new on three of them.
+Answered 2026-10-27 (evening): the week arrows retire (decision 5 stands as written; the Change sheet's Coming up chips and date picker cover moving between weeks). Parents and tutors fold into My Readings as decision 17 says; only the admin keeps a tab bar. The 2026-10-26 nav spec's four-tabs-per-role ruling is superseded for the student, parent and tutor roles by this answer.
 
-Answered 2026-10-27: the door is "Your readings"; no gate for children; the bar says "My Readings"; tutors may see any signed-in learner's readings and claim them (decisions 8, 11, 15, 16).
+Answered 2026-10-27 (afternoon): the door is "Your readings"; no gate for children; the bar says "My Readings"; tutors may see any signed-in learner's readings and claim them (decisions 8, 11, 15, 16).
+
+For the record, the two questions as put: (1) the reader's title row had two round arrow buttons, ‹ and ›, stepping one Shabbat back or forward; the design removes them. (2) The full walk found that the parent's three tabs (Today, Practice, Honors) and the tutor's three (This week, Students, Lessons) all opened the same list; decision 17 folds both roles into My Readings and keeps a tab bar only for the admin.
