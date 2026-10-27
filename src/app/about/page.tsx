@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { READINGS_DISCLOSURE } from "../../lib/readings/disclosure";
 import { SiteBar } from "../../components/site/site-bar";
 import { PracticeDisclosure } from "../../components/portal/practice-visibility/disclosure";
 import { studyEditions } from "../../components/portal/workspace/study/credits";
@@ -61,10 +62,11 @@ export default function AboutPage() {
         <h3>Fonts</h3>
         <ul className={styles.credits}>{fonts.map(font => <li key={font.name}><strong>{font.name}</strong><span>{font.notice}, <a href={font.href}>{font.license}</a>.</span></li>)}</ul>
       </section>
-      <section aria-labelledby="about-records">
+      <section id="accounts" aria-labelledby="about-records">
         <h2 id="about-records">What the site records about you</h2>
         <p>Your account stays private.</p>
         <PracticeDisclosure place="account" />
+        <p>{READINGS_DISCLOSURE}</p>
       </section>
       <section aria-labelledby="about-install">
         <h2 id="about-install">Installing it on a phone</h2>

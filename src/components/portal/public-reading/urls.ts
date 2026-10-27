@@ -33,7 +33,9 @@ export const selectorKey = (selector: ReadingSelector) => selector.by === "date"
  * - `/read` (this week) or `/read?date=YYYY-MM-DD` (another Shabbat), optionally `&kind=haftarah`;
  * - `/read?reading=<slug>` (a named reading from the catalog), optionally `&passage=<n>` (1-based);
  * - `/read?ref=<canonical ref>&kind=torah|haftarah` (any passage);
- * - `/read?saved=<id>` (a member's own saved reading: its passage comes from the member's account, never the address).
+ * - `/read?saved=<id>` (a member's own saved reading: its passage comes from the member's account, never the address), or
+ *   `/read?saved=<id>&learner=<membershipId>` (that learner's reading as the tutor who claims them, or the rabbi, reads it, read-only; plan D7).
+ *   A `learner` without `saved` means nothing and is dropped.
  * A `ref` address may add `&mark=<canonical ref>`: the verses of a selection, marked in the whole portion it came from (1.7).
  * Any of them may add `&verse=<n>` (1-based, within the passage shown: that verse opens selected, in the
  * player when recordings are on) and `&lens=study`.
@@ -43,7 +45,7 @@ export const selectorKey = (selector: ReadingSelector) => selector.by === "date"
 export type ReadTarget = Readonly<{ mode: "week"; date: string | null; kind: StudyKind | null }>
   | Readonly<{ mode: "named"; slug: string; passage: number }>
   | Readonly<{ mode: "ref"; ref: string; kind: StudyKind; mark?: string }>
-  | Readonly<{ mode: "saved"; id: string }>;
+  | Readonly<{ mode: "saved"; id: string; learner?: string }>;
 export type ReadAddress = Readonly<{ target: ReadTarget | null; verse: number | null; study: boolean; pick?: PortionPick }>;
 export const READ_VERSE_MAX = 1000;
 
@@ -57,7 +59,10 @@ export function parseReadAddress(search: string): ReadAddress {
   try { params = new URLSearchParams(search); } catch { return { target: null, verse: null, study: false }; }
   const verse = positive(params.get("verse"), READ_VERSE_MAX), study = params.get("lens") === "study";
   const slug = params.get("reading"), ref = params.get("ref"), saved = params.get("saved");
-  if (saved !== null) return { target: SAVED_ID.test(saved) ? { mode: "saved", id: saved.toLowerCase() } : null, verse, study };
+  if (saved !== null) {
+    const learner = params.get("learner");
+    return { target: SAVED_ID.test(saved) ? { mode: "saved", id: saved.toLowerCase(), ...learner !== null && SAVED_ID.test(learner) ? { learner: learner.toLowerCase() } : {} } : null, verse, study };
+  }
   if (slug !== null) {
     const reading = namedReading(slug), passage = params.get("passage") === null ? 1 : positive(params.get("passage"), 64);
     return { target: reading && passage !== null && passage <= reading.passages.length ? { mode: "named", slug: reading.slug, passage } : null, verse, study };
@@ -87,7 +92,7 @@ export function readAddress(target: ReadTarget, options: { today?: string | null
   } else if (target.mode === "named") {
     entries.push(["reading", target.slug]);
     if (target.passage !== 1) entries.push(["passage", String(target.passage)]);
-  } else if (target.mode === "saved") entries.push(["saved", target.id]);
+  } else if (target.mode === "saved") { entries.push(["saved", target.id]); if (target.learner) entries.push(["learner", target.learner]); }
   else entries.push(["ref", target.ref], ["kind", target.kind], ...target.mark ? [["mark", target.mark] as [string, string]] : []);
   if (options.verse) entries.push(["verse", String(options.verse)]);
   if (options.study) entries.push(["lens", "study"]);

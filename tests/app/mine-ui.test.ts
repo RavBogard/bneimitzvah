@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { parseSavedReading } from "../../src/components/portal/saved/api";
 import { OwnReadingsView, OWN_READINGS_FIRST, savedReadingHref } from "../../src/components/portal/mine/own-readings";
 import { EMPTY_LINE, shelfModel, sortOwnReadings, type OwnReadingsState } from "../../src/components/portal/mine/model";
-import { AccountSection, EmptyShelf, LearnSection, PinnedSection, Shelf, ShelfFoot } from "../../src/components/portal/mine/shelf";
+import { AccountSection, EmptyShelf, LearnSection, PinnedSection, Shelf, ShelfFoot, SHELF_STRINGS } from "../../src/components/portal/mine/shelf";
 import type { SessionSummary } from "../../src/components/portal/api";
 
 // The shelf's session comes from the workspace; a static render has none, so the one hook is answered here.
@@ -79,15 +79,22 @@ describe("the shelf's sections", () => {
     expect(renderToStaticMarkup(createElement(PinnedSection, { pinned: { name: "Noa", ceremony: "Beit Mitzvah, Sat, May 1, 2027", done: 2, total: 9, href: "/mine/reading" }, roles: [] }))).toContain('href="/mine/reading"');
     expect(renderToStaticMarkup(createElement(AccountSection))).toMatch(/<a href="\/account"[^>]*>Account<\/a>/);
   });
-  it("interim: a student, a parent and a tutor each get a row to their Beit Mitzvah pages", () => {
+  it("interim: a student and a parent each get a row to their Beit Mitzvah pages; the tutor's row is gone, Your students and Find a learner take its place (plan D7)", () => {
     const markup = renderToStaticMarkup(createElement(PinnedSection, { pinned: null, roles: ["student", "parent", "tutor", "admin"] }));
-    for (const [role, href] of [["student", "/workspace/student"], ["parent", "/workspace/parent"], ["tutor", "/workspace/tutor"]]) {
+    for (const [role, href] of [["student", "/workspace/student"], ["parent", "/workspace/parent"]]) {
       expect(markup).toContain(`data-testid="mine-interim-${role}"`);
       expect(markup).toContain(`href="${href}"`);
     }
-    expect(renderToStaticMarkup(createElement(PinnedSection, { pinned: null, roles: ["admin"] }))).not.toContain("mine-interim");
+    expect(markup).not.toContain("mine-interim-tutor");
+    expect(renderToStaticMarkup(createElement(PinnedSection, { pinned: null, roles: ["admin", "tutor"] }))).not.toContain("mine-interim");
     expect(model({ status: "ready", readings: [] }).sections).toEqual(["learn", "account"]);
-    expect(shelfModel({ summary: { ...summary, roles: ["tutor"] }, own: { status: "hidden" }, pinned: null, learn }).sections).toEqual(["pinned", "learn", "account"]);
+    const sections = (roles: SessionSummary["roles"], own: OwnReadingsState = { status: "hidden" }) => shelfModel({ summary: { ...summary, roles }, own, pinned: null, learn }).sections;
+    // A tutor: Your students, then Find a learner, then the rest; an admin who is not a tutor: Find a learner alone; a parent or student: neither.
+    expect(sections(["tutor"])).toEqual(["students", "find", "learn", "account"]);
+    expect(sections(["tutor", "parent"], { status: "ready", readings: [reading(1)] })).toEqual(["students", "find", "pinned", "own", "learn", "account"]);
+    expect(sections(["admin"])).toEqual(["find", "learn", "account"]);
+    expect(sections(["parent"])).toEqual(["pinned", "learn", "account"]);
+    expect(sections(["student"])).toEqual(["pinned", "learn", "account"]);
   });
   it("the page has exactly one h1 and a link named Account", () => {
     const markup = renderToStaticMarkup(createElement(Shelf));
@@ -99,5 +106,8 @@ describe("the shelf's sections", () => {
     expect(renderToStaticMarkup(createElement(Shelf))).toContain(">My Readings</h1>");
     expect(EMPTY_LINE).toBe("You’re signed in. Nothing is saved yet.");
     expect(renderToStaticMarkup(createElement(ShelfFoot))).toContain("Your tutor and the rabbi can see the readings you keep.");
+    // Plan D8: the foot line ends in the way to what the site records.
+    expect(renderToStaticMarkup(createElement(ShelfFoot))).toContain(`<a href="/about#accounts">${SHELF_STRINGS.records}</a>`);
+    expect(SHELF_STRINGS.records).toBe("What the site records about you");
   });
 });

@@ -9,4 +9,18 @@
 .foot { margin: 1.5rem 0 0; color: var(--color-muted); font-size: 0.875rem; }
 .account { display: flex; flex-wrap: wrap; align-items: center; margin: 1rem 0 0; color: var(--color-muted); font-size: 0.875rem; }
 .account a { display: inline-flex; align-items: center; min-height: 44px; }
+/* Readings for everyone (plan D7): Your students, Find a learner and the Tutor line. */
+.sectionTitle { font-size: 1.125rem; margin: 0 0 0.5rem; }
+.findLabel { display: block; margin: 0.5rem 0 0.25rem; font-size: 0.875rem; color: var(--color-muted); }
+.findInput { width: 100%; min-height: 44px; padding: 0.5rem 0.75rem; border-radius: var(--radius-object); border: 1px solid var(--color-rule); background: var(--color-surface); color: inherit; font: inherit; }
+.findStatus { margin: 0.5rem 0 0; color: var(--color-muted); font-size: 0.875rem; }
+.learnerList { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; gap: 0.5rem; }
+.learnerRow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; padding: 0.5rem 0; border-top: 1px solid var(--color-rule); }
+.learnerMain { flex: 1 1 16rem; min-width: 0; }
+.learnerName { font-weight: 600; }
+.learnerName:is(a) { display: inline-flex; align-items: center; min-height: 44px; }
+.learnerMeta { color: var(--color-muted); font-size: 0.875rem; }
+.learnerRow button { min-height: 44px; }
+.tutorLine { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; margin: 1.5rem 0 0; color: var(--color-muted); font-size: 0.875rem; }
+.tutorUndo { min-height: 44px; padding: 0 0.5rem; border: 0; background: none; color: var(--color-accent, inherit); text-decoration: underline; font: inherit; cursor: pointer; }
 @media (max-width: 640px) { .chips > * { flex: 1 1 auto; } }

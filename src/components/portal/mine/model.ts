@@ -8,7 +8,7 @@ export type OwnReadingsState = Readonly<{ status: "loading" } | { status: "ready
 export type PinnedState = Readonly<{ name: string; ceremony: string | null; done: number; total: number; href: string }>;
 /** The Learn row's second line: the next lesson, "Start the course", or nothing once the course is done. */
 export type LearnRowState = Readonly<{ meta: string | null }>;
-export type ShelfSection = "pinned" | "own" | "learn" | "account";
+export type ShelfSection = "students" | "find" | "pinned" | "own" | "learn" | "account";
 export type ShelfView = Readonly<{
   /** The sections to draw, in order. */
   sections: readonly ShelfSection[];
@@ -16,13 +16,12 @@ export type ShelfView = Readonly<{
   empty: null | Readonly<{ line: string | null }>;
 }>;
 
-export type InterimRow = Readonly<{ role: "student" | "parent" | "tutor"; title: string; href: string; action: string | null }>;
-/** The interim rows, in role order. Existing words only. */
+export type InterimRow = Readonly<{ role: "student" | "parent"; title: string; href: string; action: string | null }>;
+/** The interim rows, in role order, until E1 and E2 replace them. Existing words only. The tutor's row is gone: D7's Your students is the real one. */
 export function interimRows(roles: readonly string[]): InterimRow[] {
   const rows: InterimRow[] = [];
   if (roles.includes("student")) rows.push({ role: "student", title: "Beit Mitzvah", href: "/workspace/student", action: "Open" });
   if (roles.includes("parent")) rows.push({ role: "parent", title: "Beit Mitzvah", href: "/workspace/parent", action: "Open" });
-  if (roles.includes("tutor")) rows.push({ role: "tutor", title: "Your students", href: "/workspace/tutor", action: null });
   return rows;
 }
 
@@ -40,8 +39,12 @@ export function shelfModel(input: { summary: SessionSummary; own: OwnReadingsSta
   const settled = own.status === "ready" || own.status === "hidden";
   const empty = settled && !keeps && !pinned ? { line: own.status === "ready" ? EMPTY_LINE : null } : null;
   const sections: ShelfSection[] = [];
-  // Interim: a student, parent or tutor gets a row to their Beit Mitzvah pages until Area E (E1, E2, D7) replaces it.
-  if (pinned || interimRows(input.summary.roles).length) sections.push("pinned");
+  // A tutor (decisions 17 and 25): Your students first, then Find a learner; an admin who is not a tutor gets Find a learner alone, to see and undo claims.
+  const roles = input.summary.roles;
+  if (roles.includes("tutor")) sections.push("students");
+  if (roles.includes("tutor") || roles.includes("admin")) sections.push("find");
+  // Interim: a student or parent gets a row to their Beit Mitzvah pages until Area E (E1, E2) replaces it.
+  if (pinned || interimRows(roles).length) sections.push("pinned");
   if (own.status === "loading" || own.status === "failed" || keeps) sections.push("own");
   sections.push("learn", "account");
   return { sections, empty };

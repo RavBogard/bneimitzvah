@@ -85,7 +85,7 @@ export function PublicReading() {
   return <StudyLensScope storageKey={LENS_STORAGE.weekly} query={query}>
     {!address ? <Shell title={WEEK_TITLE} settled={false}><ReadHeader eyebrow="Torah and haftarah" title="Loading the reading" previous={{ label: "Previous week", disabled: true, onClick: () => {} }} next={{ label: "Next week", disabled: true, onClick: () => {} }} /><ReadingBlock /></Shell>
       : address.target?.mode === "week" ? <WeekReading initial={address.target} verse={address.verse} saveReturn={back} pick={address.pick} />
-        : address.target?.mode === "saved" ? <SavedReadingPage id={address.target.id} verse={address.verse} />
+        : address.target?.mode === "saved" ? <SavedReadingPage id={address.target.id} verse={address.verse} learner={address.target.learner ?? null} />
         : address.target ? <ChosenReading target={address.target} verse={address.verse} saveReturn={back} />
           : <Unavailable />}
   </StudyLensScope>;

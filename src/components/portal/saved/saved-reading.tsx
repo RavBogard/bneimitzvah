@@ -13,9 +13,10 @@ import { CHOOSE_STRINGS, type ChoosePlan, type ChosenSelection } from "../public
 import { contextFor, positionInRef, selectionPlace, type Portion } from "../../../lib/readings/verse-selection";
 import { refreshOfflinePacks } from "../offline/runtime";
 import { ChangeVersesSave, CHANGE_STRINGS } from "./change-verses";
-import { useSavedOwnLayer, type VerseWork } from "./yours";
+import { useSavedOwnLayer, YoursRowView, type VerseWork } from "./yours";
 import styles from "./saved.module.css";
 import { ReturnSignInLink } from "../return-sign-in-link";
+import { fetchLearner, fetchLearnerPage } from "../mine/api";
 
 const kindName = (kind: SavedReading["kind"]) => kind === "torah" ? "Torah" : "Haftarah";
 const workOf = (row: Extract<SavedPage, { state: "ready" }>["verses"][number]): VerseWork => ({ translation: row.translation, note: row.note });
@@ -83,13 +84,21 @@ export function SavedVerseMarks({ verseRef, mark, pending, notice, onChoose, onS
   </div>;
 }
 
+/** A verse's mark as a staff viewer sees it (plan D7): the learner's Still working or Got it, read-only; nothing when unmarked. */
+export function SavedVerseMarkReadOnly({ verseRef, mark }: { verseRef: string; mark: SavedMark | null | undefined }) {
+  if (!mark || mark.state === "unmarked") return null;
+  return <p className={styles.markNote} data-testid="learner-mark" data-state={mark.state}><span className="visually-hidden">{verseRef}: </span>{mark.state === "got-it" && check}{markLabels[mark.state]}</p>;
+}
+
 /**
  * /read?saved=<id>: a member's own saved reading. The passage comes from the account (never the address), so the
  * same text, recordings and tools open on it; above it the reading's name and date with Edit, and in Lein each
  * selected verse carries its Still working / Got it mark. In Study each verse has its closed Yours row and each inline comment its
  * star (PR 3), and stored notes and translations show read-only under Yours. A tab coming back revalidates quietly and stays mounted.
+ * With `learner` (plan D7, `&learner=<membershipId>`): the same page as the tutor who claims that learner, or the rabbi, reads it,
+ * through the read-only staff routes: no Edit, no Change verses, the marks and the Yours row shown and nothing writable.
  */
-export function SavedReadingPage({ id, verse }: { id: string; verse: number | null }) {
+export function SavedReadingPage({ id, verse, learner = null }: { id: string; verse: number | null; learner?: string | null }) {
   const lens = useStudyLens(), starter = useStarter(), editId = useId();
   const [header, setHeader] = useState<Header>({ status: "loading" }), [retry, setRetry] = useState(0), [linked, setLinked] = useState(verse);
   const [text, setText] = useState<Text | null>(null), [textRetry, setTextRetry] = useState(0);
@@ -100,10 +109,20 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
   const place = useRef<string | null>(null);
   const loadedPages = useRef(new Set<number>()), live = useRef<AbortController | null>(null);
   const reading = header.status === "ready" ? header.reading : null;
+  // The learner view: the staff read of a learner's page, and the learner's name for the muted line.
+  const viewing = learner !== null;
+  const [learnerName, setLearnerName] = useState<string | null>(null);
+  const loadPage = useCallback((offset: number, signal?: AbortSignal) => learner ? fetchLearnerPage(learner, id, offset, signal) : fetchSavedPage(id, offset, signal), [id, learner]);
+  useEffect(() => {
+    if (!learner) { setLearnerName(null); return; }
+    const controller = new AbortController();
+    fetchLearner(learner, controller.signal).then(row => { if (!controller.signal.aborted) setLearnerName(row?.name ?? null); }, () => undefined);
+    return () => controller.abort();
+  }, [learner]);
 
   const loadHeader = useCallback(async (quiet: boolean, signal: AbortSignal) => {
     try {
-      const page = await fetchSavedPage(id, 0, signal);
+      const page = await loadPage(0, signal);
       if (signal.aborted) return;
       if (page.state !== "ready") { setHeader({ status: page.state }); return; }
       setHeader(current => current.status === "ready" && JSON.stringify(current.reading) === JSON.stringify(page.reading) ? current : { status: "ready", reading: page.reading });
@@ -113,7 +132,7 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
       // Merged, not replaced: a quiet revalidation must not blank the own texts of verses on later pages (an open Yours row).
       setWork(current => { const next = new Map(current); for (const row of page.verses) next.set(row.ref, workOf(row)); return next; });
     } catch { if (!signal.aborted && !quiet) setHeader({ status: "failed" }); }
-  }, [id]);
+  }, [loadPage]);
   useEffect(() => { const controller = new AbortController(); setHeader({ status: "loading" }); void loadHeader(false, controller.signal); return () => controller.abort(); }, [loadHeader, retry]);
   // Back to the tab: check quietly that the reading is still this member's and unchanged; the page stays mounted.
   // Restored from the back-forward cache (say, after signing out on a shared device): hide everything first, then ask again.
@@ -126,7 +145,7 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
     return () => { document.removeEventListener("visibilitychange", back); window.removeEventListener("pageshow", restored); controller?.abort(); };
   }, [loadHeader]);
   // The address names the member's selection; a verse number inside the whole portion would mean something else on reload, so it is left out there.
-  useEffect(() => { replaceAddress(readAddress({ mode: "saved", id }, { verse: view === "selection" ? linked : null, study: lens.lens === "study" })); }, [id, linked, lens.lens, view]);
+  useEffect(() => { replaceAddress(readAddress({ mode: "saved", id, ...learner ? { learner } : {} }, { verse: view === "selection" ? linked : null, study: lens.lens === "study" })); }, [id, learner, linked, lens.lens, view]);
 
   // The passage itself, by its canonical ref, from the same open routes as any reading.
   const textKey = reading ? JSON.stringify([reading.kind, reading.ranges]) : "";
@@ -148,12 +167,12 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
     const offset = Math.floor(at / PAGE) * PAGE;
     if (loadedPages.current.has(offset)) return;
     loadedPages.current.add(offset);
-    fetchSavedPage(id, offset).then(page => {
+    loadPage(offset).then(page => {
       if (page.state !== "ready") { loadedPages.current.delete(offset); return; }
       setMarks(current => { const next = new Map(current); for (const row of page.verses) next.set(row.ref, row.mark); return next; });
       setWork(current => { const next = new Map(current); for (const row of page.verses) next.set(row.ref, workOf(row)); return next; });
     }, () => { loadedPages.current.delete(offset); });
-  }, [id, verses]);
+  }, [loadPage, verses]);
   const choose = (ref: string, state: "working" | "got-it") => {
     if (!reading) return;
     const current = marks.get(ref) ?? null, next = current?.state === state ? "unmarked" : state;
@@ -169,9 +188,16 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
       if (result.code === "signed-out" || result.code === "not-eligible" || result.code === "missing") setRetry(value => value + 1);
     });
   };
-  const own = useSavedOwnLayer({ readingId: id, active: header.status === "ready", work, ensure: ensureMarks, refused: () => setRetry(value => value + 1) });
-  const verseExtra = (ref: string): ReactNode =>
-    <SavedVerseMarks key={ref} onShow={ensureMarks} verseRef={ref} mark={marks.has(ref) ? marks.get(ref) : undefined} pending={pending === ref} notice={markNotice?.ref === ref ? markNotice.text : ""} onChoose={state => choose(ref, state)} />;
+  const ownLayer = useSavedOwnLayer({ readingId: id, active: header.status === "ready" && !viewing, work, ensure: ensureMarks, refused: () => setRetry(value => value + 1) });
+  // The learner view's Yours rows: the learner's stored texts, read-only, with no stars (the viewer's own stars are not the learner's).
+  const [openYours, setOpenYours] = useState<ReadonlySet<string>>(new Set());
+  const viewerLayer = useMemo<OwnLayer>(() => ({ stars: null, yours: verse => <YoursRowView key={verse.ref} verseRef={verse.ref} open={openYours.has(verse.ref)}
+    onToggle={() => { ensureMarks(verse.ref); setOpenYours(current => { const next = new Set(current); if (next.has(verse.ref)) next.delete(verse.ref); else next.add(verse.ref); return next; }); }}
+    translation={work.get(verse.ref)?.translation?.text} note={work.get(verse.ref)?.note?.text} starred={null} /> }), [openYours, work, ensureMarks]);
+  const own = viewing ? viewerLayer : ownLayer;
+  const verseExtra = (ref: string): ReactNode => viewing
+    ? <SavedVerseMarkReadOnly key={ref} verseRef={ref} mark={marks.has(ref) ? marks.get(ref) : undefined} />
+    : <SavedVerseMarks key={ref} onShow={ensureMarks} verseRef={ref} mark={marks.has(ref) ? marks.get(ref) : undefined} pending={pending === ref} notice={markNotice?.ref === ref ? markNotice.text : ""} onChoose={state => choose(ref, state)} />;
 
   const begin = () => { live.current?.abort(); const controller = new AbortController(); live.current = controller; return controller; };
 
@@ -215,7 +241,8 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
   };
   const savedChoice = (selection: ChosenSelection) => <ChangeVersesSave selection={selection} revise={revise} />;
   const ownRanges = reading ? reading.ranges.split("; ") : [];
-  const plan: ChoosePlan | undefined = !reading ? undefined : view === "selection"
+  // A staff viewer never changes the learner's verses: no Choose verses plan at all.
+  const plan: ChoosePlan | undefined = !reading || viewing ? undefined : view === "selection"
     ? { label: CHOOSE_STRINGS.change, start: ownRanges, save: savedChoice, onPlace: ref => { place.current = ref; },
       onBegin: context ? () => enter("change") : undefined,
       extra: context?.whole ? <button type="button" className="button-secondary" onClick={() => enter("portion")}>{CHOOSE_STRINGS.wholePortion}</button> : null }
@@ -260,14 +287,15 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
   };
   useEffect(() => () => live.current?.abort(), []);
 
-  const editButton = reading && <button type="button" className="button-hero-secondary" aria-expanded={edit !== "closed"} aria-controls={edit !== "closed" ? editId : undefined} onClick={openEdit}>Edit</button>;
-  // The private name stays on the page; the tab title (and so browser history) only ever says "My reading".
-  return <Shell title="My reading" signedIn={header.status === "ready"}>
-    <Hero eyebrow="My reading" title={reading ? reading.name : header.status === "loading" ? "Loading your reading" : "Reading unavailable"}
+  const editButton = reading && !viewing && <button type="button" className="button-hero-secondary" aria-expanded={edit !== "closed"} aria-controls={edit !== "closed" ? editId : undefined} onClick={openEdit}>Edit</button>;
+  // The private name stays on the page; the tab title (and so browser history) only ever says "My reading". A learner's reading says whose it is.
+  const eyebrow = viewing ? `${learnerName ?? "Learner"}’s reading` : "My reading";
+  return <Shell title={viewing ? "A learner’s reading" : "My reading"} signedIn={header.status === "ready"}>
+    <Hero eyebrow={eyebrow} title={reading ? reading.name : header.status === "loading" ? "Loading the reading" : "Reading unavailable"}
       meta={reading && <>{reading.date && <><time dateTime={reading.date}>{longDate(reading.date)}</time> · </>}{kindName(reading.kind)} <bdi dir="ltr">{displayRange([reading.ranges])}</bdi></>}
       nav={<><button type="button" className="button-hero-secondary" onClick={() => go(readAddress({ mode: "week", date: null, kind: null }, { study: lens.lens === "study" }))}>This week</button><a className="button-hero-secondary" href="/readings">Choose a reading</a></>}
       actions={reading && starter.row(editButton, printAddress({ mode: "saved", id: reading.id }))} />
-    {reading && <SavedReadingEdit step={edit} panelId={editId} name={draft.name} date={draft.date} notice={editNotice}
+    {reading && !viewing && <SavedReadingEdit step={edit} panelId={editId} name={draft.name} date={draft.date} notice={editNotice}
       onName={value => setDraft(current => ({ ...current, name: value }))} onDate={value => setDraft(current => ({ ...current, date: value }))}
       onSave={save} onCancel={() => { live.current?.abort(); setEdit("closed"); setEditNotice(""); }} onAskRemove={() => { setEditNotice(""); setEdit("confirm"); }} onRemove={remove} onKeep={() => setEdit("open")} />}
     {header.status !== "loading" && header.status !== "ready" && <SavedReadingState status={header.status} onRetry={() => setRetry(value => value + 1)} />}

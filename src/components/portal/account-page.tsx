@@ -6,6 +6,7 @@ import { PortalEntry } from "./entry";
 import { AccountRequest } from "./account-request";
 import { InstallHint } from "./offline/install-hint";
 import { ParentAccountDisclosure, PracticeDisclosure } from "./practice-visibility/disclosure";
+import { READINGS_DISCLOSURE } from "../../lib/readings/disclosure";
 import { rememberSignedIn } from "./signed-in-hint";
 import { signOutOfPortal } from "./sign-out";
 import { homeRole, rolePaths } from "./shell/role-home";
@@ -39,6 +40,7 @@ export function AccountView({ summary, current, signingOut, problem, onRole, onS
     </section>}
     <InstallHint place="account" />
     {student && <PracticeDisclosure place="account" />}
+    <p className="field-help" role="note" data-readings-disclosure="account">{READINGS_DISCLOSURE}</p>
     {roles.includes("parent") && <ParentAccountDisclosure load={parentChildren} />}
     {student && <section className="account-section"><List label="Help"><ListRow title="Need help?" href={GUIDE} external /></List></section>}
     {/* Never offered to a student, who already has an account (G20, 1.9 N20); an account with no role asks for one here. */}

@@ -50,6 +50,69 @@ test("with none saved the shelf says so and offers the first reading; a person w
   await expect(page.getByTestId("mine-own")).toHaveCount(0);
 });
 
+// Readings for everyone, plan D7: a tutor finds a learner by name, claims in one tap, opens the shelf and sees the readings; the learner sees
+// "Tutor: {name}" and "Not my tutor" undoes it. Synthetic people; the learner routes are route fulfilments like the rest.
+const LEARNER = "00000000-0000-4000-8000-000000000077";
+const learnerRow = (claimed: boolean) => ({ membershipId: LEARNER, name: "Synthetic Learner", readings: 2, nearest: { name: "Synthetic reading 1", date: "2026-10-24" },
+  tutor: claimed ? { name: "Synthetic Tutor", claimed: true, mine: true } : null, student: null });
+
+test("a tutor's shelf: Your students, then Find a learner by name, Claim as my student in one tap, then the learner's shelf and its readings", async ({ page }) => {
+  let claimed = false; const posted: string[] = [];
+  await session(page, ["tutor"]);
+  await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: [] }));
+  await page.route("**/api/students?mode=tutor*", route => json(route, 200, { students: [{ id: "00000000-0000-4000-8000-000000000088", firstName: "Synthetic", lastName: "Student", ceremonyDate: "2999-05-01", revision: 1, rehearsal1: null, rehearsal2: null, serviceSlot: "morning", ownAdultHonors: false }] }));
+  await page.route("**/api/students/*/lessons*", route => json(route, 200, { ok: true, studentId: "00000000-0000-4000-8000-000000000088", mode: "tutor", entries: [], nextCursor: null }));
+  await page.route("**/api/mine/tutor", route => json(route, 200, { ok: true, tutor: null }));
+  await page.route("**/api/learners**", route => {
+    if (route.request().method() === "POST") { posted.push(new URL(route.request().url()).pathname); claimed = true; return json(route, 200, { ok: true, learner: LEARNER, created: true }); }
+    const q = new URL(route.request().url()).searchParams.get("q") ?? "";
+    return json(route, 200, { ok: true, learners: "synthetic learner".startsWith(q.toLowerCase()) ? [learnerRow(claimed)] : [] });
+  });
+  await page.route(`**/api/saved/learner/readings?learner=${LEARNER}`, route => json(route, 200, { ok: true, readings: [row(1), row(2)] }));
+  await page.goto("/mine");
+  const students = page.getByRole("region", { name: "Your students" }), find = page.getByRole("region", { name: "Find a learner" });
+  await expect(students).toBeVisible();
+  await expect(students.getByRole("link", { name: /Synthetic Student/ })).toHaveAttribute("href", "/workspace/tutor/00000000-0000-4000-8000-000000000088");
+  await expect(page.getByTestId("mine-interim-tutor")).toHaveCount(0);
+  expect(await students.evaluate(node => node.getBoundingClientRect().top)).toBeLessThan(await find.evaluate(node => node.getBoundingClientRect().top));
+  await find.getByRole("searchbox", { name: "Find a learner", exact: true }).fill("Synth");
+  const learnerRowLocator = find.getByTestId("learner-row");
+  await expect(learnerRowLocator).toHaveCount(1);
+  await expect(learnerRowLocator).toContainText("No tutor yet");
+  await learnerRowLocator.getByRole("button", { name: "Claim as my student: Synthetic Learner", exact: true }).click();
+  await expect(find.getByRole("status").filter({ hasText: "Synthetic Learner is now your student." })).toBeVisible();
+  expect(posted).toEqual(["/api/learners/claim"]);
+  await expect(learnerRowLocator.getByRole("button", { name: "Claim as my student: Synthetic Learner", exact: true })).toBeDisabled();
+  await learnerRowLocator.getByRole("link", { name: "Synthetic Learner", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/mine/learner/${LEARNER}$`));
+  const shelf = page.getByTestId("learner-shelf");
+  await expect(shelf.getByRole("heading", { level: 1, name: "Synthetic Learner", exact: true })).toBeVisible();
+  await expect(shelf.getByRole("region", { name: "Also working on" }).getByRole("listitem")).toHaveCount(2);
+  await expect(shelf.getByRole("link", { name: /Synthetic reading 1\b/ })).toHaveAttribute("href", `/read?saved=${row(1).id}&learner=${LEARNER}`);
+  await expect(shelf.getByRole("button")).toHaveCount(0);
+  expect(await noHorizontalScroll(page)).toBe(true);
+});
+
+test("the learner's shelf says Tutor: name, and Not my tutor removes the claim; a rabbi's assignment has no undo", async ({ page }) => {
+  let tutor: { name: string; claimed: boolean } | null = { name: "Synthetic Tutor", claimed: true }; const posted: string[] = [];
+  await session(page, []);
+  await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: [row(1)] }));
+  await page.route("**/api/mine/tutor", route => json(route, 200, { ok: true, tutor }));
+  await page.route("**/api/mine/tutor/remove", route => { posted.push(route.request().method()); tutor = null; return json(route, 200, { ok: true }); });
+  await page.goto("/mine");
+  const line = page.getByTestId("mine-tutor");
+  await expect(line).toContainText("Tutor: Synthetic Tutor");
+  await expect(page.getByTestId("mine-find")).toHaveCount(0); await expect(page.getByTestId("mine-students")).toHaveCount(0);
+  await line.getByRole("button", { name: "Not my tutor", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Your tutor was removed." })).toBeVisible();
+  expect(posted).toEqual(["POST"]);
+  await expect(page.getByRole("link", { name: "What the site records about you", exact: true })).toHaveAttribute("href", "/about#accounts");
+  tutor = { name: "Synthetic Tutor", claimed: false };
+  await page.reload();
+  await expect(page.getByTestId("mine-tutor")).toContainText("Tutor: Synthetic Tutor");
+  await expect(page.getByRole("button", { name: "Not my tutor", exact: true })).toHaveCount(0);
+});
+
 test("signed out, /mine shows the sign-in step under the same bar and asks for no saved readings", async ({ page }) => {
   const saved: string[] = [];
   page.on("request", request => { if (new URL(request.url()).pathname.startsWith("/api/saved/")) saved.push(new URL(request.url()).pathname); });
