@@ -180,8 +180,10 @@ it("the member opens the saved reading from My readings, marks a verse that stay
   await tab.getByRole("button", { name: "Edit", exact: true }).click();
   await tab.getByRole("button", { name: "Remove reading", exact: true }).click();
   await tab.getByRole("button", { name: "Remove", exact: true }).click();
-  await ui(tab.locator("[data-my-readings]")).toBeVisible();
-  await ui(tab.locator("[data-my-readings]").getByText("Admin creation, renamed")).toHaveCount(0);
+  // Removed, the reader goes back to the shelf, which no longer lists it (with nothing left it shows the empty shelf).
+  await expect.poll(() => new URL(tab.url()).pathname).toBe("/mine");
+  await ui(tab.getByRole("heading", { level: 1, name: "My Readings", exact: true })).toBeVisible();
+  await ui(tab.getByText("Admin creation, renamed")).toHaveCount(0);
   expect((await fixture.ownerDb.select().from(s.savedReading).where(eq(s.savedReading.id, id))).length).toBe(0);
   expect((await fixture.ownerDb.select().from(s.savedVerseMark).where(eq(s.savedVerseMark.savedReadingId, id))).length).toBe(0);
   // The member's saved-layer writes were exactly these four, and none of them reached the audit log.
