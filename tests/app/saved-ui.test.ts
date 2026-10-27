@@ -73,7 +73,7 @@ describe("Save on /read", () => {
     expect(view("not-eligible")).toContain('<a href="/account">Ask for an account to save readings</a>');
     expect(view("unavailable")).toContain("Saving isn’t available right now. Try again.");
     const saved = view("saved");
-    expect(saved).toContain('Saved to <a href="/">My readings</a>.');
+    expect(saved).toContain('Saved to <a href="/mine">My Readings</a>.');
     expect(saved).not.toContain(">Save</button>");
   });
   it("opens an inline form with the name and the Shabbat filled in, never a dialog", () => {

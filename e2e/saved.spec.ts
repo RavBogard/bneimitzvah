@@ -96,8 +96,8 @@ test("a member saves the passage on screen with its name and Shabbat filled in, 
     await form.getByLabel("Name").fill("  My Noach  ");
     await form.getByLabel("Date (optional)").fill("");
     await form.getByRole("button", { name: "Save reading", exact: true }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Saved to My readings." })).toBeVisible();
-    await expect(page.getByRole("link", { name: "My readings", exact: true })).toHaveAttribute("href", "/");
+    await expect(page.getByRole("status").filter({ hasText: "Saved to My Readings." })).toBeVisible();
+    await expect(page.getByRole("link", { name: "My Readings", exact: true }).last()).toHaveAttribute("href", "/mine");
     expect(posted.at(-1)).toEqual({ name: "My Noach", date: null, kind: "torah", ranges: "Genesis 6:9-11:32" });
     // The haftarah is its own passage: Save starts over for it, named for it.
     await closeMore(page);

@@ -86,10 +86,10 @@ it("a tutor-and-parent saves this week's Torah from /read and finds it under My 
     await ui(form.getByLabel("Name")).toHaveValue("Synthetic portion · Torah");
     await form.getByLabel("Name").fill(`Creation at ${width}`);
     await form.getByRole("button", { name: "Save reading", exact: true }).click();
-    await ui(tab.locator('[data-save-step="saved"]')).toBeVisible(); await ui(tab.getByRole("status").filter({ hasText: "Saved to My readings." })).toBeVisible();
+    await ui(tab.locator('[data-save-step="saved"]')).toBeVisible(); await ui(tab.getByRole("status").filter({ hasText: "Saved to My Readings." })).toBeVisible();
     expect(seen).toEqual(["GET /api/saved/readings", "POST /api/saved/readings/create"]);
     expect(await noHorizontalScroll(tab)).toBe(true);
-    await tab.locator('[data-save-step="saved"] a[href="/"]').click();
+    await tab.locator('[data-save-step="saved"] a[href="/mine"]').click();
     await ui(mine.getByRole("link", { name: new RegExp(`Creation at ${width}`) })).toBeVisible();
     await ui(mine.getByRole("link", { name: new RegExp(`Creation at ${width}`) })).toContainText("Genesis 1:1–6:8");
     expect(await noHorizontalScroll(tab)).toBe(true);

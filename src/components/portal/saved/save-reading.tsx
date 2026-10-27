@@ -43,7 +43,7 @@ export function SaveReadingView({ step, problem, name, date, panelId, savedId = 
       ? <p className={styles.line} data-save-student="">{STUDENT_LINE} <a href="/workspace/student?tab=reading">Open your reading</a></p>
       : <p className={styles.line}><a href="/account">Ask for an account to save readings</a></p>)}
     {step === "unavailable" && <p className={styles.line} role="status">Saving isn’t available right now. Try again.</p>}
-    {step === "saved" && <p className={styles.line} role="status">Saved to <a href="/">My readings</a>.{savedId && <> <a href={savedReadingHref(savedId)}>Open your reading</a></>}</p>}
+    {step === "saved" && <p className={styles.line} role="status">Saved to <a href="/mine">My Readings</a>.{savedId && <> <a href={savedReadingHref(savedId)}>Open your reading</a></>}</p>}
     {open && <form id={panelId} className={styles.panel} aria-label="Save this reading" onSubmit={event => { event.preventDefault(); onSubmit(); }}>
       <div><label htmlFor={`${panelId}-name`}>Name</label>
         <input id={`${panelId}-name`} name="name" value={name} maxLength={80} required autoComplete="off" onChange={event => onName(event.target.value)} /></div>

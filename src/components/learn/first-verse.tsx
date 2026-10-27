@@ -34,7 +34,7 @@ export function FirstVerse({ lesson, onDone }: { lesson: Lesson; onDone(): void 
   const lein = fromWeek && !own && week.status === "ready" && position > 0 ? leinHref({ date: week.date, kind, verse: position }) : leinHref({ ref: verse.ref, kind, verse: 1 });
   return <>
     <p className={styles.listen}>{own ? "In your reading" : fromWeek ? "One verse from this week's reading." : COURSE_LINE[verse.ref] ?? COURSE_LINE_DEFAULT}</p>
-    {own && <p className={styles.muted}><a href="/workspace/student?tab=reading">Back to my reading</a></p>}
+    {own && <p className={styles.muted}><a href="/mine">My Readings</a></p>}
     {!fromWeek && !weekCandidates.length && activity.params.source !== "course" && <p className={styles.muted}>From the course's own verses while this week's recording is not ready.</p>}
     {fromWeek && !own && week.status === "ready" && week.shifted && <p className={styles.muted}>Showing the coming Shabbat.</p>}
     <GuidedPreparation key={`${verse.kind}:${verse.ref}`} verse={verse} lein={activity.params.openInLein ? lein : null} onDone={onDone}

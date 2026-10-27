@@ -18,7 +18,7 @@ describe("the course home for a student's own reading", () => {
   it("is exactly today's page for a signed-out visitor, with no row, no link and the Torah path first", () => {
     for (const value of [{ status: "none" }, { status: "pending" }]) {
       const html = render(value);
-      expect(html).not.toContain("First phrase of your verse"); expect(html).not.toContain("Back to my reading");
+      expect(html).not.toContain("First phrase of your verse"); expect(html).not.toContain(">My Readings</a>");
       expect(ids(html)).toEqual(["path-torah", "path-haftarah"]);
     }
   });
@@ -26,7 +26,7 @@ describe("the course home for a student's own reading", () => {
     const html = render({ status: "ready", torah: reading("torah", ["Genesis 23:1", "Genesis 23:2"]), haftarah: null });
     expect(html).toContain('data-first-phrase="torah"'); expect(html).toContain("First phrase of your verse");
     expect(html).toContain('href="/learn/prepare?ref=Genesis+23%3A1&amp;kind=torah"');
-    expect(html).toContain('href="/workspace/student?tab=reading">Back to my reading</a>');
+    expect(html).toContain('href="/mine">My Readings</a>');
     expect(html.indexOf("The two endings")).toBeLessThan(html.indexOf("First phrase of your verse"));
     expect(html.indexOf("First phrase of your verse")).toBeLessThan(html.indexOf("Inside the verse"));
     expect(ids(html)).toEqual(["path-torah", "path-haftarah"]);
@@ -50,6 +50,6 @@ describe("the course home for a student's own reading", () => {
   });
   it("carries the approved strings word for word", () => {
     const text = [read("src/components/learn/own-reading.ts"), read("src/components/learn/home.tsx"), read("src/components/learn/first-verse.tsx"), read("src/components/learn/this-week.tsx")].join("\n");
-    for (const line of ["In your reading", "Back to my reading", "First phrase of your verse"]) expect(text).toContain(line);
+    for (const line of ["In your reading", "My Readings", "First phrase of your verse"]) expect(text).toContain(line);
   });
 });

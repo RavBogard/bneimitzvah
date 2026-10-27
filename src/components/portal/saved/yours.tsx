@@ -16,7 +16,7 @@ export const YOURS_STRINGS = Object.freeze({
   row: "Yours",
   translation: "My translation",
   notes: "My notes",
-  privacy: "Only you can see what you keep here.",
+  privacy: "Your tutor and the rabbi can see what you keep here.",
   starred: "Starred comments",
 });
 

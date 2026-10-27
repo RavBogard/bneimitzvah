@@ -76,7 +76,7 @@ test("each page has exactly one footer landmark: the site footer, with no second
   for (const markup of markups) {
     expect(markup.match(/<footer\b/g) ?? []).toHaveLength(1);
     expect(markup).toContain('<footer class="site-footer">');
-    expect(markup).toContain("Central Reform Congregation · <a href=\"/about\">About</a> · Your account and reading stay private.");
+    expect(markup).toContain("Central Reform Congregation · <a href=\"/about\">About</a> · Your account stays private.");
     expect(markup).toContain('A project of <a href="https://danielbogard.com"');
     expect(markup).not.toContain("portal-footer");
     expect(markup).not.toContain("Learning at Central Reform Congregation");

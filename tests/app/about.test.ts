@@ -36,7 +36,7 @@ test("every credit is one the repository already records, and the privacy and in
   expect(text.indexOf(mark)).toBeLessThan(text.indexOf("Hebrew: Miqra according to the Masorah"));
   // The page body shows no image of the mural; the site bar's brand disc is the only one, and it lives in the header.
   expect(page.slice(page.indexOf("<main"), page.indexOf("</main>"))).not.toMatch(/<img|<picture|background-image/);
-  expect(text).toContain("Your account and reading stay private.");
+  expect(text).toContain("Your account stays private.");
   for (const line of [PLAN.installHint("CRC Torah"), PLAN.iphoneSteps, PLAN.ipadSteps, PLAN.androidMenu]) expect(text).toContain(line);
   expect(page).toContain('href="https://www.centralreform.org/"');
 });
