@@ -456,7 +456,10 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
   .site-bar-nav { gap: 0; }
   .site-bar-link { font-size: 0.875rem; }
   .site-bar-end { min-width: 3.75rem; }
-  /* The My Readings control is the icon alone; its name stays "My Readings". */
+}
+/* "My Readings" is wider than the old "Account": below 560px the control is the icon alone (its name stays "My Readings"), so the name, Read and Learn keep their gap. Measured by e2e/brand-mark.spec.ts. */
+@media (max-width: 559.98px) {
+  .site-bar-end { min-width: 3.75rem; }
   .site-bar-mine-text { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
 /* Measured in Chromium (2026-10-26): disc, name, Beta, Read, Learn and the icon-only account control need 368px to share one line with 16px of side padding; Beta shows from 375px (an iPhone SE) up. The disc and the name never hide, and fit at 320px without Beta. */

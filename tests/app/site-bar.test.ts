@@ -44,7 +44,7 @@ test("signed in, the right side is the My Readings control, with a bookmark icon
   expect(signedIn).not.toContain(">Account<");
   expect(signedIn).toMatch(/<svg[^>]*aria-hidden="true"/);
   expect(signedIn).not.toContain("Sign in");
-  // Both states live inside the one slot that holds the width; under 480px the label is visually hidden, never removed.
+  // Both states live inside the one slot that holds the width; under 560px the label is visually hidden, never removed.
   expect(slot(signedIn)?.[1]).toContain("site-bar-mine-text");
   expect(slot(signedOut)?.[1]).toContain("/sign-in");
   const css = readFileSync(join(process.cwd(), "src", "app", "globals.css"), "utf8");
