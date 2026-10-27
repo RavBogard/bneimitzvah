@@ -32,11 +32,12 @@ describe("the landing role rule: the remembered role, else the highest of admin,
     expect(homeRole(["parent", "admin"], "student")).toBe("admin");
     expect(homeRole([], "admin")).toBeNull();
   });
-  test("/workspace leads to that role's home, and an account with no role to Account", () => {
-    expect(workspaceDestination(["student", "tutor"], null)).toBe(rolePaths.tutor);
-    expect(workspaceDestination(["student", "tutor"], "student")).toBe("/workspace/student");
+  test("/workspace leads to My Readings, and an admin to This week", () => {
+    expect(workspaceDestination(["student", "tutor"], null)).toBe("/mine");
+    expect(workspaceDestination(["student", "tutor"], "student")).toBe("/mine");
     expect(workspaceDestination(["admin"], null)).toBe("/workspace/admin/students");
-    expect(workspaceDestination([], "parent")).toBe("/account");
+    expect(workspaceDestination([], "parent")).toBe("/mine");
+    expect(workspaceDestination(["admin", "tutor"], "tutor")).toBe("/workspace/admin/students");
   });
   test("the page memory is per page load: nothing is written to the device", () => {
     rememberRole("tutor");
@@ -71,7 +72,7 @@ describe("the signed-in door", () => {
     rememberRole("student");
     const student = door(["student"]);
     expect(student).toContain(">Your reading</h2>");
-    expect(student).toMatch(/href="\/workspace\/student"[^>]*>Open Today<\/a>/);
+    expect(student).toMatch(/href="\/mine"[^>]*>Open Today<\/a>/);
     expect(student).not.toContain(">Beit Mitzvah</h2>");
     expect(student).not.toContain("button-start");
     // No remembered role among these: the highest leads.
@@ -121,7 +122,7 @@ describe("Account is a list: who is signed in, Roles with the current one marked
   test("one row per role, each to its home, the current one marked", () => {
     const markup = view(["student", "tutor"], "tutor");
     expect(markup).toContain(">Account</h1>");
-    for (const [name, path] of [["Student", "/workspace/student"], ["Tutor", "/workspace/tutor"]]) expect(markup).toContain(`href="${path}"`), expect(markup).toContain(`>${name}</span>`);
+    for (const [name, path] of [["Student", "/mine"], ["Tutor", "/mine"]]) expect(markup).toContain(`href="${path}"`), expect(markup).toContain(`>${name}</span>`);
     expect(markup.match(/>Current</g)).toHaveLength(1);
     expect(markup.indexOf(">Current<")).toBeGreaterThan(markup.indexOf(">Tutor</span>"));
     expect(markup.indexOf(">Roles</h2>")).toBeLessThan(markup.indexOf(">Email settings<"));

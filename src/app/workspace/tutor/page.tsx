@@ -1,7 +1,8 @@
-import { StudentWorkspace } from "../../../components/portal/workspace/students";
+import { RedirectTo } from "../../../components/portal/shell/redirect-to";
+import { MINE_HREF } from "../../../components/portal/shell/role-home";
 import type { Metadata } from "next";
 import { signedInTitle } from "../../../lib/site/signed-in-title";
 
 export const metadata: Metadata = { title: signedInTitle("Your assigned students") };
 
-export default function TutorPage() { return <StudentWorkspace mode="tutor" />; }
+export default function TutorPage() { return <RedirectTo href={MINE_HREF} />; }

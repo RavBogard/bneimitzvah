@@ -1,6 +1,5 @@
 import { expect, it } from "vitest";
 import { calendarMarks, deviceDate, displayRef, lastSevenDays, parashahName, readingRows, rehearsalLine, rowState } from "../../src/components/portal/workspace/today/model";
-import { tabsFor } from "../../src/components/portal/shell/tabs";
 import type { Reading } from "../../src/components/portal/workspace/api";
 import type { ProgressVerse } from "../../src/lib/progress/types";
 import { expandReadingRanges } from "../../src/lib/readings/ranges";
@@ -69,12 +68,4 @@ it("marks the rehearsals and the ceremony, the ceremony winning if they share a 
   const marks = calendarMarks({ ceremonyDate: "2026-12-12", ...rehearsals });
   expect([...marks]).toEqual([["2026-10-17", "rehearsal"], ["2026-11-07", "rehearsal"], ["2026-12-12", "ceremony"]]);
   expect(calendarMarks({ ceremonyDate: "2026-12-12", rehearsal1: "2026-12-12", rehearsal2: null }).get("2026-12-12")).toBe("ceremony");
-});
-
-it("opens Today on the student's Today tab and the reading page on ?tab=reading", () => {
-  const today = tabsFor({ role: "student", pathname: "/workspace/student", tab: null }), reading = tabsFor({ role: "student", pathname: "/workspace/student", tab: "reading" });
-  expect(today.find(tab => tab.key === "today")).toMatchObject({ href: "/workspace/student", current: true });
-  expect(today.find(tab => tab.key === "reading")).toMatchObject({ href: "/workspace/student?tab=reading", current: false });
-  expect(reading.find(tab => tab.key === "reading")!.current).toBe(true);
-  expect(reading.find(tab => tab.key === "today")!.current).toBe(false);
 });

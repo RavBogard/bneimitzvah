@@ -1,56 +1,35 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { keyboardIsOpen, parseReadingTab, roleOfPath, shellRole, tabsFor, type ShellRole } from "../../src/components/portal/shell/tabs";
+import { adminArea, keyboardIsOpen, parseReadingTab, roleOfPath, shellRole, tabsFor, type ShellRole } from "../../src/components/portal/shell/tabs";
 
-// 1.9 N10: the tab bar's model. Browser-measured checks (one tap, reload, 44px, no overlap, skip link) are in e2e/tab-bar.spec.ts.
-const labels = (role: ShellRole, pathname: string, tab: string | null = null, practiceStudentId?: string) => tabsFor({ role, pathname, tab, practiceStudentId }).map(item => item.label);
-const current = (role: ShellRole, pathname: string, tab: string | null = null, practiceStudentId?: string) => tabsFor({ role, pathname, tab, practiceStudentId }).filter(item => item.current).map(item => item.label);
+// Area A: only the admin has a tab bar, and only on admin pages. Browser-measured checks are in e2e/tab-bar.spec.ts.
+const labels = (role: ShellRole, pathname: string, tab: string | null = null) => tabsFor({ role, pathname, tab }).map(item => item.label);
+const current = (role: ShellRole, pathname: string, tab: string | null = null) => tabsFor({ role, pathname, tab }).filter(item => item.current).map(item => item.label);
 
-describe("the four tabs per role (decision 1)", () => {
+describe("the admin's four tabs", () => {
   it("are exactly the approved words, in order", () => {
-    expect(labels("student", "/workspace/student")).toEqual(["Today", "Reading", "Learn", "Account"]);
-    expect(labels("parent", "/workspace/parent")).toEqual(["Today", "Practice", "Honors", "Account"]);
-    expect(labels("tutor", "/workspace/tutor")).toEqual(["This week", "Students", "Lessons", "More"]);
     expect(labels("admin", "/workspace/admin/students")).toEqual(["This week", "Students", "People", "More"]);
   });
-  it("are never more than four, and the public pages are not among their destinations", () => {
-    for (const role of ["student", "parent", "tutor", "admin"] as const) for (const item of tabsFor({ role, pathname: "/workspace", tab: null })) {
-      expect(item.href).not.toMatch(/^\/(read|trope-chart|print)/);
-      expect(tabsFor({ role, pathname: "/workspace", tab: null })).toHaveLength(4);
-    }
+  it("are the only tabs: every other role has none anywhere", () => {
+    for (const role of ["student", "parent", "tutor"] as const) for (const path of ["/mine", "/read", "/account", "/workspace/tutor/abc", "/workspace/admin/students", "/workspace/more"]) expect(tabsFor({ role, pathname: path, tab: null }), `${role} ${path}`).toEqual([]);
+    for (const item of tabsFor({ role: "admin", pathname: "/workspace/admin/students", tab: null })) expect(item.href).not.toMatch(/^\/(read|trope-chart|print)/);
+  });
+  it("show on the admin's pages only (decision 20)", () => {
+    expect(tabsFor({ role: "admin", pathname: "/mine", tab: null })).toEqual([]);
+    expect(tabsFor({ role: "admin", pathname: "/workspace/tutor/abc", tab: null })).toEqual([]);
+    expect(tabsFor({ role: "admin", pathname: "/workspace/admin/students/abc/reading", tab: null })).toEqual([]);
+    expect(adminArea("/workspace/admin/students/import")).toBe(true);
+    expect(adminArea("/workspace/accounts")).toBe(true);
   });
 });
 
 describe("which tab is current", () => {
-  it("is one tab on every page the shell knows, and the home tab on a role's home", () => {
-    expect(current("student", "/workspace/student")).toEqual(["Today"]);
-    expect(current("student", "/workspace/student", "service")).toEqual(["Reading"]);
-    expect(current("student", "/account")).toEqual(["Account"]);
-    expect(current("parent", "/workspace/parent")).toEqual(["Today"]);
-    expect(current("parent", "/workspace/parent", "reading")).toEqual(["Practice"]);
-    expect(current("parent", "/workspace/practice/abc")).toEqual(["Practice"]);
-    expect(current("parent", "/workspace/parent", "honors")).toEqual(["Honors"]);
-    expect(current("tutor", "/workspace/tutor")).toEqual(["This week"]);
-    expect(current("tutor", "/workspace/tutor", "reading")).toEqual(["Students"]);
-    expect(current("tutor", "/workspace/tutor/abc")).toEqual(["Students"]);
-    expect(current("tutor", "/workspace/tutor/abc", "lessons")).toEqual(["Lessons"]);
-    expect(current("tutor", "/workspace/more")).toEqual(["More"]);
-    expect(current("tutor", "/workspace/email")).toEqual(["More"]);
+  it("is one tab on every admin page the shell knows", () => {
     expect(current("admin", "/workspace/admin/students")).toEqual(["This week"]);
     expect(current("admin", "/workspace/admin/students", "students")).toEqual(["Students"]);
     expect(current("admin", "/workspace/admin/students/import")).toEqual(["Students"]);
-    expect(current("admin", "/workspace/admin/students/abc/reading", "lessons")).toEqual(["Students"]);
     for (const path of ["/workspace/admin/invitations", "/workspace/admin/tutors", "/workspace/accounts"]) expect(current("admin", path)).toEqual(["People"]);
     for (const path of ["/workspace/more", "/workspace/admin/settings", "/workspace/admin/reference-review", "/workspace/email", "/workspace/claude"]) expect(current("admin", path)).toEqual(["More"]);
-  });
-  it("leaves Learn alone: it is a way out to the public page, never the current tab", () => {
-    expect(tabsFor({ role: "student", pathname: "/workspace/student", tab: null }).find(item => item.label === "Learn")).toMatchObject({ href: "/learn", current: false });
-  });
-  it("sends a tutor's Lessons to the same student, and a parent's Practice back to the open child", () => {
-    expect(tabsFor({ role: "tutor", pathname: "/workspace/tutor/abc", tab: null }).find(item => item.label === "Lessons")!.href).toBe("/workspace/tutor/abc?tab=lessons");
-    expect(tabsFor({ role: "tutor", pathname: "/workspace/tutor", tab: null }).find(item => item.label === "Lessons")!.href).toBe("/workspace/tutor?tab=lessons");
-    expect(tabsFor({ role: "parent", pathname: "/workspace/parent", tab: null, practiceStudentId: "abc" }).find(item => item.label === "Practice")!.href).toBe("/workspace/practice/abc");
-    expect(tabsFor({ role: "parent", pathname: "/workspace/parent", tab: null }).find(item => item.label === "Practice")!.href).toBe("/workspace/parent?tab=reading");
   });
 });
 

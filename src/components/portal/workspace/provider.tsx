@@ -596,7 +596,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           {children}
         </WorkspaceContext.Provider></div>}
     </main>
-    {shellShown && <TabBar roles={summary!.roles} practiceStudentId={context?.studentId ?? null} onNavigate={controlledLink} />}
+    {shellShown && <TabBar roles={summary!.roles} onNavigate={controlledLink} />}
   </div>;
 }
 
