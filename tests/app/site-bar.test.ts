@@ -37,26 +37,27 @@ test("minimal mode: the brand and Beta only, no links beside the brand", () => {
   expect(markup.match(/data-beta-mark/g)).toHaveLength(1);
 });
 
-test("signed in, the right side is the account control, named Account, in the same reserved slot Sign in uses", () => {
+test("signed in, the right side is the My Readings control, with a bookmark icon, in the same reserved slot Sign in uses", () => {
   const slot = (markup: string) => /<span class="site-bar-end"[^>]*>(.*?)<\/span><\/nav>/s.exec(markup);
   const signedIn = bar({ signedIn: true }), signedOut = bar();
-  expect(links(signedIn)).toEqual([["/", "CRC Torah"], ["/read", "Read"], ["/learn", "Learn"], ["/account", "Account"]]);
+  expect(links(signedIn)).toEqual([["/", "CRC Torah"], ["/read", "Read"], ["/learn", "Learn"], ["/mine", "My Readings"]]);
+  expect(signedIn).not.toContain(">Account<");
   expect(signedIn).toMatch(/<svg[^>]*aria-hidden="true"/);
   expect(signedIn).not.toContain("Sign in");
-  // Both states live inside the one slot that holds the width; under 480px the label is visually hidden, never removed.
-  expect(slot(signedIn)?.[1]).toContain("site-bar-account-text");
+  // Both states live inside the one slot that holds the width; under 560px the label is visually hidden, never removed.
+  expect(slot(signedIn)?.[1]).toContain("site-bar-mine-text");
   expect(slot(signedOut)?.[1]).toContain("/sign-in");
   const css = readFileSync(join(process.cwd(), "src", "app", "globals.css"), "utf8");
-  expect(css).toMatch(/\.site-bar-end \{[^}]*min-width: 7\.5rem/);
-  expect(css).toMatch(/@media \(max-width: 479\.98px\)[^@]*\.site-bar-account-text \{ position: absolute/);
+  expect(css).toMatch(/\.site-bar-end \{[^}]*min-width: 9rem/);
+  expect(css).toMatch(/@media \(max-width: 559\.98px\)[^@]*\.site-bar-mine-text \{ position: absolute/);
   // Beta hides below the width where disc, name, Beta, Read, Learn and the icon-only account fit on one line (368px measured; 375px set).
   expect(css).toMatch(/@media \(max-width: 374\.98px\) \{ \.site-bar \.site-beta \{ display: none; \} \}/);
   expect(css).not.toMatch(/\.site-bar \.portal-brand[^}]*display: none|\.site-bar-mark[^}]*display: none/);
   expect(css).toMatch(/\.site-bar \{ flex-wrap: nowrap/);
 });
 
-test("the current link: Read on /read*, Learn on /learn* and the trope chart, Account on /account, nothing elsewhere", () => {
-  const cases: [string, string | null][] = [["/read", "read"], ["/read/print", "read"], ["/learn", "learn"], ["/learn/review", "learn"], ["/trope-chart", "learn"], ["/account", "account"],
+test("the current link: Read on /read*, Learn on /learn* and the trope chart, My Readings on /mine*, nothing elsewhere (Account has no site link)", () => {
+  const cases: [string, string | null][] = [["/read", "read"], ["/read/print", "read"], ["/learn", "learn"], ["/learn/review", "learn"], ["/trope-chart", "learn"], ["/mine", "mine"], ["/mine/reading", "mine"], ["/account", null], ["/minefield", null],
     ["/", null], ["/sign-in", null], ["/workspace/student", null], ["/reading-list", null], ["/learned", null]];
   for (const [path, expected] of cases) expect(currentSiteLink(path), path).toBe(expected);
   expect(currentSiteLink(null)).toBeNull();
@@ -68,9 +69,9 @@ test("the current link: Read on /read*, Learn on /learn* and the trope chart, Ac
 });
 
 test("the bar's wording is the approved wording and nothing else", () => {
-  expect(links(bar({ signedIn: true })).map(([, text]) => text)).toEqual(["CRC Torah", "Read", "Learn", "Account"]);
+  expect(links(bar({ signedIn: true })).map(([, text]) => text)).toEqual(["CRC Torah", "Read", "Learn", "My Readings"]);
   expect(links(bar()).map(([, text]) => text)).toEqual(["CRC Torah", "Read", "Learn", "Sign in"]);
-  expect(renderToStaticMarkup(createElement(SiteFooter))).toBe('<footer class="site-footer"><p>Central Reform Congregation · <a href="/about">About</a> · Your account and reading stay private.</p><p>A project of <a href="https://danielbogard.com" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Rabbi Daniel Bogard</a></p></footer>');
+  expect(renderToStaticMarkup(createElement(SiteFooter))).toBe('<footer class="site-footer"><p>Central Reform Congregation · <a href="/about">About</a> · Your account stays private.</p><p>A project of <a href="https://danielbogard.com" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Rabbi Daniel Bogard</a></p></footer>');
 });
 
 const sourceFiles = (dir: string): string[] => readdirSync(dir).flatMap(name => {

@@ -61,7 +61,7 @@ export function createGoogleChallenges<Q extends PgQueryResultHKT>(input: { db: 
       return cookie(browser, 600);
     },
     async issue(request: Request, next: AuthDestination) {
-      if (next !== "/" && next !== "/invitations/accept" && next !== "/account") throw new AccessDenied(403);
+      if (next !== "/" && next !== "/mine" && next !== "/invitations/accept" && next !== "/account") throw new AccessDenied(403);
       const browser = binding(request) ?? random();
       const challengeId = random(), nonce = random(), csrfToken = random(), current = now();
       await input.db.transaction(async tx => {
@@ -91,7 +91,7 @@ export function createGoogleChallenges<Q extends PgQueryResultHKT>(input: { db: 
         catch { throw new AccessDenied(403); }
         if (value.version !== 1 || value.origin !== input.origin || !challengeSecretValid(value.nonce) || typeof value.csrfHash !== "string" || !/^[a-f0-9]{64}$/.test(value.csrfHash)
           || !Number.isSafeInteger(value.issuedAt) || Number(value.issuedAt) > lockedAt || Number(value.issuedAt) < 0 || row.expiresAt.getTime() !== Number(value.issuedAt) + LIFETIME
-          || (value.next !== "/" && value.next !== "/invitations/accept" && value.next !== "/account") || !timingSafeEqual(Buffer.from(value.csrfHash, "hex"), hash(csrfToken))) throw new AccessDenied(403);
+          || (value.next !== "/" && value.next !== "/mine" && value.next !== "/invitations/accept" && value.next !== "/account") || !timingSafeEqual(Buffer.from(value.csrfHash, "hex"), hash(csrfToken))) throw new AccessDenied(403);
         const consumed = await tx.delete(verification).where(where).returning({ id: verification.id });
         if (consumed.length !== 1) throw new AccessDenied(403);
         return { nonce: value.nonce, next: value.next };

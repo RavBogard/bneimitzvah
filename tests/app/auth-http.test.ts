@@ -71,7 +71,7 @@ test("fragment mail bridges internally to real SDK sessions, replay fails and lo
     const link = new URL(f.messages[0].url);
     expect(link.pathname).toBe("/auth/email"); expect(link.search).toBe(""); expect(link.hash).toMatch(/^#token=[A-Za-z]{32}$/);
     const confirmed = await f.dispatch(f.request("/api/auth/email/confirm", { token: tokenOf(link.href) }));
-    expect(confirmed.status).toBe(200); expect(await confirmed.json()).toEqual({ ok: true, next: "/" });
+    expect(confirmed.status).toBe(200); expect(await confirmed.json()).toEqual({ ok: true, next: "/mine" });
     const cookie = cookieOf(confirmed);
     const proof = await f.runtime.auth.api.getSession({ headers: new Headers({ cookie }), query: { disableRefresh: true } });
     expect(proof?.user.emailVerified).toBe(true);
@@ -109,7 +109,7 @@ test("pinned Google cryptography uses server nonce and projects session JSON; re
   const credential = token(first.nonce);
   const body = { credential, challengeId: first.challengeId, csrfToken: first.csrfToken };
   const response = await f.dispatch(f.request("/api/auth/sign-in/social", body, { cookie: first.cookie }));
-  expect(response.status).toBe(200); expect(await response.json()).toEqual({ ok: true, next: "/" });
+  expect(response.status).toBe(200); expect(await response.json()).toEqual({ ok: true, next: "/mine" });
   const sessionCookie = cookieOf(response);
   expect(sessionCookie).toContain("better-auth.session_token=");
   expect((await f.db.select().from(schema.user)).length).toBe(1);
@@ -156,7 +156,7 @@ test("discarded hostile Forwarded cannot bypass real Google nonce/body verificat
   expect((await f.dispatch(f.request("/api/auth/sign-in/social", { ...body, csrfToken: randomBytes(32).toString("base64url") }, { cookie, forwarded }))).status).toBe(403);
   expect(f.sdk.mock.calls.length).toBe(0);
   const response = await f.dispatch(f.request("/api/auth/sign-in/social", body, { cookie, forwarded }));
-  expect(response.status).toBe(200); expect(await response.json()).toEqual({ ok: true, next: "/" });
+  expect(response.status).toBe(200); expect(await response.json()).toEqual({ ok: true, next: "/mine" });
   expect(f.sdk.mock.calls.length).toBe(1);
   expect(f.sdk.mock.calls.every(([request]) => !(request as Request).headers.has("forwarded"))).toBe(true);
   const forged = await f.dispatch(new Request("http://foreign.example.test/api/auth/google/challenge", { method: "POST", headers: { origin: f.origin, "content-type": "application/json", forwarded }, body: "{}" }));
@@ -317,7 +317,7 @@ test("redirect-mode Google: closed destinations, same-origin POST, Google's URL 
       [f.request("/api/auth/callback/google", {}), 405],
     ] as [Request, number][]) expect((await f.dispatch(request)).status).toBe(status);
     expect(f.sdk.mock.calls.length).toBe(0);
-    for (const [body, landing, failure] of [[{}, "/", "/sign-in?error=authentication"], [{ next: "account" }, "/account", "/sign-in?intent=account&error=authentication"], [{ next: "connect" }, "/connect", "/connect?google=failed"]] as const) {
+    for (const [body, landing, failure] of [[{}, "/mine", "/sign-in?error=authentication"], [{ next: "account" }, "/account", "/sign-in?intent=account&error=authentication"], [{ next: "connect" }, "/connect", "/connect?google=failed"]] as const) {
       const first = await startGoogle(f, body);
       expect(first.google.origin + first.google.pathname).toBe("https://accounts.google.com/o/oauth2/v2/auth");
       expect(first.google.searchParams.get("redirect_uri")).toBe(`${origin}/api/auth/callback/google`);
@@ -437,7 +437,7 @@ test("redirect-mode Google spends the popup challenge budget, keeps each return 
   }
   const long = await startGoogle(f, {}), scope = encodeURIComponent(Array.from({ length: 60 }, (_, index) => `https://www.googleapis.com/auth/synthetic.scope${index}`).join(" "));
   const echoed = await f.dispatch(f.request(callbackPath(long.state, `&scope=${scope}`), undefined, { cookie: long.cookie }));
-  expect(echoed.headers.get("location")).toBe("/");
+  expect(echoed.headers.get("location")).toBe("/mine");
   const absent = await fixture(undefined, false);
   expect((await absent.dispatch(absent.request("/api/auth/google/redirect", {}))).status).toBe(503);
   const back = await absent.dispatch(absent.request("/api/auth/callback/google?code=synthetic&state=synthetic"));

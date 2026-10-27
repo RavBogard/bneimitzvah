@@ -5,12 +5,12 @@ import { parseAcceptance, parseAcknowledgement, parseCodeResult, parseInvitation
   type InvitationReview, type SessionSummary } from "./api";
 import { GoogleContinue } from "./google-sign-in";
 import { rememberSignedIn } from "./signed-in-hint";
-import { returnAddress, signInAddress } from "../../lib/site/return-address";
+import { returnAddress } from "../../lib/site/return-address";
 import type { GoogleIntent } from "./sign-in-boundary";
 import { FrontDoor, type FrontDoorAccount } from "./front-door/front-door";
 import { AccountRequest } from "./account-request";
 import { signOutOfPortal } from "./sign-out";
-import { rolePaths } from "./shell/role-home";
+import { MINE_HREF, workspaceDestination } from "./shell/role-home";
 import { SiteBar } from "../site/site-bar";
 
 export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "uncertain" }
@@ -22,7 +22,7 @@ export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invi
  */
 export const frontDoorAccount = (view: View): FrontDoorAccount => view.kind === "loading" ? null
   : view.kind === "forbidden" ? { kind: "task", signedIn: undefined } : view.kind === "unavailable" ? { kind: "task", signedIn: false }
-    : view.kind === "signed-in" ? { kind: "account", saved: view.summary.saved, roles: view.summary.roles } : { kind: "sign-in" };
+    : view.kind === "signed-in" ? { kind: "account", saved: view.summary.saved, roles: view.summary.roles, count: null, pinned: null } : { kind: "sign-in" };
 type Action = "google" | "email" | "code" | "accept" | "sign-out";
 /**
  * Only when this device last asked for a sign-in email, never the code or the address: an installed app that
@@ -51,9 +51,9 @@ export const SIGN_IN_CODE_COPY = Object.freeze({
 });
 /**
  * Where an entry that finds the person already signed in goes: nowhere on the front door (it shows the role's door, never the
- * workspace), else the page they left (G16) or the front door. Only an accepted invitation's Continue and a return address ever lead to work.
+ * workspace), else the page they left (G16) or My Readings. Only an accepted invitation's Continue and a return address ever lead to work.
  */
-export const signedInDestination = (doors: boolean, back: string | null): string | null => doors ? null : back ?? "/";
+export const signedInDestination = (doors: boolean, back: string | null): string | null => doors ? null : back ?? MINE_HREF;
 const failure = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
 
 /**
@@ -61,7 +61,7 @@ const failure = (error: unknown) => error instanceof PortalRequestError ? error.
  * for an account with no role); invitation entry never gets doors. Otherwise this is the one sign-in form (/sign-in, and Account when
  * signed out) or the invitation's review.
  * `returnTo` (N20, G16) is where signing in here goes back to: a checked return address, carried by the email code and by Google's
- * stored state. Already signed in, the page goes straight there, or to the front door when it names none. The bare root never leaves for
+ * stored state. Already signed in, the page goes straight there, or to My Readings when it names none. The bare root never leaves for
  * the workspace; only an accepted invitation (X8, its Continue) and a return address do. A pending invitation always wins on the server.
  */
 export function PortalEntry({ invitation = false, authenticationError = false, inlineGoogle = false, googleIntent, frontDoor = false, after, returnTo = null }: { invitation?: boolean; authenticationError?: boolean; inlineGoogle?: boolean; googleIntent?: GoogleIntent; frontDoor?: boolean; after?: ReactNode; returnTo?: string | null }) {
@@ -87,7 +87,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
       .then(value => {
         const next: View = invitation ? { kind: "invitation", review: parseInvitation(value) } : { kind: "signed-in", summary: parseSession(value) };
         if (next.kind === "signed-in") { rememberCodeRequest(false); rememberSignedIn(true); }
-        // Signed in already, on the sign-in form: back to the page the person left (G16), or the front door when none is named. The
+        // Signed in already, on the sign-in form: back to the page the person left (G16), or My Readings when none is named. The
         // front door itself never leaves: it shows the role's door.
         const away = next.kind === "signed-in" ? signedInDestination(doors, back) : null;
         if (away && turn === generation.current) { window.location.replace(away); return; }
@@ -190,7 +190,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
               <button type="submit" className="button-primary" data-testid="entry-code-submit" disabled={pending !== null}>{pending === "code" ? SIGN_IN_CODE_COPY.pending : SIGN_IN_CODE_COPY.submit}</button>
             </form>
             <p>Don’t see it? Check your spam folder, or wait a minute before requesting another link.</p>{resendReady && <button type="button" className="button-secondary" disabled={pending !== null} onClick={sendNewCode}>{pending === "email" ? "Sending link…" : "Send a new code"}</button>}<button type="button" className="button-secondary" disabled={pending !== null} onClick={() => { lastEmail.current = ""; focusNext.current = true; setLinkRequested(false); setCode(""); rememberCodeRequest(false); setMessage(""); }}>Use a different email</button></>
-          : <><p>{invitation ? "Sign in with the email address that received this invitation." : "Use Google, or get a sign-in link by email. No password needed."}</p>
+          : <><p>{invitation ? "Sign in with the email address that received this invitation." : "Your readings, marks and notes stay with your account."}</p>
             {inlineGoogle ? <GoogleContinue key={authGeneration} next={googleIntent === "account" ? "account" : undefined} returnTo={back} disabled={pending !== null} onBegin={() => {
               if (gate.current) return false;
               gate.current = "google"; setPending("google"); setMessage(""); setAttemptedSignIn(true); return true;
@@ -202,11 +202,10 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
             <form onSubmit={submit}>
               <label htmlFor="entry-email">Email address</label>
               <input id="entry-email" name="email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required maxLength={254} value={email} onChange={event => setEmail(event.target.value)} disabled={pending !== null} aria-describedby="entry-email-help" />
-              <p className="field-help" id="entry-email-help">Use the address on your invitation.</p>
+              <p className="field-help" id="entry-email-help">{invitation ? "Use the address on your invitation." : "Use the address you sign in with."}</p>
               <button type="submit" className="button-primary" data-testid="entry-email-submit" disabled={pending !== null}>{pending === "email" ? "Sending link…" : "Email me a sign-in link"}</button>
             </form>
-            {/* F3: the way to the account request, which opens on Account once signed in. Not on the page that is already that way. */}
-            {!invitation && !(inlineGoogle && (back === "/account" || googleIntent === "account")) && <p className="entry-ask"><a href={signInAddress("/account")}>Ask for an account</a></p>}</>)}
+            {/* Decision 13: "Ask for an account" is retired here; the shelf offers "Ask to be linked". */}</>)}
         {view.kind === "signed-in" && <>
           {/* A role's door is the front door's own; what reaches here is an account with no role (Account holds the roles and the rest). */}
           <AccountRequest level={doors ? 4 : 3} />{!view.summary.saved && <p className="field-help">Received an invitation to a Beit Mitzvah? Open its email link while signed in.</p>}
@@ -220,7 +219,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
           <button type="button" className="button-primary" data-testid="invitation-accept" disabled={pending !== null} onClick={() => void action("accept")}>{pending === "accept" ? "Accepting invitation…" : "Accept invitation"}</button>
           <button type="button" className="button-text" disabled={pending !== null} onClick={() => void action("sign-out")}>Sign out to use another account</button>
         </>}
-        {view.kind === "accepted" && <><p role="status">Your invitation has been accepted.</p><a className="button-primary" data-testid="invitation-continue" href={rolePaths[view.role]}>Continue</a></>}
+        {view.kind === "accepted" && <><p role="status">Your invitation has been accepted.</p><a className="button-primary" data-testid="invitation-continue" href={workspaceDestination([view.role], null)}>Continue</a></>}
         {view.kind === "invalid-invitation" && <><p>This invitation may have changed, expired, already been accepted, or belong to another account. No new access has been added by this request.</p><p>Open the latest invitation email, or ask the congregation for a new invitation.</p><button type="button" className="button-primary" onClick={retry}>{message ? "Review invitation again" : "Check invitation again"}</button><a className="button-text" href="/">Check my access</a></>}
         {view.kind === "uncertain" && <><p>The request was interrupted. Your invitation may have been accepted. Check your access before trying again.</p><a className="button-primary" href="/">Check my access</a><button type="button" className="button-text" onClick={retry}>Review invitation again</button></>}
         {view.kind === "forbidden" && <><p>This account can’t use the requested access right now. Ask the congregation for help, or sign in with a different account.</p><button type="button" className="button-secondary" disabled={pending !== null} onClick={() => void action("sign-out")}>{pending === "sign-out" ? "Signing out…" : "Sign out"}</button></>}

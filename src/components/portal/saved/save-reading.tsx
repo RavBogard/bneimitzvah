@@ -4,7 +4,7 @@ import { createSavedReading, fetchSavedReadings, type SavedKind } from "./api";
 import { parseSession, requestPortal } from "../api";
 import { rememberSignedIn, signedInHint, signInPending } from "../signed-in-hint";
 import { ReturnSignInLink } from "../return-sign-in-link";
-import { savedReadingHref } from "./my-readings";
+import { savedReadingHref } from "../mine/own-readings";
 import styles from "./saved.module.css";
 
 /** The passage on screen, as /read knows it: the page's title (a parashah, a named reading or a range; absent on a
@@ -43,7 +43,7 @@ export function SaveReadingView({ step, problem, name, date, panelId, savedId = 
       ? <p className={styles.line} data-save-student="">{STUDENT_LINE} <a href="/workspace/student?tab=reading">Open your reading</a></p>
       : <p className={styles.line}><a href="/account">Ask for an account to save readings</a></p>)}
     {step === "unavailable" && <p className={styles.line} role="status">Saving isn’t available right now. Try again.</p>}
-    {step === "saved" && <p className={styles.line} role="status">Saved to <a href="/">My readings</a>.{savedId && <> <a href={savedReadingHref(savedId)}>Open your reading</a></>}</p>}
+    {step === "saved" && <p className={styles.line} role="status">Saved to <a href="/mine">My Readings</a>.{savedId && <> <a href={savedReadingHref(savedId)}>Open your reading</a></>}</p>}
     {open && <form id={panelId} className={styles.panel} aria-label="Save this reading" onSubmit={event => { event.preventDefault(); onSubmit(); }}>
       <div><label htmlFor={`${panelId}-name`}>Name</label>
         <input id={`${panelId}-name`} name="name" value={name} maxLength={80} required autoComplete="off" onChange={event => onName(event.target.value)} /></div>

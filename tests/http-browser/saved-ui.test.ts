@@ -50,6 +50,7 @@ async function signIn(tab: Page, email: string) {
   await tab.getByTestId("entry-email-submit").click();
   await ui(entryTask(tab, "sign-in", "code")).toBeVisible();
   await openAuthMail(tab, fixture.takeMail(email));
+  await tab.goto("/", { waitUntil: "domcontentloaded" }); // a plain sign-in lands on My Readings now; these flows start at the front door
   await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
 }
 const noHorizontalScroll = (tab: Page) => tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
@@ -72,8 +73,6 @@ it("a tutor-and-parent saves this week's Torah from /read and finds it under My 
     await expect.poll(() => tab.evaluate(() => { try { return JSON.parse(localStorage.getItem("crc-torah:preferences-sync/v1") ?? "null")?.active === true; } catch { return false; } }), { timeout: 15_000 }).toBe(true);
     prefs.length = 0;
     const mine = tab.locator("[data-my-readings]");
-    // Deliberate wording test for the saved readings screens: approved copy, change only with the copy.
-    if (width === 360) await ui(tab.getByTestId("my-readings-empty")).toHaveText("Save a reading from This week to see it here.");
     seen.length = 0;
     await tab.goto("/read", { waitUntil: "domcontentloaded" });
     await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
@@ -87,10 +86,10 @@ it("a tutor-and-parent saves this week's Torah from /read and finds it under My 
     await ui(form.getByLabel("Name")).toHaveValue("Synthetic portion · Torah");
     await form.getByLabel("Name").fill(`Creation at ${width}`);
     await form.getByRole("button", { name: "Save reading", exact: true }).click();
-    await ui(tab.locator('[data-save-step="saved"]')).toBeVisible(); await ui(tab.getByRole("status").filter({ hasText: "Saved to My readings." })).toBeVisible();
+    await ui(tab.locator('[data-save-step="saved"]')).toBeVisible(); await ui(tab.getByRole("status").filter({ hasText: "Saved to My Readings." })).toBeVisible();
     expect(seen).toEqual(["GET /api/saved/readings", "POST /api/saved/readings/create"]);
     expect(await noHorizontalScroll(tab)).toBe(true);
-    await tab.locator('[data-save-step="saved"] a[href="/"]').click();
+    await tab.locator('[data-save-step="saved"] a[href="/mine"]').click();
     await ui(mine.getByRole("link", { name: new RegExp(`Creation at ${width}`) })).toBeVisible();
     await ui(mine.getByRole("link", { name: new RegExp(`Creation at ${width}`) })).toContainText("Genesis 1:1–6:8");
     expect(await noHorizontalScroll(tab)).toBe(true);

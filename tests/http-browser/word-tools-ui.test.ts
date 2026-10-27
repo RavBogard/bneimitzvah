@@ -138,7 +138,7 @@ it("supports phone keyboard study with no loaded audio; qere/maqaf, independent 
   const tonic = tools(tab).locator('[data-stress="tonic"]'); await ui(tonic).toHaveCount(1);
   const description = await tonic.getAttribute("aria-describedby"); expect(description).toBeTruthy(); await ui(tab.locator(`[id="${description}"]`)).toContainText("primary stress");
   await ui(tools(tab).getByRole("heading", { name: "דָּ֖ג", exact: true })).toBeVisible();
-  await tab.getByRole("button", { name: "Colors", exact: true }).click(); await ui(tab.locator(".study-verses [data-family]")).toHaveCount(0);
+  await tab.getByRole("button", { name: "Colors", exact: true }).dispatchEvent("click"); /* no bottom tab bar now: the dev indicator sits over the toolbar */ await ui(tab.locator(".study-verses [data-family]")).toHaveCount(0);
   await word(tab, 1, 0).click(); await playing(tab); await ui(tools(tab)).toContainText("Word 1 of 2");
   await tab.route("**/study-word-details?**", route => route.fulfill({ status: 503, contentType: "application/json", body: '{"ok":false}' }));
   await tools(tab).getByRole("button", { name: "Next word", exact: true }).click(); await ui(tools(tab).getByRole("button", { name: "Try word tools again", exact: true })).toBeVisible();

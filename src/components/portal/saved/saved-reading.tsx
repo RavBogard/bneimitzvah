@@ -252,7 +252,7 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
     const controller = begin(); setEdit("removing");
     removeSavedReading({ id: reading.id, revision: reading.revision }, controller.signal).then(result => {
       if (controller.signal.aborted) return;
-      if (result.ok) { go("/"); return; }
+      if (result.ok) { go("/mine"); return; }
       if (result.code === "conflict") { conflictWith(result.current); return; }
       if (result.code === "signed-out" || result.code === "not-eligible" || result.code === "missing") { setEdit("closed"); setHeader({ status: result.code }); return; }
       setEdit("confirm"); setEditNotice("The reading wasn’t removed. Try again.");

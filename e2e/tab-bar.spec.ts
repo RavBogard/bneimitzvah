@@ -25,15 +25,6 @@ const labels = (page: Page) => bar(page).getByRole("link").allInnerTexts();
 
 type Step = { name: string; url: RegExp; landing?: string };
 const roles: { role: string; home: string; tabs: string[]; steps: Step[] }[] = [
-  { role: "student", home: "/workspace/student", tabs: ["Today", "Reading", "Learn", "Account"], steps: [
-    { name: "Reading", url: /\/workspace\/student\?tab=reading$/ }, { name: "Today", url: /\/workspace\/student$/ },
-    { name: "Account", url: /\/account$/ }, { name: "Learn", url: /\/learn$/ }] },
-  { role: "parent", home: "/workspace/parent", tabs: ["Today", "Practice", "Honors", "Account"], steps: [
-    { name: "Practice", url: /\/workspace\/parent\?tab=reading$/ }, { name: "Honors", url: /\/workspace\/parent\?tab=honors$/ },
-    { name: "Today", url: /\/workspace\/parent$/ }, { name: "Account", url: /\/account$/ }] },
-  { role: "tutor", home: "/workspace/tutor", tabs: ["This week", "Students", "Lessons", "More"], steps: [
-    { name: "Students", url: /\/workspace\/tutor\?tab=reading$/ }, { name: "Lessons", url: /\/workspace\/tutor\?tab=lessons$/ },
-    { name: "More", url: /\/workspace\/more$/ }, { name: "This week", url: /\/workspace\/tutor$/ }] },
   { role: "admin", home: "/workspace/admin/students", tabs: ["This week", "Students", "People", "More"], steps: [
     { name: "Students", url: /\/workspace\/admin\/students\?tab=students$/ }, { name: "People", url: /\/workspace\/admin\/invitations$/ },
     { name: "More", url: /\/workspace\/more$/ }, { name: "This week", url: /\/workspace\/admin\/students$/ }] },
@@ -43,7 +34,7 @@ test.describe("at 390px", () => {
   test.beforeEach(async ({ page }) => { await page.setViewportSize({ width: 390, height: 844 }); });
 
   for (const { role, home, tabs, steps } of roles) {
-    test(`a ${role} has exactly decision 1's four tabs, each one tap from the last`, async ({ page }) => {
+    test(`a ${role} has exactly the four tabs, each one tap from the last`, async ({ page }) => {
       await session(page, [role]);
       await page.goto(home);
       await expect(bar(page)).toBeVisible();
@@ -67,6 +58,17 @@ test.describe("at 390px", () => {
       }
     });
   }
+
+  test("a student, a parent and a tutor have no tab bar on /mine, /read or /account", async ({ page }) => {
+    for (const role of ["student", "parent", "tutor"]) {
+      await session(page, [role]);
+      for (const path of ["/mine", "/read", "/account"]) {
+        await page.goto(path);
+        await expect(page.locator("[data-shell-tabs]"), `${role} ${path}`).toHaveCount(0);
+      }
+      await page.unroute("**/api/session");
+    }
+  });
 
   test("a reload keeps the tab", async ({ page }) => {
     for (const { role, home, steps } of roles) {
@@ -125,8 +127,8 @@ test.describe("at 390px", () => {
   });
 
   test("a keyboard user reaches the tab bar with one skip link", async ({ page }) => {
-    await session(page, ["tutor"]);
-    await page.goto("/workspace/tutor");
+    await session(page, ["admin"]);
+    await page.goto("/workspace/admin/students");
     await expect(bar(page)).toBeVisible();
     await page.keyboard.press("Tab");
     await expect(page.getByRole("link", { name: "Skip to workspace", exact: true })).toBeFocused();
@@ -142,8 +144,8 @@ test.describe("at 390px", () => {
   });
 
   test("the bar never covers content: the last element is still clickable", async ({ page }) => {
-    await session(page, ["tutor"]);
-    await page.goto("/workspace/tutor");
+    await session(page, ["admin"]);
+    await page.goto("/workspace/admin/students");
     await expect(bar(page)).toBeVisible();
     await page.evaluate(() => {
       const main = document.querySelector("#workspace-main")!;
@@ -178,9 +180,9 @@ test.describe("at 390px", () => {
 });
 
 test("from 1000px the site bar spans the full width and the tabs are a left rail beneath it, beside the page; below it, a bar at the foot", async ({ page }) => {
-  await session(page, ["student"]);
+  await session(page, ["admin"]);
   await page.setViewportSize({ width: 1100, height: 800 });
-  await page.goto("/workspace/student");
+  await page.goto("/workspace/admin/students");
   await expect(bar(page)).toBeVisible();
   const rail = (await bar(page).boundingBox())!, content = (await page.locator("#workspace-main").boundingBox())!, site = (await page.locator("[data-site-bar]").boundingBox())!;
   expect(site.x).toBe(0);
@@ -191,7 +193,7 @@ test("from 1000px the site bar spans the full width and the tabs are a left rail
   expect(rail.width).toBeLessThan(260);
   expect(content.x, "the page sits to the right of the rail").toBeGreaterThanOrEqual(rail.x + rail.width);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  for (const name of ["Today", "Reading", "Learn", "Account"]) expect((await tab(page, name).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  for (const name of ["This week", "Students", "People", "More"]) expect((await tab(page, name).boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await page.setViewportSize({ width: 999, height: 800 });
   const foot = (await bar(page).boundingBox())!;
   expect(foot.y + foot.height).toBeGreaterThanOrEqual(799);
@@ -208,7 +210,7 @@ test("the public pages have no tab bar, even for a signed-in person", async ({ p
   }
 });
 
-test("Account carries the same tab bar when signed in, and none when signed out", async ({ page }) => {
+test("Account has no tab bar for a parent, and none when signed out", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.route("**/api/session", route => route.fulfill({ status: 401, contentType: "application/json", body: "{}" }));
   await page.goto("/account");
@@ -217,6 +219,6 @@ test("Account carries the same tab bar when signed in, and none when signed out"
   await page.unroute("**/api/session");
   await session(page, ["parent"]);
   await page.goto("/account");
-  await expect(tab(page, "Account")).toHaveAttribute("aria-current", "page");
-  expect(await labels(page)).toEqual(["Today", "Practice", "Honors", "Account"]);
+  await expect(page.getByRole("heading", { level: 1, name: "Account", exact: true })).toBeVisible();
+  await expect(bar(page)).toHaveCount(0);
 });

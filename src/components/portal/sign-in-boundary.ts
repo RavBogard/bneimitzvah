@@ -1,7 +1,7 @@
 import { returnAddress } from "../../lib/site/return-address";
 
 export type GoogleIntent = "account" | undefined;
-export type AuthDestination = "/" | "/invitations/accept" | "/account";
+export type AuthDestination = "/" | "/mine" | "/invitations/accept" | "/account";
 export type EntryQuery = Record<string, string | string[] | undefined>;
 
 /** Actual GIS attempt fence: cancelled or superseded work cannot deliver a redirect. */

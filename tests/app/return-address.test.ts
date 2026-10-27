@@ -7,7 +7,7 @@ import { parseSaveReturn, readAddress, saveReturnAddress } from "../../src/compo
 // Release 1.9 N20: where sign-in may go back to. Synthetic addresses only.
 describe("the return address", () => {
   it("keeps same-origin relative addresses on the pages sign-in returns to", () => {
-    for (const value of ["/", "/account", "/read", "/readings", "/readings?add=1", "/read?date=2026-10-31", "/read?date=2026-10-31&kind=haftarah&verse=3&lens=study",
+    for (const value of ["/", "/account", "/mine", "/readings", "/readings?add=1", "/read", "/read?date=2026-10-31", "/read?date=2026-10-31&kind=haftarah&verse=3&lens=study",
       "/read?ref=Genesis+18%3A1-10&kind=torah", "/read?reading=rosh-hashanah-1&passage=2", "/read?saved=0b0e9c8e-8f3c-4b8a-9a52-2a4c1e8f9d10",
       readAddress({ mode: "ref", ref: "Genesis 18:1-33", kind: "torah", mark: "Genesis 18:1-5; 18:10" }, { verse: 4, study: true }),
       saveReturnAddress("/read?date=2026-10-31", ["Genesis 18:1-10"])])
@@ -18,7 +18,7 @@ describe("the return address", () => {
       "//evil.example", "//evil.example/read", "///evil.example", "/\\evil.example", "\\\\evil.example", "/read\\..\\x", "https://evil.example/read", "http:/read",
       "javascript:alert(1)", "data:text/html,x", "evil.example/read", "read", "", " /read", "/read ", "/re ad", "/read\t", "/read\n", "/read\r\n//evil.example",
       "/read\u0000", "/read\u007f", "/réad", "/read?x= ", "/%2F%2Fevil.example", "/%2f/evil.example", "/%5Cevil.example", "/read%2F..%2F..", "/%2e%2e/read",
-      "/read/../account", "/./read", "/read/", "/READ", "/read#top", "/read?verse=1#x", "/account?x=1", "/?token=private", "/?", "/read?",
+      "/read/../account", "/./read", "/read/", "/READ", "/read#top", "/read?verse=1#x", "/account?x=1", "/mine?x=1", "/mine/reading", "/readings?", "/?token=private", "/?", "/read?",
       "/read?x=%00", "/read?x=%1f", "/read?x=%7F", "/read?x=%", "/read?x=%zz", "/read?x=<script>", "/read?x='1'", "/read?x=\"1\"", "/read?x=`1`",
       "/sign-in", "/sign-in?return=/read", "/api/auth/sign-out", "/auth/email", "/connect", "/workspace/admin", "/learn", "/invitations/accept",
       `/read?x=${"a".repeat(RETURN_ADDRESS_MAX)}`])
@@ -47,7 +47,7 @@ describe("/sign-in and the code answer carry it", () => {
     expect(publicSignInBoundary({ return: "/read", token: "synthetic" }, "sign-in")).toMatchObject({ inlineGoogle: false, back: null });
   });
   it("accepts a code answer only for a fixed landing or a return address", () => {
-    for (const next of ["/", "/account", "/invitations/accept", "/read?date=2026-10-31&save=1"]) expect(parseCodeResult({ ok: true, next })).toBe(next);
+    for (const next of ["/", "/mine", "/account", "/invitations/accept", "/read?date=2026-10-31&save=1"]) expect(parseCodeResult({ ok: true, next })).toBe(next);
     for (const next of ["//evil.example", "https://evil.example", "/sign-in", "/?token=private", "/workspace/admin", "javascript:alert(1)", 1, null])
       expect(() => parseCodeResult({ ok: true, next }), String(next)).toThrow(PortalRequestError);
     expect(() => parseCodeResult({ ok: true, next: "/", extra: 1 })).toThrow(PortalRequestError);
