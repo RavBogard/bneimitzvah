@@ -1,14 +1,18 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Sheet } from "../../ui";
+import { FindReading } from "../find-reading/find-reading";
+import { useStudyLens } from "../workspace/study-lens";
+import { goToReading } from "./heading-focus";
 import styles from "./public-reading.module.css";
 
 /**
- * The "More" sheet of the public reader (1.9 N5, G15). Everything that is not the reading's name, its week arrows or its lens
- * lives in one Sheet: Start reading, the Portion control, Choose verses, Print, Save, Find a date, This week, Choose a reading,
- * the Trope chart and the siddur blessings. The page and the passage it holds are two components apart, so the Sheet has a host:
- * the page's scope keeps whether it is open and a slot inside it where the passage (which owns Choose verses and the Portion
- * control) puts its two controls with a portal.
+ * The "Change" sheet of the public reader (Readings for everyone B6; the 1.9 N5 More sheet, regrouped). Its title is "Change reading":
+ * Find a reading first (a parashah, a holiday, a date or verses, and the Coming up chips), then what is in this reading (the Portion
+ * control, Choose verses and Go to verse), then the actions that have not yet moved to the page's foot and pill (Start reading, Print,
+ * Save, the Trope chart and the siddur blessings: Area C moves them). The page and the passage it holds are two components apart, so
+ * the Sheet has a host: the page's scope keeps whether it is open and a slot inside it where the passage (which owns Choose verses, the
+ * Portion control and Go to verse) puts its controls with a portal.
  */
 export type MoreHost = Readonly<{
   open: boolean;
@@ -37,11 +41,11 @@ const chevron = (direction: "previous" | "next") => <svg viewBox="0 0 24 24" wid
   <path d={direction === "previous" ? "M14.5 6l-6 6 6 6" : "M9.5 6l6 6-6 6"} fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
 /**
- * The two-line header: the eyebrow (what and when), then the name at title size with the week arrows and More. `top` and `rest` are the
- * Sheet's contents before and after the passage's own two controls. With no scope above it (the page is still finding its address) More is drawn inert.
+ * The two-line header: the eyebrow (what and when), then the name at title size with the week arrows and Change. `top` and `rest` are the
+ * Sheet's contents before and after the passage's own controls, under "In this reading". With no scope above it (the page is still finding its address) Change is drawn inert.
  */
 export function ReadHeader({ eyebrow, title, previous, next, top, rest }: { eyebrow: ReactNode; title: string; previous?: Step; next?: Step; top?: ReactNode; rest?: ReactNode }) {
-  const host = useMore();
+  const host = useMore(), lens = useStudyLens();
   return <header className={styles.readHeader}>
     <p className={styles.eyebrow}>{eyebrow}</p>
     <div className={styles.titleRow}>
@@ -49,11 +53,14 @@ export function ReadHeader({ eyebrow, title, previous, next, top, rest }: { eyeb
       <div className={styles.tools}>
         {previous && <button type="button" className={styles.arrow} aria-label={previous.label} disabled={previous.disabled} onClick={previous.onClick}>{chevron("previous")}</button>}
         {next && <button type="button" className={styles.arrow} aria-label={next.label} disabled={next.disabled} onClick={next.onClick}>{chevron("next")}</button>}
-        <button type="button" className={`button-hero-secondary ${styles.moreButton}`} data-more-button="" aria-haspopup="dialog" disabled={!host} onClick={() => host?.show()}>More</button>
+        <button type="button" className={`button-hero-secondary ${styles.moreButton}`} data-more-button="" aria-haspopup="dialog" disabled={!host} onClick={() => host?.show()}>Change<svg className={styles.changeChevron} viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
       </div>
     </div>
-    {host && <Sheet open={host.open} onClose={() => host.close()} title="More" closeLabel="Close">
+    {host && <Sheet open={host.open} onClose={() => host.close()} title="Change reading" closeLabel="Close">
       <div className={styles.moreList} data-more-sheet="">
+        {/* Mounted only while the sheet is open, so the calendar is asked for when someone wants it. The sheet closes first, then the reading opens. */}
+        {host.open && <FindReading place="sheet" study={lens.lens === "study"} onOpen={address => host.close(() => goToReading(address))} />}
+        <h3 className={styles.changeGroup}>In this reading</h3>
         {top}
         <div ref={host.setSlot} className={styles.moreList} data-more-slot="" />
         {rest}

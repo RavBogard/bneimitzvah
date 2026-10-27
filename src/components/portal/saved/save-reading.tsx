@@ -3,7 +3,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createSavedReading, fetchSavedReadings, type SavedKind } from "./api";
 import { rememberSignedIn, signedInHint, signInPending } from "../signed-in-hint";
 import { ReturnSignInLink } from "../return-sign-in-link";
-import { savedReadingHref } from "./my-readings";
+import { savedReadingHref } from "../mine/own-readings";
 import styles from "./saved.module.css";
 
 /** The passage on screen, as /read knows it: the page's title (a parashah, a named reading or a range; absent on a
@@ -41,7 +41,7 @@ export function SaveReadingView({ step, problem, name, date, panelId, savedId = 
       disabled={step === "checking" || step === "saving"} onClick={onSave}>Save</button>}
     {step === "not-eligible" && <p className={styles.line} role="status">{NOT_AVAILABLE_LINE}</p>}
     {step === "unavailable" && <p className={styles.line} role="status">Saving isn’t available right now. Try again.</p>}
-    {step === "saved" && <p className={styles.line} role="status">Saved to <a href="/">My readings</a>.{savedId && <> <a href={savedReadingHref(savedId)}>Open your reading</a></>}</p>}
+    {step === "saved" && <p className={styles.line} role="status">Saved to <a href="/mine">My Readings</a>.{savedId && <> <a href={savedReadingHref(savedId)}>Open your reading</a></>}</p>}
     {open && <form id={panelId} className={styles.panel} aria-label="Save this reading" onSubmit={event => { event.preventDefault(); onSubmit(); }}>
       <div><label htmlFor={`${panelId}-name`}>Name</label>
         <input id={`${panelId}-name`} name="name" value={name} maxLength={80} required autoComplete="off" onChange={event => onName(event.target.value)} /></div>

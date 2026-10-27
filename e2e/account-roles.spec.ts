@@ -21,39 +21,38 @@ test("Account lists the roles with the current one marked, and choosing a role o
   // With nothing remembered the highest role is the current one.
   await expect(roles.getByRole("link", { name: /^Tutor/ })).toContainText("Current");
   await expect(roles.getByText("Current", { exact: true })).toHaveCount(1);
-  await expect(roles.getByRole("link", { name: /^Parent/ })).toHaveAttribute("href", "/workspace/parent");
+  await expect(roles.getByRole("link", { name: /^Parent/ })).toHaveAttribute("href", "/mine");
   await roles.getByRole("link", { name: /^Parent/ }).click();
-  await expect(page).toHaveURL(/\/workspace\/parent$/);
-  await expect(page.getByRole("navigation", { name: "Workspace", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/mine$/);
+  await expect(page.getByRole("navigation", { name: "Workspace", exact: true })).toHaveCount(0);
   // The workspace's brand link moves inside the app, so the remembered role leads on the front door.
   await page.getByRole("link", { name: "CRC Torah", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(door(page).getByRole("heading", { level: 2, name: "Your family", exact: true })).toBeVisible();
-  await expect(door(page).getByRole("link", { name: "Open Today", exact: true })).toHaveAttribute("href", "/workspace/parent");
+  await expect(door(page).getByRole("heading", { level: 2, name: "Your readings", exact: true })).toBeVisible();
+  await expect(door(page).getByRole("link", { name: "Open My Readings", exact: true })).toHaveAttribute("href", "/mine");
 });
 
 test("the old role pills and the chooser are gone from the workspace", async ({ page }) => {
   await session(page, ["parent", "tutor"]);
   await page.goto("/workspace/tutor");
-  await expect(page.getByRole("navigation", { name: "Workspace", exact: true })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Workspace", exact: true })).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "Workspace roles", exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Choose your workspace", exact: true })).toHaveCount(0);
 });
 
-test("/workspace leads on to the highest role's home, and an account with no role to Account", async ({ page }) => {
+test("/workspace leads an admin to This week and everyone else, an account with no role too, to My Readings", async ({ page }) => {
   await session(page, ["student", "parent", "tutor", "admin"]);
   await page.goto("/workspace");
   await expect(page).toHaveURL(/\/workspace\/admin\/students$/);
   await page.unroute("**/api/session");
   await page.route("**/api/session", route => json(route, 200, { membershipAvailable: true, roles: ["student", "parent"], saved: true, approver: false, sessionBinding: binding }));
   await page.goto("/workspace");
-  await expect(page).toHaveURL(/\/workspace\/parent$/);
+  await expect(page).toHaveURL(/\/mine$/);
   await page.unroute("**/api/session");
   await page.route("**/api/session", route => json(route, 200, { membershipAvailable: false, roles: [], saved: false, approver: false, sessionBinding: binding }));
   await page.route("**/api/account/request", route => json(route, 200, { ok: true, state: "requestable", suggestedName: "", productName: "CRC Torah" }));
   await page.goto("/workspace");
-  await expect(page).toHaveURL(/\/account$/);
-  await expect(page.getByRole("heading", { name: "Ask to be linked", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/mine$/);
 });
 
 test("an accepted invitation's Continue lands on the work, and Sign out on Account returns to the sign-in form", async ({ page }) => {
@@ -65,7 +64,7 @@ test("an accepted invitation's Continue lands on the work, and Sign out on Accou
   await page.getByRole("button", { name: "Accept invitation", exact: true }).click();
   await expect(page.getByText("Your invitation has been accepted.", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Continue", exact: true }).click();
-  await expect(page).toHaveURL(/\/workspace\/student$/);
+  await expect(page).toHaveURL(/\/mine$/);
   // Account, then Sign out: the form is what is left.
   await page.route("**/api/auth/sign-out", route => json(route, 200, { ok: true }));
   await page.goto("/account");
@@ -76,5 +75,5 @@ test("an accepted invitation's Continue lands on the work, and Sign out on Accou
   await page.route("**/api/session", route => json(route, 401, { error: "authentication-required" }));
   await signOut.click();
   await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveCount(0);
 });

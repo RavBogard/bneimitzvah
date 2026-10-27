@@ -1,10 +1,9 @@
 // 1.9 N10: which tabs a signed-in role has, where each goes, and which one is current. Pure, so it is unit-tested without a browser.
-// The four tabs per role are decision 1's, word for word. Until N11 (Today) and N14 (This week) build their own screens, each of
-// those tabs opens the role's current home, and the tabs that share a home tell themselves apart by `?tab=`.
+// Area A: only the admin has a tab bar (four tabs, on admin pages). Students, parents and tutors live on /mine.
 import type { Role } from "../api";
 
 export type ShellRole = Role;
-export type TabIcon = "today" | "reading" | "learn" | "account" | "practice" | "honors" | "week" | "students" | "lessons" | "people" | "more";
+export type TabIcon = "week" | "students" | "people" | "more";
 export type ShellTab = { key: string; label: string; href: string; icon: TabIcon; current: boolean };
 
 /** The three views of a student's page, and the value each takes in `?tab=`. */
@@ -38,55 +37,33 @@ export const MORE_HREF = "/workspace/more";
 const PEOPLE_PATHS = ["/workspace/admin/invitations", "/workspace/admin/tutors", "/workspace/accounts"] as const;
 const isMore = (path: string) => MORE_PATHS.some(base => under(path, base)) || under(path, "/workspace/admin/settings") || under(path, "/workspace/admin/reference-review");
 const isPeople = (path: string) => PEOPLE_PATHS.some(base => under(path, base));
-const isAccount = (path: string) => under(path, "/account");
+
+/**
+ * Whether a page is the admin's own working area, the only place a tab bar shows (Area A: students, parents and tutors live on /mine
+ * and have none). The admin's per-student reading page is the one /workspace/admin page that is not (decision 20).
+ */
+export function adminArea(pathname: string): boolean {
+  if (/^\/workspace\/admin\/students\/[^/]+\/reading\/?$/.test(pathname)) return false;
+  return under(pathname, "/workspace/admin") || isMore(pathname) || isPeople(pathname);
+}
 
 export type TabContext = {
   role: ShellRole;
   pathname: string;
   /** The raw `?tab=` value. */
   tab: string | null;
-  /** The child this tab has open in Practice, if any (a parent's Practice goes straight back to it). */
-  practiceStudentId?: string | null;
 };
 
-/** The tabs for a role and whether each is current. Exactly one is current on a page the shell knows; none otherwise. */
-export function tabsFor({ role, pathname, tab, practiceStudentId }: TabContext): ShellTab[] {
-  const view = parseReadingTab(tab), account = isAccount(pathname);
+/** The tabs for a role and whether each is current. Only the admin has any, and only on admin pages; every other case is empty. */
+export function tabsFor({ role, pathname, tab }: TabContext): ShellTab[] {
+  if (role !== "admin" || !adminArea(pathname)) return [];
   const make = (key: string, label: string, href: string, icon: TabIcon, current: boolean): ShellTab => ({ key, label, href, icon, current });
-  if (role === "student") {
-    const home = pathname === "/workspace/student";
-    return [
-      make("today", "Today", "/workspace/student", "today", home && view === null),
-      make("reading", "Reading", "/workspace/student?tab=reading", "reading", home && view !== null),
-      make("learn", "Learn", "/learn", "learn", false),
-      make("account", "Account", "/account", "account", account || isMore(pathname)),
-    ];
-  }
-  if (role === "parent") {
-    const home = pathname === "/workspace/parent", practicing = under(pathname, "/workspace/practice");
-    return [
-      make("today", "Today", "/workspace/parent", "today", home && view === null && tab !== "honors"),
-      make("practice", "Practice", practiceStudentId ? `/workspace/practice/${encodeURIComponent(practiceStudentId)}` : "/workspace/parent?tab=reading", "practice", practicing || home && view !== null),
-      make("honors", "Honors", "/workspace/parent?tab=honors", "honors", home && tab === "honors"),
-      make("account", "Account", "/account", "account", account || isMore(pathname)),
-    ];
-  }
-  if (role === "tutor") {
-    const list = pathname === "/workspace/tutor", mine = under(pathname, "/workspace/tutor");
-    return [
-      make("week", "This week", "/workspace/tutor", "week", list && view === null),
-      make("students", "Students", "/workspace/tutor?tab=reading", "students", mine && view !== "lessons" && !(list && view === null)),
-      // On a student's page Lessons stays on that student; elsewhere it opens the list, whose cards carry the view with them.
-      make("lessons", "Lessons", mine && !list ? `${pathname}?tab=lessons` : "/workspace/tutor?tab=lessons", "lessons", mine && view === "lessons"),
-      make("more", "More", MORE_HREF, "more", isMore(pathname) || account || under(pathname, "/workspace/accounts")),
-    ];
-  }
   const roster = pathname === "/workspace/admin/students";
   return [
     make("week", "This week", "/workspace/admin/students", "week", roster && tab !== "students"),
     make("students", "Students", "/workspace/admin/students?tab=students", "students", roster && tab === "students" || under(pathname, "/workspace/admin/students") && !roster),
     make("people", "People", "/workspace/admin/invitations", "people", isPeople(pathname)),
-    make("more", "More", MORE_HREF, "more", isMore(pathname) || account),
+    make("more", "More", MORE_HREF, "more", isMore(pathname)),
   ];
 }
 

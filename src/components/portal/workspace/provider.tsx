@@ -98,7 +98,7 @@ export const statusOf = (error: unknown) => error instanceof PortalRequestError 
 export const DENIAL_REFRESH_LIMIT = 3, DENIAL_REFRESH_WINDOW_MS = 60_000;
 /** Said when a parent's practice access ends; the notice also carries its kind, for a test or a style. */
 const PRACTICE_ACCESS_CHANGED = "Practice access changed. Choose an available child again.";
-const isParentPath = (path: string) => path === rolePaths.parent || path.startsWith("/workspace/practice/");
+const isParentPath = (path: string) => path === "/workspace/parent" || path.startsWith("/workspace/practice/");
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const router = useRouter(), pathname = usePathname();
@@ -582,7 +582,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   // A checked session is what the site bar on the public pages remembers (the same hint the reader's Save uses).
   useEffect(() => { if (shellShown) rememberSignedIn(true); }, [shellShown]);
   return <div className="portal-shell workspace-shell" data-rail-pending={!shellShown && failure === null ? "" : undefined}>
-    <a className="skip-link" href="#workspace-main">Skip to workspace</a>
+    <a className="skip-link" href="#workspace-main">{pathname.startsWith("/mine") ? "Skip to main content" : "Skip to workspace"}</a>
     {shellShown && <TabSkipLink roles={summary!.roles} />}
     <SiteBar signedIn onNavigate={controlledLink} />
     <main id="workspace-main" className="workspace-main">
@@ -597,7 +597,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           {children}
         </WorkspaceContext.Provider></div>}
     </main>
-    {shellShown && <TabBar roles={summary!.roles} practiceStudentId={context?.studentId ?? null} onNavigate={controlledLink} />}
+    {shellShown && <TabBar roles={summary!.roles} onNavigate={controlledLink} />}
   </div>;
 }
 

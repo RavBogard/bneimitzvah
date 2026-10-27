@@ -52,8 +52,8 @@ test("signed out, / and /read ask nothing of accounts.google.com or any other si
   await expect(page.locator('[data-door="beit-mitzvah"]').getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", "/sign-in");
   await expect(page.getByRole("button", { name: "Continue with Google", exact: true })).toHaveCount(0);
   await expect(page.locator('script[src*="accounts.google.com"], iframe[src*="accounts.google.com"]')).toHaveCount(0);
-  // F3: the way to the account request, before sign-in.
-  await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveAttribute("href", "/sign-in?return=%2Faccount");
+  // Decision 13: "Ask for an account" is retired; the door says how accounts work instead.
+  await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveCount(0);
   await page.goto(`/read?date=2026-10-24`);
   await expect(page.getByRole("heading", { level: 1, name: "Vayeilech", exact: true })).toBeVisible();
   // Signed out from the start: Sign in to save (in the More sheet), without asking the server about an account.
@@ -133,15 +133,15 @@ test("Save, then sign in, comes back to the same reading with the same selection
   expect(codes).toEqual([{ code: "123456" }]);
 });
 
-test("already signed in, /sign-in goes back to the page the person left, or to the front door when it names none (G16)", async ({ page }) => {
+test("already signed in, /sign-in goes back to the page the person left, or to My Readings when it names none (G16)", async ({ page }) => {
   await openRoutes(page);
   await page.route("**/api/session", route => json(route, 200, { membershipAvailable: true, roles: ["tutor"], saved: true, approver: false, sessionBinding: "A".repeat(43) }));
   await page.goto(`/sign-in?return=${encodeURIComponent("/read?date=2026-10-31")}`);
   await expect(page).toHaveURL(/\/read\?date=2026-10-31/);
   await expect(page.getByRole("heading", { level: 1, name: "Vayeilech", exact: true })).toBeVisible();
   await page.goto("/sign-in");
-  await expect(page).toHaveURL(`${ORIGIN}/`);
-  await expect(page.locator('[data-door="beit-mitzvah"]').getByRole("heading", { level: 2, name: "Your students", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(`${ORIGIN}/mine`);
+  await expect(page.getByRole("heading", { level: 1, name: "My Readings", exact: true })).toBeVisible();
   await page.goto(`/sign-in?return=${encodeURIComponent("/read?date=2026-10-31&save=1")}`);
   await expect(page).toHaveURL(/\/read\?date=2026-10-31/);
 });
@@ -170,7 +170,7 @@ test("a return address that names another site, or anything but one of our pages
     const posted: Record<string, unknown>[] = [], googled: unknown[] = [];
     await page.unroute("**/api/auth/**");
     await page.route("**/api/auth/sign-in/magic-link", route => { posted.push(route.request().postDataJSON()); return json(route, 200, { requested: true }); });
-    await page.route("**/api/auth/sign-in/code", route => json(route, 200, { ok: true, next: "/" }));
+    await page.route("**/api/auth/sign-in/code", route => json(route, 200, { ok: true, next: "/mine" }));
     await page.route("**/api/auth/google/redirect", route => { googled.push(route.request().postDataJSON()); return json(route, 503, { error: "unavailable" }); });
     await page.goto(`/sign-in?return=${encodeURIComponent(evil)}`);
     await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
@@ -183,7 +183,7 @@ test("a return address that names another site, or anything but one of our pages
     expect(posted, evil).toEqual([{ email: "plain-reader@example.test" }]);
     await page.getByLabel("Sign-in code").fill("123456");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page).toHaveURL(`${ORIGIN}/`);
+    await expect(page).toHaveURL(`${ORIGIN}/mine`);
     await page.evaluate(() => { try { localStorage.clear(); } catch { /* none */ } });
   }
 });

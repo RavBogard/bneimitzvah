@@ -79,6 +79,26 @@ async function measure(page: Page, address: string, aliyot = false) {
   return { shifts, value: cls(shifts) };
 }
 
+test("/ (the home) does not jump while the week and the calendar arrive (CLS at most 0.07 at 4x CPU)", async ({ page }) => {
+  test.setTimeout(90_000);
+  const client = await page.context().newCDPSession(page);
+  await client.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  await watchShifts(page);
+  await mock(page);
+  await page.route("**/api/session", route => route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ error: "unauthenticated" }) }));
+  await page.route("**/api/public/calendar", async route => {
+    await new Promise(resolve => setTimeout(resolve, LATENCY));
+    const rows = Array.from({ length: 66 }, (_, i) => ({ date: new Date(Date.UTC(2026, 9, 24 + 7 * i)).toISOString().slice(0, 10), name: "Synthetic", kind: "regular" }));
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify({ today: rows[0].date, rows }) }).catch(() => {});
+  });
+  await page.goto("/");
+  await expect(page.locator("[data-chip-date]").first()).toBeVisible({ timeout: 30_000 });
+  await page.waitForTimeout(2000);
+  const shifts = await page.evaluate(() => (window as unknown as { __shifts: Shift[] }).__shifts);
+  await client.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+  expect(cls(shifts), JSON.stringify(shifts)).toBeLessThanOrEqual(0.07);
+});
+
 test("/read in Lein does not jump while the week, the reading and the text arrive (CLS below 0.1 at 4x CPU)", async ({ page }) => {
   const { shifts, value } = await measure(page, "/read");
   expect(value, JSON.stringify(shifts)).toBeLessThan(0.1);
@@ -99,7 +119,7 @@ for (const [name, address] of [["Lein", "/read"], ["Study", "/read?lens=study"]]
   });
 }
 
-test("at a 200% root font on a Pixel 7 the reading, its Find a date row and the reading chooser are no wider than the screen", async ({ page }, testInfo) => {
+test("at a 200% root font on a Pixel 7 the reading, its Find a reading field and the Readings index are no wider than the screen", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "phone", "A phone-width check");
   await mock(page);
   await page.goto("/read");
@@ -108,23 +128,22 @@ test("at a 200% root font on a Pixel 7 the reading, its Find a date row and the 
   // The screen is the configured device width: on a phone the browser widens its own layout viewport to fit overflowing content, so innerWidth would agree with the overflow.
   const screen = testInfo.project.use.viewport!.width, fits = () => page.evaluate(() => ({ scroll: document.documentElement.scrollWidth })).then(size => ({ ...size, view: screen }));
   let size = await fits(); expect(size.scroll, "the header and Lein").toBeLessThanOrEqual(size.view);
-  for (const name of ["More", "Previous week", "Next week"]) {
+  for (const name of ["Change", "Previous week", "Next week"]) {
     const control = await page.getByRole("button", { name, exact: true }).boundingBox();
     expect(control && control.x >= 0 && control.x + control.width <= size.view, `${name} is inside the screen`).toBe(true);
   }
   await page.getByRole("button", { name: "Study", exact: true }).click();
   await expect(page.locator("[data-study-rows]")).toBeVisible();
   size = await fits(); expect(size.scroll, "Study").toBeLessThanOrEqual(size.view);
-  // Find a date and the reading chooser are in the More sheet.
-  const sheet = await openMore(page), picker = page.getByLabel("Find a date", { exact: true });
-  await expect(picker).toBeVisible();
-  const box = await picker.boundingBox();
-  expect(box && box.x >= 0 && box.x + box.width <= (await fits()).view, "the date field is inside the screen").toBe(true);
-  await sheet.getByRole("button", { name: "Choose a reading", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Choose a reading", exact: true })).toBeVisible();
-  size = await fits(); expect(size.scroll, "the reading chooser").toBeLessThanOrEqual(size.view);
-  const panel = await page.getByRole("region", { name: "Choose a reading", exact: true }).boundingBox();
-  expect(panel && panel.x >= 0 && panel.x + panel.width <= size.view, "the chooser is inside the screen").toBe(true);
+  // Find a reading and the way to the index are in the Change sheet.
+  const sheet = await openMore(page), field = sheet.getByRole("combobox", { name: "Find a reading", exact: true });
+  await expect(field).toBeVisible();
+  const box = await field.boundingBox();
+  expect(box && box.x >= 0 && box.x + box.width <= (await fits()).view, "the Find a reading field is inside the screen").toBe(true);
+  await sheet.getByRole("link", { name: "Every parashah, holiday and passage", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Readings", exact: true })).toBeVisible();
+  await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+  size = await fits(); expect(size.scroll, "the Readings index").toBeLessThanOrEqual(size.view);
 });
 
 const active = (page: Page) => page.evaluate(() => {
@@ -164,16 +183,14 @@ test("the next text page puts focus at the start of the new text, and Previous r
   await expect.poll(() => active(page).then(state => state.reading)).toBe(true);
 });
 
-test("choosing a reading from the chooser lands focus on the new reading's heading", async ({ page }) => {
+test("choosing a reading from the Readings index lands focus on the new reading's heading", async ({ page }) => {
   // Slow answers: this week is still loading when the reading is chosen, and the page being left must not spend the focus the next page is owed.
   await mock(page, 600);
   // The next page is slow to arrive, so this one is still running when its week answers.
   await page.route("**/read?reading=*", async route => { await new Promise(resolve => setTimeout(resolve, 1500)); await route.continue(); });
-  await page.goto("/read");
-  await openMore(page);
-  await page.getByRole("button", { name: "Choose a reading", exact: true }).click();
-  await page.getByLabel("Parashah", { exact: true }).selectOption({ label: "Noach" });
-  await page.getByRole("region", { name: "Choose a reading", exact: true }).getByRole("button", { name: "Open", exact: true }).first().click();
+  await page.goto("/readings");
+  await page.locator("summary", { hasText: "Genesis" }).click();
+  await page.getByRole("link", { name: "Noach", exact: true }).click();
   await expect(page).toHaveURL(/\/read\?reading=noach/);
   await expect(page.getByRole("heading", { level: 1, name: "Noach", exact: true })).toBeVisible();
   await expect.poll(() => active(page).then(state => state.id)).toBe("public-reading-title");

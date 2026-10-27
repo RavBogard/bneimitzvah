@@ -22,6 +22,7 @@ import type { ApprovedPortionSummary } from "../../../lib/portion-summary/credit
 import { parashahSlug } from "../../../lib/portion-summary/reading";
 import type { WordPanelHost } from "../workspace/study/word-panel";
 import { ReadingPlace, scrollToVerse } from "../workspace/study/reading-place";
+import { readingChapters } from "../workspace/study/reading-place-model";
 import { namedReading, type NamedReading } from "../../../lib/readings/named-readings";
 import { useReadingPrefs } from "../workspace/reading-prefs";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
@@ -32,12 +33,12 @@ import { fetchPublicAliyot } from "../print/api";
 import { PortionPicker } from "./portion-picker";
 import { SectionTabs } from "../../ui";
 import { NextSection } from "../workspace/study/next-section";
-import { addDays, shabbatOnOrAfter, thisShabbat } from "../../../lib/readings/public-shabbat";
+import { addDays, thisShabbat } from "../../../lib/readings/public-shabbat";
 import { fetchPublicRefReading, fetchPublicShortPage, fetchPublicText, fetchPublicWeek, fetchPublicWordAids, fetchPublicWordDetails, refSource, weekSource,
   type PublicShortPage, type PublicSource, type PublicWeek } from "./api";
 import { parseReadAddress, parseSaveReturn, readAddress, saveReturnAddress, selectorKey, type ReadAddress, type ReadTarget, type SaveReturn } from "./urls";
+import { go, goToReading, HEADING_FOCUS, HEADING_FOCUS_MS } from "./heading-focus";
 import { ReturnSignInLink } from "../return-sign-in-link";
-import { ReadingChooser } from "./reading-chooser";
 import { CHOOSE_STRINGS, PlaceLink, useVerseChoice, type ChoosePlan } from "./choose-verses";
 import { canonicalReadingRef } from "../../../lib/readings/reading-ref";
 import { positionInRef, selectionPlace, wholePortionFor } from "../../../lib/readings/verse-selection";
@@ -103,14 +104,7 @@ function useReturn(saveReturn: SaveReturn, address: (verse: number | null) => st
   return { place, here, passageOffer, choiceOffer, forSave: (ranges?: readonly string[]) => () => { const at = here(); return at ? saveReturnAddress(at, ranges) : null; } };
 }
 
-export const go = (address: string) => { try { window.location.assign(address); } catch { /* Stay. */ } };
-const HEADING_FOCUS = "crc-torah:reading-focus/v1", HEADING_FOCUS_MS = 30_000;
-/** Moving to another reading is a new page, so focus would start on the body. This tab asks the next page to land focus on the new
- * reading's heading once the reading is shown (F-SITE 25); the ask is short-lived and spent by the first reading that shows. */
-export function goToReading(address: string) {
-  try { window.sessionStorage.setItem(HEADING_FOCUS, String(Date.now())); } catch { /* Focus starts on the page, as before. */ }
-  go(address);
-}
+export { go, goToReading };
 /** The ask is read once, when this reading mounts: a page that was still loading when the person chose another reading must not
  * spend it, because the next page is the one it was left for. Focus follows once this reading is shown. */
 function useHeadingFocus(shown: boolean) {
@@ -176,13 +170,8 @@ export function Hero({ eyebrow, title, meta, nav, actions }: { eyebrow: string; 
 export function ReadingBlock({ reserve = true, children }: { reserve?: boolean; children?: ReactNode }) {
   return <div className={reserve ? styles.readingBlock : undefined}>{children}</div>;
 }
-/** The "Choose a reading" toggle and its panel, opened in place under the hero. */
-export function useChooser(initiallyOpen = false) {
-  const [open, setOpen] = useState(initiallyOpen), id = useId(), lens = useStudyLens();
-  const button = <button type="button" className="button-hero-secondary" aria-expanded={open} aria-controls={id} onClick={() => setOpen(value => !value)}>Choose a reading</button>;
-  const panel = open ? <ReadingChooser id={id} study={lens.lens === "study"} onOpen={goToReading} /> : null;
-  return { button, panel };
-}
+/** Where every reading is listed: the Readings index (the three dropdowns of the old in-page chooser are retired). */
+export const ALL_READINGS_LINK = "Every parashah, holiday and passage";
 /** Start reading: scroll to the text and, with recordings, play the first verse. `row(extra, print)` adds Save or Edit beside it,
  * and Print, the reader's print sheet of the same reading (`print` is its /print address). */
 export function useStarter() {
@@ -199,18 +188,18 @@ export function useStarter() {
 }
 
 function Unavailable() {
-  const chooser = useChooser(true), today = useToday();
+  const today = useToday();
   return <Shell title="Reading unavailable">
-    <Hero eyebrow="Torah and haftarah" title="Reading unavailable" nav={<>{today && <button type="button" className="button-hero-secondary" onClick={() => goToReading("/read")}>This week</button>}{chooser.button}</>} />
-    {chooser.panel}
-    <div className="workspace-state" role="status"><h2>That reading isn’t available</h2><p>The address doesn’t name a reading this page can open. Choose one, or go back to this week.</p></div>
+    <Hero eyebrow="Torah and haftarah" title="Reading unavailable" nav={today && <button type="button" className="button-hero-secondary" onClick={() => goToReading("/read")}>This week</button>} />
+    <div className="workspace-state" role="status"><h2>That reading isn’t available</h2><p>The address doesn’t name a reading this page can open. Choose one, or go back to this week.</p>
+      <p><a href="/readings">{ALL_READINGS_LINK}</a></p></div>
   </Shell>;
 }
 function useToday() { const [today, setToday] = useState<string | null>(null); useEffect(() => { setToday(thisShabbat()); }, []); return today; }
 
 /** A Shabbat's parashah and haftarah, by date, with week-by-week browsing. */
 function WeekReading({ initial, verse, saveReturn, pick: initialPick }: { initial: Extract<ReadTarget, { mode: "week" }>; verse: number | null; saveReturn: SaveReturn; pick?: PortionPick }) {
-  const today = useToday(), [date, setDate] = useState<string | null>(null), lens = useStudyLens(), chooser = useChooser(), starter = useStarter();
+  const today = useToday(), [date, setDate] = useState<string | null>(null), lens = useStudyLens(), starter = useStarter();
   const [week, setWeek] = useState<{ date: string; value?: PublicWeek; error?: number } | null>(null), [retry, setRetry] = useState(0);
   const [kind, setKind] = useState<StudyKind | null>(initial.kind), [linked, setLinked] = useState(verse), [choosing, setChoosing] = useState(false);
   const [pick, setPick] = useState<PortionPick>(initialPick ?? "full");
@@ -284,14 +273,11 @@ function WeekReading({ initial, verse, saveReturn, pick: initialPick }: { initia
       top={<>
         {date && <p className="field-help" data-reading-ranges=""><time dateTime={date}>{longDate(date)}</time>{current?.torah && <> · Torah <bdi dir="ltr">{displayRange(current.torah.ranges)}</bdi></>}{current?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(current.haftarah.ranges)}</bdi></>}</p>}
         {rareNote && <p className="field-help" data-rare-trope="">{rareNote}</p>}
-        {sources.length > 0 && <MoreStart ready={starter.ready} onStart={starter.start} />}
       </>}
       rest={<>
+        {sources.length > 0 && <MoreStart ready={starter.ready} onStart={starter.start} />}
         {sources.length > 0 && printHref && <a className="button-hero-secondary" href={printHref}>Print</a>}
         {sources.length > 0 && savePassage && !choosing && <SaveReading passage={savePassage} back={back.forSave()} offer={back.passageOffer} />}
-        <label className={styles.picker}><span>Find a date</span><input type="date" value={date ?? ""} onChange={event => { const value = event.target.value; if (/^\d{4}-\d{2}-\d{2}$/.test(value)) { try { change(shabbatOnOrAfter(value)); } catch { /* Ignore partial input. */ } } }} /></label>
-        {date !== null && !isThisWeek && today && <MoreAction onAct={() => change(today)}>This week</MoreAction>}
-        {chooser.button}{chooser.panel}
         <a className="button-hero-secondary" href="/trope-chart">Trope chart</a>
         {current && sources.length > 0 && <SiddurBlessings torah={Boolean(current.torah)} haftarah={Boolean(current.haftarah)} />}
       </>} />
@@ -320,7 +306,7 @@ function WeekReading({ initial, verse, saveReturn, pick: initialPick }: { initia
 
 /** A named reading from the catalog, or any canonical passage: its passages loaded by ref. */
 function ChosenReading({ target, verse, saveReturn }: { target: Extract<ReadTarget, { mode: "named" | "ref" }>; verse: number | null; saveReturn: SaveReturn }) {
-  const named = target.mode === "named" ? namedReading(target.slug) : null, lens = useStudyLens(), chooser = useChooser(), starter = useStarter();
+  const named = target.mode === "named" ? namedReading(target.slug) : null, lens = useStudyLens(), starter = useStarter();
   const summary = usePortionSummary(named?.group === "parashah" ? named.slug : null, lens.lens === "study");
   const passages = useMemo(() => named ? named.passages : target.mode === "ref" ? [{ label: target.kind === "torah" ? "Torah" : "Haftarah", kind: target.kind, ref: target.ref }] : [], [named, target]);
   const title = named ? named.name : target.mode === "ref" ? displayRange([target.ref]) : "Reading";
@@ -364,13 +350,11 @@ function ChosenReading({ target, verse, saveReturn }: { target: Extract<ReadTarg
     <ReadHeader eyebrow={named ? GROUP_EYEBROW[named.group] : "Any reading"} title={loaded?.error ? "Reading unavailable" : title}
       top={<>
         <p className="field-help" data-reading-ranges="">{passages.map((row, at) => <span key={at}>{at > 0 && " · "}{row.label} <bdi dir="ltr">{displayRange([row.ref])}</bdi></span>)}</p>
-        {sources.length > 0 && <MoreStart ready={starter.ready} onStart={starter.start} />}
       </>}
       rest={<>
+        {sources.length > 0 && <MoreStart ready={starter.ready} onStart={starter.start} />}
         {sources.length > 0 && <a className="button-hero-secondary" href={printAddress(target.mode === "named" ? { mode: "named", slug: target.slug, passage: index + 1 } : target)}>Print</a>}
         {sources[index] && !choosing && <SaveReading passage={{ title: named ? named.name : title, label: passages[index]?.label ?? null, kind: sources[index].source.passage.kind, ranges: sources[index].source.passage.ranges, date: null }} back={back.forSave()} offer={back.passageOffer} />}
-        <MoreAction onAct={() => goToReading(readAddress({ mode: "week", date: null, kind: null }, { study: lens.lens === "study" }))}>This week</MoreAction>
-        {chooser.button}{chooser.panel}
         <a className="button-hero-secondary" href="/trope-chart">Trope chart</a>
       </>} />
     <ReadingBlock reserve={!loaded?.error}>
@@ -383,17 +367,23 @@ function ChosenReading({ target, verse, saveReturn }: { target: Extract<ReadTarg
   </Shell></MoreScope>;
 }
 
-/** Start reading, first in the More sheet (N5). The sheet closes first, so the action that moves focus into the reading is the one that keeps it. */
+/** Puts focus on a verse's own first control once the text has scrolled there (a verse on another text page is found after it loads). */
+function focusVerse(ref: string) {
+  let tries = 0;
+  const attempt = () => {
+    let row: Element | null = null;
+    try { row = document.querySelector(`[data-study-rows] [data-verse-ref="${CSS.escape(ref)}"], .study-verses [data-verse-ref="${CSS.escape(ref)}"]`); } catch { /* No such verse here. */ }
+    const target = row?.querySelector<HTMLElement>("button:not([disabled])") ?? (row instanceof HTMLElement ? row : null);
+    if (target) { if (!target.hasAttribute("tabindex") && !(target instanceof HTMLButtonElement)) target.setAttribute("tabindex", "-1"); target.focus({ preventScroll: true }); return; }
+    if (++tries < 20) window.setTimeout(attempt, 100);
+  };
+  window.setTimeout(attempt, 0);
+}
+/** Start reading, in the Change sheet (N5). The sheet closes first, so the action that moves focus into the reading is the one that keeps it. */
 function MoreStart({ ready, onStart }: { ready: boolean; onStart(): void }) {
   const more = useMore();
   return <button type="button" className="button-primary" disabled={!ready} onClick={() => more ? more.close(onStart) : onStart()}>Start reading</button>;
 }
-/** A More sheet action that is done once it is chosen: the sheet closes, then the action runs. */
-function MoreAction({ onAct, children }: { onAct(): void; children: ReactNode }) {
-  const more = useMore();
-  return <button type="button" className="button-hero-secondary" onClick={() => more ? more.close(onAct) : onAct()}>{children}</button>;
-}
-
 /**
  * The reading itself, for any list of passages: the passage buttons (Torah | Haftarah, or a named reading's
  * own), Lein and Study, the text pages, the player, word tools, commentary and Up close.
@@ -420,7 +410,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
 }) {
   const source = (sources[index] ?? sources[0]).source, passage = source.passage, kind = passage.kind, listening = source.listening, key = selectorKey(source.selector);
   const allVerses = useMemo(() => { try { return expandReadingRanges(passage.ranges, kind, TANAKH_VERSE_COUNTS); } catch { return []; } }, [passage, kind]);
-  const choice = useVerseChoice(choose, allVerses, kind), more = useMore();
+  const choice = useVerseChoice(choose, allVerses, kind), more = useMore(), chapters = useMemo(() => readingChapters(allVerses), [allVerses]);
   const linkedIndex = verse !== null && verse <= passage.verseCount ? verse - 1 : null;
   // What a text page is: one section when the calendar gives aliyot (the text flows inside it), else one of the server's pages.
   const sections = useMemo(() => kind === "torah" && sectionRows ? sectionsOf(sectionRows, allVerses) : NO_SECTIONS, [kind, sectionRows, allVerses]);
@@ -644,7 +634,12 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     </div>
     {(choice.button || choice.extra || portion) && !more && <div className={styles.chooseRow}>{portion}{choice.button}{choice.extra}</div>}
     {/* With a More sheet (N5) the Portion control and Choose verses live in it, put there while it is open. */}
-    {more?.slot && createPortal(<>{portion}{choice.button}{choice.extra}</>, more.slot)}
+    {more?.slot && createPortal(<>{portion}{choice.button}{choice.extra}
+      {/* Go to verse: a chapter of this reading, from the sheet. The sheet closes first, then the text scrolls there and focus goes to it. */}
+      {chapters.length > 1 && <label className={styles.goTo}><span>Go to verse</span>
+        <select aria-label="Go to verse" value="" onChange={event => { const next = chapters.find(row => row.key === event.target.value); if (next) more.close(() => { jumpTo(next.first); focusVerse(next.first); }); }}>
+          <option value="" disabled>Chapter</option>{chapters.map(row => <option key={row.key} value={row.key}>{row.label}</option>)}
+        </select></label>}</>, more.slot)}
     {/* The portion summary (1.9 N7): atop Study, only an approved one, only on a parashah's Torah. Its outline goes to an aliyah where the page has it as a section. */}
     {study && kind === "torah" && summary && <PortionSummaryBlock summary={summary} aliyot={summaryJump ? sections.map(row => row.n) : undefined} onAliyah={goAliyah} />}
     {/* Curated discussions (1.7 M6b), in Study, only where this passage has any: one tap to the Sheet here; on a laptop they are the column beside the verses, below. */}

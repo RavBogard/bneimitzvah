@@ -64,14 +64,14 @@ export function parseGoogleChallenge(value: unknown): GoogleChallenge {
 }
 export function parseAuthResult(value: unknown): AuthDestination {
   const row = record(value, ["ok", "next"]);
-  if (row.ok !== true || (row.next !== "/" && row.next !== "/invitations/accept" && row.next !== "/account")) return unavailable();
+  if (row.ok !== true || (row.next !== "/" && row.next !== "/mine" && row.next !== "/invitations/accept" && row.next !== "/account")) return unavailable();
   return row.next;
 }
 /** The typed code's answer (N20): a fixed landing, or the return address this device sealed when it asked for the email. */
 export function parseCodeResult(value: unknown): string {
   const row = record(value, ["ok", "next"]);
   if (row.ok !== true) return unavailable();
-  if (row.next === "/" || row.next === "/invitations/accept" || row.next === "/account") return row.next;
+  if (row.next === "/" || row.next === "/mine" || row.next === "/invitations/accept" || row.next === "/account") return row.next;
   return returnAddress(row.next) ?? unavailable();
 }
 /** Redirect-mode Google: only Google's own authorization endpoint may be navigated to. */

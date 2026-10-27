@@ -48,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try { while (true) { const chunk = await reader.read(); if (chunk.done) break; bytes += chunk.value.byteLength; if (bytes > 1024) throw 0; text += decoder.decode(chunk.value, { stream: true }); } text += decoder.decode(); }
       finally { void reader.cancel().catch(() => {}); reader.releaseLock(); }
       const result = JSON.parse(text);
-      if (!active || !result || result.ok !== true || Object.keys(result).sort().join() !== "next,ok" || !["/", "/invitations/accept"].includes(result.next)) throw 0;
+      if (!active || !result || result.ok !== true || Object.keys(result).sort().join() !== "next,ok" || !["/", "/mine", "/invitations/accept"].includes(result.next)) throw 0;
       location.replace(result.next);
     } catch {
       if (active) { message.textContent = "This link could not be confirmed. Check your access, or reopen the latest email to try again."; button.textContent = "Link not confirmed"; }

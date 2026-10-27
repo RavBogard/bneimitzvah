@@ -3,7 +3,7 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "rea
 import { PortalRequestError } from "../api";
 import { RATE_LIMITED_MESSAGE } from "../public-reading/rate-limited";
 import { fetchPublicRefReading, fetchPublicText, fetchPublicWeek, refSource, weekSource, type PublicSource } from "../public-reading/api";
-import { ReadingChooser } from "../public-reading/reading-chooser";
+import { FindReading } from "../find-reading/find-reading";
 import { useProductName } from "../public-reading/product-name";
 import { displayRange, replaceAddress, useDocumentTitle } from "../public-reading/view";
 import { fetchSavedReadings, type SavedReading } from "../saved/api";
@@ -242,7 +242,7 @@ export function PrintSheetPage() {
         <p role="status" className={styles.status}>{printing === "preparing" ? "Getting the Hebrew ready to print…" : printing === "error" ? "The Hebrew lettering didn’t load. Reload the page, then print again." : ""}</p>
       </header>
       <div id={chooserId} className={styles.screenOnly} hidden={!chooser}>{chooser && <>
-        <ReadingChooser id={`${chooserId}-panel`} study={false} onOpen={address => { const next = printTargetFromRead(address); if (next) open(next); }} />
+        <FindReading place="sheet" onOpen={address => { const next = printTargetFromRead(address); if (next) open(next); }} />
         <MyReadings onOpen={reading => open({ mode: "saved", id: reading.id })} />
       </>}</div>
       <div className={styles.layout}>
