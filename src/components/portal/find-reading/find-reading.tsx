@@ -5,6 +5,7 @@ import { congregationToday, shabbatOnOrAfter } from "../../../lib/readings/publi
 import type { CalendarRow } from "../../../lib/readings/calendar";
 import { addressOf, findReadings, NO_MATCH_LINE, type FindResult } from "../../../lib/readings/find-reading";
 import { fetchCalendar } from "../public-reading/calendar-api";
+import { goToReading } from "../public-reading/heading-focus";
 import { readAddress, saveReturnAddress } from "../public-reading/urls";
 import styles from "./find-reading.module.css";
 
@@ -113,7 +114,7 @@ export function FindReading({ place, study, add, onOpen }: { place: FindPlace; s
   }, [attempt]);
   const rows = calendar.status === "ready" ? calendar.rows : [], today = calendar.status === "ready" ? calendar.today : null;
   const results = useMemo(() => text.trim() ? findReadings(text, { calendar: rows, today: today ?? congregationToday() }) : [], [text, rows, today]);
-  const go = (address: string) => { if (onOpen) onOpen(address); else window.location.assign(address); };
+  const go = (address: string) => { if (onOpen) onOpen(address); else goToReading(address); };
   return <FindReadingView place={place} study={study} add={add} calendar={calendar} text={text} active={active} dateRef={dateRef}
     onText={value => { setText(value); setActive(-1); }} onActive={setActive} onOpen={go} onRetry={() => setAttempt(n => n + 1)}
     onKey={event => {

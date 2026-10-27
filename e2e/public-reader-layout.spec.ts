@@ -99,7 +99,7 @@ for (const [name, address] of [["Lein", "/read"], ["Study", "/read?lens=study"]]
   });
 }
 
-test("at a 200% root font on a Pixel 7 the reading, its Find a date row and the reading chooser are no wider than the screen", async ({ page }, testInfo) => {
+test("at a 200% root font on a Pixel 7 the reading, its Find a date row and the Readings index are no wider than the screen", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "phone", "A phone-width check");
   await mock(page);
   await page.goto("/read");
@@ -120,11 +120,10 @@ test("at a 200% root font on a Pixel 7 the reading, its Find a date row and the 
   await expect(picker).toBeVisible();
   const box = await picker.boundingBox();
   expect(box && box.x >= 0 && box.x + box.width <= (await fits()).view, "the date field is inside the screen").toBe(true);
-  await sheet.getByRole("button", { name: "Choose a reading", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Choose a reading", exact: true })).toBeVisible();
-  size = await fits(); expect(size.scroll, "the reading chooser").toBeLessThanOrEqual(size.view);
-  const panel = await page.getByRole("region", { name: "Choose a reading", exact: true }).boundingBox();
-  expect(panel && panel.x >= 0 && panel.x + panel.width <= size.view, "the chooser is inside the screen").toBe(true);
+  await sheet.getByRole("link", { name: "Choose a reading", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Readings", exact: true })).toBeVisible();
+  await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+  size = await fits(); expect(size.scroll, "the Readings index").toBeLessThanOrEqual(size.view);
 });
 
 const active = (page: Page) => page.evaluate(() => {
@@ -164,16 +163,14 @@ test("the next text page puts focus at the start of the new text, and Previous r
   await expect.poll(() => active(page).then(state => state.reading)).toBe(true);
 });
 
-test("choosing a reading from the chooser lands focus on the new reading's heading", async ({ page }) => {
+test("choosing a reading from the Readings index lands focus on the new reading's heading", async ({ page }) => {
   // Slow answers: this week is still loading when the reading is chosen, and the page being left must not spend the focus the next page is owed.
   await mock(page, 600);
   // The next page is slow to arrive, so this one is still running when its week answers.
   await page.route("**/read?reading=*", async route => { await new Promise(resolve => setTimeout(resolve, 1500)); await route.continue(); });
-  await page.goto("/read");
-  await openMore(page);
-  await page.getByRole("button", { name: "Choose a reading", exact: true }).click();
-  await page.getByLabel("Parashah", { exact: true }).selectOption({ label: "Noach" });
-  await page.getByRole("region", { name: "Choose a reading", exact: true }).getByRole("button", { name: "Open", exact: true }).first().click();
+  await page.goto("/readings");
+  await page.locator("summary", { hasText: "Genesis" }).click();
+  await page.getByRole("link", { name: "Noach", exact: true }).click();
   await expect(page).toHaveURL(/\/read\?reading=noach/);
   await expect(page.getByRole("heading", { level: 1, name: "Noach", exact: true })).toBeVisible();
   await expect.poll(() => active(page).then(state => state.id)).toBe("public-reading-title");

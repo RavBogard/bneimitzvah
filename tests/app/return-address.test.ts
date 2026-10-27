@@ -7,7 +7,7 @@ import { parseSaveReturn, readAddress, saveReturnAddress } from "../../src/compo
 // Release 1.9 N20: where sign-in may go back to. Synthetic addresses only.
 describe("the return address", () => {
   it("keeps same-origin relative addresses on the pages sign-in returns to", () => {
-    for (const value of ["/", "/account", "/read", "/read?date=2026-10-31", "/read?date=2026-10-31&kind=haftarah&verse=3&lens=study",
+    for (const value of ["/", "/account", "/read", "/readings", "/readings?add=1", "/read?date=2026-10-31", "/read?date=2026-10-31&kind=haftarah&verse=3&lens=study",
       "/read?ref=Genesis+18%3A1-10&kind=torah", "/read?reading=rosh-hashanah-1&passage=2", "/read?saved=0b0e9c8e-8f3c-4b8a-9a52-2a4c1e8f9d10",
       readAddress({ mode: "ref", ref: "Genesis 18:1-33", kind: "torah", mark: "Genesis 18:1-5; 18:10" }, { verse: 4, study: true }),
       saveReturnAddress("/read?date=2026-10-31", ["Genesis 18:1-10"])])

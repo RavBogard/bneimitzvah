@@ -99,7 +99,7 @@ test("comparison offers exact verse repair, recovery and an honest public return
 test("invalid refs and absent haftarah have a useful reading or retry route", async ({ page }) => {
   await page.goto("/learn/prepare?ref=Genesis+1%3A999&kind=torah");
   await expect(page.getByText("This reference cannot be opened.", { exact: false })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Choose a reading in Lein", exact: true })).toHaveAttribute("href", "/read");
+  await expect(page.getByRole("link", { name: "Choose a reading", exact: true })).toHaveAttribute("href", "/readings?for=prepare");
   await page.goto("/learn/prepare?kind=haftarah");
   await expect(page.getByText("No haftarah passage is available for these weeks.", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Try again", exact: true })).toBeVisible();

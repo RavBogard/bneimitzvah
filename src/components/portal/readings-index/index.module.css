@@ -1,0 +1,23 @@
+/* /readings: one column of sections in the site's own type; every row a 48px link. Existing tokens only. */
+.shell { min-height: 100svh; }
+.main { max-width: 46rem; padding-block: 2rem 3.5rem; }
+.section { margin-top: 2.25rem; }
+.section h2 { margin: 0 0 0.75rem; font-size: 1.375rem; line-height: 1.3; }
+.section h3 { margin: 1.25rem 0 0.25rem; font-size: 1.0625rem; font-weight: 700; }
+.list { margin: 0; padding: 0; list-style: none; }
+.list > li { border-top: 1px solid var(--color-rule); }
+.list > li:last-child { border-bottom: 1px solid var(--color-rule); }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.125rem 0.75rem; min-height: 48px; padding: 0.5rem 0.25rem; text-decoration: none; overflow-wrap: anywhere; }
+.rowDate { min-width: 0; color: var(--color-muted); font-variant-numeric: tabular-nums; }
+.rowName { min-width: 0; font-weight: 650; }
+.note { margin-left: auto; color: var(--color-muted); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+/* Six skeleton rows hold the height the six real rows take, so the list does not push what is below it. */
+.rowSkeleton { min-height: 48px; background: linear-gradient(var(--color-rule), var(--color-rule)) left center / 40% 0.9rem no-repeat; }
+.book { margin-top: 0.5rem; }
+.book > summary { display: flex; align-items: center; min-height: 48px; font-weight: 700; cursor: pointer; }
+.occasion + .occasion { margin-top: 0.5rem; }
+.credit { margin: 2.25rem 0 0; color: var(--color-muted); font-size: 0.875rem; }
+@media (max-width: 640px) {
+  .main { padding-block: 1.25rem 3rem; }
+  .note { margin-left: 0; flex-basis: 100%; }
+}

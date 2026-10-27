@@ -4,7 +4,7 @@ import { useStudyLens } from "../workspace/study-lens";
 import { fetchPublicRefReading, refSource } from "../public-reading/api";
 import { readAddress } from "../public-reading/urls";
 import { printAddress } from "../../../lib/print/print-address";
-import { displayRange, go, Hero, longDate, PassageReading, replaceAddress, Shell, useChooser, useStarter, type LabelledSource } from "../public-reading/view";
+import { displayRange, go, Hero, longDate, PassageReading, replaceAddress, Shell, useStarter, type LabelledSource } from "../public-reading/view";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 import { expandReadingRanges } from "../../../lib/readings/ranges";
 import { conflictMark, fetchSavedPage, parseSavedReading, removeSavedReading, setSavedMark, updateSavedReading, type SavedMark, type SavedPage, type SavedReading } from "./api";
@@ -90,7 +90,7 @@ export function SavedVerseMarks({ verseRef, mark, pending, notice, onChoose, onS
  * star (PR 3), and stored notes and translations show read-only under Yours. A tab coming back revalidates quietly and stays mounted.
  */
 export function SavedReadingPage({ id, verse }: { id: string; verse: number | null }) {
-  const lens = useStudyLens(), chooser = useChooser(), starter = useStarter(), editId = useId();
+  const lens = useStudyLens(), starter = useStarter(), editId = useId();
   const [header, setHeader] = useState<Header>({ status: "loading" }), [retry, setRetry] = useState(0), [linked, setLinked] = useState(verse);
   const [text, setText] = useState<Text | null>(null), [textRetry, setTextRetry] = useState(0);
   const [edit, setEdit] = useState<EditStep>("closed"), [draft, setDraft] = useState({ name: "", date: "" }), [editNotice, setEditNotice] = useState("");
@@ -265,9 +265,8 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
   return <Shell title="My reading" signedIn={header.status === "ready"}>
     <Hero eyebrow="My reading" title={reading ? reading.name : header.status === "loading" ? "Loading your reading" : "Reading unavailable"}
       meta={reading && <>{reading.date && <><time dateTime={reading.date}>{longDate(reading.date)}</time> · </>}{kindName(reading.kind)} <bdi dir="ltr">{displayRange([reading.ranges])}</bdi></>}
-      nav={<><button type="button" className="button-hero-secondary" onClick={() => go(readAddress({ mode: "week", date: null, kind: null }, { study: lens.lens === "study" }))}>This week</button>{chooser.button}</>}
+      nav={<><button type="button" className="button-hero-secondary" onClick={() => go(readAddress({ mode: "week", date: null, kind: null }, { study: lens.lens === "study" }))}>This week</button><a className="button-hero-secondary" href="/readings">Choose a reading</a></>}
       actions={reading && starter.row(editButton, printAddress({ mode: "saved", id: reading.id }))} />
-    {chooser.panel}
     {reading && <SavedReadingEdit step={edit} panelId={editId} name={draft.name} date={draft.date} notice={editNotice}
       onName={value => setDraft(current => ({ ...current, name: value }))} onDate={value => setDraft(current => ({ ...current, date: value }))}
       onSave={save} onCancel={() => { live.current?.abort(); setEdit("closed"); setEditNotice(""); }} onAskRemove={() => { setEditNotice(""); setEdit("confirm"); }} onRemove={remove} onKeep={() => setEdit("open")} />}
