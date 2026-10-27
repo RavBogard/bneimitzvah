@@ -44,9 +44,10 @@ test("Save on /read asks about the account only when pressed, and answers signed
   await openMore(page);
   const save = page.getByRole("button", { name: "Save", exact: true });
   await expect(save).toBeVisible();
-  // Visiting the reading never asks about a session, and the app bar offers Sign in.
+  // Visiting the reading never asks about a session; this browser was seen signed in, so the site bar shows the account control, not Sign in.
   expect(saved).toEqual([]);
-  await expect(page.getByRole("banner").getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
+  await expect(page.getByRole("banner").getByRole("link", { name: "Account", exact: true })).toHaveAttribute("href", "/account");
+  await expect(page.getByRole("banner").getByRole("link", { name: "Sign in", exact: true })).toHaveCount(0);
   await save.click();
   // Signed out after all: Save becomes Sign in to save, which comes back to this reading and offers Save there.
   const signIn = page.getByRole("link", { name: "Sign in to save", exact: true });
@@ -148,7 +149,7 @@ test("with none saved it says how to save one; signed out or student-only, the f
     saved.length = 0;
     await page.unroute("**/api/session"); await page.route("**/api/session", route => json(route, answer.status, answer.body));
     await page.goto("/");
-    await expect(page.getByRole("heading", { level: 2, name: "Beit Mitzvah", exact: true })).toBeVisible();
+    await expect(page.locator('[data-door="beit-mitzvah"]').getByRole("heading", { level: 2 })).toBeVisible();
     await expect(page.locator("[data-my-readings]")).toHaveCount(0);
     expect(saved).toEqual([]);
   }

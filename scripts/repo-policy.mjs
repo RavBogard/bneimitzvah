@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { readFile, lstat } from "node:fs/promises";
 import { promisify } from "node:util";
 import { extname, join } from "node:path";
-import { FONT_ASSETS, matchesAssetPin, reviewedFontAsset } from "./font-assets.mjs";
+import { FONT_ASSETS, brandImageProblem, matchesAssetPin, reviewedFontAsset } from "./font-assets.mjs";
 import { privateBenchmarkProblem } from "./private-benchmark-policy.mjs";
 
 const run = promisify(execFile);
@@ -163,16 +163,20 @@ function missingFontPair(present, findings, suffix = "") {
   for (const family of new Set(FONT_ASSETS.map(asset => asset.family))) {
     const members = FONT_ASSETS.filter(asset => asset.family === family);
     if (!members.some(asset => present.has(asset.path))) continue;
-    for (const asset of members) if (!present.has(asset.path)) findings.push(`${asset.path}${suffix}: required paired font asset missing`);
+    for (const asset of members) if (!present.has(asset.path)) findings.push(`${asset.path}${suffix}: required paired ${assetNoun(asset)} missing`);
   }
 }
 
+// Wording only: the brand family's findings say "brand asset"; every check is the font path's, unchanged.
+const assetNoun = asset => asset.family === "brand-mural" ? "brand asset" : "font asset";
+
 function inspectFontBytes(asset, content, findings, suffix = "") {
   const verified = matchesAssetPin(content, asset);
-  if (!verified) findings.push(`${asset.path}${suffix}: reviewed font asset integrity mismatch`);
-  // The narrow binary exception applies only to the pinned font. Its notice
+  if (!verified) findings.push(`${asset.path}${suffix}: reviewed ${assetNoun(asset)} integrity mismatch`);
+  // The narrow binary exception applies only to the pinned font or image. Its notice
   // still receives every ordinary privacy/credential/publisher/binary check.
   if (asset.kind === "license" || !verified) for (const reason of entryProblems(asset.path, content.toString("utf8"))) findings.push(`${asset.path}${suffix}: ${reason}`);
+  if (asset.kind === "image") { const problem = brandImageProblem(asset.path, content); if (problem) findings.push(`${asset.path}${suffix}: ${problem}`); }
 }
 
 // Include untracked publish candidates and the index, not only committed files.
@@ -200,7 +204,7 @@ export async function inspectRepository(root, env) {
       if (!state.exists) continue;
       worktreeFonts.add(file);
       if (!state.regular) { findings.push(`${file}: symlink or non-file requires review`); continue; }
-      if (asset.kind === "font" && state.size !== asset.size) { findings.push(`${file}: reviewed font asset integrity mismatch`); continue; }
+      if ((asset.kind === "font" || asset.kind === "image") && state.size !== asset.size) { findings.push(`${file}: reviewed ${assetNoun(asset)} integrity mismatch`); continue; }
       inspectFontBytes(asset, await repositoryRead(join(root, file)), findings);
       continue;
     }

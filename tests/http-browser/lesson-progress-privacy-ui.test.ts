@@ -232,7 +232,7 @@ it("retains the rightful lesson prompt during quiet checks and clears it on real
   await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden();
   await ui(tab.getByLabel("Student", { exact: true })).toBeHidden(); expect(await modals(tab)).toBe(0); expect(await tab.locator(".lesson-sheet textarea, .lesson-entry").count()).toBe(0);
   expect(await tab.evaluate(value => !document.body.textContent?.includes(value), text)).toBe(true); expect((await api(tab, `/api/students/${fixture.student.id}/lesson-log?mode=tutor`)).status).toBe(404); expect(writes).toBe(1);
-  await safe(() => tab.getByRole("navigation", { name: "Workspace roles", exact: true }).getByRole("link", { name: "Parent", exact: true }).click()); await ui(tab.getByLabel("Child", { exact: true })).toBeVisible(); expect(await modals(tab)).toBe(0); expect(writes).toBe(1);
+  await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "Account", exact: true }).click(); await tab.getByRole("list", { name: "Roles" }).getByRole("link", { name: /^Parent/ }).click(); })()); await ui(tab.getByLabel("Child", { exact: true })).toBeVisible(); expect(await modals(tab)).toBe(0); expect(writes).toBe(1);
 });
 
 it("gives admin full lesson authority and child read-only paging while rejecting wrong-student private answers", async () => {

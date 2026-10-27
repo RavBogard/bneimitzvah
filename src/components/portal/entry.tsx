@@ -7,24 +7,22 @@ import { GoogleContinue } from "./google-sign-in";
 import { rememberSignedIn } from "./signed-in-hint";
 import { returnAddress, signInAddress } from "../../lib/site/return-address";
 import type { GoogleIntent } from "./sign-in-boundary";
-import { forgetPendingRequest } from "./pending-request";
 import { FrontDoor, type FrontDoorAccount } from "./front-door/front-door";
 import { AccountRequest } from "./account-request";
-import { purgeOffline } from "../../lib/offline/pack-index";
-import { TabBar, TabSkipLink } from "./shell/tab-bar";
-import { ParentAccountDisclosure, PracticeDisclosure } from "./practice-visibility/disclosure";
-import { workspaceApi } from "./workspace/api";
-import { BetaMark } from "../site/beta-mark";
+import { signOutOfPortal } from "./sign-out";
+import { rolePaths } from "./shell/role-home";
+import { SiteBar } from "../site/site-bar";
 
 export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "uncertain" }
   | { kind: "accepted"; role: SessionSummary["roles"][number] }
   | { kind: "signed-in"; summary: SessionSummary } | { kind: "invitation"; review: InvitationReview };
 /**
- * What the front door app bar shows for an entry state. A refused account is signed in, so Sign in
- * would be wrong, and it has no account page it can use, so the bar stays empty; the door itself offers Sign out.
+ * What the front door shows for an entry state. A refused account is signed in, so Sign in would be wrong, and it has no account
+ * page it can use, so the bar stays empty and the door itself offers Sign out. An unavailable sign-in keeps its Try again in the door.
  */
-export const frontDoorAccount = (view: View): FrontDoorAccount => view.kind === "loading" || view.kind === "forbidden" ? null
-  : view.kind === "signed-in" ? { kind: "account", role: view.summary.roles.length === 1 ? roleNames[view.summary.roles[0]] : null, saved: view.summary.saved } : { kind: "sign-in" };
+export const frontDoorAccount = (view: View): FrontDoorAccount => view.kind === "loading" ? null
+  : view.kind === "forbidden" ? { kind: "task", signedIn: undefined } : view.kind === "unavailable" ? { kind: "task", signedIn: false }
+    : view.kind === "signed-in" ? { kind: "account", saved: view.summary.saved, roles: view.summary.roles } : { kind: "sign-in" };
 type Action = "google" | "email" | "code" | "accept" | "sign-out";
 /**
  * Only when this device last asked for a sign-in email, never the code or the address: an installed app that
@@ -51,20 +49,24 @@ export const SIGN_IN_CODE_COPY = Object.freeze({
   wrong: "That code didn’t match. Check the email and try again.",
   expired: "That code has expired or was used. Request a new email to get a new code.",
 });
-/** 1.9 N23: the parent's own linked children, for the parent's practice-visibility line on Account (asked only once the gate is open). */
-const parentChildren = () => workspaceApi.students("parent");
-const rolePath = (role: SessionSummary["roles"][number]) => role === "admin" ? "/workspace/admin/students" : `/workspace/${role}`;
-const roleTasks: Record<SessionSummary["roles"][number], string> = { student: "your assigned reading", parent: "your child’s preparation and practice", tutor: "the students you teach", admin: "students, people and setup" };
+/**
+ * Where an entry that finds the person already signed in goes: nowhere on the front door (it shows the role's door, never the
+ * workspace), else the page they left (G16) or the front door. Only an accepted invitation's Continue and a return address ever lead to work.
+ */
+export const signedInDestination = (doors: boolean, back: string | null): string | null => doors ? null : back ?? "/";
 const failure = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
 
 /**
- * `frontDoor` puts this same entry task inside the CRC Torah home's Beit Mitzvah door; invitation entry never gets doors.
- * `returnTo` (N20) is where signing in here goes back to: a checked return address, carried by the email code and by
- * Google's stored state. Already signed in, the page goes straight there. A pending invitation always wins on the server.
+ * `frontDoor` is the CRC Torah home: the Beit Mitzvah door is built from what this checks (signed out, a role's door, or the task below
+ * for an account with no role); invitation entry never gets doors. Otherwise this is the one sign-in form (/sign-in, and Account when
+ * signed out) or the invitation's review.
+ * `returnTo` (N20, G16) is where signing in here goes back to: a checked return address, carried by the email code and by Google's
+ * stored state. Already signed in, the page goes straight there, or to the front door when it names none. The bare root never leaves for
+ * the workspace; only an accepted invitation (X8, its Continue) and a return address do. A pending invitation always wins on the server.
  */
-export function PortalEntry({ invitation = false, authenticationError = false, autoEnterStudent = true, inlineGoogle = false, googleIntent, frontDoor = false, after, returnTo = null }: { invitation?: boolean; authenticationError?: boolean; autoEnterStudent?: boolean; inlineGoogle?: boolean; googleIntent?: GoogleIntent; frontDoor?: boolean; after?: ReactNode; returnTo?: string | null }) {
+export function PortalEntry({ invitation = false, authenticationError = false, inlineGoogle = false, googleIntent, frontDoor = false, after, returnTo = null }: { invitation?: boolean; authenticationError?: boolean; inlineGoogle?: boolean; googleIntent?: GoogleIntent; frontDoor?: boolean; after?: ReactNode; returnTo?: string | null }) {
   const back = invitation ? null : returnAddress(returnTo);
-  const resumesSave = back !== null && new URLSearchParams(back.slice(back.indexOf("?") + 1 || back.length)).get("save") === "1";
+  const doors = frontDoor && !invitation;
   const [view, setView] = useState<View>({ kind: "loading" });
   const [pending, setPending] = useState<Action | null>(null), [message, setMessage] = useState("");
   const [email, setEmail] = useState(""), [linkRequested, setLinkRequested] = useState(false), [code, setCode] = useState("");
@@ -85,10 +87,10 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
       .then(value => {
         const next: View = invitation ? { kind: "invitation", review: parseInvitation(value) } : { kind: "signed-in", summary: parseSession(value) };
         if (next.kind === "signed-in") { rememberCodeRequest(false); rememberSignedIn(true); }
-        // Signed in already: only Save's way back (`save=1`) goes straight back to its reading; any other visitor who is
-        // already signed in sees the roles and Account here, as before (a member's Sign in on /read must still reach them).
-        if (resumesSave && turn === generation.current && next.kind === "signed-in" && back !== window.location.pathname + window.location.search) { window.location.replace(back!); return; }
-        if (autoEnterStudent && turn === generation.current && next.kind === "signed-in" && next.summary.roles.length === 1 && next.summary.roles[0] === "student") { window.location.replace("/workspace/student"); return; }
+        // Signed in already, on the sign-in form: back to the page the person left (G16), or the front door when none is named. The
+        // front door itself never leaves: it shows the role's door.
+        const away = next.kind === "signed-in" ? signedInDestination(doors, back) : null;
+        if (away && turn === generation.current) { window.location.replace(away); return; }
         if (turn === generation.current) setView(next);
       }).catch(error => {
         if (turn !== generation.current || request.signal.aborted) return;
@@ -96,7 +98,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
         if (status === 401 && !invitation) rememberSignedIn(false);
         setView({ kind: status === 401 ? "sign-in" : status === 403 ? "forbidden" : invitation && status === 404 ? "invalid-invitation" : "unavailable" });
       });
-  }, [invitation, autoEnterStudent, back, resumesSave]);
+  }, [invitation, doors, back]);
 
   useEffect(() => {
     refresh();
@@ -133,11 +135,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
         window.location.replace(next);
         return;
       } else if (kind === "sign-out") {
-        // Saved readings leave the device before the session does (1.5 A1, §3.4). This never throws.
-        await purgeOffline();
-        parseAcknowledgement(await requestPortal("/api/auth/sign-out", {}), "ok");
-        forgetPendingRequest(); // A Connect Claude request never outlives the account that started it.
-        rememberSignedIn(false);
+        await signOutOfPortal();
         setAuthGeneration(value => value + 1);
         lastEmail.current = ""; setEmail(""); setLinkRequested(false); rememberCodeRequest(false); setView({ kind: "sign-in" }); focusNext.current = true;
       } else {
@@ -173,10 +171,10 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
   }
   function submitCode(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (/^\d{6}$/.test(code)) void action("code"); }
   const title = view.kind === "loading" ? "Checking your access" : view.kind === "unavailable" ? "Sign-in is unavailable" : view.kind === "sign-in" ? linkRequested ? "Check your email" : "Sign in"
-    : view.kind === "signed-in" ? autoEnterStudent ? "You’re signed in" : "Your account" : view.kind === "invitation" ? "Review your invitation" : view.kind === "accepted" ? "Invitation accepted"
+    : view.kind === "signed-in" ? "Your account" : view.kind === "invitation" ? "Review your invitation" : view.kind === "accepted" ? "Invitation accepted"
       : view.kind === "invalid-invitation" ? "Invitation unavailable" : view.kind === "uncertain" ? "We couldn’t confirm the result" : "Access is unavailable";
 
-  const doors = frontDoor && !invitation, TaskHeading = doors ? "h3" : "h2";
+  const TaskHeading = doors ? "h3" : "h2";
   const task = <section className="entry-task" data-entry-state={view.kind} aria-labelledby="entry-title" aria-busy={view.kind === "loading" || pending !== null}>
         <TaskHeading id="entry-title" ref={heading} tabIndex={-1} aria-live="polite" aria-atomic="true">{title}</TaskHeading>
         {view.kind === "sign-in" && authenticationError && !attemptedSignIn && <p className="request-error" role="alert">That sign-in attempt couldn’t be verified. Please try again.</p>}
@@ -199,7 +197,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
             }} onFinish={() => {
               if (gate.current !== "google") return;
               gate.current = null; setPending(null);
-            }} /> : <a className="button-secondary" href={!invitation && !autoEnterStudent ? "/sign-in?intent=account" : "/sign-in"} referrerPolicy="no-referrer" aria-disabled={pending !== null} tabIndex={pending !== null ? -1 : undefined} onClick={event => { if (pending !== null) event.preventDefault(); }}>Continue with Google</a>}
+            }} /> : <a className="button-secondary" href={!invitation && back === "/account" ? "/sign-in?intent=account" : "/sign-in"} referrerPolicy="no-referrer" aria-disabled={pending !== null} tabIndex={pending !== null ? -1 : undefined} onClick={event => { if (pending !== null) event.preventDefault(); }}>Continue with Google</a>}
             <div className="form-divider"><span>or use email</span></div>
             <form onSubmit={submit}>
               <label htmlFor="entry-email">Email address</label>
@@ -210,17 +208,8 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
             {/* F3: the way to the account request, which opens on Account once signed in. Not on the page that is already that way. */}
             {!invitation && !(inlineGoogle && (back === "/account" || googleIntent === "account")) && <p className="entry-ask"><a href={signInAddress("/account")}>Ask for an account</a></p>}</>)}
         {view.kind === "signed-in" && <>
-          {view.summary.roles.length ? <><p>{view.summary.roles.length === 1 ? "Continue to your work." : "This account has more than one role. Choose what you want to do now; you can switch later from the top of the page."}</p><ul className="role-list" aria-label="Available roles">{view.summary.roles.map(role => <li key={role}><a href={rolePath(role)}>{roleNames[role]}</a><span className="field-help"> · {roleTasks[role]}</span></li>)}</ul><p><a href="/workspace/email">Email settings</a><span className="field-help"> · choose which portal emails you get</span></p>
-            {view.summary.roles.some(role => role === "admin" || role === "tutor") && <p><a href="/workspace/claude">Claude connections</a><span className="field-help"> · see and end Claude’s access to the portal</span></p>}
-            {view.summary.approver && <p><a href="/workspace/accounts">Account requests</a><span className="field-help"> · approve accounts for people who ask</span></p>}
-            {/* 1.9 N11: a student's way to help, the congregation's own preparation guide (the link the reading page already carries). */}
-            {/* 1.9 N23: the student is told what the tutor sees, behind the same release gate as every tutor and parent line. */}
-            {view.summary.roles.includes("student") && <PracticeDisclosure place="account" />}
-            {view.summary.roles.includes("parent") && <ParentAccountDisclosure load={parentChildren} />}
-            {view.summary.roles.includes("student") && <p><a href="https://www.centralreform.org/beit-mitzvah/" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Need help?</a></p>}
-            {/* Never offered to a student, who already has an account (G20, 1.9 N20); other accounts without saved readings may ask. */}
-            {!view.summary.saved && !view.summary.roles.includes("student") && <AccountRequest level={doors ? 4 : 3} />}</>
-            : <><AccountRequest level={doors ? 4 : 3} />{!view.summary.saved && <p className="field-help">Received an invitation to a Beit Mitzvah? Open its email link while signed in.</p>}</>}
+          {/* A role's door is the front door's own; what reaches here is an account with no role (Account holds the roles and the rest). */}
+          <AccountRequest level={doors ? 4 : 3} />{!view.summary.saved && <p className="field-help">Received an invitation to a Beit Mitzvah? Open its email link while signed in.</p>}
           <p className="field-help">Signing out removes your private reading and notes from this device’s screen. Use it on a shared phone or computer.</p>
           <button type="button" className="button-secondary" disabled={pending !== null} onClick={() => void action("sign-out")}>{pending === "sign-out" ? "Signing out…" : "Sign out"}</button>
         </>}
@@ -231,32 +220,26 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
           <button type="button" className="button-primary" disabled={pending !== null} onClick={() => void action("accept")}>{pending === "accept" ? "Accepting invitation…" : "Accept invitation"}</button>
           <button type="button" className="button-text" disabled={pending !== null} onClick={() => void action("sign-out")}>Sign out to use another account</button>
         </>}
-        {view.kind === "accepted" && <><p role="status">Your invitation has been accepted.</p><a className="button-primary" href={rolePath(view.role)}>Continue</a></>}
+        {view.kind === "accepted" && <><p role="status">Your invitation has been accepted.</p><a className="button-primary" href={rolePaths[view.role]}>Continue</a></>}
         {view.kind === "invalid-invitation" && <><p>This invitation may have changed, expired, already been accepted, or belong to another account. No new access has been added by this request.</p><p>Open the latest invitation email, or ask the congregation for a new invitation.</p><button type="button" className="button-primary" onClick={retry}>{message ? "Review invitation again" : "Check invitation again"}</button><a className="button-text" href="/">Check my access</a></>}
         {view.kind === "uncertain" && <><p>The request was interrupted. Your invitation may have been accepted. Check your access before trying again.</p><a className="button-primary" href="/">Check my access</a><button type="button" className="button-text" onClick={retry}>Review invitation again</button></>}
         {view.kind === "forbidden" && <><p>This account can’t use the requested access right now. Ask the congregation for help, or sign in with a different account.</p><button type="button" className="button-secondary" disabled={pending !== null} onClick={() => void action("sign-out")}>{pending === "sign-out" ? "Signing out…" : "Sign out"}</button></>}
         {after}
       </section>;
   if (doors) {
-    return <FrontDoor account={frontDoorAccount(view)} onSignIn={() => heading.current?.focus({ preventScroll: true })}>{task}</FrontDoor>;
+    return <FrontDoor account={frontDoorAccount(view)}>{task}</FrontDoor>;
   }
 
-  // Signed in on Account (1.9 N10): the same tab bar the workspace has, so Account is a tab and not a dead end.
-  const shellRoles = !invitation && !autoEnterStudent && view.kind === "signed-in" ? view.summary.roles : [];
   return <div className="portal-shell">
     <a className="skip-link" href="#portal-main">Skip to sign-in and access</a>
-    <TabSkipLink roles={shellRoles} />
-    <header className="portal-header app-bar"><div className="portal-brand-group"><a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a><BetaMark /></div><span>Central Reform Congregation</span></header>
+    <SiteBar signedIn={view.kind === "signed-in" ? true : view.kind === "sign-in" ? false : undefined} mode={invitation ? "minimal" : "site"} />
     <main id="portal-main" className="entry-layout">
       <div className="entry-introduction">
         <h1>{invitation ? "Join your congregation’s practice" : "Open your reading"}</h1>
         <p>{invitation ? "Review the access you’ve been invited to use. You choose whether to accept it." : "Your assigned passage is the starting point. Sign in with the account on your invitation."}</p>
         <div className="entry-notes"><p>For students, parents and the people who teach them.</p><p>Parents use their own account to reach a linked child’s practice.</p></div>
-        {!invitation && <div className="hero-actions"><a className="button-hero-secondary" href="/read">Read this week’s Torah and haftarah</a><span className="field-help">Open to everyone, no sign-in needed.</span></div>}
       </div>
       {task}
     </main>
-    <section className="portal-footer" aria-label="About this portal"><span>Learning at Central Reform Congregation</span><span>Your account and reading stay private.</span></section>
-    <TabBar roles={shellRoles} />
   </div>;
 }

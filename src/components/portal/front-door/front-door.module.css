@@ -19,9 +19,8 @@
 .door { min-width: 0; padding: 1.5rem 1.5rem 1.75rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); overflow-wrap: anywhere; }
 .doorTitle { font-size: 1.5rem; }
 .doorLine { margin-top: 0.5rem; color: var(--color-muted); }
-.doorAction { margin-top: 1.25rem; justify-content: center; }
-.doorStart { display: inline-flex; align-items: center; color: #fff; text-decoration: none; }
-.doorStart:hover { color: #fff; }
+.doorAction { margin-top: 1.25rem; justify-content: center; min-height: 48px; }
+.doorWait { margin-top: 1.25rem; min-height: 48px; color: var(--color-muted); }
 .doorMore { margin-top: 0.75rem; }
 .doorMore a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
 
@@ -30,9 +29,9 @@
 .task > :global(.entry-task) { padding-top: 0; border-top: 0; }
 .task h3 { margin: 0; font-size: 1.125rem; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; }
 .task > :global(.entry-task) > h3 + p { margin-top: 0.75rem; }
-/* While access is being checked the door holds the height of the signed-out sign-in it usually becomes (measured with
-   Continue with Google, email and Ask for an account), so the Learn door and everything below do not jump (D3, N20). */
-.task > :global(.entry-task[data-entry-state="loading"]) { min-height: 28.25rem; }
+/* While access is being checked the Beit Mitzvah door holds the height of the signed-out door it usually becomes (its line, Sign in and
+   Ask for an account; 16.7rem at its tallest, measured from 320 to 1280px), and a signed-in door holds the same, so the Learn door and everything below do not jump (D3). */
+.door[data-door-state="loading"], .door[data-door-state="sign-in"], .door[data-door-state="role"] { min-height: 16.75rem; }
 
 @media (min-width: 1001px) {
   .main { padding-top: 3rem; }
@@ -49,5 +48,4 @@
   .doors { gap: 1rem; }
   .door { padding: 1.25rem 1rem 1.5rem; }
   .doorAction { width: 100%; }
-  .task > :global(.entry-task[data-entry-state="loading"]) { min-height: 30.25rem; }
 }

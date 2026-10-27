@@ -31,7 +31,7 @@ async function page(kind: Kind) {
   // Every case deliberately expires its exact SDK session, so none is reused.
   expect((await api(tab, "/api/auth/sign-in/magic-link", { email: "pg-admin@example.test" })).status).toBe(200);
   await openAuthMail(tab, fixture.takeMail("pg-admin@example.test"));
-  const path = kind === "roster" ? "/workspace/admin/students" : kind === "access" ? "/workspace/admin/tutors" : "/workspace/admin/invitations";
+  const path = kind === "roster" ? "/workspace/admin/students?tab=students" : kind === "access" ? "/workspace/admin/tutors" : "/workspace/admin/invitations";
   await safe(() => tab.goto(path, { waitUntil: "domcontentloaded" })); return tab;
 }
 async function holdSession(tab: Page) {

@@ -5,13 +5,17 @@ import { ImageResponse } from "next/og";
 import { readPublicProductName } from "./names";
 
 /**
- * The plain share card every public page sends to link previews (MISSION 2026-10-23, item 10): the page title,
- * the product name and the yad. No photo, no emoji, nothing that varies by visitor; the public congregation is fixed,
- * so one card per path is safe to cache. The inks are the app's (globals.css); Hebrew falls back to Noto Serif Hebrew.
+ * The plain share card every public page sends to link previews (MISSION 2026-10-23, item 10; the mark changed 2026-10-26): the page
+ * title and the product name on lake blue, beside Siona Benjamin's CRC floor, cropped off the right edge. No photo, no emoji, nothing
+ * that varies by visitor; the public congregation is fixed, so one card per path is safe to cache. Hebrew falls back to Noto Serif Hebrew.
  */
 export const SHARE_CARD_SIZE = Object.freeze({ width: 1200, height: 630 });
 export const SHARE_CARD_TYPE = "image/png";
-const INK = "#13202f", MUTED = "#4b5a6b", CANVAS = "#ebf2fa", LAKE = "#1d5ba6", MARIGOLD = "#f7b500";
+const LAKE = "#1d5ba6", MARIGOLD = "#f7b500", WHITE = "#ffffff";
+/** The mural disc at its native size: vertically centred (630 - 512) / 2 = 59 from the top, 96px of it cropped off the right edge. */
+const MURAL = Object.freeze({ size: 512, top: 59, right: -96 });
+/** The widest the title runs, so it never goes under the disc (which starts at 1200 + 96 - 512 = 784). */
+const TITLE_MAX_WIDTH = 620;
 
 const fontRoot = join(process.cwd(), "public", "fonts");
 // The card's renderer cannot read the axis names of a variable font, so each font is drawn at its default instance
@@ -28,39 +32,28 @@ export function defaultInstance(font: Buffer): Buffer {
 const loadFont = async (file: string) => defaultInstance(await readFile(join(fontRoot, file)));
 let fonts: Promise<[Buffer, Buffer]> | null = null;
 const readFonts = () => fonts ??= Promise.all([loadFont("bricolage-grotesque/BricolageGrotesque.ttf"), loadFont("noto-serif-hebrew/NotoSerifHebrew.ttf")]).catch(error => { fonts = null; throw error; });
+let mural: Promise<string> | null = null;
+/** The 512 px disc (public/brand/mural-512.png) as a data address, read once. */
+const readMural = () => mural ??= readFile(join(process.cwd(), "public", "brand", "mural-512.png")).then(bytes => `data:image/png;base64,${bytes.toString("base64")}`).catch(error => { mural = null; throw error; });
 
-/** The yad icon (docs/planning/2026-10-23-cowork-offload/icons/option-2-yad.svg), drawn inline at `size` pixels. */
-function Yad({ size }: { size: number }) {
-  return <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width={size} height={size}>
-    <rect width="512" height="512" rx="104" fill={LAKE} />
-    <g transform="translate(256 256) scale(0.9) translate(-256 -256)">
-      <g transform="rotate(35 256 256)">
-        <circle cx="256" cy="84" r="30" fill="#ffffff" />
-        <rect x="238" y="84" width="36" height="170" rx="18" fill="#ffffff" />
-        <rect x="216" y="238" width="80" height="24" rx="12" fill="#ffffff" />
-        <rect x="206" y="270" width="100" height="70" rx="30" fill="#ffffff" />
-        <rect x="206" y="300" width="38" height="96" rx="19" fill="#ffffff" />
-      </g>
-      <rect x="124" y="388" width="120" height="34" rx="17" fill={MARIGOLD} />
-    </g>
-  </svg>;
-}
-
-/** A long title steps down so it still sits in two calm lines. */
-export const titleSize = (title: string) => title.length <= 22 ? 112 : title.length <= 40 ? 88 : 68;
+/** A long title steps down so it still sits in a few calm lines inside TITLE_MAX_WIDTH. */
+export const titleSize = (title: string) => title.length <= 14 ? 104 : title.length <= 24 ? 84 : title.length <= 40 ? 68 : 56;
 
 export async function renderShareCard(title: string, productName?: string): Promise<ImageResponse> {
-  const [name, [sans, hebrew]] = await Promise.all([productName ?? readPublicProductName(), readFonts()]);
+  const [name, [sans, hebrew], disc] = await Promise.all([productName ?? readPublicProductName(), readFonts(), readMural()]);
   const family = "Bricolage Grotesque, Noto Serif Hebrew";
   return new ImageResponse(
-    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", background: CANVAS, padding: "72px 88px", fontFamily: family, color: INK }}>
-      <div style={{ display: "flex", alignItems: "center" }}>
-        <Yad size={104} />
-        <div style={{ display: "flex", marginLeft: 32, fontSize: 44, fontWeight: 400, color: MUTED }}>{name}</div>
-      </div>
+    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", position: "relative", background: LAKE, padding: "72px 88px", fontFamily: family, color: WHITE }}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- rendered to a PNG by ImageResponse, never to the page */}
+      <img src={disc} width={MURAL.size} height={MURAL.size} alt="" style={{ position: "absolute", top: MURAL.top, right: MURAL.right }} />
       <div style={{ display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", width: 120, height: 12, background: MARIGOLD, borderRadius: 6, marginBottom: 40 }} />
-        <div style={{ display: "flex", fontSize: titleSize(title), fontWeight: 800, lineHeight: 1.08, letterSpacing: -2, maxWidth: 1000 }}>{title}</div>
+        <div style={{ display: "flex", fontSize: titleSize(title), fontWeight: 800, lineHeight: 1.08, letterSpacing: -2, maxWidth: TITLE_MAX_WIDTH }}>{title}</div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- rendered to a PNG by ImageResponse, never to the page */}
+        <img src={disc} width={56} height={56} alt="" />
+        <div style={{ display: "flex", marginLeft: 20, fontSize: 40, fontWeight: 750, color: WHITE }}>{name}</div>
       </div>
     </div>,
     { ...SHARE_CARD_SIZE, fonts: [{ name: "Bricolage Grotesque", data: sans, weight: 800, style: "normal" }, { name: "Noto Serif Hebrew", data: hebrew, weight: 400, style: "normal" }] },

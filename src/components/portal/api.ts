@@ -2,6 +2,8 @@ import type { AuthDestination } from "./sign-in-boundary";
 import { returnAddress } from "../../lib/site/return-address";
 export const roleNames = { student: "Student", parent: "Parent", tutor: "Tutor", admin: "Rabbi / admin" } as const;
 export type Role = keyof typeof roleNames;
+/** What each role is for, as the app words it beside the role's name. */
+export const roleTasks: Record<Role, string> = { student: "your assigned reading", parent: "your child’s preparation and practice", tutor: "the students you teach", admin: "students, people and setup" };
 /** `saved`: the account keeps its own saved readings; `approver`: it may approve account requests (Release 1.4). */
 export type SessionSummary = Readonly<{ membershipAvailable: boolean; roles: readonly Role[]; saved: boolean; approver: boolean; sessionBinding: string }>;
 export type InvitationReview = Readonly<{ role: "student" | "parent" | "tutor"; student: { firstName: string; lastName: string } | null; expiresAt: string; reviewBinding: string }>;

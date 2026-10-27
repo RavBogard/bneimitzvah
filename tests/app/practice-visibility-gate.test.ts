@@ -47,8 +47,8 @@ test("the gate is open, on a real date, and every disclosure placement renders w
   expect(shown.practiceBar).toContain('data-practice-disclosure="child-practice"');
   expect(shown.parentAccount).toContain('data-practice-disclosure="parent-account"');
   // And the app mounts each of them, with the default gate (no `from` passed anywhere in the app).
-  expect(read("components/portal/entry.tsx")).toMatch(/view\.summary\.roles\.includes\("student"\) && <PracticeDisclosure place="account" \/>/);
-  expect(read("components/portal/entry.tsx")).toMatch(/view\.summary\.roles\.includes\("parent"\) && <ParentAccountDisclosure load=\{parentChildren\} \/>/);
+  expect(read("components/portal/account-page.tsx")).toMatch(/student && <PracticeDisclosure place="account" \/>/);
+  expect(read("components/portal/account-page.tsx")).toMatch(/roles\.includes\("parent"\) && <ParentAccountDisclosure load=\{parentChildren\} \/>/);
   expect(read("components/learn/home.tsx")).toMatch(/<LearnPracticeDisclosure signedIn=\{account\.state === "synced"\} isStudent=\{isStudent\} \/>/);
   expect(read("components/portal/workspace/students.tsx")).toMatch(/\{child && <ChildPracticeDisclosure name=\{child\.firstName\} place="child-practice" \/>\}/);
 });

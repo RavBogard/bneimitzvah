@@ -52,7 +52,7 @@ async function page(who: "parent" | "admin" | "student", mobile = false, colorSc
   return tab;
 }
 async function open(tab: Page, child: typeof children[number], who: "parent" | "admin") {
-  await tab.goto(who === "parent" ? "/workspace/parent" : "/workspace/admin/students", { waitUntil: "domcontentloaded" });
+  await tab.goto(who === "parent" ? "/workspace/parent" : "/workspace/admin/students?tab=students", { waitUntil: "domcontentloaded" });
   if (who === "parent") {
     // Before a save the row offers "Open the honors form"; after one it reads "Family honors · n of 7 sections saved · Edit" (1.9 N13).
     const entry = tab.getByRole("region", { name: "Family honors", exact: true }).getByRole("button", { name: /^(Open the honors form|Edit)$/ });

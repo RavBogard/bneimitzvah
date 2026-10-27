@@ -74,7 +74,7 @@ beforeAll(async () => {
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await cleanupBrowser?.(); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
 
 it("creates adults without parent contact, requires the contact for each kind and preserves explicit access across kind edits", async () => {
-  const tab = await page(); await navigate(tab, "/workspace/admin/students");
+  const tab = await page(); await navigate(tab, "/workspace/admin/students?tab=students");
   await ui(tab.getByRole("button", { name: "Add student", exact: true })).toBeEnabled(); await click(tab, "Add student");
   await ui(tab.getByLabel("Service (needed to suggest the reading)", { exact: true })).toHaveValue("unknown");
   await safe(() => tab.getByRole("radio", { name: "Adult", exact: true }).check());
@@ -208,7 +208,7 @@ it("reviews congregation-wide parent/tutor grant consequences and denies tutor a
 });
 
 it("sets rehearsal dates in order on or before the ceremony, shows them in the reading header and clears them", async () => {
-  const tab = await page(); await navigate(tab, "/workspace/admin/students");
+  const tab = await page(); await navigate(tab, "/workspace/admin/students?tab=students");
   const name = `${fixture.student.firstName} ${fixture.student.lastName}`, first = () => tab.getByLabel("First rehearsal (optional)", { exact: true }), second = () => tab.getByLabel("Second rehearsal (optional)", { exact: true });
   const stored = async () => (await api(tab, "/api/admin/students")).data.students.find((row: { id: string }) => row.id === fixture.student.id) as { rehearsal1: string | null; rehearsal2: string | null; revision: number };
   const before = await stored(); expect(before.rehearsal1 === null && before.rehearsal2 === null).toBe(true);
@@ -223,7 +223,7 @@ it("sets rehearsal dates in order on or before the ceremony, shows them in the r
   expect(await stored()).toMatchObject({ rehearsal1: "2026-12-12", rehearsal2: "2026-12-26", revision: before.revision + 1 });
   await navigate(tab, `/workspace/admin/students/${fixture.student.id}/reading`);
   await ui(tab.locator(".hero-rehearsals")).toHaveText("Rehearsals: Sat, Dec 12, 2026 and Sat, Dec 26, 2026");
-  await navigate(tab, "/workspace/admin/students"); await editDetails(tab, name);
+  await navigate(tab, "/workspace/admin/students?tab=students"); await editDetails(tab, name);
   await ui(first()).toHaveValue("2026-12-12"); await safe(() => first().fill("")); await safe(() => second().fill(""));
   await click(tab, "Save student"); await ui(tab.getByText(`Saved ${name}.`, { exact: true })).toBeVisible();
   expect(await stored()).toMatchObject({ rehearsal1: null, rehearsal2: null, revision: before.revision + 2 });
@@ -235,7 +235,7 @@ it("sets rehearsal dates in order on or before the ceremony, shows them in the r
 // approved Disable warning; everything else is found by role, label or test id.
 it("warns before Disable, marks a ceremony done after the approved confirmation, lists the student apart and undoes it", async () => {
   const tab = await page(), id = await create(tab, "CeremonyDone", "Noa"), name = "Noa CeremonyDone";
-  await navigate(tab, "/workspace/admin/students"); await editDetails(tab, name);
+  await navigate(tab, "/workspace/admin/students?tab=students"); await editDetails(tab, name);
   await click(tab, "Disable student");
   await ui(tab.getByTestId("disable-warning")).toHaveText("This can't be undone here.");
   await click(tab, "Keep student active");

@@ -11,6 +11,16 @@
 /public/fonts/taamey-frank-clm/TaameyFrankCLM-hebrew.woff2 -text
 /public/fonts/taamey-frank-clm/LICENSE.txt -text
 /public/fonts/taamey-frank-clm/TaameyFrankCLM.sfd -text
+/public/brand/mural-64.webp -text
+/public/brand/mural-128.webp -text
+/public/brand/mural-512.png -text
+/public/brand/icon-192.png -text
+/public/brand/icon-512.png -text
+/public/brand/maskable-512.png -text
+/public/brand/apple-180.png -text
+/public/brand/favicon-48.png -text
+/public/brand/favicon.ico -text
+/public/brand/PROVENANCE.md -text
 
 # Release contracts compare exact committed bytes on every platform.
 /src/server/db/migrations/** text eol=lf

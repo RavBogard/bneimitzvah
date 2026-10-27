@@ -11,8 +11,10 @@ import { MavenLinkPanel } from "./maven-link";
 import { useSearchParams } from "next/navigation";
 import { staffApi } from "./staff/api";
 import { Button, PageHeader } from "../../ui";
+import { DocumentTitle } from "./document-title";
 import { byCeremony, isSunday, needsYouRows, statusChips, type NeedsYouStudent, type StudentStatus } from "./staff/model";
 import { NeedsYou } from "./staff/needs-you";
+import { ThisWeekLists } from "./staff/this-week";
 
 const empty: StudentInput = { firstName: "", lastName: "", ceremonyDate: "", rehearsal1: null, rehearsal2: null, studentKind: "child", serviceSlot: "unknown", parentEmail: "", ownEmail: null };
 function draft(row: RosterStudent): StudentInput { return { firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate, rehearsal1: row.rehearsal1 ?? null, rehearsal2: row.rehearsal2 ?? null, studentKind: row.studentKind, serviceSlot: row.serviceSlot, parentEmail: row.parentEmail, ownEmail: row.ownEmail }; }
@@ -199,11 +201,16 @@ function Roster() {
   const reloadIcon = <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
   return <section className="role-workspace admin-workspace">
     <AccountRequestsLine mode="admin" />
-    <PageHeader title="Students" actions={<><WorkspaceLink className="button-secondary" href="/workspace/admin/students/import">Import</WorkspaceLink><Button ref={addButton} variant="primary" disabled={pending || loading || unavailable || conflict} onClick={event => choose(null, event)}>Add student</Button></>} />
+    {/* The screen is titled by the tab that opened it: This week (the default) or Students (?tab=students). */}
+    <PageHeader title={thisWeek ? "This week" : "Students"} actions={thisWeek ? undefined : <><WorkspaceLink className="button-secondary" href="/workspace/admin/students/import">Import</WorkspaceLink><Button ref={addButton} variant="primary" disabled={pending || loading || unavailable || conflict} onClick={event => choose(null, event)}>Add student</Button></>} />{!thisWeek && <DocumentTitle heading="Students" />}
     {!sheetOpen && notice}{!sheetOpen && conflict && <button type="button" className="button-secondary admin-pill roster-reload-inline" onClick={() => void load().catch(() => undefined)}>Reload roster</button>}
     {loading ? <p role="status">Loading students…</p> : unavailable ? <div className="admin-state" role="alert"><h2>Students unavailable</h2><p>The full list couldn’t be loaded, so none of it is shown. Access may have changed, or the list may be too large to load at once.</p><button className="button-secondary admin-pill" onClick={() => void load().catch(() => undefined)}>Reload roster</button></div>
       : <>
-        {thisWeek && needsYou && <NeedsYou rows={needsYou} disabled={pending || conflict || editing || !!honorsStudent} onEdit={openDetails} onHonors={openHonors} />}
+        {thisWeek && <>
+          {needsYou && <NeedsYou rows={needsYou} disabled={pending || conflict || editing || !!honorsStudent} onEdit={openDetails} onHonors={openHonors} />}
+          <ThisWeekLists students={rows} />
+        </>}
+        {!thisWeek && <>
         {roster.length > 0 && <div className="roster-tools">
           <label className="roster-search"><span className="sr-only">Find a student</span><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M16 16l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg><input type="search" placeholder="Find a student" value={query} onChange={event => { setQuery(event.target.value); setPage(0); }} autoComplete="off" /></label>
           <p className="roster-count" aria-live="polite">{query.trim() ? `${matches.length} of ${listed.length} ${listed.length === 1 ? "student" : "students"}` : `${activeCount} ${activeCount === 1 ? "student" : "students"}`}{pageCount > 1 ? ` · page ${page + 1} of ${pageCount}` : ""}</p>
@@ -230,6 +237,7 @@ function Roster() {
             return <li key={row.id} className="roster-row"><div className="roster-row-main"><span className="roster-row-name"><bdi dir="auto">{name}</bdi></span><span className="roster-row-meta"><time dateTime={row.ceremonyDate}>{when.label}</time><span>{row.studentKind === "adult" ? "Adult" : "Child"}</span></span></div>
               <div className="roster-row-actions"><button type="button" className="roster-action" data-testid="ceremony-done-undo" aria-label={`Undo Ceremony done for ${name}`} disabled={pending || conflict || editing} onClick={() => void ceremony(row, true)}>Undo</button></div></li>; })}</ul>
         </section>}
+        </>}
       </>}
     <dialog ref={sheet} className="roster-sheet" aria-labelledby="roster-editor-title" onFocus={event => { const node = event.target as HTMLElement; if (settled.current && node !== formHeading.current) lastFocus.current = node; }} closedby={pending ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); if (!pending) requestClose(); }} onClose={sheetClosed}>
       <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close student details" disabled={pending} onClick={requestClose}>{icons.close}</button></div>

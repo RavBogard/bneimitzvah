@@ -1,5 +1,11 @@
 name: CI
-on: [push, pull_request]
+# A change is tested once, through its pull request, which tests the exact merge result; main is not retested after a merge. Run it by hand with workflow_dispatch when needed. A newer commit on the same pull request cancels the run it supersedes.
+on:
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 jobs:

@@ -5,7 +5,7 @@ import { CRC_TENANT, pageOf, type ServiceSlot, type Tenant } from "../../../lib/
 import { COPY, fill } from "../../../lib/service-course/copy";
 import { SiddurOrOffline } from "./offline";
 import styles from "./service.module.css";
-import { BetaMark } from "../../site/beta-mark";
+import { SiteBar } from "../../site/site-bar";
 
 // The course's own small pieces. It does not import Learn to lein's components, so a course page never carries
 // the trope course's data or audio code.
@@ -17,7 +17,7 @@ export const icons = {
 };
 
 export function ServiceAppBar() {
-  return <header className="portal-header app-bar"><div className="portal-brand-group"><a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a><BetaMark /></div></header>;
+  return <SiteBar />;
 }
 
 /**

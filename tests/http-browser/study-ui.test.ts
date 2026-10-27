@@ -1,6 +1,6 @@
 import { observeSilentAudio, expectSilentAudio, privateRouteFetch, observeInitialShortPage } from "./audio-observation";
 import { closeVerseTools, openVerseTools, selectVerse } from "./verse-tools";
-import { openAuthMail } from "./auth-navigation";
+import { openAuthMail, switchRole } from "./auth-navigation";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
@@ -202,7 +202,7 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   await navigate(tutor, `/workspace/tutor/${crypto.randomUUID()}`); await ui(tutor.getByRole("heading", { name: "Student not found", exact: true })).toBeVisible();
   expect(await tutor.locator(".study-verses").count()).toBe(0); // A route id outside the tutor's list loads nothing.
   await navigate(tutor, `/workspace/tutor/${fixture.student.id}`); await loaded(tutor, "Genesis 1:1");
-  await safe(() => tutor.getByRole("link", { name: "Parent", exact: true }).click()); await safe(() => tutor.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(tutor, "Genesis 1:1");
+  await safe(() => switchRole(tutor, "Parent")); await safe(() => tutor.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(tutor, "Genesis 1:1");
   expect(await tutor.getByRole("heading", { name: "Set the assigned reading", exact: true }).count()).toBe(0);
   const learner = await page("student", true); await navigate(learner, "/workspace/student?tab=reading"); await loaded(learner, "Genesis 1:1"); expect(await learner.getByLabel("Student", { exact: true }).count()).toBe(0);
   studentTab = learner;

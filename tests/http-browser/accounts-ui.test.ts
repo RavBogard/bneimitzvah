@@ -33,13 +33,13 @@ async function tab(width: number) {
   return context.newPage();
 }
 async function signIn(page: Page, email: string) {
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto("/sign-in", { waitUntil: "domcontentloaded" });
   await ui(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
   await page.getByLabel("Email address", { exact: true }).fill(email);
   await page.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
   await ui(page.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
   await openAuthMail(page, fixture.takeMail(email));
-  await ui(page.getByRole("heading", { name: "You’re signed in", exact: true })).toBeVisible();
+  await ui(page.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
 }
 const noHorizontalScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 async function controlsAtLeast44(page: Page, scope: string) {
@@ -62,7 +62,7 @@ it("a person asks, an admin sees the count and approves, and the new member save
   for (const width of [360, 1280]) {
     const admin = await tab(width);
     await signIn(admin, "pg-admin@example.test");
-    await admin.goto("/workspace/admin/students", { waitUntil: "domcontentloaded" });
+    await admin.goto("/workspace/admin/students?tab=students", { waitUntil: "domcontentloaded" });
     const line = admin.getByRole("link", { name: "Account requests (1) · Review", exact: true });
     await ui(line).toBeVisible();
     await line.click();

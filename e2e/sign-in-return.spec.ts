@@ -48,10 +48,9 @@ test("signed out, / and /read ask nothing of accounts.google.com or any other si
   await signedOut(page); await openRoutes(page);
   const seen = watch(page);
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 3, name: "Sign in", exact: true })).toBeVisible();
-  const google = page.getByRole("button", { name: "Continue with Google", exact: true });
-  await expect(google).toBeVisible();
-  const box = await google.boundingBox(); expect(box && box.height >= 44).toBe(true);
+  // The home's Beit Mitzvah door is a link to the sign-in page; the form, and Google, are on /sign-in alone.
+  await expect(page.locator('[data-door="beit-mitzvah"]').getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", "/sign-in");
+  await expect(page.getByRole("button", { name: "Continue with Google", exact: true })).toHaveCount(0);
   await expect(page.locator('script[src*="accounts.google.com"], iframe[src*="accounts.google.com"]')).toHaveCount(0);
   // F3: the way to the account request, before sign-in.
   await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveAttribute("href", "/sign-in?return=%2Faccount");
@@ -63,6 +62,7 @@ test("signed out, / and /read ask nothing of accounts.google.com or any other si
   await expect(page.getByText("Sign in to keep this reading, your place and your preferred commentaries. Everything on this page is open to anyone.", { exact: true })).toBeVisible();
   await page.goto("/sign-in");
   await expect(page.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
+  const box = await page.getByRole("button", { name: "Continue with Google", exact: true }).boundingBox(); expect(box && box.height >= 44).toBe(true);
   expect(seen.offSite()).toEqual([]);
   // Pressed: the portal is asked for Google's address, and only then does the tab go to Google.
   const asked: unknown[] = [];
@@ -81,11 +81,14 @@ test("the front door holds the Beit Mitzvah door's height while access is checke
     await page.unroute("**/api/session");
     await page.route("**/api/session", async route => { await held; await json(route, 401, { error: "authentication-required" }); });
     await page.goto("/");
-    await expect(page.getByRole("heading", { level: 3, name: "Checking your access", exact: true })).toBeVisible();
-    const learn = page.locator(".portal-footer");
+    const door = page.locator('[data-door="beit-mitzvah"]');
+    await expect(door).toHaveAttribute("data-door-state", "loading");
+    await expect(door.getByText("One moment while we check your access.", { exact: true })).toBeVisible();
+    const learn = page.locator('[data-door="learn"]');
     const before = await learn.evaluate(node => node.getBoundingClientRect().top + scrollY);
     answer();
-    await expect(page.getByLabel("Email address")).toBeVisible();
+    await expect(door).toHaveAttribute("data-door-state", "sign-in");
+    await expect(door.getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
     const after = await learn.evaluate(node => node.getBoundingClientRect().top + scrollY);
     expect(Math.abs(after - before), `the page below the door moved at ${width}px`).toBeLessThanOrEqual(8);
   }
@@ -130,16 +133,17 @@ test("Save, then sign in, comes back to the same reading with the same selection
   expect(codes).toEqual([{ code: "123456" }]);
 });
 
-test("already signed in, /sign-in with a return still shows the roles and Account; only Save's way back goes straight to its reading", async ({ page }) => {
+test("already signed in, /sign-in goes back to the page the person left, or to the front door when it names none (G16)", async ({ page }) => {
   await openRoutes(page);
   await page.route("**/api/session", route => json(route, 200, { membershipAvailable: true, roles: ["tutor"], saved: true, approver: false, sessionBinding: "A".repeat(43) }));
   await page.goto(`/sign-in?return=${encodeURIComponent("/read?date=2026-10-31")}`);
-  await expect(page.getByRole("heading", { name: "You’re signed in", exact: true })).toBeVisible();
-  await expect(page.getByRole("list", { name: "Available roles" }).getByRole("link", { name: "Tutor", exact: true })).toBeVisible();
-  expect(new URL(page.url()).pathname).toBe("/sign-in");
-  await page.goto(`/sign-in?return=${encodeURIComponent("/read?date=2026-10-31&save=1")}`);
   await expect(page).toHaveURL(/\/read\?date=2026-10-31/);
   await expect(page.getByRole("heading", { level: 1, name: "Vayeilech", exact: true })).toBeVisible();
+  await page.goto("/sign-in");
+  await expect(page).toHaveURL(`${ORIGIN}/`);
+  await expect(page.locator('[data-door="beit-mitzvah"]').getByRole("heading", { level: 2, name: "Your students", exact: true })).toBeVisible();
+  await page.goto(`/sign-in?return=${encodeURIComponent("/read?date=2026-10-31&save=1")}`);
+  await expect(page).toHaveURL(/\/read\?date=2026-10-31/);
 });
 
 test("back from a Google sign-in straight onto a reading, Save asks once and shows Save for the session that is there", async ({ page }) => {

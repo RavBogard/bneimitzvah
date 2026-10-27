@@ -69,7 +69,10 @@ test("/offline is never empty (D20): its heading always, and the approved empty 
 });
 
 test("sign-out removes the saved readings before the session goes, on whichever origin it runs (shared devices)", () => {
-  const entry = readFileSync("src/components/portal/entry.tsx", "utf8"), branch = entry.slice(entry.indexOf('kind === "sign-out") {'));
-  expect(branch.indexOf("await purgeOffline();")).toBeGreaterThan(0);
-  expect(branch.indexOf("await purgeOffline();")).toBeLessThan(branch.indexOf('"/api/auth/sign-out"'));
+  // Both Sign outs (the front door's and Account's) go through the one helper, which purges first.
+  const helper = readFileSync("src/components/portal/sign-out.ts", "utf8");
+  expect(helper.indexOf("await purgeOffline();")).toBeGreaterThan(0);
+  expect(helper.indexOf("await purgeOffline();")).toBeLessThan(helper.indexOf('"/api/auth/sign-out"'));
+  expect(readFileSync("src/components/portal/entry.tsx", "utf8")).toContain("await signOutOfPortal();");
+  expect(readFileSync("src/components/portal/account-page.tsx", "utf8")).toContain("await signOutOfPortal();");
 });

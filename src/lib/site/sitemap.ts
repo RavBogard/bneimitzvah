@@ -2,7 +2,7 @@ import { NAMED_READINGS } from "../readings/named-readings";
 import { INDEXABLE_PATHS } from "./indexing";
 
 /**
- * Public URLs worth indexing, as absolute URLs on the canonical origin: the three public routes and one reading
+ * Public URLs worth indexing, as absolute URLs on the canonical origin: the four public routes and one reading
  * per weekly parashah (the stable `/read?reading=<slug>` shape). Nothing signed-in, no saved or dated address, no ids.
  */
 export function sitemapPaths(): string[] {

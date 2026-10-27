@@ -1,5 +1,5 @@
 import { observeSilentAudio, expectSilentAudio, observeInitialShortPage } from "./audio-observation";
-import { openAuthMail } from "./auth-navigation";
+import { openAuthMail, switchRole } from "./auth-navigation";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
@@ -53,7 +53,7 @@ async function capture(tab: Page, name: string) {
   await ui(tab.locator("#workspace-main").getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden();
   if (name === "workspace-admin-draft") await ui(tab.getByLabel("First name", { exact: true })).toBeVisible();
   else if (name === "workspace-admin-roster") await ui(tab.getByRole("button", { name: "Details for Synthetic revised Workspace", exact: true })).toBeVisible();
-  else await ui(tab.getByRole("heading", { name: name.includes("empty-assignment") ? "Synthetic Sibling" : "Synthetic Learner", exact: true })).toBeVisible();
+  else await ui(tab.getByRole("heading", { name: name.includes("empty-assignment") ? "Synthetic Sibling" : "Synthetic Learner", exact: true }).first()).toBeVisible();
   const directory = join(process.cwd(), ".impeccable", "review"); await mkdir(directory, { recursive: true });
   await safe(() => tab.screenshot({ path: join(directory, `${name}-${(tab.viewportSize()?.width ?? 0) < 640 ? "mobile" : "desktop"}.png`), fullPage: true }));
 }
@@ -80,7 +80,7 @@ beforeAll(async () => {
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
 
 it("retains a draft through same-session Zoom focus and visible return, then discards it for a new session with the same role", async () => {
-  const tab = await page(); await signIn(tab, "pg-admin@example.test"); await navigate(tab, "/workspace/admin/students");
+  const tab = await page(); await signIn(tab, "pg-admin@example.test"); await navigate(tab, "/workspace/admin/students?tab=students");
   const prepared = await api(tab, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "admin", ranges: ["Genesis 1:1-3"] });
   expect(prepared.status === 200 && prepared.data.status === "prepared").toBe(true);
   expect((await api(tab, `/api/students/${fixture.student.id}/reading/confirm`, { mode: "admin", binding: prepared.data.binding })).status === 200).toBe(true);
@@ -115,7 +115,7 @@ it("retains a draft through same-session Zoom focus and visible return, then dis
 });
 
 it("creates and edits a real roster record, blocks stale409 overwrite and leaves delayed mutation outcomes uncertain", async () => {
-  const tab = await page(true); await signIn(tab, "pg-admin@example.test"); await navigate(tab, "/workspace/admin/students");
+  const tab = await page(true); await signIn(tab, "pg-admin@example.test"); await navigate(tab, "/workspace/admin/students?tab=students");
   await safe(() => tab.getByRole("button", { name: "Add student", exact: true }).click());
   for (const [label, value] of [["First name", "Synthetic"], ["Last name", "Workspace"], ["Ceremony date", "2027-01-02"], ["Parent email", "workspace-parent@example.test"]]) await safe(() => tab.getByLabel(label, { exact: true }).fill(value));
   await safe(() => tab.getByRole("button", { name: "Save student", exact: true }).click());
@@ -220,14 +220,14 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await safe(() => tab.getByRole("button", { name: "Done", exact: true }).click()); await ui(tab.getByLabel("Child", { exact: true })).toBeVisible();
   await ui(tab.locator("#workspace-main").getByText("You’re back in your read-only parent view.", { exact: true })).toBeVisible();
   await ui(copied.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
-  await safe(() => tab.getByRole("link", { name: "Tutor", exact: true }).click());
+  await safe(() => switchRole(tab, "Tutor"));
   await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(tab.getByRole("region", { name: "Assigned reading", exact: true }).locator(".reading-reference").getByText("Genesis 1:1-3", { exact: true })).toBeVisible();
   expect(await tab.locator("#workspace-main").getByText("You’re back in your read-only parent view.", { exact: true }).count()).toBe(0);
   expect(await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).count()).toBe(0);
   // A real exit response arriving after role navigation must neither announce
   // parent mode nor send the active tutor back to the parent workspace.
-  await safe(() => tab.getByRole("link", { name: "Parent", exact: true }).click());
+  await safe(() => switchRole(tab, "Parent"));
   await safe(() => tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await safe(() => tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click());
   await ui(tab.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeVisible();
@@ -237,7 +237,7 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await safe(() => tab.getByRole("button", { name: "Done", exact: true }).click());
   try {
     await ui.poll(() => exitHeld).toBe(true);
-    await safe(() => tab.getByRole("link", { name: "Tutor", exact: true }).click());
+    await safe(() => switchRole(tab, "Tutor"));
     await ui(tab.getByRole("heading", { name: "Your assigned students", level: 1, exact: true })).toBeVisible();
   } finally { finishExit(); }
   await ui.poll(() => exitDelivered).toBe(true); await tab.unroute("**/api/practice/exit");

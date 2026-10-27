@@ -79,7 +79,7 @@ test("My readings restored with an ended session hides at once, and so does the 
   await restoreEvent(page);
   await expect(page.locator("[data-my-readings]")).toHaveCount(0);
   await expect(page.getByText("Private synthetic reading")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Sign in", exact: true }).first()).toBeVisible();
+  await expect(page.locator('[data-door="beit-mitzvah"]').getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
 });
 
 test("Back after signing out hides My readings restored from the back-forward cache", async ({ page }) => {
@@ -91,7 +91,7 @@ test("Back after signing out hides My readings restored from the back-forward ca
   signedIn.value = false;
   await page.goBack();
   test.info().annotations.push({ type: "bfcache", description: String(await restoredFromCache(page)) });
-  await expect(page.getByRole("heading", { name: "Sign in", exact: true }).first()).toBeVisible();
+  await expect(page.locator('[data-door="beit-mitzvah"]').getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
   await expect(page.locator("[data-my-readings]")).toHaveCount(0);
   await expect(page.getByText("Private synthetic reading")).toHaveCount(0);
 });

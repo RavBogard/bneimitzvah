@@ -62,7 +62,9 @@ async function signIn(tab: Page, email: string, invitation = false) {
   await ui(tab.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
   const link = fixture.takeMail(email), token = new URLSearchParams(new URL(link).hash.slice(1)).get("token")!;
   await openAuthMail(tab, link);
-  await ui(tab.getByRole("heading", { name: invitation ? "Review your invitation" : "You’re signed in", exact: true })).toBeVisible();
+  // An invitation link lands on its review page; a plain sign-in link lands on the front door, now signed in (its header offers Account).
+  if (invitation) await ui(tab.getByRole("heading", { name: "Review your invitation", exact: true })).toBeVisible();
+  else { await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible(); await ui(tab.getByRole("banner").getByRole("link", { name: "Account", exact: true })).toBeVisible(); }
   await clean(tab, [email, token]);
 }
 async function api(tab: Page, path: string, body?: unknown) {
@@ -162,20 +164,19 @@ it("single-submits a real magic link, shows separate genuine roles without fake 
   } finally { release(); }
   await ui(tab.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
   const link = fixture.takeMail("pg-tutor@example.test"), token = new URLSearchParams(new URL(link).hash.slice(1)).get("token")!;
-  await openAuthMail(tab, link); await ui(tab.getByRole("heading", { name: "You’re signed in", exact: true })).toBeVisible();
-  const roles = tab.getByRole("list", { name: "Available roles" });
+  await openAuthMail(tab, link); await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
+  // The front door is the highest role's door (a tutor who is also a parent); the roles themselves are on Account.
+  await ui(tab.locator('[data-door="beit-mitzvah"]').getByRole("link", { name: "Open This week", exact: true })).toHaveAttribute("href", "/workspace/tutor");
+  await clean(tab, [token, "pg-tutor@example.test"]);
+  await navigate(tab, "/account");
+  const roles = tab.getByRole("list", { name: "Roles" });
   await ui(roles).toContainText("Parent"); await ui(roles).toContainText("Tutor");
   expect(await roles.getByRole("link").count()).toBe(2);
-  expect(await roles.getByRole("link", { name: "Parent", exact: true }).getAttribute("href") === "/workspace/parent").toBe(true);
-  expect(await roles.getByRole("link", { name: "Tutor", exact: true }).getAttribute("href") === "/workspace/tutor").toBe(true);
-  await clean(tab, [token, "pg-tutor@example.test"]);
-  await referrerPolicy(tab, "strict-origin-when-cross-origin");
-  await tab.evaluate(() => { (window as Window & { __r01HardNavigation?: boolean }).__r01HardNavigation = true; });
-  await roles.getByRole("link", { name: "Parent", exact: true }).click(); await ui.poll(() => new URL(tab.url()).pathname).toBe("/workspace/parent"); await referrerPolicy(tab, "no-referrer");
-  // Existing production role links hard-navigate. This proves a real private head, not SPA restoration.
-  expect(await tab.evaluate(() => (window as Window & { __r01HardNavigation?: boolean }).__r01HardNavigation)).toBeUndefined();
-  // The existing workspace brand is an actual controlled Next router link.
-  await ui(tab.getByRole("navigation", { name: "Workspace roles", exact: true })).toBeVisible();
+  expect(await roles.getByRole("link", { name: /^Parent/ }).getAttribute("href") === "/workspace/parent").toBe(true);
+  expect(await roles.getByRole("link", { name: /^Tutor/ }).getAttribute("href") === "/workspace/tutor").toBe(true);
+  await roles.getByRole("link", { name: /^Parent/ }).click(); await ui.poll(() => new URL(tab.url()).pathname).toBe("/workspace/parent");
+  // The old role pills are gone; the workspace brand is an actual controlled Next router link.
+  await ui(tab.getByRole("navigation", { name: "Workspace", exact: true })).toBeVisible();
   await tab.evaluate(() => { (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument = true; });
   await tab.getByRole("link", { name: "CRC Torah", exact: true }).click();
   await ui.poll(() => new URL(tab.url()).pathname).toBe("/"); await referrerPolicy(tab, "strict-origin-when-cross-origin");
@@ -183,7 +184,8 @@ it("single-submits a real magic link, shows separate genuine roles without fake 
   await tab.goBack({ waitUntil: "domcontentloaded" }); await ui.poll(() => new URL(tab.url()).pathname).toBe("/workspace/parent"); await referrerPolicy(tab, "no-referrer");
   expect(await tab.evaluate(() => (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument), "History back must preserve the same document").toBe(true);
   await tab.getByRole("link", { name: "CRC Torah", exact: true }).click();
-  await ui.poll(() => new URL(tab.url()).pathname).toBe("/"); await ui(tab.getByRole("list", { name: "Available roles", exact: true })).toBeVisible();
+  await ui.poll(() => new URL(tab.url()).pathname).toBe("/"); await ui(tab.locator('[data-door="beit-mitzvah"]').getByRole("heading", { name: "Your family", exact: true })).toBeVisible();
+  await navigate(tab, "/account");
   await safe(() => tab.getByRole("button", { name: "Sign out", exact: true }).click());
   await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
   expect((await api(tab, "/api/session")).status).toBe(401);
@@ -223,9 +225,10 @@ it("signs in with the typed code from the sign-in email, survives a relaunch, an
   const second = await ask();
   await type(second);
   await ui.poll(() => new URL(tab.url()).pathname).toBe("/");
-  await ui(tab.getByRole("list", { name: "Available roles", exact: true })).toBeVisible();
+  await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
   await clean(tab, [second, email]);
   expect(await tab.evaluate(() => localStorage.getItem("crc.signin.code-requested-at"))).toBeNull();
+  await navigate(tab, "/account");
   await safe(() => tab.getByRole("button", { name: "Sign out", exact: true }).click());
   await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
 });
@@ -245,7 +248,7 @@ it("clears fragment history at both widths and waits for keyboard confirmation b
     await clean(tab, [token, email]); await capture(tab, "email-confirm");
     await safe(() => tab.getByRole("button", { name: "Continue signing in", exact: true }).focus());
     await safe(() => tab.keyboard.press("Enter"));
-    await ui(tab.getByRole("heading", { name: "You’re signed in", exact: true })).toBeVisible();
+    await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
     expect(posts === 1 && cleanRequests).toBe(true);
     await navigate(tab, link); await safe(() => tab.reload({ waitUntil: "domcontentloaded" }));
     await ui(tab.getByRole("button", { name: "Continue signing in", exact: true })).toBeDisabled();
@@ -255,7 +258,7 @@ it("clears fragment history at both widths and waits for keyboard confirmation b
 
 it("keeps invitation landing nonaccepting and accepts one reviewed binding only, with invalid/replayed links denied", async () => {
   const admin = await page(), recipient = await page(true);
-  await navigate(admin, "/"); await signIn(admin, "pg-admin@example.test");
+  await navigate(admin, "/sign-in"); await signIn(admin, "pg-admin@example.test");
   const email = "ui-recipient@example.test";
   expect((await api(admin, "/api/admin/invitations", { role: "student", email, studentId: fixture.student.id })).status).toBe(201);
   const link = fixture.takeMail(email), token = new URLSearchParams(new URL(link).hash.slice(1)).get("token")!;
@@ -288,7 +291,7 @@ it("keeps invitation landing nonaccepting and accepts one reviewed binding only,
   // Leave an unaccepted review in browser history, log out in another tab,
   // then restore it. A stale private review must not remain visible on return.
   await navigate(recipient, "/");
-  await ui(recipient.getByRole("heading", { name: "You’re signed in", exact: true })).toBeVisible();
+  await ui(recipient.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
   const logoutTab = await recipient.context().newPage();
   try {
     await navigate(logoutTab, "/");
@@ -321,14 +324,14 @@ it("keeps invitation landing nonaccepting and accepts one reviewed binding only,
 });
 
 it("revalidates an uninvited real session after logout in another tab", async () => {
-  const tab = await page(true); await navigate(tab, "/"); await signIn(tab, "ui-uninvited@example.test");
+  const tab = await page(true); await navigate(tab, "/sign-in"); await signIn(tab, "ui-uninvited@example.test");
   expect(await tab.getByRole("list", { name: "Available roles" }).count()).toBe(0);
   await ui(tab.getByRole("heading", { name: "Ask for an account", exact: true })).toBeVisible();
   expect(await tab.getByText("No congregation role is linked to this account yet.", { exact: true }).count()).toBe(0);
   const other = await tab.context().newPage(); await navigate(other, "/");
   expect((await api(other, "/api/auth/sign-out", {})).status).toBe(200);
   await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
-  await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
+  await ui(tab.locator('[data-door="beit-mitzvah"]').getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
   await clean(tab, ["ui-uninvited@example.test"]);
 });
 
@@ -340,9 +343,8 @@ it("handles mocked setup/provider failures with retry, fixed diagnostics and acc
     await navigate(tab, "/"); await ui(tab.getByRole("heading", { name: "Sign-in is unavailable", exact: true })).toBeVisible();
     expect(await tab.getByLabel("Email address").count()).toBe(0); await clean(tab, ["PRIVATE_PROVIDER_SENTINEL"]);
     unavailable = false; await safe(() => tab.getByRole("button", { name: "Try again", exact: true }).click());
-    await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeFocused();
-    await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeEnabled();
-    await ui(tab.getByLabel("Email address")).toBeEnabled();
+    // The home's Beit Mitzvah door is a link to the sign-in page; the form and Google are on /sign-in.
+    await ui(tab.locator('[data-door="beit-mitzvah"]').getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
     await clean(tab, ["PRIVATE_PROVIDER_SENTINEL"]);
   }
 });

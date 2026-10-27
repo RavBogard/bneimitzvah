@@ -52,7 +52,7 @@ afterAll(async () => { await Promise.all(contexts.map(context => context.close()
 
 it("an admin opens Claude connections from More, sees every staff connection in plain words, and ends a tutor's", async () => {
   const mine = await connect("admin", "portal:read portal:study portal:roster"), theirs = await connect("tutor", "portal:read");
-  const tab = await page("admin"); await navigate(tab, "/workspace/admin/students");
+  const tab = await page("admin"); await navigate(tab, "/workspace/admin/students?tab=students");
   await safe(() => tab.getByRole("navigation", { name: "Workspace", exact: true }).getByRole("link", { name: "More", exact: true }).click());
   await safe(() => main(tab).getByRole("link", { name: /^Claude connections/ }).click());
   await ui(tab.getByRole("heading", { name: "Claude connections", level: 1, exact: true })).toBeVisible();
@@ -88,7 +88,8 @@ it("fits a phone, and a tutor finds the page from the account page and sees only
   await ui(main(phone).getByRole("region", { name: "Other staff", exact: true }).getByRole("listitem")).toHaveCount(1);
   await capture(phone, "claude-connections-mobile");
   const tutor = await page("tutor", true); await navigate(tutor, "/account");
-  await safe(() => tutor.getByRole("link", { name: "Claude connections", exact: true }).click());
+  // A row on the Account list is named by its title and its one-line description.
+  await safe(() => tutor.getByRole("list", { name: "Your account", exact: true }).getByRole("link", { name: /^Claude connections/ }).click());
   await ui(tutor.getByRole("heading", { name: "Claude connections", level: 1, exact: true })).toBeVisible();
   await ui(main(tutor).getByRole("region", { name: "Your connections", exact: true }).getByRole("listitem")).toHaveCount(1);
   expect(await main(tutor).getByRole("region", { name: "Other staff", exact: true }).count()).toBe(0);
@@ -113,7 +114,7 @@ it("shows a student's Maven link in the roster sheet and unlinks it there", asyn
   const tab = await page("admin", true);
   for (const mobile of [true, false]) {
     if (!mobile) await safe(() => tab.setViewportSize({ width: 1440, height: 1000 }));
-    await navigate(tab, "/workspace/admin/students");
+    await navigate(tab, "/workspace/admin/students?tab=students");
     const sheet = tab.getByRole("dialog");
     await safe(() => main(tab).getByRole("button", { name: "Edit details for Synthetic Learner", exact: true }).click());
     await ui(sheet.getByRole("heading", { name: "Maven record", exact: true })).toBeVisible();

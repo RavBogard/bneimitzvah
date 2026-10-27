@@ -44,13 +44,13 @@ async function visitor(width: number) {
   return { tab: await context.newPage(), seen, prefs };
 }
 async function signIn(tab: Page, email: string) {
-  await tab.goto("/", { waitUntil: "domcontentloaded" });
+  await tab.goto("/sign-in", { waitUntil: "domcontentloaded" });
   await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
   await tab.getByLabel("Email address", { exact: true }).fill(email);
   await tab.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
   await ui(tab.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
   await openAuthMail(tab, fixture.takeMail(email));
-  await ui(tab.getByRole("heading", { name: "You’re signed in", exact: true })).toBeVisible();
+  await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
 }
 const noHorizontalScroll = (tab: Page) => tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 

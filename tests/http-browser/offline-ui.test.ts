@@ -90,13 +90,13 @@ const pack = (tab: Page) => tab.evaluate(async ([name, key]) => {
 }, [OFFLINE_CACHE, INDEX] as const);
 /** `landing`: false for a student, whose sign-in lands on their workspace instead of the "You're signed in" page. */
 async function signIn(tab: Page, email: string, landing = true) {
-  await tab.goto("/", { waitUntil: "domcontentloaded" });
+  await tab.goto("/sign-in", { waitUntil: "domcontentloaded" });
   await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
   await tab.getByLabel("Email address", { exact: true }).fill(email);
   await tab.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
   await ui(tab.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
   await openAuthMail(tab, fixture.takeMail(email));
-  if (landing) await ui(tab.getByRole("heading", { name: "You’re signed in", exact: true })).toBeVisible();
+  if (landing) await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
 }
 
 // Offline navigation (the shell, the pill, playback and expiry) is proven on the built server in e2e/installable.spec.ts:
@@ -107,6 +107,7 @@ it("signing out removes the saved readings from the device", async () => {
   await signIn(tab, "pg-admin@example.test");
   await ui(tab.getByText("Saved on this device", { exact: true })).toBeVisible({ timeout: 150_000 });
   expect(await tab.evaluate(name => caches.has(name), OFFLINE_CACHE)).toBe(true);
+  await tab.goto("/account", { waitUntil: "domcontentloaded" });
   await tab.getByRole("button", { name: "Sign out", exact: true }).click();
   await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
   expect(await tab.evaluate(async () => (await caches.keys()).filter(key => key === "crc-offline-v1"))).toEqual([]);
