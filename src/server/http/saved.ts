@@ -15,6 +15,8 @@ const routes = {
   "/api/saved/reading": ["GET"], "/api/saved/work": ["POST"], "/api/saved/mark": ["POST"], "/api/saved/stars": ["GET"], "/api/saved/star": ["POST"],
   // Release 1.7 M3b: the member's own preferred commentaries and reading settings.
   "/api/saved/preferences": ["GET"], "/api/saved/preferences/put": ["POST"],
+  // Readings for everyone (plan D5): a learner's shelf as the tutor who claims them, or the rabbi, reads it; GET only, the same bodies.
+  "/api/saved/learner/readings": ["GET"], "/api/saved/learner/reading": ["GET"], "/api/saved/learner/page": ["GET"],
 } as const;
 type Path = keyof typeof routes;
 export function savedRouteMethods(pathname: string): readonly string[] | null {
@@ -36,6 +38,15 @@ export async function handleSavedRequest(request: Request, runtime: HttpRuntime)
       if (path === "/api/saved/reading") {
         const query = uniqueQuery(request.url, ["id", "offset"]);
         result = await saved.reading(request, query.get("id"), offset(query.get("offset")));
+      } else if (path === "/api/saved/learner/readings") {
+        const query = uniqueQuery(request.url, ["learner"]);
+        result = await saved.listReadingsOf(request, query.get("learner"));
+      } else if (path === "/api/saved/learner/reading") {
+        const query = uniqueQuery(request.url, ["learner", "id"]);
+        result = await saved.readingOf(request, query.get("learner"), query.get("id"));
+      } else if (path === "/api/saved/learner/page") {
+        const query = uniqueQuery(request.url, ["learner", "id", "offset"]);
+        result = await saved.pageOf(request, query.get("learner"), query.get("id"), offset(query.get("offset")));
       } else {
         uniqueQuery(request.url, []);
         result = path === "/api/saved/stars" ? await saved.stars(request) : path === "/api/saved/preferences" ? await saved.preferences(request) : await saved.list(request);
