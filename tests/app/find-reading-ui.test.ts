@@ -60,7 +60,7 @@ test("while the calendar loads the chips hold their row, and a failed calendar s
   expect(loading).toContain('aria-busy="true"');
   const failed = render({ calendar: { status: "failed" }, text: "Tol" });
   expect(failed).toContain("Couldn’t load the calendar.");
-  expect(failed).toContain(">Try again</button>");
+  expect(failed).toContain(">Try again</button>"); expect(failed).toContain("Try again to load the calendar");
   expect(failed).toMatch(/role="option"[^>]*>Toldot<\/li>/); // names still answer; there is no next date to show
 });
 

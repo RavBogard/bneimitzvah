@@ -50,13 +50,13 @@ export function keyAction(key: string, active: number, count: number): { active:
 }
 
 type ViewProps = Readonly<{
-  place: FindPlace; study?: boolean; add?: boolean; calendar: FindCalendar; text: string; active: number;
+  place: FindPlace; study?: boolean; add?: boolean; prepare?: boolean; calendar: FindCalendar; text: string; active: number;
   onText?(text: string): void; onKey?(event: KeyboardEvent<HTMLInputElement>): void; onOpen?(address: string): void; onRetry?(): void;
   onPickDate?(date: string): void; inputRef?: React.Ref<HTMLInputElement>; dateRef?: React.Ref<HTMLInputElement>; onActive?(index: number): void;
 }>;
 
 /** The field and its answers, with every state passed in: the page's state lives in `FindReading`. */
-export function FindReadingView({ place, study, add, calendar, text, active, onText, onKey, onOpen, onRetry, onPickDate, inputRef, dateRef, onActive }: ViewProps) {
+export function FindReadingView({ place, study, add, prepare, calendar, text, active, onText, onKey, onOpen, onRetry, onPickDate, inputRef, dateRef, onActive }: ViewProps) {
   const id = useId(), list = `${id}-list`, optionId = (i: number) => `${id}-option-${i}`;
   const rows = calendar.status === "ready" ? calendar.rows : [], today = calendar.status === "ready" ? calendar.today : null;
   const results = useMemo(() => text.trim() ? findReadings(text, { calendar: rows, today: today ?? congregationToday() }) : [], [text, rows, today]);
@@ -78,13 +78,13 @@ export function FindReadingView({ place, study, add, calendar, text, active, onT
     <ul id={list} className={styles.results} role="listbox" aria-label="Readings found" hidden={results.length === 0}>
       {results.map((result, i) => <li key={`${result.kind}-${result.kind === "named" ? result.slug : result.kind === "date" ? result.date : result.ref}`} id={optionId(i)} role="option" aria-selected={i === active}
         className={styles.option} data-active={i === active ? "" : undefined} onMouseEnter={() => onActive?.(i)} onMouseDown={event => event.preventDefault()}
-        onClick={() => onOpen?.(addressOf(result, { study, add }))}>{resultLabel(result)}</li>)}
+        onClick={() => onOpen?.(addressOf(result, { study, add, prepare }))}>{resultLabel(result)}</li>)}
     </ul>
     <p className={styles.none} role="status">{noMatch ? NO_MATCH_LINE(text.trim()) : ""}</p>
     {place !== "index" && <div className={styles.coming} data-state={calendar.status}>
       <p className={styles.eyebrow} id={`${id}-coming`}>Coming up</p>
       {calendar.status === "failed"
-        ? <p className={styles.failed} role="status">Couldn’t load the calendar. <button type="button" className={styles.retry} onClick={onRetry}>Try again</button></p>
+        ? <p className={styles.failed} role="status">Couldn’t load the calendar. <button type="button" className={styles.retry} aria-label="Try again to load the calendar" onClick={onRetry}>Try again</button></p>
         : <ul className={styles.chips} aria-labelledby={`${id}-coming`} aria-busy={calendar.status === "loading"}>
           {calendar.status === "loading" ? Array.from({ length: CHIP_COUNT }, (_, i) => <li key={i} className={styles.chipSkeleton} aria-hidden="true" />)
             : chips.map(row => {
@@ -102,7 +102,7 @@ export function FindReadingView({ place, study, add, calendar, text, active, onT
  * Opening: `onOpen(address)` when given (the Change sheet closes first), else the browser goes there. `study` keeps the Study lens;
  * `add` carries the save offer to the reading it opens (the way back from "Add a reading" on My Readings).
  */
-export function FindReading({ place, study, add, onOpen }: { place: FindPlace; study?: boolean; add?: boolean; onOpen?(address: string): void }) {
+export function FindReading({ place, study, add, prepare, onOpen }: { place: FindPlace; study?: boolean; add?: boolean; prepare?: boolean; onOpen?(address: string): void }) {
   const [calendar, setCalendar] = useState<FindCalendar>({ status: "loading" }), [text, setText] = useState(""), [active, setActive] = useState(-1);
   const [attempt, setAttempt] = useState(0), dateRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -115,14 +115,14 @@ export function FindReading({ place, study, add, onOpen }: { place: FindPlace; s
   const rows = calendar.status === "ready" ? calendar.rows : [], today = calendar.status === "ready" ? calendar.today : null;
   const results = useMemo(() => text.trim() ? findReadings(text, { calendar: rows, today: today ?? congregationToday() }) : [], [text, rows, today]);
   const go = (address: string) => { if (onOpen) onOpen(address); else goToReading(address); };
-  return <FindReadingView place={place} study={study} add={add} calendar={calendar} text={text} active={active} dateRef={dateRef}
+  return <FindReadingView place={place} study={study} add={add} prepare={prepare} calendar={calendar} text={text} active={active} dateRef={dateRef}
     onText={value => { setText(value); setActive(-1); }} onActive={setActive} onOpen={go} onRetry={() => setAttempt(n => n + 1)}
     onKey={event => {
       if (event.key === "Escape") { setText(""); setActive(-1); return; }
       const action = keyAction(event.key, active, results.length);
       if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter") event.preventDefault();
       setActive(action.active);
-      if (action.open !== null) go(addressOf(results[action.open], { study, add }));
+      if (action.open !== null) go(addressOf(results[action.open], { study, add, prepare }));
     }}
     onPickDate={value => { try { go(addressOf({ kind: "date", date: shabbatOnOrAfter(value), name: null }, { study, add })); } catch { /* not a date */ } }} />;
 }

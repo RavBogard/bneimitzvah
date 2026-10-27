@@ -637,7 +637,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     {more?.slot && createPortal(<>{portion}{choice.button}{choice.extra}
       {/* Go to verse: a chapter of this reading, from the sheet. The sheet closes first, then the text scrolls there and focus goes to it. */}
       {chapters.length > 1 && <label className={styles.goTo}><span>Go to verse</span>
-        <select value="" onChange={event => { const next = chapters.find(row => row.key === event.target.value); if (next) more.close(() => { jumpTo(next.first); focusVerse(next.first); }); }}>
+        <select aria-label="Go to verse" value="" onChange={event => { const next = chapters.find(row => row.key === event.target.value); if (next) more.close(() => { jumpTo(next.first); focusVerse(next.first); }); }}>
           <option value="" disabled>Chapter</option>{chapters.map(row => <option key={row.key} value={row.key}>{row.label}</option>)}
         </select></label>}</>, more.slot)}
     {/* The portion summary (1.9 N7): atop Study, only an approved one, only on a parashah's Torah. Its outline goes to an aliyah where the page has it as a section. */}

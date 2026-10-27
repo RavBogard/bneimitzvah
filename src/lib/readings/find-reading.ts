@@ -1,4 +1,5 @@
-import { NAMED_READINGS, type NamedReadingGroup } from "./named-readings";
+import { NAMED_READINGS, type NamedReading, type NamedReadingGroup } from "./named-readings";
+import { preparationHref } from "../learn/passage-preparation";
 import { TANAKH_VERSE_COUNTS } from "./catalog";
 import { canonicalReadingRef } from "./reading-ref";
 import { shabbatOnOrAfter } from "./public-shabbat";
@@ -111,8 +112,23 @@ export function findReadings(text: string, context: { calendar: readonly Calenda
   return out;
 }
 
+/** The preparation page for a named reading's first passage that can be prepared, or null. */
+export function preparePassageHref(reading: NamedReading): string | null {
+  for (const passage of reading.passages) {
+    const canonical = canonicalReadingRef(passage.ref, passage.kind);
+    if (canonical) return preparationHref(canonical.ref, canonical.kind);
+  }
+  return null;
+}
 /** Where a result opens: the reader's address, with the save offer when the person came to add a reading to My Readings. */
-export function addressOf(result: FindResult, options: { study?: boolean; add?: boolean } = {}): string {
+export function addressOf(result: FindResult, options: { study?: boolean; add?: boolean; prepare?: boolean } = {}): string {
+  if (options.prepare) {
+    // Learn's preparation page (for=prepare): a verse reference, or the named reading a name or a date lands on.
+    if (result.kind === "ref") return preparationHref(result.ref, result.readingKind);
+    const name = result.name, reading = result.kind === "named" ? NAMED_READINGS.find(row => row.slug === result.slug) : name ? NAMED_READINGS.find(row => normalizeName(row.name) === normalizeName(name)) : undefined;
+    const href = reading ? preparePassageHref(reading) : null;
+    if (href) return href;
+  }
   const address = result.kind === "named" ? readAddress({ mode: "named", slug: result.slug, passage: 1 }, { study: options.study })
     : result.kind === "date" ? readAddress({ mode: "week", date: result.date, kind: null }, { study: options.study })
     : readAddress({ mode: "ref", ref: result.ref, kind: result.readingKind }, { study: options.study });

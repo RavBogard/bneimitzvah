@@ -3,10 +3,9 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { congregationToday, shabbatOnOrAfter } from "../../../lib/readings/public-shabbat";
 import type { CalendarRow } from "../../../lib/readings/calendar";
-import { normalizeName } from "../../../lib/readings/find-reading";
+import { normalizeName, preparePassageHref } from "../../../lib/readings/find-reading";
 import { NAMED_READINGS, type NamedReading } from "../../../lib/readings/named-readings";
 import { customRef, OCCASIONS, parashotByBook } from "../../../lib/readings/named-groups";
-import { canonicalReadingRef } from "../../../lib/readings/reading-ref";
 import { preparationHref } from "../../../lib/learn/passage-preparation";
 import { PageHeader } from "../../ui";
 import { SiteBar } from "../../site/site-bar";
@@ -39,10 +38,8 @@ export function parseIndexMode(search: string): IndexMode {
 /** Where one named reading opens: the reader (with the save offer when adding), or the preparation page for its first passage that can be prepared. */
 export function namedHref(reading: NamedReading, mode: IndexMode): string {
   if (mode.prepare) {
-    for (const passage of reading.passages) {
-      const canonical = canonicalReadingRef(passage.ref, passage.kind);
-      if (canonical) return preparationHref(canonical.ref, canonical.kind);
-    }
+    const href = preparePassageHref(reading);
+    if (href) return href;
   }
   const address = readAddress({ mode: "named", slug: reading.slug, passage: 1 });
   return mode.add ? saveReturnAddress(address) : address;
@@ -70,8 +67,8 @@ export function nextDates(rows: readonly CalendarRow[], today: string): Readonly
 }
 
 /** A row: a plain link that, for a reading, asks the next page to land focus on its heading (a modified click opens as any link does). */
-function RowLink({ href, children }: { href: string; children: ReactNode }) {
-  return <a className={styles.row} href={href} onClick={event => {
+function RowLink({ href, tall, children }: { href: string; tall?: boolean; children: ReactNode }) {
+  return <a className={tall ? `${styles.row} ${styles.rowTall}` : styles.row} href={href} onClick={event => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || !(href === "/read" || href.startsWith("/read?"))) return;
     event.preventDefault(); goToReading(href);
   }}>{children}</a>;
@@ -107,15 +104,15 @@ export function ReadingsIndexView({ calendar, mode }: { calendar: FindCalendar; 
   }, [rows, today, books]);
   return <>
     <PageHeader title="Readings" />
-    <FindReading place="index" add={mode.add} />
+    <FindReading place="index" add={mode.add} prepare={mode.prepare} />
     <section className={styles.section} aria-labelledby="readings-coming-up" data-testid="readings-coming-up">
       <h2 id="readings-coming-up">Coming up</h2>
       {calendar.status === "failed" ? <p className="field-help" role="status">Couldn’t load the calendar. Every reading is still listed below.</p>
         : <ul className={styles.list} aria-busy={calendar.status === "loading"}>
-          {calendar.status === "loading" ? Array.from({ length: COMING_UP_ROWS }, (_, i) => <li key={i} className={styles.rowSkeleton} aria-hidden="true" />)
-            : coming.map(row => <li key={row.date}><RowLink href={weekHref(row.date, calendar.today, row.name, mode)}>
-              <span className={styles.rowDate}><time dateTime={row.date}>{longDate(row.date)}</time></span>
-              <span className={styles.rowName}>{row.name ?? "Shabbat reading"}</span>
+          {calendar.status === "loading" ? Array.from({ length: COMING_UP_ROWS }, (_, i) => <li key={i} className={`${styles.rowSkeleton} ${styles.rowTall}`} aria-hidden="true" />)
+            : coming.map(row => <li key={row.date}><RowLink tall href={weekHref(row.date, calendar.today, row.name, mode)}>
+              <span className={styles.rowText}><span className={styles.rowDate}><time dateTime={row.date}>{longDate(row.date)}</time></span>
+                <span className={styles.rowName}>{row.name ?? "Shabbat reading"}</span></span>
               {row.date === shabbatOnOrAfter(calendar.today) ? <span className={styles.note}>This Shabbat</span> : row.kind === "holiday" ? <span className={styles.note}>Holiday</span> : null}
             </RowLink></li>)}
         </ul>}
@@ -126,7 +123,7 @@ export function ReadingsIndexView({ calendar, mode }: { calendar: FindCalendar; 
         <summary>{group.book}</summary>
         <ul className={styles.list}>
           {group.readings.map(reading => { const date = next.get(normalizeName(reading.name));
-            return <li key={reading.slug}><RowLink href={namedHref(reading, mode)}><span className={styles.rowName}>{reading.name}</span>{date && <span className={styles.note}>next {shortDate(date)}</span>}</RowLink></li>; })}
+            return <li key={reading.slug}><RowLink href={namedHref(reading, mode)}><span className={styles.rowName}>{reading.name}</span>{date ? <span className={styles.note}>next {shortDate(date)}</span> : calendar.status === "loading" ? <span className={`${styles.note} ${styles.pending}`} aria-hidden="true">next Nov 14</span> : null}</RowLink></li>; })}
         </ul>
       </details>)}
     </section>
@@ -136,7 +133,7 @@ export function ReadingsIndexView({ calendar, mode }: { calendar: FindCalendar; 
         <h3>{occasion.label}</h3>
         <ul className={styles.list}>
           {NAMED_READINGS.filter(reading => reading.group === occasion.group).map(reading => { const date = next.get(normalizeName(reading.name));
-            return <li key={reading.slug}><RowLink href={namedHref(reading, mode)}><span className={styles.rowName}>{reading.name}</span>{date && <span className={styles.note}>next {shortDate(date)}</span>}</RowLink></li>; })}
+            return <li key={reading.slug}><RowLink href={namedHref(reading, mode)}><span className={styles.rowName}>{reading.name}</span>{date ? <span className={styles.note}>next {shortDate(date)}</span> : calendar.status === "loading" ? <span className={`${styles.note} ${styles.pending}`} aria-hidden="true">next Nov 14</span> : null}</RowLink></li>; })}
         </ul>
       </div>)}
     </section>

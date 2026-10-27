@@ -99,3 +99,9 @@ test("addressOf opens the reader, with the save offer when adding", () => {
   expect(addressOf(named, { add: true })).toBe("/read?reading=toldot&save=1");
   expect(addressOf(named, { study: true })).toContain("lens=study");
 });
+
+test("with prepare, a name, a date and verses open Learn's preparation page", () => {
+  expect(addressOf(find("Toldot")[0], { prepare: true })).toBe("/learn/prepare?ref=Genesis+25%3A19-28%3A9&kind=torah");
+  expect(addressOf(find("Nov 14")[0], { prepare: true })).toBe("/learn/prepare?ref=Genesis+25%3A19-28%3A9&kind=torah");
+  expect(addressOf(find("Isaiah 54")[0], { prepare: true })).toBe("/learn/prepare?ref=Isaiah+54%3A1-17&kind=haftarah");
+});

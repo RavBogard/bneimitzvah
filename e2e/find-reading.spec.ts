@@ -54,5 +54,5 @@ test("a calendar that fails says so with Try again, and the field still answers 
   await expect(page.getByText("Couldn’t load the calendar.")).toBeVisible();
   await page.getByRole("combobox", { name: "Find a reading" }).fill("Noach");
   await expect(page.getByRole("option").first()).toContainText("Noach");
-  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again to load the calendar" })).toBeVisible();
 });
