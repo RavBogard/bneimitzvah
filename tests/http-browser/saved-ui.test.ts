@@ -61,9 +61,8 @@ it("a tutor-and-parent saves this week's Torah from /read and finds it under My 
     await tab.goto("/read", { waitUntil: "domcontentloaded" });
     await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
     // Never signed in here: Save is Sign in to save from the start (F4, N20), and nothing was asked.
-    await openMore(tab);
     await ui(tab.getByRole("link", { name: "Sign in to save", exact: true })).toBeVisible();
-    await ui(tab.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
+    await ui(tab.getByRole("button", { name: "Save to My Readings", exact: true })).toHaveCount(0);
     // Signed out in a browser that never signed in here, /read never asks about the account.
     expect(prefs).toEqual([]);
     await signIn(tab, "pg-tutor@example.test");
@@ -80,16 +79,15 @@ it("a tutor-and-parent saves this week's Torah from /read and finds it under My 
     expect(seen).toEqual([]);
     // Having signed in here, /read asks for the account's preferences, and only that.
     await expect.poll(() => prefs).toEqual(["GET /api/saved/preferences"]);
-    await openMore(tab);
-    await tab.getByRole("button", { name: "Save", exact: true }).click();
-    const form = tab.getByRole("form", { name: "Save this reading" });
+    await tab.getByRole("button", { name: "Save to My Readings", exact: true }).click();
+    const form = tab.getByRole("form", { name: "Add this reading" });
     await ui(form.getByLabel("Name")).toHaveValue("Synthetic portion · Torah");
     await form.getByLabel("Name").fill(`Creation at ${width}`);
-    await form.getByRole("button", { name: "Save reading", exact: true }).click();
-    await ui(tab.locator('[data-save-step="saved"]')).toBeVisible(); await ui(tab.getByRole("status").filter({ hasText: "Saved to My Readings." })).toBeVisible();
+    await form.getByRole("button", { name: "Add", exact: true }).click();
+    await ui(tab.getByRole("status").filter({ hasText: "Saved to My Readings." })).toBeVisible();
     expect(seen).toEqual(["GET /api/saved/readings", "POST /api/saved/readings/create"]);
     expect(await noHorizontalScroll(tab)).toBe(true);
-    await tab.locator('[data-save-step="saved"] a[href="/mine"]').click();
+    await tab.getByRole("status").filter({ hasText: "Saved to My Readings." }).getByRole("link", { name: "My Readings", exact: true }).click();
     await ui(mine.getByRole("link", { name: new RegExp(`Creation at ${width}`) })).toBeVisible();
     await ui(mine.getByRole("link", { name: new RegExp(`Creation at ${width}`) })).toContainText("Genesis 1:1–6:8");
     expect(await noHorizontalScroll(tab)).toBe(true);
@@ -121,12 +119,12 @@ it("Save, then sign in with the emailed code, comes back to the same reading wit
   await tab.getByTestId("entry-code-submit").click();
   await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
   await ui(bar).toHaveAttribute("data-choose-count", "3"); await ui(line).toContainText("Genesis 1:2–4");
-  const form = tab.getByRole("form", { name: "Save this reading" });
+  const form = tab.getByRole("form", { name: "Add this reading" });
   await ui(form.getByLabel("Name")).toHaveValue("Synthetic portion · Genesis 1:2–4");
   const url = new URL(tab.url());
   expect(url.pathname).toBe("/read"); expect(url.searchParams.get("lens")).toBe("study"); expect(url.searchParams.has("save") || url.searchParams.has("choose")).toBe(false);
-  await form.getByRole("button", { name: "Save reading", exact: true }).click();
-  await ui(tab.locator('[data-save-step="saved"]')).toBeVisible();
+  await form.getByRole("button", { name: "Add", exact: true }).click();
+  await ui(tab.getByRole("status").filter({ hasText: "Saved to My Readings." })).toBeVisible();
   expect(seen).toContain("POST /api/saved/readings/create");
   const rows = await fixture.ownerDb.select().from(s.savedReading).where(eq(s.savedReading.name, "Synthetic portion · Genesis 1:2–4"));
   expect(rows.map(row => [row.kind, row.ranges, row.verseCount])).toEqual([["torah", "Genesis 1:2-4", 3]]);
@@ -143,10 +141,9 @@ it("an account without saved readings is pointed to /account, and its front door
   expect(prefs).toEqual([]);
   await tab.goto("/read", { waitUntil: "domcontentloaded" });
   await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
-  await openMore(tab);
-  await tab.getByRole("button", { name: "Save", exact: true }).click();
+  await tab.getByRole("button", { name: "Save to My Readings", exact: true }).click();
   await ui(tab.getByRole("link", { name: "Ask for an account to save readings", exact: true })).toHaveAttribute("href", "/account");
-  await ui(tab.getByRole("form", { name: "Save this reading" })).toHaveCount(0);
+  await ui(tab.getByRole("form", { name: "Add this reading" })).toHaveCount(0);
   expect(prefs).toEqual([]);
 }, 120_000);
 
@@ -155,12 +152,11 @@ it("the member opens the saved reading from My readings, marks a verse that stay
   await signIn(tab, "pg-admin@example.test");
   await tab.goto("/read", { waitUntil: "domcontentloaded" });
   await ui(tab.locator('[data-testid="study-verses"]')).toBeVisible();
-  await openMore(tab);
-  await tab.getByRole("button", { name: "Save", exact: true }).click();
-  const form = tab.getByRole("form", { name: "Save this reading" });
+  await tab.getByRole("button", { name: "Save to My Readings", exact: true }).click();
+  const form = tab.getByRole("form", { name: "Add this reading" });
   await form.getByLabel("Name").fill("Admin creation");
-  await form.getByRole("button", { name: "Save reading", exact: true }).click();
-  await tab.getByRole("link", { name: "Open your reading", exact: true }).click();
+  await form.getByRole("button", { name: "Add", exact: true }).click();
+  await tab.getByRole("link", { name: "Open", exact: true }).click();
   await ui(tab.getByRole("heading", { level: 1, name: "Admin creation", exact: true })).toBeVisible();
   const id = new URL(tab.url()).searchParams.get("saved")!;
   expect(id).toMatch(/^[0-9a-f-]{36}$/);
@@ -184,8 +180,10 @@ it("the member opens the saved reading from My readings, marks a verse that stay
   await tab.getByRole("button", { name: "Edit", exact: true }).click();
   await tab.getByRole("button", { name: "Remove reading", exact: true }).click();
   await tab.getByRole("button", { name: "Remove", exact: true }).click();
-  await ui(tab.locator("[data-my-readings]")).toBeVisible();
-  await ui(tab.locator("[data-my-readings]").getByText("Admin creation, renamed")).toHaveCount(0);
+  // Removed, the reader goes back to the shelf, which no longer lists it (with nothing left it shows the empty shelf).
+  await expect.poll(() => new URL(tab.url()).pathname).toBe("/mine");
+  await ui(tab.getByRole("heading", { level: 1, name: "My Readings", exact: true })).toBeVisible();
+  await ui(tab.getByText("Admin creation, renamed")).toHaveCount(0);
   expect((await fixture.ownerDb.select().from(s.savedReading).where(eq(s.savedReading.id, id))).length).toBe(0);
   expect((await fixture.ownerDb.select().from(s.savedVerseMark).where(eq(s.savedVerseMark.savedReadingId, id))).length).toBe(0);
   // The member's saved-layer writes were exactly these four, and none of them reached the audit log.
@@ -213,11 +211,10 @@ it("on their own saved reading a member sees stored translation and note text re
   await ui(tab.locator('[data-testid="study-verses"]')).toBeVisible();
   // A public reading never shows Yours or stars: it does not ask about the account.
   await ui(tab.locator("[data-yours-ref], [data-star]")).toHaveCount(0);
-  await openMore(tab);
-  await tab.getByRole("button", { name: "Save", exact: true }).click();
-  await tab.getByRole("form", { name: "Save this reading" }).getByLabel("Name").fill("Admin study");
-  await tab.getByRole("form", { name: "Save this reading" }).getByRole("button", { name: "Save reading", exact: true }).click();
-  await tab.getByRole("link", { name: "Open your reading", exact: true }).click();
+  await tab.getByRole("button", { name: "Save to My Readings", exact: true }).click();
+  await tab.getByRole("form", { name: "Add this reading" }).getByLabel("Name").fill("Admin study");
+  await tab.getByRole("form", { name: "Add this reading" }).getByRole("button", { name: "Add", exact: true }).click();
+  await tab.getByRole("link", { name: "Open", exact: true }).click();
   await ui(tab.getByRole("heading", { level: 1, name: "Admin study", exact: true })).toBeVisible();
   const id = new URL(tab.url()).searchParams.get("saved")!;
   // Text stored before 1.7 removed the editors: written straight to the owner's rows, as the retired editors once did.
@@ -235,7 +232,7 @@ it("on their own saved reading a member sees stored translation and note text re
   await ui(first.getByText("Synthetic private note.", { exact: true })).toBeVisible();
   await ui(first.locator('[data-yours-stream="translation"]')).toBeVisible(); await ui(first.locator('[data-yours-stream="note"]')).toBeVisible();
   await ui(first.locator("textarea, form")).toHaveCount(0);
-  await ui(first.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
+  await ui(first.getByRole("button", { name: "Save to My Readings", exact: true })).toHaveCount(0);
   // A star on the inline Rashi comment: pressed in place, and listed in Yours.
   const star = tab.locator('[data-commentary-ref="Genesis 1:1"] [data-star="rashi|Genesis 1:1|1"]');
   await ui(star).toHaveAttribute("aria-pressed", "false");

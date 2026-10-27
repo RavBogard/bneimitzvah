@@ -44,6 +44,14 @@ export function Sheet({ open, onClose, title, children, footer, closeLabel, dism
   const live = useRef({ open, onClose, dismissible, returnFocusTo, initialFocus });
   useEffect(() => { live.current = { open, onClose, dismissible, returnFocusTo, initialFocus }; });
 
+  const trapRef = useRef(trap); trapRef.current = trap;
+  useEffect(() => {
+    const node = dialog.current;
+    if (!node) return;
+    const listener = (event: globalThis.KeyboardEvent) => trapRef.current(event);
+    node.addEventListener("keydown", listener);
+    return () => node.removeEventListener("keydown", listener);
+  }, []);
   useEffect(() => {
     const node = dialog.current;
     if (!open || !node) return;
@@ -59,7 +67,8 @@ export function Sheet({ open, onClose, title, children, footer, closeLabel, dism
     };
   }, [open]);
 
-  function trap(event: KeyboardEvent<HTMLDialogElement>) {
+  // A native listener, not onKeyDown: a control a page portals into the sheet (the reader's Go to verse) is in another React tree, so its keys would never reach a React handler here.
+  function trap(event: globalThis.KeyboardEvent) {
     if (event.key !== "Tab" || !dialog.current) return;
     const items = focusables(dialog.current), first = items[0], last = items.at(-1), at = document.activeElement;
     if (!first || !last) { event.preventDefault(); heading.current?.focus(); return; }
@@ -86,7 +95,6 @@ export function Sheet({ open, onClose, title, children, footer, closeLabel, dism
   }
 
   return <dialog ref={dialog} className={styles.sheet} aria-labelledby={`${id}-title`}
-    onKeyDown={trap}
     onCancel={event => { event.preventDefault(); if (dismissible) onClose(); }}
     // A tap on the backdrop lands on the dialog element itself; the panel's own content never does.
     onClick={event => { if (event.target === event.currentTarget && dismissible) onClose(); }}

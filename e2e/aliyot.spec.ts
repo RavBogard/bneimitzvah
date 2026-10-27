@@ -66,14 +66,13 @@ test("&pick=aliyah-4 opens aliyah 4 and survives Print and Save", async ({ page 
   expect(new URL(page.url()).searchParams.get("pick")).toBe("aliyah-4");
   expect(new URL(page.url()).searchParams.get("lens")).toBe("study");
   // Save, signed out: the way back from sign-in is this reading, this aliyah.
-  await openMore(page);
   const save = page.getByRole("link", { name: "Sign in to save", exact: true });
   await save.hover();
   const back = new URL(decodeURIComponent(new URL((await save.getAttribute("href"))!, page.url()).searchParams.get("return")!), page.url());
   expect(back.pathname).toBe("/read");
   expect(back.searchParams.get("pick")).toBe("aliyah-4");
   expect(back.searchParams.get("date")).toBe(VAYERA_DATE);
-  // Print: the same pick; the sheet holds aliyah 4 and nothing else (read from its DOM; nothing is printed).
+  // Print (in the row after the reading): the same pick; the sheet holds aliyah 4 and nothing else (read from its DOM; nothing is printed).
   const print = await page.getByRole("link", { name: "Print", exact: true }).getAttribute("href");
   expect(print).toBe(`/print?date=${VAYERA_DATE}&pick=aliyah-4`);
   await page.goto(print!);
@@ -142,9 +141,9 @@ for (const mode of ["none", "fail"] as const) {
     await openMore(page);
     await expect(page.getByLabel("Portion", { exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Next section", exact: true })).toHaveCount(0);
-    // Print says Full: its link is in the More sheet.
-    expect(await page.getByRole("link", { name: "Print", exact: true }).getAttribute("href")).toBe(`/print?date=${VAYERA_DATE}`);
     await closeMore(page);
+    // Print says Full: its link is in the row after the reading.
+    expect(await page.getByRole("link", { name: "Print", exact: true }).getAttribute("href")).toBe(`/print?date=${VAYERA_DATE}`);
     // The server's own pages: 100 verses, then the rest.
     await expect(page.getByText(`Verses 1–100 of ${all.length}`, { exact: true })).toBeVisible();
     expect((await refs(page, false)).length).toBe(100);

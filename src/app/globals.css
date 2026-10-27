@@ -556,6 +556,8 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .study-kind-choice .button-secondary:hover { background: var(--color-hover); }
 .study-kind-choice [aria-pressed="true"], .study-kind-choice [aria-pressed="true"]:hover { background: var(--lake); color: #fff; border-color: transparent; }
 /* The text choice (Torah / Haftarah) and the lens (Lein / Study) share one row above the passage; on a phone they wrap. */
+.reading-lens-switch .button-secondary { display: inline-flex; align-items: center; gap: 0.25rem; }
+.reading-lens-switch svg { width: 18px; height: 18px; flex: none; }
 .reading-lens-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-block: 1rem; }
 .reading-lens-row > .study-kind-choice { margin: 0; }
 .reading-lens-row > .reading-lens-choice:only-child { margin-inline-start: auto; }
@@ -756,7 +758,9 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 .reading-sources-open { margin-block: 0.25rem 0.5rem; }
 .reading-sources-open .button-secondary { min-height: 44px; }
 .reading-sources-column { display: none; }
+.reading-sources-dock { display: contents; }
 @media (min-width: 1180px) {
+  .reading-sources-dock { display: none; }
   .reading-sources-open { display: none; }
   .reading-passage-layout:has(> .reading-sources-column) { display: grid; grid-template-columns: minmax(0, 1fr) 6.5rem minmax(14rem, 18rem); column-gap: 1.5rem; }
   .reading-passage-layout:has(> .reading-sources-column):not(:has(> .reading-toolbar)) { grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem); }

@@ -186,13 +186,13 @@ test("Study opens with Rashi and the Women's Commentary on the Torah; Works can 
   await expect(rows(page).nth(1).getByText("synthetic paragraph")).toBeVisible();
   expect(server.calls.some(call => call.startsWith("/api/public/commentary?work=womens"))).toBe(true);
   // On the haftarah Rashi on the Prophets shows; the Women's Commentary is not offered: no request, no line, no panel.
-  await page.getByRole("button", { name: "Haftarah", exact: true }).click();
+  await page.getByRole("tab", { name: /^Haftarah/ }).click();
   await expect(rows(page)).toHaveCount(2);
   await expect(rows(page).nth(0).getByText("Synthetic prophet comment")).toBeVisible();
   await expect(page.getByText("The Women’s Commentary covers the Torah only.")).toHaveCount(0);
   expect(server.calls.some(call => call === "/api/public/commentary?work=womens&chapter=Isaiah+54")).toBe(false);
   // A viewer can turn it off, and that choice is remembered in this browser like any other.
-  await page.getByRole("button", { name: "Torah", exact: true }).click();
+  await page.getByRole("tab", { name: /^Torah/ }).click();
   await expect(rows(page)).toHaveCount(3);
   await page.getByRole("button", { name: /^Works/ }).click();
   await page.getByRole("group", { name: "Commentaries under each verse" }).locator('[data-work="womens"]').click();
@@ -219,7 +219,7 @@ test("at 360px every Study row fits with no horizontal scroll, the toolbar is on
     const box = await control.boundingBox();
     expect(box && box.height >= 44, "control is at least 44px tall").toBe(true);
   }
-  await page.getByRole("button", { name: "Haftarah", exact: true }).click();
+  await page.getByRole("tab", { name: /^Haftarah/ }).click();
   await expect(rows(page)).toHaveCount(2);
   expect(await noHorizontalScroll(page)).toBe(true);
 });

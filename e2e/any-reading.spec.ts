@@ -36,7 +36,7 @@ async function mock(page: Page) {
   return calls;
 }
 const noHorizontalScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
-const passageButton = (page: Page, name: string) => page.getByRole("group", { name: "Reading text selection" }).getByRole("button", { name, exact: true });
+const passageButton = (page: Page, name: string) => page.getByRole("tablist", { name: "Reading text selection" }).getByRole("tab", { name: name === "Haftarah" ? /^Haftarah/ : name, exact: name !== "Haftarah" });
 const verse = (page: Page, ref: string) => page.locator(`.study-verses [data-verse-ref="${ref}"]`).first();
 
 test("the Readings index opens a parashah, a holiday and a custom passage of the Prophets, each at an address that reloads to the same reading", async ({ page }) => {
@@ -44,7 +44,7 @@ test("the Readings index opens a parashah, a holiday and a custom passage of the
   await page.goto("/read");
   await expect(page.getByRole("heading", { level: 1, name: "Synthetic", exact: true })).toBeVisible();
   await expect(page).toHaveTitle("This week’s reading | CRC Torah");
-  await expect(page.getByRole("button", { name: "Previous week", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Change", exact: true })).toBeVisible();
   // The Change sheet's "Every parashah, holiday and passage" is the way to the index.
   await openMore(page);
   await page.getByRole("link", { name: "Every parashah, holiday and passage", exact: true }).click();
@@ -60,9 +60,9 @@ test("the Readings index opens a parashah, a holiday and a custom passage of the
   await expect(page).toHaveURL(/\/read\?reading=noach$/);
   await expect(page.getByRole("heading", { level: 1, name: "Noach", exact: true })).toBeVisible();
   await expect(page).toHaveTitle("Noach | CRC Torah");
-  await expect(page.getByText("Parashah", { exact: true }).first()).toBeVisible();
+  await expect(page.locator("[data-reading-ranges]")).toContainText("Parashah · Torah");
   await expect(verse(page, "Genesis 6:9")).toBeVisible();
-  await expect(passageButton(page, "Torah")).toHaveAttribute("aria-pressed", "true");
+  await expect(passageButton(page, "Torah")).toHaveAttribute("aria-selected", "true");
   await openMore(page);
   await expect(page.getByRole("combobox", { name: "Find a reading", exact: true })).toBeVisible();
   await closeMore(page);
@@ -72,7 +72,7 @@ test("the Readings index opens a parashah, a holiday and a custom passage of the
   await expect(page).toHaveTitle("Noach | CRC Torah"); // the address changed; the title stays
   await expect(page).toHaveURL(/\/read\?reading=noach&passage=2$/);
   await page.reload();
-  await expect(passageButton(page, "Haftarah")).toHaveAttribute("aria-pressed", "true");
+  await expect(passageButton(page, "Haftarah")).toHaveAttribute("aria-selected", "true");
   expect(calls).toContain("/api/public/reading?ref=Genesis+6%3A9-11%3A32&kind=torah");
   // A festival that crosses books: its passages in Hebcal's order, each its own button.
   await page.goto("/readings");
@@ -92,7 +92,7 @@ test("the Readings index opens a parashah, a holiday and a custom passage of the
   await expect(page).toHaveURL(/\/read\?ref=Jonah\+1%3A1-5&kind=haftarah$/);
   await expect(page.getByRole("heading", { level: 1, name: "Jonah 1:1–5", exact: true })).toBeVisible();
   await expect(page).toHaveTitle("Jonah 1:1–5 | CRC Torah");
-  await expect(page.getByText("Any reading", { exact: true })).toBeVisible();
+  await expect(page.locator("[data-reading-ranges]")).toContainText("Any reading · ");
   await expect(verse(page, "Jonah 1:5")).toBeVisible();
   expect(await noHorizontalScroll(page)).toBe(true);
 });

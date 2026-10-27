@@ -50,14 +50,14 @@ test("choose verses from the text, separated groups with the live count, then sa
   await page.route("**/api/saved/readings/create", route => { posted.push(route.request().postDataJSON()); return json(route, 200, { ok: true, reading: base }); });
   await page.goto(`/read?ref=${encodeURIComponent(PORTION)}&kind=torah`);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  // Choose verses, with Save and Print, is in the More sheet (N5).
+  // Choose verses is in the Change sheet.
   await openMore(page);
   await expect(page.getByRole("button", { name: "Choose verses", exact: true })).toBeVisible();
   // Not choosing: a word still plays in Lein, and nothing offers a selection.
   await expect(bar(page)).toHaveCount(0);
   await expect(page.locator(".study-verses [data-word-index][role=\"button\"]").first()).toBeVisible();
-  // The passage's own Save (whole passage) is in More until choosing starts.
-  const anySave = page.getByRole("button", { name: "Save", exact: true });
+  // The passage's own Save pill (what is on screen, or the whole portion) is in the title block until choosing starts.
+  const anySave = page.getByRole("button", { name: "Save to My Readings", exact: true });
   await expect(anySave).toHaveCount(1);
   await expect(bar(page)).toHaveCount(0);
   await page.getByRole("button", { name: "Choose verses", exact: true }).click();
@@ -69,8 +69,8 @@ test("choose verses from the text, separated groups with the live count, then sa
   await verse(page, 1).click();
   await expect(verse(page, 1)).toHaveAttribute("aria-pressed", "true");
   await expect(line(page)).toHaveText("1 verse: Deuteronomy 31:1");
-  // Only the bar's Save shows while choosing.
-  await expect(anySave).toHaveCount(1);
+  // Only the bar's Save shows while choosing: the title block's pill is put away.
+  await expect(anySave).toHaveCount(0);
   await expect(bar(page).getByRole("button", { name: "Save", exact: true })).toHaveCount(1);
   // Shift-click takes in everything from the last verse chosen; Select range does the same without a keyboard.
   await verse(page, 3).click({ modifiers: ["Shift"] });
@@ -92,17 +92,17 @@ test("choose verses from the text, separated groups with the live count, then sa
   await expect(line(page)).toHaveText("5 verses: Deuteronomy 31:1–3; 31:8–9");
   expect(await noHorizontalScroll(page)).toBe(true);
   await minSize(page, [verse(page, 1), bar(page).getByRole("button", { name: "Save", exact: true }), bar(page).getByRole("button", { name: "Cancel", exact: true })]);
-  // Save is the existing save flow, with these groups.
+  // Save opens the Add to My Readings sheet for these groups: the only choice of verses there.
   await bar(page).getByRole("button", { name: "Save", exact: true }).click();
-  const form = page.getByRole("form", { name: "Save this reading" });
+  const form = page.getByRole("form", { name: "Add this reading" });
   await expect(form.getByLabel("Name")).toHaveValue("Deuteronomy 31:1–30 · Deuteronomy 31:1–3; 31:8–9");
-  await form.getByRole("button", { name: "Save reading", exact: true }).click();
-  await expect(page.getByRole("link", { name: "Open your reading", exact: true })).toHaveAttribute("href", `/read?saved=${base.id}`);
+  await form.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Open", exact: true })).toHaveAttribute("href", `/read?saved=${base.id}`);
   expect(posted).toEqual([{ name: "Deuteronomy 31:1–30 · Deuteronomy 31:1–3; 31:8–9", date: null, kind: "torah", ranges: "Deuteronomy 31:1-3; Deuteronomy 31:8-9" }]);
   // Done leaves choosing, and the words are exactly as they were.
   await bar(page).getByRole("button", { name: "Done", exact: true }).click();
   await expect(bar(page)).toHaveCount(0);
-  // The sheet is closed, so More has the focus again and Choose verses and Save are in it.
+  // Done leaves More with the focus again.
   await expect(anySave).toHaveCount(0);
   await expect(moreButton(page)).toBeFocused();
   await expect(page.locator(".study-verses [data-word-index][role=\"button\"]").first()).toBeVisible();
@@ -142,7 +142,7 @@ test("Change verses on a saved reading starts in the whole portion with its vers
     await expect(page.getByRole("heading", { level: 1, name: "Synthetic selection", exact: true })).toBeVisible();
     await expect(page.getByText("Torah Deuteronomy 31:1–3; Deuteronomy 31:8–9")).toBeVisible();
     await expect(page.locator(".study-verses [data-verse-ref]")).toHaveCount(5);
-    await page.getByRole("button", { name: "Change verses", exact: true }).click();
+    await (await openMore(page)).getByRole("button", { name: "Change verses", exact: true }).click(); // in the Change sheet
     // The whole portion, with the reading's verses selected.
     await expect(page.locator(".study-verses [data-verse-ref]")).toHaveCount(30);
     await expect(line(page)).toHaveText("5 verses: Deuteronomy 31:1–3; 31:8–9");
@@ -184,19 +184,19 @@ test("Whole portion marks the selection and Back to selection returns to it; Can
   await expect(page.locator("[data-reading-place]")).not.toContainText("Deuteronomy 31:1");
   const here = (await page.locator("[data-reading-place]").innerText()).trim();
   expect(here).toMatch(/^Deuteronomy 31:(8|9)$/);
-  await page.getByRole("button", { name: "Whole portion", exact: true }).click();
+  await (await openMore(page)).getByRole("button", { name: "Whole portion", exact: true }).click(); // in the Change sheet
   await expect(page.locator("[data-study-rows] [data-verse-ref]")).toHaveCount(30);
   await expect(page.locator("[data-study-rows] [data-verse-marked]")).toHaveCount(5);
   await expect(page.locator("[data-study-rows] [data-verse-ref=\"Deuteronomy 31:4\"]")).not.toHaveAttribute("data-verse-marked", "true");
   await expect(page.locator(`[data-study-rows] [data-verse-ref="${here}"]`)).toBeInViewport();
   await expect(page).toHaveURL(new RegExp(`/read\\?saved=${base.id}&lens=study$`));
-  await page.getByRole("button", { name: "Back to selection", exact: true }).click();
+  await (await openMore(page)).getByRole("button", { name: "Back to selection", exact: true }).click(); // in the Change sheet
   await expect(page.locator("[data-study-rows] [data-verse-ref]")).toHaveCount(5);
   await expect(page.locator(`[data-study-rows] [data-verse-ref="${here}"]`)).toBeInViewport();
   // Change verses, then Cancel: back at the selection, nothing sent.
   const sent: string[] = [];
   page.on("request", request => { if (request.url().includes("/api/saved/readings/update")) sent.push(request.url()); });
-  await page.getByRole("button", { name: "Change verses", exact: true }).click();
+  await (await openMore(page)).getByRole("button", { name: "Change verses", exact: true }).click(); // in the Change sheet
   await expect(page.locator("[data-study-rows] [data-verse-ref]")).toHaveCount(30);
   await verse(page, 20).click();
   await bar(page).getByRole("button", { name: "Cancel", exact: true }).click();
