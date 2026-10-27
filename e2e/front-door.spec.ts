@@ -109,12 +109,12 @@ test("a single-role student at the root sees the front door, not the workspace, 
   await expect(page).toHaveURL(/\/workspace\/student$/);
 });
 
-test("signed in, the site bar shows Account and the Beit Mitzvah door is the highest role's door; the form is gone", async ({ page }) => {
+test("signed in, the site bar shows My Readings and the Beit Mitzvah door is the highest role's door; the form is gone", async ({ page }) => {
   await session(page, roles(["tutor"])); await week(page);
   await page.goto("/");
   const door = page.locator('[data-door="beit-mitzvah"]');
   await expect(door).toHaveAttribute("data-door-role", "tutor");
-  await expect(page.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("href", "/account");
+  await expect(page.getByRole("link", { name: "My Readings", exact: true })).toHaveAttribute("href", "/mine");
   await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveCount(0);
   await expect(door.getByTestId("door-action")).toHaveAttribute("href", "/workspace/tutor");
   await expect(page.getByTestId("account-roles")).toHaveCount(0);

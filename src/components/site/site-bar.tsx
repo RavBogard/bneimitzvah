@@ -10,17 +10,17 @@ import { signedInHint } from "../portal/signed-in-hint";
  * The site row: the one header every page carries, signed in or out (site navigation design, PR A). The tab bar (the left rail from
  * 1000px) is the role row beneath it and is not drawn here. A link may appear in both rows.
  *
- * `site` mode: the brand, the Beta mark, Read, Learn, and Sign in or the account control. `minimal` mode (an invitation, Connect Claude,
+ * `site` mode: the brand, the Beta mark, Read, Learn, and Sign in or My Readings. `minimal` mode (an invitation, Connect Claude,
  * unsubscribe, the print sheet, the saved-readings shelf): the brand and Beta only, no links.
  */
 export type SiteBarMode = "site" | "minimal";
-export type SiteLink = "read" | "learn" | "account";
+export type SiteLink = "read" | "learn" | "mine";
 
 const under = (path: string, base: string) => path === base || path.startsWith(`${base}/`);
-/** Which site link is the current page: Read on /read*, Learn on /learn* and the trope chart, Account on /account; nothing elsewhere. */
+/** Which site link is the current page: Read on /read*, Learn on /learn* and the trope chart, My Readings on /mine*; nothing elsewhere (Account is reached from the shelf). */
 export function currentSiteLink(pathname: string | null | undefined): SiteLink | null {
   const path = pathname ?? "";
-  return under(path, "/read") ? "read" : under(path, "/learn") || under(path, "/trope-chart") ? "learn" : under(path, "/account") ? "account" : null;
+  return under(path, "/read") ? "read" : under(path, "/learn") || under(path, "/trope-chart") ? "learn" : under(path, "/mine") ? "mine" : null;
 }
 
 /**
@@ -32,9 +32,9 @@ export function BrandMark() {
   return <img className="site-bar-mark" src="/brand/mural-64.webp" srcSet="/brand/mural-64.webp 1x, /brand/mural-128.webp 2x" width={28} height={28} alt="" decoding="async" />;
 }
 
-/** The person icon the account control draws (it is decoration; the control is named "Account"). */
-export function AccountIcon() {
-  return <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M5 20c1.2-3.6 3.8-5.5 7-5.5s5.8 1.9 7 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
+/** The bookmark icon the My Readings control draws (it is decoration; the control is named "My Readings"). */
+export function BookmarkIcon() {
+  return <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-4.5L6 21V4.5a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" /></svg>;
 }
 
 /** This browser's "last seen signed in" hint (the same one the reader's Save uses). The server and the first client render say signed out; the hint replaces it after hydration. */
@@ -63,7 +63,7 @@ export function SiteBar(props: SiteBarProps) {
 
 export function SiteBarView({ mode = "site", signedIn = false, back, onNavigate, productName, className, pathname }: SiteBarProps & { signedIn: boolean }) {
   const current = currentSiteLink(pathname);
-  const link = (key: SiteLink, href: string, children: ReactNode, extra = "") => <a className={`site-bar-link${extra}`} href={href} aria-current={current === key ? "page" : undefined} onClick={onNavigate ? event => onNavigate(event, href) : undefined}>{children}</a>;
+  const link = (key: SiteLink, href: string, children: ReactNode, extra = "", label?: string) => <a className={`site-bar-link${extra}`} href={href} aria-label={label} aria-current={current === key ? "page" : undefined} onClick={onNavigate ? event => onNavigate(event, href) : undefined}>{children}</a>;
   return <header className={`portal-header app-bar site-bar${className ? ` ${className}` : ""}`} data-site-bar={mode}>
     <div className="portal-brand-group"><a className="portal-brand" data-testid="site-brand" href="/" onClick={onNavigate ? event => onNavigate(event, "/") : undefined}><BrandMark />{productName ?? "CRC Torah"}</a><BetaMark /></div>
     {mode === "site" && <nav className="site-bar-nav" aria-label="Site">
@@ -71,7 +71,7 @@ export function SiteBarView({ mode = "site", signedIn = false, back, onNavigate,
       {link("learn", "/learn", <span className="site-bar-text">Learn</span>)}
       {/* The right side keeps one width whichever it shows, so the swap moves nothing. */}
       <span className="site-bar-end" data-signed-in={signedIn ? "" : undefined}>
-        {signedIn ? link("account", "/account", <><AccountIcon /><span className="site-bar-text site-bar-account-text">Account</span></>, " site-bar-account")
+        {signedIn ? link("mine", "/mine", <><BookmarkIcon /><span className="site-bar-text site-bar-mine-text">My Readings</span></>, " site-bar-mine", "My Readings")
           : <ReturnSignInLink className="site-bar-link" back={back}><span className="site-bar-text">Sign in</span></ReturnSignInLink>}
       </span>
     </nav>}

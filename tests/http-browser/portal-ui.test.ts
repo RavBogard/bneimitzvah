@@ -64,7 +64,7 @@ async function signIn(tab: Page, email: string, invitation = false) {
   await openAuthMail(tab, link);
   // An invitation link lands on its review page; a plain sign-in link lands on the front door, now signed in (its header offers Account).
   if (invitation) await ui(entryTask(tab, "invitation")).toBeVisible();
-  else { await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible(); await ui(tab.getByRole("banner").getByRole("link", { name: "Account", exact: true })).toBeVisible(); }
+  else { await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible(); await ui(tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true })).toBeVisible(); }
   await clean(tab, [email, token]);
 }
 async function api(tab: Page, path: string, body?: unknown) {

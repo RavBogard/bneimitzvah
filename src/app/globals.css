@@ -450,14 +450,14 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 /* The current page: a 2px underline under the word, 4px off it. */
 .site-bar-link[aria-current="page"] .site-bar-text { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
 /* The right side holds one width whether it shows Sign in or the account control, so the swap moves nothing (CLS). Its last link's text meets the page gutter. */
-.site-bar-end { display: flex; justify-content: flex-end; min-width: 7.5rem; margin-inline-end: calc(-1 * var(--site-bar-pad)); }
+.site-bar-end { display: flex; justify-content: flex-end; min-width: 9rem; margin-inline-end: calc(-1 * var(--site-bar-pad)); }
 @media (max-width: 479.98px) {
   .site-bar { --site-bar-pad: 0.4rem; }
   .site-bar-nav { gap: 0; }
   .site-bar-link { font-size: 0.875rem; }
   .site-bar-end { min-width: 3.75rem; }
-  /* The account control is the icon alone; its name stays "Account". */
-  .site-bar-account-text { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  /* The My Readings control is the icon alone; its name stays "My Readings". */
+  .site-bar-mine-text { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
 /* Measured in Chromium (2026-10-26): disc, name, Beta, Read, Learn and the icon-only account control need 368px to share one line with 16px of side padding; Beta shows from 375px (an iPhone SE) up. The disc and the name never hide, and fit at 320px without Beta. */
 @media (max-width: 374.98px) { .site-bar .site-beta { display: none; } }
