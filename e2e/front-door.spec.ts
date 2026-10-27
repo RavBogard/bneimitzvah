@@ -9,6 +9,9 @@ async function session(page: Page, answer: { status: number; body: unknown }) {
 const signedOut = { status: 401, body: { error: "unauthenticated" } };
 const roles = (list: string[]) => ({ status: 200, body: { membershipAvailable: list.length > 0, roles: list, saved: list.some(role => role !== "student"), approver: false, sessionBinding: binding } });
 async function week(page: Page) {
+  // Find a reading's calendar (B1): 66 Saturdays from 2026-10-24, the Saturday after the pinned Wednesday and the one the Saturday test leads with.
+  await page.route("**/api/public/calendar", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({ today: "2026-10-24", rows:
+    Array.from({ length: 66 }, (_, i) => ({ date: new Date(Date.UTC(2026, 9, 24 + 7 * i)).toISOString().slice(0, 10), name: "Noach", kind: "regular" })) }) }));
   await page.route("**/api/public/reading?*", route => {
     const date = new URL(route.request().url()).searchParams.get("date");
     return route.fulfill({ contentType: "application/json", body: JSON.stringify({ date, parashah: "Noach", fetchedAt: 0, listening: { pocketTorah: false },
@@ -34,7 +37,7 @@ test("on a Saturday the home leads with next Shabbat: its parashah and date, Lei
 });
 
 // Deliberate wording test for the front door: approved copy, change only with the copy.
-test("the home is a front door to This week, Beit Mitzvah and Learn to lein", async ({ page }, testInfo) => {
+test("the home is a front door to This week, Find a reading, Beit Mitzvah and Learn to lein", async ({ page }, testInfo) => {
   await session(page, signedOut); await week(page);
   expect((await page.goto("/"))?.status()).toBe(200);
   await expect(page).toHaveTitle("CRC Torah");
@@ -44,6 +47,11 @@ test("the home is a front door to This week, Beit Mitzvah and Learn to lein", as
   await expect(page.getByTestId("week-ranges")).toHaveText(/Torah Genesis 6:9–11:32 · Haftarah Isaiah 54:1–55:5$/);
   await expect(page.getByRole("link", { name: "Lein", exact: true })).toHaveAttribute("href", "/read");
   await expect(page.getByRole("link", { name: "Study", exact: true })).toHaveAttribute("href", "/read?lens=study");
+  // Find a reading: the field, the date button, four Coming up chips and the link to every reading.
+  await expect(page.getByRole("combobox", { name: "Find a reading" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Pick a date", exact: true })).toBeVisible();
+  await expect(page.locator("[data-chip-date]")).toHaveCount(4);
+  await expect(page.getByRole("link", { name: "Every parashah, holiday and passage", exact: true })).toHaveAttribute("href", "/readings");
   await expect(page.locator('[data-door="beit-mitzvah"]')).toBeVisible();
   // Signed out, the door is Sign in and the way to ask for an account; the form itself lives on /sign-in alone.
   const beit = page.locator('[data-door="beit-mitzvah"]');

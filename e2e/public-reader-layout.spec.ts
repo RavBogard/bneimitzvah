@@ -79,6 +79,26 @@ async function measure(page: Page, address: string, aliyot = false) {
   return { shifts, value: cls(shifts) };
 }
 
+test("/ (the home) does not jump while the week and the calendar arrive (CLS at most 0.07 at 4x CPU)", async ({ page }) => {
+  test.setTimeout(90_000);
+  const client = await page.context().newCDPSession(page);
+  await client.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  await watchShifts(page);
+  await mock(page);
+  await page.route("**/api/session", route => route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ error: "unauthenticated" }) }));
+  await page.route("**/api/public/calendar", async route => {
+    await new Promise(resolve => setTimeout(resolve, LATENCY));
+    const rows = Array.from({ length: 66 }, (_, i) => ({ date: new Date(Date.UTC(2026, 9, 24 + 7 * i)).toISOString().slice(0, 10), name: "Synthetic", kind: "regular" }));
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify({ today: rows[0].date, rows }) }).catch(() => {});
+  });
+  await page.goto("/");
+  await expect(page.locator("[data-chip-date]").first()).toBeVisible({ timeout: 30_000 });
+  await page.waitForTimeout(2000);
+  const shifts = await page.evaluate(() => (window as unknown as { __shifts: Shift[] }).__shifts);
+  await client.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+  expect(cls(shifts), JSON.stringify(shifts)).toBeLessThanOrEqual(0.07);
+});
+
 test("/read in Lein does not jump while the week, the reading and the text arrive (CLS below 0.1 at 4x CPU)", async ({ page }) => {
   const { shifts, value } = await measure(page, "/read");
   expect(value, JSON.stringify(shifts)).toBeLessThan(0.1);

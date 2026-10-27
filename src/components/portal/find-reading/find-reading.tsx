@@ -64,7 +64,7 @@ export function FindReadingView({ place, study, add, calendar, text, active, onT
   const chips = place !== "index" ? today ? comingUp(rows, today, place) : [] : [];
   const noMatch = text.trim() !== "" && results.length === 0;
   const all = add ? "/readings?add=1" : "/readings";
-  return <section className={styles.find} aria-label={FIND_LABEL} data-place={place} data-testid="find-reading">
+  return <div className={styles.find} data-place={place} data-testid="find-reading">
     <label className={styles.label} htmlFor={`${id}-field`}>{FIND_LABEL}</label>
     <div className={styles.row}>
       <input id={`${id}-field`} ref={inputRef} className={styles.field} type="text" role="combobox" autoComplete="off" autoCapitalize="none" spellCheck={false} enterKeyHint="go"
@@ -95,7 +95,7 @@ export function FindReadingView({ place, study, add, calendar, text, active, onT
         </ul>}
     </div>}
     {place !== "index" && <p className={styles.all}><a href={all}>{FIND_ALL_LINK}</a></p>}
-  </section>;
+  </div>;
 }
 
 /**
