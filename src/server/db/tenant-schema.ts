@@ -130,6 +130,31 @@ export const tutorStudent = pgTable("tutor_student", {
   uniqueIndex("tutor_student_active_key").on(t.tenantId, t.studentId, t.tutorGrantId).where(sql`${t.revokedAt} is null`),
 ]);
 
+/**
+ * A tutor's claim on a learner (readings for everyone, Daniel 2026-10-27, decision 15; plan decision 2): any tutor may claim any
+ * signed-in person in the congregation, one tutor at a time per learner (the partial unique key), and the learner may undo it.
+ * A claim on a person with a live student identity also writes the tutor_student link the staff tools read, remembered in
+ * tutor_link_id so "Not my tutor" and the admin's revoke end both. The tutor grant is a tutor's (tutor_role is checked and
+ * carried in the FK). Revocation is whole: revoked_at, who (learner, tutor or admin) and which membership, together or not at all.
+ * Row security (migration 0054): tenant_isolation as on tutor_student; SELECT, INSERT and the three revocation columns only.
+ */
+export const learnerClaim = pgTable("learner_claim", {
+  id: id(), tenantId: tenantId(), learnerMembershipId: uuid("learner_membership_id").notNull(), tutorGrantId: uuid("tutor_grant_id").notNull(),
+  tutorRole: role("tutor_role").default("tutor").notNull(), tutorLinkId: uuid("tutor_link_id"), createdAt: createdAt(), revokedAt: revokedAt(),
+  revokedBy: text("revoked_by").$type<"learner" | "tutor" | "admin">(), revokedByMembershipId: uuid("revoked_by_membership_id"),
+}, (t) => [
+  unique("learner_claim_tenant_id_key").on(t.tenantId, t.id),
+  foreignKey({ name: "learner_claim_learner_fk", columns: [t.tenantId, t.learnerMembershipId], foreignColumns: [membership.tenantId, membership.id] }),
+  foreignKey({ name: "learner_claim_tutor_fk", columns: [t.tenantId, t.tutorGrantId, t.tutorRole], foreignColumns: [roleGrant.tenantId, roleGrant.id, roleGrant.role] }),
+  foreignKey({ name: "learner_claim_link_fk", columns: [t.tenantId, t.tutorLinkId], foreignColumns: [tutorStudent.tenantId, tutorStudent.id] }),
+  foreignKey({ name: "learner_claim_revoker_fk", columns: [t.tenantId, t.revokedByMembershipId], foreignColumns: [membership.tenantId, membership.id] }),
+  uniqueIndex("learner_claim_active_key").on(t.tenantId, t.learnerMembershipId).where(sql`${t.revokedAt} is null`),
+  check("learner_claim_tutor_role", sql`${t.tutorRole} = 'tutor'`),
+  check("learner_claim_revoked_by", sql`${t.revokedBy} in ('learner', 'tutor', 'admin')`),
+  check("learner_claim_revocation_whole", sql`(${t.revokedAt} is null) = (${t.revokedBy} is null) and (${t.revokedAt} is null) = (${t.revokedByMembershipId} is null)`),
+  check("learner_claim_instants", sql`isfinite(${t.createdAt}) and (${t.revokedAt} is null or (isfinite(${t.revokedAt}) and ${t.revokedAt} >= ${t.createdAt}))`),
+]);
+
 export const invite = pgTable("invite", {
   id: id(), tenantId: tenantId(), tokenHash: text("token_hash").notNull().unique(), email: text("email").notNull(),
   role: role("role").notNull(), studentId: uuid("student_id"), inviterMembershipId: uuid("inviter_membership_id").notNull(),
@@ -225,5 +250,5 @@ export const auditEvent = pgTable("audit_event", {
   foreignKey({ name: "audit_grant_fk", columns: [t.tenantId, t.roleGrantId, t.actorMembershipId], foreignColumns: [roleGrant.tenantId, roleGrant.id, roleGrant.membershipId] }),
   foreignKey({ name: "audit_student_fk", columns: [t.tenantId, t.actingStudentId], foreignColumns: [student.tenantId, student.id] }),
   foreignKey({ name: "audit_guardian_fk", columns: [t.tenantId, t.guardianId], foreignColumns: [guardian.tenantId, guardian.id] }),
-  check("audit_action_known", sql`${t.action} in ('student.create','student.update','student.import','grant.issue','grant.revoke','guardian.link','guardian.revoke','guardian.practice-set','tutor.cantor-set','tutor.assign','tutor.revoke','invite.issue','invite.accept','invite.revoke','invite.delivery-sent','invite.delivery-failed','context.enter','context.exit','reading.set','identity.link','identity.revoke','draft.append','note.append','service-plan.set','progress.self-check.set','progress.assessment.set','lesson-log.create','lesson-log.edit','lesson-log.delete','recording.create','recording.submit','recording.delete-request','source-assignment.set','honors.set','honoree.issue','honoree.revoke','honoree.reissue','study-voice.set','study-guide.set','study-guide.publish','study-guide-student.set','study-theme.read','tenant-settings.set','notification-preference.set','notification.unsubscribe','mcp-connection.revoke','source-identity.revoke','account-request.approve','account-request.decline','member.revoke','approver.designate','approver.revoke','service-part.finish','ceremony-done.set','ceremony-done.reverse','invite.copy')`),
+  check("audit_action_known", sql`${t.action} in ('student.create','student.update','student.import','grant.issue','grant.revoke','guardian.link','guardian.revoke','guardian.practice-set','tutor.cantor-set','tutor.assign','tutor.revoke','invite.issue','invite.accept','invite.revoke','invite.delivery-sent','invite.delivery-failed','context.enter','context.exit','reading.set','identity.link','identity.revoke','draft.append','note.append','service-plan.set','progress.self-check.set','progress.assessment.set','lesson-log.create','lesson-log.edit','lesson-log.delete','recording.create','recording.submit','recording.delete-request','source-assignment.set','honors.set','honoree.issue','honoree.revoke','honoree.reissue','study-voice.set','study-guide.set','study-guide.publish','study-guide-student.set','study-theme.read','tenant-settings.set','notification-preference.set','notification.unsubscribe','mcp-connection.revoke','source-identity.revoke','account-request.approve','account-request.decline','member.revoke','approver.designate','approver.revoke','service-part.finish','ceremony-done.set','ceremony-done.reverse','invite.copy','learner.claim','learner.unclaim')`),
 ]);

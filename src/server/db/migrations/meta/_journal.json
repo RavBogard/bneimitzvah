@@ -372,6 +372,13 @@
       "when": 1793056144205,
       "tag": "0053_tutor_invite_hold",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1793126426497,
+      "tag": "0054_readings_for_everyone",
+      "breakpoints": true
     }
   ]
 }

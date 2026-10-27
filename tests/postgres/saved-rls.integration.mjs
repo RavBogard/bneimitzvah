@@ -17,6 +17,8 @@ async function begin(client, tenant, owner) {
   if (tenant !== undefined) await query(client, "SELECT set_config('app.tenant_id', $1, true)", [tenant]);
   if (owner !== undefined) await query(client, "SELECT set_config('app.saved_owner', $1, true)", [owner]);
 }
+// The two read-only settings of 0054 (readings for everyone): a learner's rows for staff, and the tenant's readings for the directory.
+const setting = (client, name, value) => query(client, "SELECT set_config($1, $2, true)", [name, value]);
 async function counts(client) {
   const out = [];
   for (const table of TABLES) out.push((await query(client, `SELECT count(*)::int AS n FROM ${table}`)).rows[0].n);
@@ -59,12 +61,14 @@ test("real PostgreSQL: owner_only keeps every saved row to its own member, casca
     }
     const { a, b, x } = members;
 
-    await t.test("the tables are forced, owned by the migration role, with one owner_only policy and column-level UPDATE only", async () => {
+    await t.test("the tables are forced, owned by the migration role, with owner_only, the read-only staff_read and directory_read, and column-level UPDATE only", async () => {
       const rows = (await query(owner, "SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity, pg_get_userbyid(c.relowner) AS owner FROM pg_class c WHERE c.relname = ANY($1) ORDER BY c.relname", [TABLES])).rows;
       assert.equal(rows.length, 4);
       for (const row of rows) { assert.equal(row.relrowsecurity, true); assert.equal(row.relforcerowsecurity, true); assert.notEqual(row.owner, "portal_runtime"); assert.notEqual(row.owner, login); }
-      const policies = (await query(owner, "SELECT tablename, policyname, cmd, roles::text[] AS roles FROM pg_policies WHERE tablename = ANY($1) ORDER BY tablename", [TABLES])).rows;
-      assert.deepEqual(policies, TABLES.map(tablename => ({ tablename, policyname: "owner_only", cmd: "ALL", roles: ["portal_runtime"] })));
+      const policies = (await query(owner, "SELECT tablename, policyname, cmd, roles::text[] AS roles FROM pg_policies WHERE tablename = ANY($1) ORDER BY tablename, policyname", [TABLES])).rows;
+      // 0054 (readings for everyone) adds the read-only staff_read on every saved table and directory_read on saved_reading alone.
+      assert.deepEqual(policies, [{ tablename: "saved_reading", policyname: "directory_read", cmd: "SELECT", roles: ["portal_runtime"] },
+        ...TABLES.flatMap(tablename => [{ tablename, policyname: "owner_only", cmd: "ALL", roles: ["portal_runtime"] }, { tablename, policyname: "staff_read", cmd: "SELECT", roles: ["portal_runtime"] }])]);
       const updates = (await query(owner, "SELECT table_name FROM information_schema.table_privileges WHERE grantee='portal_runtime' AND privilege_type IN ('UPDATE','TRUNCATE','REFERENCES','TRIGGER') AND table_name = ANY($1)", [TABLES])).rows;
       assert.deepEqual(updates, []);
       const deletes = (await query(owner, "SELECT table_name FROM information_schema.table_privileges WHERE grantee='portal_runtime' AND privilege_type='DELETE' AND table_name = ANY($1)", [TABLES])).rows;
@@ -139,6 +143,63 @@ test("real PostgreSQL: owner_only keeps every saved row to its own member, casca
         await query(client, "ROLLBACK");
         await begin(client, "crc", x.member);
         assert.deepEqual(await counts(client), [0, 0, 0, 0]);
+        await query(client, "ROLLBACK");
+      } finally { client.release(); }
+    });
+
+    await t.test("a viewer (0054 staff_read) reads one learner's rows on every saved table and writes nothing; no owner, so nothing is inserted, changed or removed", async () => {
+      const client = await checkout();
+      try {
+        await begin(client, "crc");
+        await setting(client, "app.saved_viewer", a.member);
+        assert.deepEqual(await counts(client), [1, 1, 1, 1]);
+        assert.deepEqual((await query(client, "SELECT id FROM saved_reading")).rows, [{ id: a.reading }]);
+        assert.equal((await query(client, "SELECT count(*)::int AS n FROM saved_reading WHERE id = $1", [b.reading])).rows[0].n, 0);
+        // Reads only: the owner setting is never set on this path, so owner_only admits no insert and no row is visible to an update or delete.
+        await rejects(client, "INSERT INTO saved_reading (tenant_id,membership_id,user_id,name,kind,ranges,verse_count) VALUES ('crc',$1,$2,'X','torah','Genesis 1:1',1)", [a.member, a.user], "42501");
+        await rejects(client, "INSERT INTO saved_verse_mark (tenant_id,membership_id,saved_reading_id,verse_ref,state,version) VALUES ('crc',$1,$2,'Genesis 1:2','working',1)", [a.member, a.reading], "42501");
+        await rejects(client, "INSERT INTO starred_comment (tenant_id,membership_id,user_id,work,verse_ref,comment_index) VALUES ('crc',$1,$2,'rashi','Genesis 1:2',1)", [a.member, a.user], "42501");
+        assert.equal((await query(client, "UPDATE saved_reading SET name='Seen' WHERE id=$1", [a.reading])).rowCount, 0);
+        assert.equal((await query(client, "UPDATE saved_verse_work SET text='Seen' WHERE saved_reading_id=$1", [a.reading])).rowCount, 0);
+        assert.equal((await query(client, "UPDATE saved_verse_mark SET state='got-it' WHERE saved_reading_id=$1", [a.reading])).rowCount, 0);
+        assert.equal((await query(client, "DELETE FROM saved_reading WHERE id=$1", [a.reading])).rowCount, 0);
+        assert.equal((await query(client, "DELETE FROM starred_comment WHERE membership_id=$1", [a.member])).rowCount, 0);
+        await query(client, "ROLLBACK");
+        // A viewer naming a member of another congregation, or a garbage value, sees nothing or fails closed; the setting clears with the transaction.
+        await begin(client, "crc"); await setting(client, "app.saved_viewer", x.member);
+        assert.deepEqual(await counts(client), [0, 0, 0, 0]);
+        await query(client, "ROLLBACK");
+        await begin(client, "test-other"); await setting(client, "app.saved_viewer", a.member);
+        assert.deepEqual(await counts(client), [0, 0, 0, 0]);
+        await query(client, "ROLLBACK");
+        await begin(client, "crc"); await setting(client, "app.saved_viewer", "not-a-uuid");
+        await rejects(client, "SELECT count(*) FROM saved_verse_work", [], "22P02");
+        await query(client, "ROLLBACK");
+        await begin(client, "crc");
+        assert.equal((await query(client, "SELECT coalesce(current_setting('app.saved_viewer', true), '') AS v")).rows[0].v, "");
+        assert.deepEqual(await counts(client), [0, 0, 0, 0]);
+        await query(client, "ROLLBACK");
+      } finally { client.release(); }
+    });
+
+    await t.test("the directory (0054 directory_read) reads every reading of the tenant and nothing else, and writes nothing", async () => {
+      const client = await checkout();
+      try {
+        await begin(client, "crc"); await setting(client, "app.saved_directory", "on");
+        assert.deepEqual(await counts(client), [2, 0, 0, 0]);
+        assert.deepEqual((await query(client, "SELECT id FROM saved_reading ORDER BY id")).rows.map(row => row.id).sort(), [a.reading, b.reading].sort());
+        await rejects(client, "INSERT INTO saved_reading (tenant_id,membership_id,user_id,name,kind,ranges,verse_count) VALUES ('crc',$1,$2,'X','torah','Genesis 1:1',1)", [a.member, a.user], "42501");
+        assert.equal((await query(client, "UPDATE saved_reading SET name='Listed'")).rowCount, 0);
+        assert.equal((await query(client, "DELETE FROM saved_reading")).rowCount, 0);
+        await query(client, "ROLLBACK");
+        // Only the exact word opens it; another tenant's readings stay there.
+        for (const value of ["off", "ON", "1", ""]) {
+          await begin(client, "crc"); await setting(client, "app.saved_directory", value);
+          assert.deepEqual(await counts(client), [0, 0, 0, 0], JSON.stringify(value));
+          await query(client, "ROLLBACK");
+        }
+        await begin(client, "test-other"); await setting(client, "app.saved_directory", "on");
+        assert.deepEqual((await query(client, "SELECT id FROM saved_reading")).rows, [{ id: x.reading }]);
         await query(client, "ROLLBACK");
       } finally { client.release(); }
     });

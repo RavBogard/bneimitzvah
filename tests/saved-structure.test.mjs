@@ -83,7 +83,9 @@ test("no code outside the saved layer names the saved tables, and the MCP import
     // 0040 lets the owner revise their own reading's ranges (release 1.7 "Change verses"); its own test pins it to that one grant.
     "src/server/db/migrations/0040_saved_reading_ranges.sql",
     // 0041 adds the member's own preferences to the saved layer (release 1.7 M3b).
-    "src/server/db/migrations/0041_account_preferences.sql"]);
+    "src/server/db/migrations/0041_account_preferences.sql",
+    // 0054 adds the read-only staff_read and directory_read policies (readings for everyone, plan decision 3); its own test pins them.
+    "src/server/db/migrations/0054_readings_for_everyone.sql"]);
   for (const file of sources) {
     if (allowed.has(file.path) || /^src\/server\/db\/migrations\/meta\/\d{4}_snapshot\.json$/.test(file.path) && Number(file.path.match(/(\d{4})_snapshot/)[1]) > 36) continue;
     assert.doesNotMatch(file.text, /\b(savedReading|savedVerseWork|savedVerseMark|starredComment|accountPreference)\b|\b(saved_reading|saved_verse_work|saved_verse_mark|starred_comment|account_preference)\b/, `${file.path} names a saved table`);
