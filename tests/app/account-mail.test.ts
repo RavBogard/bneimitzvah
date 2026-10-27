@@ -15,26 +15,30 @@ function transport(enabled: boolean, answer = () => new Response("{}", { status:
 describe("the account mail transport", () => {
   it("outside production hands nothing to the provider", async () => {
     const { send, calls } = transport(false);
-    for (const kind of ["account-request", "account-approved"] as const) expect(await send(kind, "approver@example.test", tenant, KEY)).toBe("skipped");
+    for (const kind of ["account-request", "account-approved", "account-linked"] as const) expect(await send(kind, "approver@example.test", tenant, KEY)).toBe("skipped");
     expect(calls).toEqual([]);
   });
   it("in production sends only its own words: a fixed link on this origin, the congregation's names, and the idempotency key", async () => {
     const { send, calls } = transport(true);
     expect(await send("account-request", "approver@example.test", tenant, KEY)).toBe("sent");
     expect(await send("account-approved", "member@example.test", tenant, KEY)).toBe("sent");
-    expect(calls).toHaveLength(2);
-    const [request, approval] = calls.map(call => ({ url: call.url, headers: call.init.headers as Record<string, string>, body: JSON.parse(call.init.body as string) }));
+    expect(await send("account-linked", "member@example.test", tenant, KEY)).toBe("sent");
+    expect(calls).toHaveLength(3);
+    const [request, approval, linked] = calls.map(call => ({ url: call.url, headers: call.init.headers as Record<string, string>, body: JSON.parse(call.init.body as string) }));
     expect(request.url).toBe("https://api.resend.com/emails");
     expect(request.headers["idempotency-key"]).toBe(KEY);
     expect(request.body).toEqual({ from: "torah@example.test", to: ["approver@example.test"], subject: "An account request for CRC Torah",
       text: "Someone has asked for a CRC Torah account.\n\nReview account requests: https://torah.centralreform.org/workspace/accounts\n\nYou receive this because you approve accounts for Central Reform Congregation." });
     expect(approval.body).toEqual({ from: "torah@example.test", to: ["member@example.test"], subject: "Your CRC Torah account is ready",
       text: "Your account request was approved. Sign in with this email address to save readings. https://torah.centralreform.org/. To follow a student's preparation, ask the congregation for a parent invitation. If you did not ask for an account, you can ignore this email." });
+    // Plan D6: approved with a target student, the email says the account is linked (lead's wording, a gap).
+    expect(linked.body).toEqual({ from: "torah@example.test", to: ["member@example.test"], subject: "Your CRC Torah account is linked",
+      text: "Your account is now linked to your student record. Sign in with this email address to open your reading. https://torah.centralreform.org/. If you did not ask for this, you can ignore this email." });
     expect(accountMailText("account-request", ORIGIN, tenant).text.match(/https?:\/\/\S+/g)).toEqual([`${ORIGIN}/workspace/accounts`]);
   });
   it("names each congregation's own product, never CRC Torah by default (Daniel, E1)", () => {
     const other = { name: "Synthetic Congregation", productName: "Synthetic Torah" };
-    for (const kind of ["account-request", "account-approved"] as const) {
+    for (const kind of ["account-request", "account-approved", "account-linked"] as const) {
       const { subject, text } = accountMailText(kind, ORIGIN, other);
       expect(subject).toContain("Synthetic Torah");
       expect(`${subject}\n${text}`).not.toContain("CRC Torah");

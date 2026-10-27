@@ -203,16 +203,20 @@ export function createNotificationTransport(input: { origin: string; apiKey: str
  * a requester's name or their purpose, so a request cannot relay text to staff. Its one link is a fixed path on
  * this origin. Outside production (`enabled` false) it hands nothing to the provider and answers "skipped".
  */
-export type AccountMailKind = "account-request" | "account-approved";
+export type AccountMailKind = "account-request" | "account-approved" | "account-linked";
 export type AccountMailOutcome = NotificationOutcome | "skipped";
-const ACCOUNT_LINKS: Readonly<Record<AccountMailKind, string>> = { "account-request": "/workspace/accounts", "account-approved": "/" };
+const ACCOUNT_LINKS: Readonly<Record<AccountMailKind, string>> = { "account-request": "/workspace/accounts", "account-approved": "/", "account-linked": "/" };
 const plainName = (value: unknown) => typeof value === "string" && value.length >= 1 && value.length <= 120 && value === value.trim() && !/[\x00-\x1f\x7f-\x9f\u00ad\u061c\u115f\u1160\u200b-\u200d\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\u3164\ufeff\uffa0\u{e0000}-\u{e007f}<>@]/u.test(value);
 export function accountMailText(kind: AccountMailKind, origin: string, tenant: Readonly<{ name: string; productName: string }>) {
   const link = `${origin}${ACCOUNT_LINKS[kind]}`;
   return kind === "account-request"
     ? { subject: `An account request for ${tenant.productName}`,
       text: `Someone has asked for a ${tenant.productName} account.\n\nReview account requests: ${link}\n\nYou receive this because you approve accounts for ${tenant.name}.` }
-    : { subject: `Your ${tenant.productName} account is ready`,
+    : kind === "account-linked"
+      // Readings for everyone (plan D6): approved with a target, the account is linked to the student record. Lead's wording, listed as a gap.
+      ? { subject: `Your ${tenant.productName} account is linked`,
+        text: `Your account is now linked to your student record. Sign in with this email address to open your reading. ${link}. If you did not ask for this, you can ignore this email.` }
+      : { subject: `Your ${tenant.productName} account is ready`,
       // The parent-invitation line is Daniel's approved wording (G13, TP-06): an account is never a parent's access.
       text: `Your account request was approved. Sign in with this email address to save readings. ${link}. To follow a student's preparation, ask the congregation for a parent invitation. If you did not ask for an account, you can ignore this email.` };
 }

@@ -53,7 +53,7 @@ test("/workspace leads on to the highest role's home, and an account with no rol
   await page.route("**/api/account/request", route => json(route, 200, { ok: true, state: "requestable", suggestedName: "", productName: "CRC Torah" }));
   await page.goto("/workspace");
   await expect(page).toHaveURL(/\/account$/);
-  await expect(page.getByRole("heading", { name: "Ask for an account", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ask to be linked", exact: true })).toBeVisible();
 });
 
 test("an accepted invitation's Continue lands on the work, and Sign out on Account returns to the sign-in form", async ({ page }) => {

@@ -3,40 +3,37 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AccountRequestView, parseRequestResult, parseRequestView, type RequestView } from "../../src/components/portal/account-request";
-import { parseApprovers, parseDecision, parseMembers, parseRequests, parseSummary } from "../../src/components/portal/workspace/accounts/api";
-import { ADMIN_REAPPROVAL_LINE } from "../../src/components/portal/workspace/accounts/workspace";
+import { parseApprovers, parseDecision, parseMembers, parseRequests, parseStudentOptions, parseSummary } from "../../src/components/portal/workspace/accounts/api";
+import { ADMIN_REAPPROVAL_LINE, ALREADY_LINKED_LINE, IDENTITY_TAKEN_LINE } from "../../src/components/portal/workspace/accounts/workspace";
 import { PortalRequestError } from "../../src/components/portal/api";
 
 const ID = "00000000-0000-4000-8000-000000000001", stamp = "2026-10-23T00:00:00.000Z";
 const view = (state: RequestView, problem: Parameters<typeof AccountRequestView>[0]["problem"] = null, level: 3 | 4 = 3) => renderToStaticMarkup(createElement(AccountRequestView, {
   view: state, level, name: "Ruth", purpose: "", problem, sending: false, formId: "req", onName: () => {}, onPurpose: () => {}, onSubmit: () => {}, onRetry: () => {} }));
 
-describe("asking for an account, on screen", () => {
-  it("offers the form with the person's name filled in, and an optional purpose", () => {
+describe("asking to be linked, on screen", () => {
+  // The one wording test for the request form (plan D6; the strings are the spec's and the lead's).
+  it("offers the link request with the person's name filled in and asks who they are, word for word", () => {
     const form = view({ status: "ready", state: "requestable", suggestedName: "Ruth", productName: "CRC Torah" });
-    expect(form).toContain(">Ask for an account</h3>");
-    // Release 1.7 M3b: true now that the account keeps preferred commentaries and reading settings too.
-    expect(form).toContain('An account keeps your saved readings, your place in Learn to lein, your preferred commentaries and your settings. Everything else on <bdi dir="auto">CRC Torah</bdi> is open without one.');
-    expect(form).not.toMatch(/translation and notes/);
+    expect(form).toContain(">Ask to be linked</h3>");
+    expect(form).toContain("<p>Preparing a Beit Mitzvah at CRC? Ask the rabbi to connect this account to your student record.</p>");
+    expect(form).not.toMatch(/translation and notes|keeps your saved readings|Ask for an account/);
     expect(form).toContain('<label for="req-name">Your name</label>');
     expect(form).toContain('value="Ruth"');
-    expect(form).toContain("What would you like to work on? <span class=\"field-help\">(optional)</span>");
+    expect(form).toContain('<label for="req-purpose">Who you are (the student’s name and ceremony date, or whose parent you are)</label>');
     expect(form).toContain(">Send request</button>");
-    expect(view({ status: "ready", state: "requestable", suggestedName: "", productName: "CRC Torah" }, null, 4)).toContain(">Ask for an account</h4>");
+    expect(view({ status: "ready", state: "requestable", suggestedName: "", productName: "CRC Torah" }, null, 4)).toContain(">Ask to be linked</h4>");
     expect(view({ status: "ready", state: "requestable", suggestedName: "", productName: "CRC Torah" }, "rate-limited")).toContain("You’ve asked several times today. Try again tomorrow.");
   });
-  it("says plainly when the request is in, or when the account can already save readings", () => {
+  it("says plainly when the request is in, and shows nothing for an approved Member role", () => {
     const pending = view({ status: "ready", state: "pending", suggestedName: "", productName: "CRC Torah" });
     expect(pending).toContain("Your request is in");
-    expect(pending).toContain("You’ll get one email when it’s approved.");
+    expect(pending).toContain("You’ll get one email when it’s been linked.");
     expect(pending).not.toContain("<form");
-    const member = view({ status: "ready", state: "member", suggestedName: "", productName: "CRC Torah" });
-    expect(member).toContain("Your account can save readings");
-    expect(member).toContain('href="/read">This week’s reading</a>');
+    // Readings for everyone: the shelf is everyone's, so the Member role leaves nothing to ask for here.
+    expect(view({ status: "ready", state: "member", suggestedName: "", productName: "CRC Torah" })).toBe("");
     expect(view({ status: "failed" })).toContain(">Try again</button>");
     for (const state of ["requestable", "pending", "member"] as const) expect(view({ status: "ready", state, suggestedName: "", productName: "CRC Torah" })).not.toMatch(/!/);
-    // Each congregation's own product name (Daniel, E1).
-    expect(view({ status: "ready", state: "requestable", suggestedName: "", productName: "Synthetic Torah" })).toContain('Everything else on <bdi dir="auto">Synthetic Torah</bdi> is open without one.');
   });
   it("the staff accounts page names the same things an account keeps", () => {
     const source = readFileSync("src/components/portal/workspace/accounts/workspace.tsx", "utf8");
@@ -59,19 +56,30 @@ describe("asking for an account, on screen", () => {
 
 describe("the approvers' client", () => {
   it("accepts exactly the queue, members and approvers shapes", () => {
-    expect(parseRequests({ ok: true, requests: [{ id: ID, name: "Ruth", purpose: null, email: "ruth@example.test", requestedAt: stamp }], productName: "CRC Torah" }).requests).toHaveLength(1);
+    expect(parseRequests({ ok: true, requests: [{ id: ID, name: "Ruth", purpose: null, email: "ruth@example.test", requestedAt: stamp, student: null }], productName: "CRC Torah" }).requests).toHaveLength(1);
+    // Plan D6: a request may name the student record it asks for; the approver's student list is the portal's own.
+    expect(parseRequests({ ok: true, requests: [{ id: ID, name: "Ruth", purpose: null, email: null, requestedAt: stamp, student: { id: ID, firstName: "Synthetic", lastName: "Student" } }], productName: "CRC Torah" }).requests[0].student).toEqual({ id: ID, firstName: "Synthetic", lastName: "Student" });
+    expect(parseStudentOptions({ students: [{ id: ID, firstName: "Synthetic", lastName: "Student", ceremonyDate: "2027-01-02", revision: 1, rehearsal1: null, rehearsal2: null, serviceSlot: "morning", ownAdultHonors: false }] })).toEqual([{ id: ID, firstName: "Synthetic", lastName: "Student", ceremonyDate: "2027-01-02" }]);
+    expect(() => parseStudentOptions({ students: [{ id: "nope", firstName: "X", lastName: "Y", ceremonyDate: "2027-01-02" }] })).toThrow(PortalRequestError);
+    expect(parseDecision(200, { ok: true, memberId: ID, linked: true })).toEqual({ ok: true });
+    expect(parseDecision(409, { ok: false, code: "identity-taken" })).toEqual({ ok: false, code: "identity-taken" });
+    expect(parseDecision(409, { ok: false, code: "already-linked" })).toEqual({ ok: false, code: "already-linked" });
+    for (const line of [IDENTITY_TAKEN_LINE, ALREADY_LINKED_LINE]) { expect(line).toMatch(/The request is kept\.$/); expect(line).not.toMatch(/!/); }
     expect(parseMembers({ ok: true, members: [{ id: ID, name: "Ruth", since: stamp }] })).toEqual([{ id: ID, name: "Ruth", since: stamp }]);
     expect(parseApprovers({ ok: true, admins: ["Rabbi"], designated: [{ id: ID, name: "Tutor" }], candidates: [{ tutorGrantId: ID, name: "Other" }] }).designated).toHaveLength(1);
     expect(parseSummary({ ok: true, requests: 3 })).toBe(3);
-    expect(parseDecision(200, { ok: true, memberId: ID })).toEqual({ ok: true });
+    expect(parseDecision(200, { ok: true, memberId: ID, linked: false })).toEqual({ ok: true });
+    expect(() => parseDecision(200, { ok: true, memberId: ID })).toThrow(PortalRequestError);
     expect(parseDecision(409, { ok: false, code: "disabled" })).toEqual({ ok: false, code: "disabled" });
     expect(parseDecision(409, { ok: false, code: "admin-only" })).toEqual({ ok: false, code: "admin-only" });
     expect(() => parseDecision(409, { ok: false, code: "other" })).toThrow(PortalRequestError);
     expect(parseDecision(409, { ok: false, code: "own-request" })).toEqual({ ok: false, code: "own-request" });
     // The tutor's refusal keeps the request and names who can act, in the house tone.
     expect(ADMIN_REAPPROVAL_LINE).toMatch(/only an admin can approve them again. The request is kept.$/); expect(ADMIN_REAPPROVAL_LINE).not.toMatch(/!/);
-    for (const bad of [() => parseRequests({ ok: true, requests: [{ id: ID, name: "A\u202eB", purpose: null, email: null, requestedAt: stamp }], productName: "CRC Torah" }),
-      () => parseRequests({ ok: true, requests: [{ id: ID, name: "Ruth", purpose: null, email: null, requestedAt: stamp, extra: 1 }], productName: "CRC Torah" }),
+    for (const bad of [() => parseRequests({ ok: true, requests: [{ id: ID, name: "A\u202eB", purpose: null, email: null, requestedAt: stamp, student: null }], productName: "CRC Torah" }),
+      () => parseRequests({ ok: true, requests: [{ id: ID, name: "Ruth", purpose: null, email: null, requestedAt: stamp, student: null, extra: 1 }], productName: "CRC Torah" }),
+      () => parseRequests({ ok: true, requests: [{ id: ID, name: "Ruth", purpose: null, email: null, requestedAt: stamp }], productName: "CRC Torah" }),
+      () => parseRequests({ ok: true, requests: [{ id: ID, name: "Ruth", purpose: null, email: null, requestedAt: stamp, student: { id: ID, firstName: "A\u202eB", lastName: "S" } }], productName: "CRC Torah" }),
       () => parseRequests({ ok: true, requests: [] }), () => parseRequests({ ok: true, requests: [], productName: "" }), () => parseRequests({ ok: true, requests: [], productName: "   " }), () => parseRequests({ ok: true, requests: [], productName: "A\u202eB" }),
       () => parseMembers({ ok: true, members: [{ id: ID, name: "Ruth", since: stamp, email: "x@example.test" }] }),
       () => parseApprovers({ ok: true, admins: [], designated: [], candidates: [{ tutorGrantId: "nope", name: "X" }] }),

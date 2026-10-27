@@ -2,16 +2,16 @@
 import { useEffect, useId, useRef, useState } from "react";
 
 /**
- * Asking for an account (release 1.4, plan section 5). An account keeps a person's saved readings, place in Learn to
- * lein, preferred commentaries and settings (release 1.7 M3b); everything else is open without one. A request waits
- * for an approver and ends in one email.
+ * Asking to be linked (readings for everyone, plan D6; was "Ask for an account", release 1.4 plan section 5). Everyone who signs in
+ * already has a shelf; this asks the rabbi to connect the account to a student record. A request waits for an approver and ends
+ * in one email. The "member" state (an approved Member role) shows nothing: there is nothing left to ask for here.
  */
 export type RequestState = "requestable" | "pending" | "member";
 export type RequestView = Readonly<{ status: "loading" } | { status: "failed" } | { status: "ready"; state: RequestState; suggestedName: string; productName: string }>;
 type Problem = null | "invalid" | "rate-limited" | "busy" | "unavailable";
 const CONTROLS = /[\x00-\x1f\x7f-\x9f\u00ad\u061c\u115f\u1160\u200b-\u200d\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\u3164\ufeff\uffa0\u{e0000}-\u{e007f}]/u;
 const problems: Record<Exclude<Problem, null>, string> = {
-  invalid: "Use a name of 1 to 80 characters, and up to 500 for what you’d like to work on.",
+  invalid: "Use a name of 1 to 80 characters, and up to 500 for who you are.",
   "rate-limited": "You’ve asked several times today. Try again tomorrow.",
   busy: "Many requests are waiting right now. Try again later.",
   unavailable: "The request didn’t send. Try again.",
@@ -53,16 +53,16 @@ export function AccountRequestView({ view, level, name, purpose, problem, sendin
   const Heading = level === 3 ? "h3" : "h4";
   if (view.status === "loading") return <div className="account-request" aria-busy="true"><p role="status">Checking your account…</p></div>;
   if (view.status === "failed") return <div className="account-request"><p role="status">Account requests aren’t available right now.</p><button type="button" className="button-secondary" onClick={onRetry}>Try again</button></div>;
-  if (view.state === "member") return <div className="account-request" data-request-state="member"><Heading>Your account can save readings</Heading>
-    <p>Save a reading from This week, and it waits for you under My readings.</p><a className="button-secondary" href="/read">This week’s reading</a></div>;
+  // Readings for everyone (plan D6): an approved Member role leaves nothing to ask for here; the shelf is everyone's already.
+  if (view.state === "member") return null;
   if (view.state === "pending") return <div className="account-request" data-request-state="pending"><Heading>Your request is in</Heading>
-    <p role="status">You’ll get one email when it’s approved.</p></div>;
-  return <div className="account-request" data-request-state="requestable"><Heading id={`${formId}-title`}>Ask for an account</Heading>
-    <p>An account keeps your saved readings, your place in Learn to lein, your preferred commentaries and your settings. Everything else on <bdi dir="auto">{view.productName}</bdi> is open without one.</p>
+    <p role="status">You’ll get one email when it’s been linked.</p></div>;
+  return <div className="account-request" data-request-state="requestable"><Heading id={`${formId}-title`}>Ask to be linked</Heading>
+    <p>Preparing a Beit Mitzvah at CRC? Ask the rabbi to connect this account to your student record.</p>
     <form aria-labelledby={`${formId}-title`} onSubmit={event => { event.preventDefault(); onSubmit(); }}>
       <label htmlFor={`${formId}-name`}>Your name</label>
       <input id={`${formId}-name`} name="name" value={name} maxLength={80} required autoComplete="name" disabled={sending} onChange={event => onName(event.target.value)} />
-      <label htmlFor={`${formId}-purpose`}>What would you like to work on? <span className="field-help">(optional)</span></label>
+      <label htmlFor={`${formId}-purpose`}>Who you are (the student’s name and ceremony date, or whose parent you are)</label>
       <textarea id={`${formId}-purpose`} name="purpose" value={purpose} maxLength={500} rows={3} disabled={sending} onChange={event => onPurpose(event.target.value)} />
       {problem && <p className="request-error" role="alert">{problems[problem]}</p>}
       <button type="submit" className="button-primary" disabled={sending}>{sending ? "Sending request…" : "Send request"}</button>

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { createHmac } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
 import { portalRoutesFixture } from "./portal-routes-fixture";
@@ -73,7 +73,7 @@ describe("asking for an account", () => {
     expect(t.mail).toHaveLength(2);
     const [row] = await t.f.owner(() => t.f.db.select().from(s.accountRequest));
     expect(row).toMatchObject({ displayName: "Ruth bat Naomi", purpose: "Learning to lein", notifyStatus: "sent" });
-    expect((await requests(t)).json.requests).toEqual([{ id: row.id, name: "Ruth bat Naomi", purpose: "Learning to lein", email: "acct-asker@example.test", requestedAt: expect.any(String) }]);
+    expect((await requests(t)).json.requests).toEqual([{ id: row.id, name: "Ruth bat Naomi", purpose: "Learning to lein", email: "acct-asker@example.test", requestedAt: expect.any(String), student: null }]);
     // Anyone without an approved Member role may ask, staff and students included (a request asks to be linked, plan D6); only the approver's
     // tenant_member row says "member" now that every membership keeps a shelf (plan D1).
     for (const who of ["learner", "multi", "admin"]) expect((await t.call("/api/account/request", who)).json.state, who).toBe("requestable");
@@ -134,7 +134,7 @@ describe("approving and declining", () => {
     t.mail.length = 0;
     expect((await t.call("/api/saved/readings", "new")).status).toBe(403);
     const approved = await t.call("/api/accounts/requests/approve", "admin", { mode: "admin", requestId: pending.id });
-    expect(approved.status).toBe(200); expect(approved.json).toEqual({ ok: true, memberId: expect.any(String) });
+    expect(approved.status).toBe(200); expect(approved.json).toEqual({ ok: true, memberId: expect.any(String), linked: false });
     expect(t.mail).toEqual([{ kind: "account-approved", to: "acct-new@example.test", tenant: { name: expect.any(String), productName: expect.any(String) }, key: approved.json.memberId }]);
     expect(await t.grants()).toEqual(grantsBefore);
     const [member] = await t.f.owner(() => t.f.db.select().from(s.tenantMember));
@@ -343,6 +343,76 @@ describe("members and approvers", () => {
     expect([403, 404]).toContain((await there("/api/accounts/approvers/add", { tutorGrantId: t.f.tutorGrant.id })).status);
     expect(await t.f.owner(async () => (await t.f.db.select().from(s.accountApprover)).length)).toBe(0);
     expect((await requests(t)).json.requests).toHaveLength(1);
+  });
+
+  it("stores the student a link request names, lists it, and an approval with a target links the account: a student grant, the identity, two audits and the linked email (plan D6)", async () => {
+    const t = await setup();
+    await t.person("link");
+    // A named student must be this congregation's and enabled; a malformed id is refused at the boundary.
+    expect((await t.call("/api/account/request", "link", { name: "Linking", studentId: t.f.students[3].id })).status).toBe(404);
+    expect((await t.call("/api/account/request", "link", { name: "Linking", studentId: "nope" })).status).toBe(400);
+    expect((await t.call("/api/account/request", "link", { name: "Linking", purpose: "Sibling B, 2 January 2027", studentId: t.f.students[1].id })).json).toEqual({ ok: true, state: "pending" });
+    const [row] = (await requests(t)).json.requests;
+    expect(row).toMatchObject({ name: "Linking", purpose: "Sibling B, 2 January 2027", student: { id: t.f.students[1].id, firstName: "Synthetic", lastName: "Sibling B" } });
+    const grantsBefore = await t.grants(); t.mail.length = 0;
+    const approved = await t.call("/api/accounts/requests/approve", "admin", { mode: "admin", requestId: row.id, studentId: t.f.students[1].id });
+    expect(approved.json).toEqual({ ok: true, memberId: expect.any(String), linked: true });
+    expect(t.mail.map(item => [item.kind, item.to])).toEqual([["account-linked", "acct-link@example.test"]]);
+    expect((await t.grants()).length).toBe(grantsBefore.length + 1);
+    // The person is now that student: the summary says so, the student's own reading opens, and the audit names the approver's grant.
+    expect((await t.call("/api/session", "link")).json).toMatchObject({ membershipAvailable: true, roles: ["student"], saved: true });
+    expect((await t.call(`/api/students/${t.f.students[1].id}?mode=student`, "link")).status).toBe(200);
+    expect((await t.audits("grant.issue")).map(audit => [audit.mode, audit.roleGrantId, audit.actorMembershipId])).toEqual([["admin", t.f.adminGrant.id, t.f.adminMember.id]]);
+    expect((await t.audits("identity.link")).map(audit => [audit.mode, audit.roleGrantId])).toEqual([["admin", t.f.adminGrant.id]]);
+    expect(await t.audits("account-request.approve")).toHaveLength(1);
+    expect(await t.f.owner(async () => (await t.f.db.select().from(s.accountRequest)).length)).toBe(0);
+    expect((await t.call("/api/account/request", "link")).json.state).toBe("member");
+    // A request made before 0054 (no student) still lists and approves, with or without a target.
+    await t.person("older");
+    await t.f.owner(() => t.f.db.insert(s.accountRequest).values({ tenantId: "crc", userId: t.people.older.id, displayName: "Older" }));
+    const older = (await requests(t)).json.requests.find((item: { name: string }) => item.name === "Older");
+    expect(older).toMatchObject({ student: null });
+    expect((await t.call("/api/accounts/requests/approve", "admin", { mode: "admin", requestId: older.id })).json).toEqual({ ok: true, memberId: expect.any(String), linked: false });
+    expect((await t.call("/api/session", "older")).json.roles).toEqual([]);
+  });
+
+  it("refuses a target whose identity is taken or an account already linked and keeps the request; a tutor approver links only a student the rabbi assigned them", async () => {
+    const t = await setup();
+    await t.person("taken"); await t.person("twice");
+    await t.call("/api/account/request", "taken", { name: "Taken" });
+    const [row] = (await requests(t)).json.requests;
+    // students[0] already carries the fixture learner's identity.
+    expect(await t.call("/api/accounts/requests/approve", "admin", { mode: "admin", requestId: row.id, studentId: t.f.students[0].id })).toEqual({ status: 409, json: { ok: false, code: "identity-taken" } });
+    expect((await requests(t)).json.requests).toHaveLength(1);
+    expect(await t.f.owner(async () => (await t.f.db.select().from(s.tenantMember)).length)).toBe(0);
+    expect(await t.audits("identity.link")).toHaveLength(0);
+    expect(t.mail.filter(item => item.kind !== "account-request")).toEqual([]);
+    // Another congregation's student, an unknown one and a disabled one: 404, request kept.
+    for (const studentId of [t.f.students[3].id, randomUUID()]) expect((await t.call("/api/accounts/requests/approve", "admin", { mode: "admin", requestId: row.id, studentId })).status, studentId).toBe(404);
+    expect((await t.call("/api/accounts/requests/approve", "admin", { mode: "admin", requestId: row.id, studentId: "nope" })).status).toBe(400);
+    await t.f.owner(() => t.f.db.update(s.student).set({ disabledAt: new Date() }).where(eq(s.student.id, t.f.students[2].id)));
+    expect((await t.call("/api/accounts/requests/approve", "admin", { mode: "admin", requestId: row.id, studentId: t.f.students[2].id })).status).toBe(404);
+    await t.f.owner(() => t.f.db.update(s.student).set({ disabledAt: null }).where(eq(s.student.id, t.f.students[2].id)));
+    expect((await requests(t)).json.requests).toHaveLength(1);
+    // The designated tutor links only a student the rabbi assigned them: students[2] is nobody's yet.
+    await t.designate();
+    expect((await t.call("/api/accounts/requests/approve", "multi", { mode: "tutor", requestId: row.id, studentId: t.f.students[2].id })).status).toBe(404);
+    expect((await t.call(`/api/admin/students/${t.f.students[2].id}/relationships/tutors`, "admin", { tutorGrantId: t.f.tutorGrant.id, expectedState: "unassigned" })).status).toBe(201);
+    expect((await t.call("/api/accounts/requests/approve", "multi", { mode: "tutor", requestId: row.id, studentId: t.f.students[2].id })).json).toMatchObject({ ok: true, linked: true });
+    expect((await t.audits("identity.link")).map(audit => [audit.mode, audit.roleGrantId])).toEqual([["tutor", t.f.tutorGrant.id]]);
+    expect((await t.audits("grant.issue")).map(audit => audit.mode)).toEqual(["tutor"]);
+    expect((await t.call(`/api/students/${t.f.students[2].id}?mode=student`, "taken")).status).toBe(200);
+    // An account already linked to a student is refused another: 409, request kept; approving it without a target is today's approval.
+    const twiceMember = (await t.f.owner(() => t.f.db.insert(s.membership).values({ tenantId: "crc", userId: t.people.twice.id }).returning()))[0];
+    const [grant] = await t.f.owner(() => t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: twiceMember.id, role: "student" }).returning());
+    await t.f.owner(() => t.f.db.insert(s.studentIdentity).values({ tenantId: "crc", studentId: t.f.students[1].id, roleGrantId: grant.id }));
+    await t.call("/api/account/request", "twice", { name: "Twice" });
+    const again = (await requests(t)).json.requests.find((item: { name: string }) => item.name === "Twice");
+    const created = await t.call("/api/admin/students", "admin", { student: { firstName: "Synthetic", lastName: "Free", ceremonyDate: "2027-01-02", parentEmail: "free@example.test" } });
+    expect(await t.call("/api/accounts/requests/approve", "admin", { mode: "admin", requestId: again.id, studentId: created.json.id })).toEqual({ status: 409, json: { ok: false, code: "already-linked" } });
+    expect((await requests(t)).json.requests.map((item: { id: string }) => item.id)).toContain(again.id);
+    expect((await t.call("/api/accounts/requests/approve", "admin", { mode: "admin", requestId: again.id })).json).toEqual({ ok: true, memberId: expect.any(String), linked: false });
+    expect(await t.grants()).toHaveLength((await t.grants()).length);
   });
 
   it("serves every accounts route private and no-store, errors included, and refuses unknown methods and query keys", async () => {

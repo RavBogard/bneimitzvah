@@ -2,14 +2,16 @@ import { PortalRequestError } from "../../api";
 
 /** Release 1.4 approvers' client: the request queue, members and approvers. Strict parsing; anything odd is a plain failure. */
 export type ApproverMode = "admin" | "tutor";
-export type AccountRequest = Readonly<{ id: string; name: string; purpose: string | null; email: string | null; requestedAt: string }>;
+/** Readings for everyone (plan D6): a request is a link request, and may name the student record it asks for. */
+export type AccountRequest = Readonly<{ id: string; name: string; purpose: string | null; email: string | null; requestedAt: string; student: Readonly<{ id: string; firstName: string; lastName: string }> | null }>;
+export type StudentOption = Readonly<{ id: string; firstName: string; lastName: string; ceremonyDate: string }>;
 export type Member = Readonly<{ id: string; name: string; since: string }>;
 export type ApproversView = Readonly<{ admins: readonly string[]; designated: readonly Readonly<{ id: string; name: string }>[]; candidates: readonly Readonly<{ tutorGrantId: string; name: string }>[] }>;
 /**
  * "admin-only": an admin ended this person's membership, so only an admin approves them again. "own-request": the
  * approver asked for this account themselves, so another approver decides it.
  */
-export type DecisionResult = Readonly<{ ok: true } | { ok: false; code: "disabled" | "admin-only" | "own-request" }>;
+export type DecisionResult = Readonly<{ ok: true } | { ok: false; code: "disabled" | "admin-only" | "own-request" | "identity-taken" | "already-linked" }>;
 export type DesignationResult = Readonly<{ ok: true } | { ok: false; code: "admin" | "designated" }>;
 
 const bad = (): never => { throw new PortalRequestError(503); };
@@ -48,8 +50,21 @@ export function parseRequests(value: unknown): RequestQueue {
   const row = object(value, ["ok", "requests", "productName"]);
   if (row.ok !== true || !Array.isArray(row.requests) || row.requests.length > 50) return bad();
   const productName = text(row.productName, 120); if (productName.trim() !== productName) return bad();
-  return { productName, requests: row.requests.map(raw => { const item = object(raw, ["id", "name", "purpose", "email", "requestedAt"]);
-    return { id: id(item.id), name: text(item.name, 80), purpose: item.purpose === null ? null : text(item.purpose, 500), email: email(item.email), requestedAt: instant(item.requestedAt) }; }) };
+  return { productName, requests: row.requests.map(raw => { const item = object(raw, ["id", "name", "purpose", "email", "requestedAt", "student"]);
+    const student = item.student === null ? null : (() => { const target = object(item.student, ["id", "firstName", "lastName"]); return { id: id(target.id), firstName: text(target.firstName, 100), lastName: text(target.lastName, 100) }; })();
+    return { id: id(item.id), name: text(item.name, 80), purpose: item.purpose === null ? null : text(item.purpose, 500), email: email(item.email), requestedAt: instant(item.requestedAt), student }; }) };
+}
+/** The students an approver may link to: every student for an admin, the approver's own for a tutor (the portal's own list). */
+export function parseStudentOptions(value: unknown): readonly StudentOption[] {
+  if (!value || typeof value !== "object" || !Array.isArray((value as { students?: unknown }).students)) return bad();
+  const rows = (value as { students: unknown[] }).students;
+  if (rows.length > 100) return bad();
+  return rows.map(raw => {
+    if (!raw || typeof raw !== "object") return bad();
+    const item = raw as Record<string, unknown>;
+    const ceremonyDate = typeof item.ceremonyDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(item.ceremonyDate) ? item.ceremonyDate : bad();
+    return { id: id(item.id), firstName: text(item.firstName, 100), lastName: text(item.lastName, 100), ceremonyDate };
+  });
 }
 export function parseMembers(value: unknown): readonly Member[] {
   const row = object(value, ["ok", "members"]);
@@ -69,15 +84,17 @@ export function parseSummary(value: unknown): number {
 }
 const done = (value: unknown, keys: readonly string[] = ["ok"]) => object(value, keys).ok === true ? { ok: true as const } : bad();
 /** An approval's answer: done, or one of the refusals that keep the request. */
-export const parseDecision = (status: number, value: unknown): DecisionResult => status === 409 ? refusal(value, ["disabled", "admin-only", "own-request"] as const) : done(value, ["ok", "memberId"]);
+export const parseDecision = (status: number, value: unknown): DecisionResult => status === 409 ? refusal(value, ["disabled", "admin-only", "own-request", "identity-taken", "already-linked"] as const) : done(value, ["ok", "memberId", "linked"]);
 
 export const accountsApi = {
   async summary(mode: ApproverMode, signal?: AbortSignal) { return parseSummary((await request(`/api/accounts/summary?mode=${mode}`, undefined, signal)).value); },
   async requests(mode: ApproverMode, signal?: AbortSignal) { return parseRequests((await request(`/api/accounts/requests?mode=${mode}`, undefined, signal)).value); },
-  async approve(mode: ApproverMode, requestId: string): Promise<DecisionResult> {
-    const { status, value } = await request("/api/accounts/requests/approve", { mode, requestId });
+  /** Approve, linking the account to `studentId` when one is given (plan D6), else today's approval. */
+  async approve(mode: ApproverMode, requestId: string, studentId?: string): Promise<DecisionResult> {
+    const { status, value } = await request("/api/accounts/requests/approve", studentId ? { mode, requestId, studentId } : { mode, requestId });
     return parseDecision(status, value);
   },
+  async students(mode: ApproverMode, signal?: AbortSignal) { return parseStudentOptions((await request(`/api/students?mode=${mode}&limit=100`, undefined, signal)).value); },
   async decline(mode: ApproverMode, requestId: string): Promise<DecisionResult> { return done((await request("/api/accounts/requests/decline", { mode, requestId })).value); },
   async members(signal?: AbortSignal) { return parseMembers((await request("/api/accounts/members", undefined, signal)).value); },
   async endMember(memberId: string) { return done((await request("/api/accounts/members/end", { memberId })).value); },
