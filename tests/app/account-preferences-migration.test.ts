@@ -69,8 +69,8 @@ test("0041 adds only the account_preference table, leaves existing rows and the 
     const owner = "((tenant_id = NULLIF(current_setting('app.tenant_id'::text, true), ''::text)) AND (membership_id = (NULLIF(current_setting('app.saved_owner'::text, true), ''::text))::uuid))";
     const policies = await client.query("select tablename, policyname, cmd, permissive, roles::text[] as roles, qual, with_check from pg_policies where tablename = $1", [TABLE]);
     expect(policies.rows).toEqual([{ tablename: TABLE, policyname: "owner_only", cmd: "ALL", permissive: "PERMISSIVE", roles: ["portal_runtime"], qual: owner, with_check: owner }]);
-    // The same policy text as the saved readings' own (0036).
-    const saved = await client.query("select qual, with_check from pg_policies where tablename = 'saved_reading'");
+    // The same policy text as the saved readings' own owner_only (0036); 0054's read-only staff_read and directory_read sit beside it and are pinned by their own test.
+    const saved = await client.query("select qual, with_check from pg_policies where tablename = 'saved_reading' and policyname = 'owner_only'");
     expect(saved.rows).toEqual([{ qual: owner, with_check: owner }]);
     const tableGrants = await client.query("select privilege_type from information_schema.table_privileges where grantee='portal_runtime' and table_name = $1 order by privilege_type", [TABLE]);
     expect(tableGrants.rows).toEqual([{ privilege_type: "INSERT" }, { privilege_type: "SELECT" }]);

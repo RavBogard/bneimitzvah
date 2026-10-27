@@ -142,7 +142,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     checkingRef.current = true; practice.pause(); work.current.forEach(value => value.pause()); setChecking(true); setFailure(null);
     void (async () => {
       // A sign-in with no membership yet gets one here (plan D1): the workspace never shows a person without a shelf.
-      const next = await fetchSession(request.signal);
+      const next = await fetchSession(requestPortal, request.signal);
       if (request.signal.aborted || turn !== sequence.current) return;
       const sameBinding = binding.current === next.sessionBinding;
       if (binding.current && !sameBinding) {

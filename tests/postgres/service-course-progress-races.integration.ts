@@ -59,6 +59,9 @@ test("revoking the grant a progress request holds waits for it, and without any 
   expect(await a).toMatchObject({ ok: true, version: 1 });
   await revoke;
   await query(f.owner, "UPDATE role_grant SET revoked_at = now() WHERE membership_id = $1 AND revoked_at IS NULL", [f.member.id]);
+  // Readings for everyone (plan D1): a live membership is the whole rule, so the progress stays without a grant; a membership turned off is refused.
+  expect(await safe(f.courseB.get(f.request("tutor")))).toMatchObject({ ok: true, version: 1 });
+  await query(f.owner, "UPDATE membership SET disabled_at = now() WHERE id = $1", [f.member.id]);
   expect(await safe(f.courseB.get(f.request("tutor")))).toEqual({ denied: 403 });
   expect((await query(f.owner, "SELECT count(*)::int AS n FROM service_course_progress WHERE membership_id=$1", [f.member.id])).rows[0].n).toBe(1);
 });

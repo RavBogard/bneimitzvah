@@ -20,7 +20,7 @@ async function setup() {
   const f = await portalRoutesFixture(); opened.push(f);
   const dispatch = createHttpDispatcher(async action => action(f.runtime));
   const members = await f.owner(async () => Object.fromEntries((await f.db.select().from(s.membership).where(eq(s.membership.tenantId, "crc"))).map(row => [row.userId, row.id])));
-  const ownerOf = (who: "admin" | "multi") => preferencesOwnerName({ tenantId: "crc", membershipId: members[f.identities[who].id] });
+  const ownerOf = (who: "admin" | "multi" | "learner") => preferencesOwnerName({ tenantId: "crc", membershipId: members[f.identities[who].id] });
   function request(path: string, who: Who, body?: unknown, headers: Record<string, string> = {}, origin = ORIGIN) {
     const h = new Headers(headers), cookie = who === "anonymous" ? "" : f.identities[who].cookie;
     if (cookie && !h.has("cookie")) h.set("cookie", cookie);
@@ -35,14 +35,15 @@ async function setup() {
   };
   const get = (who: Who) => call("/api/saved/preferences", who);
   const put = (who: Who, preferences: unknown, expectedRevision: number, owner?: string) =>
-    call("/api/saved/preferences/put", who, { preferences, expectedRevision, owner: owner ?? (who === "admin" || who === "multi" ? ownerOf(who) : "0".repeat(32)) });
+    call("/api/saved/preferences/put", who, { preferences, expectedRevision, owner: owner ?? (who === "admin" || who === "multi" || who === "learner" ? ownerOf(who) : "0".repeat(32)) });
   return { f, dispatch, call, get, put, ownerOf, members };
 }
 
 describe("account preferences: who may use them", () => {
-  it("is 401 signed out, 403 for an account that does not keep saved readings (a student, a role-less account), and open to tutors, parents and admins", async () => {
+  it("is 401 signed out, 403 without a membership or with one turned off, and open to every live membership: students, tutors, parents and admins", async () => {
     const t = await setup();
-    for (const [who, status] of [["anonymous", 401], ["recipient", 403], ["learner", 403], ["multi", 200], ["admin", 200]] as [Who, number][]) {
+    // Readings for everyone (plan D1): preferences ride the saved owner binding, which every live membership keeps.
+    for (const [who, status] of [["anonymous", 401], ["recipient", 403], ["learner", 200], ["multi", 200], ["admin", 200]] as [Who, number][]) {
       expect((await t.get(who)).status, who).toBe(status);
       expect((await t.put(who, { version: 1, colors: false }, 0)).status, who).toBe(status);
     }
@@ -61,7 +62,9 @@ describe("account preferences: who may use them", () => {
     expect(crossed).toEqual({ status: 409, json: { ok: false, code: "conflict", current: { ok: true, owner: t.ownerOf("admin"), preferences: null, revision: 0 } } });
     expect((await t.get("multi")).json.preferences).toEqual({ version: 1, works: [], colors: false, size: "large" });
     // The same person's membership in another congregation (a student there) does not reach it.
-    expect((await t.call("/api/saved/preferences", "multi", undefined, {}, "http://localhost:3101")).status).toBe(403);
+    // In the other congregation multi is a student only: since readings for everyone a shelf of its own there, with no document yet, and never this one.
+    const there = await t.call("/api/saved/preferences", "multi", undefined, {}, "http://localhost:3101");
+    expect(there.status).toBe(200); expect(there.json).toMatchObject({ ok: true, preferences: null, revision: 0 }); expect(there.json.owner).not.toBe(t.ownerOf("multi"));
     // One row, the owner's, and no audit row.
     const rows = await t.f.owner(async () => t.f.db.select().from(s.accountPreference));
     expect(rows.map(row => [row.membershipId, row.revision])).toEqual([[t.members[t.f.identities.multi.id], 1]]);

@@ -85,7 +85,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
     setView({ kind: "loading" }); setMessage(""); setLinkRequested(codeRequested()); setCode("");
     // A sign-in with no membership yet gets one here (plan D1), so the door it lands on already has a shelf.
     void (invitation ? requestPortal("/api/invitations/pending", undefined, request.signal).then(value => ({ kind: "invitation", review: parseInvitation(value) } as View))
-      : fetchSession(request.signal).then(summary => ({ kind: "signed-in", summary } as View)))
+      : fetchSession(requestPortal, request.signal).then(summary => ({ kind: "signed-in", summary } as View)))
       .then(next => {
         if (next.kind === "signed-in") { rememberCodeRequest(false); rememberSignedIn(true); }
         // Signed in already, on the sign-in form: back to the page the person left (G16), or My Readings when none is named. The

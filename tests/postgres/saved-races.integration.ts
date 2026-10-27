@@ -40,26 +40,24 @@ test("two backends creating the member's 100th reading at once: the write lock m
   expect((await query(f.owner, "SELECT count(*)::int AS n FROM saved_reading WHERE membership_id=$1", [f.member.id])).rows[0].n).toBe(100);
 });
 
-test("revoking the grant a saved request holds waits for that request, and the member's access follows the remaining grants", async () => {
+test("turning off the membership a saved request holds waits for that request; grants no longer gate the shelf, a membership turned off ends it with the rows kept", async () => {
   const f = await fixture();
-  const grants = await f.ownerDb.select().from(s.roleGrant).where(eq(s.roleGrant.membershipId, f.member.id));
-  const parent = grants.find(grant => grant.role === "parent")!, tutor = grants.find(grant => grant.role === "tutor")!;
+  // Readings for everyone (plan D1): the shelf is the live membership's, so both grants can go first and the request still runs.
+  await query(f.owner, "UPDATE role_grant SET revoked_at = now() WHERE membership_id = $1 AND revoked_at IS NULL", [f.member.id]);
   const entered = deferred(), release = deferred();
   const stop = await f.intercept("a", text => text.includes("pg_advisory_xact_lock"), async proceed => { const result = await proceed(); entered.resolve(); await release.promise; return result; });
   const a = safe(f.savedA.create(f.mutation(), body("Before revoke")));
   let revoke: Promise<unknown> | undefined;
   try {
     await waitForEntry(entered.promise, a);
-    // The eligibility check share-locked the first eligible grant (parent sorts before tutor); its revocation must wait.
-    // Revoked on the second runtime backend, as the relationships service would, so the owner connection stays free to observe the lock edge.
-    revoke = withTenantTransaction(f.bDb, { tenantId: "crc" }, tx => tx.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, parent.id)));
+    // The eligibility check share-locked the membership row; turning the membership off must wait for the request.
+    // Done on the second runtime backend, as an admin's write would be, so the owner connection stays free to observe the lock edge.
+    revoke = withTenantTransaction(f.bDb, { tenantId: "crc" }, tx => tx.update(s.membership).set({ disabledAt: new Date() }).where(eq(s.membership.id, f.member.id)));
     await f.waitForLock(f.pidB, f.pidA);
   } finally { release.resolve(); stop(); }
   expect(await a).toMatchObject({ ok: true });
   await revoke;
-  // Still a tutor: the saved layer remains. Without either grant it is gone, rows kept.
-  expect(await safe(f.savedB.list(f.request("tutor")))).toMatchObject({ ok: true, readings: [{ name: "Before revoke" }] });
-  await query(f.owner, "UPDATE role_grant SET revoked_at = now() WHERE id = $1", [tutor.id]);
+  // The membership is off: the saved layer is gone, rows kept.
   expect(await safe(f.savedB.list(f.request("tutor")))).toEqual({ denied: 403 });
   expect((await query(f.owner, "SELECT count(*)::int AS n FROM saved_reading WHERE membership_id=$1", [f.member.id])).rows[0].n).toBe(1);
 });
