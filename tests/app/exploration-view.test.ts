@@ -67,7 +67,7 @@ test("the proposed portion has the Lein | Study switch for staff and learners al
   const { StudyLensScope } = await import("../../src/components/portal/workspace/study-lens");
   const content = createElement(ExplorationContent, { ...actions, state: { pending: false, result: explorationPrepared(), page: explorationPage() } });
   const lein = renderToStaticMarkup(createElement(StudyLensScope, { storageKey: null, children: content }));
-  expect(lein).toMatch(/aria-pressed="true" data-lens="lein">Lein<\/button>/);
+  expect(lein).toMatch(/aria-pressed="true" data-lens="lein"><svg.*?<\/svg><span>Lein<\/span><\/button>/);
   expect(lein).not.toContain("data-study-rows");
   const study = renderToStaticMarkup(createElement(StudyLensScope, { storageKey: null, query: "study", children: content }));
   expect(study).toContain("data-study-rows");

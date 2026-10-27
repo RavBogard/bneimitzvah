@@ -3,7 +3,7 @@ import { expandReadingRanges } from "../src/lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../src/lib/readings/catalog";
 import { studyRangePlan } from "../src/components/portal/workspace/study/api";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
-import { moreSheet, openMore } from "./more-sheet";
+import { openMore } from "./more-sheet";
 
 // Release 1.8.2 P2 on the built, unconfigured production server: the signed-out reader's layout. Every reading and text answer is a
 // synthetic route fulfilment (invented syllables, numbered English) that arrives after a short delay, as a real network would,
@@ -128,8 +128,8 @@ test("at a 200% root font on a Pixel 7 the reading, its Find a reading field and
   // The screen is the configured device width: on a phone the browser widens its own layout viewport to fit overflowing content, so innerWidth would agree with the overflow.
   const screen = testInfo.project.use.viewport!.width, fits = () => page.evaluate(() => ({ scroll: document.documentElement.scrollWidth })).then(size => ({ ...size, view: screen }));
   let size = await fits(); expect(size.scroll, "the header and Lein").toBeLessThanOrEqual(size.view);
-  for (const name of ["Change", "Previous week", "Next week"]) {
-    const control = await page.getByRole("button", { name, exact: true }).boundingBox();
+  for (const name of ["Change", "Sign in to save"]) {
+    const control = await page.getByRole("button", { name, exact: true }).or(page.getByRole("link", { name, exact: true })).first().boundingBox();
     expect(control && control.x >= 0 && control.x + control.width <= size.view, `${name} is inside the screen`).toBe(true);
   }
   await page.getByRole("button", { name: "Study", exact: true }).click();
@@ -154,17 +154,14 @@ const active = (page: Page) => page.evaluate(() => {
 test("Start reading moves focus into the reading, in Lein and in Study", async ({ page }) => {
   await mock(page);
   await page.goto("/read");
-  // Start reading is first in the More sheet; it closes the sheet and then puts focus in the reading, so the sheet's own return of focus does not win.
-  await openMore(page);
+  // Start reading is where the text begins (spec 6); it puts focus in the reading.
   const start = page.getByRole("button", { name: "Start reading", exact: true });
   await expect(start).toBeEnabled();
   await start.click();
-  await expect(moreSheet(page)).toBeHidden();
   await expect.poll(() => active(page).then(state => state.reading)).toBe(true);
   expect(await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))).toBe("Hebrew reading");
   await page.getByRole("button", { name: "Study", exact: true }).click();
   await expect(page.locator("[data-study-rows]")).toBeVisible();
-  await openMore(page);
   await page.getByRole("button", { name: "Start reading", exact: true }).click();
   await expect.poll(() => active(page).then(state => state.reading)).toBe(true);
   expect(await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))).toBe("Hebrew reading, verse by verse");
@@ -196,7 +193,6 @@ test("choosing a reading from the Readings index lands focus on the new reading'
   await expect.poll(() => active(page).then(state => state.id)).toBe("public-reading-title");
   // A plain visit starts nowhere in particular: nothing grabs focus.
   await page.goto("/read");
-  await openMore(page);
   await expect(page.getByRole("button", { name: "Start reading", exact: true })).toBeEnabled();
   expect((await active(page)).id).not.toBe("public-reading-title");
 });
@@ -204,7 +200,6 @@ test("choosing a reading from the Readings index lands focus on the new reading'
 test("the haftarah blessings link says where on page 23 the blessing is", async ({ page }) => {
   await mock(page);
   await page.goto("/read");
-  await openMore(page);
   await expect(page.getByRole("link", { name: "Haftarah blessings: siddur page 23, after Mi Shebeirach" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Torah blessings: siddur page 22" })).toBeVisible();
 });

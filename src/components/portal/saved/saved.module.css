@@ -68,3 +68,17 @@
 .yoursStarred { display: grid; gap: 0.375rem; padding-top: 0.75rem; border-top: 1px solid var(--color-rule); color: var(--color-muted); }
 .yoursHeading { margin: 0; color: var(--color-ink); font-size: 0.875rem; font-weight: 700; }
 .yoursWork { margin: 0.25rem 0 0; color: var(--color-ink); font-size: 0.8125rem; font-weight: 650; }
+
+/* Add to My Readings (Readings for everyone C2): Save as a sheet. */
+.sheetBody { display: grid; gap: 1rem; min-width: 0; }
+.sheetForm { display: grid; gap: 1rem; }
+.sheetForm label { display: block; margin-bottom: 0.5rem; }
+.sheetForm input[type="text"], .sheetForm input:not([type]), .sheetForm input[type="date"] { border-radius: var(--radius-control); }
+.sheetForm > :global(.button-primary) { width: 100%; }
+.sheetForm :global(.field-help) { margin: 0; }
+.verses { display: grid; gap: 0; margin: 0; padding: 0; border: 0; min-width: 0; }
+.verses legend { padding: 0; margin-bottom: 0.25rem; font-weight: 700; }
+.radio { display: flex !important; align-items: center; gap: 0.75rem; min-height: 48px; margin: 0 !important; font-weight: 500; }
+.radio input { flex: none; width: 1.25rem; height: 1.25rem; margin: 0; }
+.savedNote { margin: 0.5rem 0 0; }
+.savedNote a { display: inline-flex; align-items: center; min-height: 44px; }
