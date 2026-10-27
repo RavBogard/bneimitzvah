@@ -73,7 +73,7 @@ function Review() {
     <a className={styles.backLink} href="/learn">Back to the path</a>);
   };
   if (!loaded) return frame(<p role="status" className={styles.state}>Loading the review…</p>);
-  if (!plan?.length) return verseStage ?? (versesDone ? finish([]) : frame(<><p className={styles.doneLine}>Nothing to review yet. Finish a lesson and its phrases come back here.</p><QuickTenLinks progress={progress} /></>,
+  if (!plan?.length) return verseStage ?? (versesDone ? finish([]) : frame(<><p className={styles.doneLine} data-testid="review-empty">Nothing to review yet. Finish a lesson and its phrases come back here.</p><QuickTenLinks progress={progress} /></>,
     <a className={styles.backLink} href="/learn">Back to the path</a>));
   if (data.status === "loading") return frame(<p role="status" className={styles.state}>Loading the review…</p>);
   if (data.status === "error" || !data.pools.families.size) return verseStage ?? frame(<LoadFailure rateLimited={data.status === "error" && data.rateLimited} onRetry={() => setRetry(n => n + 1)} />, <a className={styles.backLink} href="/learn">Back to the path</a>);

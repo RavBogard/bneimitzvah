@@ -141,12 +141,12 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
       aria-describedby={[button ? actionId : undefined, phraseId].filter(Boolean).join(" ") || undefined}>{part.text}</span>;
   }));
   // G18: the qere is what is chanted, so it is set full size (and is the tap target); the chip says so, and the ketiv, which the scroll writes, follows small.
-  const alternative = (written: string, read: ReactNode) => <><span className="study-read-alternative">{read}</span> <span className="study-read-chip" lang="en" dir="ltr" data-copy-skip="">read<span className="sr-only">. Chant this word (qere). The scroll writes it differently (ketiv).</span></span> <span className="study-ketiv">{maqafChains(written).map((run, at) => run.chain ? <span key={at} className={styles.chain}>{run.text}</span> : run.text)}</span></>;
+  const alternative = (written: string, read: ReactNode) => <><span className="study-read-alternative">{read}</span> <span className="study-read-chip" lang="en" dir="ltr" data-copy-skip="">read<span className="sr-only">. Chant this word (qere). The scroll writes it differently (ketiv).</span></span> <span className="study-ketiv" data-testid="study-ketiv">{maqafChains(written).map((run, at) => run.chain ? <span key={at} className={styles.chain}>{run.text}</span> : run.text)}</span></>;
   // A paragraph break after the verse is apparatus: the note below names it.
   const trailing = (index: number, count: number, kind: string) => kind === "gap" && verse.hebrew.paragraphAfter !== null && index === count - 1;
   const gap = (kind: "petuchah" | "setumah") => <span className="study-paragraph-gap"><span className="study-paragraph-mark" lang="he" aria-hidden="true" data-copy-skip="">{PARAGRAPH_LETTER[kind]}</span><span className="sr-only" lang="en" dir="ltr">[{kind === "petuchah" ? "open paragraph" : "closed paragraph"}]</span></span>;
   const sign = <span role="img" aria-label="Inverted nun, Masoretic sign">׆</span>;
-  const container = <Container className={`study-hebrew ${hebrewStyles.reading} ${inline ? styles.inlineHebrew : ""} ${onWordSelect ? styles.playable : ""} ${className}`.trim()} lang="he" dir="rtl" onKeyDown={onWordSelect ? event => {
+  const container = <Container data-testid="study-hebrew" className={`study-hebrew ${hebrewStyles.reading} ${inline ? styles.inlineHebrew : ""} ${onWordSelect ? styles.playable : ""} ${className}`.trim()} lang="he" dir="rtl" onKeyDown={onWordSelect ? event => {
     const target = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-word-index][role="button"]') : null;
     if (!target || !event.currentTarget.contains(target)) return;
     const index = Number(target.dataset.wordIndex);
@@ -191,7 +191,7 @@ export function Apparatus({ verse, learner = false }: { verse: StudyVerse; learn
   if (!alternative && !verse.hebrew.paragraphAfter) return null;
   return <div className="study-apparatus">
     {alternative && <p className="field-help">Chant this word (qere). The scroll writes it differently (ketiv).</p>}
-    {verse.hebrew.paragraphAfter && <p className="study-paragraph-note">{verse.hebrew.paragraphAfter === "petuchah" ? "Open paragraph (petuchah) after this verse." : "Closed paragraph (setumah) after this verse."}</p>}
+    {verse.hebrew.paragraphAfter && <p className="study-paragraph-note" data-testid="paragraph-note" data-paragraph={verse.hebrew.paragraphAfter}>{verse.hebrew.paragraphAfter === "petuchah" ? "Open paragraph (petuchah) after this verse." : "Closed paragraph (setumah) after this verse."}</p>}
   </div>;
 }
 
@@ -307,7 +307,7 @@ function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAv
     </span>
     {tikkun === "beside" && <TikkunVerse verse={verse} className={styles.flowTikkun} projection={projection} colors={colors} activeWord={activeWord} atoms={aligned ? atoms : null} layout={layout} aria-hidden />}
     {showEnglish && (englishHidden ? <span className={`study-english ${styles.flowEnglish} ${styles.flowEnglishHidden}`} lang="en" dir="ltr" data-english-hidden={verse.ref}>{englishHidden}</span>
-      : <span className={`study-english ${styles.flowEnglish}`} lang="en" dir="ltr" data-english-ref={verse.ref}>{verse.english ?? "English reference unavailable for this verse."}</span>)}
+      : <span className={`study-english ${styles.flowEnglish}`} lang="en" dir="ltr" data-english-ref={verse.ref} data-english-available={verse.english ? "true" : "false"}>{verse.english ?? "English reference unavailable for this verse."}</span>)}
   </span>;
 }
 /** "beside" sets the tikkun in a column next to the pointed text on every screen width; "only" shows it instead. */
@@ -324,9 +324,9 @@ export function FlowingStudyText({ verses, assignment, group, sections = [], onV
   choice?: VerseChoiceView;
 }) {
   const first = useMemo(() => firstWordKey(verses), [verses]);
-  return <WordGroup scope={`${verses[0]?.ref}|${verses.length}`} first={first} className={`study-verses ${styles.flow}`} aria-label="Hebrew reading" tabIndex={-1} data-tikkun={tikkun === "off" ? undefined : tikkun} onCopy={copyHebrew}>
+  return <WordGroup scope={`${verses[0]?.ref}|${verses.length}`} first={first} data-testid="study-verses" className={`study-verses ${styles.flow}`} aria-label="Hebrew reading" tabIndex={-1} data-tikkun={tikkun === "off" ? undefined : tikkun} onCopy={copyHebrew}>
     {studyFlowGroups(verses, sections.map(section => section.index)).map(indices => <div key={verses[indices[0]].ref}>
-      {sections.find(section => section.index === indices[0]) && <p className="student-aliyah">{sections.find(section => section.index === indices[0])!.label}</p>}
+      {sections.find(section => section.index === indices[0]) && <p className="student-aliyah" data-testid="student-aliyah">{sections.find(section => section.index === indices[0])!.label}</p>}
       <p className={styles.flowParagraph} lang="he" dir="rtl">{indices.map(index => <FlowVerse key={verses[index].ref} verse={verses[index]} assignment={assignment} id={`${group}-flow-${index}`} onVerse={onVerse ? () => onVerse(index) : undefined} onWord={onWord ? word => onWord(index, word) : undefined} activeWord={activeWord?.verse === index ? activeWord.index : null} toolsAvailable={toolsAvailable} listening={listening} showEnglish={showEnglish} englishHidden={englishHidden} tikkun={tikkun} linked={linked?.verse === index ? linked : null} choice={choice} />)}</p>
     </div>)}
   </WordGroup>;

@@ -92,7 +92,7 @@ export function ConnectClaude() {
         <p>Let Claude work in the portal as you, with exactly your access, for up to 30 days.</p>
         <div className="entry-notes"><p>For CRC clergy, staff and tutors.</p><p>You can disconnect it any time in Claude’s connector settings.</p></div>
       </div>
-      <section className="entry-task" aria-labelledby="connect-title" aria-busy={view.kind === "loading" || busy}>
+      <section className="entry-task" data-testid="connect-task" data-connect-state={view.kind} aria-labelledby="connect-title" aria-busy={view.kind === "loading" || busy}>
         {view.kind === "loading" && <h2 id="connect-title">Checking this request…</h2>}
         {view.kind === "expired" && <><h2 id="connect-title">This request has expired</h2><p className="field-help">Start again from Claude: open the connector and choose Connect.</p></>}
         {view.kind === "used" && <><h2 id="connect-title">This request was already allowed</h2><p className="field-help">Go back to Claude. If it still asks you to connect, start again from Claude: open the connector and choose Connect. To disconnect, use Claude’s connector settings.</p></>}

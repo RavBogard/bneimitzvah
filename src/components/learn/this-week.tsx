@@ -31,12 +31,12 @@ export function ThisWeekSection({ activity, lesson, fallback = [] }: { activity:
   if (week.status === "none" || !week.recorded) {
     if (kind === "haftarah") return <section className={styles.week}>{heading}<p>No recording for this haftarah yet.</p></section>;
     return <section className={styles.week}>{heading}{fallback.length > 0 && <><p className={styles.muted}>From the course's own verses while this week's recording is not ready.</p>
-      <ul className={styles.weekRows}>{fallback.slice(0, activity.params.show).map(row => <Row key={row.example.ref} verse={row.verse} words={row.example.words} family={family} />)}</ul></>}</section>;
+      <ul className={styles.weekRows} data-testid="week-rows">{fallback.slice(0, activity.params.show).map(row => <Row key={row.example.ref} verse={row.verse} words={row.example.words} family={family} />)}</ul></>}</section>;
   }
-  return <section className={styles.week} aria-labelledby="this-week-heading">
+  return <section className={styles.week} data-testid="learn-this-week" aria-labelledby="this-week-heading">
     <h2 id="this-week-heading" className={styles.sectionTitle}>{title}</h2>
     {week.shifted && <p className={styles.muted}>Showing the coming Shabbat.</p>}
-    {rows.length > 0 && <ul className={styles.weekRows}>{rows.map(phrase => <Row key={phrase.ref} verse={week.verses.find(verse => verse.ref === phrase.ref)!} words={phrase.words} family={family} />)}</ul>}
+    {rows.length > 0 && <ul className={styles.weekRows} data-testid="week-rows">{rows.map(phrase => <Row key={phrase.ref} verse={week.verses.find(verse => verse.ref === phrase.ref)!} words={phrase.words} family={family} />)}</ul>}
     {activity.params.find > 0 && <Finder verses={week.verses.filter(verse => verse.wordReady).slice(0, READER_VERSES)} family={family} need={activity.params.find} skip={new Set(rows.map(row => `${row.ref}#${row.words[0]}`))} />}
   </section>;
 }

@@ -58,7 +58,7 @@ export function ceremonyCountdown(date: string, now = new Date()) {
 export function RehearsalDates({ student }: { student: Pick<Student, "rehearsal1" | "rehearsal2"> }) {
   const dates = [student.rehearsal1, student.rehearsal2].filter((value): value is string => !!value);
   if (!dates.length) return null;
-  return <p className="hero-rehearsals">{dates.length === 1 ? "Rehearsal" : "Rehearsals"}: {dates.map((value, index) => <span key={index}>{index > 0 && " and "}<time dateTime={value}>{ceremonyCountdown(value).label}</time></span>)}</p>;
+  return <p className="hero-rehearsals" data-testid="hero-rehearsals">{dates.length === 1 ? "Rehearsal" : "Rehearsals"}: {dates.map((value, index) => <span key={index}>{index > 0 && " and "}<time dateTime={value}>{ceremonyCountdown(value).label}</time></span>)}</p>;
 }
 /**
  * The confirmed service, named as the honors sheet names it: the congregation's name for it when set.
@@ -73,7 +73,7 @@ const displayRange = (ranges: string[]) => ranges.join("; ").replace(/(\d)-(\d)/
 const refreshIcon = <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
 export function AssignedReadingSummaries({ readings, selectedKind, marked }: { readings: readonly Reading[]; selectedKind: StudyKind; marked?: string | null }) {
-  return <div className="hero-reading-summaries" role="group" aria-label="Assigned readings">{readings.map(row => <div key={row.id} className="hero-reading-summary" aria-current={row.kind === selectedKind ? "true" : undefined}>
+  return <div className="hero-reading-summaries" role="group" aria-label="Assigned readings">{readings.map(row => <div key={row.id} className="hero-reading-summary" data-reading-kind={row.kind} data-verse-count={row.verses.length} aria-current={row.kind === selectedKind ? "true" : undefined}>
     <h3>{row.kind === "torah" ? "Torah" : "Haftarah"} <bdi dir="ltr">{displayRange(row.ranges)}</bdi></h3>
     <p>{row.verses.length} {row.verses.length === 1 ? "verse" : "verses"}{row.kind === selectedKind && <> <span className="reading-summary-current">Current reading</span>{marked && <span className="hero-marked"> · {marked}</span>}</>}</p>
   </div>)}</div>;
@@ -83,7 +83,7 @@ function AssignmentContext({ row, current = false }: { row: Reading; current?: b
   return <article className={`confirmed-reading${current ? " reading-current-assignment" : ""}`}>
     <h3>{row.kind === "torah" ? "Torah" : "Haftarah"}</h3>
     <p className="reading-reference">{row.ranges.join("; ")}</p>
-    <p className={row.needsReview ? "reading-review status-chip status-chip-attention" : "field-help status-chip"}>{row.needsReview ? "Needs review with your tutor or rabbi" : "Confirmed assignment"} · Revision {row.revision}</p>
+    <p className={row.needsReview ? "reading-review status-chip status-chip-attention" : "field-help status-chip"} data-testid="reading-assignment-chip" data-needs-review={String(row.needsReview)}>{row.needsReview ? "Needs review with your tutor or rabbi" : "Confirmed assignment"} · Revision {row.revision}</p>
     <details><summary>Assigned verse references ({row.verses.length})</summary><ol className="verse-references">{row.verses.map((verse, index) => <li key={`${index}:${verse}`}>{verse}</li>)}</ol>
       <p className="field-help">Calendar source: {row.source.attribution ? <a href={row.source.attribution.url} target="_blank" rel="noopener noreferrer">{row.source.attribution.name}</a> : "not recorded"}. {row.source.status === "unavailable" ? "Calendar source was unavailable when this assignment was confirmed." : row.source.status === "unknown" ? "Source availability is not recorded." : "Calendar source was available at confirmation."}</p>
       {row.confirmationDate && <p className="field-help">Ceremony date at confirmation: {row.confirmationDate}</p>}
@@ -332,7 +332,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary }:
   // that use it, never this panel (and never its playback). Nothing is asked for anyone else, or while the gate is closed.
   return <TutorPracticeScope mode={mode} studentId={studentId} concealed={concealed}><ReadingPrefsScope studentId={studentId} englishOnWide={!staff}><StudyLensScope storageKey={staff ? LENS_STORAGE.staff : null}><DepartureReview coordinator={work} />
     {/* 1.9 N16 re-measure (CLS): while the reading loads it keeps a screen of room, so what follows it never jumps into view and out again. */}
-    {current?.loading && <div className="reading-loading-space" aria-hidden="true" />}<div className="reading-workspace reading-with-work" hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
+    {current?.loading && <div className="reading-loading-space" aria-hidden="true" />}<div className="reading-workspace reading-with-work" data-testid="reading-workspace" hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
     <section aria-label="Assigned reading">
       {!student ? <div className={`workspace-state${current?.error ? "" : " reading-loading-space"}`} aria-live="polite"><h2>{current?.error ? "Reading unavailable" : "Loading the assigned reading"}</h2>
         <p>{current?.error === 404 || current?.error === 403 ? "This reading is no longer available in the selected role. Choose another available student." : current?.error ? "We couldn’t load the confirmed assignment. No previous student’s reading is being shown." : "Checking the selected student and confirmed references."}</p>
@@ -341,7 +341,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary }:
         <div className="hero-who">
           <h2 id="reading-heading" className="hero-name"><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>
           {congregation.ready && <ServiceSlotName student={student} services={congregation.services} />}
-          <p className="hero-date"><time dateTime={student.ceremonyDate}>{countdown!.label}</time>{countdown!.phrase && <span className="hero-days">{countdown!.phrase}</span>}</p>
+          <p className="hero-date" data-testid="hero-date"><time dateTime={student.ceremonyDate}>{countdown!.label}</time>{countdown!.phrase && <span className="hero-days">{countdown!.phrase}</span>}</p>
           <button type="button" className="hero-icon" aria-label="Refresh reading" onClick={() => {
             const target = studyDenied, turn = sequence.current;
             // Explicit reload retains translation drafts; only Sources must settle before their owners are replaced.
@@ -380,7 +380,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary }:
       {tabPanel("reading", <>{student && authorizedReading && !concealed && !exploring && selectedReading && mode === "admin" && <GuideStatusLine kind={selectedReading.kind} readingKey={selectedReading.readingKey ?? null} />}{student && authorizedReading && !concealed && !exploring && selectedReading && <div className={`guide-place guide-place-wide`}><GuideCard store={guide} kind={selectedReading.kind} firstName={student.firstName} learner={learner} onStudy={() => setWalking(true)} /></div>}{walking && selectedReading && guide.view(selectedReading.kind) && <GuideWalk view={guide.view(selectedReading.kind)!} lookup={ref => verseLookup.current?.(ref) ?? null} onClose={closeWalk} />}<VersePanelScope passage={discussionPassage}><SourcesButton /><div className="reading-passage-layout" ref={readingPanel}>{student && song && (!tabbed || tab === "reading") && <ReadingToolbar listeningEnabled={listeningEnabled} tikkunAvailable={exploring || selectedReading?.kind === "torah"} worksCorpus={exploring || selectedReading?.kind !== "haftarah" ? "torah" : "neviim"} onHear={(exploring ? proposedHearReady : hearReady) && !concealed && !current?.loading ? startReading : undefined} />}
         {authorizedReading && !listeningEnabled && <p className="field-help">{readings.length ? "Listening isn’t available yet. You can read, use word tools and practice up close." : "Listening isn’t available yet. You can keep reading the Torah portion."}</p>}
         <ProposedTorahText audio={audio} hearHandle={proposedHear} onReadingReady={setProposedReady} onHearReady={setProposedHearReady} baseline={current?.loading ? null : current?.value ?? null} reloadMetadata={load} active={!tabbed || tab === "reading"} authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} />
-        {exploring && readings.length > 0 && <header><h3>Assigned Haftarah</h3><p className="reading-reference">{displayRange(readings[0].ranges)}</p>
+        {exploring && readings.length > 0 && <header><h3 data-testid="assigned-haftarah-heading">Assigned Haftarah</h3><p className="reading-reference">{displayRange(readings[0].ranges)}</p>
           {listeningEnabled && <button type="button" className="button-secondary" disabled={!hearReady || concealed || current?.loading} onClick={() => lift.current?.(0)}>Hear Haftarah</button>}</header>}
         <AssignedStudyText audio={audio} stopAudio={audio.stopAll} baseline={current?.value ?? null} register={registerStudy} reloadMetadata={load} authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} onKindChange={setSelectedKind}
         guardDeparture={guardReading} renderGuide={(kind, verseRef) => <GuideVerseNotes store={guide} kind={kind} verseRef={verseRef} />} renderWork={(kind, verseRef) => <VerseTools coordinator={work} kind={kind} verseRef={verseRef} />} renderActiveWork={() => work.active && <VerseTools coordinator={work} kind={work.active.kind} verseRef={work.active.ref} />}

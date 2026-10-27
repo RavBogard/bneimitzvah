@@ -47,7 +47,7 @@ export function HearAndName({ item, pools, melody, contrast, onAnswer }: DrillPr
   };
   const lesson = chosen && read && chosen !== item.answer.family ? lessonOfFamily(item.answer.family, item.answer.kind) : null;
   return <>
-    <h2 className={styles.prompt}>{read ? "Read it, then pick the tune" : "Which phrase is this?"}</h2>
+    <h2 className={styles.prompt} data-drill-kind={read ? "read" : "name"}>{read ? "Read it, then pick the tune" : "Which phrase is this?"}</h2>
     {read ? <>
       {verse && <div className={styles.verseBox}><UnitsText playback={[id, `${id}:compare`]} verse={verse} units={item.answer.words} className={styles.phraseStandard} card={!!chosen} /></div>}
       <p className={styles.listen}>Sing it (in your head or out loud), then check.</p>
@@ -56,12 +56,12 @@ export function HearAndName({ item, pools, melody, contrast, onAnswer }: DrillPr
     <AudioError id={[id, `${id}:compare`]} />
     <ul className={styles.choices}>{item.choices.map(family => {
       const state = !chosen ? undefined : family === item.answer.family ? "right" : family === chosen ? "chosen" : "other";
-      return <li key={family}><button type="button" className={styles.choice} data-state={state} disabled={!!chosen} aria-pressed={chosen === family}
+      return <li key={family}><button type="button" className={styles.choice} data-testid="drill-choice" data-state={state} disabled={!!chosen} aria-pressed={chosen === family}
         style={state === "right" ? phraseStyle(family) : undefined} data-family={family} data-right={family === item.answer.family || undefined} onClick={() => pick(family)}>
-        <ContourMark family={family} melody={melody} /><span>{familyName(family)}</span>{state === "right" && <span className={styles.choiceMark}>{icons.check}</span>}{state === "chosen" && <span className={styles.choiceMark}>{icons.wrong}</span>}
+        <ContourMark family={family} melody={melody} /><span>{familyName(family)}</span>{state === "right" && <span className={styles.choiceMark} data-testid="choice-mark" data-mark="right">{icons.check}</span>}{state === "chosen" && <span className={styles.choiceMark} data-testid="choice-mark" data-mark="wrong">{icons.wrong}</span>}
       </button></li>;
     })}</ul>
-    <p role="status" className={styles.feedback}>{chosen && read && <><span data-read-result>{chosen === item.answer.family ? "Same" : "Not quite"}</span><br /></>}{chosen && chosen !== item.answer.family ? compared ? `That one is ${familyName(item.answer.family)}. Here is ${familyName(chosen)} for comparison.` : `That one is ${familyName(item.answer.family)}.`
+    <p role="status" className={styles.feedback} data-testid="drill-feedback" data-compared={chosen && chosen !== item.answer.family && compared ? "true" : undefined}>{chosen && read && <><span data-read-result>{chosen === item.answer.family ? "Same" : "Not quite"}</span><br /></>}{chosen && chosen !== item.answer.family ? compared ? `That one is ${familyName(item.answer.family)}. Here is ${familyName(chosen)} for comparison.` : `That one is ${familyName(item.answer.family)}.`
       : chosen ? <span className="sr-only">{familyName(item.answer.family)}</span> : ""}</p>
     {lesson && <p className={styles.muted}><a href={`/learn/${lesson.id}`}>More about {familyName(item.answer.family)}</a></p>}
     {chosen && verse && <Answer verse={verse} phrase={item.answer} id={id} />}
@@ -200,7 +200,7 @@ export function BuildThePhrase({ item, pools, onAnswer }: DrillProps<BuildItem>)
         <span className={`${styles.hebrew} ${styles.tileSample}`} lang="he" dir="rtl">{tropeSample(marks[i])}</span><span className={styles.tileName}>{tropeLabel(marks[i])}</span></span>
         : <span className="sr-only">Empty</span>}</li>;
     })}</ol>
-    <div className={styles.tray} role="group" aria-label="Marks">{item.tiles.map((trope, tile) => <button key={`${tile}:${miss?.tile === tile ? miss.n : 0}`} type="button" className={styles.tile}
+    <div className={styles.tray} role="group" aria-label="Marks">{item.tiles.map((trope, tile) => <button key={`${tile}:${miss?.tile === tile ? miss.n : 0}`} type="button" className={styles.tile} data-testid="drill-tile"
       disabled={done || placed.includes(tile)} data-miss={miss?.tile === tile ? "true" : undefined} data-order={marks.indexOf(trope)} onClick={() => tap(tile)} aria-label={tropeLabel(trope)}>
       <span className={`${styles.hebrew} ${styles.tileSample}`} lang="he" dir="rtl" aria-hidden="true">{tropeSample(trope)}</span><span className={styles.tileName} aria-hidden="true">{tropeLabel(trope)}</span>
     </button>)}</div>
@@ -235,7 +235,7 @@ export function LookAlikes({ item, onAnswer, first = item.first }: DrillProps<Lo
           <LookWord playback={n === item.answer ? [id] : []} side={side} context={item.context} card={false} /></button>
         : <div key={n} className={`${styles.choice} ${styles.lookWord}`} data-look={n} data-state={state} style={{ "--phrase-color": "var(--lake-tint)" } as CSSProperties}>
           <LookWord playback={[...(n === item.answer ? [id] : []), { id: `${id}:words`, part: n === tapped ? 0 : 1 }]} side={side} context={item.context} card />
-          <span className={styles.lookMark} dir="ltr">{state === "right" && <span className={styles.choiceMark}>{icons.check}</span>}{state === "chosen" && <span className={styles.choiceMark}>{icons.wrong}</span>}{side.word.mark}</span>
+          <span className={styles.lookMark} dir="ltr">{state === "right" && <span className={styles.choiceMark} data-testid="choice-mark" data-mark="right">{icons.check}</span>}{state === "chosen" && <span className={styles.choiceMark} data-testid="choice-mark" data-mark="wrong">{icons.wrong}</span>}{side.word.mark}</span>
         </div>;
     })}</div>
     <p role="status" className={styles.feedback}>{tapped !== null ? lookTell(answerSide) : ""}</p>

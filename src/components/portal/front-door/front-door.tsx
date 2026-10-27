@@ -47,18 +47,18 @@ export type ThisWeekState = Readonly<{ date: string | null; status: "loading" } 
 /** This Shabbat at display scale. Lein and Study always work, whatever the reading call did. */
 export function ThisWeekView({ state }: { state: ThisWeekState }) {
   const week = state.status === "ready" ? state.week : null, loading = state.status === "loading";
-  return <section className={styles.week} aria-labelledby="this-week-title" aria-busy={loading}>
+  return <section className={styles.week} data-testid="this-week" data-week-state={state.status === "loading" ? "pending" : state.status} data-week-which={state.next ? "next" : "this"} aria-labelledby="this-week-title" aria-busy={loading}>
     <p className={styles.eyebrow}>{state.next ? "Next Shabbat" : "This Shabbat"}</p>
     <h1 id="this-week-title" className={styles.parashah}>
       {loading ? <><span className="sr-only">{FALLBACK_TITLE}</span><span className={styles.skeleton} aria-hidden="true" data-skeleton /></> : week?.parashah ?? FALLBACK_TITLE}
     </h1>
-    {state.date && <p className={styles.meta}><time dateTime={state.date}>{longDate(state.date)}</time>
+    {state.date && <p className={styles.meta} data-testid="week-ranges"><time dateTime={state.date}>{longDate(state.date)}</time>
       {week?.torah && <> · Torah <bdi dir="ltr">{displayRange(week.torah.ranges)}</bdi></>}
       {week?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(week.haftarah.ranges)}</bdi></>}</p>}
     <div className={styles.actions}>
       <a className="button-start" href={state.next && state.date ? readAddress({ mode: "week", date: state.date, kind: null }) : "/read"}>Lein</a>
       <a className="button-hero-secondary" href={state.next && state.date ? readAddress({ mode: "week", date: state.date, kind: null }, { study: true }) : "/read?lens=study"}>Study</a>
-      {state.next && <a className="button-hero-secondary" href="/read">This Shabbat</a>}
+      {state.next && <a className="button-hero-secondary" data-testid="this-shabbat-link" href="/read">This Shabbat</a>}
     </div>
   </section>;
 }
@@ -91,7 +91,7 @@ function BeitMitzvahDoor({ account, children }: { account: FrontDoorAccount; chi
   const door = role ? signedInDoor(role) : null;
   const task = account?.kind === "task" || (account?.kind === "account" && !role);
   const state = account === null ? "loading" : task ? "task" : role ? "role" : "sign-in";
-  return <section id="beit-mitzvah" className={styles.door} aria-labelledby="beit-mitzvah-title" data-door="beit-mitzvah" data-door-state={state} aria-busy={account === null}>
+  return <section id="beit-mitzvah" className={styles.door} aria-labelledby="beit-mitzvah-title" data-door="beit-mitzvah" data-door-state={state} data-door-role={role ?? undefined} aria-busy={account === null}>
     <h2 id="beit-mitzvah-title" className={styles.doorTitle}>{door ? door.title : "Beit Mitzvah"}</h2>
     {door ? door.line && <p className={styles.doorLine}>{door.line}</p> : <p className={styles.doorLine}>{DOOR_LINE}</p>}
     {account === null && <p className={styles.doorWait} role="status">One moment while we check your access.</p>}
@@ -99,7 +99,7 @@ function BeitMitzvahDoor({ account, children }: { account: FrontDoorAccount; chi
       <a className={`button-hero-secondary ${styles.doorAction}`} href="/sign-in" aria-describedby="beit-mitzvah-title">Sign in</a>
       <p className={styles.doorMore}><a href={signInAddress("/account")}>Ask for an account</a></p>
     </>}
-    {role && door && <a className={`button-hero-secondary ${styles.doorAction}`} href={rolePaths[role]} aria-describedby="beit-mitzvah-title">{door.action}</a>}
+    {role && door && <a className={`button-hero-secondary ${styles.doorAction}`} data-testid="door-action" href={rolePaths[role]} aria-describedby="beit-mitzvah-title">{door.action}</a>}
     {task && <div className={styles.task}>{children}</div>}
   </section>;
 }
@@ -124,7 +124,7 @@ export function FrontDoor({ account, children }: { account: FrontDoorAccount; ch
         <BeitMitzvahDoor account={account}>{children}</BeitMitzvahDoor>
         <section className={styles.door} aria-labelledby="learn-title" data-door="learn">
           <h2 id="learn-title" className={styles.doorTitle}>Learn to lein</h2>
-          <p className={styles.doorLine}>Hear the phrases, then lein a verse of this week's reading.</p>
+          <p className={styles.doorLine} data-testid="learn-door-line">Hear the phrases, then lein a verse of this week's reading.</p>
           <a className={`button-hero-secondary ${styles.doorAction}`} href="/learn" aria-describedby="learn-title">Start</a>
           <p className={styles.doorMore}><a href="/trope-chart">Trope chart</a></p>
         </section>

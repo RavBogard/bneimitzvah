@@ -103,7 +103,7 @@ export function LiftedLine({ verses, assignment, index, total, offset, onIndex, 
   return <dialog ref={dialog} className="lift" aria-labelledby={`${id}-title`} onCancel={event => { event.preventDefault(); onClose(); }} onKeyDown={key}>
     <div className="lift-bar">
       <button type="button" className="lift-icon" onClick={onClose} aria-label="Close practice view">{icons.close}</button>
-      <p className="lift-count" id={`${id}-count`} aria-live="polite">Verse {number} of {total}{phrases.length > 1 && <span className="lift-count-phrase"> · phrase {currentPhrase + 1} of {phrases.length}</span>}</p>
+      <p className="lift-count" id={`${id}-count`} data-testid="lift-count" data-lift-verse={number} data-lift-total={total} aria-live="polite">Verse {number} of {total}{phrases.length > 1 && <span className="lift-count-phrase"> · phrase {currentPhrase + 1} of {phrases.length}</span>}</p>
       {/* 1.9 N14 (G7): a verse picker, so any verse on this page is two taps away (open the list, choose the verse). */}
       {verses.length > 1 && <select className="lift-pick" aria-label="Choose a verse" data-testid="lift-verse-picker" value={index} onChange={event => { playback.current?.suspend(); setPlayingWord(null); onIndex(Number(event.target.value)); }}>
         {verses.map((row, position) => <option key={row.ref} value={position}>{row.ref}</option>)}
@@ -111,7 +111,7 @@ export function LiftedLine({ verses, assignment, index, total, offset, onIndex, 
       <button type="button" className="lift-icon" aria-pressed={prefs.colors} aria-label="Phrase colors" onClick={() => setReadingPrefs({ colors: !prefs.colors })}>{icons.colors}</button>
     </div>
     <ol className="lift-rail" aria-hidden="true">{verses.map((row, position) => <li key={row.ref} data-state={position < index ? "past" : position === index ? "current" : undefined} />)}</ol>
-    <div ref={stage} className="lift-stage" onPointerDown={down} onPointerUp={up} onPointerCancel={() => { pointer.current = null; }}>
+    <div ref={stage} className="lift-stage" data-testid="lift-stage" onPointerDown={down} onPointerUp={up} onPointerCancel={() => { pointer.current = null; }}>
       <h2 id={`${id}-title`} className="lift-ref"><bdi dir="ltr">{verse.ref}</bdi></h2>
       <StudyHebrew key={verse.ref} verse={verse} colors={colors} id={`${id}-v`} activeWord={activeWord} onWordSelect={reference || colors ? word => {
         if (reference) playback.current?.select(index, "verse");

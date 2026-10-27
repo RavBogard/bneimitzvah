@@ -32,7 +32,8 @@ function Roster() {
   const { registerReload, registerDeparture } = useWorkspace();
   const [rows, setRows] = useState<RosterStudent[]>([]), [loading, setLoading] = useState(true), [unavailable, setUnavailable] = useState(false);
   const [current, setCurrent] = useState<RosterStudent | null>(null), [form, setForm] = useState<StudentInput>(empty), [editing, setEditing] = useState(false);
-  const [pending, setPending] = useState(false), [message, setMessage] = useState(""), [conflict, setConflict] = useState(false), [confirmDisable, setConfirmDisable] = useState(false), [page, setPage] = useState(0);
+  const [pending, setPending] = useState(false), [message, setMessageText] = useState(""), [messageKind, setMessageKind] = useState(""), [conflict, setConflict] = useState(false), [confirmDisable, setConfirmDisable] = useState(false), [page, setPage] = useState(0);
+  const setMessage = useCallback((text: string, kind = "") => { setMessageText(text); setMessageKind(kind); }, []);
   const [query, setQuery] = useState(""), [confirmDone, setConfirmDone] = useState(false);
   // 1.9 N14: each active student's setup facts (Needs you and the row chips), and the student just added (its three next steps).
   const [neededInvites, setNeededInvites] = useState<ReadonlySet<string>>(new Set());
@@ -151,7 +152,7 @@ function Roster() {
       let refreshed = true; try { await load(); } catch { refreshed = false; }
       // A new student: "Added Noa. Next: choose a tutor, invite a parent, assign the reading", each step a link (1.9 N14, AD-02).
       if (generation === lifetime.current && created) setAdded({ id: result.id, firstName: form.firstName.trim() });
-      if (generation === lifetime.current && (saved || !refreshed)) setMessage(saved + (refreshed ? "" : `${saved ? " " : ""}The list couldn’t be refreshed. Reload it to check the current record.`));
+      if (generation === lifetime.current && (saved || !refreshed)) setMessage(saved + (refreshed ? "" : `${saved ? " " : ""}The list couldn’t be refreshed. Reload it to check the current record.`), !refreshed ? "stale" : review ? "saved-review" : disable ? "disabled" : "saved");
     } catch (error) {
       if (generation !== lifetime.current) return;
       const status = statusOf(error);
@@ -194,7 +195,7 @@ function Roster() {
       min={name === "rehearsal2" ? form.rehearsal1 || undefined : undefined} max={(name === "rehearsal1" ? form.rehearsal2 || form.ceremonyDate : form.ceremonyDate) || undefined}
       onChange={event => { const value = event.target.value || null; setForm(previous => ({ ...previous, [name]: value })); }} />
   </div>;
-  const notice = message ? <p className={conflict ? "request-error roster-message" : "workspace-notice roster-message"} role={conflict ? "alert" : "status"}>{message}</p>
+  const notice = message ? <p data-testid="roster-message" data-message-kind={messageKind} className={conflict ? "request-error roster-message" : "workspace-notice roster-message"} role={conflict ? "alert" : "status"}>{message}</p>
     : added && <p className="workspace-notice roster-message" role="status" data-testid="roster-added">Added <bdi dir="auto">{added.firstName}</bdi>. Next: <WorkspaceLink href={`/workspace/admin/students/${encodeURIComponent(added.id)}/access`}>choose a tutor</WorkspaceLink>, <WorkspaceLink href={`/workspace/admin/invitations?student=${encodeURIComponent(added.id)}&role=parent`}>invite a parent</WorkspaceLink>, <WorkspaceLink href={`/workspace/admin/students/${encodeURIComponent(added.id)}/reading`}>assign the reading</WorkspaceLink></p>;
   const openHonors = (student: NeedsYouStudent, event: { currentTarget: HTMLElement }) => { const row = rows.find(value => value.id === student.id); if (!row || pending || editing || honorsStudent) return; honorsOrigin.current = event.currentTarget as HTMLButtonElement; setHonorsStudent(row); };
   const openDetails = (student: NeedsYouStudent, event: { currentTarget: HTMLElement }) => { const row = rows.find(value => value.id === student.id); if (row) choose(row, event); };

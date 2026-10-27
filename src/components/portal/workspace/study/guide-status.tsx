@@ -41,5 +41,5 @@ export function GuideStatusLine({ kind, readingKey }: { kind: StudyKind; reading
   const { visible, held } = state.status;
   if (!visible && !held) return <p className={styles.status}>Study guide: none yet for this reading · draft it in Cowork</p>;
   const shown = visible ? `${visible.reviewed ? "Reviewed" : "Claude draft, not reviewed"} · ${visible.themes} ${visible.themes === 1 ? "theme" : "themes"} · updated ${day(visible.updatedAt)}` : "Nothing shown to students yet";
-  return <p className={styles.status} data-guide-status>Study guide: {shown}{held && <> · newer draft waiting (updated {day(held.updatedAt)})</>} · edit in Cowork</p>;
+  return <p className={styles.status} data-guide-status={visible ? (visible.reviewed ? "reviewed" : "draft") : "none-shown"} data-guide-themes={visible?.themes} data-guide-held={held ? "true" : undefined}>Study guide: {shown}{held && <> · newer draft waiting (updated {day(held.updatedAt)})</>} · edit in Cowork</p>;
 }

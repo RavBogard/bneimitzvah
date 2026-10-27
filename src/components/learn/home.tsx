@@ -76,7 +76,7 @@ export function CourseHome() {
   useVerseReview(!!mine);
   const paths = (["torah", "haftarah"] as const).map(melody => melody === "torah"
     ? <section key="torah" aria-labelledby="path-torah"><div className={styles.pathHead}><h2 id="path-torah">Torah</h2></div><PathList melody="torah" progress={progress} next={next} after={<FirstPhraseRow own={own} melody="torah" />} /></section>
-    : <section key="haftarah" aria-labelledby="path-haftarah"><div className={styles.pathHead}><h2 id="path-haftarah">Haftarah</h2>{!haftarahOpen && <span className={styles.pathNote}>Best after The two endings.</span>}</div>
+    : <section key="haftarah" aria-labelledby="path-haftarah"><div className={styles.pathHead}><h2 id="path-haftarah">Haftarah</h2>{!haftarahOpen && <span className={styles.pathNote} data-testid="path-note">Best after The two endings.</span>}</div>
       <PathList melody="haftarah" progress={progress} next={next} after={<FirstPhraseRow own={own} melody="haftarah" />} /></section>);
   if (haftarahFirst) paths.reverse();
   return <div className={`portal-shell ${styles.shell}`}>
@@ -86,7 +86,7 @@ export function CourseHome() {
       <div className={styles.home}>
         <div className={styles.homeLead}>
           <h1 className={styles.title}>Learn to lein</h1>
-          <p className={styles.intro}>Hear a phrase, chant it yourself, then connect it to a reading. Return to words, sounds and joins whenever you need help.</p>
+          <p className={styles.intro} data-testid="learn-intro">Hear a phrase, chant it yourself, then connect it to a reading. Return to words, sounds and joins whenever you need help.</p>
           {courseDone(progress) ? <section className={styles.next} aria-labelledby="learn-next"><h2 id="learn-next" className={styles.nextTitle}>Keep preparing readings</h2><p><a href="/learn/prepare">Prepare a passage</a> or revisit a lesson below.</p></section>
             : next && <section className={styles.next} aria-labelledby="learn-next" data-next={next.id}>
               <div className={styles.nextTop}><span className={styles.nextLabel}>Next</span>{next.family && <FamilyChip family={next.family} melody={next.melody} />}</div>
@@ -102,7 +102,7 @@ export function CourseHome() {
           <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a>{mine && <a href="/workspace/student?tab=reading">Back to my reading</a>}</nav>
           {/* 1.9 N23: what the tutor sees of Learn, told to the student; behind the same release gate as the tutor's lines. */}
           <LearnPracticeDisclosure signedIn={account.state === "synced"} isStudent={isStudent} />
-          {account.state !== "synced" && <p className={styles.saved}>Progress is saved on this device. <a href="/sign-in">Sign in</a> to keep it.</p>}
+          {account.state !== "synced" && <p className={styles.saved} data-testid="learn-saved-note">Progress is saved on this device. <a href="/sign-in">Sign in</a> to keep it.</p>}
         </div>
         <div className={styles.paths}>{paths}</div>
       </div>

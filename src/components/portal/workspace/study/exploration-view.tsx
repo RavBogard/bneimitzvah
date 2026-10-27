@@ -30,17 +30,17 @@ export function ExplorationContent({ state, group, retry, page, refresh, audio }
   const { rashi, works } = useReadingWorks(refs, { ready: refs.length > 0, study, chosen: lens.works, corpus: null });
   const offsetIndex = prepared && current ? prepared.pages.findIndex(row => row.offset === current.offset) : -1;
   const previous = prepared?.pages[offsetIndex - 1]?.offset;
-  return <section className="assigned-study" aria-label="Proposed Torah portion" data-size={prefs.size} aria-busy={state.pending}>
+  return <section className="assigned-study" data-testid="proposed-portion" aria-label="Proposed Torah portion" data-size={prefs.size} aria-busy={state.pending}>
     <header><h3>{prepared?.portion ?? "Explore the Torah portion"}</h3>
       <p className="field-help">Read the full portion while you and your tutor choose your verses. This is not an assigned reading yet.</p>
       {prepared && <p className="reading-reference">{prepared.ranges.join("; ").replace(/(\d)-(\d)/g, "$1–$2")}</p>}
       {lens.available && <div className="reading-lens-row" data-learner=""><LensSwitch onChange={() => leinLink.clear()} /></div>}</header>
-    {state.error ? <div role="status"><p>{state.error === 409 ? "The reading changed. Refresh it to continue." : [401, 403, 404].includes(state.error) ? "This reading is no longer available in the selected role." : "The Torah portion couldn’t be loaded. Try again in a moment."}</p>
+    {state.error ? <div role="status" data-testid="exploration-state" data-exploration-state={state.error === 409 ? "changed" : [401, 403, 404].includes(state.error) ? "role-unavailable" : "failed"}><p>{state.error === 409 ? "The reading changed. Refresh it to continue." : [401, 403, 404].includes(state.error) ? "This reading is no longer available in the selected role." : "The Torah portion couldn’t be loaded. Try again in a moment."}</p>
       <button className="button-secondary" onClick={state.error === 409 ? refresh : retry}>{state.error === 409 ? "Refresh reading" : "Try again"}</button></div>
       : unresolved && unresolved.reason === "unknown-slot" && unresolved.mode === "admin" ? <div role="status" data-testid="admin-slot-line"><p>Choose a service for this student, then the reading can be shown</p>
         {/* 1.9 N14 (AD-02, tier A): the admin is the one who sets the service, so the line says so and opens the student's details. */}
         <WorkspaceLink className="button-secondary" href={`/workspace/admin/students?tab=students&edit=${encodeURIComponent(unresolved.studentId)}`}>Edit details</WorkspaceLink></div>
-      : unresolved ? <div role="status"><p>{explorationReasons[unresolved.reason]}</p><button className="button-secondary" onClick={retry}>Try again</button></div>
+      : unresolved ? <div role="status" data-testid="exploration-state" data-exploration-state={`unresolved-${unresolved.reason}`}><p>{explorationReasons[unresolved.reason]}</p><button className="button-secondary" onClick={retry}>Try again</button></div>
       : !current || !prepared ? <p role="status">Loading the Torah portion…</p> : <>
         {study ? <>
           <CommentaryStatus works={works.map(row => ({ work: row.work, status: row.status, retry: row.retry, covers: true }))} />
@@ -48,11 +48,11 @@ export function ExplorationContent({ state, group, retry, page, refresh, audio }
             showEnglish={lens.english} works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))} />
         </> : <FlowingStudyText verses={current.verses} assignment={{ kind: "torah", confirmed: false, verses: [] }} group={group} toolsAvailable={false} activeWord={audio?.activeWord ?? null} onWord={audio?.onWord} onVerse={audio?.onVerse} showEnglish={prefs.translation} tikkun={prefs.tikkunView} linked={linkedVerse(leinLink, current.verses)} />}
         {audio?.player}
-        <div className="study-verse-details">{current.verses.map(verse => <div key={verse.ref} className="study-verse-detail" data-verse-ref={verse.ref}>
+        <div className="study-verse-details">{current.verses.map(verse => <div key={verse.ref} className="study-verse-detail" data-testid="study-verse-detail" data-verse-ref={verse.ref}>
           <Apparatus verse={verse} learner />
           {!study && <VerseRashi verse={verse} state={rashi.lookup.forVerse(verse.ref)} link={leinLink} retry={rashi.retry} />}
         </div>)}</div>
-        <p className="study-page-position">Verses {current.offset + 1}–{current.offset + current.verses.length} of {current.totalVerses}</p>
+        <p className="study-page-position" data-testid="page-position" data-page-first={current.offset + 1} data-page-last={current.offset + current.verses.length} data-page-total={current.totalVerses}>Verses {current.offset + 1}–{current.offset + current.verses.length} of {current.totalVerses}</p>
         {prepared.pages.length > 1 && <nav className="study-pages" aria-label="Proposed Torah text pages">
           <button className="button-secondary" disabled={state.pending || previous === undefined} onClick={() => previous !== undefined && page(previous)}>Previous text page</button>
           <button className="button-secondary" disabled={state.pending || current.nextOffset === null} onClick={() => current.nextOffset !== null && page(current.nextOffset)}>Next text page</button>

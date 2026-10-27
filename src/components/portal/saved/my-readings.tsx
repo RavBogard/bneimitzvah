@@ -20,7 +20,7 @@ export function MyReadingsView({ state, expanded, listId, onExpand, onRetry }: {
     {state.status === "loading" && <p className={styles.mineLine}>Finding your readings.</p>}
     {state.status === "failed" && <><p className={styles.mineLine} role="status">Your readings didn’t load.</p>
       <button type="button" className={`button-secondary ${styles.more}`} onClick={onRetry}>Try again</button></>}
-    {state.status === "ready" && !readings.length && <p className={styles.mineLine}>Save a reading from This week to see it here.</p>}
+    {state.status === "ready" && !readings.length && <p className={styles.mineLine} data-testid="my-readings-empty">Save a reading from This week to see it here.</p>}
     {shown.length > 0 && <ul id={listId} className={styles.list}>
       {shown.map(reading => <li key={reading.id}><a className={styles.item} href={savedReadingHref(reading.id)}>
         <span className={styles.itemName}><bdi>{reading.name}</bdi></span>

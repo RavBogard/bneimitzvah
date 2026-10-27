@@ -16,6 +16,18 @@ function saveLabel(cell: WorkCell, stream: Stream) {
   if (cell.text !== (cell.head?.text ?? "")) return "Not saved yet";
   return cell.head ? cell.head.text === "" ? "Translation cleared · Saved" : "Saved" : "No translation saved yet";
 }
+/** The editor's state as a stable word, whatever the status line says. */
+function saveState(cell: WorkCell, stream: Stream) {
+  if (cell.revisionRecovery) return "review";
+  if (cell.phase === "saving") return "saving";
+  if (cell.phase === "unknown") return "unconfirmed";
+  if (cell.phase === "conflict") return "conflict";
+  if (!cell.verified) return "unavailable";
+  if (cell.phase === "invalid") return "invalid";
+  if (stream === "note") return cell.text ? "unsubmitted" : "empty";
+  if (cell.text !== (cell.head?.text ?? "")) return "unsaved";
+  return cell.head ? "saved" : "empty";
+}
 function recoveryMessage(label: string, detail: string) {
   let remainder = detail.trim();
   // Collapse only identical leading sentences; all distinct recovery detail stays.
@@ -38,7 +50,7 @@ export function WorkEditor({ coordinator, kind, verseRef, stream, cell }: { coor
     <textarea id={id} dir="auto" rows={5} value={cell.text} readOnly={Boolean(revision)} aria-describedby={`${id}-help ${id}-status${separateError ? ` ${id}-error` : ""}`} aria-invalid={cell.phase === "invalid" || Boolean(cell.error && !cell.pending && cell.phase !== "conflict" && !revision)}
       onChange={event => coordinator.edit(kind, verseRef, stream, event.target.value)} onCompositionStart={() => coordinator.composition(kind, verseRef, stream, true)} onCompositionEnd={event => { coordinator.edit(kind, verseRef, stream, event.currentTarget.value); coordinator.composition(kind, verseRef, stream, false); }}
       onBlur={() => { if (stream === "draft") void coordinator.save(kind, verseRef, stream); }} />
-    <p id={`${id}-status`} role="status" className={`work-status${recovery ? " request-error" : ""}`}>{recovery ? recoveryMessage(status, cell.error) : status}</p>
+    <p id={`${id}-status`} role="status" data-testid="work-status" data-work-state={saveState(cell, stream)} className={`work-status${recovery ? " request-error" : ""}`}>{recovery ? recoveryMessage(status, cell.error) : status}</p>
     {separateError && <p id={`${id}-error`} className="request-error" role={cell.phase === "invalid" ? "alert" : "status"}>{cell.error}</p>}
     {revision && <section className="work-comparison" aria-label={`Review unsent ${stream === "draft" ? "translation" : "note"} for ${verseRef}`}>
       <h5>Current saved {stream === "draft" ? "translation" : "note"}</h5>
@@ -65,7 +77,7 @@ export function VerseTools({ coordinator, kind, verseRef }: { coordinator: WorkC
   const active = coordinator.active?.kind === kind && coordinator.active.ref === verseRef, verse = scope.verses.get(verseRef), cell = coordinator.cell(kind, verseRef, stream);
   const learner = scope.baseline.mode === "student" || scope.baseline.mode === "child-practice", staff = scope.baseline.mode === "tutor" || scope.baseline.mode === "admin", editable = stream === "draft" ? learner : staff;
   const assignment = scope.baseline.readings.find(row => row.kind === kind)!;
-  return <details className="verse-work" open={active} onToggle={event => { if (event.currentTarget.open && !active) void coordinator.open(kind, verseRef); else if (!event.currentTarget.open && active) coordinator.close(kind, verseRef); }}>
+  return <details className="verse-work" data-testid="verse-work" open={active} onToggle={event => { if (event.currentTarget.open && !active) void coordinator.open(kind, verseRef); else if (!event.currentTarget.open && active) coordinator.close(kind, verseRef); }}>
     <summary>{learner ? "More · Your translation & notes" : "More · Translation & notes"}<span className={learner ? "sr-only" : undefined}> · <bdi dir="ltr">{verseRef}</bdi></span></summary>
     {active && <div className="verse-work-content">
       <div className="work-streams" role="group" aria-label={`Work for ${verseRef}`}><button className="button-text" aria-pressed={stream === "draft"} aria-controls={`${id}-draft`} onClick={() => setStream("draft")}>{learner ? "My translation" : "Student translation"}</button><button className="button-text" aria-pressed={stream === "note"} aria-controls={`${id}-note`} onClick={() => setStream("note")}>{learner ? "Notes from your teachers" : "Teacher notes"}</button></div>

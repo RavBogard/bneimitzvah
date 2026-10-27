@@ -170,8 +170,8 @@ test("the client parser accepts the dates only together, in order and on or befo
 test("the reading header shows saved rehearsals in the ceremony date's format and nothing when none is set", () => {
   const render = (rehearsal1: string | null | undefined, rehearsal2: string | null | undefined) => renderToStaticMarkup(createElement(RehearsalDates, { student: { rehearsal1, rehearsal2 } }));
   expect(render(undefined, undefined)).toBe(""); expect(render(null, null)).toBe("");
-  expect(render("2027-01-09", "2027-01-23")).toBe('<p class="hero-rehearsals">Rehearsals: <span><time dateTime="2027-01-09">Sat, Jan 9, 2027</time></span><span> and <time dateTime="2027-01-23">Sat, Jan 23, 2027</time></span></p>');
-  expect(render(null, "2027-01-23")).toBe('<p class="hero-rehearsals">Rehearsal: <span><time dateTime="2027-01-23">Sat, Jan 23, 2027</time></span></p>');
+  expect(render("2027-01-09", "2027-01-23")).toBe('<p class="hero-rehearsals" data-testid="hero-rehearsals">Rehearsals: <span><time dateTime="2027-01-09">Sat, Jan 9, 2027</time></span><span> and <time dateTime="2027-01-23">Sat, Jan 23, 2027</time></span></p>');
+  expect(render(null, "2027-01-23")).toBe('<p class="hero-rehearsals" data-testid="hero-rehearsals">Rehearsal: <span><time dateTime="2027-01-23">Sat, Jan 23, 2027</time></span></p>');
 });
 
 test("every role that sees the ceremony date also receives the service slot, and the client parser accepts only the three known slots", async () => {

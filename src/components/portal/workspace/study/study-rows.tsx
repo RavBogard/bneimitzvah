@@ -30,7 +30,7 @@ function StudyRow({ verse, assignment, id, onVerse, onWord, onTools, activeWord,
   // While choosing verses a tap on a word does nothing at all (no card, no playback); the row is as it was once choosing ends.
   const opener = useWordCardOpener(), card = toolsAvailable && !state.choosing ? opener : null;
   return <>
-    {label && <p className="student-aliyah">{label}</p>}
+    {label && <p className="student-aliyah" data-testid="student-aliyah">{label}</p>}
     <article className={styles.row} data-verse-ref={verse.ref} aria-label={verse.ref} data-verse-picked={state.picked || undefined} data-verse-marked={state.marked || undefined}>
       <div className={styles.verseHebrew}>
         {state.choosing && choice ? <button type="button" className={styles.number} onClick={event => choice.onToggle(verse.ref, event.shiftKey)} aria-pressed={state.picked} aria-label={`Select ${verse.ref}`} title={verse.ref}><span>{state.picked && <ChoiceCheck />}{number}</span></button>
@@ -43,7 +43,7 @@ function StudyRow({ verse, assignment, id, onVerse, onWord, onTools, activeWord,
         <div className={styles.apparatus}><Apparatus verse={verse} learner /></div>
       </div>
       <div className={styles.verseSide}>
-        {showEnglish && <p className={`study-english ${styles.english}`} lang="en" dir="ltr" data-english-ref={verse.ref}>{verse.english ?? "English reference unavailable for this verse."}</p>}
+        {showEnglish && <p className={`study-english ${styles.english}`} lang="en" dir="ltr" data-english-ref={verse.ref} data-english-available={verse.english ? "true" : "false"}>{verse.english ?? "English reference unavailable for this verse."}</p>}
         <VerseCommentary verse={verse} works={works} link={link} />
         <VerseActions verse={verse.ref} onTools={onTools} />
         {own?.yours(verse, works)}
@@ -65,7 +65,7 @@ export function StudyRows({ verses, assignment, group, sections = [], onVerse, o
   choice?: VerseChoiceView;
 }) {
   const first = useMemo(() => firstWordKey(verses), [verses]);
-  return <WordGroup scope={`${verses[0]?.ref}|${verses.length}`} first={first} className={`study-verses ${styles.rows}`} aria-label="Hebrew reading, verse by verse" tabIndex={-1} data-study-rows="">
+  return <WordGroup scope={`${verses[0]?.ref}|${verses.length}`} first={first} data-testid="study-verses" className={`study-verses ${styles.rows}`} aria-label="Hebrew reading, verse by verse" tabIndex={-1} data-study-rows="">
     {verses.map((verse, index) => <StudyRow key={verse.ref} verse={verse} assignment={assignment} id={`${group}-row-${index}`}
       label={sections.find(section => section.index === index)?.label}
       onVerse={onVerse ? () => onVerse(index) : undefined} onWord={onWord ? word => onWord(index, word) : undefined} onTools={onTools ? opener => onTools(verse.ref, opener) : undefined}

@@ -15,12 +15,12 @@ test("optional verse-bound English preserves the exact continuous flow, qere and
   const render = (showEnglish?: boolean) => renderToStaticMarkup(createElement(FlowingStudyText, { ...props, ...(showEnglish === undefined ? {} : { showEnglish }) }));
   const off = render(false), on = render(true);
   expect(render()).toBe(off);
-  expect(on.replace(/<span class="study-english [^"]+" lang="en" dir="ltr" data-english-ref="[^"]+">[^]*?<\/span>/g, "")).toBe(off);
+  expect(on.replace(/<span class="study-english [^"]+" lang="en" dir="ltr" data-english-ref="[^"]+"[^>]*>[^]*?<\/span>/g, "")).toBe(off);
   expect(on.match(/data-english-ref=/g)).toHaveLength(3);
   for (const verse of verses) expect(on).toContain(`data-english-ref="${verse.ref}"`);
   expect(on).toContain("English reference unavailable for this verse.");
   expect(on).toContain("&lt;script&gt;not markup&lt;/script&gt;"); expect(on).not.toContain("<script>");
-  expect(off).toMatch(/<span class="study-read-alternative">[^]*?<\/span> <span class="study-read-chip" lang="en" dir="ltr" data-copy-skip="">read<span class="sr-only">\. Chant this word \(qere\)\. The scroll writes it differently \(ketiv\)\.<\/span><\/span> <span class="study-ketiv">/); expect(off).not.toContain("read / qere:"); expect(off).toContain('data-reference-active="true"');
+  expect(off).toMatch(/<span class="study-read-alternative">[^]*?<\/span> <span class="study-read-chip" lang="en" dir="ltr" data-copy-skip="">read<span class="sr-only">\. Chant this word \(qere\)\. The scroll writes it differently \(ketiv\)\.<\/span><\/span> <span class="study-ketiv"[^>]*>/); expect(off).not.toContain("read / qere:"); expect(off).toContain('data-reference-active="true"');
   expect(on.match(/data-word-index="\d+"/g)).toEqual(off.match(/data-word-index="\d+"/g));
   expect(render(false)).toBe(off);
 });

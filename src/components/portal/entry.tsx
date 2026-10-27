@@ -175,7 +175,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
       : view.kind === "invalid-invitation" ? "Invitation unavailable" : view.kind === "uncertain" ? "We couldn’t confirm the result" : "Access is unavailable";
 
   const TaskHeading = doors ? "h3" : "h2";
-  const task = <section className="entry-task" data-entry-state={view.kind} aria-labelledby="entry-title" aria-busy={view.kind === "loading" || pending !== null}>
+  const task = <section className="entry-task" data-testid="entry-task" data-entry-state={view.kind} data-entry-step={view.kind === "sign-in" ? (linkRequested ? "code" : "address") : undefined} aria-labelledby="entry-title" aria-busy={view.kind === "loading" || pending !== null}>
         <TaskHeading id="entry-title" ref={heading} tabIndex={-1} aria-live="polite" aria-atomic="true">{title}</TaskHeading>
         {view.kind === "sign-in" && authenticationError && !attemptedSignIn && <p className="request-error" role="alert">That sign-in attempt couldn’t be verified. Please try again.</p>}
         {message && <p className="request-error" role="alert">{message}</p>}
@@ -187,7 +187,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
               <input id="entry-code" name="code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" minLength={6} maxLength={6} required spellCheck={false}
                 value={code} onChange={event => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} disabled={pending !== null} aria-describedby="entry-code-help" />
               <p className="field-help" id="entry-code-help">{SIGN_IN_CODE_COPY.help}</p>
-              <button type="submit" className="button-primary" disabled={pending !== null}>{pending === "code" ? SIGN_IN_CODE_COPY.pending : SIGN_IN_CODE_COPY.submit}</button>
+              <button type="submit" className="button-primary" data-testid="entry-code-submit" disabled={pending !== null}>{pending === "code" ? SIGN_IN_CODE_COPY.pending : SIGN_IN_CODE_COPY.submit}</button>
             </form>
             <p>Don’t see it? Check your spam folder, or wait a minute before requesting another link.</p>{resendReady && <button type="button" className="button-secondary" disabled={pending !== null} onClick={sendNewCode}>{pending === "email" ? "Sending link…" : "Send a new code"}</button>}<button type="button" className="button-secondary" disabled={pending !== null} onClick={() => { lastEmail.current = ""; focusNext.current = true; setLinkRequested(false); setCode(""); rememberCodeRequest(false); setMessage(""); }}>Use a different email</button></>
           : <><p>{invitation ? "Sign in with the email address that received this invitation." : "Use Google, or get a sign-in link by email. No password needed."}</p>
@@ -203,7 +203,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
               <label htmlFor="entry-email">Email address</label>
               <input id="entry-email" name="email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required maxLength={254} value={email} onChange={event => setEmail(event.target.value)} disabled={pending !== null} aria-describedby="entry-email-help" />
               <p className="field-help" id="entry-email-help">Use the address on your invitation.</p>
-              <button type="submit" className="button-primary" disabled={pending !== null}>{pending === "email" ? "Sending link…" : "Email me a sign-in link"}</button>
+              <button type="submit" className="button-primary" data-testid="entry-email-submit" disabled={pending !== null}>{pending === "email" ? "Sending link…" : "Email me a sign-in link"}</button>
             </form>
             {/* F3: the way to the account request, which opens on Account once signed in. Not on the page that is already that way. */}
             {!invitation && !(inlineGoogle && (back === "/account" || googleIntent === "account")) && <p className="entry-ask"><a href={signInAddress("/account")}>Ask for an account</a></p>}</>)}
@@ -217,10 +217,10 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
           <dl className="invitation-details"><div><dt>Access</dt><dd>{roleNames[view.review.role]}</dd></div>{view.review.student && <div><dt>Student</dt><dd><bdi dir="auto">{view.review.student.firstName} {view.review.student.lastName}</bdi></dd></div>}</dl>
           {view.review.role === "parent" && view.review.student && <p>You'll be able to follow <bdi dir="auto">{view.review.student.firstName}</bdi>'s reading and practise with <bdi dir="auto">{view.review.student.firstName}</bdi>.</p>}
           <p className="field-help">This invitation expires <time dateTime={view.review.expiresAt}>{new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(view.review.expiresAt))}</time>.</p>
-          <button type="button" className="button-primary" disabled={pending !== null} onClick={() => void action("accept")}>{pending === "accept" ? "Accepting invitation…" : "Accept invitation"}</button>
+          <button type="button" className="button-primary" data-testid="invitation-accept" disabled={pending !== null} onClick={() => void action("accept")}>{pending === "accept" ? "Accepting invitation…" : "Accept invitation"}</button>
           <button type="button" className="button-text" disabled={pending !== null} onClick={() => void action("sign-out")}>Sign out to use another account</button>
         </>}
-        {view.kind === "accepted" && <><p role="status">Your invitation has been accepted.</p><a className="button-primary" href={rolePaths[view.role]}>Continue</a></>}
+        {view.kind === "accepted" && <><p role="status">Your invitation has been accepted.</p><a className="button-primary" data-testid="invitation-continue" href={rolePaths[view.role]}>Continue</a></>}
         {view.kind === "invalid-invitation" && <><p>This invitation may have changed, expired, already been accepted, or belong to another account. No new access has been added by this request.</p><p>Open the latest invitation email, or ask the congregation for a new invitation.</p><button type="button" className="button-primary" onClick={retry}>{message ? "Review invitation again" : "Check invitation again"}</button><a className="button-text" href="/">Check my access</a></>}
         {view.kind === "uncertain" && <><p>The request was interrupted. Your invitation may have been accepted. Check your access before trying again.</p><a className="button-primary" href="/">Check my access</a><button type="button" className="button-text" onClick={retry}>Review invitation again</button></>}
         {view.kind === "forbidden" && <><p>This account can’t use the requested access right now. Ask the congregation for help, or sign in with a different account.</p><button type="button" className="button-secondary" disabled={pending !== null} onClick={() => void action("sign-out")}>{pending === "sign-out" ? "Signing out…" : "Sign out"}</button></>}
@@ -234,7 +234,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
     <a className="skip-link" href="#portal-main">Skip to sign-in and access</a>
     <SiteBar signedIn={view.kind === "signed-in" ? true : view.kind === "sign-in" ? false : undefined} mode={invitation ? "minimal" : "site"} />
     <main id="portal-main" className="entry-layout">
-      <div className="entry-introduction">
+      <div className="entry-introduction" data-testid="entry-introduction" data-entry-mode={invitation ? "invitation" : "sign-in"}>
         <h1>{invitation ? "Join your congregation’s practice" : "Open your reading"}</h1>
         <p>{invitation ? "Review the access you’ve been invited to use. You choose whether to accept it." : "Your assigned passage is the starting point. Sign in with the account on your invitation."}</p>
         <div className="entry-notes"><p>For students, parents and the people who teach them.</p><p>Parents use their own account to reach a linked child’s practice.</p></div>
