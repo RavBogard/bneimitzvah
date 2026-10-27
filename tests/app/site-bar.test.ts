@@ -49,7 +49,7 @@ test("signed in, the right side is the My Readings control, with a bookmark icon
   expect(slot(signedOut)?.[1]).toContain("/sign-in");
   const css = readFileSync(join(process.cwd(), "src", "app", "globals.css"), "utf8");
   expect(css).toMatch(/\.site-bar-end \{[^}]*min-width: 9rem/);
-  expect(css).toMatch(/@media \(max-width: 479\.98px\)[^@]*\.site-bar-mine-text \{ position: absolute/);
+  expect(css).toMatch(/@media \(max-width: 559\.98px\)[^@]*\.site-bar-mine-text \{ position: absolute/);
   // Beta hides below the width where disc, name, Beta, Read, Learn and the icon-only account fit on one line (368px measured; 375px set).
   expect(css).toMatch(/@media \(max-width: 374\.98px\) \{ \.site-bar \.site-beta \{ display: none; \} \}/);
   expect(css).not.toMatch(/\.site-bar \.portal-brand[^}]*display: none|\.site-bar-mark[^}]*display: none/);
