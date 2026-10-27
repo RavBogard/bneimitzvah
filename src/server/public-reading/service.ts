@@ -2,7 +2,8 @@ import "server-only";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import { expandReadingRanges, readingSegments } from "../../lib/readings/ranges";
 import { proposeReading, type Calendar, type Snapshot } from "../../lib/readings/proposals";
-import { publicShabbat } from "../../lib/readings/public-shabbat";
+import { publicShabbat, thisShabbat } from "../../lib/readings/public-shabbat";
+import { nextShabbatot, type CalendarRow } from "../../lib/readings/calendar";
 import { canonicalReadingRef } from "../../lib/readings/reading-ref";
 import { WORD_DETAILS_LIMITS, type StudyWordDetails } from "../../lib/hebrew/word-details";
 import type { StudyWordAids } from "../../lib/hebrew/word-aids";
@@ -171,6 +172,23 @@ export function createPublicReadingService(input: {
       return Object.freeze({ date: loaded.date, parashah: loaded.snapshot.reading?.parashah ?? null,
         torah: plans.torah ? view(plans.torah) : null, haftarah: plans.haftarah ? view(plans.haftarah) : null, fetchedAt: loaded.fetchedAt,
         listening: listening() });
+    },
+    /**
+     * The next fifteen months of Shabbatot, each with the week resolver's name for it (Find a reading, the Readings index). Eight
+     * weeks at a time; a week the resolver cannot answer is a row with no name, so one bad week never fails the calendar.
+     */
+    async calendar(signal?: AbortSignal): Promise<{ today: string; rows: CalendarRow[] }> {
+      const dates = nextShabbatot(thisShabbat(now())), rows: CalendarRow[] = [];
+      for (let i = 0; i < dates.length; i += 8) {
+        connected(signal);
+        rows.push(...await Promise.all(dates.slice(i, i + 8).map(async (date): Promise<CalendarRow> => {
+          try {
+            const loaded = await snapshot(date, signal), classification = loaded.snapshot.classification;
+            return Object.freeze({ date, name: loaded.snapshot.reading?.parashah ?? null, kind: classification === "regular" ? "regular" : classification === "holiday" ? "holiday" : "other" });
+          } catch { return Object.freeze({ date, name: null, kind: "other" }); }
+        })));
+      }
+      return { today: thisShabbat(now()), rows };
     },
     /** The reader's print sheet: the Shabbat's calendar aliyot (full kriyah and triennial), numbers only. */
     async portions(date: string, signal?: AbortSignal): Promise<WeekPortions> {
