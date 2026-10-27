@@ -39,6 +39,8 @@ async function signIn(page: Page, email: string) {
   await page.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
   await ui(page.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
   await openAuthMail(page, fixture.takeMail(email));
+  // A plain sign-in now lands on My Readings (Area A); these flows start from the front door.
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   await ui(page.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
 }
 const noHorizontalScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
@@ -87,7 +89,6 @@ it("a person asks, an admin sees the count and approves, and the new member save
   // The new member: told, and saving a reading works.
   await asker.goto("/", { waitUntil: "domcontentloaded" });
   await ui(asker.getByRole("heading", { name: "Your account can save readings", exact: true })).toBeVisible();
-  await ui(asker.getByRole("region", { name: "My readings" })).toBeVisible();
   await asker.goto("/read", { waitUntil: "domcontentloaded" });
   await asker.getByRole("button", { name: "Save to My Readings", exact: true }).click();
   await asker.getByRole("form", { name: "Add this reading" }).getByRole("button", { name: "Add", exact: true }).click();

@@ -29,7 +29,8 @@ test("the home is CRC Torah's front door: This week, then the Beit Mitzvah door,
   // Study opens the same reading in the Study lens.
   expect(markup).toContain('href="/read?lens=study">Study</a>');
   expect(markup).toContain('id="beit-mitzvah-title"');
-  expect(markup).toContain(">For students, families and tutors preparing a Beit Mitzvah.</p>");
+  expect(markup).toContain(">Your readings</h2>");
+  expect(markup).toContain(">Save the readings you’re working on, mark verses, keep notes. Beit Mitzvah students and families find their assigned reading and tutor here too.</p>");
   expect(markup).toContain('id="learn-title"');
   expect(markup).toContain(">Learn to lein</h2>");
   expect(markup).toContain("Hear the phrases, then lein a verse of this week&#x27;s reading.");
@@ -133,7 +134,7 @@ test("a signed-in account that is refused still gets the same site bar; the door
   expect(frontDoorAccount({ kind: "unavailable" })).toEqual({ kind: "task", signedIn: false });
   expect(frontDoorAccount({ kind: "loading" })).toBeNull();
   expect(frontDoorAccount({ kind: "sign-in" })).toEqual({ kind: "sign-in" });
-  expect(frontDoorAccount({ kind: "signed-in", summary: { membershipAvailable: true, roles: ["tutor"], saved: true, approver: false, sessionBinding: "A".repeat(43) } })).toEqual({ kind: "account", saved: true, roles: ["tutor"] });
+  expect(frontDoorAccount({ kind: "signed-in", summary: { membershipAvailable: true, roles: ["tutor"], saved: true, approver: false, sessionBinding: "A".repeat(43) } })).toEqual({ kind: "account", saved: true, roles: ["tutor"], count: null, pinned: null });
   const bar = (account: ReturnType<typeof frontDoorAccount>) => {
     const markup = renderToStaticMarkup(createElement(FrontDoor, { account, children: createElement("p", null, "Synthetic task") }));
     return markup.slice(markup.indexOf("<header"), markup.indexOf("</header>"));
@@ -143,7 +144,7 @@ test("a signed-in account that is refused still gets the same site bar; the door
   // The home's Sign in is a plain link to the sign-in page; there is no scroll-to-door behaviour or role-name label.
   expect(bar({ kind: "sign-in" })).toContain('href="/sign-in"');
   expect(bar({ kind: "sign-in" })).not.toContain("beit-mitzvah");
-  expect(bar({ kind: "account", saved: false, roles: [] })).toContain('href="/account"');
+  expect(bar({ kind: "account", saved: false, roles: [], count: null, pinned: null })).toContain('href="/mine"');
 });
 
 test("Find a reading sits under the hero and above the doors, with the Coming up row holding its place while the calendar loads", async () => {

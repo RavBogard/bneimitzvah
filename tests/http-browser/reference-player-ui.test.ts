@@ -354,7 +354,7 @@ it("supports colors-off qere/maqaf and keyboard whole-verse playback in the phon
   });
   // The toolbar is the tool dock on a phone (1.9 N4): fixed in the thumb zone, and one only.
   expect(clearance.position).toBe("fixed"); expect(clearance.bars).toBe(1);
-  await tab.getByRole("button", { name: "Colors", exact: true }).click(); await ui(tab.locator(".study-verses [data-family]")).toHaveCount(0);
+  await tab.getByRole("button", { name: "Colors", exact: true }).dispatchEvent("click"); /* no bottom tab bar now: the dev indicator sits over the toolbar */ await ui(tab.locator(".study-verses [data-family]")).toHaveCount(0);
   const qere = tab.locator('.study-verses [data-verse-ref="Genesis 1:1"] .study-read-alternative [data-word-index="1"]');
   expect(await described(qere)).toBe("Hear whole verse; select word for tools");
   await qere.focus(); await qere.press("Enter"); await playing(tab); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse");

@@ -99,7 +99,7 @@ it("clears nested private dialogs on real session expiry and tutor revocation, l
     if (failure === "session") {
       await safe(() => tab.getByRole("link", { name: "Sign in", exact: true }).click()); await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/sign-in`);
     } else {
-      await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "Account", exact: true }).click(); await tab.getByRole("list", { name: "Roles" }).getByRole("link", { name: /^Parent/ }).click(); })());
+      await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click(); await tab.locator('a[href="/workspace/parent"]').click(); })());
       await ui(tab.getByRole("list", { name: "Child", exact: true })).toBeVisible();
       expect(await tab.evaluate(value => !document.body.textContent?.includes(value) && document.querySelectorAll("dialog:modal").length === 0, draft)).toBe(true);
     }

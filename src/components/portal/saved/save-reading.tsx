@@ -6,7 +6,7 @@ import { parseSession, requestPortal } from "../api";
 import { rememberSignedIn, signedInHint, signInPending } from "../signed-in-hint";
 import { ReturnSignInLink } from "../return-sign-in-link";
 import type { Pill } from "../public-reading/reader-title";
-import { savedReadingHref } from "./my-readings";
+import { savedReadingHref } from "../mine/own-readings";
 import styles from "./saved.module.css";
 
 /** The passage on screen, as /read knows it: the page's title (a parashah, a named reading or a range; absent on a
@@ -160,7 +160,7 @@ export function useSaveReading({ passage, whole, back, offer, onChoose, onSaved 
   const pill: Pill | null = !passage || step === "saved" ? null : step === "signed-out"
     ? { key: "save", label: "Sign in to save", icon: "bookmark", onClick: () => {}, signIn: back }
     : { key: "save", label: "Save", accessibleName: "Save to My Readings", icon: "bookmark", haspopup: "dialog", disabled: step === "checking" || step === "saving", onClick: () => ask(null) };
-  const note = step === "saved" ? <p className={styles.savedNote} role="status">Saved to <a href="/">My Readings</a>. {savedId && <a href={savedReadingHref(savedId)}>{SAVE_STRINGS.open}</a>}</p> : null;
+  const note = step === "saved" ? <p className={styles.savedNote} role="status">Saved to <a href="/mine">My Readings</a>. {savedId && <a href={savedReadingHref(savedId)}>{SAVE_STRINGS.open}</a>}</p> : null;
   return { pill, sheet, note, step, ask };
 }
 

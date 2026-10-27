@@ -2,9 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createSavedReading, fetchSavedReadings, parseSavedList, parseSavedReading, parseSaveResult, SavedRequestError } from "../../src/components/portal/saved/api";
-import { MyReadingsView, MY_READINGS_FIRST, savedReadingHref, type MyReadingsState } from "../../src/components/portal/saved/my-readings";
+import { savedReadingHref } from "../../src/components/portal/mine/own-readings";
 import { SaveReadingView, suggestedName, type SaveStep } from "../../src/components/portal/saved/save-reading";
-import { FrontDoor } from "../../src/components/portal/front-door/front-door";
 
 // Synthetic readings only: invented names, real verse references.
 const row = (index: number, extra: Record<string, unknown> = {}) => ({ id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`, name: `Reading ${index}`, date: "2026-10-17",
@@ -101,44 +100,5 @@ describe("Save on /read (Add to My Readings)", () => {
     expect(suggestedName({ title: null, label: null, kind: "torah", ranges: ["Exodus 12:21-51"], date: null })).toBe("Shabbat reading · Torah");
     expect(suggestedName({ title: "Bereshit", label: "Maftir", kind: "torah", ranges: ["Genesis 6:5-8"], date: null })).toBe("Bereshit · Maftir");
     expect(Array.from(suggestedName({ title: "א".repeat(100), label: null, kind: "torah", ranges: ["Genesis 1:1"], date: null }))).toHaveLength(80);
-  });
-});
-
-describe("My readings on the front door", () => {
-  const view = (state: MyReadingsState, expanded = false) => renderToStaticMarkup(createElement(MyReadingsView, { state, expanded, listId: "mine", onExpand: () => {}, onRetry: () => {} }));
-  const readings = (n: number) => Array.from({ length: n }, (_, i) => parseSavedReading(row(i + 1, i % 2 ? { date: null, kind: "haftarah", ranges: "Isaiah 54:1-55:5" } : {}))!);
-  it("shows the five most recent with their dates and ranges, and the rest inline on request", () => {
-    const some = view({ status: "ready", readings: readings(3) });
-    expect(some).toContain('<h2 id="my-readings-title"');
-    expect(some.match(/<li>/g)).toHaveLength(3);
-    expect(some).toContain(`href="${savedReadingHref(row(1).id)}"`);
-    expect(savedReadingHref(row(1).id)).toBe(`/read?saved=${row(1).id}`);
-    expect(some).toContain("<bdi>Reading 1</bdi>");
-    expect(some).toContain('<time dateTime="2026-10-17">Saturday, October 17, 2026</time> · Torah <bdi dir="ltr">Genesis 1:1–2:3</bdi>');
-    expect(some).toContain('Haftarah <bdi dir="ltr">Isaiah 54:1–55:5</bdi>');
-    expect(some).not.toContain("All my readings");
-    const many = view({ status: "ready", readings: readings(7) });
-    expect(many.match(/<li>/g)).toHaveLength(MY_READINGS_FIRST);
-    expect(many).toContain('aria-expanded="false" aria-controls="mine">All my readings</button>');
-    const all = view({ status: "ready", readings: readings(7) }, true);
-    expect(all.match(/<li>/g)).toHaveLength(7);
-    expect(all).toContain('aria-expanded="true" aria-controls="mine">Fewer readings</button>');
-  });
-  it("says plainly when there are none, while loading, and when the list fails; refused, it is not there at all", () => {
-    expect(view({ status: "ready", readings: [] })).toContain("Save a reading from This week to see it here.");
-    expect(view({ status: "loading" })).toContain('aria-busy="true"');
-    const failed = view({ status: "failed" });
-    expect(failed).toContain("Your readings didn’t load.");
-    expect(failed).toContain(">Try again</button>");
-    expect(view({ status: "hidden" })).toBe("");
-    for (const state of [{ status: "ready", readings: readings(7) }, { status: "failed" }, { status: "ready", readings: [] }] as const) expect(view(state)).not.toMatch(/!|badge/i);
-  });
-  it("appears on the front door, under This week, only for an account that keeps saved readings", () => {
-    const door = (account: Parameters<typeof FrontDoor>[0]["account"]) => renderToStaticMarkup(createElement(FrontDoor, { account, children: createElement("p", null, "Synthetic task") }));
-    const member = door({ kind: "account", saved: true, roles: ["tutor"] });
-    expect(member).toContain("data-my-readings");
-    expect(member.indexOf('id="this-week-title"')).toBeLessThan(member.indexOf("data-my-readings"));
-    expect(member.indexOf("data-my-readings")).toBeLessThan(member.indexOf('data-door="beit-mitzvah"'));
-    for (const account of [{ kind: "account", saved: false, roles: [] } as const, { kind: "sign-in" } as const, null]) expect(door(account)).not.toContain("data-my-readings");
   });
 });

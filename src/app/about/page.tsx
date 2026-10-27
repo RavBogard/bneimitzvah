@@ -63,7 +63,7 @@ export default function AboutPage() {
       </section>
       <section aria-labelledby="about-records">
         <h2 id="about-records">What the site records about you</h2>
-        <p>Your account and reading stay private.</p>
+        <p>Your account stays private.</p>
         <PracticeDisclosure place="account" />
       </section>
       <section aria-labelledby="about-install">

@@ -61,7 +61,7 @@ test.describe("at 390x844", () => {
     await expect(today(page).getByText("Sat, Dec 12, 2026", { exact: true })).toBeVisible();
     const chips = today(page).getByRole("list", { name: "Assigned readings", exact: true }).getByRole("listitem");
     await expect(chips).toHaveText(["Torah Genesis 37:1–40:23", "Haftarah Amos 2:6–3:8"]);
-    await expect(bar(page).getByRole("link", { name: "Today", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(bar(page)).toHaveCount(0); // a student has no tab bar (Area A)
   });
 
   test("before the first rehearsal it names the next one", async ({ page }) => {

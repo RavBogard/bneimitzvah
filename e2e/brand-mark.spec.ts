@@ -49,7 +49,7 @@ async function barState(page: Page) {
 
 test("from 320px the bar is one line with the disc and the name always shown; the Beta chip shows from its breakpoint up", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "Sets its own widths");
-  for (const width of [320, 340, 360, BETA_BREAKPOINT - 1, BETA_BREAKPOINT, 400, 430, 479, 480, 600, 1024]) {
+  for (const width of [320, 340, 360, BETA_BREAKPOINT - 1, BETA_BREAKPOINT, 400, 430, 479, 480, 559, 560, 600, 1024]) {
     await page.setViewportSize({ width, height: 800 });
     await page.goto("/read");
     const state = await barState(page);

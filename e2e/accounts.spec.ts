@@ -56,7 +56,6 @@ test("a pending request says so, a full day or queue is refused plainly, and a m
   state = "member"; await page.reload();
   await expect(page.getByRole("heading", { name: "Your account can save readings", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "This week’s reading", exact: true })).toHaveAttribute("href", "/read");
-  await expect(page.getByRole("region", { name: "My readings" })).toBeVisible();
 });
 
 test("parents, tutors, admins and students are not offered a request on /account (G20: a student already has an account)", async ({ page }) => {
@@ -79,20 +78,12 @@ test("parents, tutors, admins and students are not offered a request on /account
   expect(asked).toEqual([]);
 });
 
-test("signed out, /, /sign-in and /account each show the way to ask for an account (F3), and it signs in to Account", async ({ page }) => {
+test("signed out, /sign-in and /account no longer offer Ask for an account; the shelf offers Ask to be linked (decision 13)", async ({ page }) => {
   await week(page);
   await page.route("**/api/session", route => json(route, 401, { error: "authentication-required" }));
-  for (const path of ["/", "/sign-in", "/account"]) {
+  for (const path of ["/sign-in", "/account"]) {
     await page.goto(path);
-    // The home's Beit Mitzvah door is Sign in and this link; the form is on /sign-in and, signed out, on /account.
-    if (path !== "/") await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
-    const ask = page.getByRole("link", { name: "Ask for an account", exact: true });
-    await expect(ask).toHaveAttribute("href", "/sign-in?return=%2Faccount");
-    const box = await ask.boundingBox(); expect(box && box.height >= 44).toBe(true);
+    await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveCount(0);
   }
-  // On the way there, sign-in returns to Account, where the request form opens once signed in; the link is not offered again.
-  await page.getByRole("link", { name: "Ask for an account", exact: true }).click();
-  await expect(page).toHaveURL(/\/sign-in\?return=%2Faccount$/);
-  await expect(page.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveCount(0);
 });

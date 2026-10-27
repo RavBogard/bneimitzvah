@@ -48,8 +48,8 @@ export function privateJson(value: JsonValue, status: 200 | 201 | 400 | 409 | 42
     return new Response(serialized, { status, headers });
   } catch { return errorResponse(undefined); }
 }
-type LocalDestination = "/" | "/sign-in" | "/sign-in?error=authentication" | "/sign-in?intent=account&error=authentication" | "/invitations/accept" | "/account" | "/connect" | "/connect?google=failed";
-const localDestinations = new Set<string>(["/", "/sign-in", "/sign-in?error=authentication", "/sign-in?intent=account&error=authentication", "/invitations/accept", "/account", "/connect", "/connect?google=failed"]);
+type LocalDestination = "/" | "/mine" | "/sign-in" | "/sign-in?error=authentication" | "/sign-in?intent=account&error=authentication" | "/invitations/accept" | "/account" | "/connect" | "/connect?google=failed";
+const localDestinations = new Set<string>(["/", "/mine", "/sign-in", "/sign-in?error=authentication", "/sign-in?intent=account&error=authentication", "/invitations/accept", "/account", "/connect", "/connect?google=failed"]);
 export function privateRedirect(destination: LocalDestination): Response {
   if (!localDestinations.has(destination)) return errorResponse(undefined);
   const headers = privateHeaders(); headers.set("location", destination);

@@ -53,16 +53,18 @@ test("the home is a front door to This week, Find a reading, Beit Mitzvah and Le
   await expect(page.locator("[data-chip-date]")).toHaveCount(4);
   await expect(page.getByRole("link", { name: "Every parashah, holiday and passage", exact: true })).toHaveAttribute("href", "/readings");
   await expect(page.locator('[data-door="beit-mitzvah"]')).toBeVisible();
-  // Signed out, the door is Sign in and the way to ask for an account; the form itself lives on /sign-in alone.
+  // Signed out, the door is Your readings: Sign in and How accounts work; the form itself lives on /sign-in alone.
   const beit = page.locator('[data-door="beit-mitzvah"]');
+  await expect(beit.getByRole("heading", { level: 2, name: "Your readings", exact: true })).toBeVisible();
   await expect(beit.getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", "/sign-in");
-  await expect(beit.getByRole("link", { name: "Ask for an account", exact: true })).toHaveAttribute("href", "/sign-in?return=%2Faccount");
+  await expect(beit.getByRole("link", { name: "How accounts work", exact: true })).toHaveAttribute("href", "/about#accounts");
+  await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveCount(0);
   await expect(page.getByLabel("Email address")).toHaveCount(0);
   await expect(page.locator('[data-door="learn"]')).toBeVisible();
   await expect(page.getByRole("link", { name: "Start", exact: true })).toHaveAttribute("href", "/learn");
   await expect(page.getByTestId("learn-door-line")).toHaveText("Hear the phrases, then lein a verse of this week's reading.");
   await expect(page.getByRole("link", { name: "Trope chart", exact: true })).toHaveAttribute("href", "/trope-chart");
-  for (const [name, scope] of [["Lein", page], ["Study", page], ["Start", page], ["Sign in", beit], ["Ask for an account", beit]] as const) {
+  for (const [name, scope] of [["Lein", page], ["Study", page], ["Start", page], ["Sign in", beit], ["How accounts work", beit]] as const) {
     const box = await scope.getByRole("link", { name, exact: true }).boundingBox();
     expect(box && box.height >= 44 && box.width >= 44, `${name} is at least 44px`).toBe(true);
   }
@@ -105,26 +107,26 @@ test("a failed reading call still shows This week's reading with working Lein an
   await opened;
 });
 
-test("a single-role student at the root sees the front door, not the workspace, and reaches Today in one tap", async ({ page }) => {
+test("a single-role student at the root sees the front door, not the workspace, and reaches My Readings in one tap", async ({ page }) => {
   await session(page, roles(["student"])); await week(page);
   await page.goto("/");
   const door = page.locator('[data-door="beit-mitzvah"]');
   await expect(door).toHaveAttribute("data-door-role", "student");
   expect(new URL(page.url()).pathname).toBe("/");
-  await expect(door.getByTestId("door-action")).toHaveAttribute("href", "/workspace/student");
+  await expect(door.getByTestId("door-action")).toHaveAttribute("href", "/mine");
   await expect(page.getByRole("link", { name: "Lein", exact: true })).toHaveAttribute("href", "/read");
   await door.getByTestId("door-action").click();
-  await expect(page).toHaveURL(/\/workspace\/student$/);
+  await expect(page).toHaveURL(/\/mine$/);
 });
 
-test("signed in, the site bar shows Account and the Beit Mitzvah door is the highest role's door; the form is gone", async ({ page }) => {
+test("signed in, the site bar shows My Readings and the Beit Mitzvah door is the highest role's door; the form is gone", async ({ page }) => {
   await session(page, roles(["tutor"])); await week(page);
   await page.goto("/");
   const door = page.locator('[data-door="beit-mitzvah"]');
   await expect(door).toHaveAttribute("data-door-role", "tutor");
-  await expect(page.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("href", "/account");
+  await expect(page.getByRole("link", { name: "My Readings", exact: true })).toHaveAttribute("href", "/mine");
   await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveCount(0);
-  await expect(door.getByTestId("door-action")).toHaveAttribute("href", "/workspace/tutor");
+  await expect(door.getByTestId("door-action")).toHaveAttribute("href", "/mine");
   await expect(page.getByTestId("account-roles")).toHaveCount(0);
   await page.unroute("**/api/session"); await session(page, roles(["student", "parent", "tutor", "admin"]));
   await page.reload();
@@ -133,7 +135,9 @@ test("signed in, the site bar shows Account and the Beit Mitzvah door is the hig
   await page.unroute("**/api/session"); await session(page, roles(["parent"]));
   await page.reload();
   await expect(door).toHaveAttribute("data-door-role", "parent");
-  await expect(door.getByTestId("door-action")).toHaveAttribute("href", "/workspace/parent");
+  await expect(door.getByTestId("door-action")).toHaveAttribute("href", "/mine");
+  await expect(door.getByRole("heading", { level: 2, name: "Your readings", exact: true })).toBeVisible();
+  await expect(door.getByTestId("door-action")).toHaveText("Open My Readings");
 });
 
 test("the Beit Mitzvah door holds its height from the access check to the signed-in door, so nothing below it moves", async ({ page }) => {

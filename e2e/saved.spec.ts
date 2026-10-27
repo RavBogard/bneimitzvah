@@ -43,7 +43,7 @@ test("Save on /read asks about the account only when pressed, and answers signed
   await expect(save).toBeVisible();
   // Visiting the reading never asks about a session; this browser was seen signed in, so the site bar shows the account control, not Sign in.
   expect(saved).toEqual([]);
-  await expect(page.getByRole("banner").getByRole("link", { name: "Account", exact: true })).toHaveAttribute("href", "/account");
+  await expect(page.getByRole("banner").getByRole("link", { name: "My Readings", exact: true })).toHaveAttribute("href", "/mine");
   await expect(page.getByRole("banner").getByRole("link", { name: "Sign in", exact: true })).toHaveCount(0);
   await save.click();
   // Signed out after all: Save becomes Sign in to save, which comes back to this reading and offers Save there.
@@ -95,7 +95,7 @@ test("a member saves the passage on screen with its name and Shabbat filled in, 
     await form.getByLabel("Date you’re reading it (optional)").fill("");
     await form.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: "Saved to My Readings." })).toBeVisible();
-    await expect(page.getByRole("link", { name: "My Readings", exact: true })).toHaveAttribute("href", "/");
+    await expect(page.getByRole("link", { name: "My Readings", exact: true }).last()).toHaveAttribute("href", "/mine");
     expect(posted.at(-1)).toEqual({ name: "My Noach", date: null, kind: "torah", ranges: "Genesis 6:9-11:32" });
     // The haftarah is its own passage: Save starts over for it, named for it.
     await page.getByRole("tab", { name: /^Haftarah/ }).click();
@@ -104,50 +104,6 @@ test("a member saves the passage on screen with its name and Shabbat filled in, 
     await page.getByRole("dialog", { name: "Add to My Readings", exact: true }).getByRole("button", { name: "Close", exact: true }).click();
     await expect(page.getByRole("form", { name: "Add this reading" })).toHaveCount(0);
     expect(await noHorizontalScroll(page)).toBe(true);
-  }
-});
-
-test("the front door shows My readings under This week for a member: five, then all of them inline", async ({ page }, testInfo) => {
-  for (const width of [360, 1280]) {
-    await page.setViewportSize({ width, height: 900 });
-    await page.unrouteAll({ behavior: "ignoreErrors" });
-    await week(page);
-    await page.route("**/api/session", route => json(route, 200, { membershipAvailable: true, roles: ["parent"], saved: true, approver: false, sessionBinding: binding }));
-    await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: Array.from({ length: 7 }, (_, i) => row(i + 1)) }));
-    await page.goto("/");
-    const mine = page.getByRole("region", { name: "My readings" });
-    await expect(mine).toBeVisible();
-    const top = (selector: string) => page.locator(selector).first().evaluate(node => node.getBoundingClientRect().top);
-    expect(await top("#this-week-title")).toBeLessThan(await top("[data-my-readings]"));
-    expect(await top("[data-my-readings]")).toBeLessThan(await top('[data-door="beit-mitzvah"]'));
-    await expect(mine.getByRole("listitem")).toHaveCount(5);
-    await expect(mine.getByRole("link", { name: /Synthetic reading 1\b/ })).toHaveAttribute("href", `/read?saved=${row(1).id}`);
-    const all = mine.getByRole("button", { name: "All my readings", exact: true });
-    await minSize(page, ["All my readings"]);
-    for (const box of await mine.getByRole("link").evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height))) expect(box).toBeGreaterThanOrEqual(44);
-    await all.click();
-    await expect(mine.getByRole("listitem")).toHaveCount(7);
-    await expect(mine.getByRole("button", { name: "Fewer readings", exact: true })).toHaveAttribute("aria-expanded", "true");
-    expect(await noHorizontalScroll(page)).toBe(true);
-    if (width === 360 && testInfo.project.name === "phone") await page.screenshot({ path: testInfo.outputPath("my-readings-360.png"), fullPage: true });
-  }
-});
-
-test("with none saved it says how to save one; signed out or student-only, the front door is unchanged and never asks", async ({ page }) => {
-  const saved: string[] = [];
-  page.on("request", request => { if (new URL(request.url()).pathname.startsWith("/api/saved/")) saved.push(new URL(request.url()).pathname); });
-  await week(page);
-  await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: [] }));
-  await page.route("**/api/session", route => json(route, 200, { membershipAvailable: true, roles: ["parent", "tutor"], saved: true, approver: false, sessionBinding: binding }));
-  await page.goto("/");
-  await expect(page.getByRole("region", { name: "My readings" }).getByText("Save a reading from This week to see it here.", { exact: true })).toBeVisible();
-  for (const answer of [{ status: 401, body: { error: "authentication-required" } }, { status: 200, body: { membershipAvailable: true, roles: ["student", "parent"], saved: false, approver: false, sessionBinding: binding } }]) {
-    saved.length = 0;
-    await page.unroute("**/api/session"); await page.route("**/api/session", route => json(route, answer.status, answer.body));
-    await page.goto("/");
-    await expect(page.locator('[data-door="beit-mitzvah"]').getByRole("heading", { level: 2 })).toBeVisible();
-    await expect(page.locator("[data-my-readings]")).toHaveCount(0);
-    expect(saved).toEqual([]);
   }
 });
 
@@ -191,7 +147,7 @@ test("a saved reading opens with its name and date, keeps Still working and Got 
     await expect(page.getByText("Saturday, October 24, 2026 · Torah Genesis 1:1–3")).toBeVisible();
     // The private name is on the page, never in the tab title or browser history; the app bar knows the owner is signed in.
     await expect(page).toHaveTitle("My reading | CRC Torah");
-    await expect(page.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("href", "/account");
+    await expect(page.getByRole("link", { name: "My Readings", exact: true })).toHaveAttribute("href", "/mine");
     await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Add this reading" })).toHaveCount(0);
     await expect(page).toHaveURL(new RegExp(`/read\\?saved=${savedRow.id}$`));
@@ -230,7 +186,7 @@ test("a saved reading opens with its name and date, keeps Still working and Got 
     await page.getByRole("button", { name: "Keep it", exact: true }).click();
     await page.getByRole("button", { name: "Remove reading", exact: true }).click();
     await page.getByRole("button", { name: "Remove", exact: true }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/mine$/);
     expect(posts.remove).toEqual([{ id: savedRow.id, revision: 2 }]);
   }
 });

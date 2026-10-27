@@ -50,6 +50,7 @@ async function signIn(tab: Page, email: string) {
   await tab.getByTestId("entry-email-submit").click();
   await ui(entryTask(tab, "sign-in", "code")).toBeVisible();
   await openAuthMail(tab, fixture.takeMail(email));
+  await tab.goto("/", { waitUntil: "domcontentloaded" }); // a plain sign-in lands on My Readings now; these flows start at the front door
   await ui(tab.locator('[data-door="beit-mitzvah"]:not([data-door-state="loading"])')).toBeVisible();
 }
 const noHorizontalScroll = (tab: Page) => tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
@@ -71,8 +72,6 @@ it("a tutor-and-parent saves this week's Torah from /read and finds it under My 
     await expect.poll(() => tab.evaluate(() => { try { return JSON.parse(localStorage.getItem("crc-torah:preferences-sync/v1") ?? "null")?.active === true; } catch { return false; } }), { timeout: 15_000 }).toBe(true);
     prefs.length = 0;
     const mine = tab.locator("[data-my-readings]");
-    // Deliberate wording test for the saved readings screens: approved copy, change only with the copy.
-    if (width === 360) await ui(tab.getByTestId("my-readings-empty")).toHaveText("Save a reading from This week to see it here.");
     seen.length = 0;
     await tab.goto("/read", { waitUntil: "domcontentloaded" });
     await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();

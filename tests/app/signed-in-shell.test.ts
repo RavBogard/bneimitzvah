@@ -44,7 +44,7 @@ test("every signed-in page sets its own title, ending with | CRC Torah", async (
   }
   expect(named).toEqual(["Student | CRC Torah", "Student | CRC Torah"]);
   expect(signedInTitle("Students")).toBe("Students | CRC Torah");
-  expect(await signInMetadata({ searchParams: Promise.resolve({}) })).toMatchObject({ title: "Open your reading | CRC Torah" });
+  expect(await signInMetadata({ searchParams: Promise.resolve({}) })).toMatchObject({ title: "Sign in | CRC Torah" });
 });
 
 test("a page whose h1 is fixed is titled with that h1", () => {
@@ -76,7 +76,7 @@ test("each page has exactly one footer landmark: the site footer, with no second
   for (const markup of markups) {
     expect(markup.match(/<footer\b/g) ?? []).toHaveLength(1);
     expect(markup).toContain('<footer class="site-footer">');
-    expect(markup).toContain("Central Reform Congregation · <a href=\"/about\">About</a> · Your account and reading stay private.");
+    expect(markup).toContain("Central Reform Congregation · <a href=\"/about\">About</a> · Your account stays private.");
     expect(markup).toContain('A project of <a href="https://danielbogard.com"');
     expect(markup).not.toContain("portal-footer");
     expect(markup).not.toContain("Learning at Central Reform Congregation");

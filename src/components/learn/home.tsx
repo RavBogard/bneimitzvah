@@ -99,7 +99,7 @@ export function CourseHome() {
           {mine && <a className={styles.review} href="/learn/run-through" data-run-through><span>Run-through</span>{icons.arrow}</a>}
           {ready && <QuickTenLinks progress={progress} />}
           <LearningStart />
-          <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a>{mine && <a href="/workspace/student?tab=reading">Back to my reading</a>}</nav>
+          <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a>{mine && <a href="/mine">My Readings</a>}</nav>
           {/* 1.9 N23: what the tutor sees of Learn, told to the student; behind the same release gate as the tutor's lines. */}
           <LearnPracticeDisclosure signedIn={account.state === "synced"} isStudent={isStudent} />
           {account.state !== "synced" && <p className={styles.saved} data-testid="learn-saved-note">Progress is saved on this device. <a href="/sign-in">Sign in</a> to keep it.</p>}
