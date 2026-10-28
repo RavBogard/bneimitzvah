@@ -15,9 +15,13 @@ const families: readonly (FamilyState | null)[] = ["joined", "invited", "expirin
 
 export function parseStatuses(value: unknown): StudentStatus[] {
   const rows = list(object(value, ["students"]).students, 5000).map(item => {
-    const row = object(item, ["id", "tutors", "family", "reading", "honors"]);
+    const row = object(item, ["id", "tutors", "family", "reading", "honors", "tutorName", "got", "total"]);
+    const got = count(row.got), total = count(row.total);
+    if (got > total) return bad();
+    // A tutor name that fails the shape check is dropped alone; the rest of the row and the page stay.
+    const tutorName = typeof row.tutorName === "string" && row.tutorName.trim() && row.tutorName.length <= 160 && !/[<>@\x00-\x1f\x7f]/.test(row.tutorName) ? row.tutorName : null;
     if (!families.includes(row.family as FamilyState | null) || !["none", "confirmed", "review"].includes(row.reading as string) || typeof row.honors !== "boolean") return bad();
-    return { id: identifier(row.id), tutors: count(row.tutors), family: row.family as FamilyState | null, reading: row.reading as StudentStatus["reading"], honors: row.honors };
+    return { id: identifier(row.id), tutors: count(row.tutors), family: row.family as FamilyState | null, reading: row.reading as StudentStatus["reading"], honors: row.honors, tutorName, got, total };
   });
   if (new Set(rows.map(row => row.id)).size !== rows.length) return bad();
   return rows;

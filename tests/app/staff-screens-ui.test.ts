@@ -12,7 +12,7 @@ import { LiftedLine } from "../../src/components/portal/workspace/study/lift";
 import { ExplorationContent } from "../../src/components/portal/workspace/study/exploration-view";
 import { NeedsYou } from "../../src/components/portal/workspace/staff/needs-you";
 import { ManageSheet, manageRows } from "../../src/components/portal/workspace/staff/manage-sheet";
-import { familyLine, isSunday, linkRequestLine, needsYouRows, savedSections, statusChips, stillWorkingLine, teachesLine, verseList, waitingForDivisions, waitingLine, type StudentStatus } from "../../src/components/portal/workspace/staff/model";
+import { familyLine, isSunday, linkRequestLine, needsYouRows, nextEventLine, savedSections, statusChips, stillWorkingLine, studentFacts, teachesLine, verseList, waitingForDivisions, waitingLine, type StudentNeed, type StudentStatus } from "../../src/components/portal/workspace/staff/model";
 import { parseFamily, parseNeeded, parseStatuses } from "../../src/components/portal/workspace/staff/api";
 import { explorationPrepared } from "./exploration-client-helper";
 
@@ -25,38 +25,60 @@ const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")
 const today = new Date(2026, 9, 26);
 
 describe("Needs you and the roster chips (N14)", () => {
-  const student = (n: number, ceremonyDate: string, extra: Partial<{ serviceSlot: "morning" | "unknown"; disabledAt: string | null; ceremonyDoneAt: string | null }> = {}) =>
+  const student = (n: number, ceremonyDate: string, extra: Partial<{ serviceSlot: "morning" | "unknown"; disabledAt: string | null; ceremonyDoneAt: string | null; rehearsal1: string | null }> = {}) =>
     ({ id: id(n), firstName: `Synthetic${n}`, lastName: "Student", ceremonyDate, serviceSlot: "morning" as const, disabledAt: null, ceremonyDoneAt: null, ...extra });
-  const ready: Omit<StudentStatus, "id"> = { tutors: 1, family: "joined", reading: "confirmed", honors: true };
-  it("lists each missing step within eight weeks with one verb, soonest first, and never a disabled or ceremony-done student", () => {
+  const ready: Omit<StudentStatus, "id"> = { tutors: 1, family: "joined", reading: "confirmed", honors: true, tutorName: "Synthetic Tutor", got: 10, total: 10 };
+  const links = (item: Node) => nodes(item).filter(node => "tagName" in node && node.tagName === "a");
+  it("gives each student one row with everything left to do, never a disabled or ceremony-done student", () => {
     const students = [student(1, "2026-12-07"), student(2, "2026-11-07", { serviceSlot: "unknown" }), student(3, "2027-03-06"), student(4, "2026-11-14", { disabledAt: "2026-10-01T00:00:00Z" }), student(5, "2026-11-14", { ceremonyDoneAt: "2026-10-01T00:00:00Z" })];
     const statuses = new Map<string, StudentStatus>([
-      [id(1), { id: id(1), ...ready, tutors: 0 }], [id(2), { id: id(2), ...ready, family: "expired", reading: "review", honors: false }],
+      [id(1), { id: id(1), ...ready, tutors: 0, tutorName: null }], [id(2), { id: id(2), ...ready, family: "expired", reading: "review", honors: false }],
       [id(3), { id: id(3), ...ready, tutors: 0 }], [id(4), { id: id(4), ...ready, tutors: 0 }], [id(5), { id: id(5), ...ready, tutors: 0 }]]);
-    const rows = needsYouRows(students, statuses, today).map(row => [row.student?.id, row.condition]);
-    expect(rows).toEqual([[id(2), "invitation-expired"], [id(2), "reading-review"], [id(2), "no-service"], [id(2), "honors"], [id(1), "no-tutor"]]);
-    const markup = parseFragment(renderToStaticMarkup(createElement(NeedsYou, { rows: needsYouRows(students, statuses, today), disabled: false, onEdit() {}, onHonors() {} })));
-    const items = nodes(markup).filter(node => attr(node, "data-condition"));
-    expect(items).toHaveLength(5);
-    // One verb per row: exactly one link or button.
-    for (const item of items) expect(nodes(item).filter(node => "tagName" in node && (node.tagName === "a" || node.tagName === "button"))).toHaveLength(1);
-    const tutor = items.find(item => attr(item, "data-condition") === "no-tutor")!;
-    expect(nodes(tutor).find(node => "tagName" in node && node.tagName === "a") && attr(nodes(tutor).find(node => "tagName" in node && node.tagName === "a")!, "href")).toBe(`/workspace/admin/students/${id(1)}/access`);
-    // The one deliberate wording check for these rows (approved 2026-10-26).
-    expect(items.map(item => text(item).replace(/^.*?(days|Tomorrow|Today)/, "").trim())).toEqual(["The family's invitation expired. Send a new one.", "Reading needs review Confirm reading is still right",
-      "No service date yet. Set the service.", "Honors not started. Open the honors form.", "No tutor yet. Choose a tutor."]);
+    const rows = needsYouRows(students, statuses, today);
+    expect(rows.map(row => [row.student?.id, "conditions" in row ? row.conditions : null])).toEqual([
+      [id(2), ["invitation-expired", "reading-review", "no-service", "honors"]], [id(1), ["no-tutor"]]]);
+    const markup = parseFragment(renderToStaticMarkup(createElement(NeedsYou, { rows, statuses, disabled: false, onEdit() {}, onHonors() {} })));
+    const items = nodes(markup).filter(node => attr(node, "data-student-id"));
+    expect(items).toHaveLength(2);
+    // The no-tutor condition leads to the student's access page, and each condition has its own verb.
+    const tutor = nodes(items[1]).find(node => attr(node, "data-condition") === "no-tutor")!;
+    expect(attr(links(tutor)[0], "href")).toBe(`/workspace/admin/students/${id(1)}/access`);
+    expect(nodes(items[0]).filter(node => attr(node, "data-condition"))).toHaveLength(4);
+    // The one deliberate wording check for these rows.
+    expect(nodes(items[0]).filter(node => attr(node, "data-condition")).map(item => text(item))).toEqual(["The family's invitation expired. Send a new one.", "Reading needs review Confirm reading is still right",
+      "No service date yet. Set the service.", "Honors not started. Open the honors form."]);
     expect(statusChips(students[1], statuses.get(id(2)))).toEqual(["Reading needs review", "No service date yet"]);
-    expect(statusChips(students[0], { id: id(1), ...ready, family: "expiring", reading: "none", tutors: 0 })).toEqual(["No tutor yet", "Expires tomorrow", "No reading yet"]);
+    expect(statusChips(students[0], { id: id(1), ...ready, family: "expiring", reading: "none", tutors: 0 })).toEqual(["Expires tomorrow", "No reading yet"]);
     expect(statusChips(students[3], statuses.get(id(4)))).toEqual([]);
+  });
+  it("ranks who needs the rabbi first: a near date with no tutor or behind on verses, then the soonest next rehearsal or ceremony", () => {
+    // Today is 2026-10-26. Student 1: ceremony in 40 days, no honors. Student 2: rehearsal in 3 days, 2 of 12 verses got. Student 3: ceremony in 10 days, no tutor. Student 4: rehearsal in 2 days, all got, no honors.
+    const students = [student(1, "2026-12-05"), student(2, "2026-11-20", { rehearsal1: "2026-10-29" }), student(3, "2026-11-05"), student(4, "2026-11-20", { rehearsal1: "2026-10-28" })];
+    const statuses = new Map<string, StudentStatus>([[id(1), { id: id(1), ...ready, honors: false }], [id(2), { id: id(2), ...ready, got: 2, total: 12 }],
+      [id(3), { id: id(3), ...ready, tutors: 0, tutorName: null }], [id(4), { id: id(4), ...ready, honors: false }]]);
+    const rows = needsYouRows(students, statuses, today);
+    expect(rows.map(row => row.student?.id)).toEqual([id(2), id(3), id(4), id(1)]);
+    expect((rows[0] as StudentNeed).conditions).toEqual(["behind"]);
+    expect((rows[0] as StudentNeed).next).toMatchObject({ kind: "rehearsal", days: 3 });
+    // Far from any date, low progress is not behind.
+    expect(needsYouRows([student(1, "2026-12-05")], new Map([[id(1), { id: id(1), ...ready, got: 0, total: 12 }]]), today)).toEqual([]);
+    expect(nextEventLine({ kind: "rehearsal", date: "", days: 0 })).toBe("Rehearsal today");
+    expect(nextEventLine({ kind: "rehearsal", date: "", days: 1 })).toBe("Rehearsal tomorrow");
+    expect(nextEventLine({ kind: "ceremony", date: "", days: 5 })).toBe("Beit Mitzvah in 5 days");
+  });
+  it("shows the roster facts: who teaches, whether a parent joined, and the verses got", () => {
+    expect(studentFacts({ id: id(1), ...ready, got: 6, total: 12 })).toEqual(["Tutor: Synthetic Tutor", "Parent: joined", "6 of 12 verses got"]);
+    expect(studentFacts({ id: id(1), ...ready, tutors: 0, tutorName: null, family: "invited", total: 0, got: 0 })).toEqual(["No tutor yet", "Parent: not joined yet"]);
+    expect(studentFacts({ id: id(1), ...ready, family: null, total: 0, got: 0 })).toEqual(["Tutor: Synthetic Tutor"]);
   });
   it("asks for a parent invitation when a child's family has none, or when the invitations service names the student", () => {
     const students = [student(1, "2026-11-21"), student(2, "2026-11-21")];
     const statuses = new Map<string, StudentStatus>([[id(1), { id: id(1), ...ready, family: "none" }], [id(2), { id: id(2), ...ready, family: "invited" }]]);
-    expect(needsYouRows(students, statuses, today).map(row => row.condition)).toEqual(["needs-invitation"]);
-    expect(needsYouRows(students, statuses, today, new Set([id(2)])).map(row => row.condition)).toEqual(["needs-invitation", "needs-invitation"]);
+    expect(needsYouRows(students, statuses, today).map(row => row.student?.id)).toEqual([id(1)]);
+    expect(needsYouRows(students, statuses, today, new Set([id(2)])).map(row => row.student?.id)).toEqual([id(1), id(2)]);
   });
   it("says so when nothing needs the admin, and takes only student ids from the invitations service", () => {
-    const empty = renderToStaticMarkup(createElement(NeedsYou, { rows: [], disabled: false, onEdit() {}, onHonors() {} }));
+    const empty = renderToStaticMarkup(createElement(NeedsYou, { rows: [], statuses: new Map(), disabled: false, onEdit() {}, onHonors() {} }));
     // E4: the empty line says what was checked.
     expect(empty).toContain("Nothing needs you this week: no readings to review, no link requests, no invitations waiting.");
     const row = { memberId: id(9), name: "Synthetic Parent", email: "synthetic-parent@example.test", student: { id: id(1), firstName: "Synthetic", lastName: "Student" } };
@@ -66,20 +88,22 @@ describe("Needs you and the roster chips (N14)", () => {
   });
   it("puts link requests waiting first, as one row that opens Account requests, and says nothing for none (Readings for everyone E4)", () => {
     const students = [{ id: id(1), firstName: "Synthetic", lastName: "Student", ceremonyDate: "2026-11-08", serviceSlot: "morning" as const, disabledAt: null }];
-    const statuses = new Map([[id(1), { id: id(1), tutors: 0, family: "joined" as const, reading: "confirmed" as const, honors: true }]]);
+    const statuses = new Map<string, StudentStatus>([[id(1), { id: id(1), ...ready, tutors: 0, tutorName: null }]]);
     const rows = needsYouRows(students, statuses, today, new Set(), 3);
-    expect(rows.map(row => row.condition)).toEqual(["link-request", "no-tutor"]);
-    expect(needsYouRows(students, statuses, today, new Set(), 0).map(row => row.condition)).toEqual(["no-tutor"]);
-    const markup = parseFragment(renderToStaticMarkup(createElement(NeedsYou, { rows, disabled: false, onEdit() {}, onHonors() {} })));
-    const row = nodes(markup).find(node => attr(node, "data-condition") === "link-request")!, link = nodes(row).find(node => "tagName" in node && node.tagName === "a")!;
+    expect(rows.map(row => row.student?.id ?? "link-request")).toEqual(["link-request", id(1)]);
+    expect(needsYouRows(students, statuses, today, new Set(), 0).map(row => row.student?.id)).toEqual([id(1)]);
+    const markup = parseFragment(renderToStaticMarkup(createElement(NeedsYou, { rows, statuses, disabled: false, onEdit() {}, onHonors() {} })));
+    const row = nodes(markup).find(node => attr(node, "data-condition") === "link-request")!, link = links(row)[0];
     expect(text(link)).toBe("3 link requests waiting"); expect(attr(link, "href")).toBe("/workspace/accounts");
     expect(linkRequestLine(1)).toBe("1 link request waiting");
   });
   it("flags a Sunday ceremony only", () => { expect(isSunday("2026-11-08")).toBe(true); expect(isSunday("2026-11-07")).toBe(false); expect(isSunday("")).toBe(false); });
   it("refuses a status page with unknown keys or states", () => {
-    const row = { id: id(1), tutors: 0, family: "none", reading: "none", honors: false };
+    const row = { id: id(1), tutors: 0, family: "none", reading: "none", honors: false, tutorName: null, got: 0, total: 0 };
     expect(parseStatuses({ students: [row] })).toHaveLength(1);
-    for (const bad of [{ ...row, email: "x@example.test" }, { ...row, family: "maybe" }, { ...row, tutors: -1 }]) expect(() => parseStatuses({ students: [bad] })).toThrow();
+    // A tutor name that is not a clean name loses only the name, not the page.
+    expect(parseStatuses({ students: [{ ...row, tutorName: "x@example.test" }, { ...row, id: id(2), tutorName: "Synthetic Tutor" }] }).map(value => value.tutorName)).toEqual([null, "Synthetic Tutor"]);
+    for (const bad of [{ ...row, email: "x@example.test" }, { ...row, family: "maybe" }, { ...row, tutors: -1 }, { ...row, got: 2, total: 1 }]) expect(() => parseStatuses({ students: [bad] })).toThrow();
   });
 });
 

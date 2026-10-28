@@ -19,6 +19,6 @@ export function AccessReview({ review, pending, confirm, cancel, handOver }: { r
     </div>}
     <p className="field-help">Access is checked again before anything is saved.</p>
     <details className="access-technical" data-testid="access-technical"><summary>Technical details</summary><dl className="access-details"><div><dt>Role identifier</dt><dd data-testid="access-grant-id"><bdi dir="ltr">{review.grantId}</bdi></dd></div>{review.student && <div><dt>Ceremony date</dt><dd><time>{review.student.ceremonyDate}</time></dd></div>}</dl></details>
-    <div className="form-actions"><button className="button-primary admin-pill" disabled={pending} onClick={confirm}>{pending ? "Checking and saving…" : "Confirm access change"}</button><button className="button-secondary admin-pill" disabled={pending} onClick={cancel}>Cancel</button></div>
+    <div className="form-actions"><button className="button-primary admin-pill" disabled={pending || (review.action.kind === "grant" && review.action.handOver === true && !handOver?.value)} onClick={confirm}>{pending ? "Checking and saving…" : "Confirm access change"}</button><button className="button-secondary admin-pill" disabled={pending} onClick={cancel}>Cancel</button></div>
   </section>;
 }

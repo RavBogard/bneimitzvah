@@ -4,7 +4,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { workspaceApi, type Student } from "./api";
 import { TutorCardLine } from "./staff/practice";
-import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "./provider";
+import { RequireRole, rolePaths, statusOf, useWorkspace, WorkspaceLink } from "./provider";
+import { RedirectTo } from "../shell/redirect-to";
 import { ceremonyCountdown, ReadingPanel } from "./reading";
 import { reconcileSelectedStudent, selectAuthorizedStudent, sortStudentsByCeremony } from "./student-label";
 import { HonorsCardLine, HonorsEntry, HonorsNote } from "./honors/sheet";
@@ -15,6 +16,9 @@ import { DocumentTitle } from "./document-title";
  * The lists that used to open these (the student, parent and tutor home pages) are the shelf now, so a page names its student.
  */
 export function StudentWorkspace({ mode, studentId }: { mode: "student" | "parent" | "tutor"; studentId?: string }) {
+  const { summary } = useWorkspace();
+  // The admin has no reading of their own: /mine/reading leads them to This week, not to "Role unavailable".
+  if (mode === "student" && !summary.roles.includes("student") && summary.roles.includes("admin")) return <RedirectTo href={rolePaths.admin} />;
   return <RequireRole role={mode}><StudentSelection key={studentId ?? ""} mode={mode} routeStudentId={studentId} /></RequireRole>;
 }
 

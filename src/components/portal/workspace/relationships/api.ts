@@ -71,7 +71,7 @@ export async function adminRequest(path: string, body?: object, signal?: AbortSi
 }
 export type Group = "tutors" | "guardians" | "identities";
 export type Action = { kind: "assign"; grantId: string } | { kind: "link"; group: Group; linkId: string } | { kind: "practice"; linkId: string; enabled: boolean }
-  | { kind: "grant"; group?: Group; linkId?: string; grantId: string } | { kind: "cantor"; grantId: string; enabled: boolean };
+  | { kind: "grant"; group?: Group; linkId?: string; grantId: string; handOver?: true } | { kind: "cantor"; grantId: string; enabled: boolean };
 // scope says who is affected before the consequence: this student only, every student, or a congregation setting.
 export type Review = { action: Action; title: string; person: string; student?: Relationships["student"]; grantId: string; linkId?: string; scope: "student" | "congregation" | "setting"; consequence: string; path: string; body: Record<string, unknown>; fingerprint: string };
 export function makeReview(action: Action, data: Relationships | null, tutors: Tutor[]): Review {
@@ -86,7 +86,7 @@ export function makeReview(action: Action, data: Relationships | null, tutors: T
     } else if (action.kind === "cantor") {
       title = action.enabled ? "Mark as cantor" : "Remove cantor flag"; scope = "setting"; consequence = "This changes only the cantor label on this tutor. Their students and access stay the same."; path = `/api/admin/tutors/${tutor.id}/cantor`; body = { expectedRevision: tutor.revision, isCantor: action.enabled };
     } else {
-      title = "Remove as a tutor"; scope = "congregation"; consequence = "This tutor loses access to every student they teach in this congregation. To stop them teaching one student only, open that student's People page."; path = `/api/admin/grants/${tutor.id}/revoke`; body = { expectedRevision: tutor.revision, expectedState: "active" };
+      title = action.handOver ? "Hand over students" : "Remove as a tutor"; scope = "congregation"; consequence = action.handOver ? "Choose the tutor who takes over. This tutor's students move to them, and this tutor stops being a tutor in this congregation." : "This tutor loses access to every student they teach in this congregation. To stop them teaching one student only, open that student's People page."; path = `/api/admin/grants/${tutor.id}/revoke`; body = { expectedRevision: tutor.revision, expectedState: "active" };
     }
   } else {
     if (!student || !data) throw new PortalRequestError(409);

@@ -202,6 +202,18 @@ it("requires explicit roster inspection after an unknown import, never retries a
   await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(`${CSV_HEADER}\nSynthetic,CsvExpiry,2027-01-02,parent@example.test,`)); await tab.clock.install(); await click(tab, "Preview import"); await ui(tab.getByRole("button", { name: "Import reviewed students", exact: true })).toBeEnabled(); await tab.clock.fastForward(5 * 60_000 + 1); await ui(tab.getByTestId("csv-message")).toHaveAttribute("data-message-kind", "expired"); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
 });
 
+// The admin walk, 2026-10-28: a hand-over starts from the tutor's row and cannot be confirmed without a tutor to take over; the admin's own reading route leads to This week; the roster says who teaches.
+it("starts a hand-over from the tutor row, sends the admin from My Readings' reading to This week, and shows the roster facts", async () => {
+  const admin = await page(); await navigate(admin, "/workspace/admin/tutors"); await accessLoaded(admin);
+  await safe(() => action(admin, "Tutors", "Hand over students").click());
+  await ui(admin.getByTestId("access-review")).toBeVisible(); await ui(admin.getByTestId("hand-over")).toBeVisible();
+  await ui(admin.getByRole("button", { name: "Confirm access change", exact: true })).toBeDisabled();
+  await safe(() => admin.getByRole("button", { name: "Cancel", exact: true }).click());
+  await navigate(admin, "/mine/reading"); await admin.waitForURL(/\/workspace\/admin\/students$/);
+  await ui(admin.getByTestId("role-unavailable")).toHaveCount(0);
+  await navigate(admin, "/workspace/admin/students?tab=students"); await ui(admin.getByTestId("student-facts").first()).toBeVisible();
+});
+
 // Deliberate wording test for the access review: approved consequence copy, change only with the copy.
 it("reviews congregation-wide parent/tutor grant consequences and denies tutor access to admin controls", async () => {
   const admin = await page(), tutor = await page("tutor"); await navigate(tutor, "/workspace/admin/tutors"); await ui(tutor.getByTestId("role-unavailable")).toBeVisible();

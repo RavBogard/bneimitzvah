@@ -54,6 +54,11 @@ describe("the root never leaves for the workspace", () => {
     expect(signedInDestination(false, "/read?date=2026-10-31")).toBe("/read?date=2026-10-31");
     expect(signedInDestination(false, "/account")).toBe("/account");
     expect(signedInDestination(false, null)).toBe("/mine");
+    // An admin has no shelf to land on: This week, unless a return address says otherwise.
+    expect(signedInDestination(false, null, ["admin"])).toBe("/workspace/admin/students");
+    expect(signedInDestination(false, "/account", ["admin"])).toBe("/account");
+    expect(signedInDestination(false, null, ["tutor", "parent"])).toBe("/mine");
+    expect(signedInDestination(true, null, ["admin"])).toBeNull();
   });
 });
 

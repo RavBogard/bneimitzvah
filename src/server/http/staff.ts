@@ -34,7 +34,7 @@ export async function handleStaffRequest(request: Request, runtime: HttpRuntime)
       case "status": {
         uniqueQuery(request.url, []);
         const rows = await runtime.staff.status(request, { mode: "admin" });
-        return privateJson({ students: rows.map(row => ({ id: row.id, tutors: row.tutors, family: row.family, reading: row.reading, honors: row.honors })) });
+        return privateJson({ students: rows.map(row => ({ id: row.id, tutors: row.tutors, family: row.family, reading: row.reading, honors: row.honors, tutorName: row.tutorName, got: row.got, total: row.total })) });
       }
       case "teaching": {
         uniqueQuery(request.url, []);

@@ -472,7 +472,7 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 /* The single next decision, at poster scale. */
 .reading-hero { margin-block: 0.5rem 1.75rem; min-width: 0; }
 .hero-who { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
-.hero-name { font-size: 1.0625rem; font-weight: 700; overflow-wrap: anywhere; }
+.hero-name { font-size: 1.0625rem; font-weight: 700; overflow-wrap: break-word; }
 /* The service slot shares the name line at the name's line height, so the hero keeps its phone height. */
 .hero-slot { color: var(--color-muted); line-height: 1.4; }
 /* The start time would wrap the name line on a phone; it shows on wider screens only. */
@@ -950,7 +950,7 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 .roster-row-main { display: grid; gap: 0.25rem; min-height: 72px; align-content: center; padding: 0.75rem 1.25rem; color: var(--color-ink); text-decoration: none; border-radius: var(--radius-object); }
 a.roster-row-main:hover { background: var(--color-hover); color: var(--color-ink); }
 a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-underline-offset: 0.18em; }
-.roster-row-name { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; font-size: 1.125rem; font-weight: 750; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.roster-row-name { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; font-size: 1.125rem; font-weight: 750; letter-spacing: -0.01em; overflow-wrap: break-word; }
 .roster-row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; color: var(--color-muted); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
 .roster-row-days { background: var(--marigold); color: var(--on-ink); font-weight: 650; font-size: 0.8125rem; padding: 0.0625rem 0.5rem; border-radius: 999px; }
 .roster-chip { padding: 0.0625rem 0.5rem; border-radius: 999px; background: var(--color-canvas); box-shadow: inset 0 0 0 1px var(--color-control-rule); color: var(--color-muted); font-size: 0.8125rem; font-weight: 650; letter-spacing: 0; }
@@ -1005,7 +1005,7 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .people-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.5rem 0.875rem; padding-block: 0.75rem; }
 .people-row + .people-row { border-top: 1px solid var(--color-rule); }
 .people-avatar { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 999px; background: var(--lake-tint); color: var(--lake-deep); font-weight: 750; }
-.people-body h3 { margin: 0; font-size: 1.0625rem; font-weight: 700; overflow-wrap: anywhere; }
+.people-body h3 { margin: 0; font-size: 1.0625rem; font-weight: 700; overflow-wrap: break-word; }
 .people-status { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; margin: 0.125rem 0 0; color: var(--color-muted); font-size: 0.9375rem; }
 .people-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.25rem; }
 /* Claude connections (release 1.1): who connected, what Claude may do, and the Maven link in the roster sheet. */
@@ -1222,6 +1222,9 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .accounts-add-row { display: flex; flex-wrap: wrap; gap: 0.75rem; }
 .accounts-add select { flex: 1 1 14rem; min-width: 0; min-height: 48px; padding: 0 0.875rem; border: 1px solid var(--color-control-rule); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-ink); font: inherit; }
 .account-request-row .people-actions .field-help { flex-basis: 100%; margin: 0; }
+/* A request's name and address take the row's width; the choices sit under them, so a name never breaks mid-word beside the buttons. */
+.account-request-row { grid-template-columns: auto minmax(0, 1fr); }
+.account-request-row .people-actions { grid-column: 1 / -1; justify-content: flex-start; margin-inline-start: 2.875rem; }
 
 /* Forced colours (Windows contrast themes): the system keeps text and borders, so what is on has to be said in system colours.
    A pressed, current or selected control takes Highlight; every button keeps an edge, including "Start reading". */
@@ -1254,7 +1257,10 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .needs-you h2 { margin: 0 0 0.75rem; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; }
 .needs-you-row .roster-row-main { min-height: 0; }
 .needs-you-task { color: var(--color-ink); }
-.needs-you-task .button-text { min-height: 0; padding: 0; font-size: inherit; }
+.needs-you-tasks { display: grid; gap: 0.125rem; margin: 0.25rem 0 0; padding: 0; list-style: none; }
+.needs-you-row .roster-row-name a { color: inherit; text-decoration: none; }
+.needs-you-row .roster-row-name a:hover { text-decoration: underline; text-underline-offset: 0.18em; }
+.needs-you-task .button-text { display: inline; min-height: 0; padding: 0; font-size: inherit; }
 .lift-pick { flex: none; max-width: 11rem; min-height: 44px; padding: 0 0.75rem; border: 0; border-radius: 999px; background: rgb(255 255 255 / 0.14); color: #fff; font: inherit; font-size: 0.875rem; }
 .lift-pick option { color: #13202f; background: #fff; }
 .lift-note { width: 100%; max-width: 40rem; margin: 0 auto; padding: 0 1.25rem 0.75rem; }

@@ -592,6 +592,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const shellShown = Boolean(summary) && !checking && failure === null;
   // A checked session is what the site bar on the public pages remembers (the same hint the reader's Save uses).
   useEffect(() => { if (shellShown) rememberSignedIn(true); }, [shellShown]);
+  // Every sign-in (email link, code, Google) ends on /mine. An admin whose tab opens there from outside the site, or from the sign-in page, starts on This week instead;
+  // My Readings stays one click away in the site bar, and a client-side move to /mine never redirects (only the tab's first page is judged).
+  const firstPath = useRef(pathname), landingJudged = useRef(false);
+  useEffect(() => {
+    if (!shellShown || landingJudged.current) return;
+    landingJudged.current = true;
+    if (firstPath.current === "/mine" && summary!.roles.includes("admin") && !arrivedWithinSite()) router.replace(rolePaths.admin);
+  }, [shellShown, summary, router]);
   return <div className="portal-shell workspace-shell" data-rail-pending={!shellShown && failure === null && adminArea(pathname) ? "" : undefined}>
     <a className="skip-link" href="#workspace-main">{pathname.startsWith("/mine") ? "Skip to main content" : "Skip to workspace"}</a>
     {shellShown && <TabSkipLink roles={summary!.roles} />}
@@ -612,6 +620,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     </main>
     {shellShown && <TabBar roles={summary!.roles} onNavigate={controlledLink} />}
   </div>;
+}
+
+/** True when this page load followed a link or form inside the site (not the sign-in page); false from an email link, another site, a bookmark or the sign-in page. */
+function arrivedWithinSite() {
+  try { const from = document.referrer ? new URL(document.referrer) : null; return !!from && from.origin === window.location.origin && from.pathname !== "/sign-in"; } catch { return false; }
 }
 
 export function WorkspaceLink({ href, children, ...rest }: { href: string; children: ReactNode } & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "onClick">) {
