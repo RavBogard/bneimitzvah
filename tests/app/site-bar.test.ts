@@ -40,7 +40,7 @@ test("minimal mode: the brand and Beta only, no links beside the brand", () => {
 test("signed in, the right side is the My Readings control, with a bookmark icon, in the same reserved slot Sign in uses", () => {
   const slot = (markup: string) => /<span class="site-bar-end"[^>]*>(.*?)<\/span><\/nav>/s.exec(markup);
   const signedIn = bar({ signedIn: true }), signedOut = bar();
-  expect(links(signedIn)).toEqual([["/", "CRC Torah"], ["/read", "Read"], ["/learn", "Learn"], ["/mine", "My Readings"]]);
+  expect(links(signedIn)).toEqual([["/", "CRC Torah"], ["/read", "Read"], ["/learn", "Learn"], ["/mine", "My Readings"], ["/account", ""]]); // the Account button is an icon named by aria-label (tests/app/account-button.test.ts)
   expect(signedIn).not.toContain(">Account<");
   expect(signedIn).toMatch(/<svg[^>]*aria-hidden="true"/);
   expect(signedIn).not.toContain("Sign in");
@@ -69,7 +69,7 @@ test("the current link: Read on /read*, Learn on /learn* and the trope chart, My
 });
 
 test("the bar's wording is the approved wording and nothing else", () => {
-  expect(links(bar({ signedIn: true })).map(([, text]) => text)).toEqual(["CRC Torah", "Read", "Learn", "My Readings"]);
+  expect(links(bar({ signedIn: true })).map(([, text]) => text)).toEqual(["CRC Torah", "Read", "Learn", "My Readings", ""]);
   expect(links(bar()).map(([, text]) => text)).toEqual(["CRC Torah", "Read", "Learn", "Sign in"]);
   expect(renderToStaticMarkup(createElement(SiteFooter))).toBe('<footer class="site-footer"><p>Central Reform Congregation · <a href="/about">About</a> · Your account stays private.</p><p>A project of <a href="https://danielbogard.com" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Rabbi Daniel Bogard</a></p></footer>');
 });
