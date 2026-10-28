@@ -21,6 +21,7 @@ export const icons = {
   hear: icon("M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"),
   scroll: icon("M6 3v18M18 3v18M6 6h12M6 18h12M9.5 10h5M9.5 14h5"),
   print: icon("M7 9V3h10v6M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v7H7z"),
+  note: icon("M9 18V6l10-2v12M9 18a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM19 16a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"),
   works: icon("M3 5.5c2.5-1 5.5-.8 9 1.2 3.5-2 6.5-2.2 9-1.2v13c-2.5-1-5.5-.8-9 1.2-3.5-2-6.5-2.2-9-1.2zM12 6.7v13.2"),
 };
 
@@ -117,7 +118,7 @@ export function LiftedLine({ verses, assignment, index, total, offset, onIndex, 
         if (reference) playback.current?.select(index, "verse");
         const selectedPhrase = colors?.words[word]?.phrase, position = phrases.findIndex(row => row.phrase === selectedPhrase); if (position >= 0) setPhrase(position);
       } : undefined} wordAction={reference ? "verse" : "phrase"} toolsAvailable={false} className={`lift-hebrew${active !== null ? " lift-phrasing" : ""}`} />
-      {active !== null && <style>{`.lift .lift-phrasing [data-phrase="${active}"]{color:#13202f;background:linear-gradient(var(--phrase-color),var(--phrase-color)) right / 100% 100% no-repeat;animation:ink-pull 560ms var(--ease-settle) both;animation-delay:calc((var(--w) - ${phrases[currentPhrase].first - 1}) * 70ms)}.lift .lift-phrasing [data-phrase="${active}"][data-phrase-end]{box-shadow:inset 0.14em 0 0 0 #13202f}`}</style>}
+      {active !== null && <style>{`.lift .lift-phrasing [data-phrase="${active}"]{color:#13202f;background:linear-gradient(var(--phrase-color),var(--phrase-color)) right / 100% 100% no-repeat;animation:ink-pull 560ms var(--ease-settle) both;animation-delay:calc((var(--w) - ${phrases[currentPhrase].first - 1}) * 70ms)}`}</style>}
       {prefs.translation && <p className="lift-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p>}
       <Apparatus verse={verse} learner={learner} />
       {prefs.colors && <PhraseLegend colors={result} id={`${id}-v`} verseRef={verse.ref} />}

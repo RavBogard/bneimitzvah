@@ -9,51 +9,57 @@ test.beforeEach(async ({ page }) => { await page.clock.setFixedTime(new Date("20
 const week = `/read?date=${VAYERA_DATE}`;
 const firstWord = (page: Page) => page.locator(".study-verses [data-verse-ref] [data-word-index], [data-study-rows] [data-verse-ref] [data-word-index]").first();
 
-test("on a Pixel 7 the first Hebrew starts above y 320 on /read with the week's aliyot and haftarah, in Lein; Study is measured too", async ({ page }, info) => {
+test("on a Pixel 7 the first Hebrew starts above y 400 on /read with the week's aliyot and haftarah, in Lein; Study is measured too", async ({ page }, info) => {
   test.skip(info.project.name !== "phone", "A phone-width check");
   await mockVayera(page, { mode: "ok" }, { haftarah: true });
   const measured: Record<string, number> = {};
   for (const lens of ["lein", "study"]) {
     await page.goto(`${week}${lens === "study" ? "&lens=study" : ""}`);
-    await expect(page.getByRole("group", { name: "Reading text selection" })).toBeVisible();
+    await expect(page.getByRole("tablist", { name: "Reading text selection" })).toBeVisible();
     await expect(page.getByRole("tablist", { name: "Reading sections" })).toBeVisible();
     await expect(firstWord(page)).toBeVisible();
     measured[lens] = Math.round((await firstWord(page).boundingBox())!.y);
   }
   console.log("FIRST HEBREW y on a Pixel 7", JSON.stringify(measured));
-  expect(measured.lein, "Lein").toBeLessThan(320);
+  // C1 re-pin (320 before): the title block now carries the date and ranges line that used to sit in the Change sheet, and Torah | Haftarah, Lein | Study with Start reading, and the aliyah tabs
+  // stand in three rows above the text. Measured 384 in Lein and 437 in Study; the text still opens in the top half of the screen.
+  expect(measured.lein, "Lein").toBeLessThan(400);
   // Study carries the place row (the reference and the chapter jump) above its first verse, so it starts lower; it still opens in the top half of the screen.
-  expect(measured.study, "Study").toBeLessThan(420);
+  expect(measured.study, "Study").toBeLessThan(450);
 });
 
-test("the header is two lines: the date and kind of Shabbat, then the parashah with the week arrows and Change; the rest is in Change", async ({ page }) => {
+test("the title block is the name, one muted line of date and ranges, and the Change and Save pills; the rest is in Change, and Print and the blessings are at the foot", async ({ page }) => {
   await mockVayera(page, { mode: "ok" }, { haftarah: true });
   await page.goto(week);
   const header = page.locator("header", { has: page.locator("#public-reading-title") }).first();
   await expect(page.getByRole("heading", { level: 1, name: "Vayera", exact: true })).toBeVisible();
-  await expect(header.locator("p").first()).toHaveText(/^Shabbat · October 31$/i);
-  for (const name of ["Previous week", "Next week", "Change"]) await expect(header.getByRole("button", { name, exact: true })).toBeVisible();
-  // None of the moved actions is on the page itself.
-  for (const name of ["Find a date", "Choose a reading", "Choose verses", "Print", "Start reading", "Save", "Sign in to save"]) {
+  await expect(header.locator("[data-reading-ranges]")).toContainText("Saturday, October 31, 2026 · Torah Genesis 18:1–22:24 · Haftarah Isaiah 54:1–55:5");
+  // The week arrows and the eyebrow are retired: Coming up chips and the date field in Change move between weeks.
+  for (const name of ["Previous week", "Next week"]) await expect(page.getByRole("button", { name, exact: true }), name).toHaveCount(0);
+  await expect(header.getByRole("button", { name: "Change", exact: true })).toBeVisible();
+  // Signed out (never signed in here), the Save pill is the way to sign in and come back.
+  await expect(header.getByRole("link", { name: "Sign in to save", exact: true })).toBeVisible();
+  for (const name of ["Find a date", "Choose a reading", "Choose verses"]) {
     await expect(page.locator("main").getByRole("button", { name, exact: true }).or(page.locator("main").getByRole("link", { name, exact: true })), name).toHaveCount(0);
   }
   await expect(page.getByLabel("Find a date", { exact: true })).toHaveCount(0);
   await expect(page.getByLabel("Portion", { exact: true })).toHaveCount(0);
   const sheet = await openMore(page);
   await expect(sheet.getByRole("heading", { name: "Change reading", exact: true })).toBeFocused();
-  // Find a reading is first, then what is in this reading.
+  // Find a reading is first, then what is in this reading, and nothing else.
   await expect(sheet.getByRole("combobox", { name: "Find a reading", exact: true })).toBeVisible();
   await expect(sheet.getByRole("heading", { name: "In this reading", exact: true })).toBeVisible();
-  for (const name of ["Start reading", "Choose verses"]) await expect(sheet.getByRole("button", { name, exact: true }), name).toBeVisible();
-  // The three ways of finding a reading that Find a reading replaced are gone from the sheet.
-  for (const name of ["Choose a reading", "This week"]) await expect(sheet.getByRole("button", { name, exact: true }), name).toHaveCount(0);
+  await expect(sheet.getByRole("button", { name: "Choose verses", exact: true })).toBeVisible();
+  for (const name of ["Choose a reading", "This week", "Start reading", "Print", "Save", "Trope chart"]) {
+    await expect(sheet.getByRole("button", { name, exact: true }).or(sheet.getByRole("link", { name, exact: true })), name).toHaveCount(0);
+  }
   await expect(sheet.getByLabel("Find a date", { exact: true })).toHaveCount(0);
-  for (const name of ["Print", "Trope chart", "Torah blessings: siddur page 22 , opens in a new tab", "Haftarah blessings: siddur page 23, after Mi Shebeirach , opens in a new tab"]) await expect(sheet.getByRole("link", { name, exact: true }), name).toBeVisible();
   await expect(sheet.getByLabel("Portion", { exact: true })).toBeVisible();
   await expect(sheet.getByLabel("Go to verse", { exact: true })).toBeVisible();
-  await expect(sheet.getByRole("link", { name: "Sign in to save", exact: true })).toBeVisible();
-  // The old date line (the long date and both ranges) is the sheet's first line.
-  await expect(sheet.locator("[data-reading-ranges]")).toContainText("Saturday, October 31, 2026 · Torah Genesis 18:1–22:24 · Haftarah Isaiah 54:1–55:5");
+  await closeMore(page);
+  // The foot: a quiet row after the last verse.
+  const foot = page.getByRole("navigation", { name: "After the reading", exact: true });
+  for (const name of ["Print", "Trope chart", "Torah blessings: siddur page 22 , opens in a new tab", "Haftarah blessings: siddur page 23, after Mi Shebeirach , opens in a new tab"]) await expect(foot.getByRole("link", { name, exact: true }), name).toBeVisible();
 });
 
 test("every action in Change is reachable by keyboard: Enter opens it, Tab walks its actions and wraps, Esc closes it and returns to Change", async ({ page }) => {
@@ -76,9 +82,8 @@ test("every action in Change is reachable by keyboard: Enter opens it, Tab walks
     if (names.filter(item => item === names[0]).length > 1) break;
   }
   expect(names).not.toContain("outside");
-  for (const expected of ["Find a reading", "Pick a date", "Every parashah, holiday and passage", "Start reading", "Portion", "Choose verses", "Go to verse", "Print", "Sign in to save", "Trope chart", "Close"])
+  for (const expected of ["Find a reading", "Pick a date", "Every parashah, holiday and passage", "Portion", "Choose verses", "Go to verse", "Close"])
     expect(names.some(item => item.startsWith(expected)), `${expected} in ${JSON.stringify(names)}`).toBe(true);
-  expect(names.some(item => item.startsWith("Torah blessings")) && names.some(item => item.startsWith("Haftarah blessings"))).toBe(true);
   await page.keyboard.press("Escape");
   await expect(moreSheet(page)).toBeHidden();
   await expect(moreButton(page)).toBeFocused();
@@ -86,7 +91,7 @@ test("every action in Change is reachable by keyboard: Enter opens it, Tab walks
   await expect(moreButton(page)).toHaveAttribute("aria-haspopup", "dialog");
 });
 
-test("from the top of the page the dock is reached in fourteen Tab presses, not sixteen or more, with Change one stop among them", async ({ page }, info) => {
+test("from the top of the page the dock is reached in thirteen Tab presses, with Change and Save two stops among them", async ({ page }, info) => {
   test.skip(info.project.name !== "phone", "One device is enough.");
   await mockVayera(page, { mode: "ok" }, { haftarah: true });
   await page.goto(week);
@@ -103,17 +108,17 @@ test("from the top of the page the dock is reached in fourteen Tab presses, not 
   }
   console.log("TAB PRESSES FROM THE TOP TO THE DOCK", dock, JSON.stringify(stops));
   expect(dock).toBeGreaterThan(0);
-  // Skip link, the site bar (brand, Read, Learn and Sign in), the arrows, Change, the four lens buttons and the first chip, then the dock:
-  // thirteen stops before it (N4 counted fifteen). Read and Learn are the site menu Daniel asked for on every page (2026-10-26).
-  expect(dock).toBeLessThanOrEqual(14);
+  // Measured after C1 (the week arrows are gone, the Torah | Haftarah tabs are one stop, Start reading joined the lens row): skip link, the site bar (brand, Read, Learn, Sign in),
+  // Change, Save, the selected passage tab, Lein, Study, Start reading and the first aliyah tab, then the dock: twelve stops before it, the thirteenth press is the dock.
+  // Read and Learn are the site menu Daniel asked for on every page (2026-10-26). Pinned at the real number so a new stop fails here.
+  expect(dock).toBe(13);
 });
 
-test("Start reading in Change closes the sheet and puts focus in the reading; Choose verses closes it and puts focus on the bar", async ({ page }) => {
+test("Start reading, where the text begins, puts focus in the reading; Choose verses in Change closes it and puts focus on the bar", async ({ page }) => {
   await mockVayera(page, { mode: "ok" });
   await page.goto(week);
   await expect(firstWord(page)).toBeVisible();
-  await (await openMore(page)).getByRole("button", { name: "Start reading", exact: true }).click();
-  await expect(moreSheet(page)).toBeHidden();
+  await page.getByRole("button", { name: "Start reading", exact: true }).click();
   await expect.poll(() => page.evaluate(() => Boolean(document.activeElement?.closest(".study-verses")))).toBe(true);
   await (await openMore(page)).getByRole("button", { name: "Choose verses", exact: true }).click();
   await expect(moreSheet(page)).toBeHidden();
@@ -139,7 +144,7 @@ test("choosing a portion in Change closes the sheet and opens that aliyah; a Com
   await sheet.locator('[data-chip-date="2026-11-07"]').click();
   await expect(moreSheet(page)).toBeHidden();
   await expect(page).toHaveURL(/date=2026-11-07/);
-  await expect(page.locator("header p").first()).toHaveText(/^Shabbat · November 7$/i);
+  await expect(page.locator("[data-reading-ranges]")).toContainText("November 7");
 });
 
 test("Go to verse in Change closes the sheet and takes the reader to the first verse of that chapter", async ({ page }) => {

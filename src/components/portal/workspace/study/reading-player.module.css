@@ -1,6 +1,13 @@
-.player { margin-block: 1.25rem 1.75rem; padding-block: 1rem; border-block: 1px solid var(--color-rule); color: var(--color-ink); }
+/* The player's box steps aside so its transport can stay in view over the whole passage (Daniel 2026-10-27: Play and Pause were out of reach at the bottom while reading).
+   The transport is a white bar that sticks above the dock (or the window's foot) while the text scrolls past, and settles into its place after the text. */
+.player { display: contents; color: var(--color-ink); }
 .top, .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; }
-.top { justify-content: space-between; }
+.top { position: sticky; bottom: calc(var(--player-clear, var(--dock-clear, 0px)) + 0.5rem); z-index: 4; justify-content: space-between; margin-block: 1.25rem 0; padding: 0.5rem 0.5rem 0.5rem 1rem; border-radius: var(--radius-object); background: var(--color-surface); color: var(--color-ink);
+  box-shadow: inset 0 0 0 1px var(--color-rule), 0 6px 16px -10px rgb(19 32 47 / 0.35); }
+/* In a full-screen practice view there is no dock beneath it. While verses are being chosen, the Choose bar holds that place, so the transport stays with the player. */
+:global(dialog) .top { --player-clear: 0px; }
+:global(html:has([data-choose-bar])) .top { position: static; }
+.panel { margin-block: 0.75rem 1.75rem; padding-block-end: 1rem; border-block-end: 1px solid var(--color-rule); }
 .selection { margin: 0; font-weight: 600; }
 .controls button { font: inherit; min-height: 44px; padding: 0.5rem 1rem; border: 1px solid var(--lake); border-radius: 999px; background: transparent; color: var(--lake-deep); cursor: pointer; }
 .controls button:first-child, .controls button[aria-pressed="true"] { background: var(--lake); color: #fff; }

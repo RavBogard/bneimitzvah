@@ -4,7 +4,7 @@ import { useStudyLens } from "../workspace/study-lens";
 import { fetchPublicRefReading, refSource } from "../public-reading/api";
 import { readAddress } from "../public-reading/urls";
 import { printAddress } from "../../../lib/print/print-address";
-import { displayRange, go, Hero, longDate, PassageReading, replaceAddress, Shell, useStarter, type LabelledSource } from "../public-reading/view";
+import { displayRange, go, longDate, PassageReading, replaceAddress, Shell, useStarter, type LabelledSource } from "../public-reading/view";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 import { expandReadingRanges } from "../../../lib/readings/ranges";
 import { conflictMark, fetchSavedPage, parseSavedReading, removeSavedReading, setSavedMark, updateSavedReading, type SavedMark, type SavedPage, type SavedReading } from "./api";
@@ -14,6 +14,8 @@ import { contextFor, positionInRef, selectionPlace, type Portion } from "../../.
 import { refreshOfflinePacks } from "../offline/runtime";
 import { ChangeVersesSave, CHANGE_STRINGS } from "./change-verses";
 import { useSavedOwnLayer, YoursRowView, type VerseWork } from "./yours";
+import { MoreScope, ReadHeader } from "../public-reading/read-header";
+import type { Pill } from "../public-reading/reader-title";
 import styles from "./saved.module.css";
 import { ReturnSignInLink } from "../return-sign-in-link";
 import { fetchLearner, fetchLearnerPage } from "../mine/api";
@@ -287,14 +289,12 @@ export function SavedReadingPage({ id, verse, learner = null }: { id: string; ve
   };
   useEffect(() => () => live.current?.abort(), []);
 
-  const editButton = reading && !viewing && <button type="button" className="button-hero-secondary" aria-expanded={edit !== "closed"} aria-controls={edit !== "closed" ? editId : undefined} onClick={openEdit}>Edit</button>;
-  // The private name stays on the page; the tab title (and so browser history) only ever says "My reading". A learner's reading says whose it is.
-  const eyebrow = viewing ? `${learnerName ?? "Learner"}’s reading` : "My reading";
-  return <Shell title={viewing ? "A learner’s reading" : "My reading"} signedIn={header.status === "ready"}>
-    <Hero eyebrow={eyebrow} title={reading ? reading.name : header.status === "loading" ? "Loading the reading" : "Reading unavailable"}
-      meta={reading && <>{reading.date && <><time dateTime={reading.date}>{longDate(reading.date)}</time> · </>}{kindName(reading.kind)} <bdi dir="ltr">{displayRange([reading.ranges])}</bdi></>}
-      nav={<><button type="button" className="button-hero-secondary" onClick={() => go(readAddress({ mode: "week", date: null, kind: null }, { study: lens.lens === "study" }))}>This week</button><a className="button-hero-secondary" href="/readings">Choose a reading</a></>}
-      actions={reading && starter.row(editButton, printAddress({ mode: "saved", id: reading.id }))} />
+  // A staff viewer (plan D7) gets no Edit pill: the learner's reading is read-only to them.
+  const editPill: Pill | null = reading && !viewing ? { key: "edit", label: "Edit", icon: "pencil", expanded: edit !== "closed", controls: edit !== "closed" ? editId : undefined, onClick: openEdit } : null;
+  // The private name stays on the page; the tab title (and so browser history) only ever says "My reading", or "A learner's reading" for a staff viewer; the header line says whose it is.
+  return <MoreScope><Shell title={viewing ? "A learner’s reading" : "My reading"} signedIn={header.status === "ready"}>
+    <ReadHeader name={reading ? reading.name : header.status === "loading" ? (viewing ? "Loading the reading" : "Loading your reading") : "Reading unavailable"} loading={header.status === "loading"} pills={editPill ? [editPill] : []}
+      line={reading ? <>{viewing && <><bdi dir="auto">{learnerName ?? "Learner"}</bdi>’s reading · </>}{reading.date ? <time dateTime={reading.date}>{longDate(reading.date)}</time> : "No date"} · {kindName(reading.kind)} <bdi dir="ltr">{displayRange([reading.ranges])}</bdi></> : ""} />
     {reading && !viewing && <SavedReadingEdit step={edit} panelId={editId} name={draft.name} date={draft.date} notice={editNotice}
       onName={value => setDraft(current => ({ ...current, name: value }))} onDate={value => setDraft(current => ({ ...current, date: value }))}
       onSave={save} onCancel={() => { live.current?.abort(); setEdit("closed"); setEditNotice(""); }} onAskRemove={() => { setEditNotice(""); setEdit("confirm"); }} onRemove={remove} onKeep={() => setEdit("open")} />}
@@ -302,13 +302,13 @@ export function SavedReadingPage({ id, verse, learner = null }: { id: string; ve
     {reading && text?.key === textKey && text.error && <div className="workspace-state" role="status"><h2>The text didn’t load</h2><p>Check your connection and try again.</p>
       <button type="button" className="button-secondary" onClick={() => setTextRetry(value => value + 1)}>Try again</button></div>}
     {reading && view === "selection" && sources && <OwnLayerScope value={own}><PassageReading key={textKey} sources={sources} index={0} onIndex={() => {}} verse={linked} onVerseLeft={() => setLinked(null)}
-      registerStart={starter.register} retry={textRetry} onRetry={() => setTextRetry(value => value + 1)} verseExtra={verseExtra} choose={plan} /></OwnLayerScope>}
+      registerStart={starter.register} retry={textRetry} onRetry={() => setTextRetry(value => value + 1)} verseExtra={verseExtra} choose={plan} print={printAddress({ mode: "saved", id })} /></OwnLayerScope>}
     {reading && view !== "selection" && frame && portionSources && <OwnLayerScope value={portionOwn}><PassageReading key={`portion:${view}:${frame.ref}`} sources={portionSources} index={0} onIndex={() => {}} verse={portionVerse} onVerseLeft={() => setPortionVerse(null)}
-      registerStart={starter.register} retry={textRetry} onRetry={() => setTextRetry(value => value + 1)} verseExtra={ref => inReading.has(ref) ? verseExtra(ref) : null} choose={plan} /></OwnLayerScope>}
+      registerStart={starter.register} retry={textRetry} onRetry={() => setTextRetry(value => value + 1)} verseExtra={ref => inReading.has(ref) ? verseExtra(ref) : null} choose={plan} print={printAddress({ mode: "saved", id })} /></OwnLayerScope>}
     {reading && view !== "selection" && frame && !portionSources && (portionText?.error
       ? <div className="workspace-state" role="status"><h2>The text didn’t load</h2><p>Check your connection and try again.</p>
         <div className="hero-actions"><button type="button" className="button-secondary" onClick={() => setTextRetry(value => value + 1)}>Try again</button>
           <button type="button" className="button-secondary" onClick={() => enter("selection")}>{CHOOSE_STRINGS.backToSelection}</button></div></div>
       : <p role="status">Loading the text…</p>)}
-  </Shell>;
+  </Shell></MoreScope>;
 }

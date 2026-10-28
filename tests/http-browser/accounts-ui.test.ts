@@ -95,9 +95,8 @@ it("a person asks, an admin sees the count and approves, and the new member save
   await ui(asker.getByRole("heading", { name: "Ask to be linked", exact: true })).toHaveCount(0);
   await ui(asker.getByRole("heading", { name: "Your account can save readings", exact: true })).toHaveCount(0);
   await asker.goto("/read", { waitUntil: "domcontentloaded" });
-  await openMore(asker);
-  await asker.getByRole("button", { name: "Save", exact: true }).click();
-  await asker.getByRole("form", { name: "Save this reading" }).getByRole("button", { name: "Save reading", exact: true }).click();
+  await asker.getByRole("button", { name: "Save to My Readings", exact: true }).click();
+  await asker.getByRole("form", { name: "Add this reading" }).getByRole("button", { name: "Add", exact: true }).click();
   await ui(asker.getByRole("status").filter({ hasText: "Saved to My Readings." })).toBeVisible();
   const [member] = await fixture.ownerDb.select().from(s.tenantMember);
   expect(member).toMatchObject({ displayName: "Synthetic Asker", welcomeStatus: "skipped" });

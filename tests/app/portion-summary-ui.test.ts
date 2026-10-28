@@ -87,10 +87,10 @@ test("nothing is drawn until an approved summary has come (and never for a readi
   expect(renderToStaticMarkup(createElement(StudySummary, { slug: null, active: true }))).toBe("");
 });
 
-test("the one account that cannot save (a membership turned off, plan D2) is told so in one status line; the student-only lines are gone (N20-1, N20-2 retired)", () => {
-  const view = renderToStaticMarkup(createElement(SaveReadingView, { step: "not-eligible", problem: null, name: "Noach · Torah", date: "", panelId: "p",
-    onSave: () => {}, onName: () => {}, onDate: () => {}, onSubmit: () => {}, onCancel: () => {} }));
+test("the one account that cannot save (a membership turned off, plan D2) is told so in one status line in the sheet; the student-only lines are gone (N20-1, N20-2 retired)", () => {
+  const view = renderToStaticMarkup(createElement(SaveReadingView, { step: "not-eligible", open: true, problem: null, name: "Noach · Torah", date: "", panelId: "p", verses: "screen", screenLine: "Torah", wholeLine: null, canChoose: false,
+    onName: () => {}, onDate: () => {}, onVerses: () => {}, onSubmit: () => {}, onClose: () => {} }));
   expect(NOT_AVAILABLE_LINE).toBe("Saving isn’t available for this account.");
   expect(view).toContain(`role="status">${NOT_AVAILABLE_LINE}</p>`);
-  for (const gone of ["Student accounts", "Ask for an account", "/workspace/student", "/account"]) expect(view).not.toContain(gone);
+  for (const gone of ["Student accounts", "Ask for an account", "/workspace/student", "/account", "<form"]) expect(view).not.toContain(gone);
 });

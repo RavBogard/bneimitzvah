@@ -15,7 +15,7 @@ test("the public reading is open to signed-out visitors, never asks for a sessio
   await expect(page.getByRole("link", { name: "Sign in", exact: true }).first()).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name: "Reading unavailable", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Try again", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Next week", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Change", exact: true })).toBeEnabled();
   expect(api.length).toBeGreaterThan(0);
   expect(api.every(path => path === "/api/public/reading" || path === "/api/public/aliyot" || path === "/api/public/view")).toBe(true);
   const beacon = await counted;
