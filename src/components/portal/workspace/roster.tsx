@@ -1,5 +1,6 @@
 "use client";
 
+import { bookletHref } from "../print/booklet-href";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { workspaceApi, type RosterStudent, type StudentInput } from "./api";
 import { RequireRole, statusOf, useWorkspace, useWorkspaceModal, WorkspaceLink } from "./provider";
@@ -225,7 +226,7 @@ function Roster() {
             <span className="roster-row-meta"><time dateTime={row.ceremonyDate}>{when.label}</time>{!row.disabledAt && when.phrase && <span className="roster-row-days">{when.days > 1 ? `${when.days} days` : when.phrase}</span>}<span>{row.studentKind === "adult" ? "Adult" : "Child"}</span>{slot && <span>{slot}</span>}</span>{facts.length > 0 && <span className="roster-row-meta" data-testid="student-facts">{facts.map(line => <span key={line}>{line}</span>)}</span>}</>;
           return <li key={row.id} className={`roster-row${row.disabledAt ? " roster-row-disabled" : ""}`}>
             {row.disabledAt ? <div className="roster-row-main">{body}</div> : <WorkspaceLink className="roster-row-main" href={`/workspace/admin/students/${row.id}/reading`}>{body}</WorkspaceLink>}
-            <div className="roster-row-actions">{!row.disabledAt && <button type="button" className="roster-action" aria-label={`Honors for ${name}`} disabled={pending || editing || !!honorsStudent} onClick={event => { honorsOrigin.current = event.currentTarget; setHonorsStudent(row); }}>Honors</button>}<button type="button" className="roster-action" aria-label={`${row.disabledAt ? "Details" : "Edit details"} for ${name}`} disabled={pending || conflict} onClick={event => choose(row, event)}>{row.disabledAt ? "Details" : "Edit"}</button><WorkspaceLink className="roster-action" aria-label={`People for ${name}`} href={`/workspace/admin/students/${row.id}/access`}>People</WorkspaceLink></div>
+            <div className="roster-row-actions">{!row.disabledAt && <button type="button" className="roster-action" aria-label={`Honors for ${name}`} disabled={pending || editing || !!honorsStudent} onClick={event => { honorsOrigin.current = event.currentTarget; setHonorsStudent(row); }}>Honors</button>}<button type="button" className="roster-action" aria-label={`${row.disabledAt ? "Details" : "Edit details"} for ${name}`} disabled={pending || conflict} onClick={event => choose(row, event)}>{row.disabledAt ? "Details" : "Edit"}</button><WorkspaceLink className="roster-action" aria-label={`People for ${name}`} href={`/workspace/admin/students/${row.id}/access`}>People</WorkspaceLink>{!row.disabledAt && <a className="roster-action" aria-label={`Print booklet for ${name}`} href={bookletHref(row.id)} data-testid="roster-print-booklet">Print booklet</a>}</div>
           </li>;
         })}</ul>}
         {!roster.length ? <div className="admin-empty"><p className="admin-empty-title">No students yet</p><p>Add a student, or import a list from a spreadsheet.</p><button type="button" className="button-text" onClick={() => void load().catch(() => undefined)}>Reload roster</button></div>

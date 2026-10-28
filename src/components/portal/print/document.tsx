@@ -92,10 +92,12 @@ function Appendix({ groups, heading, title }: { groups: readonly AppendixGroup[]
   </section>;
 }
 
-export function PrintDocument({ heading, text, markers, format, productName, appendix = [] }: {
+export function PrintDocument({ heading, text, markers, format, productName, appendix = [], hebrew: hebrewOf }: {
   heading: SheetHeading; text: SheetText; markers: ReadonlyMap<string, string>; format: SheetFormat; productName: string;
   /** The commentary appendix (appendix.ts), already licence-filtered; empty prints nothing. */
   appendix?: readonly AppendixGroup[];
+  /** The study booklet's trope colour (B1): the verse's Hebrew as the reading page colours it; without it, the sheet's own Hebrew in `format.script`. */
+  hebrew?: (verse: StudyVerse) => ReactNode;
 }) {
   const type = SHEET_TYPE[format.size], rows = breaks(text.verses, markers), credits = sheetCredits(text, format);
   const hebrew = format.show !== "english", english = format.show !== "hebrew", notes = format.notes !== "none", numbers = format.numbers;
@@ -104,7 +106,7 @@ export function PrintDocument({ heading, text, markers, format, productName, app
   const number = (label: string) => numbers ? <td className={styles.number}><bdi dir="ltr">{label}</bdi></td> : null;
   const notesCell = notes ? <td className={styles.notes} aria-hidden="true" /> : null;
   const englishCell = (verse: StudyVerse) => <td className={styles.english} lang="en" dir="ltr">{verse.english ?? <span className={styles.missing}>English reference unavailable for this verse.</span>}</td>;
-  const hebrewCell = (verse: StudyVerse) => <td className={styles.hebrew} lang="he" dir="rtl"><Hebrew verse={verse} script={format.script} /></td>;
+  const hebrewCell = (verse: StudyVerse) => <td className={styles.hebrew} lang="he" dir="rtl">{hebrewOf ? hebrewOf(verse) : <Hebrew verse={verse} script={format.script} />}</td>;
   // Column order, left to right: English, the verse number between the two languages, Hebrew, then the notes column at the
   // right edge, beside where each Hebrew verse begins. With one language the number sits where that language's lines begin.
   const verseCells = (verse: StudyVerse, label: string) => format.show === "both" ? <>{englishCell(verse)}{number(label)}{hebrewCell(verse)}{notesCell}</>

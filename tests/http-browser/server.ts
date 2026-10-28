@@ -35,6 +35,8 @@ import { staffRouteMethods } from "../../src/server/http/staff";
 // The tutor walk (2026-10-28): the roster sheet and the service part-finished marks also fell through to the production composition. MCP (no runtime in this fixture) and recordings (their own gate) stay out on purpose.
 import { rosterSheetRouteMethods } from "../../src/server/http/roster-sheet";
 import { servicePartFinishedRouteMethods } from "../../src/server/http/service-part-finished";
+// The study booklet (B2) opens through its own route.
+import { bookletRouteMethods } from "../../src/server/http/booklet";
 import { closeNextDevelopment } from "./next-lifecycle";
 
 // Parallel local worktrees may choose their own loopback port; CI keeps the default.
@@ -126,7 +128,7 @@ export async function startBrowserServer(withRuntime: HttpRuntimeScope, withPubl
       if (referenceReviewRouteMethods(pathname)
         // Signed-out reading: the dispatcher's exact allowlist serves its routes and refuses every other /api/public path.
         || publicReadingRouteMethods(pathname) || isPublicReadingPath(pathname)) { await send(res, await dispatch(request)); return; }
-      if (!learnersRouteMethods(pathname) && !practiceVisibilityRouteMethods(pathname) && !serviceEcosystemRouteMethods(pathname) && !honoreeManagementRouteMethods(pathname) && !honorsRouteMethods(pathname) && !sourceContentRouteMethods(pathname) && !sourceAssignmentsRouteMethods(pathname) && !authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname) && !serviceLearningRouteMethods(pathname) && !progressRouteMethods(pathname) && !lessonLogRouteMethods(pathname) && !practiceCalendarRouteMethods(pathname) && !studyGuidesRouteMethods(pathname) && !congregationSettingsRouteMethods(pathname) && !claudeConnectionsRouteMethods(pathname) && !notificationsRouteMethods(pathname) && !savedRouteMethods(pathname) && !offlineRouteMethods(pathname) && !accountsRouteMethods(pathname) && !courseProgressRouteMethods(pathname) && !serviceCourseRouteMethods(pathname) && !verseReviewRouteMethods(pathname) && !staffRouteMethods(pathname) && !rosterSheetRouteMethods(pathname) && !servicePartFinishedRouteMethods(pathname)) { await nextHandler(req, res); return; }
+      if (!bookletRouteMethods(pathname) && !learnersRouteMethods(pathname) && !practiceVisibilityRouteMethods(pathname) && !serviceEcosystemRouteMethods(pathname) && !honoreeManagementRouteMethods(pathname) && !honorsRouteMethods(pathname) && !sourceContentRouteMethods(pathname) && !sourceAssignmentsRouteMethods(pathname) && !authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname) && !serviceLearningRouteMethods(pathname) && !progressRouteMethods(pathname) && !lessonLogRouteMethods(pathname) && !practiceCalendarRouteMethods(pathname) && !studyGuidesRouteMethods(pathname) && !congregationSettingsRouteMethods(pathname) && !claudeConnectionsRouteMethods(pathname) && !notificationsRouteMethods(pathname) && !savedRouteMethods(pathname) && !offlineRouteMethods(pathname) && !accountsRouteMethods(pathname) && !courseProgressRouteMethods(pathname) && !serviceCourseRouteMethods(pathname) && !verseReviewRouteMethods(pathname) && !staffRouteMethods(pathname) && !rosterSheetRouteMethods(pathname) && !servicePartFinishedRouteMethods(pathname)) { await nextHandler(req, res); return; }
       await send(res, await dispatch(request));
     } catch { if (!res.headersSent) await send(res, new Response(null, { status: 503 })); else res.destroy(); }
   });

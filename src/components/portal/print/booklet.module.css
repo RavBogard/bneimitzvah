@@ -1,0 +1,46 @@
+/*
+ * The study booklet (Track B). On screen: the booklet on white paper below its print controls. In print: Letter, a new page for each
+ * section, an aliyah kept whole where it fits. Trope colour is the reading page's own phrase fills (no new palette); "Black and white"
+ * prints the plain Hebrew. The fills print as they show.
+ */
+.booklet { color: #13202f; font-family: "Bricolage Grotesque", system-ui, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.section { display: grid; gap: 0.75rem; padding-block: 1.25rem; border-top: 1px dashed #c5ccd6; }
+.section:first-child { border-top: 0; padding-top: 0; }
+.cover { gap: 0.5rem; padding-block: 2rem; }
+.eyebrow { margin: 0; font-size: 0.875rem; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; color: #4b5a6b; }
+.name { margin: 0; font-size: 1.75rem; font-weight: 750; letter-spacing: -0.01em; }
+.meta { margin: 0; font-size: 0.9375rem; }
+.coverReading { display: grid; gap: 0.25rem; }
+.aliyot { margin: 0; padding-inline-start: 1.25rem; font-size: 0.875rem; }
+.heading { margin: 0; font-size: 1.25rem; font-weight: 750; }
+.partHead { padding-top: 1.25rem; border-top: 1px dashed #c5ccd6; }
+.subheading { margin: 0; font-size: 1.0625rem; font-weight: 700; }
+.minor { margin: 0.5rem 0 0; font-size: 0.9375rem; font-weight: 700; }
+.group { display: grid; gap: 0.5rem; }
+.prose { margin: 0; font-size: 0.9375rem; line-height: 1.5; }
+.prose p { margin: 0 0 0.5rem; }
+.theme { display: grid; gap: 0.25rem; }
+.themeTitle { margin: 0; font-weight: 650; }
+.label { margin: 0; font-size: 0.8125rem; color: #4b5a6b; }
+.aliyah { display: grid; gap: 0.5rem; }
+.hebrew { margin: 0; }
+.notes { display: grid; gap: 0.5rem; padding: 0.5rem 0 0.75rem; }
+.note { display: grid; gap: 0.25rem; }
+.noteHead { margin: 0; font-size: 0.875rem; font-weight: 650; }
+.sources { margin: 0; padding-inline-start: 1.25rem; font-size: 0.8125rem; color: #4b5a6b; }
+.part { display: grid; gap: 0.5rem; }
+.teaching { display: grid; gap: 0.25rem; font-size: 0.9375rem; line-height: 1.5; }
+.teaching p { margin: 0; }
+.credit { font-size: 0.8125rem; color: #4b5a6b; }
+.switch { min-height: 44px; }
+/* "Black and white": no fill behind any word, whatever the reading page's colours say. */
+.booklet[data-colour="black-and-white"] [data-family] { background: none !important; }
+
+@media print {
+  .section { border-top: 0; padding-block: 0; break-before: page; }
+  .section:first-child, .partHead + .section { break-before: auto; }
+  .partHead { border-top: 0; break-before: page; break-after: avoid; }
+  .heading, .subheading, .minor { break-after: avoid; }
+  .aliyah { break-inside: avoid; }
+  .note, .theme, .teaching { break-inside: avoid; }
+}

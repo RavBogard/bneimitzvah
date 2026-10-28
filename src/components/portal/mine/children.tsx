@@ -1,4 +1,5 @@
 "use client";
+import { bookletHref } from "../print/booklet-href";
 import { useEffect, useRef, useState } from "react";
 import { ButtonLink, Chip } from "../../ui";
 import { workspaceApi, type Assigned, type Reading, type Student } from "../workspace/api";
@@ -14,7 +15,7 @@ import { lessonDay } from "../workspace/lessons/panel";
 import styles from "./shelf.module.css";
 
 /** A parent's shelf (Readings for everyone E3): one card for each child, each with the reading, what the child has got, the latest note and the way in. */
-export const CHILDREN_STRINGS = Object.freeze({ title: "Your children", titleOne: "Your child", open: "Open", beforeNext: "Before next time", serviceParts: "Service parts", honors: "Honors form", failed: "Your children didn’t load.", none: "No children are linked to this account yet." });
+export const CHILDREN_STRINGS = Object.freeze({ title: "Your children", titleOne: "Your child", open: "Open", beforeNext: "Before next time", serviceParts: "Service parts", honors: "Honors form", booklet: "Print booklet", failed: "Your children didn’t load.", none: "No children are linked to this account yet." });
 
 export type ChildCard = Readonly<{
   id: string; first: string; name: string; date: string;
@@ -70,6 +71,7 @@ export function ChildCardView({ card, onPractice, onRetry, busy = false }: { car
     <ul className={styles.childLinks} aria-label={`${card.first}’s reading`}>
       <li><a className={styles.childLink} href={`${href}#service-parts`}>{CHILDREN_STRINGS.serviceParts}</a></li>
       <li><button type="button" className={styles.childLink} onClick={() => setHonors(true)}>{CHILDREN_STRINGS.honors}</button></li>
+      <li><a className={styles.childLink} href={bookletHref(card.id)} data-testid="print-booklet">{CHILDREN_STRINGS.booklet}</a></li>
     </ul>
     {honors && <HonorsSheet studentId={card.id} name={card.name} mode="parent" onClose={() => setHonors(false)} />}
   </li>;

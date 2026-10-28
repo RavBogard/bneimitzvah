@@ -4,17 +4,18 @@ import { List, ListRow, Sheet } from "../../../ui";
 import type { Assigned, Reading } from "../api";
 import { statusOf } from "../provider";
 import { staffApi } from "./api";
+import { bookletHref } from "../../print/booklet-href";
 
 /**
  * The staff Manage sheet (Readings for everyone E3): every action a tutor or admin takes on a student's reading, in one place, so the page's
  * title block carries two pills and one button. The rows, in order: Confirm reading is still right (one for each reading that needs review,
- * named Torah or Haftarah when there are two), Set divisions, Change verses, Print practice sheet, Print the whole reading, Write a lesson note and
+ * named Torah or Haftarah when there are two), Set divisions, Change verses, Print practice sheet, Print the whole reading, Print booklet, Write a lesson note and
  * Refresh reading; an admin also gets People and access and All students. The owner decides what each row does; this component owns the
  * confirmation, which is the one row that writes.
  */
 export const MANAGE_STRINGS = Object.freeze({
   title: "Manage", close: "Close", confirm: "Confirm reading is still right", divisions: "Set divisions", change: "Change verses",
-  printPractice: "Print practice sheet", printWhole: "Print the whole reading", writeNote: "Write a lesson note", refresh: "Refresh reading",
+  printPractice: "Print practice sheet", printWhole: "Print the whole reading", printBooklet: "Print booklet", writeNote: "Write a lesson note", refresh: "Refresh reading",
   people: "People and access", students: "All students", changed: "The reading changed. Refresh it to continue.", failed: "Couldn't confirm the reading. Try again.",
 });
 
@@ -37,7 +38,7 @@ export type ManageActions = Readonly<{
 /** The rows a mode shows, by name, in order. Pure, so the order is tested without a browser. */
 export function manageRows(mode: "tutor" | "admin", reviewKinds: readonly Reading["kind"][], twoReadings: boolean): string[] {
   const rows = reviewKinds.map(kind => twoReadings ? `${MANAGE_STRINGS.confirm}:${kind === "torah" ? "Torah" : "Haftarah"}` : MANAGE_STRINGS.confirm);
-  rows.push(MANAGE_STRINGS.divisions, MANAGE_STRINGS.change, MANAGE_STRINGS.printPractice, MANAGE_STRINGS.printWhole, MANAGE_STRINGS.writeNote, MANAGE_STRINGS.refresh);
+  rows.push(MANAGE_STRINGS.divisions, MANAGE_STRINGS.change, MANAGE_STRINGS.printPractice, MANAGE_STRINGS.printWhole, MANAGE_STRINGS.printBooklet, MANAGE_STRINGS.writeNote, MANAGE_STRINGS.refresh);
   if (mode === "admin") rows.push(MANAGE_STRINGS.people, MANAGE_STRINGS.students);
   return rows;
 }
@@ -63,6 +64,7 @@ export function ManageSheet({ mode, student, baseline, actions }: { mode: "tutor
         <ListRow title={MANAGE_STRINGS.change} onClick={then(actions.changeVerses)} />
         <ListRow title={MANAGE_STRINGS.printPractice} onClick={actions.printDisabled ? undefined : then(actions.printPractice)} />
         {actions.printWholeHref ? <ListRow title={MANAGE_STRINGS.printWhole} href={actions.printWholeHref} /> : <ListRow title={MANAGE_STRINGS.printWhole} />}
+        <ListRow title={MANAGE_STRINGS.printBooklet} href={bookletHref(student.id)} />
         <ListRow title={MANAGE_STRINGS.writeNote} onClick={then(actions.writeNote)} />
         <ListRow title={MANAGE_STRINGS.refresh} onClick={then(actions.refresh)} />
         {mode === "admin" && <ListRow title={MANAGE_STRINGS.people} href={`/workspace/admin/students/${encodeURIComponent(student.id)}/access`} />}
