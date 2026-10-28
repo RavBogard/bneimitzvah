@@ -24,12 +24,15 @@ const authority = (status: number) => [401, 403, 404].includes(status);
 const dirtyDraft = (draft: Draft | null) => Boolean(draft && (draft.base
   ? draft.summary !== draft.base.summary || draft.lessonDate !== draft.base.lessonDate || beforeNextValue(draft.beforeNext) !== draft.base.beforeNext
   : draft.summary.trim() || draft.beforeNext.trim()));
+/** The server's name for an author with no usable name. A parent reads it as the child's tutor (parent walk 2026-10-28, finding 9). */
+const UNNAMED_AUTHOR = "your tutor";
+export const authorName = (name: string, mode: ReadingMode, firstName?: string | null) => mode === "parent" && firstName && name === UNNAMED_AUTHOR ? `${firstName}’s tutor` : name;
 /** The newest note's "Before next time" line (N12). A learner reads it as theirs; everyone else, and every older note, by its field name. */
 export function BeforeNext({ text, own }: { text: string; own: boolean }) {
   return <p className="lesson-before-next"><span className="lesson-before-next-label">{own ? "Before your next lesson:" : "Before next time:"}</span> <bdi dir="auto">{text}</bdi></p>;
 }
 
-export function LessonLog({ mode, studentId, register, tabbed, headingId }: { mode: ReadingMode; studentId: string; register(value: LessonReload): () => void; tabbed: boolean; headingId?: string }) {
+export function LessonLog({ mode, studentId, register, tabbed, headingId, firstName }: { mode: ReadingMode; studentId: string; register(value: LessonReload): () => void; tabbed: boolean; headingId?: string; firstName?: string }) {
   const { summary, epoch, readLessons, registerWork, registerDeparture } = useWorkspace();
   const staff = mode === "tutor" || mode === "admin", id = useId();
   const scope = JSON.stringify([summary.sessionBinding, epoch, mode, studentId]), scopeRef = useRef(scope); scopeRef.current = scope;
@@ -237,7 +240,7 @@ export function LessonLog({ mode, studentId, register, tabbed, headingId }: { mo
     publish(paused || !current || current.loading ? { status: "loading" } : current.error ? { status: "unavailable" }
       : { status: "ready", latest: latest ? { lessonDate: latest.lessonDate, displayName: latest.displayName, summary: latest.summary, beforeNext: latest.beforeNext } : null }, projectionTurn);
   }, [current, paused, scope, publish, projectionTurn]);
-  const bytes = draft ? summaryBytes(draft.summary) : 0, nextBytes = draft ? summaryBytes(beforeNextValue(draft.beforeNext) ?? "") : 0, learner = mode === "student" || mode === "child-practice", title = staff ? "Lessons" : "Lesson notes";
+  const bytes = draft ? summaryBytes(draft.summary) : 0, nextBytes = draft ? summaryBytes(beforeNextValue(draft.beforeNext) ?? "") : 0, title = staff ? "Lessons" : "Lesson notes";
   return <section className={`lesson-log${tabbed ? " lesson-log-tabbed" : ""}`} aria-labelledby={headingId ?? `${id}-heading`} aria-busy={current?.loading || undefined}>
     <div className="lesson-log-head"><h2 id={headingId ?? `${id}-heading`} tabIndex={headingId ? -1 : undefined}>{title}</h2>
       {staff && tabbed && <p className="lesson-log-lede">Notes after each lesson. The student and their family can read them.</p>}
@@ -251,8 +254,9 @@ export function LessonLog({ mode, studentId, register, tabbed, headingId }: { mo
         <div className="lesson-entry-head"><h3><time dateTime={entry.lessonDate}>{day}</time></h3>
           {entry.canEdit && <button type="button" className="lesson-edit" aria-label={`Edit lesson from ${day}: ${Array.from(entry.summary.trim().split("\n")[0]).slice(0, 40).join("")}`} disabled={busy || Boolean(draft)} onClick={event => open(entry, event)}>Edit</button>}</div>
         <p className="lesson-summary" dir="auto">{entry.summary}</p>
-        {entry.beforeNext && <BeforeNext text={entry.beforeNext} own={learner && index === 0} />}
-        <p className="lesson-by"><bdi dir="auto">{entry.displayName}</bdi></p>
+        {/* Only the student reads the newest ask as their own; a parent's sitting reads it by its field name, as the parent's page does (finding 2). */}
+        {entry.beforeNext && <BeforeNext text={entry.beforeNext} own={mode === "student" && index === 0} />}
+        <p className="lesson-by"><bdi dir="auto">{authorName(entry.displayName, mode, firstName)}</bdi></p>
       </li>; })}</ol>}
     {current?.page?.nextCursor && <button type="button" className="button-secondary lesson-more" disabled={current.more} onClick={() => void more()}>{current.more ? "Loading…" : "Show earlier lessons"}</button>}
 

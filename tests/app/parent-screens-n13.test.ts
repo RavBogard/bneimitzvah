@@ -18,7 +18,8 @@ test("the next date is said in relative words, the rehearsal first while one is 
 
 test("the parent summary is one This week card with the note open and no retired heading", () => {
   const ui = source("workspace/parent-summary.tsx");
-  expect(ui).toContain("<h3>This week</h3>"); expect(ui).toContain("Practiced this week:"); expect(ui).toContain("· from ");
+  // Parent walk 2026-10-28: This week is the child page's own section (h2), with the week's dots in place of the list of days.
+  expect(ui).toContain("<h2>This week</h2>"); expect(ui).toContain('data-testid="parent-week"'); expect(ui).toContain("· from ");
   for (const retired of ["Latest saved lesson", "Recorded practice dates", "Read saved lesson note", "Lesson author:", "Seven days ending"]) expect(ui).not.toContain(retired);
   expect(ui).not.toMatch(/<details/);
 });
@@ -26,7 +27,7 @@ test("the parent summary is one This week card with the note open and no retired
 test("every retired TP-14 row is gone from the parent, practice and honors screens and the approved wording stands", () => {
   const all = ["workspace/students.tsx", "workspace/reading.tsx", "workspace/honors/sheet.tsx", "workspace/honors/fields.tsx", "workspace/parent-summary.tsx", "entry.tsx"].map(source).join("\n");
   for (const retired of ["Practice with another child", "Switch practice to", "Return to parent view", "This tab only", "Read-only overview", "Child practice is entered separately", "Use Save honors to record the review"]) expect(all).not.toContain(retired);
-  for (const approved of ["Sit down with", "Open the honors form", "Remember to tap Save honors.", "Blessing from family", "Not part of my service", "Send a new code", "Sit with <bdi", "Practicing with <bdi", "reading and practice with"]) expect(all).toContain(approved);
+  for (const approved of ["Open the honors form", "Remember to tap Save honors.", "Blessing from family", "Not part of my service", "Send a new code", "Practicing with <bdi", "reading and practice with"]) expect(all).toContain(approved);
   expect(source("workspace/service-learning/panel.tsx")).toContain("Your service parts will show up here soon. Nothing you've practiced is lost.");
   expect(source("entry.tsx")).toContain("RESEND_AFTER_MS = 60_000");
   // The pre-choice lines went with the lists they sat above: a child's page is opened from the shelf's card, so nothing here asks who to choose (E2, E5).
@@ -35,7 +36,9 @@ test("every retired TP-14 row is gone from the parent, practice and honors scree
 
 test("the parent's honors row follows the summary inside the reading, and an adult's follows the reading", () => {
   const reading = source("workspace/reading.tsx"), students = source("workspace/students.tsx");
-  expect(reading.indexOf("<ParentStudySummary")).toBeGreaterThan(-1); expect(reading.indexOf("{mode === \"parent\" && afterSummary}")).toBeGreaterThan(reading.indexOf("<ParentStudySummary"));
+  // Parent walk 2026-10-28: the honors row follows This week and the parent's rows, before the folded text.
+  expect(reading.indexOf("<ParentStudySummary")).toBeGreaterThan(-1); expect(reading.indexOf("{mode === \"parent\" && student && afterSummary}")).toBeGreaterThan(reading.indexOf("<ParentStudySummary"));
+  expect(reading.indexOf("{readingFold(")).toBeGreaterThan(reading.indexOf("{mode === \"parent\" && student && afterSummary}"));
   const panel = students.indexOf("<ReadingPanel mode={mode}"), adult = students.indexOf("mode === \"student\" && selectedRow?.ownAdultHonors === true");
   expect(panel).toBeGreaterThan(-1); expect(adult).toBeGreaterThan(panel);
 });

@@ -178,7 +178,7 @@ describe("wording", () => {
     expect(words(markup)).toEqual(["Account", "You’re signed in", "Roles", "Tutor", "the students you teach", "Current", "Email settings", "choose which portal emails you get",
       "Claude connections", "see and end Claude’s access to the portal", "Account requests", "approve accounts for people who ask",
       // Readings for everyone, decision 16 (plan D8): the one sentence under the N23 line.
-      "Readings you keep, with their marks and notes, can be seen by your tutor and the rabbi.",
+      "Readings you keep, with their marks and notes, can be seen by tutors and the rabbi.",
       "Signing out removes your private reading and notes from this device’s screen. Use it on a shared phone or computer.", "Sign out"]);
   });
 });

@@ -35,9 +35,18 @@
 .childName { font-size: 1.125rem; line-height: 1.25; overflow-wrap: anywhere; }
 .childRanges { color: var(--color-muted); font-size: 0.875rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .childGot { font-size: 0.875rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.childAsk { overflow-wrap: anywhere; }
+.childAskLabel { display: block; color: var(--color-muted); font-size: 0.875rem; font-weight: 600; }
+.childFailed { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+.childFailed p { margin: 0; color: var(--color-muted); }
 .childNote { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; color: var(--color-muted); }
 .childActions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .childLinks { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0; padding: 0; list-style: none; }
 .childLinks li { margin: 0; }
-.childLinks a, .childLinks button { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
+.childLinks { align-items: center; }
+/* One link style for the row: the anchor and the honors button share size, colour and baseline (finding 12). */
+.childLink { display: inline-flex; align-items: center; min-height: 44px; margin: 0; padding: 0; border: 0; background: none; color: var(--color-action); font: inherit; font-size: 0.9375rem; font-weight: 600; line-height: 1.4; text-decoration: underline; text-underline-offset: 0.2em; cursor: pointer; }
+.childLink:hover { color: var(--color-action-hover); }
+/* The section after the children (Also working on) keeps the shelf's one gap (finding 13). */
+.section + :global([data-my-readings]) { margin-top: 1.5rem; }
 @media (max-width: 640px) { .chips > * { flex: 1 1 auto; } }

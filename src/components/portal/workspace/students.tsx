@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { workspaceApi, type Student } from "./api";
-import { ChildPracticeDisclosure } from "../practice-visibility/disclosure";
 import { TutorCardLine } from "./staff/practice";
 import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "./provider";
 import { ceremonyCountdown, ReadingPanel } from "./reading";
@@ -87,21 +86,19 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
     } catch { if (turn === sequence.current) setError(true); }
     finally { gate.current = false; setPaging(false); }
   }
-  // The one compact practice bar (1.9 N13, tier B "Practicing with Noa · Switch to Eli · Done"): the child's first name, a switch for each
-  // other linked child, Done, and the one coaching line. It uses names only: the app stores no pronouns.
+  // The one compact practice bar (1.9 N13, tier B "Practicing with Noa · Switch to Eli · Done"), one line on a phone (parent walk 2026-10-28,
+  // finding 1): the child's first name, a compact switch for each other linked child, and Done. The Got it rule lives in Up close, in the child's
+  // name (finding 4). It uses names only: the app stores no pronouns.
   if (switching) {
     const child = rows.find(row => row.id === context?.studentId), others = ordered.filter(row => row.id !== context?.studentId);
     return <section className="practice-bar" aria-label="Practice">
       <div className="practice-bar-row">
         {child ? <h1 className="practice-bar-title" data-testid="practice-bar-title">Practicing with <bdi dir="auto">{child.firstName}</bdi></h1> : <h1 className="sr-only">Practice</h1>}
-        {others.length > 0 && <ul className="practice-switches">{others.map(row => <li key={row.id}><button className="button-secondary" aria-label={`Switch to ${row.firstName} ${row.lastName}`} disabled={busy} onClick={() => void selectChild(row.id)}>Switch to <bdi dir="auto">{row.firstName}</bdi></button></li>)}</ul>}
-        <button className="button-hero-secondary practice-done" disabled={busy} onClick={() => void exitPractice()}>{busy ? "Closing practice…" : "Done"}</button>
+        {others.length > 0 && <ul className="practice-switches">{others.map(row => <li key={row.id}><button className="button-secondary practice-pill" aria-label={`Switch to ${row.firstName} ${row.lastName}`} disabled={busy} onClick={() => void selectChild(row.id)}><span>Switch to <bdi dir="auto">{row.firstName}</bdi></span></button></li>)}</ul>}
+        <button className="button-hero-secondary practice-done practice-pill" disabled={busy} onClick={() => void exitPractice(child ? { id: child.id, firstName: child.firstName } : undefined)}>{busy ? "Closing practice…" : "Done"}</button>
       </div>
       {loading ? <p role="status">Loading linked children…</p> : error ? <><p role="alert">Linked children couldn’t be loaded.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload children</button></>
-        : <>{more && <button className="button-text" disabled={busy || paging} onClick={() => void loadMore()}>{paging ? "Loading children…" : "Load more children"}</button>}
-          {child && <p className="field-help practice-coach">Sit with <bdi dir="auto">{child.firstName}</bdi> for each verse. Tap Got it only when <bdi dir="auto">{child.firstName}</bdi> reads it without stopping.</p>}
-          {/* 1.9 N23: a child who practices only with a parent is told here what the tutor sees, behind the same release gate. */}
-          {child && <ChildPracticeDisclosure name={child.firstName} place="child-practice" />}</>}
+        : more && <button className="button-text" disabled={busy || paging} onClick={() => void loadMore()}>{paging ? "Loading children…" : "Load more children"}</button>}
     </section>;
   }
   const selectedRow = rows.find(row => row.id === selected), selectedName = `${selectedRow?.firstName ?? ""} ${selectedRow?.lastName ?? ""}`;
@@ -123,7 +120,7 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
               : <button type="button" className="student-card" data-student-id={row.id} aria-pressed={selected === row.id} onClick={() => { void guardDeparture().then(leave => { if (leave) setSelected(row.id); }); }}><StudentCardBody row={row} honors={mode === "parent" && rows.length > 1 && !focused && !selected} /></button>}
           </li>)}</ul>{more && <button className="button-text" disabled={paging} onClick={() => void loadMore()}>{paging ? "Loading students…" : "Load more students"}</button>}</>}
           {focused && !selected && <div className="workspace-state" data-testid="student-not-found"><h2>Student not found</h2>{mode === "parent" ? <p>This student isn’t in your list. <Link href="/mine">My Readings</Link></p> : <p>This student isn’t in your list. Choose one of your students above.</p>}</div>}
-          {selected && <ReadingPanel mode={mode} studentId={selected} onStudentReload={reconcileStudent} afterSummary={selectedHonors} />}
+          {selected && <ReadingPanel mode={mode} studentId={selected} onStudentReload={reconcileStudent} afterSummary={selectedHonors} firstName={selectedRow?.firstName} />}
           {/* An adult's own honors entry sits after the reading (G20). A parent's sits right after the summary, inside the panel (above). */}
           {selected && !context && mode === "student" && selectedRow?.ownAdultHonors === true && <HonorsEntry key={`student:${selected}`} mode="student" studentId={selected} name={selectedName} />}
           {selected && mode === "student" && rows.find(row => row.id === selected)?.ownAdultHonors !== true && <HonorsNote />}</>}

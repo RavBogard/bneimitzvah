@@ -50,7 +50,8 @@ test("the gate is open, on a real date, and every disclosure placement renders w
   expect(read("components/portal/account-page.tsx")).toMatch(/student && <PracticeDisclosure place="account" \/>/);
   expect(read("components/portal/account-page.tsx")).toMatch(/roles\.includes\("parent"\) && <ParentAccountDisclosure load=\{parentChildren\} \/>/);
   expect(read("components/learn/home.tsx")).toMatch(/<LearnPracticeDisclosure signedIn=\{account\.state === "synced"\} isStudent=\{isStudent\} \/>/);
-  expect(read("components/portal/workspace/students.tsx")).toMatch(/\{child && <ChildPracticeDisclosure name=\{child\.firstName\} place="child-practice" \/>\}/);
+  // The sitting's line moved from the bar to under the tutor's ask (parent walk 2026-10-28, finding 1).
+  expect(read("components/portal/workspace/reading.tsx")).toMatch(/\{mode === "child-practice" && <ChildPracticeDisclosure name=\{student\.firstName\} place="child-practice" \/>\}/);
 });
 
 test("no tutor or parent line can render without the gate: built in one module, only from the read, which asks nothing while closed", async () => {

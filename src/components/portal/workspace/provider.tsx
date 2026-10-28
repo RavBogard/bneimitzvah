@@ -42,7 +42,7 @@ export { rolePaths };
 type WorkLifecycle = { pause(): void; clear(): void; settle(): Promise<void>; hasUnsaved(): boolean; reveal(): void };
 type Workspace = {
   summary: SessionSummary; context: Context | null; epoch: number; busy: boolean; notice: string;
-  selectChild(id: string): Promise<void>; exitPractice(): Promise<void>; refresh(): void;
+  selectChild(id: string): Promise<void>; exitPractice(child?: { id: string; firstName: string }): Promise<void>; refresh(): void;
   read(mode: ReadingMode, id: string, signal: AbortSignal): Promise<Assigned>;
   readVerified(mode: ReadingMode, id: string, signal: AbortSignal): Promise<Assigned>;
   readStudy(baseline: Assigned, kind: StudyKind, offset: number, signal: AbortSignal): Promise<StudyPage>;
@@ -218,6 +218,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     };
   }, [refresh, practice, clearWork]);
   useEffect(() => { if (!isParentPath(pathname)) setNotice(""); refresh(); }, [pathname, refresh]);
+  const leaving = useRef<string | null>(null);
+  useEffect(() => { if (leaving.current && pathname !== leaving.current) { leaving.current = null; setBusy(false); } }, [pathname]);
   useEffect(() => {
     if (!context) return;
     const remaining = Math.max(0, Date.parse(context.expiresAt) - Date.now());
@@ -246,16 +248,24 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }
     } finally { setBusy(false); }
   }
-  async function exitPractice() {
+  /** Done: back to the child's own page, where This week shows the sitting's marks, with a plain word that it ended (parent walk 2026-10-28, finding 6). */
+  async function exitPractice(child?: { id: string; firstName: string }) {
     if (practice.pending) return;
     if (!await guardDeparture()) return;
     quiet.current?.cancel();
     clearWork();
     const route = routeRevision.current;
     setBusy(true); setContext(null); setEpoch(value => value + 1);
-    try { await practice.exit(); if (route === routeRevision.current) setNotice("You’re back in your read-only parent view."); }
+    let closed = false;
+    try { await practice.exit(); closed = true; if (route === routeRevision.current) setNotice(child ? `You’ve finished practicing with ${child.firstName}.` : ""); }
     catch { if (route === routeRevision.current) setNotice("This tab no longer has an active practice view. Its server closure could not be confirmed; choose a child again if needed."); }
-    finally { setBusy(false); if (route === routeRevision.current) router.replace("/mine"); }
+    finally {
+      const target = closed && child ? `/mine/child/${encodeURIComponent(child.id)}` : "/mine";
+      // The sitting's page would send a closed sitting to the shelf as soon as it is no longer busy; it stays busy until the child's page is reached.
+      if (route === routeRevision.current && target !== "/mine") { leaving.current = currentPath.current; setTimeout(() => { if (leaving.current) { leaving.current = null; setBusy(false); } }, 10_000); }
+      else setBusy(false);
+      if (route === routeRevision.current) router.replace(target);
+    }
   }
   const read = useCallback(async (mode: ReadingMode, id: string, signal: AbortSignal) => {
     const generation = practice.generation, active = practice.selection;
@@ -589,7 +599,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     <main id="workspace-main" className="workspace-main">
       {(checking || !summary) && <section className="workspace-state" data-testid="workspace-state" data-workspace-state={failure === null ? "checking" : failure === 401 ? "signed-out" : failure === 403 || failure === 404 ? "access-changed" : "unavailable"} aria-live="polite"><h1>{failure === null ? "Checking your access" : failure === 401 ? "Sign in to continue" : failure === 403 || failure === 404 ? "Access has changed" : "Workspace unavailable"}</h1>
         <p>{failure === null ? "Your student information is hidden until access has been checked." : failure === 401 ? "Sign in with the email address your invitation was sent to." : failure === 403 || failure === 404 ? "The requested access is not available. Your previous student view has been cleared." : "We couldn’t load the workspace. Please try again shortly."}</p>
-        {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={() => { denials.current = []; refresh(); }}>Check access again</button>}</section>
+        {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={() => { denials.current = []; refresh(); }}>Check access again</button>}
+        {/* A parent who lands here from a child's page or a sitting keeps a way back to the shelf (finding 7). */}
+        {failure !== null && failure !== 401 && isParentPath(pathname) && <a className="button-text" href="/mine">My Readings</a>}</section>
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>
         <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readExploration, readExplorationPage, readReference, createShortReferenceOwner, createShortExplorationOwner, readWordAids, readWordDetails, createSources, createSourceContent, readWork, readProgress, readGuide, readServiceMetadata, readServiceFinished,readMyService,readMyServiceMaterial,requestMyService,readServiceUnit, readLessons, readPracticeCalendar, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, registerQuiet, concealed: checking || failure !== null }}>

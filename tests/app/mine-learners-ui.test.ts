@@ -115,7 +115,7 @@ describe("Your students", () => {
 
 describe("what the site says it records (plan D8)", () => {
   it("is the one sentence, on Account under the N23 line and on About, word for word", () => {
-    expect(READINGS_DISCLOSURE).toBe("Readings you keep, with their marks and notes, can be seen by your tutor and the rabbi.");
+    expect(READINGS_DISCLOSURE).toBe("Readings you keep, with their marks and notes, can be seen by tutors and the rabbi.");
     const account = readFileSync("src/components/portal/account-page.tsx", "utf8");
     expect(account).toMatch(/\{student && <PracticeDisclosure place="account" \/>\}\r?\n\s*<p className="field-help" role="note" data-readings-disclosure="account">\{READINGS_DISCLOSURE\}<\/p>/);
     expect(readFileSync("src/app/about/page.tsx", "utf8")).toContain("<p>{READINGS_DISCLOSURE}</p>");

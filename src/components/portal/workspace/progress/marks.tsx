@@ -15,10 +15,10 @@ export function VerseMark({ store, kind, verseRef }: { store: ProgressStore; kin
   useStore(store);
   const verse = store.verse(kind, verseRef); if (!verse) return null;
   if (store.unverified(kind, verseRef)) return <span className="verse-marks"><span className="verse-mark" data-testid="verse-mark">Mark unverified</span></span>;
-  // Staff and parents see both marks, each named; students see their own.
-  const staff = store.stream !== "self-check", self = verse.selfCheck.state, assessment = verse.assessment.state;
+  // Staff and parents see both marks, each named; students see their own. A parent (who writes no stream) reads the child's mark under the child's name (finding 8).
+  const staff = store.stream !== "self-check", parent = store.stream === null, self = verse.selfCheck.state, assessment = verse.assessment.state;
   return <span className="verse-marks">
-    {self !== "unmarked" && <span className="verse-mark" data-testid="verse-mark" data-state={self}>{self === "got-it" && check}{staff ? <StudentMark kind={kind} verseRef={verseRef} state={self} /> : selfLabels[self]}</span>}
+    {self !== "unmarked" && <span className="verse-mark" data-testid="verse-mark" data-state={self}>{self === "got-it" && check}{parent && store.studentName ? <><bdi dir="auto">{store.studentName}</bdi>{`: ${selfLabels[self].toLowerCase()}`}</> : staff ? <StudentMark kind={kind} verseRef={verseRef} state={self} /> : selfLabels[self]}</span>}
     {staff && assessment !== "not-started" && <span className="verse-mark" data-testid="verse-mark" data-state={assessment}>{assessment === "solid" && check}{`Tutor: ${assessmentLabels[assessment].toLowerCase()}`}</span>}
   </span>;
 }
@@ -29,8 +29,9 @@ function StudentMark({ kind, verseRef, state }: { kind: StudyKind; verseRef: str
 }
 
 /** In the practice view: students mark how a verse is going, tutors and admins assess it. */
-export function LiftProgress({ store, kind, verseRef, listening = true }: { store: ProgressStore; kind: StudyKind; verseRef: string;
-  /** False while the reference recording is not available: the Got it rule then asks for nothing the student never had. */ listening?: boolean }) {
+export function LiftProgress({ store, kind, verseRef, listening = true, childName }: { store: ProgressStore; kind: StudyKind; verseRef: string;
+  /** False while the reference recording is not available: the Got it rule then asks for nothing the student never had. */ listening?: boolean;
+  /** In a parent's sitting: the child's first name. The parent holds the phone and taps, so the one Got it rule names the child (finding 4). */ childName?: string }) {
   useStore(store);
   const verse = store.verse(kind, verseRef), stream = store.stream, pending = store.pending(kind, verseRef), notice = store.notice(kind, verseRef);
   const checking = store.loading(kind);
@@ -50,7 +51,7 @@ export function LiftProgress({ store, kind, verseRef, listening = true }: { stor
         onClick={() => { if (!pending && assessment !== state) choose(state, assessment, "not-started"); }}>{state === "solid" && check}{assessmentLabels[state]}</button>)}
     </div> : null}
     {/* 1.9 N19, LD-09 (tier A): what each mark means. The tutor's line names the child, never a pronoun. */}
-    {stream === "self-check" ? <p className="lift-progress-note" role="note" data-criterion="got-it">{listening ? "Got it means you chanted this verse twice without the recording and it matched the reader." : "Mark Got it when you can chant this verse twice in a row on your own, smoothly."}</p>
+    {stream === "self-check" ? <p className="lift-progress-note" role="note" data-criterion="got-it">{childName ? <>Mark Got it when <bdi dir="auto">{childName}</bdi> can chant this verse twice in a row, smoothly.</> : listening ? "Got it means you chanted this verse twice without the recording and it matched the reader." : "Mark Got it when you can chant this verse twice in a row on your own, smoothly."}</p>
       : stream === "assessment" && store.studentName ? <p className="lift-progress-note" role="note" data-criterion="solid">{`Solid means ${store.studentName} chanted it to you without help.`}</p> : null}
     <p className="lift-progress-note" role="status">{notice}</p>
     {!notice && <p className="lift-progress-note">{stream === "assessment" ? `Student: ${selfLabels[self].toLowerCase()}`

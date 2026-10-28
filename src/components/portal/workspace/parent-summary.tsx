@@ -1,12 +1,12 @@
 "use client";
-import { useId, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Assigned } from "./api";
 import { PortalRequestError } from "../api";
 import { dayOrdinal, dayString, type PracticeDates } from "./practice-calendar/api";
-import { BeforeNext, type LessonSummarySnapshot } from "./lessons/panel";
-import { nextDateLine, weekdayShort } from "./parent-week";
+import { authorName, BeforeNext, type LessonSummarySnapshot } from "./lessons/panel";
+import { nextDateLine } from "./parent-week";
 import { deviceDate } from "./today/model";
-import { ParentCountLine } from "./staff/practice";
+import { gotCount, readMarks } from "./today/today";
 
 type CalendarRead = (mode: "parent", studentId: string, operation: { type: "calendar"; fromDate: string; throughDate: string }, signal: AbortSignal) => Promise<PracticeDates>;
 type Lesson = LessonSummarySnapshot["lesson"];
@@ -64,32 +64,72 @@ export class ParentSummaryStore {
   }
 }
 const label = (date: string) => new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
+const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+// 1970-01-01 was a Thursday.
+const weekday = (ordinal: number) => (((ordinal + 4) % 7) + 7) % 7;
+
 /**
- * The parent's "This week" card (1.9 N13): the next date in relative words, the days practiced this week, and the latest lesson note, open.
- * Everything on it is read through reads the parent already has (the child's dates, the practice calendar, the lesson notes).
+ * What the child has got across the whole reading, counted as the shelf's card counts it: every page of the child's marks, read through the
+ * parent's own progress read (the same authorized path the card and this page already use; nothing new is asked of the server).
+ */
+type ProgressRead = Parameters<typeof readMarks>[0];
+function useGot(baseline: Assigned | null, live: boolean, readProgress: ProgressRead | undefined) {
+  const read = useRef(readProgress); read.current = readProgress;
+  const [got, setGot] = useState<{ baseline: Assigned; value: { got: number; total: number } } | null>(null);
+  useEffect(() => {
+    if (!live || !baseline || !baseline.readings.length || !read.current) return;
+    const controller = new AbortController();
+    void (async () => {
+      const marks = new Map<Assigned["readings"][number]["kind"], Awaited<ReturnType<typeof readMarks>>>();
+      for (const reading of baseline.readings) { const progress = read.current; if (!progress) return; marks.set(reading.kind, await readMarks(progress, baseline, reading.kind, controller.signal)); }
+      const value = gotCount(baseline.readings, { status: "ready", value: marks });
+      if (!controller.signal.aborted && value) setGot({ baseline, value });
+    })().catch(() => undefined);
+    return () => controller.abort();
+  }, [baseline, live]);
+  return got?.baseline === baseline ? got.value : null;
+}
+
+/** The week's dots as the student's card draws them, for the seven days the read covers (ending today); a practiced day carries its date. Dates only. */
+function WeekDots({ serverDay, dates, name }: { serverDay: string; dates: readonly string[]; name: string }) {
+  const today = dayOrdinal(serverDay), start = today - 6, practiced = new Set(dates);
+  return <ol className="parent-summary-dates parent-week" aria-label={`Days ${name} practiced this week`} data-testid="parent-week">{Array.from({ length: 7 }, (_, index) => {
+    const ordinal = start + index, date = dayString(ordinal), done = practiced.has(date);
+    return <li key={ordinal} className={`parent-day${done ? " parent-day-done" : ""}${ordinal === today ? " parent-day-today" : ""}`}>
+      <span aria-hidden="true" className="parent-day-letter">{weekdays[weekday(ordinal)][0]}</span>
+      <span className="parent-day-dot" aria-hidden="true" />
+      <span className="sr-only">{done ? <time dateTime={date}>{weekdays[weekday(ordinal)]}</time> : weekdays[weekday(ordinal)]}{ordinal === today ? ", today" : ""}: {done ? "practiced" : "not practiced"}</span>
+    </li>;
+  })}</ol>;
+}
+
+/**
+ * The parent's "This week" card (1.9 N13; parent walk 2026-10-28, the whole-screen rethink): the next date in relative words, the tutor's
+ * "Before next time" with its date (the note itself when there is none), the week's dots, what the child has got, and Practice with the child.
+ * Everything on it is read through reads the parent already has (the child's dates, the practice calendar, the lesson notes, the marks).
  * notice: the congregation's consent notice from its settings (what is stored, who hears it, when it is deleted); nothing when unset.
  */
-export function ParentStudySummary({ store, baseline, scope, concealed, notice = null }: { store: ParentSummaryStore; baseline: Assigned | null; scope: string; concealed: boolean; notice?: string | null }) {
-  const state = useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot), practised = useId();
-  if (!baseline || baseline.mode !== "parent" || concealed || !store.matches(baseline, scope)) return null;
-  const lesson = state.lesson, dates = state.dates, next = nextDateLine(baseline.student, deviceDate());
-  return <section className="parent-study-summary" aria-label="Preparation summary">
-    <h3>This week</h3>
+export function ParentStudySummary({ store, baseline, scope, concealed, notice = null, action, readProgress }: { store: ParentSummaryStore; baseline: Assigned | null; scope: string; concealed: boolean; notice?: string | null; action?: ReactNode;
+  /** The parent's own progress read (the provider's), for what the child has got; without it the line is left out. */ readProgress?: ProgressRead }) {
+  const state = useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);
+  const live = Boolean(baseline && baseline.mode === "parent" && !concealed && store.matches(baseline, scope)), got = useGot(baseline, live, readProgress);
+  if (!baseline || !live) return null;
+  const lesson = state.lesson, dates = state.dates, next = nextDateLine(baseline.student, deviceDate()), first = baseline.student.firstName;
+  return <section className="parent-study-summary" aria-label="Preparation summary" data-testid="parent-this-week">
+    <h2>This week</h2>
     {next && <p className="parent-summary-next">{next}</p>}
-    <div className="parent-summary-practised">
-      {dates.status === "loading" ? <p role="status">Loading practice dates…</p> : dates.status === "unavailable" ? <p>Practice dates couldn’t be loaded.</p>
-        : dates.dates.length ? <><span id={practised}>Practiced this week:</span> <ul className="parent-summary-dates" aria-labelledby={practised}>{dates.dates.map(date => <li key={date}><time dateTime={date}>{weekdayShort(date)}</time></li>)}</ul></>
-          : <p>No practice dates recorded in these seven days.</p>}
-    </div>
     <div className="parent-summary-lesson">
       {lesson.status === "loading" ? <p role="status">Loading the latest lesson…</p> : lesson.status === "unavailable" ? <p>The latest lesson couldn’t be loaded.</p> : !lesson.latest ? <p>No saved lesson yet.</p> : <>
-        <p><time dateTime={lesson.latest.lessonDate}>{label(lesson.latest.lessonDate)}</time> · from <bdi dir="auto">{lesson.latest.displayName}</bdi></p>
-        <p className="parent-summary-note" dir="auto">{lesson.latest.summary}</p>
-        {lesson.latest.beforeNext && <BeforeNext text={lesson.latest.beforeNext} own={false} />}
+        <p className="parent-summary-from"><time dateTime={lesson.latest.lessonDate}>{label(lesson.latest.lessonDate)}</time> · from <bdi dir="auto">{authorName(lesson.latest.displayName, "parent", first)}</bdi></p>
+        {lesson.latest.beforeNext ? <BeforeNext text={lesson.latest.beforeNext} own={false} /> : <p className="parent-summary-note" dir="auto">{lesson.latest.summary}</p>}
       </>}
     </div>
-    {/* 1.9 N23: the mark-count line, from the parent's own counts read (behind the release gate). */}
-    <ParentCountLine studentId={baseline.student.id} name={baseline.student.firstName} />
+    <div className="parent-summary-practised">
+      {dates.status === "loading" ? <p role="status">Loading practice dates…</p> : dates.status === "unavailable" ? <p>Practice dates couldn’t be loaded.</p>
+        : dates.dates.length ? <WeekDots serverDay={dates.serverDay} dates={dates.dates} name={first} /> : <p>No practice dates recorded in these seven days.</p>}
+    </div>
+    {got && <p className="parent-summary-got" data-testid="parent-got">Verses <bdi dir="auto">{first}</bdi> has got: <span>{got.got} of {got.total}</span></p>}
+    {action && <div className="parent-summary-action">{action}</div>}
     {notice && <p className="parent-consent-notice" dir="auto">{notice}</p>}
   </section>;
 }

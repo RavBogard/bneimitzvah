@@ -20,7 +20,7 @@ import styles from "./shelf.module.css";
 export const SHELF_STRINGS = Object.freeze({
   title: "My Readings",
   add: "Add",
-  foot: "Your tutor and the rabbi can see the readings you keep.",
+  foot: "Tutors and the rabbi can see the readings you keep.",
   records: "What the site records about you",
   recordsHref: "/about#accounts",
   emptyHeading: "Add your first reading",
