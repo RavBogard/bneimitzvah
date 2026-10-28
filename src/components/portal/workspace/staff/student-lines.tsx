@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { Assigned } from "../api";
+import { relationshipApi, type Relationships } from "../relationships/api";
+import { WorkspaceLink } from "../provider";
 import { staffApi, type Family } from "./api";
-import { familyLine, waitingForDivisions, waitingLine } from "./model";
+import { familyLine, parentLine, tutorLine, waitingForDivisions, waitingLine } from "./model";
 
 /**
  * The lines under a student's name on the staff page (1.9 N14/N15):
@@ -22,12 +24,24 @@ export function StaffStudentLines({ mode, baseline }: { mode: "tutor" | "admin";
     staffApi.family("tutor", studentId, request.signal).then(value => { if (!request.signal.aborted) setFamily({ id: studentId, value }); }, () => undefined);
     return () => request.abort();
   }, [mode, studentId]);
+  // The admin's header line: who teaches and whether a parent joined, from the same read the People page uses (no address is in it).
+  const [people, setPeople] = useState<{ id: string; value: Relationships } | null>(null);
+  useEffect(() => {
+    if (mode !== "admin") return;
+    const request = new AbortController();
+    relationshipApi.inspect(studentId, request.signal).then(value => { if (!request.signal.aborted) setPeople({ id: studentId, value }); }, () => undefined);
+    return () => request.abort();
+  }, [mode, studentId]);
   const known = family?.id === studentId ? family.value : null;
+  const shown = mode === "admin" && people?.id === studentId ? people.value : null;
   const waiting = mode === "tutor" && waitingForDivisions(known?.kind, baseline.readings);
   const review = baseline.readings.filter(row => row.needsReview);
   const lines = known ? familyLine(known) : [];
-  if (!lines.length && !waiting && !review.length) return null;
+  if (!lines.length && !waiting && !review.length && !shown) return null;
   return <div className="staff-lines" data-testid="staff-student-lines">
+    {shown && <p data-testid="admin-people-line"><bdi dir="auto">{[tutorLine(shown.tutors.find(row => row.effectiveRead)?.displayName ?? null, shown.tutors.filter(row => row.effectiveRead).length),
+      shown.guardians.length || !shown.identities.length ? parentLine(shown.guardians.some(row => row.effectiveRead) ? "joined" : "none") : null].filter(Boolean).join(". ")}</bdi>{" "}
+      <WorkspaceLink href={`/workspace/admin/students/${encodeURIComponent(studentId)}/access`}>People and access</WorkspaceLink></p>}
     {lines.map(line => <p key={line} data-testid="family-line"><bdi dir="auto">{line}</bdi></p>)}
     {waiting && <p data-testid="honors-status"><bdi dir="auto">{waitingLine(firstName)}</bdi></p>}
     {review.map(reading => <p key={reading.id} className="reading-review-clear" data-testid="reading-review"><span className="roster-chip">Reading needs review</span>

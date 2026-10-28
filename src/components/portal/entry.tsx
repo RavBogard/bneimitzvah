@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { fetchDoor, fetchSession, parseAcceptance, parseAcknowledgement, parseCodeResult, parseInvitation, PortalRequestError, requestPortal, roleNames,
-  type InvitationReview, type SessionDoor, type SessionSummary } from "./api";
+  type InvitationReview, type Role, type SessionDoor, type SessionSummary } from "./api";
 import { GoogleContinue } from "./google-sign-in";
 import { rememberSignedIn } from "./signed-in-hint";
 import { returnAddress } from "../../lib/site/return-address";
@@ -10,7 +10,7 @@ import type { GoogleIntent } from "./sign-in-boundary";
 import { FrontDoor, type FrontDoorAccount } from "./front-door/front-door";
 import { AccountRequest } from "./account-request";
 import { signOutOfPortal } from "./sign-out";
-import { MINE_HREF, workspaceDestination } from "./shell/role-home";
+import { MINE_HREF, rolePaths, workspaceDestination } from "./shell/role-home";
 import { SiteBar } from "../site/site-bar";
 
 export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "uncertain" }
@@ -55,7 +55,7 @@ export const SIGN_IN_CODE_COPY = Object.freeze({
  * Where an entry that finds the person already signed in goes: nowhere on the front door (it shows the role's door, never the
  * workspace), else the page they left (G16) or My Readings. Only an accepted invitation's Continue and a return address ever lead to work.
  */
-export const signedInDestination = (doors: boolean, back: string | null): string | null => doors ? null : back ?? MINE_HREF;
+export const signedInDestination = (doors: boolean, back: string | null, roles: readonly Role[] = []): string | null => doors ? null : back ?? (roles.includes("admin") ? rolePaths.admin : MINE_HREF);
 const failure = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
 
 /**
@@ -92,7 +92,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
         if (next.kind === "signed-in") { rememberCodeRequest(false); rememberSignedIn(true); }
         // Signed in already, on the sign-in form: back to the page the person left (G16), or My Readings when none is named. The
         // front door itself never leaves: it shows the role's door.
-        const away = next.kind === "signed-in" ? signedInDestination(doors, back) : null;
+        const away = next.kind === "signed-in" ? signedInDestination(doors, back, next.summary.roles) : null;
         if (away && turn === generation.current) { window.location.replace(away); return; }
         if (turn === generation.current) setView(next);
         // The home's door names the pinned reading, the first child or the nearest student; it is asked for once the person is known and never holds the page up. The last answer stays until a new one comes, so the line does not blink on a refresh.

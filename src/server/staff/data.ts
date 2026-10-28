@@ -99,3 +99,25 @@ export async function lockedAssignment<Q extends PgQueryResultHKT>(tx: Tx<Q>, te
     .where(and(eq(s.assignment.tenantId, tenantId), eq(s.assignment.studentId, studentId), eq(s.assignment.kind, kind))).for("update");
   return row;
 }
+
+/** The live tutors' display names per student (the name staff already see on the People page; the service cleans it). */
+export async function tutorNames<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string) {
+  return tx.select({ studentId: s.tutorStudent.studentId, name: s.user.name }).from(s.tutorStudent)
+    .innerJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.tutorStudent.tenantId), eq(s.roleGrant.id, s.tutorStudent.tutorGrantId)))
+    .innerJoin(s.membership, and(eq(s.membership.tenantId, s.roleGrant.tenantId), eq(s.membership.id, s.roleGrant.membershipId)))
+    .innerJoin(s.user, eq(s.user.id, s.membership.userId))
+    .where(and(eq(s.tutorStudent.tenantId, tenantId), isNull(s.tutorStudent.revokedAt), isNull(s.roleGrant.revokedAt), isNull(s.membership.disabledAt)))
+    .orderBy(asc(s.user.name), asc(s.tutorStudent.tutorGrantId)).limit(LIMIT);
+}
+/** Verses in each student's confirmed readings (total), and how many the student has marked Got it. Counts only. */
+export async function verseCounts<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string) {
+  const v = s.assignmentVerse, a = s.assignment, mark = s.verseSelfCheck;
+  const confirmed = and(eq(v.tenantId, tenantId), eq(a.status, "confirmed"));
+  const total = await tx.select({ studentId: v.studentId, count: sql<number>`count(*)::int` }).from(v)
+    .innerJoin(a, and(eq(a.tenantId, v.tenantId), eq(a.id, v.assignmentId))).where(confirmed).groupBy(v.studentId).limit(LIMIT);
+  const got = await tx.select({ studentId: v.studentId, count: sql<number>`count(*)::int` }).from(v)
+    .innerJoin(a, and(eq(a.tenantId, v.tenantId), eq(a.id, v.assignmentId)))
+    .innerJoin(mark, and(eq(mark.tenantId, v.tenantId), eq(mark.studentId, v.studentId), eq(mark.assignmentId, v.assignmentId), eq(mark.verseRef, v.verseRef), eq(mark.state, "got-it")))
+    .where(confirmed).groupBy(v.studentId).limit(LIMIT);
+  return { total, got };
+}

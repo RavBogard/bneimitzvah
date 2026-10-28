@@ -18,7 +18,7 @@ import * as data from "./data";
  * Release 1.9 N14 and N15: what the staff screens need beyond the roster and the reading.
  *
  * - status (admin): per active student, the setup facts behind "Needs you" and the roster's status chips. Ids, counts and states
- *   only: no names, no addresses (the admin's own roster already carries those).
+ *   and the first tutor's display name (as the People page shows it) and verse counts: no addresses.
  * - teaching (admin): each tutor's current students, by name, for "Teaches n students" (G11).
  * - handOver (admin, fresh session): moves a departing tutor's students to another tutor and removes the departing tutor, in one
  *   transaction (G11). It can only move the students the departing tutor teaches now, in this congregation, to a live, verified
@@ -30,7 +30,7 @@ import * as data from "./data";
  */
 type Access<Q extends PgQueryResultHKT> = Pick<ReturnType<typeof createAccessService<Q>>, "withAdminCapability" | "withStudentCapability">;
 export type FamilyState = "joined" | "invited" | "expiring" | "expired" | "none";
-export type StudentStatus = Readonly<{ id: string; tutors: number; family: FamilyState | null; reading: "none" | "confirmed" | "review"; honors: boolean }>;
+export type StudentStatus = Readonly<{ id: string; tutors: number; family: FamilyState | null; reading: "none" | "confirmed" | "review"; honors: boolean; tutorName: string | null; got: number; total: number }>;
 const DAY_MS = 86_400_000;
 const conflict = () => Object.freeze({ ok: false as const, code: "stale-state" as const });
 const tooMany = (rows: readonly unknown[]) => { if (rows.length > 20_000) throw new AccessDenied(403); };
@@ -47,7 +47,10 @@ export function createStaffService<Q extends PgQueryResultHKT>(input: { access: 
       const finished = new Set(done.map(row => row.studentId)), active = rows.filter(row => !row.disabledAt && !finished.has(row.id));
       const [tutors, families, invites, readings, honors] = [await data.liveTutorCounts(tx, tenantId), await data.joinedFamilies(tx, tenantId),
         await data.openParentInvites(tx, tenantId), await data.confirmedAssignments(tx, tenantId), await data.honorsStarted(tx, tenantId)];
-      [tutors, families, invites, readings, honors].forEach(tooMany);
+      const [names, verses] = [await data.tutorNames(tx, tenantId), await data.verseCounts(tx, tenantId)];
+      [tutors, families, invites, readings, honors, names, verses.total, verses.got].forEach(tooMany);
+      const firstTutor = new Map<string, string>(); for (const row of names) if (!firstTutor.has(row.studentId)) firstTutor.set(row.studentId, displayName(row.name));
+      const totalOf = new Map(verses.total.map(row => [row.studentId, Number(row.count)])), gotOf = new Map(verses.got.map(row => [row.studentId, Number(row.count)]));
       const tutorCount = new Map(tutors.map(row => [row.studentId, Number(row.count)])), joined = new Set(families.map(row => row.studentId)), started = new Set(honors.map(row => row.studentId));
       const group = <T extends { studentId: string | null }>(rows: readonly T[]) => { const map = new Map<string, T[]>(); for (const row of rows) if (row.studentId) map.set(row.studentId, [...map.get(row.studentId) ?? [], row]); return map; };
       const invitesOf = group(invites), readingsOf = group(readings), at = now();
@@ -60,7 +63,8 @@ export function createStaffService<Q extends PgQueryResultHKT>(input: { access: 
         }
         const own = readingsOf.get(student.id) ?? [];
         const reading = !own.length ? "none" : own.some(row => assignmentNeedsReview(row.snapshot, student.ceremonyDate)) ? "review" : "confirmed";
-        return Object.freeze({ id: student.id, tutors: tutorCount.get(student.id) ?? 0, family, reading, honors: started.has(student.id) });
+        return Object.freeze({ id: student.id, tutors: tutorCount.get(student.id) ?? 0, family, reading, honors: started.has(student.id),
+          tutorName: firstTutor.get(student.id) ?? null, got: gotOf.get(student.id) ?? 0, total: totalOf.get(student.id) ?? 0 });
       }));
     });
   }

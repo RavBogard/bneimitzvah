@@ -4,7 +4,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
 import { portalRoutesFixture } from "./portal-routes-fixture";
 import { createHttpDispatcher } from "../../src/server/http/dispatch";
-import { needsYouRows, NEEDS_YOU_TEXT, statusChips, type StudentStatus } from "../../src/components/portal/workspace/staff/model";
+import { needsYouRows, NEEDS_YOU_TEXT, studentFacts, type StudentStatus } from "../../src/components/portal/workspace/staff/model";
 
 // Release 1.9 N14/N15 staff screens, server side. Synthetic people only. The fixture's "multi" is the tutor of Sibling A and the
 // parent of Siblings A and B; "learner" is Sibling A's own account; "recipient" becomes a second tutor here; students[3] and a
@@ -52,20 +52,22 @@ describe("Needs you (N14)", () => {
     const statuses = new Map<string, StudentStatus>(response.json.students.map((row: StudentStatus) => [row.id, row]));
     // Only this congregation's students; the other congregation's is never named.
     expect([...statuses.keys()].sort()).toEqual([t.own.id, t.sibling.id, t.unrelated.id].sort());
-    expect(statuses.get(t.unrelated.id)).toEqual({ id: t.unrelated.id, tutors: 0, family: "none", reading: "none", honors: false });
+    expect(statuses.get(t.unrelated.id)).toEqual({ id: t.unrelated.id, tutors: 0, family: "none", reading: "none", honors: false, tutorName: null, got: 0, total: 0 });
     expect(statuses.get(t.own.id)).toMatchObject({ tutors: 1, family: "joined" });
+    // The tutor is named as the People page names them (never an address); verse counts are counts only.
+    expect(typeof statuses.get(t.own.id)!.tutorName).toBe("string");
     // A parent whose address is unverified has not joined, by the same rule as the tutor's family line.
     await t.f.owner(() => t.f.db.update(s.user).set({ emailVerified: false }).where(eq(s.user.id, t.f.identities.multi.id)));
     expect((await t.call("/api/admin/student-status", "admin")).json.students.find((row: StudentStatus) => row.id === t.own.id).family).toBe("none");
     await t.f.owner(() => t.f.db.update(s.user).set({ emailVerified: true }).where(eq(s.user.id, t.f.identities.multi.id)));
     const roster = (await t.call("/api/admin/students", "admin")).json.students;
     const rows = needsYouRows(roster, statuses).filter(row => row.student?.id === t.unrelated.id);
-    const tutorRows = rows.filter(row => row.condition === "no-tutor");
+    const tutorRows = rows.filter(row => "conditions" in row && row.conditions.includes("no-tutor"));
     expect(tutorRows).toHaveLength(1);
     expect(NEEDS_YOU_TEXT["no-tutor"]).toEqual({ text: "No tutor yet.", verb: "Choose a tutor." });
     // The students a year out are not listed at all.
     expect(needsYouRows(roster, statuses).some(row => row.student?.id === t.own.id)).toBe(false);
-    expect(statusChips(roster.find((row: { id: string }) => row.id === t.unrelated.id), statuses.get(t.unrelated.id))).toContain("No tutor yet");
+    expect(studentFacts(statuses.get(t.unrelated.id)!)).toContain("No tutor yet");
   });
 
   it("refuses everyone but an admin", async () => {
