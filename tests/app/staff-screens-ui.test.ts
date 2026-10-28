@@ -10,9 +10,9 @@ vi.mock("../../src/components/portal/workspace/provider", async original => ({ .
 import { normalizeHebrew } from "../../src/server/study/normalize";
 import { LiftedLine } from "../../src/components/portal/workspace/study/lift";
 import { ExplorationContent } from "../../src/components/portal/workspace/study/exploration-view";
-import { NeedsYou } from "../../src/components/portal/workspace/staff/needs-you";
+import { ThisWeekCards } from "../../src/components/portal/workspace/staff/this-week";
 import { ManageSheet, manageRows } from "../../src/components/portal/workspace/staff/manage-sheet";
-import { familyLine, isSunday, linkRequestLine, needsYouRows, nextEventLine, savedSections, statusChips, stillWorkingLine, studentFacts, teachesLine, verseList, waitingForDivisions, waitingLine, type StudentNeed, type StudentStatus } from "../../src/components/portal/workspace/staff/model";
+import { familyLine, isSunday, linkRequestLine, nextEventLine, weekCards, savedSections, statusChips, stillWorkingLine, studentFacts, teachesLine, verseList, waitingForDivisions, waitingLine, type StudentStatus } from "../../src/components/portal/workspace/staff/model";
 import { parseFamily, parseNeeded, parseStatuses } from "../../src/components/portal/workspace/staff/api";
 import { explorationPrepared } from "./exploration-client-helper";
 
@@ -24,44 +24,50 @@ const nodes = (node: Node): Node[] => [node, ...children(node).flatMap(nodes)];
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const today = new Date(2026, 9, 26);
 
-describe("Needs you and the roster chips (N14)", () => {
+describe("This week's cards and the roster chips (N14)", () => {
   const student = (n: number, ceremonyDate: string, extra: Partial<{ serviceSlot: "morning" | "unknown"; disabledAt: string | null; ceremonyDoneAt: string | null; rehearsal1: string | null }> = {}) =>
     ({ id: id(n), firstName: `Synthetic${n}`, lastName: "Student", ceremonyDate, serviceSlot: "morning" as const, disabledAt: null, ceremonyDoneAt: null, ...extra });
   const ready: Omit<StudentStatus, "id"> = { tutors: 1, family: "joined", reading: "confirmed", honors: true, tutorName: "Synthetic Tutor", got: 10, total: 10 };
   const links = (item: Node) => nodes(item).filter(node => "tagName" in node && node.tagName === "a");
-  it("gives each student one row with everything left to do, never a disabled or ceremony-done student", () => {
+  const render = (cards: ReturnType<typeof weekCards>, statuses: Map<string, StudentStatus>, linkRequests = 0) => parseFragment(renderToStaticMarkup(createElement(ThisWeekCards, { cards, statuses, linkRequests, disabled: false, onEdit() {}, onHonors() {} })));
+  it("gives each student one card with at most two chips and a line per setup task, never a disabled or ceremony-done student", () => {
     const students = [student(1, "2026-12-07"), student(2, "2026-11-07", { serviceSlot: "unknown" }), student(3, "2027-03-06"), student(4, "2026-11-14", { disabledAt: "2026-10-01T00:00:00Z" }), student(5, "2026-11-14", { ceremonyDoneAt: "2026-10-01T00:00:00Z" })];
     const statuses = new Map<string, StudentStatus>([
-      [id(1), { id: id(1), ...ready, tutors: 0, tutorName: null }], [id(2), { id: id(2), ...ready, family: "expired", reading: "review", honors: false }],
+      [id(1), { id: id(1), ...ready, tutors: 0, tutorName: null }], [id(2), { id: id(2), ...ready, family: "expired", reading: "review", honors: false, got: 2, total: 12, tutors: 0 }],
       [id(3), { id: id(3), ...ready, tutors: 0 }], [id(4), { id: id(4), ...ready, tutors: 0 }], [id(5), { id: id(5), ...ready, tutors: 0 }]]);
-    const rows = needsYouRows(students, statuses, today);
-    expect(rows.map(row => [row.student?.id, "conditions" in row ? row.conditions : null])).toEqual([
-      [id(2), ["invitation-expired", "reading-review", "no-service", "honors"]], [id(1), ["no-tutor"]]]);
-    const markup = parseFragment(renderToStaticMarkup(createElement(NeedsYou, { rows, statuses, disabled: false, onEdit() {}, onHonors() {} })));
+    const cards = weekCards(students, statuses, today);
+    // Student 2 has four chip conditions; only the two most urgent show. Student 3's ceremony is a year out, so nothing lists it.
+    expect(cards.map(card => [card.student.id, card.chips, card.tasks])).toEqual([[id(2), ["no-tutor", "behind"], ["no-service", "honors"]], [id(1), ["no-tutor"], []]]);
+    const markup = render(cards, statuses);
     const items = nodes(markup).filter(node => attr(node, "data-student-id"));
     expect(items).toHaveLength(2);
-    // The no-tutor condition leads to the student's access page, and each condition has its own verb.
-    const tutor = nodes(items[1]).find(node => attr(node, "data-condition") === "no-tutor")!;
-    expect(attr(links(tutor)[0], "href")).toBe(`/workspace/admin/students/${id(1)}/access`);
-    expect(nodes(items[0]).filter(node => attr(node, "data-condition"))).toHaveLength(4);
-    // The one deliberate wording check for these rows.
-    expect(nodes(items[0]).filter(node => attr(node, "data-condition")).map(item => text(item))).toEqual(["The family's invitation expired. Send a new one.", "Reading needs review Confirm reading is still right",
-      "No service date yet. Set the service.", "Honors not started. Open the honors form."]);
+    // A chip leads to its fix.
+    const chip = nodes(items[1]).find(node => attr(node, "data-chip") === "no-tutor")!;
+    expect(attr(chip, "href")).toBe(`/workspace/admin/students/${id(1)}/access`);
+    expect(nodes(items[0]).filter(node => attr(node, "data-chip"))).toHaveLength(2);
+    expect(nodes(items[0]).filter(node => attr(node, "data-task"))).toHaveLength(2);
+    // The one deliberate wording check for these cards: the chips, the setup lines as one sentence, the date line and the facts.
+    expect(nodes(items[0]).filter(node => attr(node, "data-chip")).map(text)).toEqual(["Needs a tutor", "Behind on practice"]);
+    expect(nodes(items[0]).filter(node => attr(node, "data-task")).map(text)).toEqual(["No service date yet · Set the service", "Honors not started · Open the honors form"]);
+    expect(text(nodes(items[0]).find(node => attr(node, "data-testid") === "week-date")!)).toBe("Beit Mitzvah in 12 days · Sat, Nov 7, 2026");
+    expect(nodes(items[0]).filter(node => attr(node, "data-testid") === "student-fact").map(text)).toEqual(["2 of 12 verses got"]);
     expect(statusChips(students[1], statuses.get(id(2)))).toEqual(["Reading needs review", "No service date yet"]);
     expect(statusChips(students[0], { id: id(1), ...ready, family: "expiring", reading: "none", tutors: 0 })).toEqual(["Expires tomorrow", "No reading yet"]);
     expect(statusChips(students[3], statuses.get(id(4)))).toEqual([]);
   });
-  it("ranks who needs the rabbi first: a near date with no tutor or behind on verses, then the soonest next rehearsal or ceremony", () => {
-    // Today is 2026-10-26. Student 1: ceremony in 40 days, no honors. Student 2: rehearsal in 3 days, 2 of 12 verses got. Student 3: ceremony in 10 days, no tutor. Student 4: rehearsal in 2 days, all got, no honors.
-    const students = [student(1, "2026-12-05"), student(2, "2026-11-20", { rehearsal1: "2026-10-29" }), student(3, "2026-11-05"), student(4, "2026-11-20", { rehearsal1: "2026-10-28" })];
+  it("folds this week's rehearsals and ceremonies into the cards, ordered by the next one, even when nothing is wrong", () => {
+    // Today is 2026-10-26. Student 1: ceremony in 40 days, no honors. Student 2: rehearsal in 3 days, 2 of 12 verses got. Student 3: ceremony in 10 days, no tutor.
+    // Student 4: rehearsal in 2 days and all well. Student 5: ceremony in 40 days, all well, nothing this week.
+    const students = [student(1, "2026-12-05"), student(2, "2026-11-20", { rehearsal1: "2026-10-29" }), student(3, "2026-11-05"), student(4, "2026-11-20", { rehearsal1: "2026-10-28" }), student(5, "2026-12-05")];
     const statuses = new Map<string, StudentStatus>([[id(1), { id: id(1), ...ready, honors: false }], [id(2), { id: id(2), ...ready, got: 2, total: 12 }],
-      [id(3), { id: id(3), ...ready, tutors: 0, tutorName: null }], [id(4), { id: id(4), ...ready, honors: false }]]);
-    const rows = needsYouRows(students, statuses, today);
-    expect(rows.map(row => row.student?.id)).toEqual([id(2), id(3), id(4), id(1)]);
-    expect((rows[0] as StudentNeed).conditions).toEqual(["behind"]);
-    expect((rows[0] as StudentNeed).next).toMatchObject({ kind: "rehearsal", days: 3 });
-    // Far from any date, low progress is not behind.
-    expect(needsYouRows([student(1, "2026-12-05")], new Map([[id(1), { id: id(1), ...ready, got: 0, total: 12 }]]), today)).toEqual([]);
+      [id(3), { id: id(3), ...ready, tutors: 0, tutorName: null }], [id(4), { id: id(4), ...ready }], [id(5), { id: id(5), ...ready }]]);
+    const cards = weekCards(students, statuses, today);
+    expect(cards.map(card => card.student.id)).toEqual([id(4), id(2), id(3), id(1)]);
+    expect(cards[1].chips).toEqual(["behind"]); expect(cards[1].next).toMatchObject({ kind: "rehearsal", days: 3 });
+    // Far from any date, low progress is not behind and a well student with nothing this week has no card.
+    expect(weekCards([student(1, "2026-12-05")], new Map([[id(1), { id: id(1), ...ready, got: 0, total: 12 }]]), today)).toEqual([]);
+    // With the facts unread, this week's dates still show.
+    expect(weekCards(students, null, today).map(card => card.student.id)).toEqual([id(4), id(2)]);
     expect(nextEventLine({ kind: "rehearsal", date: "", days: 0 })).toBe("Rehearsal today");
     expect(nextEventLine({ kind: "rehearsal", date: "", days: 1 })).toBe("Rehearsal tomorrow");
     expect(nextEventLine({ kind: "ceremony", date: "", days: 5 })).toBe("Beit Mitzvah in 5 days");
@@ -74,11 +80,11 @@ describe("Needs you and the roster chips (N14)", () => {
   it("asks for a parent invitation when a child's family has none, or when the invitations service names the student", () => {
     const students = [student(1, "2026-11-21"), student(2, "2026-11-21")];
     const statuses = new Map<string, StudentStatus>([[id(1), { id: id(1), ...ready, family: "none" }], [id(2), { id: id(2), ...ready, family: "invited" }]]);
-    expect(needsYouRows(students, statuses, today).map(row => row.student?.id)).toEqual([id(1)]);
-    expect(needsYouRows(students, statuses, today, new Set([id(2)])).map(row => row.student?.id)).toEqual([id(1), id(2)]);
+    expect(weekCards(students, statuses, today).map(card => card.student.id)).toEqual([id(1)]);
+    expect(weekCards(students, statuses, today, new Set([id(2)])).map(card => [card.student.id, card.chips])).toEqual([[id(1), ["needs-parent"]], [id(2), ["needs-parent"]]]);
   });
   it("says so when nothing needs the admin, and takes only student ids from the invitations service", () => {
-    const empty = renderToStaticMarkup(createElement(NeedsYou, { rows: [], statuses: new Map(), disabled: false, onEdit() {}, onHonors() {} }));
+    const empty = renderToStaticMarkup(createElement(ThisWeekCards, { cards: [], statuses: new Map(), disabled: false, onEdit() {}, onHonors() {} }));
     // E4: the empty line says what was checked.
     expect(empty).toContain("Nothing needs you this week: no readings to review, no link requests, no invitations waiting.");
     const row = { memberId: id(9), name: "Synthetic Parent", email: "synthetic-parent@example.test", student: { id: id(1), firstName: "Synthetic", lastName: "Student" } };
@@ -86,15 +92,16 @@ describe("Needs you and the roster chips (N14)", () => {
     expect(() => parseNeeded({ needed: [{ ...row, extra: 1 }] })).toThrow();
     expect(() => parseNeeded({ needed: [{ ...row, student: { ...row.student, id: "x" } }] })).toThrow();
   });
-  it("puts link requests waiting first, as one row that opens Account requests, and says nothing for none (Readings for everyone E4)", () => {
+  it("shows link requests waiting once, above the cards, as one line that opens Account requests (Readings for everyone E4)", () => {
     const students = [{ id: id(1), firstName: "Synthetic", lastName: "Student", ceremonyDate: "2026-11-08", serviceSlot: "morning" as const, disabledAt: null }];
     const statuses = new Map<string, StudentStatus>([[id(1), { id: id(1), ...ready, tutors: 0, tutorName: null }]]);
-    const rows = needsYouRows(students, statuses, today, new Set(), 3);
-    expect(rows.map(row => row.student?.id ?? "link-request")).toEqual(["link-request", id(1)]);
-    expect(needsYouRows(students, statuses, today, new Set(), 0).map(row => row.student?.id)).toEqual([id(1)]);
-    const markup = parseFragment(renderToStaticMarkup(createElement(NeedsYou, { rows, statuses, disabled: false, onEdit() {}, onHonors() {} })));
-    const row = nodes(markup).find(node => attr(node, "data-condition") === "link-request")!, link = links(row)[0];
+    const markup = render(weekCards(students, statuses, today), statuses, 3);
+    const lines = nodes(markup).filter(node => attr(node, "data-testid") === "link-request-line");
+    expect(lines).toHaveLength(1);
+    const link = links(lines[0])[0];
     expect(text(link)).toBe("3 link requests waiting"); expect(attr(link, "href")).toBe("/workspace/accounts");
+    expect(nodes(markup).filter(node => attr(node, "data-testid") === "link-request-line" || attr(node, "data-student-id")).map(node => attr(node, "data-testid") ?? "card")).toEqual(["link-request-line", "card"]);
+    expect(nodes(render([], new Map(), 0)).filter(node => attr(node, "data-testid") === "link-request-line")).toHaveLength(0);
     expect(linkRequestLine(1)).toBe("1 link request waiting");
   });
   it("flags a Sunday ceremony only", () => { expect(isSunday("2026-11-08")).toBe(true); expect(isSunday("2026-11-07")).toBe(false); expect(isSunday("")).toBe(false); });

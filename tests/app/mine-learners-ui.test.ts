@@ -162,7 +162,8 @@ describe("the Tutor line and a learner's shelf", () => {
   it("a learner's shelf is the same Also working on list, read-only, each row opening the reading in the learner view", () => {
     const reading = parseSavedReading({ id: R1, name: "Noach", date: "2026-10-24", kind: "torah", ranges: "Genesis 6:9-11:32", verseCount: 153, revision: 1, createdAt: "2026-10-22T00:00:00.000Z", updatedAt: "2026-10-22T00:00:00.000Z" })!;
     const markup = renderToStaticMarkup(createElement(LearnerShelfView, { membershipId: M1, learner: learner(), state: { status: "ready", readings: { state: "ready", readings: [reading] } }, onRetry: () => {} }));
-    expect(markup).toContain("Synthetic Learner"); expect(markup).toContain(`>${LEARNER_SHELF_STRINGS.title}</h2>`);
+    expect(markup).toContain("Synthetic Learner"); expect(markup).toContain(">Synthetic Learner’s readings</h2>");
+    expect(renderToStaticMarkup(createElement(LearnerShelfView, { membershipId: M1, learner: null, state: { status: "loading" }, onRetry: () => {} }))).toContain(`>${LEARNER_SHELF_STRINGS.title}</h2>`);
     // Static markup escapes the ampersand; the address itself is plain.
     expect(markup).toContain(`href="${learnerReadingHref(M1, R1).replace("&", "&amp;")}"`);
     expect(learnerReadingHref(M1, R1)).toBe(`/read?saved=${R1}&learner=${M1}`);

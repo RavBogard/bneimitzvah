@@ -27,13 +27,15 @@ export function studentRows(students: readonly Student[], learners: readonly Lea
       studentId: student.id, rehearsal1: student.rehearsal1 ?? null, rehearsal2: student.rehearsal2 ?? null }));
   const known = new Set(students.map(student => student.id));
   const claimed = learners.filter(row => row.tutor?.mine && !(row.student && known.has(row.student.id))).sort((a, b) => a.name.localeCompare(b.name))
-    .map(row => ({ key: `learner:${row.membershipId}`, name: row.name, ceremonyDate: row.student?.ceremonyDate ?? null, note: null, href: learnerShelfHref(row.membershipId) }));
+    .map(row => ({ key: `learner:${row.membershipId}`, name: row.name, // With no student record, the date is the learner's nearest saved reading (tutor walk 2026-10-28, finding 10).
+      ceremonyDate: row.student?.ceremonyDate ?? row.nearest?.date ?? null, note: null, href: learnerShelfHref(row.membershipId) }));
   return [...dated, ...claimed];
 }
 /** The row's lines: the next date (a chip within two weeks), the practice line for a student, then the latest note's first line. */
 export function StudentRowMeta({ row, now }: { row: StudentRow; now?: Date }) {
   const ceremony = row.ceremonyDate ? ceremonyCountdown(row.ceremonyDate, now) : null;
-  const next = row.ceremonyDate ? nextDate({ ceremonyDate: row.ceremonyDate, rehearsal1: row.rehearsal1 ?? null, rehearsal2: row.rehearsal2 ?? null }, now) : null;
+  // Only a student has rehearsals and a Beit Mitzvah; a learner's date is a reading's, so it gets no chip.
+  const next = row.ceremonyDate && row.studentId ? nextDate({ ceremonyDate: row.ceremonyDate, rehearsal1: row.rehearsal1 ?? null, rehearsal2: row.rehearsal2 ?? null }, now) : null;
   // A Beit Mitzvah chip already says how far away it is; otherwise the date keeps its days-to-go phrase.
   const date = ceremony ? (next?.chip && next.kind === "ceremony" ? ceremony.label : ceremony.phrase ? `${ceremony.label} · ${ceremony.phrase}` : ceremony.label) : null;
   if (!date && !row.studentId && !row.note) return null;

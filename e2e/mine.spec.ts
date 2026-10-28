@@ -93,7 +93,7 @@ test("a tutor's shelf: Your students, then Find a learner by name, Add to my stu
   await expect(page).toHaveURL(new RegExp(`/mine/learner/${LEARNER}$`));
   const shelf = page.getByTestId("learner-shelf");
   await expect(shelf.getByRole("heading", { level: 1, name: "Synthetic Learner", exact: true })).toBeVisible();
-  await expect(shelf.getByRole("region", { name: "Also working on" }).getByRole("listitem")).toHaveCount(2);
+  await expect(shelf.getByRole("region", { name: "Synthetic Learner’s readings" }).getByRole("listitem")).toHaveCount(2);
   await expect(shelf.getByRole("link", { name: /Synthetic reading 1\b/ })).toHaveAttribute("href", `/read?saved=${row(1).id}&learner=${LEARNER}`);
   await expect(shelf.getByRole("button")).toHaveCount(0);
   expect(await noHorizontalScroll(page)).toBe(true);

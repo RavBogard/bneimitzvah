@@ -1185,7 +1185,8 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .settings-workspace .settings-grid { max-width: none; gap: 1rem 1.25rem; }
 .settings-workspace .settings-grid .roster-field + .roster-field { margin-top: 0; }
 .settings-workspace .field-error { margin: 0.5rem 0 0; color: var(--color-danger); font-size: 0.875rem; font-weight: 600; }
-.settings-workspace .settings-actions { margin-top: 0.5rem; }
+/* Save stays in reach however long the six cards run (admin walk 2026-10-28, finding 10); above the bottom tab bar where there is one. */
+.settings-workspace .settings-actions { position: sticky; bottom: var(--shell-bar-h, 0px); z-index: 1; margin-top: 0.5rem; padding-block: 0.75rem; background: var(--color-canvas); }
 .settings-workspace .settings-actions .button-primary { width: auto; min-width: min(100%, 12rem); }
 @media (max-width: 640px) { .settings-workspace .settings-grid { grid-template-columns: minmax(0, 1fr); } }
 
@@ -1336,3 +1337,12 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 /* Up close keeps the phrase legend to one row that scrolls sideways, so the verse and its legend fit the stage and no chip is left cut off above the marks. */
 .lift-stage > ol[aria-label^="Phrase families"] { align-self: stretch; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding-block: 2px; }
 .lift-stage > ol[aria-label^="Phrase families"] > li { flex: none; }
+
+/* This week's cards (admin walk 2026-10-28): chips that lead to their fix, and small actions that are at least 44px tall on touch. */
+.needs-you-chips { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-top: 0.125rem; }
+.needs-you-chip { display: inline-flex; align-items: center; text-decoration: none; color: var(--color-ink); }
+.needs-you-chip:hover { background: var(--color-hover); }
+@media (pointer: coarse), (max-width: 640px) {
+  .needs-you-chip, .needs-you-task .button-text, .needs-you-task a, .needs-you-row .roster-row-name a, .accounts-line a { display: inline-flex; align-items: center; min-height: 44px; }
+  .needs-you-chip { padding-inline: 0.875rem; }
+}
