@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type MutableRefObject, type ReactNode } from "react";
 import { type Assigned } from "../api";
 import { statusOf, useWorkspace, WorkspaceLink } from "../provider";
 import { studyBinding, studyPlan, type StudyKind, type StudyPage, type StudyVerse } from "./api";
@@ -28,6 +28,15 @@ import { NextSection } from "./next-section";
 import { PortalRequestError } from "../../api";
 import { watchReadingAudioDeadline } from "./reading-player-intent";
 import type { ShortReferenceOwner } from "./short-reference-bridge";
+import type { GuideStore } from "./guide-store";
+import { notesFor } from "./guide-card";
+
+const noGuide = () => () => {}, noVersion = () => 0;
+/** The guide's view for one text, kept current; null without a guide. */
+function useGuideView(store: GuideStore | undefined, kind: StudyKind | undefined) {
+  useSyncExternalStore(store?.subscribe ?? noGuide, store?.snapshot ?? noVersion, store?.snapshot ?? noVersion);
+  return store && kind ? store.view(kind) : null;
+}
 
 export type StudyReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
 const NO_SECTIONS: readonly Section[] = Object.freeze([]), SERVICE_CHIP = "service";
@@ -36,9 +45,14 @@ function aliyahSections(kind: StudyKind, assignment: Assigned["readings"][number
   return verses.flatMap((verse, index) => { const position = aliyahPosition(kind, assignment.aliyahStarts, assignment.verses, verse.ref);
     return position && (position.startsHere || index === 0) ? [{ index, label: `Aliyah ${position.number}${position.startsHere ? " starts here" : " · continued from the previous text page"}` }] : []; });
 }
-export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderGuide, renderWork, renderActiveWork, onPage, onPrint, printSheetHref, learner = false, liftHandle, practiceHandle, textStartHandle, verseLookupHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, onPracticeReady, onService, active = true, audio, stopAudio, practising = false, gotIt }: {
+export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderGuide, guide, renderIntro, renderWork, renderActiveWork, onPage, onPrint, printSheetHref, learner = false, liftHandle, practiceHandle, textStartHandle, verseLookupHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, onPracticeReady, onService, active = true, audio, stopAudio, practising = false, gotIt }: {
   baseline: Assigned | null; register(value: StudyReload): () => void; reloadMetadata(): Promise<Assigned>; authorityFailed(status: number): void; onKindChange(kind: StudyKind): void;
-  guardDeparture?(): Promise<boolean>; serviceHref?: string; renderGuide?(kind: StudyKind, verseRef: string): ReactNode; renderWork?(kind: StudyKind, verseRef: string): ReactNode; renderActiveWork?(): ReactNode; onPage?(kind: StudyKind, offset: number, signal: AbortSignal): Promise<void>;
+  guardDeparture?(): Promise<boolean>; serviceHref?: string; renderGuide?(kind: StudyKind, verseRef: string): ReactNode;
+  /** The study guide, so Study's rail can mark the verses it has notes on and open on the first of them. */
+  guide?: GuideStore;
+  /** Study's intro at the top of the text (the guide's overview), drawn only in Study. */
+  renderIntro?(kind: StudyKind): ReactNode;
+  renderWork?(kind: StudyKind, verseRef: string): ReactNode; renderActiveWork?(): ReactNode; onPage?(kind: StudyKind, offset: number, signal: AbortSignal): Promise<void>;
   /** Opens the printable practice sheet; learners on phones reach it here rather than in the hero. */
   onPrint?(): void;
   /** The reader's print sheet of these verses (/print), shown under the reading on a learner's phone. */
@@ -151,7 +165,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const shortView = useRef({ baseline, page: livePage, kind: state.kind, active, concealed, lift });
   shortView.current = { baseline, page: livePage, kind: state.kind, active, concealed, lift };
   useLayoutEffect(() => {
-    if (!baseline || !livePage || !state.kind || !listeningEnabled) return;
+    if (!baseline || !livePage || !state.kind || !listeningEnabled || study) return;
     const value = baseline, page = livePage, kind = state.kind, turn = generation.current;
     const live = () => { const now = shortView.current; return now.baseline === value && metadata.current === value && now.page === page && now.kind === kind
       && turn === generation.current && !now.concealed && now.active && !now.lift && document.visibilityState === "visible"; };
@@ -160,7 +174,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     shortMetadata.current = owned;
     if (live()) void owned.prepare().catch(() => undefined);
     return () => { owned.dispose(); if (shortMetadata.current === owned) shortMetadata.current = null; };
-  }, [baseline, livePage, state.kind, createShortReferenceOwner, epoch, key, listeningEnabled]);
+  }, [baseline, livePage, state.kind, createShortReferenceOwner, epoch, key, listeningEnabled, study]);
   useLayoutEffect(() => {
     if (concealed || !active || lift) shortMetadata.current?.suspend();
   }, [concealed, active, lift]);
@@ -199,6 +213,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   // Women's Commentary when Study shows it on Torah. Public texts only; nothing about the student is sent.
   const commentaryRefs = useMemo(() => livePage && !concealed ? livePage.verses.map(verse => verse.ref) : [], [livePage, concealed]);
   const corpus = state.kind === "haftarah" ? "neviim" : "torah";
+  const guideView = useGuideView(guide, state.kind);
   const { rashi, works } = useReadingWorks(commentaryRefs, { ready: commentaryRefs.length > 0, study, chosen: lens.works, corpus: state.kind === "torah" ? "torah" : "neviim" });
   const clearLink = leinLink.clear;
   useEffect(() => { clearLink(); }, [livePage, study, clearLink]);
@@ -209,7 +224,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   // their text lives in the work coordinator, not in the sheet, so closing loses nothing and the reader's place and words are all still there on reopening.
   const closeTools = async () => { if (!await guardLeaving("sources")) return false; setToolsRef(null); return true; };
   const openTools = (ref: string, opener: HTMLElement | null) => { toolsOpener.current = opener; setPicked(ref); setToolsRef(ref); };
-  const hear = (page: StudyPage, index: number, word: ReadingSelection = "verse") => { setPicked(page.verses[index].ref); playback.current?.select(index, word); if (word === "verse") tools.current?.selectVerse(index); else tools.current?.select(index, word); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
+  // Study plays nothing (2026-10-28): there a verse is only chosen.
+  const hear = (page: StudyPage, index: number, word: ReadingSelection = "verse") => { setPicked(page.verses[index].ref); if (study) return; playback.current?.select(index, word); if (word === "verse") tools.current?.selectVerse(index); else tools.current?.select(index, word); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
   const open = (page: StudyPage, index: number) => { setPicked(page.verses[index].ref); stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.suspend(); modalRequest.current?.abort();
     const old = modalScope.current, next = { page, index, opening: old?.page === page ? old.opening : ++modalSequence.current, navigation: (old?.navigation ?? 0) + 1 };
     modalScope.current = next; setLift(next); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
@@ -264,7 +280,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       if (signal.aborted || turn !== generation.current || metadata.current !== value) throw new PortalRequestError(409);
       return result;
     },
-    onHear: listeningEnabled ? (index, word) => hear(livePage!, index, word) : undefined,
+    // Study plays nothing (2026-10-28): its word card has no Hear.
+    onHear: undefined,
     onVisit: ref => onVisit?.(kind, ref),
     reveal: ref => jumpTo(ref),
   } : null;
@@ -293,6 +310,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       onSelect={id => { if (id === SERVICE_CHIP) onService?.(); else goSection(sections.findIndex(row => row.n === id)); }} />}
     {/* The portion summary (1.9 N7), atop Study: only an approved one, only on a calendar parashah's Torah. A line goes to its aliyah only where the tutor
         recorded the whole portion aliyah by aliyah (seven sections); a student's own divisions are not the calendar's, so then the outline is plain text. */}
+    {study && renderIntro && <div className="study-intro">{renderIntro(kind)}</div>}
     {study && kind === "torah" && <StudySummary slug={parashahSlug(assignment?.readingKey)} active={active && !concealed} aliyot={sections.length >= 7 ? sections.map(row => row.n) : undefined}
       onAliyah={n => { const target = sections.find(row => row.n === n); if (target && assignment) jumpTo(assignment.verses[target.start]); }} />}
     {!current || current.loading ? <p role="status">Loading the assigned text…</p> : current.error ? <div role="status" data-testid="study-text-state" data-text-state={current.error === 409 ? "assignment-changed" : [401, 403, 404].includes(current.error) ? "access-changed" : "unavailable"}><h4>{current.error === 409 ? "Assignment changed" : [401, 403, 404].includes(current.error) ? "Text access changed" : "Text unavailable"}</h4>
@@ -303,10 +321,10 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       {study ? <>
         <CommentaryStatus works={workStatuses(works, corpus)} />
         <ReadingPlace refs={assignment!.verses} pageKey={wordScope} onJump={jumpTo} />
-        <StudyRows verses={livePage.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord} listening={listeningEnabled} showEnglish={lens.english}
+        <StudyRows verses={livePage.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} showEnglish={lens.english}
           sections={aliyahSections(kind, assignment!, livePage.verses)} works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))}
-          onVerse={listeningEnabled ? index => hear(livePage!, index) : undefined} onWord={(index, word) => { setPicked(livePage!.verses[index].ref); if (listeningEnabled) playMainVerseForWord(playback.current, tools.current, index, word); else { tools.current?.select(index, word); tools.current?.reveal(); } onVisit?.(kind, livePage!.verses[index].ref); }}
-          onTools={(ref, opener) => openTools(ref, opener)} />
+          notes={renderGuide ? ref => renderGuide(kind, ref) : undefined} hasNotes={guide ? ref => notesFor(guideView, ref).length > 0 : undefined}
+          onPick={ref => { setPicked(ref); onVisit?.(kind, ref); }} onTools={(ref, opener) => openTools(ref, opener)} />
       </> : <FlowingStudyText verses={livePage.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord} listening={listeningEnabled} showEnglish={songSession && prefs.translation} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
         sections={aliyahSections(kind, assignment!, livePage.verses)} linked={linkedVerse(leinLink, livePage.verses)}
         onNumber={practising ? (index, opener) => { openTools(livePage!.verses[index].ref, opener); onVisit?.(kind, livePage!.verses[index].ref); } : undefined} gotIt={gotIt ? ref => gotIt(kind, ref) : undefined}
@@ -314,7 +332,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       {/* The end of the section (N3): the next one's first verse, faint, and the way on. The verse comes from the page already loaded, when it is on it. */}
       {sectionNow >= 0 && sectionNow + 1 < sections.length && livePage.nextOffset === null
         && <NextSection onNext={() => goSection(sectionNow + 1)} preview={rawPage?.verses[sections[sectionNow + 1].start - rawPage.offset]} />}
-      {!concealed && listeningEnabled && <ReadingPlayer key={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])}
+      {!concealed && listeningEnabled && !study && <ReadingPlayer key={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])}
         scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])} verses={livePage.verses} active={active && !lift} enabled={!concealed && !lift} expiresAt={baseline?.context ? Date.parse(baseline.context.expiresAt) : undefined} audio={audio ? { coordinator: audio, slot: "assigned" } : undefined}
         register={registerPlayback} onActiveWord={setPlayingWord} load={async (index, signal) => {
           const value = baseline, page = livePage!, turn = generation.current;
@@ -352,7 +370,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       {!practising && (() => { const index = Math.max(0, livePage.verses.findIndex(row => row.ref === picked)), verse = livePage.verses[index];
         return <div className="study-verse-bar" data-testid="study-verse-bar" data-selected-verse={verse.ref}>
           <button type="button" className="button-secondary" aria-haspopup="dialog" onClick={event => openTools(verse.ref, event.currentTarget)}>Verse tools · <bdi dir="ltr">{verse.ref}</bdi></button>
-          <button type="button" className="button-text" onClick={() => open(livePage!, index)}>View {verse.ref} up close</button>
+          {!study && <button type="button" className="button-text" onClick={() => open(livePage!, index)}>View {verse.ref} up close</button>}
           {renderMark?.(kind, verse.ref)}
         </div>; })()}
       {toolsVerse && <Sheet open onClose={() => void closeTools()} title={`Verse tools · ${toolsVerse.ref}`} closeLabel="Close" returnFocusTo={() => toolsOpener.current}>

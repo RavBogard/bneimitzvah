@@ -16,7 +16,7 @@ import { LensSwitch } from "../workspace/lens-switch";
 import { LENS_STORAGE, lensFromSearch, StudyLensScope, useStudyLens, type Lens } from "../workspace/study-lens";
 import { StudyRows } from "../workspace/study/study-rows";
 import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi, workStatuses } from "../workspace/study/commentary-view";
-import { DiscussionList, VersePanelScope, WordPanelSource } from "../workspace/study/verse-panel";
+import { VersePanelScope, WordPanelSource } from "../workspace/study/verse-panel";
 import { PortionSummaryBlock, usePortionSummary } from "../workspace/study/portion-summary";
 import type { ApprovedPortionSummary } from "../../../lib/portion-summary/credit";
 import { parashahSlug } from "../../../lib/portion-summary/reading";
@@ -553,7 +553,8 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   const wordHost: WordPanelHost | null = page && study ? { scopeKey, verses: page.verses,
     readAids: (at, signal) => fetchPublicWordAids(source, page.offset + at, page.verses[at], signal),
     readDetails: (at, word, signal) => fetchPublicWordDetails(source, page.offset + at, page.verses[at], word, signal),
-    onHear: listening ? (at, word) => hear(at, word) : undefined,
+    // Study plays nothing (2026-10-28): its word card has no Hear.
+    onHear: undefined,
     onVisit: ref => { const at = page.verses.findIndex(row => row.ref === ref); if (at >= 0) release(() => setFocus(at)); },
     reveal: ref => jumpTo(ref) } : null;
   // The chapter jump: a verse on this text page is scrolled to; one on another page loads that page first.
@@ -572,7 +573,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     const target = anchor.querySelector<HTMLElement>(".study-verses [data-verse-ref] button[aria-label^='Hear ']:not([disabled])") ?? anchor.querySelector<HTMLElement>(".study-verses") ?? anchor;
     target.focus({ preventScroll: true });
   };
-  const start = useRef<() => void>(() => {}); start.current = () => { if (listening && page) hear(0); focusReading(); };
+  const start = useRef<() => void>(() => {}); start.current = () => { if (listening && page && !study) hear(0); focusReading(); };
   // The page the pager is taking the reader to: focus waits until that page's verses have rendered (the switch is a transition, 1.9 N16).
   const pagerFocus = useRef<number | null>(null), pagerTo = (next: number) => { pagerFocus.current = next; changeWin(next); };
   // An outline line of the portion summary: that aliyah's page, with focus on its first verse; the aliyah already open only takes the reader to its text.
@@ -655,14 +656,14 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
           {study ? <>
             <CommentaryStatus works={workStatuses(works, corpus)} />
             <ReadingPlace refs={allVerses} pageKey={textKey} onJump={jumpTo} onHere={choose?.onPlace ? ref => onPlace.current?.(ref) : undefined} />
-            <StudyRows verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={lens.english} sections={labels}
-              works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))}
-              onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} choice={choice.view} />
+            <StudyRows verses={page.verses} assignment={assignment} group={group} showEnglish={lens.english} sections={labels}
+              works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))} choice={choice.view}
+              onPick={ref => { const at = page.verses.findIndex(row => row.ref === ref); if (at >= 0) release(() => setFocus(at)); }} />
           </> : <FlowingStudyText verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={prefs.translation} englishHidden={drillVerse ? DRILL_STRINGS.hidden : undefined} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
             sections={labels} linked={linkedVerse(leinLink, page.verses)} onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} choice={choice.view} />}
           {/* The end of the section (N3): the next one's first verse, faint, and the way on. */}
           {sections.length > 0 && nextWin !== null && <NextSection onNext={() => pagerTo(nextWin)} preview={preview} />}
-          {listening && <ReadingPlayer key={`player:${scopeKey}`} scopeKey={scopeKey} verses={page.verses} active={!lift} enabled={!lift} audio={{ coordinator: audio, slot: "proposed" }}
+          {listening && !study && <ReadingPlayer key={`player:${scopeKey}`} scopeKey={scopeKey} verses={page.verses} active={!lift} enabled={!lift} audio={{ coordinator: audio, slot: "proposed" }}
             target={drillTarget ?? (linkedOnPage !== null ? { index: linkedOnPage, generation: 0 } : undefined)} register={registerPlayback} onActiveWord={setPlayingWord} load={loadShort} />}
           <WordTools key={`tools:${scopeKey}`} scopeKey={scopeKey} verses={page.verses} register={registerTools}
             readAids={(at, signal) => fetchPublicWordAids(source, page.offset + at, page.verses[at], signal)}
@@ -699,8 +700,6 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
             onIndex={at => setLift(value => value && { index: at, opening: value.opening, navigation: value.navigation + 1 })} onClose={() => { audio.stopAll(); setLift(null); }} />}
         </>}
       </section>
-      {/* The sources column (1.9 N7): on a laptop, to the right of the verses (the layout's third column); a phone has the button above instead. */}
-      <DiscussionList />
     </div>
   </VersePanelScope>;
 }

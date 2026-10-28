@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
 import { shelfSefariaUrl, sourceSefariaUrl } from "../src/lib/readings/shelf";
 import { creditLine, licenseLabel } from "../src/lib/readings/edition-credit";
+import { closeNotes, verseNotes } from "./study-sheet";
 
 // More on this verse on the built, unconfigured production server. Every answer is a synthetic route
 // fulfilment: invented titles, citations and syllables, numbered English only.
@@ -42,14 +43,15 @@ async function mock(page: Page, options: { shelf?: "ok" | "fail"; source?: "ok" 
   return { recoverShelf() { shelfFails = false; }, recoverSource() { sourceFails = false; } };
 }
 const row = (page: Page, ref: string) => page.locator(`[data-study-rows] article[data-verse-ref="${ref}"]`);
-const more = (page: Page, ref: string) => row(page, ref).getByRole("button", { name: "More on this verse", exact: true });
+/** A verse's More on this verse: with its notes (the rail beside the verses, or its Notes sheet on a phone; Study as a study sheet, 2026-10-28). */
+const more = async (page: Page, ref: string) => (await verseNotes(page, ref)).getByRole("button", { name: "More on this verse", exact: true });
 const panel = (page: Page) => page.locator("[data-verse-panel]");
 const pills = (page: Page) => panel(page).getByRole("group", { name: "Kinds of texts" });
 
 test("More on this verse: kinds of texts as wrapping pills, curated works, a citation that opens in place with its credit, and Esc", async ({ page }) => {
   await mock(page);
   await page.goto("/read?lens=study");
-  const button = more(page, "Genesis 1:2");
+  const button = await more(page, "Genesis 1:2");
   await button.scrollIntoViewIfNeeded();
   expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   const scrolled = await page.evaluate(() => scrollY);
@@ -96,7 +98,7 @@ test("More on this verse: kinds of texts as wrapping pills, curated works, a cit
 test("failures are one quiet line with Try again, for the shelf and for one text", async ({ page }) => {
   const sefaria = await mock(page, { shelf: "fail", source: "fail" });
   await page.goto("/read?lens=study");
-  await more(page, "Genesis 1:1").click();
+  await (await more(page, "Genesis 1:1")).click();
   await expect(panel(page).getByText("More on this verse isn’t available right now.")).toBeVisible();
   sefaria.recoverShelf();
   await panel(page).getByRole("button", { name: "Try again", exact: true }).click();
@@ -112,11 +114,12 @@ test("with reduced motion the panel opens at once, and Lein offers no shelf", as
   await page.emulateMedia({ reducedMotion: "reduce" });
   await mock(page);
   await page.goto("/read?lens=study");
-  await more(page, "Genesis 1:3").click();
+  await (await more(page, "Genesis 1:3")).click();
   await expect(panel(page)).toBeVisible();
   // The sheet's rise snaps: no animation at all.
-  expect(await page.getByRole("dialog").evaluate(node => getComputedStyle(node).animationName)).toBe("none");
+  expect(await page.getByRole("dialog", { name: "More on Genesis 1:3" }).evaluate(node => getComputedStyle(node).animationName)).toBe("none");
   await page.keyboard.press("Escape");
+  await closeNotes(page);
   await page.getByRole("button", { name: "Lein", exact: true }).click();
   await expect(page.getByRole("button", { name: "More on this verse", exact: true })).toHaveCount(0);
   await expect(panel(page)).toHaveCount(0);
@@ -125,7 +128,7 @@ test("with reduced motion the panel opens at once, and Lein offers no shelf", as
 test("an opened Targum or Talmud text is marked Aramaic; a midrash stays Hebrew", async ({ page }) => {
   await mock(page);
   await page.goto("/read?lens=study");
-  await more(page, "Genesis 1:1").click();
+  await (await more(page, "Genesis 1:1")).click();
   await pills(page).getByRole("button", { name: /^Talmud/ }).click();
   await panel(page).getByRole("button", { name: "Synthetic Tractate 2a:1", exact: true }).click();
   await expect(panel(page).locator('p[lang="arc"][dir="rtl"]').filter({ hasText: "הוּ זַח" })).toBeVisible();
@@ -141,7 +144,7 @@ test("an opened Targum or Talmud text is marked Aramaic; a midrash stays Hebrew"
 test("a text opened in More on this verse names its English, leads with it, credits it first, and its Hebrew follows the size control (N5)", async ({ page }) => {
   await mock(page);
   await page.goto("/read?lens=study");
-  await more(page, "Genesis 1:2").click();
+  await (await more(page, "Genesis 1:2")).click();
   await panel(page).getByRole("button", { name: "Ramban on Genesis 1:2 · 3 comments", exact: true }).click();
   // The segment with English leads in English under an "English" tag; the segment with Hebrew only has no tag.
   await expect(panel(page).getByText("English", { exact: true })).toHaveCount(1);
@@ -150,9 +153,10 @@ test("a text opened in More on this verse names its English, leads with it, cred
   // The Hebrew behind its button grows with the size control: the Sheet carries the same four steps as the page.
   const sizeOf = async (id: string) => {
     await page.keyboard.press("Escape");
+    await closeNotes(page);
     await page.getByRole("button", { name: /^Text size/ }).click();
     await page.locator(`.toolbar-menu [data-size="${id}"]`).click();
-    await more(page, "Genesis 1:2").click();
+    await (await more(page, "Genesis 1:2")).click();
     const ramban = panel(page).getByRole("button", { name: "Ramban on Genesis 1:2 · 3 comments", exact: true });
     if ((await ramban.getAttribute("aria-expanded")) !== "true") await ramban.click();
     const hebrew = panel(page).locator('p[lang="he"]').filter({ hasText: "הוּ זַח" });

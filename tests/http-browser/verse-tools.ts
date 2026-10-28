@@ -39,7 +39,8 @@ export async function upClose(tab: Page, ref: string) {
   await ui(tab.locator("dialog.lift")).toBeVisible();
 }
 
-/** Switches the reading to Study. There each verse has its own "Verse tools" action, which selects it and opens its sheet without a sound (in Lein a verse number or a word plays the verse). */
+/** Switches the reading to Study. There a verse's "Verse tools" action is in the rail beside the verses once the verse is chosen, or in its Notes sheet on a phone
+ *  (Study as a study sheet, 2026-10-28); it opens the verse's sheet without a sound (in Lein a verse number or a word plays the verse). */
 export async function inStudy(tab: Page) {
   if (await tab.getByRole("dialog", { name: /^Verse tools · / }).count()) await closeVerseTools(tab);
   await tab.getByRole("button", { name: "Study", exact: true }).click();
@@ -52,8 +53,8 @@ export async function openVerseTools(tab: Page, ref: string): Promise<Locator> {
   if (await sheet.count() === 0) {
     // Another verse's sheet is modal: it is closed first, as a reader would.
     if (await tab.getByRole("dialog", { name: /^Verse tools · / }).count()) await closeVerseTools(tab);
-    const own = tab.locator(`[data-study-rows] [data-verse-ref="${ref}"]`).getByRole("button", { name: "Verse tools", exact: true });
-    if (await own.count()) await own.click();
+    const own = await studyVerseTools(tab, ref);
+    if (own) await own.click();
     else if (await verseNumber(tab, ref).count()) await verseNumber(tab, ref).click();
     else { await selectVerse(tab, ref); await toolsBar(tab).getByRole("button", { name: /^Verse tools/ }).click(); }
     await ui(sheet).toBeVisible();
@@ -64,8 +65,25 @@ export async function openVerseTools(tab: Page, ref: string): Promise<Locator> {
 /** The first verse's "Your translation & notes" disclosure, with the sheet opened for it. The locator is lazy: it needs the sheet open whenever it is used. */
 export async function workPanel(tab: Page): Promise<Locator> { return (await openVerseTools(tab, "Genesis 1:1")).getByTestId("verse-work"); }
 
-/** Closes whatever verse-tools sheet is open, with Esc (which asks the departure guard first, as leaving the page would). */
+/** Closes whatever verse-tools sheet is open, with Esc (which asks the departure guard first, as leaving the page would); on a phone in Study, then the verse's Notes sheet it was opened from. */
 export async function closeVerseTools(tab: Page) {
   await tab.keyboard.press("Escape");
   await ui(tab.getByRole("dialog", { name: /^Verse tools · / })).toHaveCount(0);
+  if (await notesSheet(tab).count()) { await tab.keyboard.press("Escape"); await ui(notesSheet(tab)).toHaveCount(0); }
+}
+
+const notesSheet = (tab: Page) => tab.getByRole("dialog", { name: /^On this verse · / });
+/** In Study, the verse's "Verse tools" action: in the rail once the verse is chosen (from 900px), else in the verse's Notes sheet. Null outside Study. */
+async function studyVerseTools(tab: Page, ref: string): Promise<Locator | null> {
+  if (!await tab.locator("[data-study-rows]").count()) return null;
+  const rail = tab.locator("[data-study-rail]");
+  if ((tab.viewportSize()?.width ?? 0) >= 900) {
+    if (await rail.getAttribute("data-rail-verse") !== ref) await tab.locator(`[data-study-rows] article[data-verse-ref="${ref}"] button[data-verse-number]`).click();
+    await ui(rail).toHaveAttribute("data-rail-verse", ref);
+    return rail.getByRole("button", { name: "Verse tools", exact: true });
+  }
+  await tab.locator(`[data-study-rows] article[data-verse-ref="${ref}"]`).getByTestId("study-notes-open").click();
+  const sheet = tab.getByRole("dialog", { name: `On this verse · ${ref}`, exact: true });
+  await ui(sheet).toBeVisible();
+  return sheet.getByRole("button", { name: "Verse tools", exact: true });
 }

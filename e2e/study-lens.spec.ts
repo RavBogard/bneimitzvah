@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { commentaryCandidates, commentaryEditionUrl, parseCommentaryChapter } from "../src/lib/readings/commentary";
 import { thisShabbat } from "../src/lib/readings/public-shabbat";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
+import { closeNotes, verseNotes } from "./study-sheet";
 
 // The built, unconfigured production server. Every reading and commentary answer is a synthetic
 // route fulfilment: invented syllables and numbered English only, never a verse, a translation or a
@@ -61,7 +62,7 @@ async function mock(page: Page, options: Mocks = {}) {
 const noHorizontalScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 const rows = (page: Page) => page.locator("[data-study-rows] article[data-verse-ref]");
 
-test("/read opens in Lein; the switch opens Study verse rows with Rashi inline, drops the tikkun and is remembered in this browser", async ({ page }) => {
+test("/read opens in Lein; the switch opens Study verse rows with Rashi on the chosen verse, drops the tikkun and is remembered in this browser", async ({ page }) => {
   await mock(page);
   await page.goto("/read");
   const lein = page.getByRole("button", { name: "Lein", exact: true }), study = page.getByRole("button", { name: "Study", exact: true });
@@ -75,17 +76,17 @@ test("/read opens in Lein; the switch opens Study verse rows with Rashi inline, 
   await expect(rows(page)).toHaveCount(3);
   await expect(page.getByRole("button", { name: /^Tikkun/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^Works/ })).toBeVisible();
-  // English starts on in Study; Rashi sits under the verse it explains, English-led, the quoted words in bold Hebrew.
-  const first = rows(page).nth(0);
-  await expect(first.getByText("Synthetic translation Genesis 1:1")).toBeVisible();
+  // English starts on in Study, in the verse's row; Rashi is with the verse's notes (the rail, or its Notes sheet), English-led, the quoted words in bold Hebrew.
+  await expect(rows(page).nth(0).getByText("Synthetic translation Genesis 1:1")).toBeVisible();
+  const first = await verseNotes(page, "Genesis 1:1");
   await expect(first.getByRole("heading", { name: "Rashi", exact: true })).toBeVisible();
   await expect(first.getByText("SYNTHETIC LEMMA ONE — synthetic comment one.")).toBeVisible();
   await expect(first.locator("bdi[lang=he]").first()).toHaveText("דֵּה וְזַח");
-  // Verse 2 has no comment and shows no filler.
-  await expect(rows(page).nth(1).getByRole("heading", { name: "Rashi" })).toHaveCount(0);
   // Hebrew shows Rashi's own words in place.
   await first.getByRole("button", { name: "Hebrew", exact: true }).first().click();
   await expect(first.getByText("חִי כָּל", { exact: false }).first()).toBeVisible();
+  // Verse 2 has no comment and shows no filler.
+  await expect((await verseNotes(page, "Genesis 1:2")).getByRole("heading", { name: "Rashi" })).toHaveCount(0);
   // Credit at the work's foot: edition, licence, via Sefaria, linked.
   await expect(page.getByText(/Metsudah Publications, 2009, via Sefaria \(CC BY\)/).first()).toBeVisible();
   await page.reload();
@@ -93,11 +94,39 @@ test("/read opens in Lein; the switch opens Study verse rows with Rashi inline, 
   await expect(rows(page)).toHaveCount(3);
 });
 
+test("Study plays nothing and colours nothing: plain Hebrew, no Colors, Hear verse or listen bar, a row and its rail on a wide screen and Notes on a phone; Lein keeps them", async ({ page }) => {
+  await mock(page);
+  await page.goto("/read?lens=study");
+  await expect(rows(page)).toHaveCount(3);
+  await expect(page.locator("[data-study-rows] [data-family]")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Colors", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Hear/ })).toHaveCount(0);
+  await expect(page.getByTestId("player-selection")).toHaveCount(0);
+  await expect(page.getByTestId("study-toolbar")).toBeVisible();
+  const wide = (page.viewportSize()?.width ?? 0) >= 900;
+  await expect(page.locator("[data-study-rail]")).toHaveCount(wide ? 1 : 0);
+  await expect(rows(page).nth(0).getByTestId("study-notes-open")).toBeVisible({ visible: !wide });
+  if (wide) {
+    // English, then the number, then the Hebrew, along one row.
+    const box = async (selector: string) => (await rows(page).nth(0).locator(selector).first().boundingBox())!;
+    const english = await box("[data-english-ref]"), number = await box("button[data-verse-number]"), hebrew = await box(".study-hebrew");
+    expect(english.x).toBeLessThan(number.x); expect(number.x).toBeLessThan(hebrew.x);
+  } else {
+    // Hebrew first, the English beneath it.
+    const hebrew = (await rows(page).nth(0).locator(".study-hebrew").boundingBox())!, english = (await rows(page).nth(0).locator("[data-english-ref]").boundingBox())!;
+    expect(hebrew.y).toBeLessThan(english.y);
+    expect((await rows(page).nth(0).getByTestId("study-notes-open").boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  }
+  // Lein restores Colors as it was left.
+  await page.getByRole("button", { name: "Lein", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Colors", exact: true })).toHaveAttribute("aria-pressed", "true");
+});
+
 test("/read?lens=study opens Study directly; pointing at a comment underlines only the words it quotes, and an unmatched quote links nothing", async ({ page }) => {
   await mock(page);
   await page.goto("/read?lens=study");
   await expect(rows(page)).toHaveCount(3);
-  const first = rows(page).nth(0), linked = first.locator('[data-linked="true"]');
+  const first = await verseNotes(page, "Genesis 1:1"), linked = rows(page).nth(0).locator('[data-linked="true"]');
   await expect(linked).toHaveCount(0);
   const entry = first.locator('[data-linkable="true"]');
   await expect(entry).toHaveCount(1); // the second comment's quote is not in the verse: no link
@@ -109,18 +138,20 @@ test("/read?lens=study opens Study directly; pointing at a comment underlines on
   await expect(linked).toHaveCount(0);
   // Keyboard: focusing the quoted words underlines them too, with a visible focus ring.
   const quote = first.getByRole("button", { name: /show in the verse/ });
+  await page.keyboard.press("Shift"); // the last input was a tap or a click (choosing the verse); focus from here on is the keyboard's
   await quote.focus();
   await expect(linked).toHaveCount(2);
   expect(await quote.evaluate(node => getComputedStyle(node).outlineStyle)).not.toBe("none");
-  // Tapping pins it; tapping again lets it go.
+  // Tapping pins it; tapping again lets it go. (A tap outside a phone's Notes sheet closes it; the pin stays.)
   await quote.click();
   await expect(quote).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("heading", { level: 1 }).click();
+  await page.getByRole("heading", { level: 1 }).click({ force: true });
   await expect(linked).toHaveCount(2);
-  await quote.click();
-  await expect(quote).toHaveAttribute("aria-pressed", "false");
+  const pinned = (await verseNotes(page, "Genesis 1:1")).getByRole("button", { name: /show in the verse/ });
+  await pinned.click();
+  await expect(pinned).toHaveAttribute("aria-pressed", "false");
   // A long comment shows three lines, then More.
-  const long = rows(page).nth(2);
+  const long = await verseNotes(page, "Genesis 1:3");
   const more = long.getByRole("button", { name: "More", exact: true });
   await expect(more).toBeVisible();
   await more.click();
@@ -162,7 +193,7 @@ test("a commentary failure is a quiet line with Try again and never holds back t
   await line("Rashi isn’t available right now.").getByRole("button", { name: "Try again", exact: true }).click();
   await line("Women’s Commentary isn’t available right now.").getByRole("button", { name: "Try again", exact: true }).click();
   await expect(status).toHaveCount(0);
-  await expect(rows(page).nth(0).getByText("SYNTHETIC LEMMA ONE — synthetic comment one.")).toBeVisible();
+  await expect((await verseNotes(page, "Genesis 1:1")).getByText("SYNTHETIC LEMMA ONE — synthetic comment one.")).toBeVisible();
 });
 
 test("in Lein a commentary outage shows nothing under the selected verse, and Up close reads with its spaces", async ({ page }) => {
@@ -182,13 +213,16 @@ test("Study opens with Rashi and the Women's Commentary on the Torah; Works can 
   await page.goto("/read?lens=study");
   await expect(rows(page)).toHaveCount(3);
   await expect(page.getByRole("button", { name: "Works: Rashi, Women’s Commentary" })).toBeVisible();
-  await expect(rows(page).nth(1).getByRole("heading", { name: "Women’s Commentary", exact: true })).toBeVisible();
-  await expect(rows(page).nth(1).getByText("synthetic paragraph")).toBeVisible();
+  const second = await verseNotes(page, "Genesis 1:2");
+  await expect(second.getByRole("heading", { name: "Women’s Commentary", exact: true })).toBeVisible();
+  await expect(second.getByText("synthetic paragraph")).toBeVisible();
+  await closeNotes(page);
   expect(server.calls.some(call => call.startsWith("/api/public/commentary?work=womens"))).toBe(true);
   // On the haftarah Rashi on the Prophets shows; the Women's Commentary is not offered: no request, no line, no panel.
   await page.getByRole("tab", { name: /^Haftarah/ }).click();
   await expect(rows(page)).toHaveCount(2);
-  await expect(rows(page).nth(0).getByText("Synthetic prophet comment")).toBeVisible();
+  await expect((await verseNotes(page, "Isaiah 54:1")).getByText("Synthetic prophet comment")).toBeVisible();
+  await closeNotes(page);
   await expect(page.getByText("The Women’s Commentary covers the Torah only.")).toHaveCount(0);
   expect(server.calls.some(call => call === "/api/public/commentary?work=womens&chapter=Isaiah+54")).toBe(false);
   // A viewer can turn it off, and that choice is remembered in this browser like any other.
@@ -197,7 +231,7 @@ test("Study opens with Rashi and the Women's Commentary on the Torah; Works can 
   await page.getByRole("button", { name: /^Works/ }).click();
   await page.getByRole("group", { name: "Commentaries under each verse" }).locator('[data-work="womens"]').click();
   await page.keyboard.press("Escape");
-  await expect(rows(page).nth(1).getByRole("heading", { name: "Women’s Commentary" })).toHaveCount(0);
+  await expect((await verseNotes(page, "Genesis 1:2")).getByRole("heading", { name: "Women’s Commentary" })).toHaveCount(0);
   await page.reload();
   await expect(rows(page)).toHaveCount(3);
   await expect(page.getByRole("button", { name: "Works: Rashi", exact: true })).toBeVisible();
@@ -208,17 +242,22 @@ test("at 360px every Study row fits with no horizontal scroll, the toolbar is on
   await mock(page);
   await page.goto("/read?lens=study");
   await expect(rows(page)).toHaveCount(3);
-  await expect(rows(page).nth(0).getByText("SYNTHETIC LEMMA ONE — synthetic comment one.")).toBeVisible();
   expect(await noHorizontalScroll(page)).toBe(true);
-  const items = page.locator(".reading-toolbar .toolbar-item");
+  const items = page.locator(".study-toolbar .study-tool");
   expect(await items.count()).toBeLessThanOrEqual(5);
   const tops = await items.evaluateAll(nodes => nodes.map(node => Math.round(node.getBoundingClientRect().top)));
   expect(new Set(tops).size).toBe(1);
-  for (const control of [page.getByRole("button", { name: "Lein", exact: true }), page.getByRole("button", { name: "Study", exact: true }),
-    rows(page).nth(0).getByRole("button", { name: "Hebrew", exact: true }).first(), rows(page).nth(2).getByRole("button", { name: "More", exact: true })]) {
+  for (const control of [page.getByRole("button", { name: "Lein", exact: true }), page.getByRole("button", { name: "Study", exact: true }), ...await items.all(), rows(page).nth(0).getByTestId("study-notes-open")]) {
     const box = await control.boundingBox();
     expect(box && box.height >= 44, "control is at least 44px tall").toBe(true);
   }
+  for (const [ref, name] of [["Genesis 1:1", "Hebrew"], ["Genesis 1:3", "More"]] as const) {
+    const notes = await verseNotes(page, ref);
+    if (ref === "Genesis 1:1") await expect(notes.getByText("SYNTHETIC LEMMA ONE — synthetic comment one.")).toBeVisible();
+    const box = await notes.getByRole("button", { name, exact: true }).first().boundingBox();
+    expect(box && box.height >= 44, "control is at least 44px tall").toBe(true);
+  }
+  await closeNotes(page);
   await page.getByRole("tab", { name: /^Haftarah/ }).click();
   await expect(rows(page)).toHaveCount(2);
   expect(await noHorizontalScroll(page)).toBe(true);

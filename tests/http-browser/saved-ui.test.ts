@@ -55,6 +55,12 @@ async function signIn(tab: Page, email: string) {
 }
 const noHorizontalScroll = (tab: Page) => tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
+/** A verse's Notes on a phone (Study as a study sheet, 2026-10-28): its commentary, actions and Yours, in the one Sheet. */
+async function studyNotes(tab: Page, ref: string) {
+  await tab.locator(`[data-study-rows] article[data-verse-ref="${ref}"]`).getByTestId("study-notes-open").click();
+  await ui(tab.getByRole("dialog", { name: `On this verse · ${ref}`, exact: true })).toBeVisible();
+}
+
 it("a tutor-and-parent saves this week's Torah from /read and finds it under My Readings; the reading itself never asks first", async () => {
   for (const width of [360, 1280]) {
     const { tab, seen, prefs } = await visitor(width);
@@ -233,6 +239,8 @@ it("on their own saved reading a member sees stored translation and note text re
   ]);
   await tab.reload({ waitUntil: "domcontentloaded" });
   await tab.getByRole("group", { name: "Reading lens", exact: true }).getByRole("button", { name: "Study", exact: true }).click();
+  // Study is a study sheet (2026-10-28): on a phone a verse's commentary and Yours are in its Notes sheet.
+  await studyNotes(tab, "Genesis 1:1");
   const first = tab.locator('[data-yours-ref="Genesis 1:1"]');
   await ui(first.getByTestId("yours-toggle")).toHaveAttribute("aria-expanded", "false");
   await first.getByTestId("yours-toggle").click();
@@ -253,9 +261,12 @@ it("on their own saved reading a member sees stored translation and note text re
   // After a reload all of it is still there, for this member.
   await tab.reload({ waitUntil: "domcontentloaded" });
   await ui(tab.locator("[data-study-rows]")).toBeVisible();
+  await studyNotes(tab, "Genesis 1:1");
   await ui(tab.locator('[data-commentary-ref="Genesis 1:1"] [data-star="rashi|Genesis 1:1|1"]').first()).toHaveAttribute("aria-pressed", "true");
   await tab.locator('[data-yours-ref="Genesis 1:1"]').getByTestId("yours-toggle").click();
   await ui(tab.locator('[data-yours-ref="Genesis 1:1"]').getByText("Synthetic own words for the first verse.", { exact: true })).toBeVisible();
+  await tab.keyboard.press("Escape");
+  await ui(tab.getByRole("dialog", { name: "On this verse · Genesis 1:1", exact: true })).toHaveCount(0);
   // Lein: the drill reveals JPS only, with no own translation and no way into Yours.
   await tab.getByRole("group", { name: "Reading lens", exact: true }).getByRole("button", { name: "Lein", exact: true }).click();
   await tab.locator('[data-testid="study-verses"] [data-verse-ref="Genesis 1:1"] [data-word-index="0"]').first().click();
@@ -267,6 +278,7 @@ it("on their own saved reading a member sees stored translation and note text re
   // Unstarring deletes the star (in Study, where the comment and its star are).
   await tab.getByRole("group", { name: "Reading lens", exact: true }).getByRole("button", { name: "Study", exact: true }).click();
   await ui(tab.locator("[data-study-rows]")).toBeVisible();
+  await studyNotes(tab, "Genesis 1:1");
   await tab.locator('[data-commentary-ref="Genesis 1:1"] [data-star="rashi|Genesis 1:1|1"]').first().click();
   await ui(tab.locator('[data-commentary-ref="Genesis 1:1"] [data-star="rashi|Genesis 1:1|1"]').first()).toHaveAttribute("aria-pressed", "false");
   // Nothing was written or audited by the page: the two stored rows are untouched, and only the star was posted.

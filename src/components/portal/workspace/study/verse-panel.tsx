@@ -104,6 +104,11 @@ export function DiscussionList() {
   const scope = usePanel(), view = useDiscussionsView();
   return scope?.active && view ? <div className="reading-sources-column" data-sources-column=""><DiscussionListView view={view} onOpen={scope.openFromList} /></div> : null;
 }
+/** The reading's sources in the Study sheet's rail (2026-10-28), shown there while no verse is chosen: the same list as the column, the same way into a verse's sources. */
+export function RailSources() {
+  const scope = usePanel(), view = useDiscussionsView();
+  return scope?.active && view ? <div data-sources-rail=""><DiscussionListView view={view} onOpen={scope.openFromList} /></div> : null;
+}
 /** On a phone or a tablet the sources are one tap away, in the Sheet: the button is in flow above the text, never over a verse; at laptop width the column replaces it. */
 export function SourcesButton() {
   const scope = usePanel(), view = useDiscussionsView();
@@ -111,10 +116,10 @@ export function SourcesButton() {
     <button type="button" className="button-secondary" aria-haspopup="dialog" onClick={event => scope.openList(event.currentTarget)}>{DISCUSSION_LABELS.column}</button></p> : null;
 }
 /** Sources as a dock item (Readings for everyone C1): it left the reader's top row, and joins the dock beside Works. Works chooses the commentaries under each verse; Sources lists where this passage is discussed, so the two stay separate. At laptop width the column beside the verses replaces it. */
-export function SourcesDockItem() {
+export function SourcesDockItem({ className = "toolbar-item", wrapper = "reading-sources-dock" }: { className?: string; wrapper?: string } = {}) {
   const scope = usePanel(), view = useDiscussionsView();
   // A wrapper that draws no box, so the dock lays its items out as before and "[data-sources-open] button" still finds it.
-  return scope?.active && view ? <span className="reading-sources-dock" data-sources-open=""><button type="button" className="toolbar-item" aria-haspopup="dialog" onClick={event => scope.openList(event.currentTarget)}>
+  return scope?.active && view ? <span className={wrapper} data-sources-open=""><button type="button" className={className} aria-haspopup="dialog" onClick={event => scope.openList(event.currentTarget)}>
     <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 5h14v10H9l-4 4zM9 9h6M9 12h4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg><span>{DISCUSSION_LABELS.column}</span></button></span> : null;
 }
 /** The Sources sheet: the column's list, titled by the sheet; a source opens its verse's sources in the same Sheet (this one gives way). */
