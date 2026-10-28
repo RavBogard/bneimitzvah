@@ -1,5 +1,18 @@
 # State — CRC B'nei Mitzvah portal
 
+**Return point, 2026-10-28 evening: booklet replacement started; sample guides wait on Daniel.**
+- Daniel asked for an analysis of replacing the URJ "Parashat HaShavua" booklets: `docs/superpowers/research/2026-10-28-replacing-the-parashat-hashavua-study-guide.md`; plan with his 15 rulings: `docs/superpowers/plans/2026-10-28-replacing-the-study-guide-booklet.md` (efaecec9). Guides for every reading (sample first), per-student print booklet; no talk-it-over questions, no Plaut/Fields licensing, no transliteration, new students first.
+- GATE: #149 faster CI (446d92d5): unit 4 shards per OS, http-browser 6, service-course spec once (phone) — proceeded because every step and assertion is kept; only the split changed.
+- GATE: #150 re-walk fixes (b01c289b): one staff student header, no orphan separators, no empty shelf for staff, parent practice at 320, "No practice in the last 7 days", role-home sign-in, admin redirect from a tutor URL. Re-walk: `C:/Users/dsbog/bneimitzvah-review-output/rewalk-2026-10-28/`.
+- GATE: #151 `list_guide_catalog` (ff4d585c): 168 guide keys (61 parashah, 24 holiday Torah, regular/special/holiday haftarot), none unresolved; an unassigned Torah key falls back to the catalog passage — proceeded because authorities, channels and review rules are unchanged.
+- GATE: granted CRC admin to Karen's verified account with `scripts/manage-admin.mjs` prepare/apply (digest-confirmed; new membership, admin only) — proceeded because Daniel asked directly so she has MCP access.
+- GATE: #152 account button (e4eec993): top-right Account button on signed-in screens; Account lists Congregation settings for admins. Shows a person icon (the session carries no name). Below 440px the wordmark text hides.
+- GATE: #153 per-student study booklet (538dbaab): /print/booklet/<id>, entrances on My Readings, child card, staff Manage and roster rows. Adversarial pass PASS, delta PASS. The fix round also applied A1 to the tutor reading routes and student list (tutorLinkPassesA1) and dropped disabled tutors from tutor lines.
+- GATE: #154 MCP fixes (41772aef): guide pages ≤10 verses/200 KB, `{id}`-only sources, A1 on MCP tutor reads and tutor-draft notices. Scoped review PASS.
+- Sample guides saved HELD through the portal MCP (the operator bridge stays retired): Bereshit v2, Yitro v1, Ki Teitzei v1, Isaiah 40:1-26 v1. Readable copies: `C:/Users/dsbog/bneimitzvah-review-output/guide-sample-2026-10-28/`. The study voice is still the starter template.
+- Waiting on Daniel: the sample verdict and voice corrections; whether everyday words (Shabbat, Torah, shofar, midrash) are allowed (Claude's default: yes, only quoted Hebrew is never romanized). Bulk drafting (plan G3) starts after.
+- Accepted Lows: booklet timing difference (ids are random UUIDs); a verse whose own sources exceed the page budget lists only what fits (`sourcesOmitted`).
+
 **Return point, 2026-10-28 day: walk and polish done for all four roles (student, parent, tutor, admin); v2.2.0.**
 - GATE: student phone polish merged — #141 PGlite snapshot (84d1c141; unit legs 21→≤6.6 min), #142 Hebrew first (e3832194; first Hebrew 547→255 px at 390; Listen stays disabled with a popover reason, no audio request — G3 checked in the diff), #143 shelf and Learn (7e00d2d0; the calendar keeps opening on this month because CI showed today vanishing otherwise) — proceeded because every check passed.
 - GATE: #144 parent phone (94316282): the child page is a This week card; Hebrew behind "See {child}’s reading"; no server read changed. Walk: `C:/Users/dsbog/bneimitzvah-review-output/parent-walk-2026-10-28/FINDINGS.md`.
