@@ -34,6 +34,7 @@ export function AccountView({ summary, current, signingOut, problem, onRole, onS
     {roles.length > 0 && <section className="account-section">
       <List label="Your account">
         <ListRow title="Email settings" meta="choose which portal emails you get" href="/workspace/email" />
+        {roles.includes("admin") && <ListRow title="Congregation settings" meta="the congregation’s name, dates and options" href="/workspace/admin/settings" />}
         {staff && <ListRow title="Claude connections" meta="see and end Claude’s access to the portal" href="/workspace/claude" />}
         {summary.approver && <ListRow title="Account requests" meta="approve accounts for people who ask" href="/workspace/accounts" />}
       </List>
