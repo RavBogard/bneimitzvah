@@ -1,4 +1,7 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
+import { longestEvent } from "./aliyot-fixture";
+import { mock as studentMock } from "./student-fixture";
+import { cls, shiftsOf, structureProblems, watchShifts } from "./web-vitals";
 
 // Area A: /mine, the shelf of My Readings, in the built, unconfigured production server. The session and saved-readings answers are
 // synthetic route fulfilments, so the page's own client code is under test. Invented reading names only.
@@ -35,7 +38,8 @@ test("a member's shelf: the title, My Readings current in the bar, no tab bar, f
 });
 
 test("with none saved the shelf says so and offers the first reading; a person whose saving is not open yet sees the same shelf without the line", async ({ page }) => {
-  await session(page, ["parent", "tutor"]);
+  // A tutor: a student's pinned card or a parent's cards stand in for the empty state (E1, E3), so they are not the people this checks.
+  await session(page, ["tutor"]);
   await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: [] }));
   await page.goto("/mine");
   await expect(page.getByTestId("mine-empty")).toBeVisible();
@@ -123,3 +127,41 @@ test("signed out, /mine shows the sign-in step under the same bar and asks for n
   await expect(page.getByTestId("mine-own")).toHaveCount(0);
   expect(saved).toEqual([]);
 });
+
+// Readings for everyone E6, the performance and accessibility gate (spec, Done means): on /mine for the student fixture, layout shift at most 0.07 and the
+// slowest interaction at most 80 ms at 4x CPU; and the structure axe checks (one h1, no skipped level, named controls, no repeated id, one main) on all four pages.
+test("/mine for a student does not jump while the pinned card arrives (CLS at most 0.07 at 4x CPU) and answers an interaction within 80 ms", async ({ page }) => {
+  test.setTimeout(90_000);
+  const client = await page.context().newCDPSession(page);
+  await client.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  await watchShifts(page);
+  // A returning student: this browser remembers being signed in, so the site bar is already the signed-in one (a first visit's bar changing is the bar's, not the shelf's).
+  await page.addInitScript(() => { try { window.localStorage.setItem("crc-torah:signed-in/v1", "1"); } catch { /* Storage blocked. */ } });
+  await studentMock(page, { practised: ["2026-10-14"], got: [0, 1, 2] });
+  await page.goto("/mine");
+  await expect(page.getByTestId("pinned-reading")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("pinned-progress")).toContainText(" of ", { timeout: 30_000 });
+  await page.waitForTimeout(2000);
+  const shifts = await shiftsOf(page);
+  await client.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+  expect(cls(shifts), JSON.stringify(shifts)).toBeLessThanOrEqual(0.07);
+  // Interaction to Next Paint: the card's disclosure and the keyboard, the two things a person does on it.
+  const { longest, entries } = await longestEvent(page, 4, async () => {
+    await page.getByText("Practice calendar", { exact: true }).click();
+    await page.getByRole("button", { name: "Next month", exact: true }).first().click().catch(() => undefined);
+    for (let step = 0; step < 6; step++) await page.keyboard.press("Tab");
+  });
+  console.log("MINE longest event (ms) at 4x CPU", Math.round(longest), JSON.stringify(entries.slice(0, 4)));
+  expect(longest).toBeLessThanOrEqual(80);
+});
+
+for (const [name, address, signedIn] of [["/", "/", false], ["/read", "/read", false], ["/readings", "/readings", false], ["/mine", "/mine", true]] as const) {
+  test(`${name} has one h1, no skipped heading level, named controls, no repeated id and one main (what axe checks)`, async ({ page }) => {
+    if (signedIn) await studentMock(page, { practised: ["2026-10-14"], got: [0] });
+    else await page.route("**/api/session", route => json(route, 401, { error: "unauthenticated" }));
+    await page.goto(address);
+    await expect(page.getByRole("main")).toBeVisible();
+    await page.waitForTimeout(1500);
+    expect(await structureProblems(page)).toEqual([]);
+  });
+}

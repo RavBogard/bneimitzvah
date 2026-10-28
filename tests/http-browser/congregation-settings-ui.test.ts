@@ -10,6 +10,7 @@ import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from 
 import { installLoopbackFetchGuard } from "./egress";
 import { eq } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
+import { goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -119,11 +120,10 @@ it("a parent sees the congregation's service name in the reading header, its tim
   expect(await main(admin).getByText(/Saved for your records|isn’t shown to families/).count()).toBe(0);
   for (const mobile of [false, true]) {
     const parent = await page("tutor", mobile); await navigate(parent, "/workspace/parent");
-    await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
+    await safe(() => goChild(parent, fixture.student.id));
     const slot = parent.locator(".hero-who .hero-slot");
     await ui(slot).toHaveText(mobile ? "· Synthetic gathering" : "· Synthetic gathering · 9:30 AM", { useInnerText: true });
-    // On a phone the service stays on the name line, so the header does not grow.
-    if (mobile) { const [name, line] = await Promise.all([parent.locator(".hero-who .hero-name").boundingBox(), slot.boundingBox()]); expect(Math.abs((name?.y ?? 0) - (line?.y ?? 99))).toBeLessThan(4); }
+    // E2: the service is one muted line under the title block (it was on the name line), so the header grows by that line on every screen.
     await ui(parent.getByRole("region", { name: "Preparation summary", exact: true }).getByText("Synthetic consent notice for families.", { exact: true })).toBeVisible();
     await capture(parent, mobile ? "settings-parent-mobile" : "settings-parent-desktop");
   }

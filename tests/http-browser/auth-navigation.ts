@@ -19,10 +19,14 @@ export function entryTask(tab: Page, state: EntryState, step?: "address" | "code
   return tab.locator(`[data-testid="entry-task"][data-entry-state="${state}"]${step ? `[data-entry-step="${step}"]` : ""}`);
 }
 
-/** Roles are reached from My Readings: open it from the header, then choose the role by its route. A tutor's shelf shows Your students (Area D) in place of
- * a link to the tutor home, which stays reachable by its address until Area E retires it. */
-export async function switchRole(tab: Page, role: "Parent" | "Tutor" | "Student") {
+/**
+ * Roles are reached from My Readings (Readings for everyone E2, E3): open it from the header, then go the way the shelf goes. A student's pinned card opens
+ * /mine/reading; a parent's card for a child opens /mine/child/<id>; a tutor's Your students row opens /workspace/tutor/<id>. With no `studentId` a parent or
+ * tutor stays on the shelf, where the cards and rows are.
+ */
+export async function switchRole(tab: Page, role: "Parent" | "Tutor" | "Student", studentId?: string) {
   await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click();
-  if (role === "Tutor") { await tab.getByTestId("mine-students").waitFor(); await tab.goto("/workspace/tutor", { waitUntil: "domcontentloaded" }); return; }
-  await tab.locator(`a[href="/workspace/${role.toLowerCase()}"]`).click();
+  if (role === "Tutor") { await tab.getByTestId("mine-students").waitFor(); if (studentId) await tab.locator(`a[href="/workspace/tutor/${studentId}"]`).click(); return; }
+  if (role === "Parent") { await tab.getByTestId("mine-children").waitFor(); if (studentId) await tab.locator(`a[href="/mine/child/${studentId}"]`).click(); return; }
+  await tab.locator('a[href="/mine/reading"]').first().click();
 }

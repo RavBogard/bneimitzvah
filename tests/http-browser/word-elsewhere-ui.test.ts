@@ -87,8 +87,8 @@ it("staff switching tabs after a cross-page jump does not reopen the sheet on th
   await tools.getByRole("button", { name: "Go to Genesis 4:24, word 1", exact: true }).click(); await ui(tools).toContainText("Genesis 4:24 · Word 1 of 2");
   await ui(tools.getByText("Synthetic B sense", { exact: true })).toBeVisible(); await ui(tools.getByText("Solid underline: primary stress.", { exact: true })).toBeVisible();
   let details = 0; tab.on("request", request => { if (new URL(request.url()).pathname.endsWith("/study-word-details")) details++; });
-  await tab.getByRole("tab", { name: "Lessons", exact: true }).click(); await ui(tools).toHaveCount(0);
-  await tab.getByRole("tab", { name: "Reading", exact: true }).click();
+  // E2: Lessons follow the text on one page, so scrolling to them no longer closes the sheet; closing it by hand is the same fresh start the old tab switch gave.
+  await tab.locator("#lessons").scrollIntoViewIfNeeded(); await disclosure.click();
   await ui(disclosure).toHaveAttribute("aria-expanded", "false"); await ui(tools).not.toContainText("Genesis 4:24 · Word 1 of 2"); expect(details).toBe(0);
   // Going back to the first page from the second is the same explicit jump.
   await tab.locator('.study-verses [data-verse-ref="Genesis 4:24"] [data-word-index="0"]').first().click(); await disclosure.click();

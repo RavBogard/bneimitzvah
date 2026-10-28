@@ -12,6 +12,7 @@ import { installLoopbackFetchGuard } from "./egress";
 import { closeVerseTools, openVerseTools, workPanel } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import * as s from "../../src/server/db/index";
+import { manage } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser;
@@ -40,14 +41,14 @@ async function page(fresh = false) {
   await ui(tab.locator(".study-verses")).toBeVisible(); return tab;
 }
 async function choose(tab: Page, part = 1) {
-  await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click());
+  await safe(() => tab.locator("#service-parts").scrollIntoViewIfNeeded());
   await ui(panel(tab).getByText("Checking assigned service parts…", { exact: true })).toBeHidden();
   await click(tab, "Choose service parts");
   await safe(() => panel(tab).getByRole("checkbox", { name: new RegExp(`Synthetic part ${part}`) }).check());
-  await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click());
+  await safe(() => tab.locator("[data-testid=\"reading-workspace\"]").scrollIntoViewIfNeeded());
 }
 async function prepareReading(tab: Page) {
-  await click(tab, "Change verses"); await ui(sheet(tab)).toBeVisible();
+  await manage(tab, "Change verses"); await ui(sheet(tab)).toBeVisible();
   await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom"));
   await safe(() => tab.getByText("Advanced references and aliyah boundaries", { exact: true }).click());
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2"));
@@ -89,7 +90,7 @@ afterAll(async () => { await Promise.all(contexts.map(context => context.close()
 
 it("retains only the rightful service decision during a quiet check, preserving both drafts and focus while another tab stays independent", async () => {
   const tab = await page(), other = await page(), writes = countWrites(tab);
-  await choose(other, 2); await safe(() => other.getByRole("tab", { name: "Service parts", exact: true }).click());
+  await choose(other, 2); await safe(() => other.locator("#service-parts").scrollIntoViewIfNeeded());
   await pendingService(tab); const hold = await holdSession(tab);
   try {
     await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await hold.ready();
@@ -104,8 +105,8 @@ it("retains only the rightful service decision during a quiet check, preserving 
   expect(await modalCount(tab)).toBe(1); expect(await sheet(tab).evaluate(node => node.contains(document.activeElement))).toBe(true);
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
   await safe(() => tab.keyboard.press("Escape")); await ui(sheet(tab)).toBeHidden(); expect(await modalCount(tab)).toBe(0);
-  await ui(tab.getByRole("button", { name: "Change verses", exact: true })).toBeFocused();
-  await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click());
+  await ui(tab.getByRole("button", { name: "Manage", exact: true })).toBeFocused();
+  await safe(() => tab.locator("#service-parts").scrollIntoViewIfNeeded());
   await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked();
   await ui(panel(other).getByRole("checkbox", { name: /Synthetic part 2/ })).toBeChecked(); expect(writes).toEqual({ confirm: 0, note: 0 });
   await hold.remove(); await safe(() => tab.context().close()); await safe(() => other.context().close());
@@ -133,8 +134,7 @@ it("serializes service and unknown-note guards, and canceling the later decision
   await safe(() => tab.keyboard.press("Escape")); await ui(sheet(tab)).toBeHidden(); expect(await modalCount(tab)).toBe(0);
   // The service decision brought its tab forward. Reopen the rightful reading
   // tab/stream before checking retained coordinator text, not a hidden control.
-  await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click());
-  await ui(tab.getByRole("tab", { name: "Reading", exact: true })).toHaveAttribute("aria-selected", "true");
+  await safe(() => tab.locator("[data-testid=\"reading-workspace\"]").scrollIntoViewIfNeeded());
   await openVerseTools(tab, "Genesis 1:1");
   if (await note.getAttribute("open") === null) await safe(() => note.locator("summary").first().click());
   await safe(() => note.getByRole("button", { name: "Teacher notes", exact: true }).click());
@@ -146,8 +146,7 @@ it("serializes service and unknown-note guards, and canceling the later decision
   // Leaving for My Readings (where the role pages are reached) is the departure the guard stops.
   await safe(() => tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click());
   await ui(workGuard(tab)).toBeVisible(); expect(await modalCount(tab)).toBe(1); await click(tab, "Leave without confirming");
-  await safe(() => tab.locator('a[href="/workspace/parent"]').click());
-  await ui(tab.getByRole("list", { name: "Child", exact: true })).toBeVisible(); expect(await modalCount(tab)).toBe(0);
+  await ui(tab.getByTestId("mine-children")).toBeVisible(); expect(await modalCount(tab)).toBe(0);
   expect(await tab.locator("dialog.editor-sheet, .service-plan-editor").count()).toBe(0);
   expect(await tab.evaluate(value => !document.body.textContent?.includes(value), text)).toBe(true); expect(writes).toEqual({ confirm: 0, note: 1 });
   await safe(() => tab.context().close());
@@ -171,7 +170,7 @@ it("clears pending service and reading modals after real session expiry or relat
     expect(await tab.evaluate(() => !document.body.textContent?.includes("Keep this service draft?") && !document.body.textContent?.includes("Synthetic part 1") && !JSON.stringify({ local: { ...localStorage }, tab: { ...sessionStorage } }).includes("Genesis 1:1-2"))).toBe(true);
     expect(writes).toEqual({ confirm: 0, note: 0 }); await hold.remove();
     if (failure === "session") { await safe(() => tab.getByRole("link", { name: "Sign in", exact: true }).click()); await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/sign-in`); }
-    else { await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click(); await tab.locator('a[href="/workspace/parent"]').click(); })()); await ui(tab.getByRole("list", { name: "Child", exact: true })).toBeVisible(); expect(await modalCount(tab)).toBe(0); }
+    else { await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click(); })()); await ui(tab.getByTestId("mine-children")).toBeVisible(); expect(await modalCount(tab)).toBe(0); }
     await safe(() => tab.context().close());
   }
 });

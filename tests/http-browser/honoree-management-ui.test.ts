@@ -11,6 +11,7 @@ import { installLoopbackFetchGuard } from "./egress";
 import { openAuthMail } from "./auth-navigation";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import * as s from "../../src/server/db/index";
+import { goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 // Deliberately invalid credential: canonical grammar only, never server-signed.
@@ -55,7 +56,7 @@ async function page(who: "parent" | "admin", mobile = false, colorScheme: "light
 }
 async function open(tab: Page, child: Child, who: "parent" | "admin") {
   await tab.goto(who === "parent" ? "/workspace/parent" : "/workspace/admin/students?tab=students", { waitUntil: "domcontentloaded" });
-  if (who === "parent") { await tab.locator(`button.student-card[data-student-id="${child.id}"]`).click(); await tab.getByRole("region", { name: "Family honors", exact: true }).getByRole("button", { name: /^(Open the honors form|Edit)$/ }).click(); }
+  if (who === "parent") { await goChild(tab, child.id); await tab.getByRole("region", { name: "Family honors", exact: true }).getByRole("button", { name: /^(Open the honors form|Edit)$/ }).click(); }
   else await tab.getByRole("button", { name: `Honors for ${child.name}`, exact: true }).click();
   await ui(group(tab)).toBeVisible();
 }

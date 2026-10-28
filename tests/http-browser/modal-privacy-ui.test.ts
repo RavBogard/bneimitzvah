@@ -10,6 +10,7 @@ import { closeVerseTools, openVerseTools, workPanel } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
+import { manage } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -33,7 +34,7 @@ async function pendingDeparture(tab: Page, draft: string) {
   await safe(() => verse.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await safe(() => verse.getByRole("textbox").fill(draft));
   await closeVerseTools(tab); // the page's controls are behind the sheet; closing it loses no text
-  await click(tab, "Change verses"); await ui(editor(tab)).toBeVisible();
+  await manage(tab, "Change verses"); await ui(editor(tab)).toBeVisible();
   await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom"));
   await safe(() => tab.getByText("Advanced references and aliyah boundaries", { exact: true }).click());
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2"));
@@ -75,13 +76,13 @@ it("retains the sole rightful departure modal during a quiet check without confi
   expect(await editor(tab).evaluate(node => node.contains(document.activeElement))).toBe(true);
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
   await safe(() => tab.keyboard.press("Escape")); await ui(editor(tab)).toBeHidden();
-  await ui(tab.getByRole("button", { name: "Change verses", exact: true })).toBeFocused();
+  await ui(tab.getByRole("button", { name: "Manage", exact: true })).toBeFocused();
   // The retained note stream remains independently selectable after the guard.
   const notePanel = await workPanel(tab);
   await safe(() => notePanel.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await ui(notePanel.getByRole("textbox")).toHaveValue(draft);
   await closeVerseTools(tab);
-  await click(tab, "Change verses"); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
+  await manage(tab, "Change verses"); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
   expect(writes).toBe(0); await tab.unroute("**/api/session");
 });
 
@@ -99,8 +100,8 @@ it("clears nested private dialogs on real session expiry and tutor revocation, l
     if (failure === "session") {
       await safe(() => tab.getByRole("link", { name: "Sign in", exact: true }).click()); await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/sign-in`);
     } else {
-      await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click(); await tab.locator('a[href="/workspace/parent"]').click(); })());
-      await ui(tab.getByRole("list", { name: "Child", exact: true })).toBeVisible();
+      await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click(); })());
+      await ui(tab.getByTestId("mine-children")).toBeVisible();
       expect(await tab.evaluate(value => !document.body.textContent?.includes(value) && document.querySelectorAll("dialog:modal").length === 0, draft)).toBe(true);
     }
     await safe(() => tab.context().close());

@@ -11,6 +11,7 @@ import { installLoopbackFetchGuard } from "./egress";
 import { openAuthMail } from "./auth-navigation";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import * as s from "../../src/server/db/index";
+import { goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined, isolated: Awaited<ReturnType<typeof isolatedEnv>> | undefined;
 let failed = false;
@@ -56,7 +57,7 @@ async function open(tab: Page, child: typeof children[number], who: "parent" | "
   if (who === "parent") {
     // Before a save the row offers "Open the honors form"; after one it reads "Family honors · n of 7 sections saved · Edit" (1.9 N13).
     const entry = tab.getByRole("region", { name: "Family honors", exact: true }).getByRole("button", { name: /^(Open the honors form|Edit)$/ });
-    await tab.locator(`button.student-card[data-student-id="${child.id}"]`).click(); await ui(entry).toBeVisible();
+    await goChild(tab, child.id); await ui(entry).toBeVisible();
     await ui(tab.getByRole("heading", { name: /^Choose a child/ })).toHaveCount(0);
     await ui.poll(() => tab.evaluate(() => { const summary = document.querySelector(".parent-study-summary"), honors = document.getElementById("family-honors"); return !!honors && (!summary || !!(summary.compareDocumentPosition(honors) & Node.DOCUMENT_POSITION_FOLLOWING)); })).toBe(true);
     await entry.click();
@@ -236,8 +237,8 @@ it("admin printing verifies only the saved copy; real guardian denial clears pri
 });
 it("own adult uses the existing honors sheet and link controls while child practice tutor and foreign targets stay denied", async () => {
   const student = await page("student"); await openAdult(student);
-  // An adult's honors entry sits after the adult's reading (G20); the sheet is open now, so check the page behind it.
-  await ui.poll(() => student.evaluate(() => { const reading = document.querySelector('[aria-label="Reading sections"]'), honors = document.getElementById("family-honors"); return !!reading && !!honors && !!(reading.compareDocumentPosition(honors) & Node.DOCUMENT_POSITION_FOLLOWING); })).toBe(true);
+  // An adult's honors entry sits at the foot of the pinned card, after the link to the reading (G20, E1); the sheet is open now, so check the page behind it.
+  await ui.poll(() => student.evaluate(() => { const open = document.querySelector('[data-pinned-card] a[href="/mine/reading"]'), honors = document.querySelector('[data-pinned-card] #family-honors'); return !!open && !!honors && !!(open.compareDocumentPosition(honors) & Node.DOCUMENT_POSITION_FOLLOWING); })).toBe(true);
   await add(student, "Opening the ark", "Synthetic Adult Honoree"); await add(student, "Aliyah 2 · Genesis 1:2 – Genesis 1:3", "Synthetic Adult Aliyah");
   const result = await save(student, fixture.student.id); expect(result.ok).toBe(true);
   const [identity] = await fixture.ownerDb.select().from(s.studentIdentity).where(eq(s.studentIdentity.studentId, fixture.student.id));
@@ -260,7 +261,7 @@ it("own adult uses the existing honors sheet and link controls while child pract
     await ui(student.getByRole("region", { name: "Family honors", exact: true })).toBeVisible(); await ui(student.getByRole("button", { name: "Open the honors form", exact: true })).toHaveCount(0);
   } finally { await fixture.ownerDb.update(s.student).set({ studentKind: "adult" }).where(eq(s.student.id, fixture.student.id)); }
   const parent = await page("parent"), entered = await api(parent, "/api/practice/enter", { studentId: children[0].id }); expect(entered.status).toBe(201); const denied = await parent.evaluate(async ({ id, handle }) => { const r = await fetch(`/api/students/${id}/honors?mode=parent`, { headers: { "X-Practice-Context": handle }, cache: "no-store" }); return r.status; }, { id: children[0].id, handle: entered.data.handle }); expect(denied).toBe(403);
-  await parent.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await parent.locator(`button.student-card[data-student-id="${children[0].id}"]`).click(); await parent.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(parent.getByRole("button", { name: "Done", exact: true })).toBeVisible(); await ui(parent.getByRole("button", { name: "Open the honors form", exact: true })).toHaveCount(0);
+  await parent.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await goChild(parent, children[0].id); await parent.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(parent.getByRole("button", { name: "Done", exact: true })).toBeVisible(); await ui(parent.getByRole("button", { name: "Open the honors form", exact: true })).toHaveCount(0);
   await parent.goto("/workspace/tutor", { waitUntil: "domcontentloaded" }); await ui(parent.locator(".role-workspace")).toBeVisible(); await ui(parent.getByRole("button", { name: "Open the honors form", exact: true })).toHaveCount(0);
 });
 

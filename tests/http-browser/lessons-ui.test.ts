@@ -33,7 +33,7 @@ async function page(role: "tutor" | "student", mobile = false) {
 /** The tutor account also holds the fixture's parent role, so one sign-in covers both views. */
 async function workspace(tab: Page, role: "tutor" | "student" | "parent") {
   await safe(() => tab.goto(`/workspace/${role}${role === "student" ? "?tab=reading" : ""}`, { waitUntil: "domcontentloaded" }));
-  if (role !== "student") await safe(() => tab.getByLabel(role === "parent" ? "Child" : "Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
+  if (role !== "student") await safe(() => tab.locator(`a[href="${role === "parent" ? "/mine/child/" : "/workspace/tutor/"}${fixture.student.id}"]`).click());
   await ui(tab.locator(".reading-hero")).toBeVisible();
 }
 const lessons = (tab: Page) => tab.locator(".lesson-log");
@@ -41,7 +41,7 @@ const sheet = (tab: Page) => tab.locator("dialog.lesson-sheet");
 const entry = (tab: Page, text: string) => lessons(tab).locator(".lesson-entry").filter({ hasText: text });
 const editButton = (tab: Page, text: string) => entry(tab, text).getByRole("button", { name: /^Edit lesson from / });
 async function lessonTab(tab: Page) {
-  await safe(() => tab.getByRole("tab", { name: "Lessons", exact: true }).click());
+  await safe(() => tab.locator("#lessons").scrollIntoViewIfNeeded());
   await ui(lessons(tab).getByRole("button", { name: "Add lesson note", exact: true })).toBeEnabled();
 }
 async function write(tab: Page, text: string, date?: string) {
@@ -166,13 +166,13 @@ it("lets a tutor add, edit and delete lessons, keeps an unsaved note, shows a ch
   // The family reads the same list, with nothing to change.
   const parent = await page("tutor", true); await workspace(parent, "parent");
   // Everyone has the Lessons tab beside the reading (1.9 N10).
-  await safe(() => parent.getByRole("tab", { name: "Lessons", exact: true }).click());
+  await safe(() => parent.locator("#lessons").scrollIntoViewIfNeeded());
   await ui(lessons(parent).getByRole("heading", { name: "Lesson notes", exact: true })).toBeVisible();
   await ui(entry(parent, "Synthetic lesson: all three verses.")).toBeVisible();
   expect(await lessons(parent).getByRole("button").count()).toBe(0);
   const parentRows = await stored(parent, "parent"); expect(parentRows.map(row => [row.canEdit, row.canDelete])).toEqual([[false, false]]);
   const student = await page("student", true); await workspace(student, "student");
-  await safe(() => student.getByRole("tab", { name: "Lessons", exact: true }).click());
+  await safe(() => student.locator("#lessons").scrollIntoViewIfNeeded());
   await ui(entry(student, "Synthetic lesson: all three verses.")).toBeVisible();
   expect(await lessons(student).getByRole("button").count()).toBe(0);
   await safe(() => lessons(student).scrollIntoViewIfNeeded());
@@ -224,14 +224,14 @@ it("lets a tutor add Before next time with the if-then prompt, says too long onc
   expect(rows[0]).toMatchObject({ summary: "Synthetic newest lesson with a next step.", beforeNext: line });
 
   const student = await page("student", true); await workspace(student, "student");
-  await safe(() => student.getByRole("tab", { name: "Lessons", exact: true }).click());
+  await safe(() => student.locator("#lessons").scrollIntoViewIfNeeded());
   await ui(entry(student, "Synthetic newest lesson with a next step.").locator(".lesson-before-next")).toHaveText(`Before your next lesson: ${line}`);
   await ui(lessons(student).getByText("Before your next lesson:", { exact: true })).toHaveCount(1);
   await capture(student, "student-before-next-mobile");
 
   const parent = await page("tutor", true); await workspace(parent, "parent");
   await ui(parent.locator(".parent-study-summary .lesson-before-next")).toHaveText(`Before next time: ${line}`);
-  await safe(() => parent.getByRole("tab", { name: "Lessons", exact: true }).click());
+  await safe(() => parent.locator("#lessons").scrollIntoViewIfNeeded());
   await ui(entry(parent, "Synthetic newest lesson with a next step.").locator(".lesson-before-next")).toHaveText(`Before next time: ${line}`);
   expect((await stored(parent, "parent"))[0]).toMatchObject({ beforeNext: line, canEdit: false });
 }, 180_000);

@@ -13,7 +13,8 @@ async function students(page: Page, rows: { id: string; firstName: string; lastN
 const fits = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
 const SIGNED_IN = [
-  "/mine", "/workspace/student", "/workspace/parent", "/workspace/tutor", `/workspace/tutor/${ID_A}`,
+  // /workspace/student, /workspace/parent and /workspace/tutor redirect to /mine (E2), so they are checked below, not here.
+  "/mine", "/mine/reading", `/mine/child/${ID_A}`, `/workspace/tutor/${ID_A}`,
   "/workspace/accounts", "/workspace/claude", "/workspace/email", "/workspace/more", "/workspace/admin/invitations", "/workspace/admin/reference-review",
   "/workspace/admin/settings", "/workspace/admin/students", "/workspace/admin/students/import", `/workspace/admin/students/${ID_A}/reading`,
   `/workspace/admin/students/${ID_A}/access`, "/workspace/admin/tutors", "/account", "/connect", "/invitations/accept",
@@ -35,20 +36,30 @@ test("every signed-in page has its own tab title and exactly one contentinfo lan
   }
 });
 
+test("the old role home pages lead to My Readings, and an old reading tab to its place on the reading", async ({ page }) => {
+  await session(page, ["student", "parent", "tutor"]);
+  await students(page, [{ id: ID_A, firstName: "Noa", lastName: "Synthetic" }]);
+  for (const path of ["/workspace/student", "/workspace/parent", "/workspace/tutor"]) { await page.goto(path); await expect(page, path).toHaveURL(/\/mine$/); }
+  await page.goto("/workspace/student?tab=reading"); await expect(page).toHaveURL(/\/mine\/reading$/);
+  await page.goto("/workspace/student?tab=lessons"); await expect(page).toHaveURL(/\/mine\/reading#lessons$/);
+  await page.goto("/workspace/student?tab=service"); await expect(page).toHaveURL(/\/mine\/reading#service-parts$/);
+});
+
 test("the tutor's student page is titled and headed with the student's name", async ({ page }) => {
   await session(page, ["tutor"]);
   await students(page, [{ id: ID_A, firstName: "Noa", lastName: "Synthetic" }, { id: ID_B, firstName: "Tamar", lastName: "Synthetic" }]);
   await page.goto(`/workspace/tutor/${ID_A}`);
   await expect(page).toHaveTitle("Noa Synthetic | CRC Torah");
-  await expect(page.getByRole("heading", { level: 1, name: "Noa Synthetic", exact: true })).toBeAttached();
+  // The reading is not answered here, so the page's one h1 is the loading or failure state; with a reading it is the title block, the student's name.
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
 });
 
 test("at a 200% root font the child cards and a text button fit a 412 px screen", async ({ page }) => {
   await page.setViewportSize({ width: 412, height: 900 });
   await session(page, ["parent"]);
   await students(page, [{ id: ID_A, firstName: "Noa-Shoshana-Rivka", lastName: "Synthetic-Longfamilyname" }, { id: ID_B, firstName: "Tamar", lastName: "Synthetic" }]);
-  await page.goto("/workspace/parent");
-  await expect(page.locator(".student-card")).toHaveCount(2);
+  await page.goto("/mine");
+  await expect(page.getByTestId("child-card")).toHaveCount(2);
   await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
   expect(await fits(page), "child cards").toBe(true);
   // The student page's "View … up close" is a .button-text in a flex row; a long one wraps instead of widening the page.

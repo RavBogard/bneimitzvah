@@ -15,6 +15,7 @@ import { syntheticServiceCatalog } from "../helpers/service-learning";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { StudyUnavailable } from "../../src/server/study/types";
 import * as s from "../../src/server/db/index";
+import { manage, refreshReading } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -53,10 +54,10 @@ async function page(role: "admin" | "tutor" | "student", mobile = false) {
 }
 async function workspace(tab: Page, role: "admin" | "tutor" | "student" | "parent", view: "service" | "reading" = "service") {
   await safe(() => tab.goto(role === "admin" ? `/workspace/admin/students/${fixture.student.id}/reading` : `/workspace/${role}${role === "student" ? "?tab=reading" : ""}`, { waitUntil: "domcontentloaded" }));
-  if (role === "tutor" || role === "parent") await safe(() => tab.getByLabel(role === "parent" ? "Child" : "Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
+  if (role === "tutor" || role === "parent") await safe(() => tab.locator(`a[href="${role === "parent" ? "/mine/child/" : "/workspace/tutor/"}${fixture.student.id}"]`).click());
   // Everyone reaches service parts through the tab beside the reading (1.9 N10); a test about the reading itself stays on it.
   if (view === "reading") return;
-  await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click());
+  await safe(() => tab.locator("#service-parts").scrollIntoViewIfNeeded());
   await ui(panel(tab).getByRole("heading", { name: "Service parts", exact: true })).toBeVisible();
   await ui(panel(tab).getByText("Checking assigned service parts…", { exact: true })).toBeHidden();
 }
@@ -126,7 +127,7 @@ it("keeps the saved plan unchanged through staff selection and authoritative rev
 it("preserves first-Hebrew phone geometry and offers read-only student/parent selection, exact credits and keyboard notes", async () => {
   const learner = await page("student", true); await workspace(learner, "student", "reading"); await firstHebrew(learner);
   await ui(learner.getByRole("button", { name: "Torah text", exact: true })).toBeVisible(); await ui(learner.getByRole("button", { name: "Haftarah text", exact: true })).toBeVisible();
-  await safe(() => learner.getByRole("tab", { name: "Service parts", exact: true }).click());
+  await safe(() => learner.locator("#service-parts").scrollIntoViewIfNeeded());
   expect(await panel(learner).getByRole("heading", { name: "Set service parts", exact: true }).count()).toBe(0);
   await click(learner, "Synthetic part 0");
   const unit = panel(learner).locator(".service-unit"); await ui(unit).toContainText("Synthetic translation 0");
@@ -146,13 +147,13 @@ it("keeps service reading and its local retry available when scripture text retu
   try {
     const tab = await page("student"); await workspace(tab, "student", "reading");
     await ui(tab.getByRole("heading", { name: "Text unavailable", exact: true })).toBeVisible();
-    await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click());
+    await safe(() => tab.locator("#service-parts").scrollIntoViewIfNeeded());
     let reads = 0; await tab.route("**/service-plan/unit", async route => { if (++reads === 1) await route.fulfill({ status: 503, contentType: "application/json", body: "{}" }); else await route.continue(); });
     await click(tab, "Synthetic part 0"); await ui(panel(tab).getByText("Service parts are unavailable. Your scripture reading is separate.", { exact: true })).toBeVisible();
     await click(tab, "Reload service parts");
     await ui(panel(tab).getByRole("button", { name: "Synthetic part 0", exact: true })).toBeVisible();
     await click(tab, "Synthetic part 0"); await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
-    await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click());
+    await safe(() => tab.locator("[data-testid=\"reading-workspace\"]").scrollIntoViewIfNeeded());
     await ui(tab.getByRole("heading", { name: "Text unavailable", exact: true })).toBeVisible();
   } finally { scriptureUnavailable = false; }
 });
@@ -229,47 +230,31 @@ it("rejects a stale review without overwriting a newer service plan, and explici
   await assign(tab, fixture.student.id, [content.first, content.second]);
 });
 
-it("puts a tutor's service parts in a tab beside the reading, keeping open material and an unsent draft across switches and bringing a departure prompt's tab forward", async () => {
+it("puts a tutor's service parts after the text under their own heading, keeping open material and an unsent draft while the text is used and raising the draft prompt over the page", async () => {
   const admin = await page("admin"); await assign(admin, fixture.student.id, [content.first, content.second]);
-  const tab = await page("tutor"); await safe(() => tab.goto("/workspace/tutor", { waitUntil: "domcontentloaded" }));
-  await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
-  const tabs = tab.getByRole("tablist", { name: "Student page" }), readingTab = tabs.getByRole("tab", { name: "Reading", exact: true }), serviceTab = tabs.getByRole("tab", { name: "Service parts", exact: true });
-  await ui(readingTab).toHaveAttribute("aria-selected", "true"); await ui(tab.locator(".assigned-study")).toBeVisible();
-  for (const control of [readingTab, serviceTab]) {
-    const id = await control.getAttribute("aria-controls"); expect(id).toBeTruthy();
-    await ui(tab.locator(`[id="${id}"][role="tabpanel"]`)).toHaveAttribute("aria-labelledby", (await control.getAttribute("id"))!);
-  }
-  await ui(panel(tab)).toBeHidden();
-  expect(await tab.getByRole("link", { name: "Service parts", exact: true }).count()).toBe(0);
-  await safe(() => readingTab.focus()); await safe(() => tab.keyboard.press("ArrowRight"));
-  await ui(serviceTab).toHaveAttribute("aria-selected", "true"); await ui(serviceTab).toBeFocused();
-  await ui(tab.locator(".assigned-study")).toBeHidden(); await ui(tab.locator(".reading-toolbar")).toHaveCount(0);
+  const tab = await page("tutor"); await safe(() => tab.goto(`/workspace/tutor/${fixture.student.id}`, { waitUntil: "domcontentloaded" }));
+  // Readings for everyone E2: no tabs. The text, then Service parts, then Lessons, all on the one page.
+  await ui(tab.locator(".assigned-study")).toBeVisible(); expect(await tab.getByRole("tablist", { name: "Student page" }).count()).toBe(0);
+  await ui(panel(tab).getByRole("heading", { name: "Service parts", exact: true })).toBeVisible();
   await ui(panel(tab).getByText("Checking assigned service parts…", { exact: true })).toBeHidden();
   await click(tab, "Synthetic part 0"); await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
   await capture(tab, "tutor-service-tab");
-  // Held Start brings the main text forward without requesting listening.
-  await click(tab, "Start reading");
-  await ui(readingTab).toHaveAttribute("aria-selected", "true"); await ui(tab.locator("dialog.lift")).toHaveCount(0);
+  // The text takes focus without listening being requested, and the open material stays open beside it.
+  await safe(() => tab.locator(".study-verses").focus()); await ui(tab.locator("dialog.lift")).toHaveCount(0);
   await ui(tab.locator(".study-verses")).toBeFocused(); await heldReading(tab);
   await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0);
-  await safe(() => serviceTab.click()); await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
-  await safe(() => tab.keyboard.press("Home")); await ui(readingTab).toHaveAttribute("aria-selected", "true"); await ui(readingTab).toBeFocused();
-  // Left from the first tab wraps to the last (Lessons), then steps back to Service parts.
-  await safe(() => tab.keyboard.press("ArrowLeft")); await ui(tabs.getByRole("tab", { name: "Lessons", exact: true })).toHaveAttribute("aria-selected", "true");
-  await safe(() => tab.keyboard.press("ArrowLeft")); await ui(serviceTab).toHaveAttribute("aria-selected", "true"); await ui(serviceTab).toBeFocused();
-  // An unsent service draft survives the panel being hidden.
+  await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
+  // An unsent service draft survives using the text.
   await click(tab, "Choose service parts"); await safe(() => panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ }).check());
-  await safe(() => readingTab.click()); await ui(panel(tab)).toBeHidden();
-  await safe(() => serviceTab.click()); await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked();
-  // A guarded reading action from the Reading tab raises the draft prompt and brings Service parts forward.
-  await safe(() => readingTab.click()); await click(tab, "Haftarah text");
+  await safe(() => tab.locator("[data-testid=\"reading-workspace\"]").scrollIntoViewIfNeeded()); await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked();
+  // A guarded reading action raises the draft prompt over the page.
+  await click(tab, "Haftarah text");
   const prompt = tab.getByRole("dialog", { name: "Keep this service draft?", exact: true }); await ui(prompt).toBeVisible();
-  await ui(serviceTab).toHaveAttribute("aria-selected", "true");
   await click(tab, "Keep editing service parts"); await ui(prompt).toBeHidden();
-  await ui(serviceTab).toHaveAttribute("aria-selected", "true"); await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked();
-  await ui(panel(tab).getByRole("button", { name: "Discard choices and start again", exact: true })).toBeFocused();
-  await safe(() => readingTab.click()); await click(tab, "Haftarah text"); await click(tab, "Discard service draft and continue");
-  await ui(readingTab).toHaveAttribute("aria-selected", "true");
+  await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked();
+  // E2: with no tab to bring forward, focus stays where the prompt was opened; the draft is what matters.
+  await ui(panel(tab).getByRole("button", { name: "Discard choices and start again", exact: true })).toBeVisible();
+  await click(tab, "Haftarah text"); await click(tab, "Discard service draft and continue");
   await ui(tab.getByRole("button", { name: "Haftarah text", exact: true })).toHaveAttribute("aria-pressed", "true");
 });
 
@@ -285,8 +270,8 @@ it("suspends the reading sheet for a service decision and retains only that righ
   const admin = await page("admin"); await assign(admin, fixture.student.id, [content.first]);
   const tab = await page("tutor"); await workspace(tab, "tutor");
   await click(tab, "Choose service parts"); await safe(() => panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ }).check());
-  await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click());
-  await click(tab, "Change verses");
+  await safe(() => tab.locator("[data-testid=\"reading-workspace\"]").scrollIntoViewIfNeeded());
+  await manage(tab, "Change verses");
   const sheet = tab.locator("dialog.editor-sheet"), prompt = tab.getByRole("dialog", { name: "Keep this service draft?", exact: true });
   await ui(sheet).toBeVisible();
   await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom"));
@@ -312,20 +297,20 @@ it("suspends the reading sheet for a service decision and retains only that righ
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
   await safe(() => tab.keyboard.press("Escape")); await ui(sheet).toBeHidden();
   expect(await snapshot()).toEqual({ modals: 0, service: false, sheet: false });
-  await ui(tab.getByRole("button", { name: "Change verses", exact: true })).toBeFocused();
-  await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click());
+  await ui(tab.getByRole("button", { name: "Manage", exact: true })).toBeFocused();
+  await safe(() => tab.locator("#service-parts").scrollIntoViewIfNeeded());
   await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked(); expect(writes).toBe(0);
   await tab.unroute("**/api/session");
   // A real native close must settle this idle decision as cancellation, while
   // the quiet validation above must preserve the pending decision.
-  await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click()); await click(tab, "Haftarah text"); await ui(prompt).toBeVisible();
+  await safe(() => tab.locator("[data-testid=\"reading-workspace\"]").scrollIntoViewIfNeeded()); await click(tab, "Haftarah text"); await ui(prompt).toBeVisible();
   await safe(() => prompt.evaluate(node => (node as HTMLDialogElement).close())); await ui(prompt).toBeHidden();
   expect(await snapshot()).toEqual({ modals: 0, service: false, sheet: false });
-  await ui(panel(tab).getByRole("button", { name: "Discard choices and start again", exact: true })).toBeFocused();
-  await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click()); await click(tab, "Haftarah text"); await ui(prompt).toBeVisible();
+  // E2: with no tab to bring forward, focus stays where the prompt was opened; the draft is what matters.
+  await ui(panel(tab).getByRole("button", { name: "Discard choices and start again", exact: true })).toBeVisible();
+  await safe(() => tab.locator("[data-testid=\"reading-workspace\"]").scrollIntoViewIfNeeded()); await click(tab, "Haftarah text"); await ui(prompt).toBeVisible();
   await click(tab, "Discard service draft and continue"); await ui(prompt).toBeHidden();
   expect(await snapshot()).toEqual({ modals: 0, service: false, sheet: false });
-  await ui(tab.getByRole("tab", { name: "Reading", exact: true })).toHaveAttribute("aria-selected", "true");
   await ui(tab.getByRole("button", { name: "Haftarah text", exact: true })).toHaveAttribute("aria-pressed", "true"); expect(writes).toBe(0);
 });
 
@@ -380,14 +365,14 @@ it("fences a late selected-unit response across linked-child switching and never
   const admin = await page("admin"); await assign(admin, sibling.id, [content.second]);
   const parent = await page("tutor"); await workspace(parent, "parent"); await click(parent, "Practice with Synthetic");
   await ui(parent.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeVisible();
-  await safe(() => parent.getByRole("tab", { name: "Service parts", exact: true }).click());
+  await safe(() => parent.locator("#service-parts").scrollIntoViewIfNeeded());
   let release!: () => void, held = false, delivered = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await parent.route("**/service-plan/unit", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); delivered = true; });
   try {
     await click(parent, "Synthetic part 0"); await ui.poll(() => held).toBe(true);
     await safe(() => parent.getByRole("button", { name: /^Switch to .*Sibling/ }).click());
     // A new child opens on the Reading tab; Service parts is one tap away.
-    await safe(() => parent.getByRole("tab", { name: "Service parts", exact: true }).click());
+    await safe(() => parent.locator("#service-parts").scrollIntoViewIfNeeded());
     await ui(panel(parent).getByRole("button", { name: "Synthetic part 2", exact: true })).toBeVisible();
     release(); await ui.poll(() => delivered).toBe(true);
     expect(await panel(parent).locator(".service-unit").count()).toBe(0);
@@ -411,11 +396,11 @@ it("reads service-only student plans without scripture assignments and preserves
   const [haftarah] = await fixture.ownerDb.select().from(s.assignment).where(eq(s.assignment.kind, "haftarah"));
   await fixture.ownerDb.delete(s.assignmentVerse).where(eq(s.assignmentVerse.assignmentId, haftarah.id)); await fixture.ownerDb.delete(s.assignment).where(eq(s.assignment.id, haftarah.id));
   const tab = await page("student", true); await workspace(tab, "student", "reading"); await firstHebrew(tab);
-  await ui(tab.getByRole("tab", { name: "Service parts", exact: true })).toBeVisible();
+  await ui(tab.locator("#service-parts")).toBeVisible();
   await fixture.ownerDb.delete(s.assignmentVerse).where(eq(s.assignmentVerse.studentId, fixture.student.id)); await fixture.ownerDb.delete(s.assignment).where(eq(s.assignment.studentId, fixture.student.id));
-  await click(tab, "Refresh reading");
+  await refreshReading(tab);
   await ui(tab.getByRole("heading", { name: "Explore the full Torah portion", exact: true })).toBeVisible();
-  await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click()); await click(tab, "Synthetic part 0");
+  await safe(() => tab.locator("#service-parts").scrollIntoViewIfNeeded()); await click(tab, "Synthetic part 0");
   await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
   await captures(tab, "service-only");
 });
@@ -425,23 +410,19 @@ it("retains superseded source readability but removes withdrawn material on auth
   const tab = await page("student"); await workspace(tab, "student"); await click(tab, "Synthetic part 0");
   await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
   await fixture.ownerDb.update(s.serviceCatalogLifecycle).set({ state: "withdrawn", revision: 3 }).where(eq(s.serviceCatalogLifecycle.catalogId, catalogId));
-  await click(tab, "Refresh reading");
+  await refreshReading(tab);
   await ui(panel(tab).getByText("The assigned service material has been withdrawn. Ask your tutor or rabbi about a replacement.", { exact: true })).toBeVisible();
   expect(await panel(tab).locator(".service-unit, .service-part-choices").count()).toBe(0);
 });
 
-it("remembers the view in ?tab= for a student and keeps it on a reload", async () => {
+it("sends an old ?tab= address to its place on the student's reading, and Service parts and Lessons are headings after the text", async () => {
   const tab = await page("student"); await workspace(tab, "student", "reading");
-  // A student has no tab bar now (Area A); the view lives in ?tab= alone.
+  // A student has no tab bar (Area A) and no page tabs (E2): the old address names a place on the page.
   await ui(tab.getByRole("navigation", { name: "Workspace", exact: true })).toHaveCount(0);
-  await safe(() => tab.getByRole("tab", { name: "Lessons", exact: true }).click());
-  await ui(tab.getByRole("tab", { name: "Lessons", exact: true })).toHaveAttribute("aria-selected", "true");
-  expect(new URL(tab.url()).searchParams.get("tab")).toBe("lessons");
-  await safe(() => tab.reload({ waitUntil: "domcontentloaded" }));
-  await ui(tab.getByRole("tab", { name: "Lessons", exact: true })).toHaveAttribute("aria-selected", "true");
-  // The reading page's own tab writes the address too; with no ?tab= a student is on Today (1.9 N11).
-  await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click());
-  expect(new URL(tab.url()).searchParams.get("tab")).toBe("reading");
+  expect(await tab.getByRole("tablist", { name: "Student page" }).count()).toBe(0);
+  await safe(() => tab.goto("/workspace/student?tab=lessons", { waitUntil: "domcontentloaded" }));
+  await ui.poll(() => new URL(tab.url()).pathname + new URL(tab.url()).hash).toBe("/mine/reading#lessons");
+  await ui(tab.locator("#lessons")).toBeVisible(); await ui(tab.locator("#service-parts")).toBeVisible();
   await safe(() => tab.goto("/workspace/student", { waitUntil: "domcontentloaded" }));
-  await ui(tab.locator("[data-today]")).toBeVisible();
+  await ui.poll(() => new URL(tab.url()).pathname).toBe("/mine"); await ui(tab.getByTestId("pinned-reading")).toBeVisible();
 });

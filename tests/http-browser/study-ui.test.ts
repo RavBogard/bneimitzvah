@@ -17,6 +17,7 @@ import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
 import { projectStudyVerse } from "../../src/lib/hebrew/study-tokens";
 import { StudyUnavailable } from "../../src/server/study/types";
 import * as s from "../../src/server/db/index";
+import { openVerseEditor, refreshReading, goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -184,12 +185,12 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   await ui(adminTab.getByRole("link", { name: "CC-BY-SA-4.0", exact: true })).toBeVisible(); await ui(adminTab.getByRole("link", { name: "CC-BY-NC-4.0", exact: true })).toBeVisible();
   expect(await adminTab.getByTestId("study-credits").locator("a").evaluateAll(links => links.every(link => (link as HTMLAnchorElement).protocol === "https:" && /^(www\.sefaria\.org|he\.wikisource\.org|jps\.org|creativecommons\.org)$/.test((link as HTMLAnchorElement).hostname) && link.getAttribute("rel")?.includes("noopener")))).toBe(true);
   await capture(adminTab, "study-admin-partial-desktop");
-  const tutor = await page("tutor"); await navigate(tutor, "/workspace/tutor"); await safe(() => tutor.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(tutor, "Genesis 1:1");
+  const tutor = await page("tutor"); await navigate(tutor, "/workspace/tutor"); await safe(() => tutor.locator(`a[href="/workspace/tutor/${fixture.student.id}"]`).click()); await loaded(tutor, "Genesis 1:1");
   expect(new URL(tutor.url()).pathname).toBe(`/workspace/tutor/${fixture.student.id}`); // A stable page per student.
   await navigate(tutor, `/workspace/tutor/${crypto.randomUUID()}`); await ui(tutor.getByTestId("student-not-found")).toBeVisible();
   expect(await tutor.getByTestId("study-verses").count()).toBe(0); // A route id outside the tutor's list loads nothing.
   await navigate(tutor, `/workspace/tutor/${fixture.student.id}`); await loaded(tutor, "Genesis 1:1");
-  await safe(() => switchRole(tutor, "Parent")); await safe(() => tutor.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(tutor, "Genesis 1:1");
+  await safe(() => switchRole(tutor, "Parent")); await safe(() => goChild(tutor, fixture.student.id)); await loaded(tutor, "Genesis 1:1");
   expect(await tutor.getByTestId("reading-editor-title").count()).toBe(0);
   const learner = await page("student", true); await navigate(learner, "/workspace/student?tab=reading"); await loaded(learner, "Genesis 1:1"); expect(await learner.getByLabel("Student", { exact: true }).count()).toBe(0);
   studentTab = learner;
@@ -205,7 +206,7 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   const prepared = await api(adminTab, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "admin", kind: "torah", preparationMode: "current-assignment", expectedAssignmentRevision: torah.revision, aliyahStarts: [] });
   expect(prepared.status).toBe(200);
   expect((await api(adminTab, `/api/students/${fixture.student.id}/reading/confirm`, { mode: "admin", binding: prepared.data.binding })).status).toBe(200);
-  await click(learner, "Refresh reading"); await loaded(learner, "Genesis 1:1");
+  await refreshReading(learner); await loaded(learner, "Genesis 1:1");
   await ui(learner.getByTestId("student-aliyah").first()).toBeVisible();
   await firstHebrewInViewport(learner);
   await capture(learner, "study-student-one-aliyah-mobile"); await captureDark(learner, "study-student-one-aliyah-mobile-dark");
@@ -258,7 +259,7 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and keeps Start
   await mkdir(directory, { recursive: true });
   longVerse = true;
   try {
-    await click(tab, "Torah text"); await click(tab, "Refresh reading"); await loaded(tab, "Genesis 1:1");
+    await click(tab, "Torah text"); await refreshReading(tab); await loaded(tab, "Genesis 1:1");
     const first = verse(tab, "Genesis 1:1").getByTestId("study-hebrew");
     for (const size of ["Standard", "Huge"] as const) {
       const toolbar = tab.getByRole("navigation", { name: "Reading tools", exact: true });
@@ -276,9 +277,9 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and keeps Start
       expect(firstWord.top).toBeGreaterThanOrEqual(0); expect(firstWord.bottom).toBeLessThanOrEqual(await tab.evaluate(() => innerHeight));
       const readingText = await first.textContent();
       await safe(() => tab.screenshot({ path: join(directory, `${size.toLowerCase()}-reading.png`) }));
-      await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).focus()); await safe(() => tab.keyboard.press("Tab"));
-      const start = tab.getByRole("button", { name: "Start reading", exact: true }); await ui(start).toBeFocused();
-      await safe(() => tab.keyboard.press("Enter"));
+      // Readings for everyone E2: the header has no Refresh reading or Start reading button; the text takes focus where a reader puts it.
+      expect(await tab.getByRole("button", { name: "Start reading", exact: true }).count()).toBe(0);
+      await safe(() => tab.getByTestId("study-verses").focus());
       await ui(tab.getByTestId("study-verses")).toBeFocused(); await heldReading(tab);
       await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0); await ui(tab.getByRole("dialog")).toHaveCount(0);
       await selectVerse(tab, "Genesis 1:1"); const closeup = tab.getByRole("button", { name: "View Genesis 1:1 up close", exact: true }); await safe(() => closeup.click());
@@ -313,13 +314,13 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and keeps Start
     const toolbar = tab.getByRole("navigation", { name: "Reading tools", exact: true });
     await safe(() => toolbar.getByRole("button", { name: /^Text size:/ }).click());
     await safe(() => toolbar.getByRole("group", { name: "Hebrew text size", exact: true }).getByRole("button", { name: /Standard$/ }).click());
-    await click(tab, "Refresh reading"); await loaded(tab, "Genesis 1:1");
+    await refreshReading(tab); await loaded(tab, "Genesis 1:1");
   }
 });
 
 it("retains optional close-up during a quiet unchanged access check without requiring it for Start", async () => {
-  const tab = await page("student", true); await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab, "Genesis 1:1"); await click(tab, "Start reading");
-  await ui(tab.getByTestId("study-verses")).toBeFocused(); await heldReading(tab);
+  const tab = await page("student", true); await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab, "Genesis 1:1");
+  await safe(() => tab.getByTestId("study-verses").focus()); await ui(tab.getByTestId("study-verses")).toBeFocused(); await heldReading(tab);
   await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0); await ui(tab.getByRole("dialog")).toHaveCount(0);
   await click(tab, "View Genesis 1:1 up close"); const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
@@ -329,8 +330,7 @@ it("retains optional close-up during a quiet unchanged access check without requ
     await ui(tab.locator('[data-workspace-state="checking"]')).toBeHidden(); await ui(dialog).toBeVisible();
   } finally { release(); await tab.unroute("**/api/session"); }
   await loaded(tab, "Genesis 1:1"); await ui(dialog).toBeVisible(); await safe(() => tab.keyboard.press("Escape")); await ui(dialog).toHaveCount(0);
-  const start = tab.getByRole("button", { name: "Start reading", exact: true }); await safe(() => start.focus()); await safe(() => tab.keyboard.press("Enter"));
-  await ui(tab.getByTestId("study-verses")).toBeFocused(); await heldReading(tab);
+  await safe(() => tab.getByTestId("study-verses").focus()); await ui(tab.getByTestId("study-verses")).toBeFocused(); await heldReading(tab);
   await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0); await ui(tab.getByRole("dialog")).toHaveCount(0);
 });
 
@@ -360,12 +360,12 @@ it("keeps unsent typing and an unknown save intact while phrase controls change"
 });
 
 it("discards held old-child text after a switch, keeps another tab independent, and clears text after relationship revocation", async () => {
-  const tab = await page("tutor", true); await navigate(tab, "/workspace/parent"); await safe(() => tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await click(tab, "Practice with Synthetic"); await loaded(tab, "Genesis 1:1");
-  const other = await tab.context().newPage(); await navigate(other, "/workspace/parent"); await safe(() => other.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await click(other, "Practice with Synthetic"); await loaded(other, "Genesis 1:1");
+  const tab = await page("tutor", true); await navigate(tab, "/workspace/parent"); await safe(() => goChild(tab, fixture.student.id)); await click(tab, "Practice with Synthetic"); await loaded(tab, "Genesis 1:1");
+  const other = await tab.context().newPage(); await navigate(other, "/workspace/parent"); await safe(() => goChild(other, fixture.student.id)); await click(other, "Practice with Synthetic"); await loaded(other, "Genesis 1:1");
   await colorVerse(tab, "Genesis 1:1"); await setColors(tab, false); // Remembered for this child only.
   const pattern = new RegExp(`/api/students/${fixture.student.id}/study-text\\?`); let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route(pattern, async route => { const response = await privateRouteFetch(route, tab); if (!response) return; held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
-  await click(tab, "Refresh reading"); await ui.poll(() => held).toBe(true);
+  // E2: the practice page has no Refresh reading button, so the old child's text read is not held open here; the switch is what is checked.
   try { await click(tab, "Switch to Synthetic Sibling"); await loaded(tab, "Genesis 2:1"); } finally { release(); }
   await tab.unroute(pattern); expect(await tab.getByTestId("study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true }).count()).toBe(0);
   expect(await tab.locator("[data-testid='study-verses'] [data-verse-ref]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-verse-ref")).join(","))).toBe("Genesis 2:1,Genesis 2:2");
@@ -375,7 +375,7 @@ it("discards held old-child text after a switch, keeps another tab independent, 
   const relationships = await api(adminTab, `/api/admin/students/${sibling.id}/relationships`);
   const guardian = relationships.data.guardians[0]; expect(Boolean(guardian)).toBe(true);
   expect((await api(adminTab, `/api/admin/students/${sibling.id}/relationships/guardians/${guardian.id}/revoke`, { expectedState: "active" })).status === 200).toBe(true);
-  await click(tab, "Refresh reading"); await ui(tab.getByLabel("Child", { exact: true })).toBeVisible(); expect(await tab.getByTestId("study-verses").count()).toBe(0);
+  await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui(tab.getByTestId("mine-children")).toBeVisible(); expect(await tab.getByTestId("study-verses").count()).toBe(0);
   expect(await tab.locator("[data-family], [data-word-index]").count()).toBe(0);
   await safe(() => other.evaluate(() => window.dispatchEvent(new Event("focus")))); await loaded(other, "Genesis 1:1");
   expect(modes.size === 5 && [...modes].every(mode => ["student", "parent", "tutor", "admin", "child-practice"].includes(mode))).toBe(true);
@@ -386,15 +386,15 @@ it("preserves staff drafts, paging and quiet same-session reading while rejectin
   // sign-in instead of reusing an earlier case's cached role session.
   const tab = await page("admin", false, true); await navigate(tab, `/workspace/admin/students/${fixture.student.id}/reading`); await loaded(tab, "Genesis 1:1");
   // The verse editor is a sheet over the reading; its draft stays mounted while it is closed.
-  await safe(() => tab.getByRole("button", { name: /^(Change|Assign) verses$/ }).click());
+  await safe(() => openVerseEditor(tab));
   await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom")); await safe(() => tab.getByText("Advanced references and aliyah boundaries", { exact: true }).click()); await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:4-5"));
   await safe(() => tab.getByRole("button", { name: "Close verse editor", exact: true }).click());
-  unavailable = true; await click(tab, "Refresh reading"); await ui(tab.getByTestId("study-text-state")).toHaveAttribute("data-text-state", "unavailable");
+  unavailable = true; await refreshReading(tab); await ui(tab.getByTestId("study-text-state")).toHaveAttribute("data-text-state", "unavailable");
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:4-5"); expect(await tab.getByTestId("study-hebrew").count()).toBe(0);
   unavailable = false; english = "unavailable"; await click(tab, "Reload assigned text"); await loaded(tab, "Genesis 1:1"); await capture(tab, "study-english-unavailable-desktop"); english = "partial";
   const prepared = await api(tab, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "admin", ranges: ["Genesis 1:1-4:24"] }); expect(prepared.status === 200 && prepared.data.status === "prepared").toBe(true);
   expect((await api(tab, `/api/students/${fixture.student.id}/reading/confirm`, { mode: "admin", binding: prepared.data.binding })).status === 200).toBe(true);
-  await click(tab, "Refresh reading"); await ui(tab.locator("[data-testid='study-verses'] [data-verse-ref]")).toHaveCount(100);
+  await refreshReading(tab); await ui(tab.locator("[data-testid='study-verses'] [data-verse-ref]")).toHaveCount(100);
   await colorVerse(tab, "Genesis 1:1");
   const beforeNext = calls; await click(tab, "Next text page"); await ui(tab.locator("[data-testid='study-verses'] [data-verse-ref]")).toHaveCount(4); expect(calls - beforeNext).toBe(1);
   await ui(tab.getByRole("navigation", { name: "Reading tools", exact: true })).toHaveCount(1);

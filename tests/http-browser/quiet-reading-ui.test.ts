@@ -12,6 +12,7 @@ import { openAuthMail } from "./auth-navigation";
 import { countPageFetches, pageFetchesSettled } from "./fetch-settle";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
+import { goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
 let isolated: Awaited<ReturnType<typeof isolatedEnv>> | undefined;
@@ -41,7 +42,7 @@ async function page(mode: "student" | "parent" = "student") {
     await openAuthMail(tab, fixture.takeMail("pg-tutor@example.test")); cached.set("tutor", await context.cookies());
   }
   await tab.goto(`/workspace/${mode}${mode === "student" ? "?tab=reading" : ""}`, { waitUntil: "domcontentloaded" });
-  if (mode === "parent") await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click();
+  if (mode === "parent") await goChild(tab, fixture.student.id);
   await ui(tab.locator(".study-verses")).toBeVisible(); await heldReading(tab); return tab;
 }
 async function editor(tab: Page, ordinal = 0) {

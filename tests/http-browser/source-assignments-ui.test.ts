@@ -14,6 +14,7 @@ import { openAuthMail, switchRole } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { parseRelatedMetadata, SourceMetadataUnavailable } from "../../src/server/study/sources/metadata";
 import * as s from "../../src/server/db/index";
+import { goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -143,7 +144,7 @@ it("shows no Sources control on a verse that has none, to a student or a child, 
   await ui(detail(tab)).toBeVisible(); await ui(panel(tab)).toHaveCount(0); await ui(tab.getByRole("button", { name: /^Sources/ })).toHaveCount(0);
   expect(relatedCalls).toBe(before); expect(posts).toBe(0); expect(calendars).toBe(0); await noAudio(tab);
   const child = await page("tutor"); await closeVerseTools(child); await switchRole(child, "Parent");
-  await child.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await child.getByRole("button", { name: "Practice with Synthetic", exact: true }).click();
+  await goChild(child, fixture.student.id); await child.getByRole("button", { name: "Practice with Synthetic", exact: true }).click();
   await ui(child.locator(".study-verses")).toBeVisible(); await openVerseTools(child, "Genesis 1:1"); await ui(detail(child)).toBeVisible(); await ui(child.getByRole("button", { name: /^Sources/ })).toHaveCount(0); await noAudio(child);
 });
 
@@ -236,7 +237,7 @@ it("offers an honest unknown-save departure without automatic retry, then clears
   await disclosure.click(); await ui(dialog).toContainText("It may still complete if you leave"); await dialog.getByRole("button", { name: "Keep working", exact: true }).click(); await ui(panel(tab).getByRole("button", { name: "Check what saved", exact: true })).toBeVisible(); expect(posts).toBe(1);
   await disclosure.click(); await dialog.getByRole("button", { name: "Leave without confirming", exact: true }).click(); await ui(disclosure).toHaveAttribute("aria-expanded", "false"); expect(posts).toBe(1);
   const after = await fixture.ownerDb.select().from(s.verseSourceAssignment).where(and(eq(s.verseSourceAssignment.studentId, fixture.student.id), eq(s.verseSourceAssignment.verseRef, "Genesis 1:1"))); expect(after.length).toBe(before.length);
-  await closeVerseTools(tab); await switchRole(tab, "Parent"); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(tab.locator(".study-verses")).toBeVisible(); await open(tab); await browse(tab);
+  await closeVerseTools(tab); await switchRole(tab, "Parent"); await goChild(tab, fixture.student.id); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(tab.locator(".study-verses")).toBeVisible(); await open(tab); await browse(tab);
   await closeVerseTools(tab); await tab.getByRole("button", { name: "Switch to Synthetic Sibling", exact: true }).click(); await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible(); await openVerseTools(tab, "Genesis 1:1");
   // The sibling's scope starts clean: a child in practice has no sources on this verse, so there is no Sources control (1.9 N4, G2), and nothing of the other child's is shown.
   await ui(detail(tab)).toBeVisible(); await ui(tab.getByRole("button", { name: /^Sources/ })).toHaveCount(0); await ui(assigned(tab)).toHaveCount(0);

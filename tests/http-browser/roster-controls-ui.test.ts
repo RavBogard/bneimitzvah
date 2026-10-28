@@ -11,6 +11,7 @@ import { installLoopbackFetchGuard } from "./egress";
 import { CSV_HEADER } from "../../src/components/portal/workspace/csv-import/api";
 import * as s from "../../src/server/db/index";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
+import { goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined, sibling: { id: string };
@@ -134,13 +135,13 @@ it("reviews tutor assignment/removal with fresh target reads, blocks duplicate s
 });
 
 it("revokes only the selected parent practice context, removes exact parent/student links and preserves sibling access", async () => {
-  const admin = await page(), parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await click(parent, "Practice with Synthetic"); await ui(parent.getByTestId("practice-bar-title")).toBeVisible();
-  const other = await parent.context().newPage(); await navigate(other, "/workspace/parent"); await safe(() => other.getByLabel("Child", { exact: true }).locator(`[data-student-id="${sibling.id}"]`).click()); await click(other, "Practice with Synthetic"); await ui(other.getByTestId("practice-bar-title")).toBeVisible();
+  const admin = await page(), parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => goChild(parent, fixture.student.id)); await click(parent, "Practice with Synthetic"); await ui(parent.getByTestId("practice-bar-title")).toBeVisible();
+  const other = await parent.context().newPage(); await navigate(other, "/workspace/parent"); await safe(() => goChild(other, sibling.id)); await click(other, "Practice with Synthetic"); await ui(other.getByTestId("practice-bar-title")).toBeVisible();
   await navigate(admin, `/workspace/admin/students/${fixture.student.id}/access`); await accessLoaded(admin); await safe(() => action(admin, "Parents", "Stop child practice").click()); await confirm(admin);
   const denied = parent.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${fixture.student.id}/reading` && response.status() === 404);
   // A real denial short-circuits the normal successful quiet probe sequence.
   // Bind this case to the actual rejection and terminal recovery instead.
-  await safe(() => parent.evaluate(() => window.dispatchEvent(new Event("focus")))); expect((await denied).status()).toBe(404); await ui.poll(() => new URL(parent.url()).pathname).toBe("/workspace/parent"); await ui(parent.getByTestId("workspace-notice")).toHaveAttribute("data-notice-kind", "practice-access-changed"); await ui(parent.getByLabel("Child", { exact: true })).toBeVisible();
+  await safe(() => parent.evaluate(() => window.dispatchEvent(new Event("focus")))); expect((await denied).status()).toBe(404); await ui.poll(() => new URL(parent.url()).pathname).toBe("/mine"); await ui(parent.getByTestId("workspace-notice")).toHaveAttribute("data-notice-kind", "practice-access-changed"); await ui(parent.getByTestId("mine-children")).toBeVisible();
   expect(await parent.getByTestId("reading-workspace").count()).toBe(0);
   await ui(parent.locator("[data-testid='study-verses'], [data-testid='study-hebrew'], [data-testid='verse-work'], dialog:modal")).toHaveCount(0);
   await focus(other); await ui(other.getByTestId("practice-bar-title")).toBeVisible();

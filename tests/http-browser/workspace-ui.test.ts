@@ -11,6 +11,7 @@ import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from 
 import { installLoopbackFetchGuard } from "./egress";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
+import { refreshReading, goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -169,30 +170,29 @@ it("creates and edits a real roster record, blocks stale409 overwrite and leaves
 
 it("keeps sibling tab handles isolated, rejects a copied practice URL and discards delayed old-child reads after switching", async () => {
   const tab = await page(); await signIn(tab, "pg-tutor@example.test"); await navigate(tab, "/workspace/parent");
-  await safe(() => tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
+  await safe(() => goChild(tab, fixture.student.id));
   await ui(tab.getByRole("heading", { name: "Synthetic Learner", exact: true })).toBeVisible();
   // Once a child is chosen the page is about that child: no "Choose a child" heading or line is left.
   await ui(tab.getByRole("heading", { name: /^Choose a child/ })).toHaveCount(0); await ui(tab.getByText("Choose a child to see their reading.", { exact: true })).toHaveCount(0);
   const copied = await tab.context().newPage(); await navigate(copied, `/workspace/practice/${fixture.student.id}`);
-  await ui(copied.getByLabel("Child", { exact: true })).toBeVisible();
+  await ui(copied.getByTestId("mine-children")).toBeVisible();
   let rawHandle = "";
   await tab.route("**/api/practice/enter", async route => { const response = await route.fetch(); rawHandle = (await response.json()).handle; await route.fulfill({ response }); });
   await safe(() => tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click());
   await ui(tab.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeVisible();
-  await ui(tab.getByText("Genesis 1:1\u20133", { exact: true })).toBeVisible();
+  await ui(tab.getByText(/Torah Genesis 1:1\u20133/)).toBeVisible();
   await capture(tab, "workspace-child-confirmed-reading");
   await tab.setViewportSize({ width: 390, height: 844 });
-  await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).focus());
-  await safe(() => tab.keyboard.press("Tab"));
-  await ui(tab.getByRole("button", { name: "Start reading", exact: true }), "First Tab after Refresh reaches Start").toBeFocused();
+  // Readings for everyone E2: the practice page has no Refresh reading or Start reading button; the text takes focus where a reader puts it.
+  expect(await tab.getByRole("button", { name: "Start reading", exact: true }).count()).toBe(0);
   await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
-  await safe(() => tab.keyboard.press("Enter"));
-  await ui(tab.locator(".study-verses"), "Held Start focuses the current flowing text").toBeFocused();
+  await safe(() => tab.locator(".study-verses").focus());
+  await ui(tab.locator(".study-verses"), "The current flowing text takes focus").toBeFocused();
   await heldReading(tab); await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0);
   await ui(tab.getByRole("dialog")).toHaveCount(0);
   await safe(() => tab.keyboard.press("Escape"));
   await ui(tab.getByRole("dialog")).toHaveCount(0);
-  await ui(tab.locator(".study-verses"), "Held Start keeps the flowing text focused without requiring a dialog").toBeFocused(); await heldReading(tab);
+  await ui(tab.locator(".study-verses"), "The flowing text stays focused without requiring a dialog").toBeFocused(); await heldReading(tab);
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await capture(tab, "workspace-child-confirmed-reading");
   await tab.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
@@ -200,13 +200,13 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await capture(tab, "workspace-child-confirmed-reading-zoom");
   await tab.evaluate(() => { document.documentElement.style.fontSize = ""; });
   await tab.setViewportSize({ width: 1440, height: 1000 });
-  await safe(() => copied.getByLabel("Child", { exact: true }).locator(`[data-student-id="${sibling.id}"]`).click()); await safe(() => copied.getByRole("button", { name: "Practice with Synthetic", exact: true }).click());
+  await safe(() => goChild(copied, sibling.id)); await safe(() => copied.getByRole("button", { name: "Practice with Synthetic", exact: true }).click());
   await ui(copied.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route(`**/api/students/${fixture.student.id}/reading?mode=child-practice`, async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
   // Hold one real old-child response while switching; its private payload must
   // not replace the later child view when released.
-  await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).click()); await ui.poll(() => held).toBe(true);
+  await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
   try {
     await safe(() => tab.getByRole("button", { name: "Switch to Synthetic Sibling", exact: true }).click());
     await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
@@ -217,18 +217,18 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await focus(copied); await ui(copied.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   expect(await tab.evaluate(handle => !location.href.includes(handle) && !document.body.textContent?.includes(handle) && !JSON.stringify({ local: { ...localStorage }, tab: { ...sessionStorage } }).includes(handle), rawHandle)).toBe(true);
   await capture(tab, "workspace-child-practice-empty-assignment");
-  await safe(() => tab.getByRole("button", { name: "Done", exact: true }).click()); await ui(tab.getByLabel("Child", { exact: true })).toBeVisible();
+  await safe(() => tab.getByRole("button", { name: "Done", exact: true }).click()); await ui(tab.getByTestId("mine-children")).toBeVisible();
   await ui(tab.locator("#workspace-main").getByText("You’re back in your read-only parent view.", { exact: true })).toBeVisible();
   await ui(copied.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   await safe(() => switchRole(tab, "Tutor"));
-  await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
+  await safe(() => tab.locator(`a[href="/workspace/tutor/${fixture.student.id}"]`).click());
   await ui(tab.getByRole("region", { name: "Assigned reading", exact: true }).locator(".reading-reference").getByText("Genesis 1:1-3", { exact: true })).toBeVisible();
   expect(await tab.locator("#workspace-main").getByText("You’re back in your read-only parent view.", { exact: true }).count()).toBe(0);
   expect(await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).count()).toBe(0);
   // A real exit response arriving after role navigation must neither announce
   // parent mode nor send the active tutor back to the parent workspace.
   await safe(() => switchRole(tab, "Parent"));
-  await safe(() => tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
+  await safe(() => goChild(tab, fixture.student.id));
   await safe(() => tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click());
   await ui(tab.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeVisible();
   let finishExit!: () => void, exitHeld = false, exitDelivered = false;
@@ -238,13 +238,13 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   try {
     await ui.poll(() => exitHeld).toBe(true);
     await safe(() => switchRole(tab, "Tutor"));
-    await ui(tab.getByRole("heading", { name: "Your assigned students", level: 1, exact: true })).toBeVisible();
+    await ui(tab.getByTestId("mine-students")).toBeVisible();
   } finally { finishExit(); }
   await ui.poll(() => exitDelivered).toBe(true); await tab.unroute("**/api/practice/exit");
   await safe(() => tab.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))));
-  await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/workspace/tutor`);
+  await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/mine`);
   expect(await tab.locator("#workspace-main").getByText(/read-only parent view|server closure could not be confirmed/).count()).toBe(0);
-  await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
+  await safe(() => tab.locator(`a[href="/workspace/tutor/${fixture.student.id}"]`).click());
   await ui(tab.getByRole("region", { name: "Assigned reading", exact: true }).locator(".reading-reference").getByText("Genesis 1:1-3", { exact: true })).toBeVisible();
   await capture(tab, "workspace-tutor-reading");
 });

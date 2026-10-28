@@ -11,6 +11,7 @@ import { closeVerseTools, openVerseTools, workPanel } from "./verse-tools";
 import { openAuthMail, switchRole } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
+import { refreshReading, goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -33,6 +34,8 @@ async function page(who: "tutor" | "admin" | "student" | "anonymous" = "tutor") 
 }
 const cards = (tab: Page) => tab.getByRole("list", { name: "Student", exact: true });
 const card = (tab: Page, id: string) => cards(tab).locator(`[data-student-id="${id}"]`);
+/** A student's row in Your students on the shelf (the tutor's list page is /mine now). */
+const row = (tab: Page, id: string) => tab.getByTestId("mine-students").locator(`a[href="/workspace/tutor/${id}"]`);
 async function loaded(tab: Page, ref: string) { await ui(tab.locator(".study-verses").getByRole("heading", { name: ref, exact: true })).toBeVisible(); }
 async function capture(tab: Page, name: string) {
   await safe(() => tab.evaluate(async () => { await document.fonts.ready; scrollTo(0, 0); }));
@@ -63,12 +66,12 @@ beforeAll(async () => {
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
 
 it("opens authorized card and copied direct routes, captures tutor home and phone reading, and guards canceled and confirmed card departure", async () => {
-  const tab = await page(); await navigate(tab, "/workspace/tutor"); await ui(card(tab, fixture.student.id)).toBeVisible(); await capture(tab, "desktop-home");
+  const tab = await page(); await navigate(tab, "/workspace/tutor"); await ui(row(tab, fixture.student.id)).toBeVisible({ timeout: 30_000 }); await capture(tab, "desktop-home");
   await safe(() => tab.setViewportSize({ width: 390, height: 844 })); await capture(tab, "phone-home");
-  await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click(); await tab.locator('a[href="/workspace/parent"]').click(); })());
-  await ui(tab.getByRole("list", { name: "Child", exact: true })).toBeVisible(); await capture(tab, "phone-parent-home");
+  await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click(); })());
+  await ui(tab.getByTestId("mine-children")).toBeVisible(); await capture(tab, "phone-parent-home");
   await safe(() => (async () => { await switchRole(tab, "Tutor"); })());
-  await safe(() => card(tab, fixture.student.id).focus()); await safe(() => tab.keyboard.press("Enter")); await loaded(tab, "Genesis 1:1");
+  await safe(() => row(tab, fixture.student.id).focus()); await safe(() => tab.keyboard.press("Enter")); await loaded(tab, "Genesis 1:1");
   await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/workspace/tutor/${fixture.student.id}`);
   await capture(tab, "phone-reading");
   await safe(() => tab.setViewportSize({ width: 1440, height: 1000 })); await capture(tab, "desktop-reading");
@@ -92,7 +95,7 @@ it("does not substitute another reading for foreign or unknown routes and reject
   let held = false, release!: () => void; const gate = new Promise<void>(resolve => { release = resolve; });
   const pattern = `**/api/students/${fixture.student.id}/reading?mode=tutor`;
   await tab.route(pattern, async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
-  await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).click()); await ui.poll(() => held).toBe(true);
+  await safe(() => refreshReading(tab)); await ui.poll(() => held).toBe(true);
   try { await safe(() => card(tab, sibling.id).click()); await loaded(tab, "Genesis 2:1"); } finally { release(); }
   await tab.unroute(pattern); await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toHaveCount(0);
   for (const id of [fixture.otherStudent.id, "ffffffff-ffff-4fff-8fff-fffffffffff1", "not-a-student"]) {
@@ -110,23 +113,23 @@ it("does not substitute another reading for foreign or unknown routes and reject
   await fixture.ownerDb.update(s.tutorStudent).set({ revokedAt: new Date() }).where(eq(s.tutorStudent.id, fixture.link.id));
   await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
   await ui(tab.getByRole("heading", { name: "Student not found", exact: true })).toBeVisible(); expect(await tab.locator(".study-verses, .verse-work").count()).toBe(0);
-  await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click(); await tab.locator('a[href="/workspace/parent"]').click(); })());
-  await safe(() => tab.getByRole("list", { name: "Child", exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(tab, "Genesis 1:1");
-  expect(await tab.getByRole("link", { name: "Change verses", exact: true }).count()).toBe(0);
+  await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click(); })());
+  await safe(() => goChild(tab, fixture.student.id)); await loaded(tab, "Genesis 1:1");
+  // A parent's reading has no Manage sheet: the staff actions are not theirs.
+  expect(await tab.getByRole("button", { name: "Manage", exact: true }).count()).toBe(0); expect(await tab.getByRole("link", { name: "Change verses", exact: true }).count()).toBe(0);
   await navigate(tab, `/workspace/tutor/${fixture.student.id}`); await ui(tab.getByRole("heading", { name: "Student not found", exact: true })).toBeVisible(); expect(await tab.locator(".study-verses, .verse-work").count()).toBe(0);
   expect((await api(tab, `/api/students/${fixture.student.id}/reading?mode=tutor`)).status).toBe(404);
   await ui(card(tab, sibling.id)).toBeVisible();
 });
 
-it("opens a later-page authorized card and direct URL and waits for exhausted pagination before showing an absent target", async () => {
+it("opens a later-page authorized student by direct URL and waits for exhausted pagination before showing an absent target, while Your students lists the first hundred", async () => {
   const target = "ffffffff-ffff-4fff-8fff-fffffffffff0";
   const rows = Array.from({ length: 100 }, (_, index) => ({ id: `10000000-0000-4000-8000-${(index + 1).toString().padStart(12, "0")}`, tenantId: "crc", firstName: "Synthetic", lastName: `Page ${index + 1}`, ceremonyDate: "2027-01-02", parentEmail: "synthetic@example.test" }));
   await fixture.ownerDb.insert(s.student).values([...rows, { ...rows[0], id: target, lastName: "Routed" }]);
   await fixture.ownerDb.insert(s.tutorStudent).values([...rows.map(row => row.id), target].map(studentId => ({ tenantId: "crc", studentId, tutorGrantId: fixture.tutorGrant.id })));
   await assignment(target, "Genesis 3:1");
-  const tab = await page(); await navigate(tab, "/workspace/tutor"); await ui(cards(tab).locator(".student-card")).toHaveCount(100);
-  await safe(() => tab.getByRole("button", { name: "Load more students", exact: true }).click()); await ui(card(tab, target)).toBeVisible();
-  await safe(() => card(tab, target).click()); await loaded(tab, "Genesis 3:1"); await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/workspace/tutor/${target}`);
+  const tab = await page(); await navigate(tab, "/workspace/tutor"); await ui(tab.getByTestId("mine-students-list").getByRole("listitem")).toHaveCount(100);
+  await navigate(tab, `/workspace/tutor/${target}`); await loaded(tab, "Genesis 3:1"); await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/workspace/tutor/${target}`);
   const direct = await tab.context().newPage(); await navigate(direct, `/workspace/tutor/${target}`); await loaded(direct, "Genesis 3:1");
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await direct.route("**/api/students?mode=tutor&limit=100&afterId=*", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });

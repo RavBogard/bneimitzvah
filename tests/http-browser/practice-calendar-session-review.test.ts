@@ -10,6 +10,7 @@ import { openAuthMail, switchRole } from "./auth-navigation";
 import { countPageFetches, pageFetchesSettled } from "./fetch-settle";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
+import { refreshReading, goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, sibling: { id: string };
@@ -25,7 +26,8 @@ const studyVerses = '[data-testid="study-verses"]';
 const click = (tab: Page, name: string) => safe(() => tab.getByRole("button", { name, exact: true }).click());
 async function ready(tab: Page, expectedServiceReads=1, studentId=fixture.student.id, mode="student") {
   const initialUi = await tab.evaluate(() => ({ visible: document.visibilityState === "visible", reading: Boolean(document.querySelector('[data-testid="study-verses"]')), service: Boolean(document.querySelector("[data-my-service]")), signIn: Boolean(document.querySelector('[data-workspace-state="signed-out"]')) }));
-  await ui(week(tab).getByRole("listitem")).toHaveCount(7);
+  // The week's dots are on the shelf's pinned card now (E1); a student's reading is ready when its text is, and a parent's practice page still has the dots.
+  if (mode === "student") await ui(tab.locator(studyVerses)).toBeVisible(); else await ui(week(tab).getByRole("listitem")).toHaveCount(7);
   // This fixture has no connected ceremony. A completed successful read and
   // the resulting absent panel prove its post-authority probe settled too.
   // Navigation can legitimately abort the previous role's read. Only a finished
@@ -120,7 +122,7 @@ it("keeps calendar 403 and 404 local but makes a direct POST 401 globally termin
     expect(await tab.locator(signedOutState).count()).toBe(0);
     await click(tab, "Close practice view"); await pageFetchesSettled(tab); expect(seen.sessions).toEqual([200]);
     await tab.unroute(eventPath(tab));const expectedServiceReads=selectedReads(tab).length+1;
-    await click(tab, "Refresh reading"); await ready(tab,expectedServiceReads); await pageFetchesSettled(tab); seen.sessions.length = 0;
+    await refreshReading(tab); await ready(tab,expectedServiceReads); await pageFetchesSettled(tab); seen.sessions.length = 0;
   }
   await tab.route(eventPath(tab), async route => { await expired(); await route.fulfill({ status: 401, contentType: "application/json", body: "{}" }); });
   await click(tab, "View Genesis 1:1 up close"); await globallyGone(tab); expect(seen.sessions).toEqual([200, 401]); expect(seen.events).toEqual(["POST", "POST", "POST"]); await tab.context().close();
@@ -133,7 +135,7 @@ it("ignores a held old calendar 401 after a real role and child-context replacem
   await tab.route(eventPath(tab), hold);
   try {
     await click(tab, "View Genesis 1:1 up close"); await ui.poll(() => held).toBe(true); await click(tab, "Close practice view");
-    await switchRole(tab, "Parent"); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${sibling.id}"]`).click();
+    await switchRole(tab, "Parent"); await goChild(tab, sibling.id);
     await click(tab, "Practice with Synthetic"); await ready(tab,1,sibling.id,"child-practice"); await ui(tab.locator(`${studyVerses} [data-verse-ref="Genesis 2:1"]`)).toBeVisible();
   } finally { release(); }
   await completed; await pageFetchesSettled(tab); await ready(tab,1,sibling.id,"child-practice");
@@ -144,6 +146,6 @@ it("ignores a held old calendar 401 after a real role and child-context replacem
   await fixture.ownerDb.update(s.guardian).set({ revokedAt: new Date(), revision: 2 }).where(eq(s.guardian.studentId, sibling.id));
   const denied = tab.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${sibling.id}/reading`);
   await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); expect([403, 404]).toContain((await denied).status());
-  await ui(tab.getByLabel("Child", { exact: true })).toBeVisible(); expect(await tab.locator(`[data-testid="practice-day"], ${studyVerses}, [data-word-index]`).count()).toBe(0);
+  await ui(tab.getByTestId("mine-children")).toBeVisible(); expect(await tab.locator(`[data-testid="practice-bar-title"], ${studyVerses}, [data-word-index]`).count()).toBe(0);
   expect(seen.events).toEqual(["POST"]); await tab.context().close();
 });

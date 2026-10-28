@@ -11,6 +11,7 @@ import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from 
 import { installLoopbackFetchGuard } from "./egress";
 import * as s from "../../src/server/db/index";
 import { installReadingRouteGuard, readingRouteCleanupError, routePageStep } from "./reading-route-guard";
+import { openVerseEditor, goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -57,7 +58,7 @@ async function capture(tab: Page, name: string) {
   } else await safe(() => tab.screenshot({ path: join(directory, `${name}.png`), fullPage: true }));
 }
 // Tutors change verses in a sheet over the reading; admin keeps the inline editor.
-async function openEditor(tab: Page) { await safe(() => tab.getByRole("button", { name: /^(Change|Assign) verses$/ }).click()); await ui(tab.getByRole("dialog", { name: "Set the assigned reading" })).toBeVisible(); await ui(tab.locator(".reading-editor").getByText(/^Calendar:/)).toBeVisible(); }
+async function openEditor(tab: Page) { await safe(() => openVerseEditor(tab)); await ui(tab.getByRole("dialog", { name: "Set the assigned reading" })).toBeVisible(); await ui(tab.locator(".reading-editor").getByText(/^Calendar:/)).toBeVisible(); }
 async function closeEditor(tab: Page) { await click(tab, "Close verse editor"); await ui(tab.getByRole("dialog", { name: "Set the assigned reading" })).toBeHidden(); }
 async function custom(tab: Page, value: string) { await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom")); const advanced = tab.locator("details").filter({ has: tab.getByText("Advanced references and aliyah boundaries", { exact: true }) }); if (!await advanced.getAttribute("open").then(value => value !== null)) await safe(() => advanced.locator(":scope > summary").click()); await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill(value)); }
 beforeAll(async () => {
@@ -79,7 +80,7 @@ it("lets an admin review actual calendar choices, confirm once and replace only 
   await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("aliyah:1"));
   expect(await tab.getByRole("button", { name: "Save assignment", exact: true }).count()).toBe(0);
   await click(tab, "Review assignment");
-  await ui(tab.getByRole("heading", { name: "Explore the full Torah portion", level: 3, exact: true })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: "Explore the full Torah portion", level: 2, exact: true })).toBeVisible();
   await capture(tab, "reading-admin-prepared-desktop");
   let confirmations = 0;
   const counted = await routePageStep(tab, "**/reading/confirm", async route => { confirmations++; const response = await route.fetch(); await route.fulfill({ response }); });
@@ -117,7 +118,7 @@ it("lets an admin review actual calendar choices, confirm once and replace only 
 
 it("retains a tutor draft during visible access revalidation, invalidates edited/stale reviews and never retries an uncertain confirmation", async () => {
   const tab = await page("tutor", true); await navigate(tab, "/workspace/tutor");
-  await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await openEditor(tab); await custom(tab, "Genesis 1:1-3");
+  await safe(() => tab.locator(`a[href="/workspace/tutor/${fixture.student.id}"]`).click()); await openEditor(tab); await custom(tab, "Genesis 1:1-3");
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   let metadataSeen = false, finalSessions = 0;
   const observed = (response: import("playwright").Response) => { const path = new URL(response.url()).pathname;
@@ -233,7 +234,7 @@ it("keeps the tutor sheet visible through prepare, confirm and local reload wait
   finally { explicitReload.release(); }
   await ui(sheet.getByText("Showing what is saved now. Review the assignment again to make a change.", { exact: true })).toBeVisible(); await explicitReload.remove();
   await ui(close).toBeEnabled(); await ui(sheet).toHaveAttribute("closedby", "closerequest"); await safe(() => tab.keyboard.press("Escape")); await ui(sheet).toBeHidden();
-  await ui(tab.getByRole("button", { name: "Change verses", exact: true })).toBeFocused();
+  await ui(tab.getByRole("button", { name: "Manage", exact: true })).toBeFocused();
   await openEditor(tab); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:8-9"); await closeEditor(tab);
 });
 
@@ -253,8 +254,8 @@ it("handles an empty calendar without invention and exposes no editor in parent 
   await ui(tab.getByText("No calendar selections are available. Choose your own verses.", { exact: true })).toBeVisible();
   await custom(tab, "Isaiah 1:1-2"); await click(tab, "Review assignment"); await click(tab, "Save assignment");
   await ui(tab.locator(".confirmed-reading").getByText("Isaiah 1:1-2", { exact: true })).toBeVisible();
-  const parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
-  await ui(parent.getByRole("heading", { name: "Synthetic Learner", level: 2, exact: true })).toBeVisible(); expect(await parent.getByRole("heading", { name: "Set the assigned reading", exact: true }).count()).toBe(0);
+  const parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => goChild(parent, fixture.student.id));
+  await ui(parent.getByRole("heading", { name: "Synthetic Learner", level: 1, exact: true })).toBeVisible(); expect(await parent.getByRole("heading", { name: "Set the assigned reading", exact: true }).count()).toBe(0);
   const [{ serviceSlot }] = await fixture.ownerDb.select({ serviceSlot: s.student.serviceSlot }).from(s.student).where(eq(s.student.id, fixture.student.id)), service = serviceSlot === "morning" ? "Morning service" : "Havdalah service";
   expect(serviceSlot === "morning" || serviceSlot === "havdalah").toBe(true); await ui(parent.locator(".hero-who .hero-slot")).toHaveText(`· ${service}`);
   expect((await api(parent, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "parent", ranges: ["Genesis 1:1"] })).status === 400).toBe(true);

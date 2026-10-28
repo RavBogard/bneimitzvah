@@ -12,6 +12,7 @@ import { openAuthMail } from "./auth-navigation";
 import { markOf } from "./verse-tools";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
+import { refreshReading } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -35,7 +36,7 @@ async function page(role: "tutor" | "student", mobile = false) {
 }
 async function workspace(tab: Page, role: "tutor" | "student") {
   await safe(() => tab.goto(`/workspace/${role}${role === "student" ? "?tab=reading" : ""}`, { waitUntil: "domcontentloaded" }));
-  if (role === "tutor") await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
+  if (role === "tutor") await safe(() => tab.locator(`a[href="/workspace/tutor/${fixture.student.id}"]`).click());
   await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", level: 4, exact: true })).toBeVisible();
 }
 async function openPractice(tab: Page) { await safe(() => tab.getByRole("button", { name: "View Genesis 1:1 up close", exact: true }).click()); await ui(lift(tab)).toBeVisible(); }
@@ -113,7 +114,7 @@ it("lets a student mark verses in practice and a tutor assess them, keeping the 
   expect([saved.verses[0].selfCheck, saved.verses[0].assessment]).toEqual([{ state: "got-it", version: 1 }, { state: "solid", version: 1 }]);
 
   // The student sees the tutor's assessment, and clearing their own mark leaves it alone.
-  await safe(() => student.getByRole("button", { name: "Refresh reading", exact: true }).click());
+  await safe(() => refreshReading(student));
   await ui(await markOf(student, "Genesis 1:1")).toHaveText("Got it");
   await openPractice(student);
   await ui(lift(student).locator(".lift-progress-note:not([role])")).toHaveText("Your tutor: solid");
