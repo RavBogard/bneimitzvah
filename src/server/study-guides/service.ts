@@ -310,26 +310,9 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       return row ? readingView(row, student!.ceremonyDate).source.date : null;
     });
   }
-  async function setThemeRead(request: AccessRequest, selection: { mode: Mode; studentId: string; kind: unknown; readingKey: unknown; themeId: unknown; read: unknown; expectedVersion: unknown }) {
-    // Study v6 (Daniel, 2026-10-28): "I read this" is retired. The route and the stored ticks stay, but nothing writes one any more.
-    if (selection.mode) throw new AccessDenied(403);
-    const kind = kindOf(selection.kind), readingKey = keyOf(selection.readingKey), read = bool(selection.read), expected = versionOf(selection.expectedVersion);
-    if (typeof selection.themeId !== "string" || selection.themeId.length > 73 || !THEME_TICK.test(selection.themeId)) throw new AccessDenied(403);
-    const themeId = selection.themeId;
-    // Only the learner ticks, alone or in a parent's child-practice session (never parent overview or staff).
-    if (selection.mode !== "student" && selection.mode !== "child-practice") throw new AccessDenied(403);
-    return input.practice.withPracticeCapability(request, { mode: selection.mode, studentId: selection.studentId, capability: "practice-write" }, async (tx, actor) => {
-      const view = await viewFor(tx, actor, kind);
-      if (!view || view.readingKey !== readingKey) return fail("stale-assignment");
-      const known = [...(view.base?.themes ?? []), ...(view.additions?.themes ?? [])].some(t => t.id === themeId);
-      if (!known) throw new AccessDenied(404);
-      const head = await data.lockThemeRead(tx, actor, kind, readingKey, themeId), state = read ? "read" as const : "unread" as const;
-      if ((head?.version ?? 0) !== expected) return fail("conflict");
-      if ((head?.state ?? "unread") === state) return Object.freeze({ ok: true as const, themeId, read, version: head?.version ?? 0 });
-      if (expected >= 2147483646) return fail("conflict");
-      const changed = await data.changeThemeRead(tx, actor, { kind, readingKey, themeId, state, expected }, !!head);
-      return changed ? Object.freeze({ ok: true as const, themeId, read, version: changed.version }) : fail("conflict");
-    });
+  /** "I read this" is retired (Study v6, Daniel 2026-10-28): the route and the stored ticks stay, but nothing writes one and no mode may. */
+  async function setThemeRead(_request: AccessRequest, _selection: { mode: Mode; studentId: string; kind: unknown; readingKey: unknown; themeId: unknown; read: unknown; expectedVersion: unknown }): Promise<never> {
+    throw new AccessDenied(403);
   }
 
   // Rabbi's web status and preview (cookie, admin mode, read only; S10) --------------------------

@@ -85,7 +85,7 @@ async function store(view: StudentGuideView) {
 test("the About card: the medallion, the heading, the first paragraph, Read more for the rest, the label; no themes, no ticks, no link to themes", async () => {
   const markup = renderToStaticMarkup(createElement(AboutCard, { store: await store(guideView()), kind: "haftarah" }));
   expect(markup).toContain('src="/brand/mural-512.png"'); expect(markup).toContain('alt=""');
-  expect(markup).toContain(">About this haftarah</h3>");
+  expect(markup).toContain(">About this haftarah</h3>"); expect(markup).toContain('data-study-about="guide"'); expect(markup).not.toContain("data-portion-summary-credit");
   expect(markup).toContain("First synthetic paragraph."); expect(markup).toContain("Second synthetic paragraph.");
   expect(markup).toContain(">Read more</button>");
   expect(markup).toContain('data-guide-label="claude-draft"');

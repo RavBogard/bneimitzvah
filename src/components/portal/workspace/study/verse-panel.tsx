@@ -25,7 +25,9 @@ import styles from "./commentary.module.css";
  */
 export type { VersePanelKind } from "./verse-panel-state";
 type Open = PanelOpen;
-type Scope = Readonly<{ open: Open | null; active: boolean; listOpen: boolean; openList(trigger: HTMLElement): void; toggle(verse: string, kind: VersePanelKind, trigger: HTMLElement): void; close(): void; closeWord(): void;
+type Scope = Readonly<{ open: Open | null; active: boolean; listOpen: boolean; openList(trigger: HTMLElement): void; toggle(verse: string, kind: VersePanelKind, trigger: HTMLElement): void;
+  /** Changes the open panel to another kind for the same verse (Compare from "Everything on this verse"), keeping what focus returns to. */
+  swap(verse: string, kind: VersePanelKind): void; close(): void; closeWord(): void;
   /** A source in a reading's list: the discussion panel at its verse, brought into view first. */
   openFromList(verse: string, trigger: HTMLElement): void; backToVerse(): void;
   /** Study's word tap: the word card for one word, in the sheet. Null when no text page has registered a host. */
@@ -60,6 +62,7 @@ export function VersePanelScope({ children, passage }: { children: ReactNode; pa
     const shown = current.current, next = moveWord(shown, verse, word); if (!shown || next === shown) return;
     trigger.current = null; setOpen(next); host.current?.onVisit?.(verse);
   }, []);
+  const swap = useCallback((verse: string, kind: VersePanelKind) => { setOpen(Object.freeze({ verse, kind, id: `${base}-panel` })); }, [base]);
   const close = useCallback(() => { setOpen(null); }, []);
   const openList = useCallback((element: HTMLElement) => { listTrigger.current = element; setListOpen(true); }, []);
   const closeList = useCallback(() => { setListOpen(false); }, []);
@@ -86,8 +89,8 @@ export function VersePanelScope({ children, passage }: { children: ReactNode; pa
   useEffect(() => { if (!active) { setOpen(null); setListOpen(false); } }, [active]);
   // A source chosen in the phone's Sources sheet: that sheet gives way to the verse's own in the same render, and the Sources button is where focus comes back to.
   const openFromSheet = useCallback((verse: string, element: HTMLElement) => { setListOpen(false); openFromList(verse, listTrigger.current?.isConnected ? listTrigger.current : element); }, [openFromList]);
-  const value = useMemo<Scope>(() => ({ open: active ? open : null, active, listOpen, openList, toggle, close, closeWord, openFromList, backToVerse, openWord: hasWords ? openWord : null, moveWord: stepWord, host, setHost }),
-    [active, open, listOpen, openList, toggle, close, closeWord, openFromList, backToVerse, hasWords, openWord, stepWord, setHost]);
+  const value = useMemo<Scope>(() => ({ open: active ? open : null, active, listOpen, openList, toggle, swap, close, closeWord, openFromList, backToVerse, openWord: hasWords ? openWord : null, moveWord: stepWord, host, setHost }),
+    [active, open, listOpen, openList, toggle, swap, close, closeWord, openFromList, backToVerse, hasWords, openWord, stepWord, setHost]);
   const scope = <Context.Provider value={value}>{children}{active && open && <VersePanelSheet open={open} onClose={close} returnTarget={returnTarget} />}{active && listOpen && !open && <SourcesSheet onClose={closeList} onOpen={openFromSheet} />}</Context.Provider>;
   return passage === undefined ? scope : <DiscussionsSource passage={passage} active={active}>{scope}</DiscussionsSource>;
 }
@@ -156,7 +159,7 @@ function PanelBody({ open }: { open: Open }) {
     {open.kind === "compare" ? <CompareView verse={open.verse} />
       : open.kind === "discussion" ? <DiscussionPanelBody verse={open.verse} />
       : open.kind === "word" ? word && open.word !== undefined && scope ? <WordPanelBody key={word.scopeKey} host={word} verse={open.verse} word={open.word} onMove={scope.moveWord} onGone={scope.close} /> : null
-        : <ShelfView key={open.verse} verse={open.verse} inline={lens.works} />}
+        : <>{parseCompareVerse(open.verse) && scope && <p><button type="button" className="button-secondary" onClick={() => scope.swap(open.verse, "compare")}>Compare translations</button></p>}<ShelfView key={open.verse} verse={open.verse} inline={lens.works} /></>}
   </div>;
 }
 /** The one Sheet of the verse panel, mounted while a panel is open. `focusKey` keeps the same sheet (and the reader's place on its buttons) while a word card steps on. */

@@ -32,21 +32,24 @@ async function mock(page: Page, options: { summary?: "approved" | "draft" | "fai
   if (options.discussions !== false) await page.route("**/api/public/discussions*", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(discussions(new URL(route.request().url()).searchParams)) }));
   return asked;
 }
-const block = (page: Page) => page.locator("[data-portion-summary]");
+// Study v6 (2026-10-28): the approved summary is shown in the About card (same card as the guide's overview), never as a block of its own.
+const block = (page: Page) => page.locator('[data-study-about="summary"]');
 const tab = (page: Page, name: string) => page.getByRole("tablist", { name: "Reading sections" }).getByRole("tab", { name, exact: true });
 const firstVerse = (page: Page) => page.locator("[data-study-rows] [data-verse-ref]").first();
 const wide = (page: Page) => (page.viewportSize()?.width ?? 0) >= 1180;
 
-test("Vayera with an approved summary shows it atop Study, headed 'This portion', with the stamped credit", async ({ page }) => {
+test("Vayera with an approved summary shows it in the About card atop Study, with the stamped credit and Read more", async ({ page }) => {
   const asked = await mock(page);
   await page.goto(week);
   await expect(firstVerse(page)).toBeVisible();
   await expect(block(page)).toBeVisible();
-  await expect(block(page).getByText("This portion", { exact: true })).toBeVisible();
+  await expect(block(page).getByRole("heading", { name: "About this portion" })).toBeVisible();
   await expect(block(page).getByText("A synthetic overview of a made-up portion, in two plain sentences.")).toBeVisible();
   await expect(block(page).locator("strong", { hasText: "A made-up emphasis." })).toBeVisible();
   await expect(block(page).locator("[data-portion-summary-credit]")).toHaveText(CREDIT);
-  await expect(block(page).locator("[data-portion-outline] li")).toHaveCount(7);
+  await expect(block(page).getByRole("button", { name: "Read more" })).toBeVisible();
+  // No outline and no old block: the card is the one overview.
+  await expect(page.locator("[data-portion-summary], [data-portion-outline]")).toHaveCount(0);
   // Atop Study: above the first verse; the page asked for the parashah's summary by its slug, and only once.
   const above = (await block(page).boundingBox())!.y < (await firstVerse(page).boundingBox())!.y;
   expect(above).toBe(true);
@@ -57,41 +60,15 @@ test("Vayera with an approved summary shows it atop Study, headed 'This portion'
   await expect(block(page)).toHaveCount(0);
 });
 
-test("a parashah with no approved summary (a draft is never served) shows no block, no heading and no placeholder", async ({ page }) => {
+test("a parashah with no approved summary (a draft is never served) shows no card, no heading and no placeholder", async ({ page }) => {
   for (const options of [{ summary: "draft" }, { summary: "failed" }] as const) {
     await page.unrouteAll({ behavior: "ignoreErrors" });
     await mock(page, options);
     await page.goto(week);
     await expect(firstVerse(page)).toBeVisible();
-    await expect(page.getByText("This portion", { exact: true })).toHaveCount(0);
-    await expect(page.locator("[data-portion-summary], [data-portion-summary-credit]")).toHaveCount(0);
+    await expect(page.getByText("About this portion")).toHaveCount(0);
+    await expect(page.locator("[data-study-about], [data-portion-summary-credit]")).toHaveCount(0);
   }
-});
-
-test("each outline line goes to its aliyah: the chip, the address and the first verse follow, and the line already open takes focus to its verses", async ({ page }) => {
-  await mock(page);
-  await page.goto(week);
-  await expect(firstVerse(page)).toBeVisible();
-  const first = (n: string) => FULL.find(([key]) => key === n)![1].split("-")[0];
-  for (const n of ["4", "6", "1"]) {
-    await block(page).locator(`button[data-outline-aliyah="${n}"]`).click();
-    await expect(tab(page, `Aliyah ${n}`)).toHaveAttribute("aria-selected", "true");
-    await expect(firstVerse(page)).toHaveAttribute("data-verse-ref", first(n));
-    expect(new URL(page.url()).searchParams.get("pick")).toBe(n === "1" ? "aliyah-1" : `aliyah-${n}`);
-  }
-  // The aliyah already open: no page change, focus goes into the reading.
-  await block(page).locator('button[data-outline-aliyah="1"]').click();
-  await expect(tab(page, "Aliyah 1")).toHaveAttribute("aria-selected", "true");
-  await expect(page.locator("[data-reading-text]:focus-within")).toHaveCount(1);
-});
-
-test("with no aliyot to go to (a week the calendar gives none for) the outline is plain lines that promise nothing", async ({ page }) => {
-  await mock(page, { aliyot: "none" });
-  await page.goto(week);
-  await expect(firstVerse(page)).toBeVisible();
-  await expect(block(page).locator("[data-portion-outline] li")).toHaveCount(7);
-  await expect(block(page).locator("button[data-outline-aliyah]")).toHaveCount(0);
-  await expect(block(page).getByText("Synthetic outline line for aliyah 3")).toBeVisible();
 });
 
 test("the sources close the page, at every width, and open at their verse; there is no Sources button in the tool row", async ({ page }) => {
@@ -176,33 +153,23 @@ async function workspace(page: Page, options: { starts?: string[] | null; summar
 }
 test.describe("a student's own Study", () => {
   test.use({ timezoneId: "America/Chicago" });
-  test("shows the approved summary with its credit, and a line goes to the aliyah the tutor recorded", async ({ page }) => {
+  test("with no guide overview the About card shows the approved summary with its credit, and the sources close the page", async ({ page }) => {
     await workspace(page);
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/workspace/student?tab=reading");
     await page.getByRole("group", { name: "Reading lens" }).getByRole("button", { name: "Study", exact: true }).click();
     await expect(block(page)).toBeVisible();
     await expect(block(page).locator("[data-portion-summary-credit]")).toHaveText(CREDIT);
-    await expect(block(page).getByText("This portion", { exact: true })).toBeVisible();
-    await block(page).locator('button[data-outline-aliyah="4"]').click();
-    await expect(tab(page, "Aliyah 4")).toHaveAttribute("aria-selected", "true");
-    await expect(page.locator('[data-study-rows] [data-verse-ref="Genesis 19:21"]').first()).toBeVisible();
-    // The sources close the page here too (Study v6, 2026-10-28).
+    await expect(block(page).getByRole("heading", { name: "About this portion" })).toBeVisible();
+    await expect(page.locator("[data-study-about]")).toHaveCount(1);
     await expect(page.locator("[data-sources-rail]")).toBeVisible();
   });
-  test("a draft shows nothing; and where the tutor recorded no divisions the outline is plain lines", async ({ page }) => {
+  test("a draft shows no card at all", async ({ page }) => {
     await workspace(page, { summary: "draft" });
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/workspace/student?tab=reading");
     await page.getByRole("group", { name: "Reading lens" }).getByRole("button", { name: "Study", exact: true }).click();
     await expect(page.locator("[data-study-rows] [data-verse-ref]").first()).toBeVisible();
-    await expect(page.locator("[data-portion-summary]")).toHaveCount(0);
-    await page.unrouteAll({ behavior: "ignoreErrors" });
-    await workspace(page, { starts: null });
-    await page.goto("/workspace/student?tab=reading");
-    await page.getByRole("group", { name: "Reading lens" }).getByRole("button", { name: "Study", exact: true }).click();
-    await expect(block(page)).toBeVisible();
-    await expect(block(page).locator("[data-portion-outline] li")).toHaveCount(7);
-    await expect(block(page).locator("button[data-outline-aliyah]")).toHaveCount(0);
+    await expect(page.locator("[data-study-about]")).toHaveCount(0);
   });
 });

@@ -58,6 +58,8 @@ test("theme-read is retired: parent, tutor and student POSTs are all refused, an
   expect((await f.send(path, { who: "multi", body: tick(f, "tutor") })).status).toBe(403);
   expect((await f.send(path, { who: "learner", body: tick(f, "student") })).status).toBe(403);
   expect((await f.send(view(f.studentId, "tutor"), { who: "multi" })).body.view.tickable).toBe(false);
+  // Nothing was written: no tick row exists after any of the refused posts.
+  expect(await f.owner(async () => f.db.select().from(s.studyThemeRead))).toEqual([]);
   // Cross-site and malformed writes never reach the service.
   expect((await f.send(path, { who: "learner", body: tick(f, "student", { expectedVersion: 1 }), headers: { origin: "https://evil.example" } })).status).toBe(403);
   expect((await f.send(path, { who: "learner", body: { ...tick(f, "student"), extra: 1 } })).status).toBe(400);

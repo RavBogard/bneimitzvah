@@ -109,6 +109,17 @@ test("the route answers published discussions with ordered sources, credits and 
   expect((await byRef.json())).toMatchObject({ ref: "Genesis 12:1-3", kind: "torah" });
 });
 
+test("the answer carries the rabbi's display name as plain text and no email, user or membership field", async () => {
+  const read: PublicDiscussionsRead = { productName: "Synthetic Torah", rabbiName: "Rabbi Synthetic", truncated: false, rows: [row("only", 1, "Genesis 12:1")] };
+  const body = await (await harness(read).call("/api/public/discussions?reading=lech-lecha")).json();
+  expect(body.rabbiName).toBe("Rabbi Synthetic");
+  expect(typeof body.rabbiName).toBe("string");
+  // Top level and every nested key: nothing that names a person's account.
+  const keys = (value: unknown): string[] => value && typeof value === "object" ? Object.entries(value).flatMap(([key, child]) => [key, ...keys(child)]) : [];
+  expect(keys(body).filter(key => /e-?mail|user|member|account|actor/i.test(key))).toEqual([]);
+  expect(JSON.stringify(body)).not.toMatch(/@|[0-9a-f]{8}-[0-9a-f]{4}-/);
+});
+
 test("a bad query never opens the runtime, and a source Sefaria cannot give is served without text and kept a minute only", async () => {
   const h = harness({ productName: "Synthetic Torah", truncated: false, rows: [row("only", 1, "Genesis 12:1")] }, Object.assign(async () => { throw new SourceTextUnavailable("upstream"); }, { calls: [] }));
   for (const path of ["/api/public/discussions", "/api/public/discussions?reading=not-a-reading", "/api/public/discussions?reading=noach&kind=torah",
@@ -148,6 +159,8 @@ test("through the real view: a withdrawn discussion is hidden, another congregat
   const read = await withTenantTransaction(f.db, { tenantId: "crc" }, tx => readPublicDiscussions(tx as never, "crc", versesFor({ reading: namedReading("lech-lecha")! })));
   expect(read.rows.map(r => r.slug)).toEqual(["kept"]);
   expect(read.rows[0].selectedByName).toBe("Synthetic Curator");
+  // The rabbi's name comes from the congregation's settings (the neutral default here), as a plain display string.
+  expect(read.rabbiName).toBe("the rabbi");
   const h = harness(read);
   const text = await (await h.call("/api/public/discussions?reading=lech-lecha")).text();
   expect(JSON.parse(text).discussions.map((d: { slug: string }) => d.slug)).toEqual(["kept"]);

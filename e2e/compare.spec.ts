@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
 import { sefariaEditionUrl } from "../src/lib/readings/compare";
 import { creditLine, licenseLabel } from "../src/lib/readings/edition-credit";
+import { parseCommentaryChapter, commentaryCandidates, commentaryEditionUrl } from "../src/lib/readings/commentary";
 import { closeNotes, verseNotes } from "./study-sheet";
 
 // Compare on the built, unconfigured production server. Every reading, text and translations answer is a
@@ -28,26 +29,34 @@ async function mock(page: Page, options: { translations?: "ok" | "fail" } = {}) 
         edition(ref, "en", "Synthetic Edition Two", "Copyright: Synthetic Press", `Synthetic rendering two of ${ref}.`)],
         targum: { work: "Onkelos", aramaic: edition(targum, "he", "Synthetic Aramaic", "Public Domain", "אָבָג דֵּה"), english: edition(targum, "en", "Synthetic Targum English", "", "Synthetic targum rendering.") } });
     }
+    // A verse has a notes card only where something speaks on it, so Rashi speaks on all three: Compare lives in "Everything on this verse" there.
+    if (url.pathname === "/api/public/commentary") {
+      const work = q.get("work")!, chapter = q.get("chapter")!, parsed = parseCommentaryChapter(work, chapter), c = parsed ? commentaryCandidates(parsed) : null;
+      const editions = parsed && c ? [c.he[0], c.en[0]].filter(Boolean).map(item => ({ language: item.language, title: item.title, license: item.license, credit: item.credit, url: commentaryEditionUrl(parsed, item) })) : [];
+      return json({ work, chapter, verses: work === "rashi" ? Object.fromEntries(["1", "2", "3"].map(n => [n, { comments: [{ hebrew: null, english: [{ text: `Synthetic comment ${n}` }] }] }])) : {}, editions });
+    }
     return json({ error: "unavailable" }, 503);
   });
   return { calls, recover() { failing = false; } };
 }
-// Study v6 (Daniel, 2026-10-28): the notes column has three actions (Everything on this verse, Copy, Open on Sefaria), so Compare has no entry point in Study for now.
-// These tests are skipped, not deleted, until Daniel says where Compare goes; the verse panel's Compare code and its unit tests are intact.
 const row = (page: Page, ref: string) => page.locator(`[data-study-rows] article[data-verse-ref="${ref}"]`);
-/** A verse's Compare: with its notes (the rail beside the verses, or its Notes sheet on a phone; Study as a study sheet, 2026-10-28). */
-const compare = async (page: Page, ref: string) => (await verseNotes(page, ref)).getByRole("button", { name: "Compare", exact: true });
+/** Compare is inside "Everything on this verse" (Study v6): the verse's opener, and the "Compare translations" button in the sheet it opens. */
+const everything = async (page: Page, ref: string) => (await verseNotes(page, ref)).getByRole("button", { name: "Everything on this verse", exact: true });
+const compare = async (page: Page, ref: string) => {
+  const opener = await everything(page, ref);
+  await opener.click();
+  return { opener, button: page.getByRole("dialog", { name: `More on ${ref}` }).getByRole("button", { name: "Compare translations", exact: true }) };
+};
 const compareSheets = (page: Page) => page.getByRole("dialog", { name: /^Compare / });
 const panel = (page: Page) => page.locator("[data-verse-panel]");
 
-test.skip("Compare opens one sheet for the verse: every other translation credited as Sefaria states it, then the Targum, and Esc gives focus back", async ({ page }) => {
+test("Compare opens one sheet for the verse: every other translation credited as Sefaria states it, then the Targum, and Esc gives focus back", async ({ page }) => {
   const sefaria = await mock(page);
   await page.goto("/read?lens=study");
   await expect(row(page, "Genesis 1:1")).toBeVisible();
   expect(sefaria.calls.some(call => call.startsWith("/api/public/translations"))).toBe(false); // only when opened
-  const button = await compare(page, "Genesis 1:2");
+  const { opener, button } = await compare(page, "Genesis 1:2");
   expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-  await button.scrollIntoViewIfNeeded();
   const scrolled = await page.evaluate(() => scrollY);
   await button.click();
   // One Sheet (1.9 N4): modal, named for the verse, opening on its title, and the page behind it does not move.
@@ -62,10 +71,10 @@ test.skip("Compare opens one sheet for the verse: every other translation credit
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.keyboard.press("Escape");
   await expect(compareSheets(page)).toHaveCount(0);
-  await expect(button).toBeFocused();
+  await expect(opener).toBeFocused();
   // Another verse's Compare opens its own sheet; Close does the same as Esc.
-  const third = await compare(page, "Genesis 1:3");
-  await third.click();
+  const { opener: third, button: thirdCompare } = await compare(page, "Genesis 1:3");
+  await thirdCompare.click();
   await expect(page.getByRole("dialog", { name: "Compare Genesis 1:3" }).getByRole("heading", { name: "Compare Genesis 1:3" })).toBeFocused();
   await page.getByRole("dialog", { name: "Compare Genesis 1:3" }).getByRole("button", { name: "Close", exact: true }).click();
   await expect(compareSheets(page)).toHaveCount(0);
@@ -73,13 +82,13 @@ test.skip("Compare opens one sheet for the verse: every other translation credit
   // Lein has no Compare.
   await closeNotes(page);
   await page.getByRole("button", { name: "Lein", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Compare", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Compare/ })).toHaveCount(0);
 });
 
-test.skip("a failed Compare is one quiet line with Try again, and the reading is untouched", async ({ page }) => {
+test("a failed Compare is one quiet line with Try again, and the reading is untouched", async ({ page }) => {
   const sefaria = await mock(page, { translations: "fail" });
   await page.goto("/read?lens=study");
-  await (await compare(page, "Genesis 1:1")).click();
+  await (await compare(page, "Genesis 1:1")).button.click();
   await expect(panel(page).getByText("Translations aren’t available right now.")).toBeVisible();
   await expect(row(page, "Genesis 1:2")).toBeVisible();
   sefaria.recover();
@@ -87,10 +96,10 @@ test.skip("a failed Compare is one quiet line with Try again, and the reading is
   await expect(panel(page).getByText("Synthetic rendering one of Genesis 1:1.")).toBeVisible();
 });
 
-test.skip("the Compare sheet is modal: Tab never leaves it, and a tap outside closes it and gives focus back", async ({ page }) => {
+test("the Compare sheet is modal: Tab never leaves it, and a tap outside closes it and gives focus back", async ({ page }) => {
   await mock(page);
   await page.goto("/read?lens=study");
-  const button = await compare(page, "Genesis 1:1");
+  const { opener, button } = await compare(page, "Genesis 1:1");
   await button.click();
   const sheet = page.getByRole("dialog", { name: "Compare Genesis 1:1" });
   await expect(sheet.getByText("Synthetic rendering one of Genesis 1:1.")).toBeVisible();
@@ -100,5 +109,5 @@ test.skip("the Compare sheet is modal: Tab never leaves it, and a tap outside cl
   // A tap on the backdrop (the top of the screen, above the sheet) closes it.
   await page.mouse.click(4, 4);
   await expect(compareSheets(page)).toHaveCount(0);
-  await expect(button).toBeFocused();
+  await expect(opener).toBeFocused();
 });

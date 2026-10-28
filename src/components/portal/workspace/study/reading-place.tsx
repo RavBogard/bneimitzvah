@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { chapterOf, readingChapters, topVisible } from "./reading-place-model";
+import { chapterOf, readingChapters } from "./reading-place-model";
+import { FOLLOW } from "./rail-follow";
 import { useOpenPanelVerse } from "./verse-panel";
 import styles from "./commentary.module.css";
 
@@ -17,18 +18,17 @@ export function scrollToVerse(ref: string): void {
 export function ReadingPlace({ refs, pageKey, onJump, onHere }: { refs: readonly string[]; pageKey: string; onJump(ref: string): void; onHere?(ref: string): void }) {
   const chapters = useMemo(() => readingChapters(refs), [refs]);
   const [here, setHere] = useState<string | null>(null), openVerse = useOpenPanelVerse();
-  // The verse nearest the top of the screen, from what is on screen after the page's verses render; the top fifth counts, so the line is not late.
+  // The first verse whose bottom passes the reading line (33% of the viewport): the same line the notes column follows, so the label never lags a verse behind.
   useEffect(() => {
-    const rows = [...document.querySelectorAll<HTMLElement>("[data-study-rows] [data-verse-ref]")], order = rows.map(row => row.dataset.verseRef!);
-    setHere(order[0] ?? null);
-    if (typeof IntersectionObserver === "undefined" || !rows.length) return;
-    const visible = new Set<string>();
-    const watch = new IntersectionObserver(entries => {
-      for (const entry of entries) { const ref = (entry.target as HTMLElement).dataset.verseRef!; if (entry.isIntersecting) visible.add(ref); else visible.delete(ref); }
-      const top = topVisible(order, visible); if (top) setHere(top);
-    }, { rootMargin: "0px 0px -80% 0px" });
-    rows.forEach(row => watch.observe(row));
-    return () => watch.disconnect();
+    const rows = [...document.querySelectorAll<HTMLElement>("[data-study-rows] [data-verse-ref]")];
+    setHere(rows[0]?.dataset.verseRef ?? null);
+    if (!rows.length) return;
+    let tick = false;
+    const sync = () => { tick = false; const line = window.innerHeight * FOLLOW.line; const row = rows.find(item => item.getBoundingClientRect().bottom > line); if (row) setHere(row.dataset.verseRef!); };
+    const onScroll = () => { if (!tick) { tick = true; requestAnimationFrame(sync); } };
+    window.addEventListener("scroll", onScroll, { passive: true }); window.addEventListener("resize", onScroll);
+    sync();
+    return () => { window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); };
   }, [pageKey]);
   useEffect(() => { if (openVerse) setHere(openVerse); }, [openVerse]);
   // Told to the page as it changes (Choose verses opens the whole portion at this verse, and back).
