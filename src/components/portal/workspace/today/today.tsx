@@ -150,7 +150,8 @@ function PinnedReady({ slices, assigned, headingId }: { slices: TodaySlices; ass
       {countdown.phrase && <span className={styles.days} data-nobreak>{countdown.phrase}</span>}
     </div>
     <h2 id={headingId} className={styles.name}><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>
-    {(readings.length > 0 || slot) && <p className={styles.ranges} data-nobreak>{readings.flatMap(reading => refSegments(reading.ranges).map((segment, index) => `${index === 0 ? `${reading.kind === "torah" ? "Torah" : "Haftarah"} ` : ""}${segment}`)).join(" · ")}{slot && <>{readings.length > 0 && " · "}{slot}</>}</p>}
+    {(readings.length > 0 || slot) && <p className={styles.ranges}>{readings.flatMap(reading => refSegments(reading.ranges).map((segment, index) => `${index === 0 ? `${reading.kind === "torah" ? "Torah" : "Haftarah"} ` : ""}${segment}`))
+      .map((text, index) => <span key={index}>{index > 0 && " · "}<span data-nobreak>{text}</span></span>)}{slot && <>{readings.length > 0 && " · "}<span data-nobreak>{slot}</span></>}</p>}
     {rehearsal && <p className={styles.rehearsal} data-nobreak>{rehearsal}</p>}
     {readings.length === 0 ? <p className={styles.empty}>Your tutor or rabbi will add your verses here.</p>
       : <div className={styles.got} data-testid="pinned-progress">
@@ -158,13 +159,15 @@ function PinnedReady({ slices, assigned, headingId }: { slices: TodaySlices; ass
         <div className={styles.bar} aria-hidden="true"><span style={{ inlineSize: count && count.total ? `${Math.round(count.got * 100 / count.total)}%` : "0%" }} /></div>
         <p className={styles.gotCount}>{count ? `${count.got} of ${count.total}` : " "}</p>
       </div>}
+    {readings.length > 0 && lesson.status === "loading" && <div className={styles.holdNote} aria-hidden="true" />}
     {note && <section className={styles.note} data-testid="today-note" aria-labelledby={`${headingId}-note`}>
       <p id={`${headingId}-note`} className={styles.noteLabel}>Latest from <bdi dir="auto">{note.displayName}</bdi> · <time dateTime={note.lessonDate}>{noteDay(note.lessonDate)}</time>:</p>
       <p className={styles.noteText} dir="auto">{note.summary}</p>
       {note.beforeNext && <BeforeNext text={note.beforeNext} own />}
     </section>}
+    {readings.length > 0 && dates.status === "loading" && <div className={styles.holdDots} aria-hidden="true" />}
     {readings.length > 0 && dates.status === "ready" && <div className={styles.dots}>
-      <ol className="practice-week" aria-labelledby={caption}>{lastSevenDays(dates.serverDay, dates.dates).map(day =>
+      <ol className="practice-week" data-testid="practice-week" aria-label="Practice this week" aria-describedby={caption}>{lastSevenDays(dates.serverDay, dates.dates).map(day =>
         <li key={day.date} data-testid="practice-day" className={`practice-day${day.practised ? " practice-day-done" : ""}${day.today ? " practice-day-today" : ""}`}>
           <span aria-hidden="true" className="practice-day-letter">{weekdayLetters[day.weekday]}</span>
           <span className="practice-day-dot" aria-hidden="true" />
@@ -173,6 +176,7 @@ function PinnedReady({ slices, assigned, headingId }: { slices: TodaySlices; ass
       <p id={caption} className={styles.caption}>Days you practised · a day fills when you open your reading up close</p>
     </div>}
     {readings.length > 0 && dates.status === "unavailable" && <p className={styles.caption}>Practice days couldn’t be loaded.</p>}
+    {dates.status === "loading" && <div className={styles.holdCalendar} aria-hidden="true" />}
     {dates.status !== "loading" && <div className={styles.calendar}><PracticeMonths today={calendarDay} first={dates.status === "ready" ? dayOrdinal(dates.fromDate) : calendarDay - 364}
       practiced={ordinal => dates.status === "ready" && dates.dates.has(dayString(ordinal))} marks={dayMarks} lastDay={dayOrdinal(student.ceremonyDate)} /></div>}
     <div className={styles.actions}>

@@ -28,6 +28,7 @@
 .childCard { display: grid; gap: 0.5rem; min-width: 0; padding: 1rem 1.25rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
 .childCard > * { margin: 0; min-width: 0; max-width: none; }
 .childHead { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.625rem; }
+.childHead :global([data-tone]) { white-space: normal; max-width: 100%; }
 .childDays { color: var(--color-muted); font-size: 0.875rem; font-weight: 600; white-space: nowrap; }
 .childName { font-size: 1.125rem; line-height: 1.25; overflow-wrap: anywhere; }
 .childRanges { color: var(--color-muted); font-size: 0.875rem; font-weight: 600; font-variant-numeric: tabular-nums; }

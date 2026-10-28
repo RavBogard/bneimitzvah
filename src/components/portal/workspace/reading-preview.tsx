@@ -35,7 +35,7 @@ export function ReadingPreview({ mode, baseline, kind, custom, disabled,onUseSel
   function failure(error: unknown) {
     clear();
     const status = statusOf(error);
-    setNotice(status === 409 ? "The student or reading changed. Use Refresh reading above, then preview again."
+    setNotice(status === 409 ? "The student or reading changed. Use Refresh reading in Manage, then preview again."
       : [401, 403, 404].includes(status) ? "This preview is no longer available. Current access is being checked."
       : status === 400 ? "Check the custom references before previewing them."
       : "The preview is unavailable. Your custom draft and the assigned reading have not changed.");

@@ -700,11 +700,11 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 .study-more { display: flex; flex-wrap: wrap; align-items: start; gap: 0.5rem 1.5rem; margin-top: 1.5rem; }
 .study-more .study-credits { margin-top: 0; flex: 1 1 20rem; }
 .study-more > a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
-.study-more > .study-print-action { display: none; min-height: 44px; margin: 0; padding: 0; font-size: 1rem; font-weight: 600; }
+.study-more > .study-print-action { display: inline-flex; align-items: center; min-height: 44px; margin: 0; padding: 0; font-size: 1rem; font-weight: 600; }
 .study-more > .study-print-sheet { display: none; }
 @media (max-width: 1000px) {
   .reading-print-action[data-learner], .reading-print-sheet[data-learner] { display: none; }
-  .study-more > .study-print-action, .study-more > .study-print-sheet { display: inline-flex; align-items: center; }
+  .study-more > .study-print-action { display: inline-flex; align-items: center; }
 }
 .verse-work > summary { gap: 0.3em; }
 .workspace-main:has(.reading-toolbar) .service-learning-panel { border-top: 0; padding: 1.25rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
@@ -1238,3 +1238,6 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .account-section { margin-top: 1.75rem; }
 .account-section > h2 { margin: 0 0 0.75rem; font-size: 1.125rem; font-weight: 700; line-height: 1.3; }
 .account-main > [data-practice-disclosure], .account-main [data-install-hint] { margin-top: 1.5rem; }
+
+/* While access is checked the page keeps a screen of room, so the shelf or reading that replaces it does not move the foot of the page (E6, CLS). */
+.workspace-state[data-workspace-state="checking"] { min-height: 60svh; }

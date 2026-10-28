@@ -4,7 +4,12 @@
 
 .pinned { display: grid; gap: 0.625rem; max-width: 40rem; min-width: 0; padding: 1rem 1.25rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
 .pinned > * { min-width: 0; margin: 0; max-width: none; }
-.holdRoom { min-height: 16rem; }
+.holdRoom { min-height: 24rem; }
+/* Room held while the note, the week and the calendar arrive, so the shelf below does not move when they do. */
+.holdNote { min-height: 5.5rem; }
+.holdDots { min-height: 5.5rem; }
+.holdCalendar { min-height: 2.75rem; }
+.head :global([data-tone]) { white-space: normal; max-width: 100%; }
 .state { color: var(--color-muted); }
 
 .head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.625rem; }
@@ -39,3 +44,4 @@
 .links { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0; padding: 0; list-style: none; }
 .links li { margin: 0; }
 .links a { display: inline-flex; align-items: center; min-height: 44px; font-weight: var(--weight-semibold); }
+.ranges [data-nobreak] { white-space: nowrap; }

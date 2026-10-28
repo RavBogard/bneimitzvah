@@ -33,6 +33,7 @@ import { TabBar, TabSkipLink } from "../shell/tab-bar";
 
 import { fetchShortExplorationPage, checkShortExplorationExpectation } from "./study/short-exploration-api";
 import { createShortExplorationOwner as composeShortExplorationOwner, type ShortExplorationOwner } from "./study/short-exploration-owner";
+import { adminArea } from "../shell/tabs";
 import { SiteBar } from "../../site/site-bar";
 import { rememberSignedIn } from "../signed-in-hint";
 import { rolePaths } from "../shell/role-home";
@@ -581,7 +582,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const shellShown = Boolean(summary) && !checking && failure === null;
   // A checked session is what the site bar on the public pages remembers (the same hint the reader's Save uses).
   useEffect(() => { if (shellShown) rememberSignedIn(true); }, [shellShown]);
-  return <div className="portal-shell workspace-shell" data-rail-pending={!shellShown && failure === null ? "" : undefined}>
+  return <div className="portal-shell workspace-shell" data-rail-pending={!shellShown && failure === null && adminArea(pathname) ? "" : undefined}>
     <a className="skip-link" href="#workspace-main">{pathname.startsWith("/mine") ? "Skip to main content" : "Skip to workspace"}</a>
     {shellShown && <TabSkipLink roles={summary!.roles} />}
     <SiteBar signedIn onNavigate={controlledLink} />
