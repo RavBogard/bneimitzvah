@@ -6,6 +6,7 @@ import { recommendedLesson } from "../../../lib/learn/recommendation";
 import { ButtonLink, List, ListRow, PageHeader } from "../../ui";
 import { AccountRequest } from "../account-request";
 import { useWorkspace } from "../workspace/provider";
+import { PINNED_HREF, pinnedOf, PinnedReadingCard, useStudentToday, type TodaySlices } from "../workspace/today/today";
 import { interimRows, shelfModel, type LearnRowState, type PinnedState, type ShelfSection } from "./model";
 import { OwnReadings, useOwnReadings } from "./own-readings";
 import { YourStudents } from "./your-students";
@@ -30,15 +31,12 @@ export const SHELF_STRINGS = Object.freeze({
   accountMeta: " · roles, email, sign out",
 });
 
-/** The student's pinned reading, first on the shelf. Task E1 fills `pinned`; until then the section is never drawn. */
-export function PinnedSection({ pinned, roles }: { pinned: PinnedState | null; roles: readonly string[] }) {
-  // Interim rows to the role pages: Area E replaces them with E1 (the student's pinned reading) and E2 (the parent's view); D7's Your students is in place.
+/** The student's pinned reading, first on the shelf (E1), with an interim row to a parent's page until E3's children's cards. */
+export function PinnedSection({ slices, roles }: { slices: TodaySlices; roles: readonly string[] }) {
   const rows = interimRows(roles);
-  return <section className={styles.section} aria-label="Your assigned reading" data-testid="mine-pinned">
-    <List>
-      {pinned && <ListRow title={pinned.name} meta={[pinned.ceremony, pinned.total ? `${pinned.done} of ${pinned.total} verses` : null].filter(Boolean).join(" · ") || undefined} href={pinned.href} />}
-      {rows.map(row => <ListRow key={row.role} title={row.title} meta={<span data-testid={`mine-interim-${row.role}`}>{row.action ?? "Open"}</span>} href={row.href} />)}
-    </List>
+  return <section className={styles.section} aria-label="Your reading" data-testid="mine-pinned">
+    {roles.includes("student") && <PinnedReadingCard slices={slices} />}
+    {rows.length > 0 && <List>{rows.map(row => <ListRow key={row.role} title={row.title} meta={<span data-testid={`mine-interim-${row.role}`}>{row.action ?? "Open"}</span>} href={row.href} />)}</List>}
   </section>;
 }
 
@@ -86,11 +84,11 @@ function useLearnRow(): LearnRowState {
 
 export function Shelf() {
   const { summary } = useWorkspace(), { state: own, retry } = useOwnReadings(), learn = useLearnRow();
-  // The pinned reading arrives with Task E1.
-  const pinned: PinnedState | null = null;
+  const slices = useStudentToday(summary.roles.includes("student")), found = pinnedOf(slices);
+  const pinned: PinnedState | null = found && { name: found.name, ceremony: found.ceremony, done: found.done, total: found.total, href: PINNED_HREF };
   const view = shelfModel({ summary, own, pinned, learn });
   const part = (section: ShelfSection) => section === "students" ? <YourStudents key={section} /> : section === "find" ? <FindALearner key={section} roles={summary.roles} />
-    : section === "pinned" ? <PinnedSection key={section} pinned={pinned} roles={summary.roles} />
+    : section === "pinned" ? <PinnedSection key={section} slices={slices} roles={summary.roles} />
     : section === "own" ? <OwnReadings key={section} state={own} onRetry={retry} />
       : section === "learn" ? <LearnSection key={section} learn={learn} /> : <AccountSection key={section} />;
   return <section className="role-workspace" data-testid="shelf" aria-busy={own.status === "loading"}>

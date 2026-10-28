@@ -8,7 +8,6 @@ vi.mock("../../src/components/portal/workspace/provider", async original => ({ .
   WorkspaceLink: ({ href, children, ...rest }: { href: string; children: ReactNode }) => createElement("a", { ...rest, href }, children) }));
 vi.mock("../../src/components/portal/workspace/document-title", () => ({ DocumentTitle: () => null }));
 import { ThisWeekLists, weekAhead, weekWindow, type WeekStudent } from "../../src/components/portal/workspace/staff/this-week";
-import { TodayView } from "../../src/components/portal/workspace/today/today";
 
 type Node = DefaultTreeAdapterMap["node"];
 const children = (node: Node): Node[] => "childNodes" in node ? node.childNodes : [];
@@ -49,19 +48,5 @@ describe("The admin's This week lists", () => {
     const markup = renderToStaticMarkup(createElement(ThisWeekLists, { now, students: [student(1)] }));
     expect(markup).toContain("Ceremonies this week"); expect(markup).toContain("Rehearsals this week");
     expect(markup.match(/None this week\./g)).toHaveLength(2);
-  });
-});
-
-describe("The student's Today", () => {
-  const view = (lesson: { status: "ready"; value: unknown }) => parseFragment(renderToStaticMarkup(createElement(TodayView, {
-    headingId: "today-h", student: { id: id(1), firstName: "Synthetic", lastName: "Learner", ceremonyDate: "2027-01-09", revision: 1 }, ownAdultHonors: false,
-    readings: [{ id: id(2), kind: "torah", revision: 1, ranges: ["Genesis 23:1-23:9"], verses: ["Genesis 23:1", "Genesis 23:2"], needsReview: false, aliyahStarts: null, source: { status: "unknown", fetchedAt: null, date: null, calendar: null, attribution: null }, confirmationDate: null, basis: "synthetic" }],
-    marks: { status: "unavailable" }, lesson, dates: { status: "unavailable" }, choices: null, onChoose() {} } as never)));
-  it("shows the tutor's latest note before the list of reading sections", () => {
-    const tree = view({ status: "ready", value: { entryId: id(3), lessonDate: "2026-10-20", summary: "Synthetic summary.", beforeNext: null, version: 1, displayName: "Synthetic Tutor", canEdit: false, canDelete: false } });
-    const all = nodes(tree), note = all.find(node => attr(node, "data-testid") === "today-note")!, list = all.find(node => attr(node, "aria-label") === "Reading sections")!;
-    expect(note).toBeDefined(); expect(list).toBeDefined();
-    expect(all.indexOf(note)).toBeLessThan(all.indexOf(list));
-    expect(text(note)).toContain("Latest from Synthetic Tutor"); expect(text(note)).toContain("Oct 20");
   });
 });

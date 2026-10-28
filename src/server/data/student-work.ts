@@ -15,12 +15,13 @@ export async function studentRevision<Q extends PgQueryResultHKT>(tx: AccessTran
   if (!row) throw new Error("Work authority unavailable");
   return row.revision;
 }
-const displayName = (value: string) => value.includes("@") ? "Portal member"
-  : Array.from(value.toWellFormed().replace(/[\x00-\x1f\x7f-\x9f]/g, " ").trim()).slice(0, 120).join("") || "Portal member";
+// A tutor's note with no usable name reads "your tutor" (Readings for everyone E1); a student's or a parent's own work keeps "Portal member".
+const displayName = (value: string, mode: string) => { const none = mode === "tutor" || mode === "admin" ? "your tutor" : "Portal member";
+  return value.includes("@") ? none : Array.from(value.toWellFormed().replace(/[\x00-\x1f\x7f-\x9f]/g, " ").trim()).slice(0, 120).join("") || none; };
 export function view(row: WorkRow) {
   return { id: row.id, verseRef: row.verseRef, version: row.version, text: row.text,
     assignmentId: row.assignmentId, assignmentRevision: row.assignmentRevision,
-    author: { membershipId: row.actorMembershipId, displayName: displayName(row.displayName), mode: row.mode, assisted: row.mode === "child-practice" }, createdAt: row.createdAt.toISOString() };
+    author: { membershipId: row.actorMembershipId, displayName: displayName(row.displayName, row.mode), mode: row.mode, assisted: row.mode === "child-practice" }, createdAt: row.createdAt.toISOString() };
 }
 export async function history<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: WorkActor, stream: Stream, verseRef: string, before: number | undefined, limit: number) {
   const t = table(stream);

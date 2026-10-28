@@ -204,14 +204,14 @@ test("email-shaped account names use safe author labels on current/history/recei
   await f.owner(() => f.db.update(s.user).set({ name: "synthetic-staff@example.test" }).where(eq(s.user.id, f.identities.multi.id)));
   const selection = { ...f.selection, mode: "tutor" as const };
   const appended = await f.work.append(f.workRequest("multi"), selection, "note", input);
-  expect(appended).toMatchObject({ committed: { author: { displayName: "Portal member", membershipId: f.multiMember.id } } });
+  expect(appended).toMatchObject({ committed: { author: { displayName: "your tutor", membershipId: f.multiMember.id } } });
   const page = await f.work.page(f.workRequest(), f.selection);
   if (!page.ok) throw new Error("Expected work page");
-  expect(page.verses[0].notes[0].author.displayName).toBe("Portal member");
+  expect(page.verses[0].notes[0].author.displayName).toBe("your tutor");
   const history = await f.work.history(f.workRequest(), f.selection, "note", input.verseRef);
-  expect(history).toMatchObject({ versions: [{ author: { displayName: "Portal member" } }] });
+  expect(history).toMatchObject({ versions: [{ author: { displayName: "your tutor" } }] });
   const receipt = await f.work.receipt(f.workRequest("multi"), selection, "note", input.verseRef, input.mutationId);
-  expect(receipt).toMatchObject({ committed: { author: { displayName: "Portal member" } } });
+  expect(receipt).toMatchObject({ committed: { author: { displayName: "your tutor" } } });
   expect(JSON.stringify([appended, page, history, receipt])).not.toContain("@");
 });
 
