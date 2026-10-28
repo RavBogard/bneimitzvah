@@ -24,7 +24,9 @@ function pages(directory: string): string[] {
 // The signed-in surface: the workspace, and the account, connect, invitation and sign-in pages. Public pages
 // (home, /read, /learn, /trope-chart, /print, /offline) carry their own titles through the product name.
 const SIGNED_IN = pages(APP).map(path => relative(APP, path).split(sep).join("/"))
-  .filter(path => path.startsWith("workspace/") || ["account/page.tsx", "connect/page.tsx", "invitations/accept/page.tsx", "sign-in/page.tsx", "unsubscribe/page.tsx"].includes(path)).sort();
+  // The portal group (My Readings and the workspace) adds no segment to an address; a page that only redirects is never seen, so it carries no title.
+  .filter(path => !readFileSync(join(APP, path), "utf8").includes("redirect("))
+  .filter(path => path.startsWith("(portal)/workspace/") || path.startsWith("(portal)/mine/") || ["account/page.tsx", "connect/page.tsx", "invitations/accept/page.tsx", "sign-in/page.tsx", "unsubscribe/page.tsx"].includes(path)).sort();
 
 test("every signed-in page sets its own title, ending with | CRC Torah", async () => {
   expect(SIGNED_IN.length).toBeGreaterThanOrEqual(20);
@@ -37,7 +39,7 @@ test("every signed-in page sets its own title, ending with | CRC Torah", async (
     expect(typeof title, file).toBe("string");
     expect(title as string, file).toMatch(/^\S.* \| CRC Torah$/);
     // A student's own page is titled by the student's name in the browser; before that, tutor and admin share "Student".
-    const shared = /^workspace\/(tutor\/\[studentId\]|admin\/students\/\[studentId\]\/reading)\/page\.tsx$/.test(file);
+    const shared = /^\(portal\)\/workspace\/(tutor\/\[studentId\]|admin\/students\/\[studentId\]\/reading)\/page\.tsx$/.test(file);
     if (shared) named.push(title as string);
     else expect(seen.get(title as string), `${file} repeats ${seen.get(title as string)}`).toBeUndefined();
     seen.set(title as string, file);
@@ -54,14 +56,14 @@ test("a page whose h1 is fixed is titled with that h1", () => {
     ...[...source(file).matchAll(/<PageHeader title=(?:"([^"]+)"|\{[^"}]*"([^"]+)")/g)].map(match => match[1] ?? match[2])];
   const titleOf = (file: string) => /signedInTitle\("([^"]+)"\)/.exec(source(file))?.[1];
   for (const [component, page] of [
-    ["components/portal/workspace/accounts/workspace.tsx", "app/workspace/accounts/page.tsx"],
-    ["components/portal/workspace/connections/workspace.tsx", "app/workspace/claude/page.tsx"],
-    ["components/portal/workspace/email/workspace.tsx", "app/workspace/email/page.tsx"],
-    ["components/portal/workspace/invitations/workspace.tsx", "app/workspace/admin/invitations/page.tsx"],
-    ["components/portal/workspace/reference-review/workspace.tsx", "app/workspace/admin/reference-review/page.tsx"],
-    ["components/portal/workspace/settings/workspace.tsx", "app/workspace/admin/settings/page.tsx"],
-    ["components/portal/workspace/csv-import/workspace.tsx", "app/workspace/admin/students/import/page.tsx"],
-    ["components/portal/workspace/roster.tsx", "app/workspace/admin/students/page.tsx"],
+    ["components/portal/workspace/accounts/workspace.tsx", "app/(portal)/workspace/accounts/page.tsx"],
+    ["components/portal/workspace/connections/workspace.tsx", "app/(portal)/workspace/claude/page.tsx"],
+    ["components/portal/workspace/email/workspace.tsx", "app/(portal)/workspace/email/page.tsx"],
+    ["components/portal/workspace/invitations/workspace.tsx", "app/(portal)/workspace/admin/invitations/page.tsx"],
+    ["components/portal/workspace/reference-review/workspace.tsx", "app/(portal)/workspace/admin/reference-review/page.tsx"],
+    ["components/portal/workspace/settings/workspace.tsx", "app/(portal)/workspace/admin/settings/page.tsx"],
+    ["components/portal/workspace/csv-import/workspace.tsx", "app/(portal)/workspace/admin/students/import/page.tsx"],
+    ["components/portal/workspace/roster.tsx", "app/(portal)/workspace/admin/students/page.tsx"],
     ["components/portal/connect.tsx", "app/connect/page.tsx"],
   ] as const) expect(headings(component), page).toContain(titleOf(page));
 });

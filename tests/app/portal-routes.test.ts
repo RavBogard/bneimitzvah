@@ -77,6 +77,14 @@ describe("private portal HTTP adapters over actual SDK and restricted tenant ser
     expect((await f.call("/api/session/begin", { who: "recipient", body: {} })).status).toBe(200);
     expect(await memberships()).toHaveLength(1);
     expect(await json(await f.call("/api/session", { who: "recipient" }))).toMatchObject({ membershipAvailable: true, roles: [], saved: true });
+    // The home's door (Readings for everyone E3): GET only, signed in only, private, a closed shape of names, dates and counts, with no query.
+    expect(portalRouteMethods("/api/session/door")?.join()).toBe("GET");
+    expect((await f.call("/api/session/door", { who: "anonymous" })).status).toBe(401);
+    expect((await f.call("/api/session/door", { who: "recipient", body: {} })).status).toBe(405);
+    expect((await f.call("/api/session/door?mode=admin", { who: "recipient" })).status).toBe(400);
+    const door = await f.call("/api/session/door", { who: "recipient" });
+    expect(door.status === 200 && privateResponse(door)).toBe(true);
+    expect(await json(door)).toEqual({ pinned: null, child: null, nearest: null, count: 0 });
     // A membership is not a role: nothing a role gates opens.
     for (const mode of ["student", "parent", "tutor", "admin"]) expect((await f.call(`/api/students?mode=${mode}`, { who: "recipient" })).status, mode).toBe(403);
     for (const [who, mode, expected] of [["multi", "parent", 2], ["multi", "tutor", 1], ["admin", "admin", 3], ["learner", "student", 1]] as const) {

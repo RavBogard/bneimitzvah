@@ -175,14 +175,14 @@ it("single-submits a real magic link, shows separate genuine roles without fake 
   expect(await roles.getByRole("link").count()).toBe(2);
   // Both roles open My Readings (Area A); the role pages are reached from its rows.
   await roles.getByRole("link").first().click(); await ui.poll(() => new URL(tab.url()).pathname).toBe("/mine");
-  await ui(tab.getByTestId("mine-interim-parent")).toBeVisible(); await ui(tab.getByTestId("mine-students")).toBeVisible();
-  await tab.locator('a[href="/workspace/parent"]').click(); await ui.poll(() => new URL(tab.url()).pathname).toBe("/workspace/parent");
+  // Readings for everyone E3: a parent's shelf has a card for each child, a tutor's has Your students; the role pages are not reached from rows any more.
+  await ui(tab.getByTestId("mine-children")).toBeVisible(); await ui(tab.getByTestId("mine-students")).toBeVisible();
   // The old role pills are gone; the workspace brand is an actual controlled Next router link.
   await tab.evaluate(() => { (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument = true; });
   await tab.getByTestId("site-brand").click();
   await ui.poll(() => new URL(tab.url()).pathname).toBe("/"); await referrerPolicy(tab, "strict-origin-when-cross-origin");
   expect(await tab.evaluate(() => (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument), "Workspace brand must preserve the hydrated document").toBe(true);
-  await tab.goBack({ waitUntil: "domcontentloaded" }); await ui.poll(() => new URL(tab.url()).pathname).toBe("/workspace/parent"); await referrerPolicy(tab, "no-referrer");
+  await tab.goBack({ waitUntil: "domcontentloaded" }); await ui.poll(() => new URL(tab.url()).pathname).toBe("/mine"); await referrerPolicy(tab, "no-referrer");
   expect(await tab.evaluate(() => (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument), "History back must preserve the same document").toBe(true);
   await tab.getByTestId("site-brand").click();
   await ui.poll(() => new URL(tab.url()).pathname).toBe("/"); await ui(tab.locator('[data-door="beit-mitzvah"][data-door-role="parent"]')).toBeVisible();
@@ -316,11 +316,10 @@ it("keeps invitation landing nonaccepting and accepts one reviewed binding only,
   await ui(entryTask(recipient, "accepted")).toBeVisible();
   await clean(recipient, [token, email]);
   await safe(() => recipient.getByTestId("invitation-continue").click());
-  // Continue lands on My Readings (Area A); the student's pages open from its interim row.
-  await ui(recipient.getByTestId("mine-interim-student")).toBeVisible();
-  await recipient.locator('a[href="/workspace/student"]').click();
-  await ui(recipient.locator("[data-today]")).toBeVisible();
-  expect(new URL(recipient.url()).pathname === "/workspace/student").toBe(true);
+  // Continue lands on My Readings (Area A); the student's reading is the pinned card's Open link (E1).
+  await ui(recipient.getByTestId("pinned-reading")).toBeVisible();
+  await recipient.getByTestId("pinned-reading").getByRole("link", { name: "Open", exact: true }).click();
+  await ui.poll(() => new URL(recipient.url()).pathname).toBe("/mine/reading");
   expect(await recipient.getByTestId("entry-task").count()).toBe(0);
   await openAuthMail(recipient, link);
   await ui(entryTask(recipient, "invalid-invitation")).toBeVisible();

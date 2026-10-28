@@ -4,10 +4,10 @@ import { claimLearner, fetchLearners, unclaimLearner, type Learner } from "./api
 import { longDate } from "./own-readings";
 import styles from "./shelf.module.css";
 
-/** Find a learner (decision 15): every signed-in person with a shelf, by name, with "Claim as my student" in one tap. */
+/** Find a learner (decision 15): every signed-in person with a shelf, by name, with "Add to my students" in one tap. */
 export const FIND_STRINGS = Object.freeze({
-  title: "Find a learner", claim: "Claim as my student", removeClaim: "Remove claim", noTutor: "No tutor yet", tutor: "Tutor: ", next: "next ", noDate: "no date",
-  claimed: (name: string) => `${name} is now your student.`, hasTutor: "This learner already has a tutor.", failed: "That didn’t work. Try again.", none: "No learners found.",
+  title: "Find a learner", claim: "Add to my students", removeClaim: "Remove from my students", noTutor: "No tutor yet", tutor: "Tutor: ", next: "next ", noDate: "no date",
+  claimed: (name: string) => `${name} was added to your students.`, hasTutor: "This learner already has a tutor.", failed: "That didn’t work. Try again.", none: "No learners found.",
 });
 export const learnerShelfHref = (membershipId: string) => `/mine/learner/${encodeURIComponent(membershipId)}`;
 const readings = (n: number) => `${n} ${n === 1 ? "reading" : "readings"}`;

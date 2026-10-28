@@ -59,12 +59,12 @@ describe("Needs you (N14)", () => {
     expect((await t.call("/api/admin/student-status", "admin")).json.students.find((row: StudentStatus) => row.id === t.own.id).family).toBe("none");
     await t.f.owner(() => t.f.db.update(s.user).set({ emailVerified: true }).where(eq(s.user.id, t.f.identities.multi.id)));
     const roster = (await t.call("/api/admin/students", "admin")).json.students;
-    const rows = needsYouRows(roster, statuses).filter(row => row.student.id === t.unrelated.id);
+    const rows = needsYouRows(roster, statuses).filter(row => row.student?.id === t.unrelated.id);
     const tutorRows = rows.filter(row => row.condition === "no-tutor");
     expect(tutorRows).toHaveLength(1);
     expect(NEEDS_YOU_TEXT["no-tutor"]).toEqual({ text: "No tutor yet.", verb: "Choose a tutor." });
     // The students a year out are not listed at all.
-    expect(needsYouRows(roster, statuses).some(row => row.student.id === t.own.id)).toBe(false);
+    expect(needsYouRows(roster, statuses).some(row => row.student?.id === t.own.id)).toBe(false);
     expect(statusChips(roster.find((row: { id: string }) => row.id === t.unrelated.id), statuses.get(t.unrelated.id))).toContain("No tutor yet");
   });
 

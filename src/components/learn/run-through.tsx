@@ -11,7 +11,7 @@ import styles from "./learn.module.css";
 /**
  * 1.9 N19: the Run-through. A signed-in student chants their own reading verse by verse with no audio and the colours off,
  * and marks each verse Clean or Stumbled. A stumble feeds review (the verse becomes a card, or its card drops); the summary
- * names the stumbled verses, "Practise verses 3 and 8 again.", with no tally. Nothing here plays, and nothing is shown to
+ * names the stumbled verses, "Practice verses 3 and 8 again.", with no tally. Nothing here plays, and nothing is shown to
  * a tutor, a parent or anyone else: the results live only in the student's own verse cards.
  * Anyone without an own reading (signed out, a tutor, a parent, an admin) sees only the way back.
  */

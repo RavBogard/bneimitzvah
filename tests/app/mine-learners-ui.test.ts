@@ -57,7 +57,7 @@ describe("the shelf's learners client", () => {
 describe("Find a learner", () => {
   const view = (rows: readonly Learner[], roles: string[] = ["tutor"], extra: Partial<Parameters<typeof FindALearnerView>[0]> = {}) => renderToStaticMarkup(createElement(FindALearnerView, { query: "", state: { status: "ready", rows },
     tutor: roles.includes("tutor"), admin: roles.includes("admin"), pending: null, status: null, problem: null, inputId: "find", onQuery: () => {}, onClaim: () => {}, onUnclaim: () => {}, ...extra }));
-  it("is a search field named Find a learner, with each row's name, count, nearest date and tutor, and one Claim as my student", () => {
+  it("is a search field named Find a learner, with each row's name, count, nearest date and tutor, and one Add to my students", () => {
     const markup = view([learner(), learner({ membershipId: M2, name: "Synthetic Other", readings: 1, nearest: null, tutor: { name: "Synthetic Tutor", claimed: true, mine: false } })]);
     expect(markup).toContain('<label for="find"');
     expect(markup).toContain('type="search"');
@@ -65,25 +65,25 @@ describe("Find a learner", () => {
     expect(markup).toContain("3 readings"); expect(markup).toContain("1 reading ");
     expect(markup).toContain("Saturday, October 24, 2026"); expect(markup).toContain("no date");
     expect(markup).toContain(FIND_STRINGS.noTutor); expect(markup).toContain("Tutor: <bdi dir=\"auto\">Synthetic Tutor</bdi>");
-    expect(markup.match(/aria-label="Claim as my student: /g)).toHaveLength(2);
-    expect(markup).not.toContain("Remove claim");
+    expect(markup.match(/aria-label="Add to my students: /g)).toHaveLength(2);
+    expect(markup).not.toContain("Remove from my students");
     // Nobody's name is a link until the claim is the viewer's own: the shelf behind it is 404 to anyone else.
     expect(markup).not.toContain(`href="${learnerShelfHref(M1)}"`);
   });
-  it("a claimed learner of the viewer's own shows the tutor's name in the disabled button and opens the learner's shelf; an admin gets Remove claim", () => {
+  it("a claimed learner of the viewer's own shows the tutor's name in the disabled button and opens the learner's shelf; an admin gets Remove from my students", () => {
     const mine = learner({ tutor: { name: "Synthetic Me", claimed: true, mine: true } });
     const markup = view([mine]);
-    expect(markup).toMatch(/<button[^>]*disabled=""[^>]*aria-label="Claim as my student: Synthetic Learner">Synthetic Me<\/button>/);
+    expect(markup).toMatch(/<button[^>]*disabled=""[^>]*aria-label="Add to my students: Synthetic Learner">Synthetic Me<\/button>/);
     expect(markup).toContain(`href="${learnerShelfHref(M1)}"`);
     const admin = view([mine, learner({ membershipId: M2, name: "Rabbi's claim", tutor: { name: "Synthetic Tutor", claimed: true, mine: false } })], ["admin"]);
-    expect(admin.match(/Remove claim: /g)).toHaveLength(2);
-    expect(admin).not.toContain("Claim as my student");
+    expect(admin.match(/Remove from my students: /g)).toHaveLength(2);
+    expect(admin).not.toContain("Add to my students");
     expect(admin).toContain(`href="${learnerShelfHref(M2)}"`);
-    expect(view([learner({ tutor: { name: "Synthetic Tutor", claimed: false, mine: false } })], ["admin"])).not.toContain("Remove claim");
+    expect(view([learner({ tutor: { name: "Synthetic Tutor", claimed: false, mine: false } })], ["admin"])).not.toContain("Remove from my students");
   });
   it("says what happened after a claim, and when a learner already has a tutor, in the house tone", () => {
     const after = view([learner()], ["tutor"], { status: FIND_STRINGS.claimed("Synthetic Learner") });
-    expect(after).toContain('role="status">Synthetic Learner is now your student.</p>');
+    expect(after).toContain('role="status">Synthetic Learner was added to your students.</p>');
     expect(view([learner()], ["tutor"], { problem: FIND_STRINGS.hasTutor })).toContain('role="alert"');
     expect(view([])).toContain(FIND_STRINGS.none);
     for (const markup of [after, view([]), view([learner()], ["tutor"], { state: { status: "failed" } })]) expect(markup).not.toMatch(/!/);
@@ -97,16 +97,16 @@ describe("Your students", () => {
     const linked = learner({ membershipId: M2, name: "Synthetic Linked", tutor: { name: "Me", claimed: true, mine: true }, student: { id: R1, firstName: "Synthetic", lastName: "Linked", ceremonyDate: "2027-05-01" } });
     const bare = learner({ name: "Synthetic Bare", tutor: { name: "Me", claimed: true, mine: true } });
     const other = learner({ membershipId: "00000000-0000-4000-8000-000000000033", name: "Synthetic Other", tutor: { name: "Someone", claimed: true, mine: false } });
-    const rows = studentRows([student(R1, "Linked", "2027-05-01"), student("00000000-0000-4000-8000-000000000102", "Sooner", "2027-01-02")], [other, bare, linked], new Map([[R1, "Practised the first aliyah"]]));
+    const rows = studentRows([student(R1, "Linked", "2027-05-01"), student("00000000-0000-4000-8000-000000000102", "Sooner", "2027-01-02")], [other, bare, linked], new Map([[R1, "Practiced the first aliyah"]]));
     expect(rows.map(row => [row.name, row.href])).toEqual([["Synthetic Sooner", "/workspace/tutor/00000000-0000-4000-8000-000000000102"], ["Synthetic Linked", `/workspace/tutor/${R1}`], ["Synthetic Bare", learnerShelfHref(M1)]]);
-    expect(rows[1].note).toBe("Practised the first aliyah");
+    expect(rows[1].note).toBe("Practiced the first aliyah");
     expect(firstLine("  First line\nSecond")).toBe("First line"); expect(firstLine("\n\n")).toBeNull(); expect(firstLine(null)).toBeNull();
   });
   it("renders each row with the days to go, the note's first line and Open, under the Your students heading", () => {
-    const markup = renderToStaticMarkup(createElement(YourStudentsView, { state: { status: "ready", rows: studentRows([student(R1, "Linked", "2999-01-02")], [], new Map([[R1, "Practised the first aliyah"]])) }, onRetry: () => {} }));
+    const markup = renderToStaticMarkup(createElement(YourStudentsView, { state: { status: "ready", rows: studentRows([student(R1, "Linked", "2999-01-02")], [], new Map([[R1, "Practiced the first aliyah"]])) }, onRetry: () => {} }));
     expect(markup).toContain(`>${YOUR_STUDENTS_STRINGS.title}</h2>`);
     expect(markup).toContain('data-testid="mine-students"');
-    expect(markup).toContain("days to go"); expect(markup).toContain("Practised the first aliyah"); expect(markup).toContain(">Open<");
+    expect(markup).toContain("days to go"); expect(markup).toContain("Practiced the first aliyah"); expect(markup).toContain(">Open<");
     expect(markup).toContain(`href="/workspace/tutor/${R1}"`);
     expect(renderToStaticMarkup(createElement(YourStudentsView, { state: { status: "ready", rows: [] }, onRetry: () => {} }))).toContain(YOUR_STUDENTS_STRINGS.none);
     expect(renderToStaticMarkup(createElement(YourStudentsView, { state: { status: "failed" }, onRetry: () => {} }))).toContain(">Try again</button>");

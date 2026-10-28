@@ -5,6 +5,8 @@ import { and, eq } from "drizzle-orm";
 import { accessFixture } from "./access-fixture";
 import { createPortalService } from "../../src/server/portal/service";
 import { createPracticeService } from "../../src/server/practice/service";
+import { createProgressService } from "../../src/server/progress/service";
+import { createSavedService } from "../../src/server/saved/service";
 import { createInvitationService } from "../../src/server/invitations/service";
 import { createStudentService } from "../../src/server/students/service";
 import { parseCeremonyDate } from "../../src/lib/readings/ranges";
@@ -307,4 +309,39 @@ it("legacy confirmed snapshots missing slot provenance require review while reta
  const current=await f.portal.assignedReading(f.http(),{mode:"parent",studentId:f.students[0].id});
  expect(current.readings[0]).toMatchObject({needsReview:true,verses:["Genesis 1:1","Genesis 1:2","Genesis 1:3"]});
  expect(Object.keys(current.student).sort()).toEqual(["ceremonyDate","firstName","id","lastName","rehearsal1","rehearsal2","revision","serviceSlot"]);
+});
+
+describe("the home's door (Readings for everyone E3)", () => {
+  async function withDoor() {
+    const f = await fixture();
+    const door = createPortalService({ access: f.service, practice: f.practice, sessionBindingSecret: randomBytes(48).toString("base64url"),
+      door: { progress: createProgressService({ access: f.service, practice: f.practice }), saved: createSavedService({ access: f.service }) } });
+    return { ...f, door };
+  }
+  it("names a student's pinned reading with how many verses they have got, and nothing for a parent, a tutor or the saved count", async () => {
+    const f = await withDoor();
+    const none = await f.door.sessionDoor(f.http("learner"));
+    expect(none).toEqual({ pinned: { name: "Synthetic Sibling A", date: "2027-01-02", got: 0, total: 0 }, child: null, nearest: null, count: 0 });
+    const reading = await f.confirm("torah", ["Genesis 1:1-3"]);
+    const progress = createProgressService({ access: f.service, practice: f.practice });
+    const selection = { studentId: f.students[0].id, mode: "student" as const, kind: "torah" as const, assignmentId: reading.assignmentId, assignmentRevision: reading.revision };
+    const marked = await progress.setSelfCheck(f.http("learner", undefined, { method: "POST" }), selection, { verseRef: "Genesis 1:1", state: "got-it", expectedVersion: 0 });
+    expect(marked.ok).toBe(true);
+    expect((await f.door.sessionDoor(f.http("learner"))).pinned).toEqual({ name: "Synthetic Sibling A", date: "2027-01-02", got: 1, total: 3 });
+  });
+  it("names a parent's first child and a tutor's nearest student, and counts the readings a member keeps", async () => {
+    const f = await withDoor();
+    const saved = createSavedService({ access: f.service });
+    for (const index of [1, 2, 3]) await saved.create(f.http("multi", undefined, { method: "POST" }), { name: `Reading ${index}`, date: "2026-11-07", kind: "torah", ranges: "Genesis 1:1-3" });
+    const door = await f.door.sessionDoor(f.http("multi"));
+    expect(door.pinned).toBeNull();
+    expect(door.child).toEqual({ name: "Synthetic Sibling A", date: "2027-01-02" });
+    expect(door.nearest).toEqual({ name: "Synthetic Sibling A", date: "2027-01-02" });
+    expect(door.count).toBe(3);
+  });
+  it("is empty for the admin, and refuses a signed-out request like the summary", async () => {
+    const f = await withDoor();
+    expect(await f.door.sessionDoor(f.http("admin"))).toEqual({ pinned: null, child: null, nearest: null, count: 0 });
+    expect(await denied(() => f.door.sessionDoor(f.http("multi", undefined, { cookie: "" })), 401)).toBe(true);
+  });
 });

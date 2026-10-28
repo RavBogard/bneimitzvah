@@ -1,51 +1,47 @@
-/* 1.9 N11: the student's Today. It spends the N9 tokens and writes no colour, size or radius of its own beyond them. A reference or a date
-   is one unit that never breaks across lines (.nobreak); where a line is too long it breaks between units, never inside one. */
+/* The student's pinned reading on /mine (Readings for everyone E1; was the 1.9 N11 Today). It spends the N9 tokens and writes no colour, size
+   or radius of its own beyond them. A reference or a date is one unit that never breaks across lines ([data-nobreak]); where a line is too long
+   it breaks between units, never inside one. */
 
-.today { display: grid; gap: 0.75rem; max-width: 40rem; min-width: 0; }
-.today > * { min-width: 0; }
-.nobreak { white-space: nowrap; }
+.pinned { display: grid; gap: 0.625rem; max-width: 40rem; min-width: 0; padding: 1rem 1.25rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.pinned > * { min-width: 0; margin: 0; max-width: none; }
+.holdRoom { min-height: 24rem; }
+/* Room held while the note, the week and the calendar arrive, so the shelf below does not move when they do. */
+.holdNote { min-height: 5.5rem; }
+.holdDots { min-height: 5.5rem; }
+.holdCalendar { min-height: 2.75rem; }
+.head :global([data-tone]) { white-space: normal; max-width: 100%; }
+.state { color: var(--color-muted); }
 
-/* ---- The lake field: parashah, countdown, rehearsal, the readings as chips ---- */
-.lake { display: grid; gap: 0.375rem; padding: 1rem 1.25rem; border-radius: var(--radius-object); background: var(--lake); color: #fff; }
-.lake .who { margin: 0; color: rgb(255 255 255 / 0.88); font-size: var(--text-callout); font-weight: var(--weight-semibold); line-height: 1.3; overflow-wrap: anywhere; }
-.lake .parashah { max-width: none; margin: 0; font-size: clamp(1.875rem, 9.4vw, var(--text-display)); font-weight: var(--weight-strong); line-height: 1.08; letter-spacing: -0.03em; overflow-wrap: break-word; color: #fff; }
-.lake .parashah:focus { outline: none; }
-.lake .when { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.625rem; margin: 0; max-width: none; font-size: var(--text-body); line-height: 1.35; font-variant-numeric: tabular-nums; }
-.lake .days { padding: 0.0625rem 0.625rem; border-radius: var(--radius-pill); background: var(--marigold); color: var(--on-ink); font-size: var(--text-callout); font-weight: var(--weight-semibold); white-space: nowrap; }
-.lake .rehearsal { margin: 0; max-width: none; font-size: var(--text-body); font-weight: var(--weight-semibold); line-height: 1.35; font-variant-numeric: tabular-nums; }
-.readings { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.375rem 0 0; padding: 0; list-style: none; }
-.readings li { margin: 0; min-width: 0; }
+.head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.625rem; }
+.days { color: var(--color-muted); font-size: var(--text-callout); font-weight: var(--weight-semibold); white-space: nowrap; }
+.name { font-size: var(--text-heading); font-weight: var(--weight-strong); line-height: 1.2; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.ranges, .rehearsal { color: var(--color-muted); font-size: var(--text-callout); font-weight: var(--weight-semibold); line-height: 1.35; font-variant-numeric: tabular-nums; }
+.empty { color: var(--color-muted); }
 
-/* ---- The Next card: one decision, one button, then the last seven days ---- */
-.pending { visibility: hidden; }
-.next { display: grid; gap: 0.625rem; padding: 1rem 1.25rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
-.next .nextTitle { margin: 0; font-size: var(--text-heading); font-weight: var(--weight-strong); line-height: 1.25; letter-spacing: -0.01em; }
-.next .nextRef { color: var(--color-muted); font-size: var(--text-callout); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
-.dots { display: grid; gap: 0.375rem; padding-top: 0.625rem; border-top: 1px solid var(--color-rule); }
-.dots .caption { margin: 0; max-width: none; color: var(--color-muted); font-size: var(--text-caption); line-height: 1.35; }
-.dots :global(.practice-week) { max-width: 17.5rem; }
+/* ---- What the student has: a bar and "9 of 14" ---- */
+.got { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0.25rem 0.75rem; }
+.gotLabel { grid-column: 1 / -1; font-size: var(--text-callout); font-weight: var(--weight-semibold); }
+.bar { block-size: 0.5rem; border-radius: var(--radius-pill); background: var(--color-rule); overflow: hidden; }
+.bar > span { display: block; block-size: 100%; border-radius: var(--radius-pill); background: var(--color-action); }
+.gotCount { min-inline-size: 4.5rem; text-align: end; font-size: var(--text-callout); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+@media (forced-colors: active) { .bar { border: 1px solid CanvasText; } .bar > span { forced-color-adjust: none; background: Highlight; } }
 
-/* ---- Reading sections as rows, each with its state: a dot and a word ---- */
-.state { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--color-ink); font-size: var(--text-callout); font-weight: var(--weight-semibold); white-space: nowrap; }
-.dot { flex: none; width: 0.875rem; height: 0.875rem; border-radius: 50%; box-sizing: border-box; border: 2px solid var(--color-control-rule); background: transparent; }
-.state[data-state="working"] .dot { border-color: var(--color-action); background: linear-gradient(to right, var(--color-action) 50%, transparent 50%); }
-.state[data-state="solid"] .dot { border-color: var(--forest); background: var(--forest); }
-@media (prefers-color-scheme: dark) { .state[data-state="solid"] .dot { border-color: var(--color-teal); background: var(--color-teal); } }
-@media (forced-colors: active) { .dot { border-color: CanvasText; } .state[data-state="working"] .dot { forced-color-adjust: none; background: linear-gradient(to right, Highlight 50%, transparent 50%); border-color: Highlight; } .state[data-state="solid"] .dot { forced-color-adjust: none; background: Highlight; border-color: Highlight; } }
-
-/* ---- The latest lesson note, pinned ---- */
-.note { display: grid; gap: 0.125rem; padding: 0.25rem 1.25rem 0.875rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
-.noteHead { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-height: 44px; }
+/* ---- The tutor's latest note ---- */
+.note { display: grid; gap: 0.125rem; padding-top: 0.625rem; border-top: 1px solid var(--color-rule); }
 .note .noteLabel { margin: 0; max-width: none; min-width: 0; font-size: var(--text-callout); font-weight: var(--weight-semibold); line-height: 1.35; color: var(--color-muted); overflow-wrap: anywhere; }
 .note .noteText { margin: 0; max-width: none; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; white-space: pre-line; overflow-wrap: anywhere; line-height: 1.5; }
 .note :global(.lesson-before-next) { margin-top: 0.25rem; }
-.note .noteMore { flex: none; display: inline-flex; align-items: center; justify-content: flex-end; min-height: 44px; min-width: 44px; font-weight: var(--weight-semibold); }
 
-/* ---- The calendar sits behind the existing "Practice calendar" disclosure ---- */
+/* ---- The last seven days, then the calendar behind its disclosure ---- */
+.dots { display: grid; gap: 0.375rem; padding-top: 0.625rem; border-top: 1px solid var(--color-rule); }
+.dots .caption, .caption { margin: 0; max-width: none; color: var(--color-muted); font-size: var(--text-caption); line-height: 1.35; }
+.dots :global(.practice-week) { max-width: 17.5rem; }
 .calendar { padding-inline: 0.25rem; }
 .calendar :global(.practice-month) { margin-top: 0; }
 
-/* A student account with more than one student chooses between them first. */
-.chooser { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
-
-@media (min-width: 1000px) { .today { max-width: 44rem; } }
+/* ---- Open, and the two places inside the reading ---- */
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+.links { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0; padding: 0; list-style: none; }
+.links li { margin: 0; }
+.links a { display: inline-flex; align-items: center; min-height: 44px; font-weight: var(--weight-semibold); }
+.ranges [data-nobreak] { white-space: nowrap; }

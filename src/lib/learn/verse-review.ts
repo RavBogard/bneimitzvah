@@ -136,7 +136,7 @@ export function answerVerseRun(run: VerseRun, result: VerseResult): VerseRun {
 export const stumbledRefs = (run: VerseRun): string[] => run.order.filter(id => run.results[id] === "stumbled").map(id => parseVerseCardId(id)!.ref);
 
 /**
- * The Run-through's summary (Daniel, 2026-10-24, "Keep, drop the tally"): "Practise verses 3 and 8 again.", built from the
+ * The Run-through's summary (Daniel, 2026-10-24, "Keep, drop the tally"): "Practice verses 3 and 8 again.", built from the
  * stumbled verses alone, with no count of clean ones. Verses are named by number within one chapter, by chapter:verse
  * across chapters, and in full across books. Null when nothing stumbled.
  */
@@ -147,7 +147,7 @@ export function practiseAgain(refs: readonly string[]): string | null {
   const oneBook = positions.every(p => p.book === positions[0].book), oneChapter = oneBook && positions.every(p => p.chapter === positions[0].chapter);
   const names = positions.map(p => oneChapter ? `${p.verse}` : oneBook ? `${p.chapter}:${p.verse}` : `${p.book} ${p.chapter}:${p.verse}`);
   const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
-  return `Practise ${names.length === 1 ? "verse" : "verses"} ${list} again.`;
+  return `Practice ${names.length === 1 ? "verse" : "verses"} ${list} again.`;
 }
 
 /**

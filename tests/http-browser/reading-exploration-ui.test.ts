@@ -26,6 +26,7 @@ import { installLoopbackFetchGuard } from "./egress";
 import { installReadingRouteGuard, readingRouteCleanupError } from "./reading-route-guard";
 import { assertBrowserStartupAllowed, BROWSER_ORIGIN, startBrowserServer } from "./server";
 import * as s from "../../src/server/db/index";
+import { refreshReading, goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 declare global { interface Window { explorationAudios: HTMLAudioElement[]; explorationOverlap: number } }
 
@@ -179,7 +180,7 @@ it("keeps parent dashboard read-only and enters exploration only after selecting
   const tab = await page(); let requests = 0;
   tab.on("request", request => { if (new URL(request.url()).pathname.includes("/reading/explore/")) requests++; });
   await safe(() => tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" }));
-  await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click();
+  await goChild(tab, fixture.student.id);
   await ui(tab.getByRole("button", { name: "Practice with Synthetic", exact: true })).toBeVisible();
   expect(await portion(tab).count()).toBe(0); expect(requests).toBe(0);
   await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click();
@@ -202,7 +203,7 @@ it("preserves confirmed Haftarah and honest unknown-slot state without borrowing
   await tutor(tab); await ui(tab.getByTestId("assigned-haftarah-heading")).toBeVisible();
   await ui(tab.getByRole("button", { name: "Hear Isaiah 1:1", exact: true })).toBeVisible(); expect(assignedTorah).toBe(0);
   await fixture.ownerDb.update(s.student).set({ serviceSlot: "unknown" }).where(eq(s.student.id, fixture.student.id));
-  await tab.getByRole("button", { name: "Refresh reading", exact: true }).click();
+  await refreshReading(tab);
   await ui(portion(tab).getByTestId("exploration-state")).toHaveAttribute("data-exploration-state", "unresolved-unknown-slot");
   await ui(tab.getByRole("button", { name: "Hear Isaiah 1:1", exact: true })).toBeVisible(); expect(assignedTorah).toBe(0);
 });
@@ -214,9 +215,10 @@ it("held proposed reading remains readable without reference metadata and option
     tab.on("request", request => { const path = new URL(request.url()).pathname; if (path.endsWith("/reading/explore/reference/short/page") || path.endsWith("/reference-audio/short/page")) metadata++; if (shortBodies.has(path)) bodies++; });
     await tutor(tab); await position(tab, 1, 100, 146);
     await ui(tab.getByRole("button", { name: /^Hear/ })).toHaveCount(0); await ui(tab.getByRole("button", { name: "Practice up close", exact: true })).toHaveCount(0);
-    await tab.getByRole("button", { name: "Start reading", exact: true }).click(); await ui(portion(tab).getByTestId("study-verses")).toBeFocused();
+    // E2: no Start reading button; the portion's text takes focus where a reader puts it.
+    await ui(tab.getByRole("button", { name: "Start reading", exact: true })).toHaveCount(0); await portion(tab).getByTestId("study-verses").focus(); await ui(portion(tab).getByTestId("study-verses")).toBeFocused();
     await ui(tab.getByRole("dialog")).toHaveCount(0); expect(metadata).toBe(0); expect(bodies).toBe(0); expect(await tab.evaluate(() => window.explorationAudios.length)).toBe(0);
-    await assign("haftarah"); await tab.getByRole("button", { name: "Refresh reading", exact: true }).click();
+    await assign("haftarah"); await refreshReading(tab);
     const practice = tab.getByRole("button", { name: "Practice assigned Haftarah up close", exact: true }); await ui(practice).toBeEnabled(); await practice.click();
     await ui(tab.getByRole("dialog", { name: "Isaiah 1:1", exact: true })).toBeVisible(); await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0);
     expect(metadata).toBe(0); expect(bodies).toBe(0); expect(await tab.evaluate(() => window.explorationAudios.length)).toBe(0);

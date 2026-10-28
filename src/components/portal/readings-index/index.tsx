@@ -79,7 +79,7 @@ function Verses({ mode }: { mode: IndexMode }) {
   const [corpus, setCorpus] = useState<StudyKind>("torah"), [custom, setCustom] = useState("");
   const ref = customRef(custom, corpus), chosen = custom.trim() !== "";
   return <form onSubmit={event => { event.preventDefault(); if (ref) goToReading(refHref(ref, corpus, mode)); }}>
-    <div className="study-kind-choice" role="group" aria-label="Kind of passage">
+    <div className="study-kind-choice" role="group" aria-label="Kind of reading">
       {(["torah", "haftarah"] as const).map(kind => <button key={kind} type="button" className="button-secondary" aria-pressed={corpus === kind}
         onClick={() => { if (kind !== corpus) { setCorpus(kind); setCustom(""); } }}>{kind === "torah" ? "Torah" : "Prophets"}</button>)}
     </div>

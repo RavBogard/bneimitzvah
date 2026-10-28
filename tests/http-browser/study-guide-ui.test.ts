@@ -12,6 +12,7 @@ import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { guide, note, source, theme } from "../helpers/study-guide-fixture";
 import * as s from "../../src/server/db/index";
 import type { GuideBody } from "../../src/server/study-guides/validation";
+import { goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -42,7 +43,7 @@ async function page(who: "student" | "parent" | "tutor" | "admin", mobile = fals
   if (who === "student") await tab.goto("/workspace/student?tab=reading", { waitUntil: "domcontentloaded" });
   else if (who === "tutor") await tab.goto(`/workspace/tutor/${fixture.student.id}`, { waitUntil: "domcontentloaded" });
   else if (who === "admin") await tab.goto(`/workspace/admin/students/${fixture.student.id}/reading`, { waitUntil: "domcontentloaded" });
-  else { await tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); }
+  else { await tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await goChild(tab, fixture.student.id); }
   await ui(tab.locator(studyVerses).getByRole("heading", { name: "Genesis 1:1", level: 4, exact: true })).toBeVisible();
   return tab;
 }

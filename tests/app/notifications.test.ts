@@ -237,7 +237,7 @@ describe("weekly digests", () => {
     f.clock.now = sunday;
     const today = chicagoDay(sunday).date;
     await f.owner(async () => {
-      // Ada practised on three of the last seven days (and once before that window); Cy on one.
+      // Ada practiced on three of the last seven days (and once before that window); Cy on one.
       for (const back of [1, 3, 7, 9]) await f.db.insert(s.practiceDay).values({ tenantId: "crc", studentId: f.students[0].id, practiceDay: addDays(today, -back) });
       await f.db.insert(s.practiceDay).values({ tenantId: "crc", studentId: f.students[2].id, practiceDay: addDays(today, -2) });
       await f.db.insert(s.lessonLog).values([

@@ -18,7 +18,7 @@ test("the next date is said in relative words, the rehearsal first while one is 
 
 test("the parent summary is one This week card with the note open and no retired heading", () => {
   const ui = source("workspace/parent-summary.tsx");
-  expect(ui).toContain("<h3>This week</h3>"); expect(ui).toContain("Practised this week:"); expect(ui).toContain("· from ");
+  expect(ui).toContain("<h3>This week</h3>"); expect(ui).toContain("Practiced this week:"); expect(ui).toContain("· from ");
   for (const retired of ["Latest saved lesson", "Recorded practice dates", "Read saved lesson note", "Lesson author:", "Seven days ending"]) expect(ui).not.toContain(retired);
   expect(ui).not.toMatch(/<details/);
 });
@@ -26,11 +26,11 @@ test("the parent summary is one This week card with the note open and no retired
 test("every retired TP-14 row is gone from the parent, practice and honors screens and the approved wording stands", () => {
   const all = ["workspace/students.tsx", "workspace/reading.tsx", "workspace/honors/sheet.tsx", "workspace/honors/fields.tsx", "workspace/parent-summary.tsx", "entry.tsx"].map(source).join("\n");
   for (const retired of ["Practice with another child", "Switch practice to", "Return to parent view", "This tab only", "Read-only overview", "Child practice is entered separately", "Use Save honors to record the review"]) expect(all).not.toContain(retired);
-  for (const approved of ["Sit down with", "Open the honors form", "Remember to tap Save honors.", "Blessing from family", "Not part of my service", "Send a new code", "Sit with <bdi", "Practising with <bdi", "reading and practise with"]) expect(all).toContain(approved);
-  expect(source("workspace/service-learning/panel.tsx")).toContain("Your service parts will show up here soon. Nothing you've practised is lost.");
+  for (const approved of ["Sit down with", "Open the honors form", "Remember to tap Save honors.", "Blessing from family", "Not part of my service", "Send a new code", "Sit with <bdi", "Practicing with <bdi", "reading and practice with"]) expect(all).toContain(approved);
+  expect(source("workspace/service-learning/panel.tsx")).toContain("Your service parts will show up here soon. Nothing you've practiced is lost.");
   expect(source("entry.tsx")).toContain("RESEND_AFTER_MS = 60_000");
-  // The pre-choice line only shows before a child is chosen.
-  expect(source("workspace/students.tsx")).toMatch(/!focused && !selected && <p className="selection-lede">/);
+  // The pre-choice lines went with the lists they sat above: a child's page is opened from the shelf's card, so nothing here asks who to choose (E2, E5).
+  for (const retired of ["Choose a child to see their reading.", "Who are you teaching today?", "Choose a child to practice"]) expect(source("workspace/students.tsx")).not.toContain(retired);
 });
 
 test("the parent's honors row follows the summary inside the reading, and an adult's follows the reading", () => {

@@ -14,7 +14,7 @@
 .actions > :global(.button-primary) { width: auto; }
 .panel > :global(.request-error) { margin: 0; }
 
-/* My readings on the front door, between This week and the doors. */
+/* My Readings on the front door, between This week and the doors. */
 .mine { min-width: 0; margin-bottom: 2.5rem; padding: 1.5rem 1.5rem 1.75rem; border-radius: var(--radius-object); background: var(--color-surface);
   box-shadow: inset 0 0 0 1px var(--color-rule); overflow-wrap: anywhere; }
 .mineTitle { font-size: 1.5rem; }

@@ -18,7 +18,7 @@ import type { ParentPractice, PracticeDay, PracticeDayReading, PracticeKind, Pra
  *   reader policy, which check all of that again in the database. Admins (rabbis), parents, students, child practice, other tutors, MCP,
  *   cron, the roster Sheet, exports and notifications never come through here. The answer: per day for the last 14 days (never
  *   before the release date), which verses were opened and which marks were made; each verse's current mark and whether a parent
- *   was there; the days practised of the last 7 and the last lesson date; Learn's "Can hear" counts and the pair most often
+ *   was there; the days practiced of the last 7 and the last lesson date; Learn's "Can hear" counts and the pair most often
  *   mixed up. Dates only: no time of day, duration, action, play count or score is read or returned.
  * - `parent`: a linked parent, in parent view: how many verses are marked Got it and Still working. Nothing per day, no source.
  *
@@ -85,7 +85,7 @@ export function createPracticeVisibilityService<Q extends PgQueryResultHKT>(inpu
     },
     /**
      * Daniel's ruling (2026-10-26): decision 7 governs practice ACTIVITY (days, verses opened, timing). A parent keeps seeing the
-     * child's current per-verse marks on the existing progress page, which practising together needs; that is unchanged. This read
+     * child's current per-verse marks on the existing progress page, which practicing together needs; that is unchanged. This read
      * adds only the two counts, and never anything per day, the source of a mark or Learn.
      */
     async parent(request: AccessRequest, selection: { mode: "parent"; studentId: string }): Promise<ParentPractice> {

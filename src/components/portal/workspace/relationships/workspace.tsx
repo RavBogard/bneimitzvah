@@ -132,15 +132,15 @@ function Access({ studentId }: { studentId?: string }) {
             <button className="button-secondary admin-pill" disabled={disabled || data.student.disabled || !selected} onClick={open({ kind: "assign", grantId: selected })}>Assign</button></div>
             {!available.length && <p className="field-help">Every tutor on this page is already assigned. Invite a new tutor from Invitations.</p>}</div>
         </section>
-        <section className="people-card" data-testid="people-parents" aria-labelledby="people-parents"><div className="people-card-head"><h2 id="people-parents">Parents</h2><p>Can read this student’s work. Practising as the child is a separate permission.</p></div>
-          {data.guardians.length ? <ul className="people-list">{data.guardians.map(row => person(parentLabels.get(row.parentGrantId)!, <>{row.effectiveRead ? "Can read" : "Access paused"} · {row.practiceEnabled ? (row.effectivePractice ? "Can practise as the child" : "Child practice allowed but unavailable") : "Child practice stopped"}</>,
+        <section className="people-card" data-testid="people-parents" aria-labelledby="people-parents"><div className="people-card-head"><h2 id="people-parents">Parents</h2><p>Can read this student’s work. Practicing as the child is a separate permission.</p></div>
+          {data.guardians.length ? <ul className="people-list">{data.guardians.map(row => person(parentLabels.get(row.parentGrantId)!, <>{row.effectiveRead ? "Can read" : "Access paused"} · {row.practiceEnabled ? (row.effectivePractice ? "Can practice as the child" : "Child practice allowed but unavailable") : "Child practice stopped"}</>,
             <>{act(row.practiceEnabled ? "Stop child practice" : "Allow child practice", parentLabels.get(row.parentGrantId)!, { kind: "practice", linkId: row.id, enabled: !row.practiceEnabled }, false, !row.practiceEnabled && (!row.effectiveRead || data.student.disabled))}
               {remove(parentLabels.get(row.parentGrantId)!, { kind: "link", group: "guardians", linkId: row.id })}</>, row.id))}</ul>
             : <p className="people-empty">No parent linked yet.</p>}
           {!data.student.disabled && <WorkspaceLink className="button-secondary admin-pill people-invite" href={`/workspace/admin/invitations?student=${encodeURIComponent(data.student.id)}&role=parent`}>Invite a parent</WorkspaceLink>}
         </section>
-        <section className="people-card" data-testid="people-students" aria-labelledby="people-students"><div className="people-card-head"><h2 id="people-students">Student sign-in</h2><p>The student’s own account. A parent practising as the child doesn’t need one.</p></div>
-          {data.identities.length ? <ul className="people-list">{data.identities.map(row => person(studentLabels.get(row.studentGrantId)!, row.effectivePractice ? "Can sign in and practise" : "Access paused",
+        <section className="people-card" data-testid="people-students" aria-labelledby="people-students"><div className="people-card-head"><h2 id="people-students">Student sign-in</h2><p>The student’s own account. A parent practicing as the child doesn’t need one.</p></div>
+          {data.identities.length ? <ul className="people-list">{data.identities.map(row => person(studentLabels.get(row.studentGrantId)!, row.effectivePractice ? "Can sign in and practice" : "Access paused",
             remove(studentLabels.get(row.studentGrantId)!, { kind: "link", group: "identities", linkId: row.id }), row.id))}</ul>
             : <p className="people-empty">No student sign-in linked.</p>}
           {!data.student.disabled && <WorkspaceLink className="button-secondary admin-pill people-invite" href={`/workspace/admin/invitations?student=${encodeURIComponent(data.student.id)}&role=student`}>Invite the student</WorkspaceLink>}
@@ -179,7 +179,7 @@ function SetupSummary({ data }: { data: Relationships }) {
       next: !teaching && <button type="button" className="button-text" onClick={focus("access-tutor")}>Choose a tutor</button> },
     { title: "Family access", state: reading ? "Done" : "To do", text: reading ? `${reading} ${reading === 1 ? "parent has" : "parents have"} accepted access.` : "No parent has accepted access yet. A parent email on the student record doesn’t give access by itself.",
       next: !reading && <WorkspaceLink className="button-text" href={`/workspace/admin/invitations?student=${id}&role=parent`}>Send a parent invitation</WorkspaceLink> },
-    { title: "Student sign-in", state: signIn ? "Done" : "Optional", text: signIn ? `${first} signs in with their own account.` : "Not linked. A child can practise through a parent; an adult needs their own sign-in.",
+    { title: "Student sign-in", state: signIn ? "Done" : "Optional", text: signIn ? `${first} signs in with their own account.` : "Not linked. A child can practice through a parent; an adult needs their own sign-in.",
       next: !signIn && <WorkspaceLink className="button-text" href={`/workspace/admin/invitations?student=${id}&role=student`}>Send the student an invitation</WorkspaceLink> },
   ];
   return <section className="people-card people-setup" aria-labelledby="people-setup"><div className="people-card-head"><h2 id="people-setup">Setup</h2>

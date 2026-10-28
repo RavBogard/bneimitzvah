@@ -5,6 +5,7 @@ import { PeopleNav } from "../../shell/people-nav";
 import { Button, PageHeader } from "../../../ui";
 import { DocumentTitle } from "../document-title";
 import { accountsApi, type AccountRequest, type ApproverMode, type ApproversView, type Member, type StudentOption } from "./api";
+import { linkRequestLine } from "../staff/model";
 
 /** Daniel's approved approver help line (F1, wording approved 2026-10-23). */
 export const APPROVER_HELP_LINE = "Anyone who asks in good faith can have an account, member or not. Decline only spam or abuse.";
@@ -163,7 +164,7 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
   </section>;
 }
 
-/** "Link requests (n) · Review" for approvers, only while some wait. Quiet when none do or when it can't tell. */
+/** "3 link requests waiting · Review" for approvers, only while some wait. Quiet when none do or when it can't tell. */
 export function AccountRequestsLine({ mode }: { mode: ApproverMode }) {
   const [count, setCount] = useState(0);
   useEffect(() => {
@@ -171,5 +172,5 @@ export function AccountRequestsLine({ mode }: { mode: ApproverMode }) {
     accountsApi.summary(mode, controller.signal).then(value => { if (!controller.signal.aborted) setCount(value); }, () => { if (!controller.signal.aborted) setCount(0); });
     return () => controller.abort();
   }, [mode]);
-  return count > 0 ? <p className="accounts-line"><WorkspaceLink href="/workspace/accounts">Link requests ({count}) · Review</WorkspaceLink></p> : null;
+  return count > 0 ? <p className="accounts-line"><WorkspaceLink href="/workspace/accounts">{linkRequestLine(count)} · Review</WorkspaceLink></p> : null;
 }

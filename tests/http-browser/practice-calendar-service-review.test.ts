@@ -11,6 +11,7 @@ import { openAuthMail } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { syntheticServiceCatalog } from "../helpers/service-learning";
 import * as s from "../../src/server/db/index";
+import { goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser;
@@ -22,6 +23,8 @@ const safe = async <T>(action: () => Promise<T>): Promise<T> => { try { return a
 const week = (tab: Page) => tab.getByRole("list", { name: "Practice this week", exact: true });
 const click = (tab: Page, name: string) => safe(() => tab.getByRole("button", { name, exact: true }).click());
 const ready = (tab: Page) => ui(week(tab).getByRole("listitem")).toHaveCount(7);
+/** A student's reading is ready when its text is: the week's dots are on the pinned card (E1), a parent's practice page keeps its own. */
+const readyStudent = (tab: Page) => ui(tab.locator('[data-testid="study-verses"]')).toBeVisible();
 const marked = (tab: Page, yes: boolean) => ui(week(tab).locator(".practice-day-today")).toHaveClass(yes ? /practice-day-done/ : /^(?!.*practice-day-done).*$/);
 function traffic(tab: Page) {
   const posts: { body: Record<string, unknown>; context: string | null }[] = [], rawReads: string[] = [];
@@ -69,8 +72,8 @@ it("reports only explicit service choices with exact bindings and never manufact
   const tab = await page("student"), seen = traffic(tab);
   const response = tab.waitForResponse(r => new URL(r.url()).pathname.endsWith("/practice-calendar") && r.status() === 200);
   await safe(() => tab.goto("/workspace/student?tab=reading", { waitUntil: "domcontentloaded" })); const { serverDay } = await (await response).json();
-  await ready(tab); await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click()); await ui(tab.getByRole("button", { name: "Synthetic part 0", exact: true })).toBeVisible(); expect(seen.posts).toHaveLength(0);
-  await click(tab, "Synthetic part 0"); await ui(tab.locator(".service-unit")).toContainText("Synthetic translation 0"); await ui.poll(() => seen.posts.length).toBe(1); await marked(tab, true);
+  await readyStudent(tab); await safe(() => tab.locator("#service-parts").scrollIntoViewIfNeeded()); await ui(tab.getByRole("button", { name: "Synthetic part 0", exact: true })).toBeVisible(); expect(seen.posts).toHaveLength(0);
+  await click(tab, "Synthetic part 0"); await ui(tab.locator(".service-unit")).toContainText("Synthetic translation 0"); await ui.poll(() => seen.posts.length).toBe(1);
   expect(seen.posts[0]).toEqual({ context: null, body: { mode: "student", eventId: expect.stringMatching(/^[0-9a-f-]{36}$/), expectedDay: serverDay, action: "visit", target: { type: "service-unit", catalogId, catalogIdentity: content.identity, planId: plans.get(fixture.student.id)!.id, planRevision: 1, unitId: content.first } } });
   await click(tab, "Synthetic part 0"); await ui(tab.locator(".service-unit")).toContainText("Synthetic translation 0"); expect(seen.posts).toHaveLength(1);
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
@@ -83,11 +86,11 @@ it("reports only explicit service choices with exact bindings and never manufact
   await tab.route("**/api/session", hold);
   try {
     await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await ui.poll(() => held).toBe(true);
-    await ui(tab.locator("#workspace-main").getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); await ready(tab); await marked(tab, true);
+    await ui(tab.locator("#workspace-main").getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); await readyStudent(tab);
     await ui(tab.locator(".service-unit")).toContainText("Synthetic translation 0"); expect(seen.posts).toHaveLength(1);
   } finally { release(); }
   await ui.poll(() => finalSessions).toBeGreaterThanOrEqual(2); tab.off("response", observed);
-  await ready(tab); await ui(tab.locator(".service-unit")).toContainText("Synthetic translation 0"); expect(seen.posts).toHaveLength(1);
+  await readyStudent(tab); await ui(tab.locator(".service-unit")).toContainText("Synthetic translation 0"); expect(seen.posts).toHaveLength(1);
   await tab.unroute("**/api/session", hold);
   const secondAck = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/practice-events") && response.request().method() === "POST");
   await click(tab, "Synthetic part 2"); expect((await secondAck).status()).toBe(200); await ui.poll(() => seen.posts.length).toBe(2);
@@ -99,9 +102,9 @@ it("reports only explicit service choices with exact bindings and never manufact
 
 it("drops a held service visit acknowledgement after a real child-context switch and keeps parent views dates-free", async () => {
   const tab = await page("parent"), seen = traffic(tab);
-  await tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click();
+  await tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await goChild(tab, fixture.student.id);
   await ui(tab.getByRole("button", { name: "Practice with Synthetic", exact: true })).toBeVisible(); expect(await week(tab).count()).toBe(0); expect(seen.posts).toHaveLength(0);
-  await click(tab, "Practice with Synthetic"); await ready(tab); await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click());
+  await click(tab, "Practice with Synthetic"); await ready(tab); await safe(() => tab.locator("#service-parts").scrollIntoViewIfNeeded());
   let release!: () => void, complete!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; }), completed = new Promise<void>(resolve => { complete = resolve; });
   const hold = async (route: Route) => { try { const response = await route.fetch(); expect(response.status()).toBe(200); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); } finally { complete(); } };
   const target = `**/api/students/${fixture.student.id}/practice-events`; await tab.route(target, hold);
@@ -112,6 +115,6 @@ it("drops a held service visit acknowledgement after a real child-context switch
     expect(await days(sibling.id)).toBe(0); expect(await days(fixture.student.id)).toBe(1);
   } finally { release(); }
   await completed; await tab.unroute(target, hold); await marked(tab, false); expect(seen.posts).toHaveLength(1);
-  await click(tab, "Done"); await ui(tab.getByLabel("Child", { exact: true })).toBeVisible(); await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/workspace/parent`);
+  await click(tab, "Done"); await ui(tab.getByTestId("mine-children")).toBeVisible(); await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/mine`);
   expect(await tab.locator(".practice-week, .practice-day").count()).toBe(0); expect(seen.posts).toHaveLength(1); expect(seen.rawReads).toEqual([]); await tab.context().close();
 });

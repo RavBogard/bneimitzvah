@@ -16,6 +16,7 @@ import { installLoopbackFetchGuard } from "./egress";
 import { closeVerseTools, openVerseTools, toolsSheet } from "./verse-tools";
 import { openAuthMail, switchRole } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
+import { goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -76,7 +77,7 @@ it("all actual modes explicitly list/read editions without assignment writes, au
     await readEdition(tab); await ui(reader(tab).getByRole("link")).toHaveCount(0); await reader(tab).getByRole("button", { name: "Back to editions", exact: true }).click(); await readEdition(tab, 0, "en"); expect(posts).toBe(0); await noAudio(tab);
     await reader(tab).getByRole("button", { name: "Back to the verse", exact: true }).click(); await ui(reader(tab)).toHaveCount(0);
   }
-  const child = await page("tutor"); await closeVerseTools(child); await switchRole(child, "Parent"); await child.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await ui(child.locator(".study-verses")).toBeVisible(); await open(child); await readCitation(child); await readEdition(child); await closeVerseTools(child); await child.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(child.locator(".study-verses")).toBeVisible(); await open(child); await readCitation(child); await readEdition(child); await noAudio(child);
+  const child = await page("tutor"); await closeVerseTools(child); await switchRole(child, "Parent"); await goChild(child, fixture.student.id); await ui(child.locator(".study-verses")).toBeVisible(); await open(child); await readCitation(child); await readEdition(child); await closeVerseTools(child); await child.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await child.waitForURL(/\/workspace\/practice\//, { timeout: 60_000 }); await ui(child.locator(".study-verses")).toBeVisible(); await open(child); await readCitation(child); await readEdition(child); await noAudio(child);
 });
 
 it("related readers page explicitly, hold unknown rights, and quiet return retains the exact text DOM without any source-provider GET", async () => {
@@ -106,7 +107,7 @@ it("read-only content actions cannot alter an uncertain save or its exact retry 
 });
 
 it("actual guardian revocation during a held body clears old child text and cannot publish its late result", async () => {
-  const tab = await page("tutor"); await closeVerseTools(tab); await switchRole(tab, "Parent"); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(tab.locator(".study-verses")).toBeVisible(); await open(tab); await readCitation(tab);
+  const tab = await page("tutor"); await closeVerseTools(tab); await switchRole(tab, "Parent"); await goChild(tab, fixture.student.id); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await tab.waitForURL(/\/workspace\/practice\//, { timeout: 60_000 }); await ui(tab.locator(".study-verses")).toBeVisible(); await open(tab); await readCitation(tab);
   let entered!: () => void, release!: () => void; const entry = new Promise<void>(done => { entered = done; }), wait = new Promise<void>(done => { release = done; }); bodyBarrier = { entered, wait };
   await reader(tab).getByRole("listitem").filter({ hasText: "Invented edition 001" }).getByRole("button").click();
   try { await entry; await fixture.ownerDb.update(s.guardian).set({ revokedAt: new Date() }).where(eq(s.guardian.studentId, fixture.student.id)); } finally { release(); }

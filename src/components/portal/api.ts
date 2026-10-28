@@ -6,6 +6,12 @@ export type Role = keyof typeof roleNames;
 export const roleTasks: Record<Role, string> = { student: "your assigned reading", parent: "your child’s preparation and practice", tutor: "the students you teach", admin: "students, people and setup" };
 /** `saved`: the account keeps its own saved readings; `approver`: it may approve account requests (Release 1.4). */
 export type SessionSummary = Readonly<{ membershipAvailable: boolean; roles: readonly Role[]; saved: boolean; approver: boolean; sessionBinding: string }>;
+/**
+ * What the home's door names (Readings for everyone E3), from GET /api/session/door: the student's pinned reading and how many verses they have got,
+ * a parent's first child, a tutor's nearest student (names and ceremony dates only), and how many readings the person keeps.
+ */
+export type SessionDoor = Readonly<{ pinned: Readonly<{ name: string; date: string; got: number; total: number }> | null; child: Readonly<{ name: string; date: string }> | null;
+  nearest: Readonly<{ name: string; date: string }> | null; count: number }>;
 export type InvitationReview = Readonly<{ role: "student" | "parent" | "tutor"; student: { firstName: string; lastName: string } | null; expiresAt: string; reviewBinding: string }>;
 
 export class PortalRequestError extends Error {
@@ -42,6 +48,28 @@ export function parseSession(value: unknown): SessionSummary {
     || (row.approver && !roles.some(item => item === "admin" || item === "tutor"))) return unavailable();
   return { membershipAvailable: row.membershipAvailable, roles, saved: row.saved, approver: row.approver, sessionBinding: row.sessionBinding };
 }
+const plainName = (value: unknown) => typeof value === "string" && value.trim().length > 0 && value.length <= 240 && !/[\x00-\x1f\x7f]/.test(value);
+const isoDate = (value: unknown) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(`${value}T00:00:00Z`));
+const count = (value: unknown) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= 100_000;
+function named(value: unknown): { name: string; date: string } | null {
+  if (value === null) return null;
+  const row = record(value, ["name", "date"]);
+  if (!plainName(row.name) || !isoDate(row.date)) return unavailable();
+  return { name: row.name as string, date: row.date as string };
+}
+export function parseDoor(value: unknown): SessionDoor {
+  const row = record(value, ["pinned", "child", "nearest", "count"]);
+  if (!count(row.count)) return unavailable();
+  let pinned: SessionDoor["pinned"] = null;
+  if (row.pinned !== null) {
+    const item = record(row.pinned, ["name", "date", "got", "total"]);
+    if (!plainName(item.name) || !isoDate(item.date) || !count(item.got) || !count(item.total) || (item.got as number) > (item.total as number)) return unavailable();
+    pinned = { name: item.name as string, date: item.date as string, got: item.got as number, total: item.total as number };
+  }
+  return { pinned, child: named(row.child), nearest: named(row.nearest), count: row.count as number };
+}
+/** The door's facts, asked for once the home knows who is signed in; a failure leaves the door as it was (the door never blocks the page). */
+export const fetchDoor = async (request: typeof requestPortal, signal?: AbortSignal): Promise<SessionDoor> => parseDoor(await request("/api/session/door", undefined, signal));
 export function parseInvitation(value: unknown): InvitationReview {
   const row = record(value, ["role", "student", "expiresAt", "requiresConfirmation", "reviewBinding"]), intendedRole = role(row.role);
   if (intendedRole === "admin" || row.requiresConfirmation !== true || typeof row.expiresAt !== "string" || !Number.isFinite(Date.parse(row.expiresAt))
@@ -97,8 +125,8 @@ export function parseAcceptance(value: unknown) {
 
 // A closed endpoint set prevents callers from turning this helper into an
 // arbitrary fetch/redirect surface. No response diagnostics cross the boundary.
-type Endpoint = "/api/session" | "/api/session/begin" | "/api/auth/sign-in/social" | "/api/auth/google/challenge" | "/api/auth/google/redirect" | "/api/auth/sign-in/magic-link" | "/api/auth/sign-in/code" | "/api/auth/sign-out" | "/api/invitations/pending" | "/api/invitations/accept";
-const endpoints = new Set<string>(["/api/session", "/api/session/begin", "/api/auth/sign-in/social", "/api/auth/google/challenge", "/api/auth/google/redirect", "/api/auth/sign-in/magic-link", "/api/auth/sign-in/code", "/api/auth/sign-out", "/api/invitations/pending", "/api/invitations/accept"]);
+type Endpoint = "/api/session" | "/api/session/begin" | "/api/session/door" | "/api/auth/sign-in/social" | "/api/auth/google/challenge" | "/api/auth/google/redirect" | "/api/auth/sign-in/magic-link" | "/api/auth/sign-in/code" | "/api/auth/sign-out" | "/api/invitations/pending" | "/api/invitations/accept";
+const endpoints = new Set<string>(["/api/session", "/api/session/begin", "/api/session/door", "/api/auth/sign-in/social", "/api/auth/google/challenge", "/api/auth/google/redirect", "/api/auth/sign-in/magic-link", "/api/auth/sign-in/code", "/api/auth/sign-out", "/api/invitations/pending", "/api/invitations/accept"]);
 export async function requestPortal(endpoint: Endpoint, body?: Record<string, unknown>, signal?: AbortSignal): Promise<unknown> {
   if (!endpoints.has(endpoint)) return unavailable();
   const controller = new AbortController(), abort = () => controller.abort();

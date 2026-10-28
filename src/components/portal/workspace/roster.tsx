@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { workspaceApi, type RosterStudent, type StudentInput } from "./api";
 import { RequireRole, statusOf, useWorkspace, useWorkspaceModal, WorkspaceLink } from "./provider";
 import { AccountRequestsLine } from "./accounts/workspace";
+import { accountsApi } from "./accounts/api";
 import { ceremonyCountdown } from "./reading";
 import { icons } from "./study/lift";
 import { HonorsSheet } from "./honors/sheet";
@@ -36,7 +37,7 @@ function Roster() {
   const setMessage = useCallback((text: string, kind = "") => { setMessageText(text); setMessageKind(kind); }, []);
   const [query, setQuery] = useState(""), [confirmDone, setConfirmDone] = useState(false);
   // 1.9 N14: each active student's setup facts (Needs you and the row chips), and the student just added (its three next steps).
-  const [neededInvites, setNeededInvites] = useState<ReadonlySet<string>>(new Set());
+  const [neededInvites, setNeededInvites] = useState<ReadonlySet<string>>(new Set()), [linkRequests, setLinkRequests] = useState(0);
   const [statuses, setStatuses] = useState<Map<string, StudentStatus> | null>(null), [added, setAdded] = useState<{ id: string; firstName: string } | null>(null);
   // This week (the admin's home) shows Needs you; Students (?tab=students) is the plain list. ?edit= opens one student's details.
   const params = useSearchParams(), thisWeek = params.get("tab") !== "students", editTarget = params.get("edit"), editOpened = useRef<string | null>(null);
@@ -53,10 +54,11 @@ function Roster() {
     try {
       // The setup facts are a second, separate read: if it fails the roster still shows, without Needs you or chips.
       // N22: the students the invitations service says need a parent invitation; without it, Needs you still asks for families with none.
-      const [values, facts, needed] = await Promise.all([workspaceApi.roster(request.signal), staffApi.status(request.signal).catch(() => null), staffApi.needed(request.signal).catch(() => new Set<string>())]);
+      const [values, facts, needed, waiting] = await Promise.all([workspaceApi.roster(request.signal), staffApi.status(request.signal).catch(() => null), staffApi.needed(request.signal).catch(() => new Set<string>()),
+        accountsApi.summary("admin", request.signal).catch(() => 0)]);
       if (generation === turn.current && !request.signal.aborted) {
         setRows(values); if (!preserve) setPage(0);
-        setStatuses(facts ? new Map(facts.map(row => [row.id, row])) : null); setNeededInvites(needed);
+        setStatuses(facts ? new Map(facts.map(row => [row.id, row])) : null); setNeededInvites(needed); setLinkRequests(waiting);
         const selected = currentRef.current;
         if (preserve && selected) {
           const next = values.find(row => row.id === selected.id);
@@ -169,7 +171,7 @@ function Roster() {
   const [showDisabled, setShowDisabled] = useState(false);
   const roster = useMemo(() => byCeremony(rows.filter(row => !row.ceremonyDoneAt || row.disabledAt)), [rows]);
   const listed = useMemo(() => showDisabled ? roster : roster.filter(row => !row.disabledAt), [roster, showDisabled]);
-  const needsYou = useMemo(() => statuses ? needsYouRows(rows as NeedsYouStudent[], statuses, new Date(), neededInvites) : null, [rows, statuses, neededInvites]);
+  const needsYou = useMemo(() => statuses ? needsYouRows(rows as NeedsYouStudent[], statuses, new Date(), neededInvites, linkRequests) : null, [rows, statuses, neededInvites, linkRequests]);
   // ?edit=<id> (the reading page's "Edit details") opens that student's details once the roster has loaded.
   useEffect(() => {
     if (loading || unavailable || conflict || !editTarget || editOpened.current === editTarget) return;

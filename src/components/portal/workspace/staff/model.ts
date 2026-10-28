@@ -3,9 +3,12 @@
 
 export type FamilyState = "joined" | "invited" | "expiring" | "expired" | "none";
 export type StudentStatus = { id: string; tutors: number; family: FamilyState | null; reading: "none" | "confirmed" | "review"; honors: boolean };
-export type NeedsYouCondition = "no-tutor" | "invitation-expired" | "needs-invitation" | "no-reading" | "reading-review" | "no-service" | "honors";
+export type NeedsYouCondition = "no-tutor" | "invitation-expired" | "needs-invitation" | "no-reading" | "reading-review" | "no-service" | "honors" | "link-request";
 export type NeedsYouStudent = { id: string; firstName: string; lastName: string; ceremonyDate: string; serviceSlot: "morning" | "havdalah" | "unknown"; disabledAt: string | null; ceremonyDoneAt?: string | null };
-export type NeedsYouRow = { student: NeedsYouStudent; condition: NeedsYouCondition; days: number };
+export type StudentNeed = { student: NeedsYouStudent; condition: Exclude<NeedsYouCondition, "link-request">; days: number };
+/** Link requests waiting are the one row that belongs to no student (Readings for everyone E4): a count, opening Account requests. */
+export type LinkRequestNeed = { student: null; condition: "link-request"; days: number; count: number };
+export type NeedsYouRow = StudentNeed | LinkRequestNeed;
 
 /** The window "Needs you" looks at: ceremonies from today through eight weeks out. */
 export const NEEDS_YOU_DAYS = 56;
@@ -23,20 +26,20 @@ export function isSunday(date: string) {
 }
 
 /** The order rows take inside one student: the setup path (tutor, family, reading, service, honors). */
-const ORDER: NeedsYouCondition[] = ["no-tutor", "invitation-expired", "needs-invitation", "no-reading", "reading-review", "no-service", "honors"];
+const ORDER: Exclude<NeedsYouCondition, "link-request">[] = ["no-tutor", "invitation-expired", "needs-invitation", "no-reading", "reading-review", "no-service", "honors"];
 /**
  * One row per thing to do, each with one verb, for active students whose ceremony is within eight weeks; soonest first.
  * A child's family with no invitation at all needs one; so does any student the invitations service names (N22's
  * /api/admin/invitations/needed, passed as `needsInvitation`). A family whose invitation expired gets "Send a new one" instead.
  * Disabled and ceremony-done students are never listed.
  */
-export function needsYouRows(students: readonly NeedsYouStudent[], statuses: ReadonlyMap<string, StudentStatus>, now = new Date(), needsInvitation: ReadonlySet<string> = new Set()): NeedsYouRow[] {
-  const rows: NeedsYouRow[] = [];
+export function needsYouRows(students: readonly NeedsYouStudent[], statuses: ReadonlyMap<string, StudentStatus>, now = new Date(), needsInvitation: ReadonlySet<string> = new Set(), linkRequests = 0): NeedsYouRow[] {
+  const rows: StudentNeed[] = [];
   for (const student of students) {
     if (student.disabledAt || student.ceremonyDoneAt) continue;
     const days = daysUntil(student.ceremonyDate, now), status = statuses.get(student.id);
     if (days < 0 || days > NEEDS_YOU_DAYS || !status) continue;
-    const add = (condition: NeedsYouCondition) => rows.push({ student, condition, days });
+    const add = (condition: StudentNeed["condition"]) => rows.push({ student, condition, days });
     if (status.tutors === 0) add("no-tutor");
     if (status.family === "expired") add("invitation-expired");
     else if (status.family === "none" || status.family !== null && status.family !== "joined" && needsInvitation.has(student.id)) add("needs-invitation");
@@ -45,11 +48,13 @@ export function needsYouRows(students: readonly NeedsYouStudent[], statuses: Rea
     if (student.serviceSlot === "unknown") add("no-service");
     if (!status.honors) add("honors");
   }
-  return rows.sort((a, b) => a.days - b.days || a.student.ceremonyDate.localeCompare(b.student.ceremonyDate) || a.student.id.localeCompare(b.student.id) || ORDER.indexOf(a.condition) - ORDER.indexOf(b.condition));
+  const sorted = rows.sort((a, b) => a.days - b.days || a.student.ceremonyDate.localeCompare(b.student.ceremonyDate) || a.student.id.localeCompare(b.student.id) || ORDER.indexOf(a.condition) - ORDER.indexOf(b.condition));
+  // Link requests belong to no ceremony, so they come first: someone is waiting to be linked.
+  return linkRequests > 0 ? [{ student: null, condition: "link-request" as const, days: 0, count: linkRequests }, ...sorted] : sorted;
 }
 
 /** What a row says, then its one verb (the link or button text). Approved 2026-10-26 and in tier B. */
-export const NEEDS_YOU_TEXT: Record<NeedsYouCondition, { text: string; verb: string }> = {
+export const NEEDS_YOU_TEXT: Record<StudentNeed["condition"], { text: string; verb: string }> = {
   "no-tutor": { text: "No tutor yet.", verb: "Choose a tutor." },
   "invitation-expired": { text: "The family's invitation expired.", verb: "Send a new one." },
   "needs-invitation": { text: "", verb: "Needs a parent invitation" },
@@ -58,6 +63,11 @@ export const NEEDS_YOU_TEXT: Record<NeedsYouCondition, { text: string; verb: str
   "no-service": { text: "No service date yet.", verb: "Set the service." },
   "honors": { text: "Honors not started.", verb: "Open the honors form." },
 };
+
+/** "3 link requests waiting", "1 link request waiting". */
+export const linkRequestLine = (count: number) => `${count} link ${count === 1 ? "request" : "requests"} waiting`;
+/** What the empty Needs you says: what was checked, so an empty list never reads as nothing looked at (Readings for everyone E4). */
+export const NEEDS_YOU_EMPTY = "Nothing needs you this week: no readings to review, no link requests, no invitations waiting.";
 
 /** The roster row's status chips, from the same facts. Each chip is the first words of an approved row (see the PR's gaps). */
 export function statusChips(student: Pick<NeedsYouStudent, "serviceSlot" | "disabledAt" | "ceremonyDoneAt">, status: StudentStatus | undefined): string[] {

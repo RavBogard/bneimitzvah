@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 import { browserProgressStore, courseDone, emptyProgress, type Progress } from "../../../lib/learn/progress";
 import { recommendedLesson } from "../../../lib/learn/recommendation";
 import { ButtonLink, List, ListRow, PageHeader } from "../../ui";
+import { ChildrenSection } from "./children";
 import { AccountRequest } from "../account-request";
+import { AccountRequestsLine } from "../workspace/accounts/workspace";
 import { useWorkspace } from "../workspace/provider";
-import { interimRows, shelfModel, type LearnRowState, type PinnedState, type ShelfSection } from "./model";
+import { PINNED_HREF, pinnedOf, PinnedReadingCard, useStudentToday, type TodaySlices } from "../workspace/today/today";
+import { shelfModel, type LearnRowState, type PinnedState, type ShelfSection } from "./model";
 import { OwnReadings, useOwnReadings } from "./own-readings";
 import { YourStudents } from "./your-students";
 import { FindALearner } from "./find-a-learner";
@@ -30,16 +33,9 @@ export const SHELF_STRINGS = Object.freeze({
   accountMeta: " · roles, email, sign out",
 });
 
-/** The student's pinned reading, first on the shelf. Task E1 fills `pinned`; until then the section is never drawn. */
-export function PinnedSection({ pinned, roles }: { pinned: PinnedState | null; roles: readonly string[] }) {
-  // Interim rows to the role pages: Area E replaces them with E1 (the student's pinned reading) and E2 (the parent's view); D7's Your students is in place.
-  const rows = interimRows(roles);
-  return <section className={styles.section} aria-label="Your assigned reading" data-testid="mine-pinned">
-    <List>
-      {pinned && <ListRow title={pinned.name} meta={[pinned.ceremony, pinned.total ? `${pinned.done} of ${pinned.total} verses` : null].filter(Boolean).join(" · ") || undefined} href={pinned.href} />}
-      {rows.map(row => <ListRow key={row.role} title={row.title} meta={<span data-testid={`mine-interim-${row.role}`}>{row.action ?? "Open"}</span>} href={row.href} />)}
-    </List>
-  </section>;
+/** The student's pinned reading, first on the shelf (E1). */
+export function PinnedSection({ slices }: { slices: TodaySlices }) {
+  return <section className={styles.section} aria-label="Your reading" data-testid="mine-pinned"><PinnedReadingCard slices={slices} /></section>;
 }
 
 /** The Learn row: the course, with where the person is in it. */
@@ -86,15 +82,18 @@ function useLearnRow(): LearnRowState {
 
 export function Shelf() {
   const { summary } = useWorkspace(), { state: own, retry } = useOwnReadings(), learn = useLearnRow();
-  // The pinned reading arrives with Task E1.
-  const pinned: PinnedState | null = null;
+  const slices = useStudentToday(summary.roles.includes("student")), found = pinnedOf(slices);
+  const pinned: PinnedState | null = found && { name: found.name, ceremony: found.ceremony, done: found.done, total: found.total, href: PINNED_HREF };
   const view = shelfModel({ summary, own, pinned, learn });
   const part = (section: ShelfSection) => section === "students" ? <YourStudents key={section} /> : section === "find" ? <FindALearner key={section} roles={summary.roles} />
-    : section === "pinned" ? <PinnedSection key={section} pinned={pinned} roles={summary.roles} />
+    : section === "pinned" ? <PinnedSection key={section} slices={slices} />
+    : section === "children" ? <ChildrenSection key={section} />
     : section === "own" ? <OwnReadings key={section} state={own} onRetry={retry} />
       : section === "learn" ? <LearnSection key={section} learn={learn} /> : <AccountSection key={section} />;
   return <section className="role-workspace" data-testid="shelf" aria-busy={own.status === "loading"}>
     <PageHeader title={SHELF_STRINGS.title} actions={<ButtonLink href="/readings?add=1">{SHELF_STRINGS.add}</ButtonLink>} />
+    {/* A tutor an admin chose to approve accounts sees waiting requests here (they were above the tutor's list, which is Your students now), as admins do on This week. */}
+    {summary.approver && summary.roles.includes("tutor") && !summary.roles.includes("admin") && <AccountRequestsLine mode="tutor" />}
     {view.empty && <EmptyShelf line={view.empty.line} linkable={summary.roles.length === 0} />}
     {view.sections.map(part)}
     <MyTutorLine />

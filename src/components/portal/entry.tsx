@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { fetchSession, parseAcceptance, parseAcknowledgement, parseCodeResult, parseInvitation, PortalRequestError, requestPortal, roleNames,
-  type InvitationReview, type SessionSummary } from "./api";
+import { fetchDoor, fetchSession, parseAcceptance, parseAcknowledgement, parseCodeResult, parseInvitation, PortalRequestError, requestPortal, roleNames,
+  type InvitationReview, type SessionDoor, type SessionSummary } from "./api";
 import { GoogleContinue } from "./google-sign-in";
 import { rememberSignedIn } from "./signed-in-hint";
 import { returnAddress } from "../../lib/site/return-address";
@@ -15,14 +15,16 @@ import { SiteBar } from "../site/site-bar";
 
 export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "uncertain" }
   | { kind: "accepted"; role: SessionSummary["roles"][number] }
-  | { kind: "signed-in"; summary: SessionSummary } | { kind: "invitation"; review: InvitationReview };
+  | { kind: "signed-in"; summary: SessionSummary; door?: SessionDoor | null } | { kind: "invitation"; review: InvitationReview };
 /**
  * What the front door shows for an entry state. A refused account is signed in, so Sign in would be wrong, and it has no account
  * page it can use, so the bar stays empty and the door itself offers Sign out. An unavailable sign-in keeps its Try again in the door.
  */
 export const frontDoorAccount = (view: View): FrontDoorAccount => view.kind === "loading" ? null
   : view.kind === "forbidden" ? { kind: "task", signedIn: undefined } : view.kind === "unavailable" ? { kind: "task", signedIn: false }
-    : view.kind === "signed-in" ? { kind: "account", saved: view.summary.saved, roles: view.summary.roles, count: null, pinned: null } : { kind: "sign-in" };
+    : view.kind === "signed-in" ? { kind: "account", saved: view.summary.saved, roles: view.summary.roles, count: view.door?.count ?? null,
+      pinned: view.door?.pinned ? { name: view.door.pinned.name, ceremony: view.door.pinned.date, done: view.door.pinned.got, total: view.door.pinned.total } : null,
+      child: view.door?.child ? { name: view.door.child.name, ceremony: view.door.child.date } : null, nearest: view.door?.nearest ? { name: view.door.nearest.name, ceremony: view.door.nearest.date } : null } : { kind: "sign-in" };
 type Action = "google" | "email" | "code" | "accept" | "sign-out";
 /**
  * Only when this device last asked for a sign-in email, never the code or the address: an installed app that
@@ -74,7 +76,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
   // "Send a new code" shows a minute after the last request. The address is kept in memory only, for that one resend: never in storage.
   const [resendReady, setResendReady] = useState(false), [codeRound, setCodeRound] = useState(0), lastEmail = useRef("");
   const [authGeneration, setAuthGeneration] = useState(0);
-  const gate = useRef<Action | null>(null), generation = useRef(0), controller = useRef<AbortController | null>(null);
+  const gate = useRef<Action | null>(null), generation = useRef(0), controller = useRef<AbortController | null>(null), lastDoor = useRef<SessionDoor | null>(null);
   const heading = useRef<HTMLHeadingElement>(null), focusNext = useRef(false);
 
   const refresh = useCallback(() => {
@@ -85,7 +87,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
     setView({ kind: "loading" }); setMessage(""); setLinkRequested(codeRequested()); setCode("");
     // A sign-in with no membership yet gets one here (plan D1), so the door it lands on already has a shelf.
     void (invitation ? requestPortal("/api/invitations/pending", undefined, request.signal).then(value => ({ kind: "invitation", review: parseInvitation(value) } as View))
-      : fetchSession(requestPortal, request.signal).then(summary => ({ kind: "signed-in", summary } as View)))
+      : fetchSession(requestPortal, request.signal).then(summary => ({ kind: "signed-in", summary, door: lastDoor.current } as View)))
       .then(next => {
         if (next.kind === "signed-in") { rememberCodeRequest(false); rememberSignedIn(true); }
         // Signed in already, on the sign-in form: back to the page the person left (G16), or My Readings when none is named. The
@@ -93,6 +95,10 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
         const away = next.kind === "signed-in" ? signedInDestination(doors, back) : null;
         if (away && turn === generation.current) { window.location.replace(away); return; }
         if (turn === generation.current) setView(next);
+        // The home's door names the pinned reading, the first child or the nearest student; it is asked for once the person is known and never holds the page up. The last answer stays until a new one comes, so the line does not blink on a refresh.
+        if (next.kind === "signed-in" && doors && turn === generation.current) {
+          void fetchDoor(requestPortal, request.signal).then(door => { if (turn !== generation.current) return; lastDoor.current = door; setView(current => current.kind === "signed-in" && current.summary === next.summary ? { ...current, door } : current); }, () => undefined);
+        }
       }).catch(error => {
         if (turn !== generation.current || request.signal.aborted) return;
         const status = failure(error);
@@ -215,7 +221,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
         </>}
         {view.kind === "invitation" && <><p>Check the details before joining. Accepting adds this access to your signed-in account.</p>
           <dl className="invitation-details"><div><dt>Access</dt><dd>{roleNames[view.review.role]}</dd></div>{view.review.student && <div><dt>Student</dt><dd><bdi dir="auto">{view.review.student.firstName} {view.review.student.lastName}</bdi></dd></div>}</dl>
-          {view.review.role === "parent" && view.review.student && <p>You'll be able to follow <bdi dir="auto">{view.review.student.firstName}</bdi>'s reading and practise with <bdi dir="auto">{view.review.student.firstName}</bdi>.</p>}
+          {view.review.role === "parent" && view.review.student && <p>You'll be able to follow <bdi dir="auto">{view.review.student.firstName}</bdi>'s reading and practice with <bdi dir="auto">{view.review.student.firstName}</bdi>.</p>}
           <p className="field-help">This invitation expires <time dateTime={view.review.expiresAt}>{new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(view.review.expiresAt))}</time>.</p>
           <button type="button" className="button-primary" data-testid="invitation-accept" disabled={pending !== null} onClick={() => void action("accept")}>{pending === "accept" ? "Accepting invitation…" : "Accept invitation"}</button>
           <button type="button" className="button-text" disabled={pending !== null} onClick={() => void action("sign-out")}>Sign out to use another account</button>

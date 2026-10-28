@@ -8,6 +8,7 @@ import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
+import { openVerseEditor } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -132,17 +133,17 @@ it("opens a student's page with the staff tabs and verse sheet, and links to the
   for (const mobile of [false, true]) {
     const tab = await page(mobile); await navigate(tab, "/workspace/admin/students?tab=students");
     await safe(() => roster(tab).getByRole("link", { name: /^Synthetic Learner/ }).click());
-    await ui(tab.getByRole("heading", { name: "Synthetic Learner", level: 2, exact: true })).toBeVisible();
+    await ui(tab.getByRole("heading", { name: "Synthetic Learner", level: 1, exact: true })).toBeVisible();
     // Decision 20: the admin's per-student reading page carries no tab bar.
     await ui(tab.getByRole("navigation", { name: "Workspace", exact: true })).toHaveCount(0);
-    const tabs = tab.getByRole("tablist", { name: "Student page", exact: true });
-    await ui(tabs.getByRole("tab")).toHaveText(["Reading", "Service parts", "Lessons"]);
-    await ui(tab.getByRole("button", { name: /^(Assign|Change) verses$/ })).toBeVisible();
+    // Readings for everyone E2: no tabs; Service parts and Lessons follow the text, and every staff action is in Manage.
+    expect(await tab.getByRole("tablist", { name: "Student page", exact: true }).count()).toBe(0);
+    await ui(tab.getByRole("button", { name: "Manage", exact: true })).toBeVisible();
     await capture(tab, "admin-student", false);
-    await safe(() => tab.getByRole("button", { name: /^(Assign|Change) verses$/ }).click());
+    await safe(() => openVerseEditor(tab));
     await ui(tab.getByRole("dialog", { name: /verses|reading/i })).toBeVisible();
     await safe(() => tab.getByRole("button", { name: "Close verse editor", exact: true }).click());
-    await safe(() => tabs.getByRole("tab", { name: "Lessons", exact: true }).click());
+    await safe(() => tab.locator("#lessons").scrollIntoViewIfNeeded());
     await ui(tab.getByRole("button", { name: "Add lesson note", exact: true })).toBeVisible();
     await safe(() => tab.getByRole("link", { name: "People and access", exact: true }).click());
     await ui(tab.getByRole("heading", { name: "People and access", level: 1, exact: true })).toBeVisible();

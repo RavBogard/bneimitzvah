@@ -5,7 +5,7 @@ import type { PracticeDay, PracticeKind, PracticeLearn, PracticeMarkState } from
  * 1.9 N23: the words of practice visibility. The approved lines (PLAN, tier A strings) are built here and only here:
  * - TP-02, the tutor's per-day line: "Tue Oct 20 · Torah 23:1–23:9 · marked 23:4 Got it"
  * - LD-10, Learn for the tutor: "Often mixed up: tevir and etnachta"; for the student: "Your tutor sees which phrases you can hear."
- * - TP-11, the roster card line: "Practised 3 of last 7 days · Last lesson Oct 17 · 2 verses still working"
+ * - TP-11, the roster card line: "Practiced 3 of last 7 days · Last lesson Oct 17 · 2 verses still working"
  * - TP-20, a verse's mark for the tutor: "Student (with parent): got it"
  * Small wording decided here in the house voice (listed in the PR): the "Can hear" line, one verse, and leaving out an empty part.
  */
@@ -56,9 +56,9 @@ export function dayLine(day: PracticeDay): string {
 /** TP-20: "Student (with parent): got it". A mark made before the source was recorded reads as the student's own. */
 export const markLine = (state: PracticeMarkState, withParent: boolean | null) => `Student${withParent ? " (with parent)" : ""}: ${MARK_LOWER[state]}`;
 
-/** TP-11: "Practised 3 of last 7 days · Last lesson Oct 17 · 2 verses still working". No lesson, or nothing still working, leaves its part out. */
+/** TP-11: "Practiced 3 of last 7 days · Last lesson Oct 17 · 2 verses still working". No lesson, or nothing still working, leaves its part out. */
 export function rosterLine(input: { practisedDays: number; lastLesson: string | null; stillWorking: number }): string {
-  const parts = [`Practised ${input.practisedDays} of last 7 days`];
+  const parts = [`Practiced ${input.practisedDays} of last 7 days`];
   if (input.lastLesson) parts.push(`Last lesson ${shortDate(input.lastLesson)}`);
   if (input.stillWorking > 0) parts.push(`${input.stillWorking} ${input.stillWorking === 1 ? "verse" : "verses"} still working`);
   return parts.join(" · ");

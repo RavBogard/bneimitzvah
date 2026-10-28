@@ -23,4 +23,19 @@
 .learnerRow button { min-height: 44px; }
 .tutorLine { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; margin: 1.5rem 0 0; color: var(--color-muted); font-size: 0.875rem; }
 .tutorUndo { min-height: 44px; padding: 0 0.5rem; border: 0; background: none; color: var(--color-accent, inherit); text-decoration: underline; font: inherit; cursor: pointer; }
+/* Readings for everyone (E3): a parent's card for each child. Names and dates are one unit each; text wraps between them, never inside. */
+.childList { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.75rem; }
+.childCard { display: grid; gap: 0.5rem; min-width: 0; padding: 1rem 1.25rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.childCard > * { margin: 0; min-width: 0; max-width: none; }
+.childHead { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.625rem; }
+.childHead :global([data-tone]) { white-space: normal; max-width: 100%; }
+.childDays { color: var(--color-muted); font-size: 0.875rem; font-weight: 600; white-space: nowrap; }
+.childName { font-size: 1.125rem; line-height: 1.25; overflow-wrap: anywhere; }
+.childRanges { color: var(--color-muted); font-size: 0.875rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.childGot { font-size: 0.875rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.childNote { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; color: var(--color-muted); }
+.childActions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.childLinks { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0; padding: 0; list-style: none; }
+.childLinks li { margin: 0; }
+.childLinks a, .childLinks button { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
 @media (max-width: 640px) { .chips > * { flex: 1 1 auto; } }

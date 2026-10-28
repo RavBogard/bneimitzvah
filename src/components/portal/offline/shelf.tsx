@@ -14,7 +14,7 @@ import { SiteBar } from "../../site/site-bar";
  * that needs a connection.
  *
  * A2: the person's own readings open at their /read?ref= address (the public ref routes they were packed from),
- * named as My readings names them: a member's own name for the reading, else "Torah" or "Haftarah" and the range.
+ * named as My Readings names them: a member's own name for the reading, else "Torah" or "Haftarah" and the range.
  * Online, they show only once this page load has asked whose readings this device keeps, so an account that
  * replaced another on this device never sees the other's list.
  *

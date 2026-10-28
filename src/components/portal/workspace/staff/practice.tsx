@@ -12,7 +12,7 @@ import type { PracticeKind, PracticeMarkState, TutorPractice } from "../../../..
  *
  * - the per-day lines ("Tue Oct 20 · Torah 23:1–23:9 · marked 23:4 Got it") and Learn's lines ("Often mixed up: tevir and
  *   etnachta") in the tutor's Lessons;
- * - the roster card line ("Practised 3 of last 7 days · Last lesson Oct 17 · 2 verses still working") on the tutor's cards;
+ * - the roster card line ("Practiced 3 of last 7 days · Last lesson Oct 17 · 2 verses still working") on the tutor's cards;
  * - a mark made with a parent, on the verse card: "Student (with parent): got it";
  * - the parent's count line ("Noa has marked 12 verses Got it and 3 Still working.") in the parent's This week.
  * Admins (rabbis) never get this read; their pages are unchanged.
@@ -47,14 +47,14 @@ export function useStudentMarkLine(kind: PracticeKind, verseRef: string, state: 
   return markLine(state, practice?.sources.get(sourceKey(kind, verseRef, state)) ?? null);
 }
 
-/** The tutor's Lessons: one line per day practised (newest first) and Learn to lein's lines. */
+/** The tutor's Lessons: one line per day practiced (newest first) and Learn to lein's lines. */
 export function TutorPracticeDays() {
   const practice = useContext(TutorPracticeContext), days = useId(), learn = useId();
   if (!practice) return null;
   const { view } = practice, since = [view.from, addDays(view.today, -13)].sort().at(-1)!;
   const mixedUp = view.learn ? mixedUpLine(view.learn) : null;
   return <section className="tutor-practice" data-testid="tutor-practice" aria-labelledby={days}>
-    <h3 id={days}>Verses practised</h3>
+    <h3 id={days}>Verses practiced</h3>
     {view.days.length ? <ul className="tutor-practice-days">{[...view.days].sort((a, b) => b.day.localeCompare(a.day)).map(entry => <li key={entry.day} data-testid="practice-day-line">{dayLine(entry)}</li>)}</ul>
       : <p className="field-help">No verses opened since {dayLabel(since)}.</p>}
     {view.learn && <div className="tutor-practice-learn" role="group" aria-labelledby={learn}>
@@ -66,7 +66,7 @@ export function TutorPracticeDays() {
 }
 const addDays = (date: string, days: number) => new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 
-/** The tutor's student card: "Practised 3 of last 7 days · Last lesson Oct 17 · 2 verses still working". */
+/** The tutor's student card: "Practiced 3 of last 7 days · Last lesson Oct 17 · 2 verses still working". */
 export function TutorCardLine({ studentId, from = PRACTICE_VISIBILITY_FROM }: { studentId: string; from?: string | null }) {
   const [line, setLine] = useState<{ id: string; text: string } | null>(null);
   const open = practiceVisibilityFrom(from) !== null;

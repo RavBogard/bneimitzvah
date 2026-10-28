@@ -70,6 +70,14 @@ test.describe("at 390px", () => {
     }
   });
 
+  test("an admin on a student's reading has the site bar, the breadcrumb and no tab bar", async ({ page }) => {
+    await session(page, ["admin"]);
+    await page.goto(`/workspace/admin/students/${ID_A}/reading`);
+    await expect(page.locator("[data-site-bar]")).toBeVisible();
+    await expect(page.getByRole("link", { name: "All students", exact: true })).toBeVisible();
+    await expect(bar(page)).toHaveCount(0);
+  });
+
   test("a reload keeps the tab", async ({ page }) => {
     for (const { role, home, steps } of roles) {
       await session(page, [role]);

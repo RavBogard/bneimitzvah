@@ -10,6 +10,7 @@ import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from 
 import { installLoopbackFetchGuard } from "./egress";
 import { openAuthMail } from "./auth-navigation";
 import * as s from "../../src/server/db/index";
+import { openVerseEditor } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser;
@@ -42,9 +43,9 @@ async function page(role: "admin" | "tutor" = "admin") {
 }
 async function navigate(tab: Page, role = "admin") {
   await safe(() => tab.goto(`/workspace/${role === "admin" ? "admin/students" : "tutor"}/${fixture.student.id}${role === "admin" ? "/reading" : ""}`, { waitUntil: "domcontentloaded" }));
-  await ui(tab.getByRole("button", { name: /^(Change|Assign) verses$/ })).toBeEnabled();
+  await ui(tab.getByRole("button", { name: "Manage", exact: true })).toBeEnabled();
 }
-async function open(tab: Page) { await safe(() => tab.getByRole("button", { name: /^(Change|Assign) verses$/ }).click()); await ui(sheet(tab)).toBeVisible(); }
+async function open(tab: Page) { await safe(() => openVerseEditor(tab)); await ui(sheet(tab)).toBeVisible(); }
 async function close(tab: Page) { await click(tab, "Close verse editor"); await ui(sheet(tab)).toBeHidden(); }
 async function capture(tab: Page, stage: "initial" | "review") {
   if (process.env.READING_ASSIGNMENT_CAPTURE !== "1") return;

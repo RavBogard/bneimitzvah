@@ -12,6 +12,7 @@ import { installLoopbackFetchGuard } from "./egress";
 import { closeVerseTools, openVerseTools } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import * as s from "../../src/server/db/index";
+import { openVerseEditor, refreshReading, goChild, manage } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -25,7 +26,7 @@ async function click(tab: Page, name: string) { await safe(() => tab.getByRole("
 const workTools = async (tab: Page) => (await openVerseTools(tab, "Genesis 1:1")).locator(".verse-work");
 async function openSheet(tab: Page) {
   if (await tab.getByRole("dialog", { name: /^Verse tools · / }).count()) await closeVerseTools(tab);
-  await safe(() => tab.getByRole("button", { name: /^(Change|Assign) verses$/ }).click());
+  await safe(() => openVerseEditor(tab));
   await ui(tab.locator(".reading-editor").getByText(/^Calendar:/)).toBeVisible();
   for (const name of ["Advanced references and aliyah boundaries", "Hebrew preview and verse selection (optional)"]) {
     const summary = tab.getByText(name, { exact: true });
@@ -53,7 +54,7 @@ async function page(role: "admin" | "tutor" | "student" = "admin") {
 }
 async function reading(tab: Page, role = "admin") {
   await safe(() => tab.goto(role === "admin" ? `/workspace/admin/students/${fixture.student.id}/reading` : "/workspace/tutor", { waitUntil: "domcontentloaded" }));
-  if (role === "tutor") await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
+  if (role === "tutor") await safe(() => tab.locator(`a[href="/workspace/tutor/${fixture.student.id}"]`).click());
   // Staff change verses in a sheet over the reading.
   await openSheet(tab);
 }
@@ -181,7 +182,7 @@ it("retains a bound preview through unchanged quiet verification, fences explici
   try {
     await click(tab, "Preview custom references"); await ui.poll(() => heldRefresh).toBe(true);
     const reloaded = tab.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${fixture.student.id}/reading` && response.status() === 200);
-    await tab.locator('button[aria-label="Refresh reading"]').evaluate(button => (button as HTMLButtonElement).click()); await reloaded;
+    await tab.getByRole("button", { name: "Manage", exact: true }).evaluate(button => (button as HTMLButtonElement).click()); await tab.getByRole("dialog", { name: "Manage", exact: true }).getByRole("button", { name: "Refresh reading", exact: true }).click(); await reloaded;
     await ui(panel(tab).locator(".study-verses")).toHaveCount(0);
     releaseRefresh(); await ui.poll(() => deliveredRefresh).toBe(true); await ui(panel(tab).locator(".study-verses")).toHaveCount(0);
     await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
@@ -197,7 +198,7 @@ it("retains a bound preview through unchanged quiet verification, fences explici
     if (size) await safe(() => tab.setViewportSize(size));
   }
   expect((await api(tab, `/api/students/${fixture.student.id}/reading/preview/prepare`, { mode: "parent", kind: "torah", source: "calendar" })).status).toBe(400);
-  await safe(() => tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" })); await safe(() => tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
+  await safe(() => tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" })); await safe(() => goChild(tab, fixture.student.id));
   await ui(tab.locator(".reading-current-assignment")).toBeVisible(); expect(await tab.getByRole("button", { name: "Preview custom references", exact: true }).count()).toBe(0);
 });
 
@@ -365,7 +366,7 @@ it("shows recorded student boundaries and page continuation, distinguishing unre
   const [assignment] = await fixture.ownerDb.select().from(s.assignment).where(eq(s.assignment.studentId, fixture.student.id));
   for (const aliyahStarts of [null, []] as const) {
     await fixture.ownerDb.update(s.assignment).set({ aliyahStarts: aliyahStarts === null ? null : [], revision: assignment.revision + (aliyahStarts === null ? 1 : 2) }).where(eq(s.assignment.id, assignment.id));
-    await click(learner, "Refresh reading");
+    await refreshReading(learner);
     if (aliyahStarts === null) {
       expect(await study.getByText("Aliyah boundaries have not been recorded for this assignment.", { exact: true }).count()).toBe(0); // Students see no assignment status.
       expect(await study.locator(".student-aliyah").count()).toBe(0);

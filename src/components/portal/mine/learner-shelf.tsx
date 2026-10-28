@@ -6,9 +6,10 @@ import { sortOwnReadings } from "./model";
 import { fetchLearner, fetchLearnerReadings, type Learner, type LearnerReadings } from "./api";
 import { longDate } from "./own-readings";
 import styles from "../saved/saved.module.css";
+import { NAMELESS_LEARNER } from "../../../lib/learner-name";
 
 /** A learner's shelf as the tutor who claims them, or the rabbi, sees it (plan D7): the same "Also working on" list, read-only. */
-export const LEARNER_SHELF_STRINGS = Object.freeze({ title: "Also working on", fallback: "Learner", missing: "This learner isn’t yours to see.", failed: "The readings didn’t load.", none: "Nothing is saved yet." });
+export const LEARNER_SHELF_STRINGS = Object.freeze({ title: "Also working on", fallback: NAMELESS_LEARNER, missing: "This learner isn’t yours to see.", failed: "The readings didn’t load.", none: "Nothing is saved yet." });
 const displayRange = (ranges: string) => ranges.replace(/(\d)-(\d)/g, "$1–$2");
 /** Where a learner's reading opens: the reading page in its read-only learner view. */
 export const learnerReadingHref = (membershipId: string, id: string) => readAddress({ mode: "saved", id, learner: membershipId });

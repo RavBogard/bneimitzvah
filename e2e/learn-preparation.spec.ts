@@ -58,7 +58,7 @@ test("a learner can repair a word or an uncertain tune, join parts, return later
   await page.getByRole("button", { name: "Compare the join", exact: true }).click(); await at(page, "join-check");
   await page.getByRole("button", { name: "Return later", exact: true }).click(); await at(page, "summary");
   await expect(page.getByText("Return later: try the part you prepared before replay.", { exact: false })).toBeVisible();
-  await expect(page.getByText("You've practised preparing a verse", { exact: false })).toHaveCount(0); // Daniel, answer 1: our ending only, gated
+  await expect(page.getByText("You've practiced preparing a verse", { exact: false })).toHaveCount(0); // Daniel, answer 1: our ending only, gated
   await expect(page.getByText("You can lein this verse.", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Try this verse before replay", exact: true }).click(); await at(page, "whole-attempt");
   expect(await plays(page)).toBe(0);
@@ -73,7 +73,7 @@ test("whole-verse uncertainty can select any word or explicitly choose a part fo
   await page.goto("/learn/torah-first-verse"); await at(page, "model");
   await page.getByRole("button", { name: "Go straight to a whole-verse attempt" }).click();
   await page.getByRole("button", { name: "Compare the whole verse", exact: true }).click();
-  await expect(page.getByRole("combobox", { name: "Choose a part to practise", exact: true })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Choose a part to practice", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Work on a word", exact: true }).click();
   const words = page.locator("[data-unit][data-tap=answer]"), count = await words.count();
   expect(count).toBeGreaterThan(2);
@@ -87,7 +87,7 @@ test("whole-verse uncertainty can select any word or explicitly choose a part fo
   await page.getByRole("button", { name: "Compare the whole verse", exact: true }).click();
   await page.getByRole("button", { name: "Work on the tune", exact: true }).click(); await at(page, "choose-part");
   expect(await plays(page)).toBe(0);
-  await page.getByRole("combobox", { name: "Choose a part to practise", exact: true }).selectOption("0"); await at(page, "tune-repair");
+  await page.getByRole("combobox", { name: "Choose a part to practice", exact: true }).selectOption("0"); await at(page, "tune-repair");
   await expect(page.getByRole("button", { name: "Hear the ending", exact: true })).toBeVisible();
 });
 
@@ -115,7 +115,7 @@ test("the first-verse result is only a temporary explicit learner comparison", a
   await expect(result).toHaveCount(0);
   await page.getByRole("button", { name: "Not yet", exact: true }).click(); await at(page, "choose-part");
   await expect(result).toHaveCount(0);
-  await page.getByRole("combobox", { name: "Choose a part to practise", exact: true }).selectOption("0"); await at(page, "words");
+  await page.getByRole("combobox", { name: "Choose a part to practice", exact: true }).selectOption("0"); await at(page, "words");
   await page.getByRole("button", { name: "Return later", exact: true }).click(); await at(page, "summary");
   await expect(result).toHaveCount(0);
   await page.getByRole("button", { name: "Try this verse before replay", exact: true }).click();

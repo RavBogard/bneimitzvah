@@ -9,11 +9,12 @@ import * as data from "./data";
 import { isCeremonyDone } from "../data/ceremony-done";
 import { auditClaim, liveClaimForLink, liveClaimsOfGrant, revokeClaim } from "../learners/data";
 import type { AdminSelection, EligibleTutor, FlagSelection, LinkSelection } from "./types";
+import { NAMELESS_LEARNER } from "../../lib/learner-name";
 
 const conflict = () => Object.freeze({ ok: false as const, code: "stale-state" as const });
 function active(value: unknown) { if (value !== "active") throw new AccessDenied(403); }
 function boolean(value: unknown): boolean { if (typeof value !== "boolean") throw new AccessDenied(403); return value; }
-export function displayName(value: string, fallback: "Parent" | "Student" | "Tutor" | "Learner" = "Tutor") {
+export function displayName(value: string, fallback: "Parent" | "Student" | "Tutor" | typeof NAMELESS_LEARNER = "Tutor") {
   const label = value.trim();
   // This is only the label of an already tenant-authorized tutor, never an
   // arbitrary global-user search. Do not turn email-shaped names into contacts.

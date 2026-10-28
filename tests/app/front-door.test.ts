@@ -8,7 +8,7 @@ import AccountRoute from "../../src/app/account/page";
 import SignInPage from "../../src/app/sign-in/page";
 import { metadata as rootMetadata } from "../../src/app/layout";
 import { frontDoorAccount, PortalEntry } from "../../src/components/portal/entry";
-import { FrontDoor, ThisWeekView } from "../../src/components/portal/front-door/front-door";
+import { FrontDoor, signedInDoor, ThisWeekView } from "../../src/components/portal/front-door/front-door";
 import type { PublicWeek } from "../../src/components/portal/public-reading/api";
 
 const home = async (query: Record<string, string> = {}) => renderToStaticMarkup(await Home({ searchParams: Promise.resolve(query) }));
@@ -134,7 +134,7 @@ test("a signed-in account that is refused still gets the same site bar; the door
   expect(frontDoorAccount({ kind: "unavailable" })).toEqual({ kind: "task", signedIn: false });
   expect(frontDoorAccount({ kind: "loading" })).toBeNull();
   expect(frontDoorAccount({ kind: "sign-in" })).toEqual({ kind: "sign-in" });
-  expect(frontDoorAccount({ kind: "signed-in", summary: { membershipAvailable: true, roles: ["tutor"], saved: true, approver: false, sessionBinding: "A".repeat(43) } })).toEqual({ kind: "account", saved: true, roles: ["tutor"], count: null, pinned: null });
+  expect(frontDoorAccount({ kind: "signed-in", summary: { membershipAvailable: true, roles: ["tutor"], saved: true, approver: false, sessionBinding: "A".repeat(43) } })).toEqual({ kind: "account", saved: true, roles: ["tutor"], count: null, pinned: null, child: null, nearest: null });
   const bar = (account: ReturnType<typeof frontDoorAccount>) => {
     const markup = renderToStaticMarkup(createElement(FrontDoor, { account, children: createElement("p", null, "Synthetic task") }));
     return markup.slice(markup.indexOf("<header"), markup.indexOf("</header>"));
@@ -157,4 +157,17 @@ test("Find a reading sits under the hero and above the doors, with the Coming up
   // The hero's Lein and Study stay, and the chips are placeholders until the calendar arrives.
   expect(markup).toContain('href="/read">Lein</a>');
   expect(markup).toContain('data-state="loading"');
+});
+
+test("the door names the pinned reading, a parent's first child and a tutor's nearest student from the door's facts (Readings for everyone E3)", () => {
+  const summary = (roles: ("student" | "parent" | "tutor")[]) => ({ membershipAvailable: true, roles, saved: true, approver: false, sessionBinding: "A".repeat(43) });
+  const door = { pinned: { name: "Synthetic Learner", date: "2027-05-01", got: 9, total: 14 }, child: { name: "Synthetic Child", date: "2027-06-05" }, nearest: { name: "Synthetic Student", date: "2027-04-03" }, count: 3 };
+  // The server gives a pinned reading only to a student; a tutor's door has no pinned reading, so it names the nearest student.
+  const markup = (roles: ("student" | "parent" | "tutor")[]) => renderToStaticMarkup(createElement(FrontDoor, { account: frontDoorAccount({ kind: "signed-in", summary: summary(roles), door: roles.includes("student") ? door : { ...door, pinned: null } }), children: null }));
+  expect(markup(["student"])).toContain("Synthetic Learner · Beit Mitzvah, Sat, May 1, 2027 · 9 of 14 verses");
+  expect(frontDoorAccount({ kind: "signed-in", summary: summary(["parent"]), door })).toMatchObject({ child: { name: "Synthetic Child", ceremony: "2027-06-05" }, nearest: { name: "Synthetic Student" }, count: 3 });
+  expect(signedInDoor("parent", { child: { name: "Synthetic Child", ceremony: "2027-06-05" }, count: 3 }).line).toBe("Synthetic Child · Beit Mitzvah, Sat, Jun 5, 2027");
+  expect(signedInDoor("tutor", { nearest: { name: "Synthetic Student", ceremony: "2027-04-03" }, count: 3 }).line).toBe("Next: Synthetic Student · Beit Mitzvah, Sat, Apr 3, 2027");
+  expect(signedInDoor("tutor", { count: 3 }).line).toBe("3 saved readings");
+  expect(markup(["tutor"])).toContain("Next: Synthetic Student · Beit Mitzvah, Sat, Apr 3, 2027");
 });

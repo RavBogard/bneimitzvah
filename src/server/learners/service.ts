@@ -14,6 +14,7 @@ import { audit as auditRelationship, revokeTutor } from "../relationships/data";
 import { displayName, writeTutorAssignment, writeTutorRevocation } from "../relationships/service";
 import type { SavedService } from "../saved/service";
 import * as data from "./data";
+import { NAMELESS_LEARNER } from "../../lib/learner-name";
 
 /**
  * Readings for everyone (Daniel, 2026-10-27, decision 15; plan decisions 2 and 6, task D5). Any tutor may see every signed-in
@@ -98,7 +99,7 @@ export function createLearnersService<Q extends PgQueryResultHKT>(input: { acces
         const learners = [];
         for (const row of rows) {
           const tutor = await tutorOf(tx, identity.tenantId, row.membershipId), student = await data.liveStudentOf(tx, identity.tenantId, row.membershipId), shelf = shelves.get(row.membershipId);
-          learners.push(Object.freeze({ membershipId: row.membershipId, name: displayName(row.name, "Learner"), readings: shelf?.readings ?? 0, nearest: shelf?.nearest ?? null,
+          learners.push(Object.freeze({ membershipId: row.membershipId, name: displayName(row.name, NAMELESS_LEARNER), readings: shelf?.readings ?? 0, nearest: shelf?.nearest ?? null,
             tutor: tutor ? Object.freeze({ name: tutor.name, claimed: tutor.claimed, mine: tutor.grantId === grant.id }) : null,
             student: student ? Object.freeze({ id: student.id, firstName: student.firstName, lastName: student.lastName, ceremonyDate: student.ceremonyDate }) : null }));
         }

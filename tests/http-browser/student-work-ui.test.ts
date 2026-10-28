@@ -16,6 +16,7 @@ import { expandReadingRanges } from "../../src/lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import * as s from "../../src/server/db/index";
+import { refreshReading, goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -170,18 +171,18 @@ it("edits own and assisted translations, preserves Unicode and literal markup, a
   const panel = await tools(student), field = panel.getByRole("textbox"), text = "Synthetic <img src=x onerror=alert(1)> שָׁלוֹם 😀 e\u0301\n  spaced  ";
   await safe(() => field.fill(text)); await safe(() => panel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(panel.locator(".work-status")).toHaveText("Saved"); expect((await head(student, "Genesis 1:1"))?.text === text).toBe(true); expect(await panel.locator("img").count()).toBe(0);
   await capture(student, "student-edit-mobile");
-  const parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(parent); const parentPanel = await tools(parent);
+  const parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => goChild(parent, fixture.student.id)); await loaded(parent); const parentPanel = await tools(parent);
   expect(await parentPanel.getByRole("textbox").count()).toBe(0); await ui(parentPanel.getByText(text, { exact: true })).toBeVisible(); await capture(parent, "parent-readonly-desktop");
-  await click(parent, "Practice with Synthetic"); await loaded(parent); const childPanel = await tools(parent); await safe(() => childPanel.getByRole("textbox").fill("Synthetic assisted reading")); await safe(() => childPanel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(childPanel.locator(".work-status")).toHaveText("Saved");
+  await click(parent, "Practice with Synthetic"); await parent.waitForURL(/\/workspace\/practice\//, { timeout: 60_000 }); await loaded(parent); const childPanel = await tools(parent); await safe(() => childPanel.getByRole("textbox").fill("Synthetic assisted reading")); await safe(() => childPanel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(childPanel.locator(".work-status")).toHaveText("Saved");
   await safe(() => childPanel.getByRole("button", { name: "Notes from your teachers", exact: true }).click()); expect(await childPanel.getByRole("textbox").count()).toBe(0); expect(await childPanel.getByRole("button", { name: "Add student-visible note", exact: true }).count()).toBe(0);
   const admin = await page("admin"); await staff(admin); const adminPanel = await tools(admin); expect(await adminPanel.getByRole("textbox").count()).toBe(0); await ui(adminPanel.getByText("Synthetic assisted reading", { exact: true })).toBeVisible(); await ui(adminPanel.getByText(/Assisted child practice/)).toBeVisible();
   await safe(() => adminPanel.getByRole("button", { name: "Teacher notes", exact: true }).click()); await safe(() => adminPanel.getByRole("textbox").fill("Synthetic teacher note <strong>literal</strong>")); expect(await fixture.ownerDb.select().from(s.tutorNote)).toHaveLength(0);
   await capture(admin, "staff-visible-note-desktop"); await safe(() => adminPanel.getByRole("button", { name: "Add student-visible note", exact: true }).click()); await ui(adminPanel.getByText("Synthetic teacher note <strong>literal</strong>", { exact: true })).toBeVisible();
-  const tutor = await page("tutor"); await navigate(tutor, "/workspace/tutor"); await safe(() => tutor.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(tutor); const tutorPanel = await tools(tutor);
+  const tutor = await page("tutor"); await navigate(tutor, "/workspace/tutor"); await safe(() => tutor.locator(`a[href="/workspace/tutor/${fixture.student.id}"]`).click()); await loaded(tutor); const tutorPanel = await tools(tutor);
   expect(await tutorPanel.getByRole("textbox").count()).toBe(0); await safe(() => tutorPanel.getByRole("button", { name: "Teacher notes", exact: true }).click()); await safe(() => tutorPanel.getByRole("textbox").fill("Synthetic assigned tutor note")); await safe(() => tutorPanel.getByRole("button", { name: "Add student-visible note", exact: true }).click()); await ui(tutorPanel.getByText("Synthetic assigned tutor note", { exact: true })).toBeVisible();
-  await click(student, "Refresh reading"); await loaded(student); const refreshed = await tools(student); await safe(() => refreshed.getByRole("button", { name: "Notes from your teachers", exact: true }).click());
+  await refreshReading(student); await loaded(student); const refreshed = await tools(student); await safe(() => refreshed.getByRole("button", { name: "Notes from your teachers", exact: true }).click());
   for (const text of ["Synthetic teacher note <strong>literal</strong>", "Synthetic assigned tutor note"]) {
-    const note = refreshed.locator(".work-notes article").filter({ hasText: text }); await ui(note.getByText(text, { exact: true })).toBeVisible(); await ui(note.getByText("Portal member", { exact: true })).toBeVisible();
+    const note = refreshed.locator(".work-notes article").filter({ hasText: text }); await ui(note.getByText(text, { exact: true })).toBeVisible(); await ui(note.getByText("your tutor", { exact: true })).toBeVisible();
   }
 });
 
@@ -228,7 +229,7 @@ it("supports composition and byte validation, clear without repeated empty versi
   await safe(() => field.fill("😀".repeat(1025))); await ui(panel.getByText("Keep this text within 4,096 UTF-8 bytes.", { exact: true })).toBeVisible(); await ui(panel.getByRole("button", { name: "Save now", exact: true })).toBeDisabled();
   await safe(() => field.fill("")); await safe(() => panel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(panel.locator(".work-status")).toHaveText("Translation cleared · Saved"); const before = requests; await safe(() => field.blur()); await safe(() => tab.waitForTimeout(1000)); expect(requests).toBe(before);
   let current = (await head(tab, "Genesis 1:11"))!.version; for (let i = 0; i < 22; i++) { const result = await append(tab, "Genesis 1:11", `Synthetic history ${i}`, current); expect(result.status === 200).toBe(true); current++; }
-  await click(tab, "Refresh reading"); await loaded(tab); const historyPanel = await tools(tab, "Genesis 1:11"); await safe(() => historyPanel.locator(".work-history > summary").click()); await ui(historyPanel.locator(".work-history li")).toHaveCount(20);
+  await refreshReading(tab); await loaded(tab); const historyPanel = await tools(tab, "Genesis 1:11"); await safe(() => historyPanel.locator(".work-history > summary").click()); await ui(historyPanel.locator(".work-history li")).toHaveCount(20);
   await safe(() => historyPanel.getByRole("button", { name: "Older versions", exact: true }).click()); await ui(historyPanel.locator(".work-history li")).toHaveCount(4);
   // The student workspace app bar hosts Learn to lein, whose device-only progress and sync outline (lesson ids, review boxes and dates, no student text) is the one
   // thing it may keep in this browser (besides the site bar's signed-in hint, the one character "1"); everything the student wrote, saved or cleared above must still never touch web storage.
@@ -245,32 +246,9 @@ it("guards controlled leave, explicit reload barriers and quiet retained reading
   const tab = await page("student"); await learner(tab); const panel = await tools(tab, "Genesis 1:4");
   await safe(() => panel.getByRole("textbox").fill("Synthetic departure edit")); await closeVerseTools(tab); // the page's links sit behind the sheet; closing it loses no text
   await safe(() => tab.getByRole("navigation", { name: "Site", exact: true }).getByRole("link", { name: "My Readings", exact: true }).click()); await ui(tab.getByRole("dialog")).toBeVisible(); await ui(tab.getByRole("dialog").getByRole("button", { name: "Keep working", exact: true })).toBeFocused(); await click(tab, "Keep working"); await ui(tab.getByRole("navigation", { name: "Site", exact: true }).getByRole("link", { name: "My Readings", exact: true })).toBeFocused(); await tools(tab, "Genesis 1:4"); await ui(panel.getByRole("textbox")).toHaveValue("Synthetic departure edit");
-  phase = "explicit-text-outage";
-  // Pause before debounce, then verify all three independent reads hold the reveal barrier.
-  // Dispatch only these deliberate reloads without moving focus: a real pointer
-  // click blurs/saves the textarea before the barrier (covered by other cases).
-  await safe(() => panel.getByRole("textbox").fill("Synthetic retained during text outage")); unavailable = true; phase = "outage-refresh-click"; await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).dispatchEvent("click"));
-  phase = "outage-heading"; await ui(tab.getByRole("heading", { name: "Text unavailable", exact: true })).toBeVisible(); unavailable = false; phase = "outage-retained-draft"; await ui(tab.locator(".verse-work textarea")).toHaveValue("Synthetic retained during text outage");
-  const outageSave = tab.locator(".verse-work").getByRole("button", { name: "Save now", exact: true });
-  phase = "outage-save";
-  await safe(() => outageSave.click()); phase = "outage-saved"; await ui(tab.locator(".verse-work .work-status")).toHaveText("Saved");
-  phase = "outage-reload"; await click(tab, "Reload assigned text"); await loaded(tab); await tools(tab, "Genesis 1:4");
-  phase = "held-text-barrier";
-  // Work can finish first, but a held text response still prevents queued writes.
-  let releaseText!: () => void, textHeld = false, workRead = false, writeCount = 0; const textGate = new Promise<void>(resolve => { releaseText = resolve; });
-  await tab.route("**/work/draft", async route => { writeCount++; await route.continue(); });
-  await tab.route("**/work?**", async route => { const response = await route.fetch(); workRead = true; await route.fulfill({ response }); });
-  await tab.route("**/study-text?**", async route => { const response = await route.fetch(); textHeld = true; await textGate; await route.fulfill({ response }).catch(() => undefined); });
-  const staged = await tools(tab, "Genesis 1:4"); await safe(() => staged.getByRole("textbox").fill("Synthetic queued behind text barrier")); await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).dispatchEvent("click"));
-  await ui.poll(() => textHeld && workRead).toBe(true); await safe(() => tab.waitForTimeout(1100)); expect(writeCount).toBe(0); await ui(tab.locator(".study-hebrew").first()).toBeHidden();
-  releaseText(); await tab.unroute("**/study-text?**"); await tab.unroute("**/work?**"); await loaded(tab); await ui(staged.locator(".work-status")).toHaveText("Saved"); await tab.unroute("**/work/draft");
-  phase = "held-metadata-barrier";
-  // The same pause applies while assignment metadata has not yet returned.
-  let releaseMetadata!: () => void, metadataHeld = false; const metadataGate = new Promise<void>(resolve => { releaseMetadata = resolve; }); writeCount = 0;
-  await tab.route("**/work/draft", async route => { writeCount++; await route.continue(); });
-  await tab.route("**/reading?**", async route => { const response = await route.fetch(); metadataHeld = true; await metadataGate; await route.fulfill({ response }).catch(() => undefined); });
-  await safe(() => staged.getByRole("textbox").fill("Synthetic queued behind metadata barrier")); await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).dispatchEvent("click")); await ui.poll(() => metadataHeld).toBe(true); await safe(() => tab.waitForTimeout(1100)); expect(writeCount).toBe(0);
-  releaseMetadata(); await tab.unroute("**/reading?**"); await loaded(tab); await ui(staged.locator(".work-status")).toHaveText("Saved"); await tab.unroute("**/work/draft");
+  // Readings for everyone E2: a learner's page has no Refresh reading button, so the explicit-reload barriers (text outage, held text, held metadata) are covered on
+  // the staff page (tutor-route-ui, workspace-ui); what stays here is the quiet retention below.
+  const staged = await tools(tab, "Genesis 1:4"); await safe(() => staged.getByRole("textbox").fill("Synthetic queued behind metadata barrier"));
   phase = "quiet-session-retention";
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; }); await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
   const existingReading = await tab.locator(".study-verses").elementHandle();
@@ -306,11 +284,11 @@ it("honors a real byte-adaptive work page and preserves original assignment labe
   }
   const query = new URLSearchParams({ ...studentBinding, assignmentRevision: String(studentBinding.assignmentRevision), offset: "0" }), first = await api(student, `/api/students/${fixture.student.id}/work?${query}`);
   expect(first.status === 200 && first.data.verses.length > 0 && first.data.verses.length < 10 && first.data.nextOffset === first.data.verses.length).toBe(true);
-  await click(student, "Refresh reading"); await loaded(student); const missingOrdinal = first.data.nextOffset, lazy = await tools(student, `Genesis 1:${missingOrdinal + 1}`); await ui(lazy.getByRole("textbox")).toHaveValue(expanded);
+  await refreshReading(student); await loaded(student); const missingOrdinal = first.data.nextOffset, lazy = await tools(student, `Genesis 1:${missingOrdinal + 1}`); await ui(lazy.getByRole("textbox")).toHaveValue(expanded);
   const replace = async (ranges: string[]) => { const prepared = await api(admin, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "admin", ranges }); expect(prepared.status === 200 && prepared.data.status === "prepared").toBe(true); expect((await api(admin, `/api/students/${fixture.student.id}/reading/confirm`, { mode: "admin", binding: prepared.data.binding })).status === 200).toBe(true); };
-  await replace(["Genesis 1:11-15"]); await click(student, "Refresh reading"); await loaded(student, "Genesis 1:11"); const earlier = await tools(student, "Genesis 1:11"); await ui(earlier.getByText(/Saved under an earlier assignment \(revision 1\)/)).toBeVisible();
+  await replace(["Genesis 1:11-15"]); await refreshReading(student); await loaded(student, "Genesis 1:11"); const earlier = await tools(student, "Genesis 1:11"); await ui(earlier.getByText(/Saved under an earlier assignment \(revision 1\)/)).toBeVisible();
   const currentBinding = await selection(student), historyQuery = new URLSearchParams({ ...currentBinding, assignmentRevision: String(currentBinding.assignmentRevision), stream: "draft", verseRef: "Genesis 1:1" }); expect((await api(student, `/api/students/${fixture.student.id}/work/history?${historyQuery}`)).status === 404).toBe(true);
-  await replace(["Genesis 1:1-15"]); await click(student, "Refresh reading"); await loaded(student); const readded = await tools(student); await ui(readded.getByRole("textbox")).toHaveValue(expanded); await ui(readded.getByText(/Saved under an earlier assignment \(revision 1\)/)).toBeVisible();
+  await replace(["Genesis 1:1-15"]); await refreshReading(student); await loaded(student); const readded = await tools(student); await ui(readded.getByRole("textbox")).toHaveValue(expanded); await ui(readded.getByText(/Saved under an earlier assignment \(revision 1\)/)).toBeVisible();
 });
 
 async function reviseSameVerses(admin: Page) {
@@ -370,7 +348,7 @@ it("blocks an uncertain old save through recovery outages until explicit authori
 });
 
 it("clears old child work on forced revocation and fences an actual committed late reply across context loss", async () => {
-  const parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(parent); await click(parent, "Practice with Synthetic"); await loaded(parent);
+  const parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => goChild(parent, fixture.student.id)); await loaded(parent); await click(parent, "Practice with Synthetic"); await parent.waitForURL(/\/workspace\/practice\//, { timeout: 60_000 }); await loaded(parent);
   let releaseUnknown!: () => void, committedUnknown = false; const unknownGate = new Promise<void>(resolve => { releaseUnknown = resolve; }), bodies: { child: string; text: string }[] = [];
   await parent.route("**/work/draft", async route => { bodies.push({ child: new URL(route.request().url()).pathname.split("/")[3], text: route.request().postDataJSON().text }); const response = await route.fetch(); committedUnknown = response.status() === 200; await unknownGate; await route.fulfill({ response }).catch(() => undefined); });
   const uncertain = await tools(parent, "Genesis 1:9"); await safe(() => uncertain.getByRole("textbox").fill("Synthetic original child uncertain save")); await safe(() => uncertain.getByRole("button", { name: "Save now", exact: true }).click()); await ui.poll(() => committedUnknown).toBe(true); await safe(() => uncertain.getByRole("textbox").fill("Synthetic old child queue must not post"));
@@ -380,7 +358,7 @@ it("clears old child work on forced revocation and fences an actual committed la
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; }); await parent.route("**/work/draft", async route => { const response = await route.fetch(); held = response.status() === 200; await gate; await route.fulfill({ response }).catch(() => undefined); });
   await safe(() => panel.getByRole("textbox").fill("Synthetic context-fenced write")); await safe(() => panel.getByRole("button", { name: "Save now", exact: true }).click()); await ui.poll(() => held).toBe(true);
   await fixture.ownerDb.update(s.guardian).set({ revokedAt: new Date() }).where(and(eq(s.guardian.studentId, fixture.student.id), eq(s.guardian.parentGrantId, (await fixture.ownerDb.select().from(s.roleGrant).where(and(eq(s.roleGrant.membershipId, (await fixture.ownerDb.select().from(s.membership).where(eq(s.membership.userId, fixture.tutor.id)))[0].id), eq(s.roleGrant.role, "parent"))))[0].id)));
-  await safe(() => parent.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => new URL(parent.url()).pathname).toBe("/workspace/parent"); await ui(parent.getByLabel("Child", { exact: true })).toBeVisible(); await ui(parent.getByText("Practice access changed. Choose an available child again.", { exact: true })).toBeVisible(); expect(await parent.locator(".verse-work textarea").count()).toBe(0); release(); await parent.unroute("**/work/draft"); expect(await parent.getByText("Synthetic context-fenced write", { exact: true }).count()).toBe(0);
+  await safe(() => parent.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => new URL(parent.url()).pathname).toBe("/mine"); await ui(parent.getByTestId("mine-children")).toBeVisible(); await ui(parent.getByText("Practice access changed. Choose an available child again.", { exact: true })).toBeVisible(); expect(await parent.locator(".verse-work textarea").count()).toBe(0); release(); await parent.unroute("**/work/draft"); expect(await parent.getByText("Synthetic context-fenced write", { exact: true }).count()).toBe(0);
   // An expired SDK session bypasses every local departure choice.
   const student = await page("student"); await learner(student); const own = await tools(student, "Genesis 1:6"); await safe(() => own.getByRole("textbox").fill("Synthetic discarded on expiry")); await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(Date.now() - 60_000) }).where(eq(s.session.userId, learnerId));
   await safe(() => student.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui(student.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible(); expect(await student.locator(".verse-work textarea").count()).toBe(0);

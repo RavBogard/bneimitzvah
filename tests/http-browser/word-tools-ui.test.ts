@@ -22,6 +22,7 @@ import { parseReferenceCatalog } from "../../src/server/reference-audio/catalog"
 import { parseTahot, parseTbesh } from "../../src/server/study/lexical/step";
 import { REFERENCE_ATTRIBUTION } from "../../src/lib/reference-audio/contract";
 import * as s from "../../src/server/db/index";
+import { goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 declare global { interface Window { toolsAudios: HTMLAudioElement[]; toolsRevoked: string[]; toolsBlobKinds: Record<string, "prime" | "word" | "verse"> } }
@@ -106,7 +107,15 @@ afterAll(async () => {
 }, 120_000);
 
 const tools = (tab: Page) => tab.getByRole("region", { name: "Word tools", exact: true });
-async function openTools(tab: Page) { await tools(tab).getByRole("button", { name: "Word tools", exact: true }).click(); await ui(tools(tab).getByText("Synthetic dictionary sense", { exact: true })).toBeVisible(); }
+// A child or assignment change deliberately closes the tools, so a click that lands just before that reset is retried until the tools stay open.
+async function openTools(tab: Page) {
+  const button = tools(tab).getByRole("button", { name: "Word tools", exact: true }), sense = tools(tab).getByText("Synthetic dictionary sense", { exact: true });
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if (await button.getAttribute("aria-expanded") !== "true") await button.click();
+    if (await sense.waitFor({ state: "visible", timeout: 3_000 }).then(() => true, () => false)) return;
+  }
+  await ui(sense).toBeVisible();
+}
 it("keeps tools closed on primary word playback; explicit open remembers that word and silent navigation ignores audio ticks", async () => {
   const { tab, state } = await page(); let requests = 0;
   tab.on("request", request => { if (/\/study-word-(aids|details)$/.test(new URL(request.url()).pathname)) requests++; });
@@ -165,7 +174,7 @@ it("fences out-of-order held responses and dismissal; quiet unchanged return ret
 it("clears selected private tools on actual assignment and child-context changes", async () => {
   const { tab } = await page(false, "tutor"); await openTools(tab);
   await switchRole(tab, "Parent"); await ui(tools(tab)).toHaveCount(0);
-  await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(tab.locator(".study-verses")).toBeVisible(); await openTools(tab);
+  await goChild(tab, fixture.student.id); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(tab.locator(".study-verses")).toBeVisible(); await openTools(tab);
   await tab.getByRole("button", { name: "Switch to Synthetic Sibling", exact: true }).click(); await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   await ui(tools(tab).getByRole("button", { name: "Word tools", exact: true })).toHaveAttribute("aria-expanded", "false"); await ui(tools(tab).getByText("Synthetic dictionary sense", { exact: true })).toHaveCount(0);
   await openTools(tab);

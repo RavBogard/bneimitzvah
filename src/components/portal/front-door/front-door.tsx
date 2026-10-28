@@ -20,12 +20,15 @@ import { rememberedRole } from "../shell/role-memory";
  * no Sign in; or sign-in that is unavailable, which keeps its Try again). `signedIn` is what the site bar shows for it, left undefined
  * when this browser's hint decides. `saved`: the account keeps saved readings, so My Readings has a shelf.
  */
-export type FrontDoorAccount = null | Readonly<{ kind: "sign-in" }> | Readonly<{ kind: "account"; saved: boolean; roles: readonly Role[]; count: number | null; pinned: DoorFacts["pinned"] }> | Readonly<{ kind: "task"; signedIn: boolean | undefined }>;
+export type FrontDoorAccount = null | Readonly<{ kind: "sign-in" }> | Readonly<{ kind: "account"; saved: boolean; roles: readonly Role[]; count: number | null; pinned: DoorFacts["pinned"]; child?: DoorFacts["child"]; nearest?: DoorFacts["nearest"] }> | Readonly<{ kind: "task"; signedIn: boolean | undefined }>;
 
 /** What a signed-in person's door says. `reading` and `children` are used when the session summary carries them; it does not yet, so the fallbacks show. */
 export type DoorFacts = Readonly<{
-  /** The pinned reading's student, the ceremony date and how many verses are got it; from the session summary once Task E3 provides it. */
+  /** The pinned reading's student, the ceremony date and how many verses are got it (GET /api/session/door). */
   pinned?: Readonly<{ name: string; ceremony: string; done: number; total: number }> | null;
+  /** A parent's first child by ceremony, and a tutor's nearest student: a name and the ceremony date. */
+  child?: Readonly<{ name: string; ceremony: string }> | null;
+  nearest?: Readonly<{ name: string; ceremony: string }> | null;
   /** How many readings the person keeps. */
   count?: number | null;
 }>;
@@ -34,13 +37,15 @@ export type SignedInDoor = Readonly<{ title: string; line: string | null; action
 const shortDate = (date: string) => new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
 /** The door of a signed-in person: My Readings for every role but the admin (decisions 12 and 22), This week for the admin. */
 export function signedInDoor(role: Role, facts: DoorFacts = {}): SignedInDoor {
-  if (role === "admin") return { title: "This week", line: "Needs you, ceremonies and rehearsals.", action: "Open This week" };
+  if (role === "admin") return { title: "This week", line: "Needs you, ceremonies and rehearsals.", action: "See this week" };
   const line = facts.pinned ? `${facts.pinned.name} · Beit Mitzvah, ${shortDate(facts.pinned.ceremony)} · ${facts.pinned.done} of ${facts.pinned.total} verses`
-    : facts.count ? `${facts.count} saved` : null;
+    : role === "parent" && facts.child ? `${facts.child.name} · Beit Mitzvah, ${shortDate(facts.child.ceremony)}`
+      : role === "tutor" && facts.nearest ? `Next: ${facts.nearest.name} · Beit Mitzvah, ${shortDate(facts.nearest.ceremony)}`
+        : facts.count ? `${facts.count} saved ${facts.count === 1 ? "reading" : "readings"}` : null;
   return { title: "Your readings", line, action: "Open My Readings" };
 }
 /** Whether the door leads the home, under the hero: the person keeps a reading or has one pinned (decision 22). */
-export const doorLeads = (account: FrontDoorAccount): boolean => account?.kind === "account" && (account.pinned != null || (account.count ?? 0) > 0);
+export const doorLeads = (account: FrontDoorAccount): boolean => account?.kind === "account" && (account.pinned != null || account.child != null || account.nearest != null || (account.count ?? 0) > 0);
 
 const displayRange = (ranges: readonly string[]) => ranges.join("; ").replace(/(\d)-(\d)/g, "$1–$2");
 const longDate = (date: string) => new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
@@ -94,7 +99,7 @@ const SIGNED_OUT_LINE = "Save the readings you’re working on, mark verses, kee
  */
 function BeitMitzvahDoor({ account, children, place }: { account: FrontDoorAccount; children: ReactNode; place: "hero" | "doors" }) {
   const role = account?.kind === "account" ? homeRole(account.roles, rememberedRole()) : null;
-  const door = role ? signedInDoor(role, account?.kind === "account" ? { pinned: account.pinned, count: account.count } : {}) : null;
+  const door = role ? signedInDoor(role, account?.kind === "account" ? { pinned: account.pinned, child: account.child, nearest: account.nearest, count: account.count } : {}) : null;
   const task = account?.kind === "task" || (account?.kind === "account" && !role);
   const state = account === null ? "loading" : task ? "task" : role ? "role" : "sign-in";
   return <section id="beit-mitzvah" className={styles.door} aria-labelledby="beit-mitzvah-title" data-door="beit-mitzvah" data-door-place={place} data-door-state={state} data-door-role={role ?? undefined} aria-busy={account === null}>

@@ -1,35 +1,37 @@
 "use client";
-// 1.9 N11: the student's Today. Everything on it is read through the student's own workspace reads (the same ones the Reading page uses):
-// the student list and assigned reading, the verse marks, the practice calendar's dates and the lesson notes. It adds no route and reads
-// nobody else. It records nothing: opening Today is not practice.
+// The student's pinned reading (Readings for everyone E1; the 1.9 N11 Today, now the first card on /mine). Everything on it is read through the
+// student's own workspace reads (the same ones the reading page uses): the student list and assigned reading, the verse marks, the practice
+// calendar's dates and the lesson notes. It reads nobody else. It records nothing: showing the card is not practice.
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { PortalRequestError } from "../../api";
 import { workspaceApi, type Assigned, type Reading, type Student } from "../api";
 import { statusOf, useWorkspace } from "../provider";
-import { ButtonLink, Chip, EmptyState, List, ListRow } from "../../../ui";
+import { ButtonLink, Chip } from "../../../ui";
 import { ceremonyCountdown } from "../reading";
 import { quietReadingAuthority } from "../quiet-refresh";
 import { reconcileSelectedStudent, sortStudentsByCeremony } from "../student-label";
-import { DocumentTitle } from "../document-title";
 import { PracticeCalendar } from "../practice-calendar/store";
 import { PracticeMonths } from "../practice-calendar/view";
 import { dayOrdinal, dayString } from "../practice-calendar/api";
 import { BeforeNext } from "../lessons/panel";
 import { HonorsEntry } from "../honors/sheet";
+import { useCongregation } from "../settings/links";
+import { serviceSlotName } from "../service-slot";
 import type { ProgressRows } from "../progress/api";
 import type { LessonLogEntry } from "../../../../lib/lesson-log/types";
 import type { ProgressVerse } from "../../../../lib/progress/types";
-import { calendarMarks, deviceDate, lastSevenDays, parashahName, readingRows, refSegments, rehearsalLine, rowState, stateWord, displayRef, type RowState } from "./model";
+import { calendarMarks, deviceDate, lastSevenDays, refSegments, rehearsalLine } from "./model";
 import styles from "./today.module.css";
 
-type Slice<T> = { status: "loading" } | { status: "unavailable" } | { status: "ready"; value: T };
-const READING_HREF = "/workspace/student?tab=reading", LESSONS_HREF = "/workspace/student?tab=lessons";
+export type Slice<T> = { status: "loading" } | { status: "unavailable" } | { status: "ready"; value: T };
+export type MarkSlice = Slice<ReadonlyMap<Reading["kind"], readonly ProgressVerse[]>>;
+export const PINNED_HREF = "/mine/reading";
 const weekdayLetters = ["S", "M", "T", "W", "T", "F", "S"];
 const weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const noteDay = (date: string) => { const [year, month, day] = date.split("-").map(Number); return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(Date.UTC(year, month - 1, day)); };
+export const noteDay = (date: string) => { const [year, month, day] = date.split("-").map(Number); return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(Date.UTC(year, month - 1, day)); };
 
 /** Every page of the student's marks for one reading (at most a thousand verses, a hundred to a page). */
-async function readMarks(read: (baseline: Assigned, kind: Reading["kind"], operation: { type: "page"; offset: number }, signal: AbortSignal) => Promise<unknown>, baseline: Assigned, kind: Reading["kind"], signal: AbortSignal) {
+export async function readMarks(read: (baseline: Assigned, kind: Reading["kind"], operation: { type: "page"; offset: number }, signal: AbortSignal) => Promise<unknown>, baseline: Assigned, kind: Reading["kind"], signal: AbortSignal) {
   const verses: ProgressVerse[] = []; let offset = 0;
   for (let pages = 0; pages < 12; pages++) {
     const page = await read(baseline, kind, { type: "page", offset }, signal) as ProgressRows;
@@ -40,19 +42,34 @@ async function readMarks(read: (baseline: Assigned, kind: Reading["kind"], opera
   throw new PortalRequestError(503);
 }
 
-export function StudentToday() {
+/** The verses a person has marked "got it" across a reading's kinds, and how many verses the reading has; null until the marks are read. */
+export function gotCount(readings: readonly Reading[], marks: MarkSlice): { got: number; total: number } | null {
+  const total = readings.reduce((sum, row) => sum + row.verses.length, 0);
+  if (marks.status !== "ready") return null;
+  let got = 0; for (const verses of marks.value.values()) got += verses.filter(verse => verse.selfCheck.state === "got-it").length;
+  return { got, total };
+}
+
+/** What the pinned card shows. `phase` is "off" for a session without the student role: nothing is read. */
+export type TodaySlices = Readonly<{
+  phase: "off" | "loading" | "error" | "ready"; rows: readonly Student[]; assigned: Assigned | null; marks: MarkSlice; lesson: Slice<LessonLogEntry | null>;
+  dates: ReturnType<PracticeCalendar["snapshot"]>; reload(): void;
+}>;
+
+export function useStudentToday(enabled = true): TodaySlices {
   const { epoch, readVerified, readProgress, readPracticeCalendar, readLessons, registerReload, registerWork, registerQuiet, serviceAuthorityFailed } = useWorkspace();
   const [rows, setRows] = useState<Student[]>([]), [assigned, setAssigned] = useState<Assigned | null>(null);
   const [phase, setPhase] = useState<"loading" | "error" | "ready">("loading"), [retry, setRetry] = useState(0);
-  const [marks, setMarks] = useState<Slice<ReadonlyMap<Reading["kind"], readonly ProgressVerse[]>>>({ status: "loading" });
+  const [marks, setMarks] = useState<MarkSlice>({ status: "loading" });
   const [lesson, setLesson] = useState<Slice<LessonLogEntry | null>>({ status: "loading" });
-  const selected = useRef<string | null>(null), abort = useRef<AbortController | null>(null), sequence = useRef(0), headingId = useId();
+  const selected = useRef<string | null>(null), abort = useRef<AbortController | null>(null), sequence = useRef(0);
   const env = useRef({ readVerified, readProgress, readPracticeCalendar, readLessons, serviceAuthorityFailed, reload: () => undefined as unknown });
   const calendarRef = useRef<PracticeCalendar | null>(null);
   if (!calendarRef.current) calendarRef.current = new PracticeCalendar((...args) => env.current.readPracticeCalendar(...args), () => { void env.current.reload(); });
   const calendar = calendarRef.current, dates = useSyncExternalStore(calendar.subscribe, calendar.snapshot, calendar.snapshot);
 
   const load = useCallback(async () => {
+    if (!enabled) return;
     abort.current?.abort(); const request = new AbortController(), turn = ++sequence.current; abort.current = request;
     const stale = () => request.signal.aborted || turn !== sequence.current;
     calendar.clear(); setMarks({ status: "loading" }); setLesson({ status: "loading" }); setAssigned(null); setPhase("loading");
@@ -86,94 +103,86 @@ export function StudentToday() {
       ];
       await Promise.all(reads);
     } catch (error) { if (!stale()) { setPhase("error"); throw error; } }
-  }, [calendar]);
+  }, [calendar, enabled]);
   env.current = { readVerified, readProgress, readPracticeCalendar, readLessons, serviceAuthorityFailed, reload: () => load().catch(() => undefined) };
-  useEffect(() => registerReload(async () => { await load(); }), [registerReload, load]);
+  useEffect(() => enabled ? registerReload(async () => { await load(); }) : undefined, [registerReload, load, enabled]);
   useEffect(() => { void load().catch(() => undefined); return () => { sequence.current++; abort.current?.abort(); }; }, [load, epoch, retry]);
   // Like every private view: nothing is kept while access is being checked, and what is shown is checked again in the background.
-  useLayoutEffect(() => registerWork({ pause: () => { abort.current?.abort(); calendar.clear(); }, clear: () => { abort.current?.abort(); calendar.configure(null); }, settle: async () => {}, hasUnsaved: () => false, reveal() {} }), [registerWork, calendar]);
+  useLayoutEffect(() => enabled ? registerWork({ pause: () => { abort.current?.abort(); calendar.clear(); }, clear: () => { abort.current?.abort(); calendar.configure(null); }, settle: async () => {}, hasUnsaved: () => false, reveal() {} }) : undefined, [registerWork, calendar, enabled]);
   useLayoutEffect(() => {
-    if (!assigned) return;
+    if (!assigned || !enabled) return;
     const expected = JSON.stringify(assigned), authority = quietReadingAuthority(assigned);
     return registerQuiet(async signal => {
       const fresh = await env.current.readVerified("student", assigned.student.id, signal);
       if (!signal.aborted && quietReadingAuthority(fresh) !== authority) throw new PortalRequestError(404);
       return !signal.aborted && JSON.stringify(fresh) === expected;
     });
-  }, [assigned, registerQuiet]);
-
-  if (phase === "loading") return <section className="workspace-state" aria-live="polite"><h1>Loading the assigned reading</h1><p>Checking the selected student and confirmed references.</p></section>;
-  if (phase === "error") return <div role="alert" className="workspace-state"><h1>Reading unavailable</h1><p>Students couldn’t be loaded. No previous selection is being shown.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload students</button></div>;
-  if (!rows.length || !assigned) return <section className="workspace-state"><h1>Your assigned reading</h1><p>No student is currently linked to this role. Ask the congregation for help with your assignment.</p></section>;
-  const student = assigned.student;
-  return <TodayView headingId={headingId} student={student} ownAdultHonors={rows.find(row => row.id === student.id)?.ownAdultHonors === true} readings={assigned.readings} marks={marks} lesson={lesson} dates={dates}
-    choices={rows.length > 1 ? sortStudentsByCeremony(rows) : null} onChoose={id => { selected.current = id; void load().catch(() => undefined); }} />;
+  }, [assigned, registerQuiet, enabled]);
+  return { phase: enabled ? phase : "off", rows, assigned, marks, lesson, dates, reload: () => setRetry(value => value + 1) };
 }
 
-export function TodayView({ headingId, student, ownAdultHonors, readings, marks, lesson, dates, choices, onChoose }: {
-  headingId: string; student: Student; ownAdultHonors: boolean; readings: readonly Reading[]; marks: Slice<ReadonlyMap<Reading["kind"], readonly ProgressVerse[]>>; lesson: Slice<LessonLogEntry | null>;
-  dates: ReturnType<PracticeCalendar["snapshot"]>; choices: Student[] | null; onChoose(id: string): void;
-}) {
-  const today = deviceDate(), countdown = ceremonyCountdown(student.ceremonyDate), parashah = parashahName(readings.find(row => row.kind === "torah"));
-  const heading = parashah ?? `${student.firstName} ${student.lastName}`, rehearsal = rehearsalLine(student, today);
-  const rows = readingRows(readings), stateOf = (row: (typeof rows)[number]): RowState | null => {
-    if (marks.status !== "ready") return null;
-    const verses = marks.value.get(row.kind); return verses ? rowState(verses, row.start, row.end) : null;
-  };
-  const settled = marks.status !== "loading" && dates.status !== "loading";
-  const states = rows.map(stateOf), started = states.some(state => state !== null && state !== "not-started") || dates.status === "ready" && dates.dates.size > 0;
-  const next = rows.length ? rows[Math.max(0, states.findIndex(state => state !== "solid"))] : null;
+/** The pinned reading's name and the line the shelf's model keeps (see `PinnedState`), once the student's reading is known. */
+export function pinnedOf(slices: TodaySlices): { name: string; ceremony: string; done: number; total: number } | null {
+  if (slices.phase !== "ready" || !slices.assigned) return null;
+  const { student, readings } = slices.assigned, count = gotCount(readings, slices.marks);
+  return { name: `${student.firstName} ${student.lastName}`, ceremony: ceremonyCountdown(student.ceremonyDate).label, done: count?.got ?? 0, total: count?.total ?? readings.reduce((sum, row) => sum + row.verses.length, 0) };
+}
+
+/** The student's Beit Mitzvah reading, first on the shelf. It states what the student has, never a score: "9 of 14" is a position. */
+export function PinnedReadingCard({ slices }: { slices: TodaySlices }) {
+  const headingId = useId();
+  if (slices.phase === "off") return null;
+  if (slices.phase === "loading") return <section className={styles.pinned} aria-busy="true" aria-live="polite" data-pinned-card><p className={styles.state} role="status">Loading the assigned reading</p><div className={styles.holdRoom} aria-hidden="true" /></section>;
+  if (slices.phase === "error") return <section className={styles.pinned} data-pinned-card><div role="alert"><p>Students couldn’t be loaded. No previous selection is being shown.</p><button type="button" className="button-secondary" onClick={slices.reload}>Reload students</button></div></section>;
+  if (!slices.rows.length || !slices.assigned) return <section className={styles.pinned} data-pinned-card><p>No student is currently linked to this role. Ask the congregation for help with your assignment.</p></section>;
+  return <PinnedReady slices={slices} assigned={slices.assigned} headingId={headingId} />;
+}
+
+function PinnedReady({ slices, assigned, headingId }: { slices: TodaySlices; assigned: Assigned; headingId: string }) {
+  const { student, readings } = assigned, { marks, lesson, dates } = slices, congregation = useCongregation(true);
+  const today = deviceDate(), countdown = ceremonyCountdown(student.ceremonyDate), rehearsal = rehearsalLine(student, today), caption = useId();
+  const own = slices.rows.find(row => row.id === student.id), slot = congregation.ready ? serviceSlotName(student.serviceSlot, congregation.services) : null;
+  const count = gotCount(readings, marks), note = lesson.status === "ready" ? lesson.value : null;
   const dayMarks = calendarMarks(student), calendarDay = dates.status === "ready" ? dayOrdinal(dates.serverDay) : dayOrdinal(today);
-  const note = lesson.status === "ready" ? lesson.value : null;
-  // The tutor's latest note reads before the sections list (1.9 role homes); with no reading assigned it still shows, after the empty state.
-  const noteBlock = note && <section className={styles.note} data-testid="today-note" aria-labelledby={`${headingId}-note`}>
-    <div className={styles.noteHead}>
+  return <section className={styles.pinned} aria-labelledby={headingId} data-pinned-card data-testid="pinned-reading">
+    <div className={styles.head}>
+      <Chip tone="attention">{`Beit Mitzvah · ${countdown.label}`}</Chip>
+      {countdown.phrase && <span className={styles.days} data-nobreak>{countdown.phrase}</span>}
+    </div>
+    <h2 id={headingId} className={styles.name}><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>
+    {(readings.length > 0 || slot) && <p className={styles.ranges}>{readings.flatMap(reading => refSegments(reading.ranges).map((segment, index) => `${index === 0 ? `${reading.kind === "torah" ? "Torah" : "Haftarah"} ` : ""}${segment}`))
+      .map((text, index) => <span key={index}>{index > 0 && " · "}<span data-nobreak>{text}</span></span>)}{slot && <>{readings.length > 0 && " · "}<span data-nobreak>{slot}</span></>}</p>}
+    {rehearsal && <p className={styles.rehearsal} data-testid="rehearsal-line" data-nobreak>{rehearsal}</p>}
+    {readings.length === 0 ? <p className={styles.empty}>Your tutor or rabbi will add your verses here.</p>
+      : <div className={styles.got} data-testid="pinned-progress">
+        <p className={styles.gotLabel}>Verses you’ve got</p>
+        <div className={styles.bar} aria-hidden="true"><span style={{ inlineSize: count && count.total ? `${Math.round(count.got * 100 / count.total)}%` : "0%" }} /></div>
+        <p className={styles.gotCount}>{count ? `${count.got} of ${count.total}` : " "}</p>
+      </div>}
+    {readings.length > 0 && lesson.status === "loading" && <div className={styles.holdNote} aria-hidden="true" />}
+    {note && <section className={styles.note} data-testid="today-note" aria-labelledby={`${headingId}-note`}>
       <p id={`${headingId}-note`} className={styles.noteLabel}>Latest from <bdi dir="auto">{note.displayName}</bdi> · <time dateTime={note.lessonDate}>{noteDay(note.lessonDate)}</time>:</p>
-      <a className={styles.noteMore} href={LESSONS_HREF}>Lessons</a>
-    </div>
-    <p className={styles.noteText} dir="auto">{note.summary}</p>
-    {note.beforeNext && <BeforeNext text={note.beforeNext} own />}
-  </section>;
-  return <section className={styles.today} data-today aria-labelledby={headingId}>
-    <DocumentTitle heading={heading} />
-    {choices && <ul className={styles.chooser} aria-label="Student">{choices.map(row => <li key={row.id}>
-      <button type="button" className="student-card" aria-pressed={row.id === student.id} onClick={() => { if (row.id !== student.id) onChoose(row.id); }}><span className="student-card-name"><bdi dir="auto">{row.firstName} {row.lastName}</bdi></span></button></li>)}</ul>}
-    <div className={styles.lake}>
-      {parashah && choices && <p className={styles.who}><bdi dir="auto">{student.firstName} {student.lastName}</bdi></p>}
-      <h1 id={headingId} className={styles.parashah} tabIndex={-1}><bdi dir="auto">{heading}</bdi></h1>
-      <p className={styles.when}><time className={styles.nobreak} dateTime={student.ceremonyDate} data-nobreak>{countdown.label}</time>{countdown.phrase && <span className={styles.days} data-nobreak>{countdown.phrase}</span>}</p>
-      {rehearsal && <p className={styles.rehearsal} data-nobreak>{rehearsal}</p>}
-      {readings.length > 0 && <ul className={styles.readings} aria-label="Assigned readings">{readings.flatMap(reading => refSegments(reading.ranges).map((segment, index) =>
-        <li key={`${reading.id}:${index}`}><Chip>{index === 0 ? `${reading.kind === "torah" ? "Torah" : "Haftarah"} ${segment}` : segment}</Chip></li>))}</ul>}
-    </div>
-    {readings.length === 0 ? <><EmptyState title="No reading has been assigned yet" description="Your tutor or rabbi will add your verses here." />{noteBlock}</> : <>
-      {next && (settled ? <NextCard row={next} started={started} dates={dates} />
-        // 1.9 N16 re-measure (CLS): until marks and days settle, the card's room is held by an invisible copy, so the sections below do not jump.
-        : <div className={styles.pending} aria-hidden="true" inert><NextCard row={next} started={false} dates={{ status: "ready", serverDay: today, fromDate: today, throughDate: today, dates: new Set() }} /></div>)}
-      {noteBlock}
-      <List label="Reading sections">{rows.map((row, index) => <ListRow key={row.key} href={READING_HREF} title={row.label}
-        meta={<bdi dir="ltr" className={styles.nobreak} data-nobreak>{row.ref}</bdi>}
-        trailing={states[index] ? <span className={styles.state} data-state={states[index]}><span className={styles.dot} aria-hidden="true" />{stateWord[states[index]!]}</span> : undefined} />)}</List>
-    </>}
-    {dates.status !== "loading" && <div className={styles.calendar}><PracticeMonths today={calendarDay} first={dates.status === "ready" ? dayOrdinal(dates.fromDate) : calendarDay - 364}
-      practiced={ordinal => dates.status === "ready" && dates.dates.has(dayString(ordinal))} marks={dayMarks} lastDay={dayOrdinal(student.ceremonyDate)} /></div>}
-    {ownAdultHonors && <HonorsEntry key={student.id} mode="student" studentId={student.id} name={`${student.firstName} ${student.lastName}`} />}
-  </section>;
-}
-
-function NextCard({ row, started, dates }: { row: ReturnType<typeof readingRows>[number]; started: boolean; dates: ReturnType<PracticeCalendar["snapshot"]> }) {
-  const id = useId(), caption = useId(), range = displayRef(row.ref);
-  return <section className={styles.next} aria-labelledby={id}>
-    <h2 id={id} className={styles.nextTitle}>{row.label}{started && <> <span className={styles.nextRef}><bdi dir="ltr" className={styles.nobreak} data-nobreak>{range}</bdi></span></>}</h2>
-    <ButtonLink variant="primary" block href={READING_HREF}>{started ? "Start where you left off" : <>Practice verses&nbsp;<bdi dir="ltr" className={styles.nobreak} data-nobreak>{range}</bdi></>}</ButtonLink>
-    {dates.status === "ready" ? <div className={styles.dots}>
-      <ol className="practice-week" aria-labelledby={caption}>{lastSevenDays(dates.serverDay, dates.dates).map(day =>
+      <p className={styles.noteText} dir="auto">{note.summary}</p>
+      {note.beforeNext && <BeforeNext text={note.beforeNext} own />}
+    </section>}
+    {readings.length > 0 && dates.status === "loading" && <div className={styles.holdDots} aria-hidden="true" />}
+    {readings.length > 0 && dates.status === "ready" && <div className={styles.dots}>
+      <ol className="practice-week" data-testid="practice-week" aria-label="Practice this week" aria-describedby={caption}>{lastSevenDays(dates.serverDay, dates.dates).map(day =>
         <li key={day.date} data-testid="practice-day" className={`practice-day${day.practised ? " practice-day-done" : ""}${day.today ? " practice-day-today" : ""}`}>
           <span aria-hidden="true" className="practice-day-letter">{weekdayLetters[day.weekday]}</span>
           <span className="practice-day-dot" aria-hidden="true" />
-          <span className="sr-only">{weekdayNames[day.weekday]}{day.today ? ", today" : ""}: {day.practised ? "practised" : "not practised"}</span>
+          <span className="sr-only">{weekdayNames[day.weekday]}{day.today ? ", today" : ""}: {day.practised ? "practiced" : "not practiced"}</span>
         </li>)}</ol>
-      <p id={caption} className={styles.caption}>Days you practised · a day fills when you open your reading up close</p>
-    </div> : dates.status === "unavailable" ? <p className={styles.caption}>Practice days couldn’t be loaded.</p> : null}
+      <p id={caption} className={styles.caption}>Days you practiced · a day fills when you open your reading up close</p>
+    </div>}
+    {readings.length > 0 && dates.status === "unavailable" && <p className={styles.caption}>Practice days couldn’t be loaded.</p>}
+    {dates.status === "loading" && <div className={styles.holdCalendar} aria-hidden="true" />}
+    {dates.status !== "loading" && <div className={styles.calendar}><PracticeMonths today={calendarDay} first={dates.status === "ready" ? dayOrdinal(dates.fromDate) : calendarDay - 364}
+      practiced={ordinal => dates.status === "ready" && dates.dates.has(dayString(ordinal))} marks={dayMarks} lastDay={dayOrdinal(student.ceremonyDate)} /></div>}
+    <div className={styles.actions}>
+      <ButtonLink variant="primary" href={PINNED_HREF}>Open</ButtonLink>
+      {readings.length > 0 && <ul className={styles.links} aria-label="In your reading"><li><a href={`${PINNED_HREF}#service-parts`}>Service parts</a></li><li><a href={`${PINNED_HREF}#lessons`}>Lessons</a></li></ul>}
+    </div>
+    {own?.ownAdultHonors === true && <HonorsEntry key={student.id} mode="student" studentId={student.id} name={`${student.firstName} ${student.lastName}`} />}
   </section>;
 }

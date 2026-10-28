@@ -67,7 +67,7 @@ describe("marks record whether a parent was there, and the server's own instant"
     const rows = () => t.f.owner(() => t.f.db.select({ verseRef: s.verseSelfCheck.verseRef, sourceMode: s.verseSelfCheck.sourceMode, markedAt: s.verseSelfCheck.markedAt }).from(s.verseSelfCheck));
     const [first] = await rows();
     expect(first.sourceMode).toBe("student"); expect(first.markedAt).toBeInstanceOf(Date);
-    // A parent practising with the child writes child-practice; the database stamps the instant and refuses a forged one.
+    // A parent practicing with the child writes child-practice; the database stamps the instant and refuses a forged one.
     const forged = new Date("2020-01-01T00:00:00.000Z");
     await t.f.owner(() => t.f.db.update(s.verseSelfCheck).set({ state: "working", version: 2, sourceMode: "child-practice", markedAt: forged }).where(eq(s.verseSelfCheck.verseRef, "Exodus 23:4")));
     const [second] = await rows();
@@ -86,7 +86,7 @@ describe("the assigned tutor's view", () => {
     await t.event(t.own.id, t.assignment.id, "Exodus 23:2"); // A second visit adds nothing: one row per day and verse.
     await t.event(t.own.id, t.assignment.id, "Exodus 23:8", "play"); // A play is not an opening, and is never counted or shown.
     await t.mark("Exodus 23:4", "got-it"); await t.mark("Exodus 23:6", "got-it");
-    // The parent, practising with the child, changes 23:6 to Still working (child practice writes child-practice).
+    // The parent, practicing with the child, changes 23:6 to Still working (child practice writes child-practice).
     await t.f.owner(() => t.f.db.update(s.verseSelfCheck).set({ sourceMode: "child-practice", state: "working", version: 2 }).where(eq(s.verseSelfCheck.verseRef, "Exodus 23:6")));
     // Learn: tevir and etnachta taught on the Torah path, each with a card dropped to box 0 or 1 by a miss.
     const lessons = pathLessons("torah").filter(lesson => lesson.family === "tevir" || lesson.family === "etnachta").map(lesson => lesson.id);

@@ -13,6 +13,7 @@ import { normalizeHebrew } from "../../src/server/study/normalize";
 import { expandReadingRanges } from "../../src/lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
 import * as s from "../../src/server/db/index";
+import { manage } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 // Tikkun view and printable practice sheet, on synthetic invented syllables only.
@@ -260,6 +261,6 @@ it("previews a print-only practice sheet with an optional tikkun column and no E
   await safe(() => tab.keyboard.press("Escape")); await ui(dialog).toHaveCount(0);
   // Staff reach the same sheet from the student's reading page.
   const admin = await page("admin"); await navigate(admin, `/workspace/admin/students/${fixture.student.id}/reading`); await loaded(admin, "Genesis 1:1");
-  await safe(() => admin.getByRole("button", { name: "Print practice sheet", exact: true }).click());
+  await safe(() => manage(admin, "Print practice sheet"));
   await ui(admin.getByRole("dialog", { name: "Practice sheet", exact: true }).locator("li[data-verse-ref]")).toHaveCount(3, { timeout: 30_000 });
 });

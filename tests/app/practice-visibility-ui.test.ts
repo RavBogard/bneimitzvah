@@ -18,15 +18,15 @@ test("the approved lines, word for word", () => {
   expect(dayLine({ day: "2026-10-20", readings: [{ kind: "torah", opened, marked: [{ verseRef: "Exodus 23:4", state: "got-it" }] }] })).toBe("Tue Oct 20 · Torah 23:1–23:9 · marked 23:4 Got it");
   expect(mixedUpLine({ torah: { heard: 2, of: 10 }, haftarah: { heard: 0, of: 11 }, mixedUp: ["tevir", "etnachta"] })).toBe("Often mixed up: tevir and etnachta");
   expect(PRACTICE_DISCLOSURE.learn).toBe("Your tutor sees which phrases you can hear.");
-  expect(rosterLine({ practisedDays: 3, lastLesson: "2026-10-17", stillWorking: 2 })).toBe("Practised 3 of last 7 days · Last lesson Oct 17 · 2 verses still working");
+  expect(rosterLine({ practisedDays: 3, lastLesson: "2026-10-17", stillWorking: 2 })).toBe("Practiced 3 of last 7 days · Last lesson Oct 17 · 2 verses still working");
   expect(markLine("got-it", true)).toBe("Student (with parent): got it");
 });
 
 test("the lines' small cases: ranges across chapters, one verse, no lesson, nothing still working, a mark made before sources were recorded", () => {
   expect(verseRanges(["Exodus 22:29", "Exodus 22:30", "Exodus 23:1", "Exodus 23:4"])).toBe("22:29–23:1, 23:4");
   expect(verseRanges(["Exodus 22:29", "Exodus 23:1"])).toBe("22:29, 23:1");
-  expect(rosterLine({ practisedDays: 0, lastLesson: null, stillWorking: 1 })).toBe("Practised 0 of last 7 days · 1 verse still working");
-  expect(rosterLine({ practisedDays: 2, lastLesson: null, stillWorking: 0 })).toBe("Practised 2 of last 7 days");
+  expect(rosterLine({ practisedDays: 0, lastLesson: null, stillWorking: 1 })).toBe("Practiced 0 of last 7 days · 1 verse still working");
+  expect(rosterLine({ practisedDays: 2, lastLesson: null, stillWorking: 0 })).toBe("Practiced 2 of last 7 days");
   expect(markLine("working", false)).toBe("Student: still working");
   expect(markLine("got-it", null)).toBe("Student: got it");
   expect(dayLine({ day: "2026-10-21", readings: [{ kind: "torah", opened: ["Exodus 23:1"], marked: [] }, { kind: "haftarah", opened: ["Isaiah 1:1", "Isaiah 1:2"], marked: [{ verseRef: "Isaiah 1:2", state: "working" }] }] }))
@@ -66,8 +66,8 @@ test("the student's disclosure renders only with the release gate open, the same
 });
 
 test("Daniel's Account line word for word, the parent line named and pronoun-free, and the parent's count line", () => {
-  expect(PRACTICE_DISCLOSURE.account).toBe("Your tutor sees which days you practised, which verses you opened, how you marked them and whether a parent was with you, and in Learn to lein which phrases you can hear and the two you mix up most. Your parents see how you marked each verse. No one sees how long you practise or a score.");
-  expect(parentDisclosure("Noa")).toBe("Noa's tutor sees which days Noa practised, which verses Noa opened, how Noa marked them and whether a parent was there, and in Learn to lein which phrases Noa can hear and the two Noa mixes up most. You see how Noa marked each verse. No one sees how long Noa practises or a score.");
+  expect(PRACTICE_DISCLOSURE.account).toBe("Your tutor sees which days you practiced, which verses you opened, how you marked them and whether a parent was with you, and in Learn to lein which phrases you can hear and the two you mix up most. Your parents see how you marked each verse. No one sees how long you practice or a score.");
+  expect(parentDisclosure("Noa")).toBe("Noa's tutor sees which days Noa practiced, which verses Noa opened, how Noa marked them and whether a parent was there, and in Learn to lein which phrases Noa can hear and the two Noa mixes up most. You see how Noa marked each verse. No one sees how long Noa practices or a score.");
   // No pronoun for the child ("them" is the verses).
   expect(PRACTICE_DISCLOSURE.parent).not.toMatch(/\b(he|she|they|his|her|hers|their|him)\b/i);
   expect(parentCountLine("Noa", { gotIt: 12, working: 3 })).toBe("Noa has marked 12 verses Got it and 3 Still working.");
@@ -76,7 +76,7 @@ test("Daniel's Account line word for word, the parent line named and pronoun-fre
   expect(parentCountLine("Noa", { gotIt: 0, working: 0 })).toBe("Noa has not marked any verses yet.");
 });
 
-test("a child who practises only with a parent is told in child practice, and a parent on Account, behind the same gate", () => {
+test("a child who practices only with a parent is told in child practice, and a parent on Account, behind the same gate", () => {
   for (const place of ["child-practice", "parent-account"] as const) {
     expect(renderToStaticMarkup(createElement(ChildPracticeDisclosure, { name: "Noa", place, from: null }))).toBe("");
     const open = renderToStaticMarkup(createElement(ChildPracticeDisclosure, { name: "Noa", place, from: "2026-10-27" }));
@@ -85,7 +85,7 @@ test("a child who practises only with a parent is told in child practice, and a 
   const list = renderToStaticMarkup(createElement(ParentAccountDisclosureList, { names: [{ id: "a", firstName: "Noa" }, { id: "b", firstName: "Eli" }], from: "2026-10-27" }));
   expect(list.match(/data-practice-disclosure="parent-account"/g)).toHaveLength(2);
   expect(renderToStaticMarkup(createElement(ParentAccountDisclosureList, { names: [{ id: "a", firstName: "Noa" }], from: null }))).toBe("");
-  // The practice bar shows it for the child being practised with; the parent's Account shows it for each linked child.
+  // The practice bar shows it for the child being practiced with; the parent's Account shows it for each linked child.
   expect(source("components/portal/workspace/students.tsx")).toMatch(/\{child && <ChildPracticeDisclosure name=\{child\.firstName\} place="child-practice" \/>\}/);
   expect(source("components/portal/account-page.tsx")).toMatch(/roles\.includes\("parent"\) && <ParentAccountDisclosure load=\{parentChildren\} \/>/);
   expect(source("components/portal/account-page.tsx")).toMatch(/const parentChildren = \(\) => workspaceApi\.students\("parent"\);/);

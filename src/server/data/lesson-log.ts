@@ -15,8 +15,9 @@ const key = (actor: LessonLogActor, entryId: string) => and(scope(actor), eq(t.e
 export function canChange(actor: LessonLogActor, row: LessonLogRow) {
   return actor.mode === "admin" || actor.mode === "tutor" && actor.membershipId === row.creatorMembershipId && actor.userId === row.creatorUserId;
 }
+/** A lesson note's author is a tutor or the rabbi; with no usable name the learner is told "your tutor" (Readings for everyone E1, F24), never "Portal member". */
 export function safeDisplayName(value: string) {
-  return !value.isWellFormed() || !value.trim() || value.includes("@") || Array.from(value).length > 120 || /[\x00-\x1f\x7f-\x9f]/.test(value) ? "Portal member" : value.trim();
+  return !value.isWellFormed() || !value.trim() || value.includes("@") || Array.from(value).length > 120 || /[\x00-\x1f\x7f-\x9f]/.test(value) ? "your tutor" : value.trim();
 }
 export function view(actor: LessonLogActor, row: LessonLogRow, name: string): LessonLogEntry {
   if (row.deleted) throw new Error("Lesson unavailable");

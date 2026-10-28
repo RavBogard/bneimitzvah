@@ -24,6 +24,7 @@ import { createShortReferenceAudioService } from "../../src/server/reference-aud
 
 
 import * as s from "../../src/server/db/index";
+import { goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 // A cold CI runner compiles routes on first use and runs several browsers at once. Every wait below is for the real
 // condition; these budgets only bound a genuine hang. Vitest polls for 1 s by default and Playwright for 5 s.
@@ -218,7 +219,8 @@ it("held student and child practice read directly, keep word tools and open opti
       const { tab, state } = await page(mobile, "tutor", authenticated, { held: true, colorScheme: scheme, destination: "/workspace/student?tab=reading" }); authenticated ??= tab.context();
       const reading = tab.locator(".study-verses"); await ui(player(tab)).toHaveCount(0); await ui(tab.getByRole("dialog")).toHaveCount(0);
       await ui(tab.getByRole("button", { name: /^Hear/ })).toHaveCount(0); expect(await described(word(tab, 1, 1))).toBe("Select word for tools");
-      const start = tab.getByRole("button", { name: "Start reading", exact: true }); await start.focus(); await tab.keyboard.press("Enter");
+      // Readings for everyone E2: the header's Start reading button is gone; the text takes focus where a reader puts it.
+      await ui(tab.getByRole("button", { name: "Start reading", exact: true })).toHaveCount(0); await reading.focus();
       await ui(reading).toBeFocused(); await ui(tab.getByRole("dialog")).toHaveCount(0); expect(await native(tab)).toMatchObject({ count: 0, allClean: true });
       expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0);
       await word(tab, 1, 1).click(); const tools = tab.getByRole("button", { name: "Word tools", exact: true }); await ui(tools).toHaveAttribute("aria-expanded", "true");
@@ -237,9 +239,9 @@ it("held student and child practice read directly, keep word tools and open opti
         await tab.evaluate(() => window.scrollTo(0, 0)); const image = join(target, name + ".png"); await tab.screenshot({ path: image });
         captures.push({ name, width: mobile ? 390 : 1440, height: mobile ? 844 : 1000, sha256: createHash("sha256").update(await readFile(image)).digest("hex") });
       }
-      await tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click();
+      await tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await goChild(tab, fixture.student.id);
       await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(reading).toBeVisible();
-      await tab.getByRole("button", { name: "Start reading", exact: true }).click(); await ui(reading).toBeFocused();
+      await reading.focus(); await ui(reading).toBeFocused();
       await tab.getByRole("button", { name: "Practice up close", exact: true }).click(); await ui(tab.getByRole("dialog", { name: "Genesis 1:1", exact: true })).toBeVisible();
       expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0); expect(await native(tab)).toMatchObject({ count: 0, allClean: true });
       await tab.getByRole("dialog").getByRole("button", { name: "Close practice view", exact: true }).click();
@@ -249,14 +251,14 @@ it("held student and child practice read directly, keep word tools and open opti
   } finally { setListeningRelease(true); }
 });
 
-it("held tutor Start returns from another tab to focused continuous text and practice stays optional", async () => {
+it("held tutor text takes focus after the Service parts section and practice stays optional", async () => {
   setListeningRelease(false);
   try {
     const { tab, state, idle } = await page(false, "tutor", undefined, { held: true });
-    await idle(); await tab.getByRole("tab", { name: "Service parts", exact: true }).click();
-    await ui(tab.getByRole("tab", { name: "Service parts", exact: true })).toHaveAttribute("aria-selected", "true"); await idle();
-    await tab.getByRole("button", { name: "Start reading", exact: true }).click();
-    await ui(tab.getByRole("tab", { name: "Reading", exact: true })).toHaveAttribute("aria-selected", "true"); await ui(tab.locator(".study-verses")).toBeFocused();
+    await idle(); await tab.locator("#service-parts").scrollIntoViewIfNeeded(); await idle();
+    // Service parts and the text share one page, so there is no tab to return from and no Start reading button.
+    await ui(tab.getByRole("button", { name: "Start reading", exact: true })).toHaveCount(0);
+    await tab.locator(".study-verses").focus(); await ui(tab.locator(".study-verses")).toBeFocused();
     await ui(tab.getByRole("dialog")).toHaveCount(0); expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0); expect(await native(tab)).toMatchObject({ count: 0, allClean: true });
     await tab.getByRole("button", { name: "Practice up close", exact: true }).click(); await ui(tab.getByRole("dialog", { name: "Genesis 1:1", exact: true })).toBeVisible();
     expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0); expect(await native(tab)).toMatchObject({ count: 0, allClean: true });
@@ -387,7 +389,7 @@ it("backgrounding pauses/cancels without erasing text or resuming on return; rol
   await idle(); // The return starts a quiet access check; let it answer before the next word is played.
   await word(tab, 1, 1).click(); await playing(tab); expect(state.requests).toBe(2); await sameOwner(tab, owner); // Scope suspension cleared private metadata and compressed ownership.
   await switchRole(tab, "Parent"); await expect.poll(async () => (await native(tab)).revoked, POLL_OPTIONS).toBe(2); expect(await native(tab)).toMatchObject({ paused: true, allClean: true });
-  await ui(tab.getByLabel("Child", { exact: true })).toBeVisible(); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click();
+  await ui(tab.getByTestId("mine-children")).toBeVisible(); await goChild(tab, fixture.student.id); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click();
   await ui(tab.locator(".study-verses")).toBeVisible(); const childOwner = await settledOwner(tab); await word(tab, 1, 0).click(); await playing(tab); await sameOwner(tab, childOwner);
   await tab.getByRole("button", { name: "Switch to Synthetic Sibling", exact: true }).click(); await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   expect(await native(tab)).toMatchObject({ paused: true, src: null, revoked: 3, allClean: true, retiredClean: true });
@@ -397,14 +399,13 @@ it("clears playback on real session denial while quiet unchanged checks retain t
   await tab.context().clearCookies(); await tab.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect.poll(async () => (await native(tab)).revoked, POLL_OPTIONS).toBe(1); expect(await native(tab)).toMatchObject({ paused: true, src: null, allClean: true }); await ui(player(tab)).toHaveCount(0);
 });
-it("Start and Hear play the main verse and never require or reopen the optional close-up", async () => {
-  const { tab, state, owner, idle } = await page(false, "admin", contexts[0]), tabs = tab.getByRole("tablist", { name: "Student page" }), service = tabs.getByRole("tab", { name: "Service parts", exact: true }), reading = tabs.getByRole("tab", { name: "Reading", exact: true });
-  await idle(); await service.click(); await ui(service).toHaveAttribute("aria-selected", "true"); await idle();
-  const start = tab.getByRole("button", { name: "Start reading", exact: true }); await start.focus(); await tab.keyboard.press("Enter");
-  await ui(reading).toHaveAttribute("aria-selected", "true"); await playing(tab); await ui(start).toBeFocused(); await ui(tab.getByRole("dialog")).toHaveCount(0); expect(state.requests).toBe(1); expect(state.shortRequests).toBe(1); expect(state.archiveRequests).toBe(0);
-  await service.click(); await expect.poll(async () => (await native(tab)).revoked, POLL_OPTIONS).toBe(1); expect((await native(tab)).paused).toBe(true);
-  await reading.click(); expect(await native(tab)).toMatchObject({ ...owner, paused: true, src: null, retiredClean: true });
-  await tab.getByRole("button", { name: "Hear verse", exact: true }).click(); await playing(tab); expect(state.shortRequests).toBe(2); expect(state.archiveRequests).toBe(0); expect(state.requests).toBe(2); await sameOwner(tab, owner); await ui(tab.getByRole("dialog")).toHaveCount(0);
+it("Hear plays the main verse and never requires or reopens the optional close-up", async () => {
+  const { tab, state, owner, idle } = await page(false, "admin", contexts[0]);
+  await idle(); await tab.locator("#service-parts").scrollIntoViewIfNeeded(); await idle();
+  // E2: Service parts follow the text on one page, so moving to them does not stop a verse, and there is no Start reading button.
+  await ui(tab.getByRole("button", { name: "Start reading", exact: true })).toHaveCount(0);
+  expect(await native(tab)).toMatchObject({ ...owner, paused: true, src: null, retiredClean: true });
+  await tab.getByRole("button", { name: "Hear verse", exact: true }).click(); await playing(tab); expect(state.shortRequests).toBe(1); expect(state.archiveRequests).toBe(0); expect(state.requests).toBe(1); await sameOwner(tab, owner); await ui(tab.getByRole("dialog")).toHaveCount(0);
 });
 it("plays main verses without word timing but refuses explicit untimed word drills", async () => {
   const { tab } = await page(false, "admin", contexts[0]);
