@@ -65,8 +65,10 @@ export function LiftedLine({ verses, assignment, index, total, offset, onIndex, 
   useLayoutEffect(() => {
     const node = stage.current; if (!node) return;
     const hebrew = () => node.querySelector<HTMLElement>(".lift-hebrew");
-    // The verse itself, not the notes under it, must end inside the stage.
-    const shows = () => { const row = hebrew(); return !row || row.getBoundingClientRect().bottom - node.getBoundingClientRect().top + node.scrollTop <= node.clientHeight - 8; };
+    // The verse, and the phrase legend under it, end inside the stage, so no row of it shows cut off above the marks. Below the size floor the stage scrolls.
+    const last = () => [...node.children].filter(child => child.tagName !== "STYLE").at(-1) as HTMLElement | undefined;
+    const ends = (row: HTMLElement | null | undefined) => !row || row.getBoundingClientRect().bottom - node.getBoundingClientRect().top + node.scrollTop <= node.clientHeight - 36; // clear of the stage's faded foot (globals.css .lift-stage)
+    const shows = () => ends(hebrew()) && ends(last());
     const fit = () => {
       let scale = 1; node.style.setProperty("--lift-fit", "1");
       while (!shows() && scale > 0.55) { scale = Math.round((scale - 0.05) * 100) / 100; node.style.setProperty("--lift-fit", String(scale)); }

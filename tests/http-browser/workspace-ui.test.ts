@@ -180,7 +180,8 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await tab.route("**/api/practice/enter", async route => { const response = await route.fetch(); rawHandle = (await response.json()).handle; await route.fulfill({ response }); });
   await safe(() => tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click());
   await ui(tab.getByRole("heading", { name: /^Practicing with /, level: 1 })).toBeVisible();
-  await ui(tab.getByText(/Torah Genesis 1:1\u20133/)).toBeVisible();
+  // Child practice names the reading by its switch and shows its verses (Hebrew first): no range line in the title.
+  await ui(tab.locator('.study-verses [data-verse-ref="Genesis 1:3"]').first()).toBeVisible();
   await capture(tab, "workspace-child-confirmed-reading");
   await tab.setViewportSize({ width: 390, height: 844 });
   // Readings for everyone E2: the practice page has no Refresh reading or Start reading button; the text takes focus where a reader puts it.

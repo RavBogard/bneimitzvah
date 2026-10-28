@@ -11,7 +11,7 @@ import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from 
 import { installLoopbackFetchGuard } from "./egress";
 import * as s from "../../src/server/db/index";
 import { installReadingRouteGuard, readingRouteCleanupError, routePageStep } from "./reading-route-guard";
-import { openVerseEditor, goChild } from "./reading-nav";
+import { openVerseEditor, goChild, openPlan } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -260,5 +260,7 @@ it("handles an empty calendar without invention and exposes no editor in parent 
   expect(serviceSlot === "morning" || serviceSlot === "havdalah").toBe(true); await ui(parent.locator(".hero-who .hero-slot")).toHaveText(`· ${service}`);
   expect((await api(parent, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "parent", ranges: ["Genesis 1:1"] })).status === 400).toBe(true);
   await click(parent, "Practice with Synthetic"); await ui(parent.getByRole("heading", { name: /^Practicing with /, level: 1 })).toBeVisible();
-  expect(await parent.getByRole("heading", { name: "Set the assigned reading", exact: true }).count()).toBe(0); await ui(parent.locator(".hero-who .hero-slot")).toHaveText(`· ${service}`);
+  expect(await parent.getByRole("heading", { name: "Set the assigned reading", exact: true }).count()).toBe(0);
+  // Child practice keeps the service in "Your plan" at the foot (Hebrew first).
+  await safe(() => parent.getByTestId("plan-service").waitFor({ state: "attached" })); await safe(() => openPlan(parent)); await ui(parent.getByTestId("plan-service")).toHaveText(service);
 });

@@ -1271,3 +1271,6 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .lift-pick { flex: 1 1 auto; min-width: 0; max-width: 18rem; text-overflow: ellipsis; }
 .lift-count { flex: none; margin: 0; padding: 0.375rem 1rem 0; font-size: 0.9375rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lift-stage { padding-bottom: 2rem; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 1.5rem), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 1.5rem), transparent); }
+/* Up close keeps the phrase legend to one row that scrolls sideways, so the verse and its legend fit the stage and no chip is left cut off above the marks. */
+.lift-stage > ol[aria-label^="Phrase families"] { align-self: stretch; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding-block: 2px; }
+.lift-stage > ol[aria-label^="Phrase families"] > li { flex: none; }
