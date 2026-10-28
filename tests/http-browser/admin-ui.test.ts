@@ -56,7 +56,8 @@ it("moves between the areas of the tab bar, finds a student, and adds one in a s
   const nav = tab.getByRole("navigation", { name: "Workspace", exact: true });
   await ui(nav.getByRole("link", { name: "This week", exact: true })).toHaveAttribute("aria-current", "page");
   await ui(tab.getByRole("heading", { level: 1, name: "This week", exact: true })).toBeVisible();
-  await ui(tab.getByRole("heading", { name: "Ceremonies this week", exact: true })).toBeVisible(); await ui(tab.getByRole("heading", { name: "Rehearsals this week", exact: true })).toBeVisible();
+  // This week is one card per student (the old Ceremonies and Rehearsals lists are folded into the cards).
+  await ui(tab.getByTestId("this-week-cards")).toBeVisible(); await ui(tab.getByRole("heading", { name: "Ceremonies this week", exact: true })).toHaveCount(0);
   await safe(() => nav.getByRole("link", { name: "Students", exact: true }).click());
   await ui(nav.getByRole("link", { name: "Students", exact: true })).toHaveAttribute("aria-current", "page");
   await ui(tab.getByRole("heading", { level: 1, name: "Students", exact: true })).toBeVisible();

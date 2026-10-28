@@ -24,6 +24,8 @@ export function MoreWorkspace() {
   return <section className="role-workspace">
     <PageHeader title="More" />
     <List label="More">{rows.map(row => <ListRow key={row.href} href={row.href} title={row.title} meta={"meta" in row ? row.meta : undefined} />)}</List>
+    {/* There is no admin page for Discussions and insights; they are curated through Claude (admin walk 2026-10-28). */}
+    <p className={styles.moreNote} data-testid="more-curation-note">Discussions and insights are curated through Claude connections.</p>
     <p className={styles.moreAction}><UpdateStaffSheet /></p>
   </section>;
 }

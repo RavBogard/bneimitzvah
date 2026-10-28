@@ -19,6 +19,8 @@ export const OWN_REQUEST_LINE = "This is your own request, so another approver n
 export const IDENTITY_TAKEN_LINE = "That student record is already linked to another account. The request is kept.";
 export const ALREADY_LINKED_LINE = "This account is already linked to a student record. The request is kept.";
 const studentLabel = (student: Pick<StudentOption, "firstName" | "lastName">) => `${student.firstName} ${student.lastName}`;
+/** "Sat, Nov 14, 2026" for a calendar date (never the ISO form). */
+const longDay = (date: string) => { const [year, month, day] = date.split("-").map(Number); return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(Date.UTC(year, month - 1, day)); };
 const initial = (name: string) => Array.from(name.trim())[0]?.toLocaleUpperCase() ?? "A";
 const day = (value: string) => new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
 type Message = { text: string; tone: "status" | "alert"; signIn?: boolean } | null;
@@ -93,6 +95,8 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
     } finally { gate.current = false; if (alive.current) setPending(false); }
   }
 
+  // The student chooser reads soonest ceremony first.
+  const byDate = [...students].sort((a, b) => a.ceremonyDate.localeCompare(b.ceremonyDate) || studentLabel(a).localeCompare(studentLabel(b)) || a.id.localeCompare(b.id));
   return <section className="role-workspace admin-workspace accounts-workspace">{admin && <PeopleNav />}
     <PageHeader title={admin ? "Members" : "Link requests"} />{!admin && <DocumentTitle heading="Link requests" />}
     {productName && <p className="people-note">An account keeps a person’s saved readings, place in Learn to lein, preferred commentaries and settings. Everything else on <bdi dir="auto">{productName}</bdi> is open without one.</p>}
@@ -101,8 +105,8 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
     {loading && !requests ? <p role="status">Loading link requests…</p>
       : broken || !requests ? <div className="admin-state" role="alert"><p>Link requests couldn’t be loaded.</p><Button onClick={() => void load()}>Reload</Button></div>
       : <>
-        <section className="people-card" aria-labelledby="accounts-requests"><div className="people-card-head"><h2 id="accounts-requests">Link requests</h2>
-          <p>Approving gives the person an account and sends them one email. Declining removes the request and sends nothing.</p>
+        <section className="people-card" {...(admin ? { "aria-labelledby": "accounts-requests" } : { "aria-label": "Link requests" })}><div className="people-card-head">{admin && <h2 id="accounts-requests">Link requests</h2>}
+          <p>Approving links this person’s account to the student you choose. They’ll get one email saying so. Declining removes the request and sends nothing.</p>
           <p>{APPROVER_HELP_LINE}</p>
           <p data-testid="approver-parent-line">{APPROVER_PARENT_LINE}</p></div>
           {requests.length ? <ul className="people-list">{requests.map(row => <li key={row.id} className="people-row account-request-row">
@@ -121,7 +125,7 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
                 {students.length > 0 && <label className="accounts-link-target"><span className="field-help">Student</span>
                   <select aria-label={`Student for: ${row.name}`} value={chosen[row.id] ?? ""} disabled={pending || confirming !== null} onChange={event => setChosen(current => ({ ...current, [row.id]: event.target.value }))}>
                     <option value="">Choose a student</option>
-                    {students.map(option => <option key={option.id} value={option.id}>{studentLabel(option)} · {option.ceremonyDate}</option>)}
+                    {byDate.map(option => <option key={option.id} value={option.id}>{studentLabel(option)} · {longDay(option.ceremonyDate)}</option>)}
                   </select></label>}
                 <button type="button" className="roster-action" aria-label={`Approve and link: ${row.name}`} disabled={pending || confirming !== null || !chosen[row.id]} onClick={() => void approve(row, chosen[row.id])}>Approve and link</button>
                 <button type="button" className="roster-action" aria-label={`Approve without linking: ${row.name}`} disabled={pending || confirming !== null} onClick={() => void approve(row)}>Approve without linking</button>
@@ -141,7 +145,7 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
                 <button type="button" className="roster-action" aria-label={`Keep membership: ${row.name}`} disabled={pending} onClick={() => setConfirming(null)}>Keep</button>
               </> : <button type="button" className="roster-action people-danger" aria-label={`End membership: ${row.name}`} disabled={pending || confirming !== null} onClick={() => { setMessage(null); setConfirming(`end:${row.id}`); }}>End membership</button>}
             </div>
-          </li>)}</ul> : <p className="people-empty">No approved accounts yet.</p>}
+          </li>)}</ul> : <p className="people-empty">No one has been linked through a link request yet.</p>}
         </section>}
         {admin && approvers && <section className="people-card" aria-labelledby="accounts-approvers"><div className="people-card-head"><h2 id="accounts-approvers">Approvers</h2>
           <p>Admins approve requests. You can also choose tutors to approve them.</p></div>

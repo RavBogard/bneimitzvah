@@ -45,15 +45,17 @@ const chapterVerse = (ref: string) => { const parsed = parse(ref); return parsed
 
 const inOrder = (refs: readonly string[]) => [...refs].sort((a, b) => { const x = parse(a), y = parse(b); return !x || !y ? 0 : x.chapter - y.chapter || x.verse - y.verse; });
 /**
- * TP-02: "Tue Oct 20 · Torah 23:1–23:9 · marked 23:4 Got it", each reading of the day in turn. A day of many marks reads as ranges per
- * state ("marked 1:1–1:6 Got it, 1:7–1:8 Still working"), not one verse at a time (tutor walk 2026-10-28, finding 13).
+ * TP-02: "Tue Oct 20 · Torah 23:1–23:9 · marked 23:4 Got it", each reading of the day in turn. A day of many marks names only the Still working
+ * verses and counts the rest ("marked 1:7–1:8 Still working, 6 verses got it"), so the line stays short (tutor walk 2026-10-28, finding 13).
  */
 export function dayLine(day: PracticeDay): string {
   const parts = [dayLabel(day.day)];
   for (const reading of day.readings) {
     parts.push(`${KIND[reading.kind]} ${verseRanges(reading.opened)}`.trim());
-    const marks = (["got-it", "working"] as const).map(state => [state, inOrder(reading.marked.filter(mark => mark.state === state).map(mark => mark.verseRef))] as const).filter(([, refs]) => refs.length)
-      .map(([state, refs]) => `${verseRanges(refs) || refs.map(chapterVerse).join(", ")} ${MARK[state]}`);
+    // Only the Still working verses are named; any number of Got it verses past one is a count (tutor walk 2026-10-28, finding 13).
+    const got = inOrder(reading.marked.filter(mark => mark.state === "got-it").map(mark => mark.verseRef)), working = inOrder(reading.marked.filter(mark => mark.state === "working").map(mark => mark.verseRef));
+    const marks = [...working.length ? [`${verseRanges(working) || working.map(chapterVerse).join(", ")} ${MARK.working}`] : [],
+      ...got.length === 1 ? [`${verseRanges(got) || chapterVerse(got[0])} ${MARK["got-it"]}`] : got.length > 1 ? [`${got.length} verses ${MARK_LOWER["got-it"]}`] : []];
     if (marks.length) parts.push(`marked ${marks.join(", ")}`);
   }
   return parts.join(" · ");

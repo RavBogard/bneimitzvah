@@ -4,7 +4,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
 import { portalRoutesFixture } from "./portal-routes-fixture";
 import { createHttpDispatcher } from "../../src/server/http/dispatch";
-import { needsYouRows, NEEDS_YOU_TEXT, studentFacts, type StudentStatus } from "../../src/components/portal/workspace/staff/model";
+import { CHIP_TEXT, weekCards, studentFacts, type StudentStatus } from "../../src/components/portal/workspace/staff/model";
 
 // Release 1.9 N14/N15 staff screens, server side. Synthetic people only. The fixture's "multi" is the tutor of Sibling A and the
 // parent of Siblings A and B; "learner" is Sibling A's own account; "recipient" becomes a second tutor here; students[3] and a
@@ -61,12 +61,11 @@ describe("Needs you (N14)", () => {
     expect((await t.call("/api/admin/student-status", "admin")).json.students.find((row: StudentStatus) => row.id === t.own.id).family).toBe("none");
     await t.f.owner(() => t.f.db.update(s.user).set({ emailVerified: true }).where(eq(s.user.id, t.f.identities.multi.id)));
     const roster = (await t.call("/api/admin/students", "admin")).json.students;
-    const rows = needsYouRows(roster, statuses).filter(row => row.student?.id === t.unrelated.id);
-    const tutorRows = rows.filter(row => "conditions" in row && row.conditions.includes("no-tutor"));
-    expect(tutorRows).toHaveLength(1);
-    expect(NEEDS_YOU_TEXT["no-tutor"]).toEqual({ text: "No tutor yet.", verb: "Choose a tutor." });
+    const cards = weekCards(roster, statuses).filter(card => card.student.id === t.unrelated.id);
+    expect(cards).toHaveLength(1); expect(cards[0].chips).toContain("no-tutor");
+    expect(CHIP_TEXT["no-tutor"]).toBe("Needs a tutor");
     // The students a year out are not listed at all.
-    expect(needsYouRows(roster, statuses).some(row => row.student?.id === t.own.id)).toBe(false);
+    expect(weekCards(roster, statuses).some(card => card.student.id === t.own.id)).toBe(false);
     expect(studentFacts(statuses.get(t.unrelated.id)!)).toContain("No tutor yet");
   });
 

@@ -45,6 +45,7 @@
 .sublink[aria-current="page"] { background: var(--color-action-fill); color: #fff; }
 
 /* More: the one action that is not a link. */
+.moreNote { margin: 1rem 0 0; color: var(--color-muted); font-size: 0.9375rem; }
 .moreAction { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin: 1.5rem 0 0; }
 
 @media (prefers-reduced-motion: reduce) { .tab { transition: none; } }
