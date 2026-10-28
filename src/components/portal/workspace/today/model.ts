@@ -29,6 +29,15 @@ export function rehearsalLine(student: Pick<Student, "rehearsal1" | "rehearsal2"
   return next ? `Next rehearsal: ${shortDay(next)}` : null;
 }
 
+/** The one "what is next" line on the pinned card: "Rehearsal today", "Next: Rehearsal Sat, Dec 12", then "Next: Beit Mitzvah Sat, Dec 26" once rehearsals are past; nothing after the ceremony day. */
+export function nextDateLine(student: Pick<Student, "rehearsal1" | "rehearsal2" | "ceremonyDate">, today: string): string | null {
+  const dates = [student.rehearsal1, student.rehearsal2].filter((value): value is string => !!value).sort();
+  if (dates.includes(today)) return "Rehearsal today";
+  const rehearsal = dates.find(date => date > today);
+  if (rehearsal) return `Next: Rehearsal ${shortDay(rehearsal)}`;
+  return student.ceremonyDate > today ? `Next: Beit Mitzvah ${shortDay(student.ceremonyDate)}` : null;
+}
+
 /** A reference as it is read aloud on screen: ranges joined by "; ", numbers joined by an en dash. */
 export const displayRef = (ref: string) => ref.replace(/(\d)-(\d)/g, "$1–$2");
 /** The segments of a reading's ranges, each one a reference that must stay on one line. */

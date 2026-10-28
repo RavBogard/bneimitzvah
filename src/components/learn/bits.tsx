@@ -9,6 +9,7 @@ import { routeUnitTap, unitWordParts } from "../../lib/learn/word-tap";
 // The Hebrew @font-face rules, which every Learn and service-course page needs whatever else it loads.
 import "../../styles/hebrew-font.module.css";
 import { usePlayerState, useLearnServices } from "./services";
+import { useOwnReading } from "./own-reading";
 import { RATE_LIMITED_MESSAGE } from "../portal/public-reading/rate-limited";
 import { useWordCard } from "./word-card";
 import { activeLessonWord, type PlaybackBinding } from "./player";
@@ -96,7 +97,12 @@ export function AudioError({ id }: { id: string | readonly string[] }) {
  * recording line (COPY.md), because the recordings travel with the verses.
  */
 export function LoadFailure({ rateLimited = false, onRetry }: { rateLimited?: boolean; onRetry(): void }) {
-  return <div role="status" className={styles.state} data-testid="recording-failed"><p>{rateLimited ? RATE_LIMITED_MESSAGE : "The recording did not load. Try again."}</p><button type="button" className="button-secondary" onClick={onRetry}>Try again</button></div>;
+  return <div role="status" className={styles.state} data-testid="recording-failed"><p>{rateLimited ? RATE_LIMITED_MESSAGE : "The recording did not load. Try again."}</p><button type="button" className="button-secondary" onClick={onRetry}>Try again</button><LoadFailureLinks /></div>;
+}
+/** Ways out of a failed screen: back to the course, and for a signed-in student with an assigned reading, on to that reading. */
+function LoadFailureLinks() {
+  const own = useOwnReading();
+  return <p className={styles.failureLinks}><a href="/learn" data-testid="learn-back">Back to Learn</a>{own.status === "ready" && <a href="/mine/reading" data-testid="learn-open-reading">Open my reading</a>}</p>;
 }
 /** After an answer: bring the revealed answer fully into view above the thumb's band, then hand focus to Next. */
 export function revealAnswer(next: { current: HTMLButtonElement | null }) {

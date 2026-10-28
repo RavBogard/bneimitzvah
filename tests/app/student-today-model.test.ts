@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { calendarMarks, deviceDate, displayRef, lastSevenDays, parashahName, readingRows, rehearsalLine, rowState } from "../../src/components/portal/workspace/today/model";
+import { calendarMarks, deviceDate, displayRef, lastSevenDays, parashahName, readingRows, nextDateLine, rehearsalLine, rowState } from "../../src/components/portal/workspace/today/model";
 import type { Reading } from "../../src/components/portal/workspace/api";
 import type { ProgressVerse } from "../../src/lib/progress/types";
 import { expandReadingRanges } from "../../src/lib/readings/ranges";
@@ -15,6 +15,15 @@ it("says Rehearsal today on the day, and otherwise the next one still to come", 
   expect(rehearsalLine(rehearsals, "2026-11-08")).toBeNull();
   expect(rehearsalLine({ rehearsal1: null, rehearsal2: null }, "2026-10-17")).toBeNull();
   expect(rehearsalLine({}, "2026-10-17")).toBeNull();
+});
+
+it("names the next marked date: a rehearsal, then the Beit Mitzvah, then nothing", () => {
+  const student = { ...rehearsals, ceremonyDate: "2026-12-26" };
+  expect(nextDateLine(student, "2026-10-17")).toBe("Rehearsal today");
+  expect(nextDateLine(student, "2026-10-10")).toBe("Next: Rehearsal Sat, Oct 17");
+  expect(nextDateLine(student, "2026-11-08")).toBe("Next: Beit Mitzvah Sat, Dec 26");
+  expect(nextDateLine({ rehearsal1: null, rehearsal2: null, ceremonyDate: "2026-12-26" }, "2026-10-10")).toBe("Next: Beit Mitzvah Sat, Dec 26");
+  expect(nextDateLine(student, "2026-12-26")).toBeNull();
 });
 
 it("reads the device date on the calendar, not the instant", () => {

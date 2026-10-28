@@ -9,6 +9,7 @@ vi.mock("server-only", () => ({}));
 const own = vi.hoisted(() => ({ value: { status: "none" } as unknown }));
 vi.mock("../../src/components/learn/own-reading", async importOriginal => ({ ...await importOriginal<typeof import("../../src/components/learn/own-reading")>(), useOwnReading: () => own.value }));
 const { CourseHome } = await import("../../src/components/learn/home");
+const { LoadFailure } = await import("../../src/components/learn/bits");
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 const reading = (kind: "torah" | "haftarah", verses: string[]) => ({ id: "22222222-2222-4222-8222-222222222222", kind, verses, ranges: verses, needsReview: false });
 const render = (value: unknown) => { own.value = value; return renderToStaticMarkup(createElement(CourseHome)); };
@@ -51,5 +52,18 @@ describe("the course home for a student's own reading", () => {
   it("carries the approved strings word for word", () => {
     const text = [read("src/components/learn/own-reading.ts"), read("src/components/learn/home.tsx"), read("src/components/learn/first-verse.tsx"), read("src/components/learn/this-week.tsx")].join("\n");
     for (const line of ["In your reading", "My Readings", "First phrase of your verse"]) expect(text).toContain(line);
+  });
+});
+
+describe("the ways back from Learn's dead ends (student walk finding 10)", () => {
+  const link = (html: string, id: string) => html.match(new RegExp(`<a [^>]*data-testid="${id}"[^>]*>`))?.[0] ?? null;
+  it("links a signed-in student's course home and failure screen to their reading, and anyone else's failure screen only back to Learn", () => {
+    const ready = { status: "ready", torah: reading("torah", ["Genesis 23:1"]), haftarah: null };
+    expect(link(render(ready), "learn-open-reading")).toContain('href="/mine/reading"');
+    expect(link(render({ status: "none" }), "learn-open-reading")).toBeNull();
+    own.value = ready; const failed = renderToStaticMarkup(createElement(LoadFailure, { onRetry: () => undefined }));
+    expect(link(failed, "learn-back")).toContain('href="/learn"'); expect(link(failed, "learn-open-reading")).toContain('href="/mine/reading"');
+    own.value = { status: "none" }; const plain = renderToStaticMarkup(createElement(LoadFailure, { onRetry: () => undefined }));
+    expect(link(plain, "learn-back")).toContain('href="/learn"'); expect(link(plain, "learn-open-reading")).toBeNull();
   });
 });

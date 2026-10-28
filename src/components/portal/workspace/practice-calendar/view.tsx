@@ -54,9 +54,13 @@ const markWords: Record<CalendarMark, string> = { rehearsal: "Rehearsal", ceremo
  */
 export function PracticeMonths({ today, first, practiced, marks, lastDay }: { today: number; first: number; practiced(ordinal: number): boolean; marks?: ReadonlyMap<string, CalendarMark>; lastDay?: number }) {
   const now = parts(today), earliest = parts(first), index = (year: number, month: number) => year * 12 + month - 1;
-  const [shown, setShown] = useState(index(now.year, now.month));
   const ahead = lastDay !== undefined && lastDay > today ? parts(lastDay) : now;
-  const min = index(earliest.year, earliest.month), max = index(ahead.year, ahead.month), at = Math.min(Math.max(shown, min), max);
+  const min = index(earliest.year, earliest.month), max = index(ahead.year, ahead.month);
+  // The calendar opens on the month of the next marked day (a rehearsal or the ceremony) when that month is in range, else on this month.
+  const next = marks ? [...marks.keys()].map(dayOrdinal).filter(ordinal => ordinal >= today).sort((a, b) => a - b)[0] : undefined;
+  const nextMonth = next === undefined ? undefined : index(parts(next).year, parts(next).month);
+  const [shown, setShown] = useState(nextMonth !== undefined && nextMonth >= min && nextMonth <= max ? nextMonth : index(now.year, now.month));
+  const at = Math.min(Math.max(shown, min), max);
   const year = Math.floor(at / 12), month = at % 12 + 1, begin = dayOrdinal(`${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-01`);
   const length = dayOrdinal(dayString(begin + 31).slice(0, 8) + "01") - begin, lead = weekday(begin);
   const cells = [...Array<null>(lead).fill(null), ...Array.from({ length }, (_, day) => begin + day)];

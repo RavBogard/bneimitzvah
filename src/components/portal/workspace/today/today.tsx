@@ -20,7 +20,7 @@ import { serviceSlotName } from "../service-slot";
 import type { ProgressRows } from "../progress/api";
 import type { LessonLogEntry } from "../../../../lib/lesson-log/types";
 import type { ProgressVerse } from "../../../../lib/progress/types";
-import { calendarMarks, deviceDate, lastSevenDays, refSegments, rehearsalLine } from "./model";
+import { calendarMarks, deviceDate, lastSevenDays, nextDateLine, refSegments } from "./model";
 import styles from "./today.module.css";
 
 export type Slice<T> = { status: "loading" } | { status: "unavailable" } | { status: "ready"; value: T };
@@ -140,7 +140,7 @@ export function PinnedReadingCard({ slices }: { slices: TodaySlices }) {
 
 function PinnedReady({ slices, assigned, headingId }: { slices: TodaySlices; assigned: Assigned; headingId: string }) {
   const { student, readings } = assigned, { marks, lesson, dates } = slices, congregation = useCongregation(true);
-  const today = deviceDate(), countdown = ceremonyCountdown(student.ceremonyDate), rehearsal = rehearsalLine(student, today), caption = useId();
+  const today = deviceDate(), countdown = ceremonyCountdown(student.ceremonyDate), rehearsal = nextDateLine(student, today), caption = useId();
   const own = slices.rows.find(row => row.id === student.id), slot = congregation.ready ? serviceSlotName(student.serviceSlot, congregation.services) : null;
   const count = gotCount(readings, marks), note = lesson.status === "ready" ? lesson.value : null;
   const dayMarks = calendarMarks(student), calendarDay = dates.status === "ready" ? dayOrdinal(dates.serverDay) : dayOrdinal(today);
@@ -149,9 +149,11 @@ function PinnedReady({ slices, assigned, headingId }: { slices: TodaySlices; ass
       <Chip tone="attention">{`Beit Mitzvah · ${countdown.label}`}</Chip>
       {countdown.phrase && <span className={styles.days} data-nobreak>{countdown.phrase}</span>}
     </div>
-    <h2 id={headingId} className={styles.name}><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>
+    <h2 id={headingId} className={styles.name}><a href={PINNED_HREF} className={styles.nameLink}><bdi dir="auto">{student.firstName} {student.lastName}</bdi></a></h2>
     {(readings.length > 0 || slot) && <p className={styles.ranges}>{readings.flatMap(reading => refSegments(reading.ranges).map((segment, index) => `${index === 0 ? `${reading.kind === "torah" ? "Torah" : "Haftarah"} ` : ""}${segment}`))
       .map((text, index) => <span key={index}>{index > 0 && " · "}<span data-nobreak>{text}</span></span>)}{slot && <>{readings.length > 0 && " · "}<span data-nobreak>{slot}</span></>}</p>}
+    {/* Open comes right after the name and ranges, so a phone shows it without scrolling. */}
+    <ButtonLink variant="primary" href={PINNED_HREF} block>Open</ButtonLink>
     {rehearsal && <p className={styles.rehearsal} data-testid="rehearsal-line" data-nobreak>{rehearsal}</p>}
     {readings.length === 0 ? <p className={styles.empty}>Your tutor or rabbi will add your verses here.</p>
       : <div className={styles.got} data-testid="pinned-progress">
@@ -179,10 +181,9 @@ function PinnedReady({ slices, assigned, headingId }: { slices: TodaySlices; ass
     {dates.status === "loading" && <div className={styles.holdCalendar} aria-hidden="true" />}
     {dates.status !== "loading" && <div className={styles.calendar}><PracticeMonths today={calendarDay} first={dates.status === "ready" ? dayOrdinal(dates.fromDate) : calendarDay - 364}
       practiced={ordinal => dates.status === "ready" && dates.dates.has(dayString(ordinal))} marks={dayMarks} lastDay={dayOrdinal(student.ceremonyDate)} /></div>}
-    <div className={styles.actions}>
-      <ButtonLink variant="primary" href={PINNED_HREF}>Open</ButtonLink>
+    {readings.length > 0 && <div className={styles.actions}>
       {readings.length > 0 && <ul className={styles.links} aria-label="In your reading"><li><a href={`${PINNED_HREF}#service-parts`}>Service parts</a></li><li><a href={`${PINNED_HREF}#lessons`}>Lessons</a></li></ul>}
-    </div>
+    </div>}
     {own?.ownAdultHonors === true && <HonorsEntry key={student.id} mode="student" studentId={student.id} name={`${student.firstName} ${student.lastName}`} />}
   </section>;
 }

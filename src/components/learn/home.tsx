@@ -87,6 +87,7 @@ export function CourseHome() {
         <div className={styles.homeLead}>
           <h1 className={styles.title}>Learn to lein</h1>
           <p className={styles.intro} data-testid="learn-intro">Hear a phrase, chant it yourself, then connect it to a reading. Return to words, sounds and joins whenever you need help.</p>
+          {mine && <p className={styles.ownLink}><a href="/mine/reading" data-testid="learn-open-reading">Open my reading</a></p>}
           {courseDone(progress) ? <section className={styles.next} aria-labelledby="learn-next"><h2 id="learn-next" className={styles.nextTitle}>Keep preparing readings</h2><p><a href="/learn/prepare">Prepare a passage</a> or revisit a lesson below.</p></section>
             : next && <section className={styles.next} aria-labelledby="learn-next" data-next={next.id}>
               <div className={styles.nextTop}><span className={styles.nextLabel}>Next</span>{next.family && <FamilyChip family={next.family} melody={next.melody} />}</div>
