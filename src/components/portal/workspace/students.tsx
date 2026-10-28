@@ -19,6 +19,8 @@ export function StudentWorkspace({ mode, studentId }: { mode: "student" | "paren
   const { summary } = useWorkspace();
   // The admin has no reading of their own: /mine/reading leads them to This week, not to "Role unavailable".
   if (mode === "student" && !summary.roles.includes("student") && summary.roles.includes("admin")) return <RedirectTo href={rolePaths.admin} />;
+  // An admin who is not a tutor opening a student's tutor address lands on the admin's own page for that student (re-walk 2026-10-28); routing only, the admin page keeps its own checks.
+  if (mode === "tutor" && studentId && !summary.roles.includes("tutor") && summary.roles.includes("admin")) return <RedirectTo href={`/workspace/admin/students/${encodeURIComponent(studentId)}/reading`} />;
   return <RequireRole role={mode}><StudentSelection key={studentId ?? ""} mode={mode} routeStudentId={studentId} /></RequireRole>;
 }
 

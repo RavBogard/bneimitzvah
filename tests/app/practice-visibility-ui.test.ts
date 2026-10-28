@@ -25,7 +25,7 @@ test("the approved lines, word for word", () => {
 test("the lines' small cases: ranges across chapters, one verse, no lesson, nothing still working, a mark made before sources were recorded", () => {
   expect(verseRanges(["Exodus 22:29", "Exodus 22:30", "Exodus 23:1", "Exodus 23:4"])).toBe("22:29–23:1, 23:4");
   expect(verseRanges(["Exodus 22:29", "Exodus 23:1"])).toBe("22:29, 23:1");
-  expect(rosterLine({ practisedDays: 0, lastLesson: null, stillWorking: 1 })).toBe("Practiced 0 of last 7 days · 1 verse still working");
+  expect(rosterLine({ practisedDays: 0, lastLesson: null, stillWorking: 1 })).toBe("No practice in the last 7 days · 1 verse still working");
   expect(rosterLine({ practisedDays: 2, lastLesson: null, stillWorking: 0 })).toBe("Practiced 2 of last 7 days");
   expect(markLine("working", false)).toBe("Student: still working");
   expect(markLine("got-it", null)).toBe("Student: got it");

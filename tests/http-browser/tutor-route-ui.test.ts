@@ -140,7 +140,10 @@ it("opens a later-page authorized student by direct URL and waits for exhausted 
 });
 
 it("does not turn a different account role into tutor authority through the new URL", async () => {
-  for (const who of ["admin", "student", "anonymous"] as const) {
+  // An admin who is not a tutor is routed to the admin's own page for that student: the tutor URL gives no tutor authority (nothing of the tutor page renders there).
+  const adminTab = await page("admin"); await navigate(adminTab, `/workspace/tutor/${sibling.id}`);
+  await ui(adminTab).toHaveURL(new RegExp(`/workspace/admin/students/${sibling.id}/reading$`), { timeout: 30_000 });
+  for (const who of ["student", "anonymous"] as const) {
     const tab = await page(who); let reads = 0;
     tab.on("request", request => { if (/\/api\/students\/[^/]+\/(reading|study-text|work)$/.test(new URL(request.url()).pathname)) reads++; });
     await navigate(tab, `/workspace/tutor/${sibling.id}`);

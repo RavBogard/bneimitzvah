@@ -151,7 +151,7 @@ function PinnedReady({ slices, assigned, headingId }: { slices: TodaySlices; ass
     </div>
     <h2 id={headingId} className={styles.name}><a href={PINNED_HREF} className={styles.nameLink}><bdi dir="auto">{student.firstName} {student.lastName}</bdi></a></h2>
     {(readings.length > 0 || slot) && <p className={styles.ranges}>{readings.flatMap(reading => refSegments(reading.ranges).map((segment, index) => `${index === 0 ? `${reading.kind === "torah" ? "Torah" : "Haftarah"} ` : ""}${segment}`))
-      .map((text, index) => <span key={index}>{index > 0 && " · "}<span data-nobreak>{text}</span></span>)}{slot && <>{readings.length > 0 && " · "}<span data-nobreak>{slot}</span></>}</p>}
+      .map((text, index, all) => <span key={index}><span data-nobreak>{text}{(index < all.length - 1 || slot) && " ·"}</span>{" "}</span>)}{slot && <span data-nobreak>{slot}</span>}</p>}
     {/* Open comes right after the name and ranges, so a phone shows it without scrolling. */}
     <ButtonLink variant="primary" href={PINNED_HREF} block>Open</ButtonLink>
     {rehearsal && <p className={styles.rehearsal} data-testid="rehearsal-line" data-nobreak>{rehearsal}</p>}

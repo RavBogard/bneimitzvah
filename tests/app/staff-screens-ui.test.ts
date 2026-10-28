@@ -48,7 +48,7 @@ describe("This week's cards and the roster chips (N14)", () => {
     expect(nodes(items[0]).filter(node => attr(node, "data-task"))).toHaveLength(2);
     // The one deliberate wording check for these cards: the chips, the setup lines as one sentence, the date line and the facts.
     expect(nodes(items[0]).filter(node => attr(node, "data-chip")).map(text)).toEqual(["Needs a tutor", "Behind on practice"]);
-    expect(nodes(items[0]).filter(node => attr(node, "data-task")).map(text)).toEqual(["No service date yet · Set the service", "Honors not started · Open the honors form"]);
+    expect(nodes(items[0]).filter(node => attr(node, "data-task")).map(text)).toEqual(["No service date yet Set the service", "Honors not started Open the honors form"]);
     expect(text(nodes(items[0]).find(node => attr(node, "data-testid") === "week-date")!)).toBe("Beit Mitzvah in 12 days · Sat, Nov 7, 2026");
     expect(nodes(items[0]).filter(node => attr(node, "data-testid") === "student-fact").map(text)).toEqual(["2 of 12 verses got"]);
     expect(statusChips(students[1], statuses.get(id(2)))).toEqual(["Reading needs review", "No service date yet"]);

@@ -64,9 +64,12 @@ export function dayLine(day: PracticeDay): string {
 /** TP-20: "Student (with parent): got it". A mark made before the source was recorded reads as the student's own. */
 export const markLine = (state: PracticeMarkState, withParent: boolean | null) => `Student${withParent ? " (with parent)" : ""}: ${MARK_LOWER[state]}`;
 
+/** Zero days is said as a plain fact, not a score of 0 (re-walk 2026-10-28). The same words are the basis of the Behind on practice chip. */
+export const NO_PRACTICE_LINE = "No practice in the last 7 days";
+
 /** TP-11: "Practiced 3 of last 7 days · Last lesson Oct 17 · 2 verses still working". No lesson, or nothing still working, leaves its part out. */
 export function rosterLine(input: { practisedDays: number; lastLesson: string | null; stillWorking: number }): string {
-  const parts = [`Practiced ${input.practisedDays} of last 7 days`];
+  const parts = [input.practisedDays > 0 ? `Practiced ${input.practisedDays} of last 7 days` : NO_PRACTICE_LINE];
   if (input.lastLesson) parts.push(`Last lesson ${shortDate(input.lastLesson)}`);
   if (input.stillWorking > 0) parts.push(`${input.stillWorking} ${input.stillWorking === 1 ? "verse" : "verses"} still working`);
   return parts.join(" · ");

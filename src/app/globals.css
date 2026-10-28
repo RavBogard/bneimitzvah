@@ -1258,6 +1258,7 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .needs-you h2 { margin: 0 0 0.75rem; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; }
 .needs-you-row .roster-row-main { min-height: 0; }
 .needs-you-task { color: var(--color-ink); }
+.needs-you-task-text { margin-inline-end: 0.5rem; }
 .needs-you-tasks { display: grid; gap: 0.125rem; margin: 0.25rem 0 0; padding: 0; list-style: none; }
 .needs-you-row .roster-row-name a { color: inherit; text-decoration: none; }
 .needs-you-row .roster-row-name a:hover { text-decoration: underline; text-underline-offset: 0.18em; }
@@ -1346,3 +1347,26 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
   .needs-you-chip, .needs-you-task .button-text, .needs-you-task a, .needs-you-row .roster-row-name a, .accounts-line a { display: inline-flex; align-items: center; min-height: 44px; }
   .needs-you-chip { padding-inline: 0.875rem; }
 }
+
+/* Re-walk 2026-10-28: the desktop reading drops its empty band above the title (page padding, workspace margin and hero margin each gave a little). */
+@media (min-width: 900px) {
+  .workspace-main:has(.reading-hero) { padding-top: 1rem; }
+  .reading-workspace:has(.reading-hero) { margin-top: 0.5rem; }
+  .reading-workspace .reading-hero { margin-top: 0.5rem; }
+}
+/* The roster's Honors, Edit and People stay 44px tall wherever they sit. */
+.roster-row-actions .roster-action { min-height: 44px; box-sizing: border-box; }
+/* The switcher's chips fade at the edge instead of clipping a name; the end padding lets the last chip scroll clear of the fade. */
+.student-cards-compact { padding-inline-end: 1.5rem; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent); }
+/* A staff header's slot and a row's date never break mid-phrase. */
+.hero-slot, .hero-slot-time { white-space: nowrap; }
+/* Parent practice at a narrow phone (320): the tutor's note holds to two lines with Read all, and the title row keeps Switch and Done beside the name. */
+.practice-ask-clamped .lesson-before-next { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.practice-ask-toggle { display: none; }
+@media (max-width: 340px) {
+  .practice-ask-toggle { display: inline-flex; align-items: center; min-height: 44px; }
+  .practice-bar-row { flex-wrap: nowrap; }
+  .practice-bar .practice-bar-title { min-width: 0; font-size: 1rem; overflow-wrap: anywhere; }
+  .practice-bar .practice-pill { padding: 0 0.5rem; flex: none; }
+}
+@media (min-width: 341px) { .practice-ask-clamped .lesson-before-next { display: block; overflow: visible; } }
