@@ -181,6 +181,12 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
       handler: async (_input, ctx) => ctx.guides.guideWork(rabbiAuthority(ctx)),
     },
     {
+      name: "list_guide_catalog", roles: ["admin"], scope: SCOPES.read, annotations: readOnly,
+      description: "Every guide key CRC's rite can read, in calendar order, whether or not a student has it: the parashot and doubled weeks (Torah keys), each regular haftarah, the special-Shabbat haftarot, and holiday and fast-day readings. Each entry has kind, readingKey, name, group (a Torah book, special or holiday), verseCount, `draftable` (whether get_reading_for_guide and save_guide return verses for the key: an assigned student's reading, or the catalog's own passage) and base: none, held-draft, published-unreviewed or reviewed, with versions. `unresolved` lists catalog readings that produce no key. No student data.",
+      inputSchema: closed({}),
+      handler: async (_input, ctx) => ctx.guides.guideCatalog(rabbiAuthority(ctx)),
+    },
+    {
       name: "get_reading_for_guide", roles: ["admin"], scope: SCOPES.read, annotations: readOnly, deadlineMs: 55_000,
       description: "The text to draft a base guide from, 25 verses per page: Hebrew (Miqra According to the Masorah) and the JPS 2023 English for your drafting only (never paste English verse text into a guide), and for each verse the Sefaria sources a note may cite. `readable:true` sources open in the portal's reader; the rest link out to Sefaria. Pass `offset` from `nextOffset` for the next page.",
       inputSchema: closed({ kind, readingKey, offset: { type: "integer", minimum: 0, maximum: 1000, description: "Verse offset, from the previous page's nextOffset." } }, ["kind", "readingKey"]),

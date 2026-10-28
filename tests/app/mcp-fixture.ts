@@ -28,14 +28,14 @@ export const syntheticReading = async (date: string, calendar: Calendar): Promis
     triennial: { year: 1, aliyot: [{ n: 1, ref: "Genesis 1:1-3" }] } }, haftarah: "Isaiah 1:1-3" } });
 
 /** `now` is the MCP clock (Date.now when omitted), for plan-token expiry; `related` and `loadReading` stand in for Sefaria and Hebcal. */
-export async function mcpFixture(enabled = true, now?: () => number, outside: { related?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; loadReading?: typeof syntheticReading; pinnedSource?: PinnedSourceReader } = {}) {
+export async function mcpFixture(enabled = true, now?: () => number, outside: { related?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; loadReading?: typeof syntheticReading; pinnedSource?: PinnedSourceReader; loadText?: Parameters<typeof createMcpEndpoint>[0]["loadText"] } = {}) {
   const f = await accessFixture(); opened.push(f);
   const deployment = { environment: "test" as const, deployment: "suite" };
   // The portal's invitation email, captured: invite_tutor sends through it and a test reads what would have gone out.
   const mail: { email: string; url: string; role: string }[] = [];
   const transport = async (message: { email: string; url: string; role: string }) => { mail.push({ email: message.email, url: message.url, role: message.role }); };
   const mcp = enabled ? createMcpEndpoint({ db: f.db, access: f.service, practice: createPracticeService({ access: f.service }), secret: randomBytes(48).toString("base64url"),
-    loadText: async () => { throw new Error("no network"); }, related: outside.related ?? (async () => { throw new Error("no network"); }), loadReading: outside.loadReading ?? syntheticReading, now,
+    loadText: outside.loadText ?? (async () => { throw new Error("no network"); }), related: outside.related ?? (async () => { throw new Error("no network"); }), loadReading: outside.loadReading ?? syntheticReading, now,
     pinnedSource: outside.pinnedSource ?? (async () => { throw new SourceTextUnavailable("upstream"); }),
     invitations: { transport, throttleSecret: randomBytes(48).toString("base64url") } }) : null;
   // The staff Claude connections page and the roster's Maven link (release 1.1) share this dispatcher, so a test can end a

@@ -79,7 +79,7 @@ export async function guideStreams<Q extends PgQueryResultHKT>(tx: AccessTransac
 /**
  * The Torah passage behind a reading key, taken from the signed Hebcal snapshots of this tenant's
  * confirmed assignments that carry it (every aliyah including maftir). Empty when no current
- * student has that reading: a base guide is drafted for readings students actually have.
+ * student has that reading; the study-guide service then falls back to the catalog's full kriyah for the key.
  */
 export async function torahPassageVerses<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, readingKey: string, counts: VerseCounts): Promise<Set<string>> {
   const rows = await tx.select({ snapshot: s.assignment.proposalSnapshot }).from(s.assignment)
