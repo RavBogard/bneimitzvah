@@ -14,7 +14,8 @@ import { installLoopbackFetchGuard } from "./egress";
 import { openAuthMail } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
-import { refreshReading, goChild } from "./reading-nav";
+import { refreshReading, goChild, toSection } from "./reading-nav";
+import { upClose } from "./verse-tools";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -44,8 +45,8 @@ async function workspace(tab: Page, role: "student" | "tutor" | "parent" | "admi
   if (role === "parent") await safe(() => goChild(tab, fixture.student.id));
   await ui(tab.locator("#reading-heading")).toBeVisible();
 }
-async function lessonsTab(tab: Page) { await safe(() => tab.locator("#lessons").scrollIntoViewIfNeeded()); await ui(lessons(tab).getByRole("button", { name: "Add lesson note", exact: true })).toBeEnabled(); }
-async function openFirstVerse(tab: Page) { const ref = await tab.locator(".study-verses [data-verse-ref]").first().getAttribute("data-verse-ref"); expect(ref).toBeTruthy(); await click(tab, `View ${ref} up close`); await ui(tab.locator("dialog.lift")).toBeVisible(); }
+async function lessonsTab(tab: Page) { await safe(() => toSection(tab, "lessons")); await ui(lessons(tab).getByRole("button", { name: "Add lesson note", exact: true })).toBeEnabled(); }
+async function openFirstVerse(tab: Page) { const ref = await tab.locator(".study-verses [data-verse-ref]").first().getAttribute("data-verse-ref"); expect(ref).toBeTruthy(); await safe(() => upClose(tab, ref!)); }
 async function firstMark(tab: Page, state: string) { await openFirstVerse(tab); await safe(() => tab.locator("dialog.lift").getByRole("group", { name: /^How / }).getByRole("button", { name: state, exact: true }).click()); }
 async function markStatus(tab: Page, mode = "student") {
   const r = await api(tab, `/api/students/${fixture.student.id}/reading?mode=${mode}`); expect(r.status).toBe(200); const a = r.data.readings.find((x: { kind: string }) => x.kind === "torah");
@@ -193,7 +194,7 @@ it("reconciles a held successful mark across same-scope refresh and rejects its 
     await firstMark(tab, "Got it"); await post.ready(); await safe(() => tab.keyboard.press("Escape")); await refreshReading(tab); await loaded(tab, "Genesis 1:1");
     expect((await markStatus(tab)).data.verses[0].selfCheck).toEqual({ state: "got-it", version: 1 });
   } finally { post.release(); }
-  await ui(tab.locator(".hero-marked")).toHaveText(/^\s*·\s*1 got it$/); await ui(tab.locator(".study-verse-bar .verse-mark")).toHaveText("Got it"); // the selected verse's mark (the first verse, until another is chosen) await post.remove(); expect(writes).toBe(1);
+  await ui(tab.locator('[data-verse-ref="Genesis 1:1"] [data-testid="verse-got-it"]')).toBeVisible(); await ui(tab.locator(".hero-marked")).toHaveCount(0); // a student sees a check beside the verse number, no tally (Hebrew first) await post.remove(); expect(writes).toBe(1);
   const old = await held(tab, "**/progress/self-check");
   try {
     await firstMark(tab, "Still working"); await old.ready(); await safe(() => tab.keyboard.press("Escape"));
@@ -243,13 +244,13 @@ it("retains the rightful lesson prompt during quiet checks and clears it on real
 it("gives admin full lesson authority and child read-only paging while rejecting wrong-student private answers", async () => {
   const initial = (await fixture.ownerDb.select({ total: count() }).from(s.lessonLog).where(eq(s.lessonLog.studentId, fixture.student.id)))[0].total;
   await fixture.ownerDb.insert(s.lessonLog).values(Array.from({ length: 51 }, (_, i) => ({ tenantId: "crc", studentId: fixture.student.id, entryId: randomUUID(), creatorMembershipId: tutorMemberId, creatorUserId: fixture.tutor.id, lessonDate: "2026-10-15", summary: `Synthetic paged lesson ${String(i).padStart(2, "0")}`, version: 1, deleted: false })));
-  const admin = await page("admin"); await workspace(admin, "admin"); await safe(() => admin.locator("#lessons").scrollIntoViewIfNeeded()); /* Admins read lessons in the staff Lessons tab. */ await ui(lessons(admin).locator(".lesson-entry")).toHaveCount(50); await click(admin, "Show earlier lessons"); await ui(lessons(admin).locator(".lesson-entry")).toHaveCount(initial + 51);
+  const admin = await page("admin"); await workspace(admin, "admin"); await safe(() => toSection(admin, "lessons")); /* Admins read lessons in the staff Lessons tab. */ await ui(lessons(admin).locator(".lesson-entry")).toHaveCount(50); await click(admin, "Show earlier lessons"); await ui(lessons(admin).locator(".lesson-entry")).toHaveCount(initial + 51);
   const otherAuthor = lessons(admin).locator(".lesson-entry").filter({ hasText: "Synthetic paged lesson 00" }); await safe(() => otherAuthor.getByRole("button", { name: /^Edit lesson from / }).click()); await ui(sheet(admin).getByRole("button", { name: "Delete lesson", exact: true })).toBeVisible(); await safe(() => field(admin).fill("Synthetic admin-edited lesson")); await click(admin, "Save lesson"); await ui(sheet(admin)).toBeHidden();
-  const tab = await page("tutor"); await workspace(tab, "parent"); await click(tab, "Practice with Synthetic"); await ui(tab.locator(".study-verses [data-verse-ref]").first()).toBeVisible(); await safe(() => tab.locator("#lessons").scrollIntoViewIfNeeded()); await ui(lessons(tab).locator(".lesson-entry")).toHaveCount(50); await click(tab, "Show earlier lessons"); await ui(lessons(tab).locator(".lesson-entry")).toHaveCount(initial + 51); await ui(lessons(tab).getByRole("button", { name: /^Edit lesson/ })).toHaveCount(0); await ui(lessons(tab).getByRole("button", { name: "Add lesson note", exact: true })).toHaveCount(0);
+  const tab = await page("tutor"); await workspace(tab, "parent"); await click(tab, "Practice with Synthetic"); await ui(tab.locator(".study-verses [data-verse-ref]").first()).toBeVisible(); await safe(() => toSection(tab, "lessons")); await ui(lessons(tab).locator(".lesson-entry")).toHaveCount(50); await click(tab, "Show earlier lessons"); await ui(lessons(tab).locator(".lesson-entry")).toHaveCount(initial + 51); await ui(lessons(tab).getByRole("button", { name: /^Edit lesson/ })).toHaveCount(0); await ui(lessons(tab).getByRole("button", { name: "Add lesson note", exact: true })).toHaveCount(0);
   const marker = "Synthetic WRONG STUDENT PRIVATE NOTE"; let mismatched = false;
   await tab.route("**/lesson-log?*", async route => { const response = await route.fetch(), body = await response.json(); expect(response.status()).toBe(200); if (!body.entries?.length) return route.fulfill({ response, json: body }); body.studentId = sibling.id; body.entries[0].summary = marker; mismatched = true; await route.fulfill({ response, json: body }); });
   // E2: the practice page has no Refresh reading button; entering the practice again asks for the lessons again.
-  await click(tab, "Done"); await goChild(tab, fixture.student.id); await click(tab, "Practice with Synthetic"); await ui.poll(() => mismatched).toBe(true); await ui(lessons(tab).getByText("Lesson notes couldn’t be loaded.", { exact: true })).toBeVisible(); expect(await tab.evaluate(value => !document.body.textContent?.includes(value), marker)).toBe(true); await ui(lessons(tab).locator(".lesson-entry")).toHaveCount(0);
+  await click(tab, "Done"); await goChild(tab, fixture.student.id); await click(tab, "Practice with Synthetic"); await ui.poll(() => mismatched).toBe(true); await safe(() => toSection(tab, "lessons")); await ui(lessons(tab).getByText("Lesson notes couldn’t be loaded.", { exact: true })).toBeVisible(); expect(await tab.evaluate(value => !document.body.textContent?.includes(value), marker)).toBe(true); await ui(lessons(tab).locator(".lesson-entry")).toHaveCount(0);
   await tab.unroute("**/lesson-log?*"); await safe(() => lessons(tab).getByRole("button", { name: "Try again", exact: true }).click()); await ui(lessons(tab).locator(".lesson-entry")).toHaveCount(50);
 });
 

@@ -60,7 +60,7 @@ async function reading(tab: Page, role = "admin") {
 }
 async function assertDesktopStudyColumns(tab: Page) {
   const layout = await safe(() => tab.locator(".assigned-study").evaluate(section => {
-    const flow = section.querySelector(".study-verses"), marker = flow?.querySelector(".student-aliyah"), verse = flow?.querySelector('p[lang="he"]'), tools = section.querySelector(".study-verse-bar");
+    const flow = section.querySelector(".study-verses"), marker = flow?.querySelector(".student-aliyah"), verse = flow?.querySelector('p[lang="he"]'), tools = section.querySelector(".study-verse-bar") ?? section.querySelector(".study-more"); // a student's page has no verse bar (Hebrew first): what follows the text is About and print
     if (!marker || !verse || !tools || !flow) return null;
     const bounds = (element: Element) => { const rect = element.getBoundingClientRect(); return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }; };
     return { marker: bounds(marker), flow: bounds(flow), verse: bounds(verse), tools: bounds(tools), viewport: innerWidth, words: flow.querySelectorAll("[data-word-index]").length };

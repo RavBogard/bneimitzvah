@@ -190,7 +190,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
         {view.kind === "unavailable" && <><p>The portal isn’t ready to sign you in right now. Your reading remains private.</p><p>Please try again shortly. If this continues, ask your tutor or the congregation for help.</p><button type="button" className="button-primary" onClick={retry}>Try again</button></>}
         {view.kind === "sign-in" && (linkRequested ? <><p role="status">{SIGN_IN_CODE_COPY.sent}</p>
             <form method="post" onSubmit={submitCode}>
-              <label htmlFor="entry-code">{SIGN_IN_CODE_COPY.label}</label>
+              <label htmlFor="entry-code" className="entry-code-label">{SIGN_IN_CODE_COPY.label}</label>
               <input id="entry-code" name="code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" minLength={6} maxLength={6} required spellCheck={false}
                 value={code} onChange={event => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} disabled={pending !== null} aria-describedby="entry-code-help" />
               <p className="field-help" id="entry-code-help">{SIGN_IN_CODE_COPY.help}</p>
@@ -209,7 +209,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
             <form onSubmit={submit}>
               <label htmlFor="entry-email">Email address</label>
               <input id="entry-email" name="email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required maxLength={254} value={email} onChange={event => setEmail(event.target.value)} disabled={pending !== null} aria-describedby="entry-email-help" />
-              <p className="field-help" id="entry-email-help">{invitation ? "Use the address on your invitation." : "Use the address you sign in with."}</p>
+              <p className="field-help" id="entry-email-help">{invitation ? "Use the address on your invitation." : "We’ll email you a code to sign in."}</p>
               <button type="submit" className="button-primary" data-testid="entry-email-submit" disabled={pending !== null}>{pending === "email" ? "Sending link…" : "Email me a sign-in link"}</button>
             </form>
             {/* Decision 13: "Ask for an account" is retired here; the shelf offers "Ask to be linked". */}</>)}

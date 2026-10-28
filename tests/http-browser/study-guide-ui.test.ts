@@ -160,7 +160,9 @@ it("a reviewed guide names the tenant's rabbi, starts closed on a phone and fits
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-const englishToggle = (tab: Page) => tab.getByRole("navigation", { name: "Reading tools", exact: true }).getByRole("button", { name: "English", exact: true });
+// A student's English is under the dock's Text (Hebrew first): read its state there even while the menu is closed, and open the menu to press it.
+const englishToggle = (tab: Page) => tab.getByTestId("dock-text-menu").locator("button", { hasText: /^English$/ });
+async function pressEnglish(tab: Page) { await tab.getByTestId("dock-text").click(); await englishToggle(tab).click(); await tab.keyboard.press("Escape"); }
 const english = (tab: Page, ref: string) => tab.locator(`${studyVerses} [data-verse-ref="${ref}"] [data-english-ref]`);
 
 it("at 1440 a learner sees English with each verse by default", async () => {
@@ -173,14 +175,14 @@ it("at 390 English is off by default and shows with its verse when turned on", a
   const tab = await page("student", true);
   await ui(englishToggle(tab)).toHaveAttribute("aria-pressed", "false");
   await ui(english(tab, "Genesis 1:1")).toHaveCount(0);
-  await englishToggle(tab).click();
+  await pressEnglish(tab);
   await ui(english(tab, "Genesis 1:1")).toBeVisible();
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 it("the English preference persists across reload", async () => {
   const tab = await page("student");
-  await englishToggle(tab).click();
+  await pressEnglish(tab);
   await ui(englishToggle(tab)).toHaveAttribute("aria-pressed", "false");
   await tab.reload({ waitUntil: "domcontentloaded" });
   await ui(tab.locator(studyVerses).getByRole("heading", { name: "Genesis 1:1", level: 4, exact: true })).toBeVisible();

@@ -6,7 +6,21 @@ import type { Page } from "playwright";
 
 /** Brings the Service parts or Lessons section into view (they follow the text; there are no tabs to choose). */
 export async function toSection(tab: Page, section: "service" | "lessons") {
-  await tab.locator(section === "service" ? "#service-parts" : "#lessons").scrollIntoViewIfNeeded();
+  // On a student's page the sections are inside "Your plan" at the foot: it is opened first, as a reader would.
+  const heading = tab.locator(section === "service" ? "#service-parts" : "#lessons");
+  await heading.waitFor({ state: "attached" });
+  await tab.locator('[data-testid="reading-loading"]').waitFor({ state: "detached" }).catch(() => undefined);
+  // The plan folds once the reading has loaded, so it is opened again until the section stays in view.
+  for (let attempt = 0; attempt < 50 && !(await heading.isVisible()); attempt++) {
+    if (await heading.evaluate(node => Boolean(node.closest("details[data-reading-plan]:not([open])")))) await openPlan(tab); else await tab.waitForTimeout(100);
+  }
+  await heading.scrollIntoViewIfNeeded();
+}
+
+/** A student's page (and a parent's sitting with a child) folds the rehearsals, service parts and lesson notes into "Your plan" at the foot: opens it. Nothing elsewhere. */
+export async function openPlan(tab: Page) {
+  const plan = tab.getByTestId("reading-plan");
+  if (await plan.count() && !(await plan.evaluate(node => (node as HTMLDetailsElement).open))) await plan.locator("> summary").click();
 }
 
 /** A parent's child page, as the shelf's card opens it. */

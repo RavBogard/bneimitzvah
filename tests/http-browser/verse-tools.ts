@@ -15,8 +15,29 @@ export async function selectVerse(tab: Page, ref: string) {
   await ui(toolsBar(tab)).toHaveAttribute("data-selected-verse", ref);
 }
 
-/** The selected verse's mark (its "Got it" or "Still working", the tutor's assessment): in the bar under the passage. */
-export async function markOf(tab: Page, ref: string): Promise<Locator> { await selectVerse(tab, ref); return toolsBar(tab).getByTestId("verse-mark"); }
+/**
+ * A verse's mark (its "Got it" or "Still working", the tutor's assessment). Staff and parents read it in the bar under the passage; a student's page
+ * (Hebrew first, 2026-10-28) has no bar, so the verse's own sheet is opened from its number and the mark is read there (the sheet stays open).
+ */
+export async function markOf(tab: Page, ref: string): Promise<Locator> {
+  if (await studentPage(tab)) return (await openVerseTools(tab, ref)).getByTestId("verse-mark");
+  await selectVerse(tab, ref); return toolsBar(tab).getByTestId("verse-mark");
+}
+
+/** A student's reading: its verse numbers open the verse's sheet. */
+const verseNumber = (tab: Page, ref: string) => tab.locator(`[data-testid="study-verses"] [data-verse-ref="${ref}"] button[data-verse-number][aria-haspopup="dialog"]`);
+async function studentPage(tab: Page) {
+  // Decided once the reading's controls are on the page (after a reload the dock or the bar may not be drawn yet).
+  await tab.locator('[data-testid="dock-up-close"], [data-testid="study-verse-bar"]').first().waitFor();
+  return await tab.getByTestId("dock-up-close").count() > 0;
+}
+
+/** Opens Up close at this verse: from the bar under the passage, or on a student's page from the verse's sheet. */
+export async function upClose(tab: Page, ref: string) {
+  if (await studentPage(tab)) await (await openVerseTools(tab, ref)).getByRole("button", { name: `View ${ref} up close`, exact: true }).click();
+  else await tab.getByRole("button", { name: `View ${ref} up close`, exact: true }).click();
+  await ui(tab.locator("dialog.lift")).toBeVisible();
+}
 
 /** Switches the reading to Study. There each verse has its own "Verse tools" action, which selects it and opens its sheet without a sound (in Lein a verse number or a word plays the verse). */
 export async function inStudy(tab: Page) {
@@ -33,6 +54,7 @@ export async function openVerseTools(tab: Page, ref: string): Promise<Locator> {
     if (await tab.getByRole("dialog", { name: /^Verse tools · / }).count()) await closeVerseTools(tab);
     const own = tab.locator(`[data-study-rows] [data-verse-ref="${ref}"]`).getByRole("button", { name: "Verse tools", exact: true });
     if (await own.count()) await own.click();
+    else if (await verseNumber(tab, ref).count()) await verseNumber(tab, ref).click();
     else { await selectVerse(tab, ref); await toolsBar(tab).getByRole("button", { name: /^Verse tools/ }).click(); }
     await ui(sheet).toBeVisible();
   }
