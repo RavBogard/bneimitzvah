@@ -5,7 +5,7 @@ import type { createAccessService } from "../access/service";
 import type { AccessRequest, AccessTransaction, Actor, VerifiedIdentity } from "../access/types";
 import { lockRoleGrant } from "../data/authority";
 import { isCeremonyDone } from "../data/ceremony-done";
-import { activeClaimOf, liveStaffGrant, liveTutorLinksOf, notALearner } from "../data/learner-claims";
+import { activeClaimOf, assignedLinksOf, liveStaffGrant, liveTutorLinksOf, notALearner } from "../data/learner-claims";
 import { membershipOf } from "../data/portal";
 import { closedObject } from "../http/query";
 import { requireCookieMutation } from "../http/mutations";
@@ -122,7 +122,7 @@ export function createLearnersService<Q extends PgQueryResultHKT>(input: { acces
         if (!member || member.disabledAt) throw new AccessDenied(404);
         // A1 (tutor and admin walks 2026-10-28): the rabbi and the tutors are colleagues and parents are family, not learners: the same 404 an unknown
         // learner gets. The rabbi's assignment wins: a student already assigned to this tutor is never refused (claiming them changes nothing, below).
-        const assigned = (await liveTutorLinksOf(tx, actor.tenantId, learner)).some(link => link.tutorGrantId === actor.roleGrantId);
+        const assigned = (await assignedLinksOf(tx, actor.tenantId, learner)).some(link => link.tutorGrantId === actor.roleGrantId);
         if (!assigned && await notALearner(tx, actor.tenantId, learner)) throw new AccessDenied(404);
         await data.lockLearnerClaims(tx, actor.tenantId, learner);
         const existing = await activeClaimOf(tx, actor.tenantId, learner, "update");

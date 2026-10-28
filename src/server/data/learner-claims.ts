@@ -39,7 +39,9 @@ export async function notALearner<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantI
   // An adult student who is also a parent is a learner: a live student identity through a live student grant of this membership.
   const [identity] = await tx.select({ id: s.studentIdentity.id }).from(s.studentIdentity)
     .innerJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.studentIdentity.tenantId), eq(s.roleGrant.id, s.studentIdentity.roleGrantId), isNull(s.roleGrant.revokedAt), eq(s.roleGrant.role, "student")))
-    .where(and(eq(s.studentIdentity.tenantId, tenantId), eq(s.roleGrant.membershipId, membershipId), isNull(s.studentIdentity.revokedAt))).limit(1);
+    .innerJoin(s.student, and(eq(s.student.tenantId, s.studentIdentity.tenantId), eq(s.student.id, s.studentIdentity.studentId), isNull(s.student.disabledAt)))
+    .where(and(eq(s.studentIdentity.tenantId, tenantId), eq(s.roleGrant.membershipId, membershipId), isNull(s.studentIdentity.revokedAt),
+      notCeremonyDone(s.studentIdentity.tenantId, s.studentIdentity.studentId))).limit(1);
   return !identity;
 }
 
@@ -69,6 +71,18 @@ export async function liveTutorLinksOf<Q extends PgQueryResultHKT>(tx: Tx<Q>, te
 }
 
 /**
+ * The rabbi's assignments of the learner: liveTutorLinksOf without the links a tutor's own claim made (learner_claim.tutor_link_id),
+ * so a claim-made link never counts as an assignment and A1's notALearner still decides it.
+ */
+export async function assignedLinksOf<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, learnerMembershipId: string) {
+  const links = await liveTutorLinksOf(tx, tenantId, learnerMembershipId);
+  if (!links.length) return links;
+  const claimed = await tx.select({ linkId: s.learnerClaim.tutorLinkId }).from(s.learnerClaim)
+    .where(and(eq(s.learnerClaim.tenantId, tenantId), inArray(s.learnerClaim.tutorLinkId, links.map(link => link.linkId)), isNull(s.learnerClaim.revokedAt)));
+  return links.filter(link => !claimed.some(row => row.linkId === link.linkId));
+}
+
+/**
  * Whether the viewer may read the learner's shelf: a live admin grant; or a live tutor grant, on a learner who is neither staff nor a
  * parent (notALearner), that holds the learner's unrevoked claim, or an unrevoked tutor link to the student whose live identity is the learner's. Null for everyone else, which the
  * caller turns into the same 404 a missing learner gets. Both memberships are the same tenant's; nothing crosses it.
@@ -78,7 +92,7 @@ export async function canView<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: s
   if (!grant) return null;
   if (grant.role === "admin") return grant;
   // The rabbi's assignment always wins: a tutor linked to the learner's student sees the shelf, whatever else the learner is.
-  const links = await liveTutorLinksOf(tx, tenantId, learnerMembershipId);
+  const links = await assignedLinksOf(tx, tenantId, learnerMembershipId);
   if (links.some(link => link.tutorGrantId === grant.id)) return grant;
   // A1 (tutor and admin walks 2026-10-28): a claim never opens a colleague's, the rabbi's or a parent's shelf, even one made before they were refused.
   if (await notALearner(tx, tenantId, learnerMembershipId)) return null;

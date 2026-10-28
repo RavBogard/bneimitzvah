@@ -1,5 +1,6 @@
 import "server-only";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql, type SQL } from "drizzle-orm";
+import { studentCeremonyDone } from "../db/ceremony-done-schema";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
 import * as s from "../db/index";
@@ -34,13 +35,19 @@ export async function listLearners<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenant
     .orderBy(sql`lower(${s.user.name})`, asc(s.membership.id)).limit(input.limit);
 }
 
+/** Not ceremony-done (the raw-SQL form of notCeremonyDone in src/server/data/ceremony-done.ts). */
+function ceremonyLive(tenant: SQL, student: SQL) {
+  return sql`not exists (select 1 from ${studentCeremonyDone} d where d.tenant_id = ${tenant} and d.student_id = ${student} and d.reversed_at is null)`;
+}
+
 /**
  * A learner (A1, tutor and admin walks 2026-10-28): no live admin or tutor grant, and not a parent (a live parent grant with a live
  * guardian link) unless the member also has a live student identity, as an adult student who is also a parent does. Staff are
  * colleagues and parents are family. The same rule as notALearner in src/server/data/learner-claims.ts.
  */
 const liveStudentIdentity = sql`exists (select 1 from ${s.studentIdentity} si join ${s.roleGrant} sg on sg.tenant_id = si.tenant_id and sg.id = si.role_grant_id
-  and sg.role = 'student' and sg.revoked_at is null where si.tenant_id = ${s.membership.tenantId} and sg.membership_id = ${s.membership.id} and si.revoked_at is null)`;
+  and sg.role = 'student' and sg.revoked_at is null join ${s.student} st on st.tenant_id = si.tenant_id and st.id = si.student_id and st.disabled_at is null
+  where si.tenant_id = ${s.membership.tenantId} and sg.membership_id = ${s.membership.id} and si.revoked_at is null and ${ceremonyLive(sql`si.tenant_id`, sql`si.student_id`)})`;
 const learnerOnly = (tenantId: string) => sql`(not exists (select 1 from ${s.roleGrant} where ${s.roleGrant.tenantId} = ${tenantId}
   and ${s.roleGrant.membershipId} = ${s.membership.id} and ${s.roleGrant.revokedAt} is null and ${s.roleGrant.role} in ('admin', 'tutor'))
   and (${liveStudentIdentity} or not exists (select 1 from ${s.roleGrant} pg join ${s.guardian} g on g.tenant_id = pg.tenant_id and g.parent_grant_id = pg.id
@@ -50,7 +57,9 @@ const assignedTo = (tenantId: string, tutorGrantId: string) => sql`exists (selec
   join ${s.studentIdentity} si on si.tenant_id = ts.tenant_id and si.student_id = ts.student_id and si.revoked_at is null
   join ${s.roleGrant} sg on sg.tenant_id = si.tenant_id and sg.id = si.role_grant_id and sg.role = 'student' and sg.revoked_at is null
   join ${s.student} st on st.tenant_id = ts.tenant_id and st.id = ts.student_id and st.disabled_at is null
-  where ts.tenant_id = ${tenantId} and ts.tutor_grant_id = ${tutorGrantId}::uuid and ts.revoked_at is null and sg.membership_id = ${s.membership.id})`;
+  where ts.tenant_id = ${tenantId} and ts.tutor_grant_id = ${tutorGrantId}::uuid and ts.revoked_at is null and sg.membership_id = ${s.membership.id}
+    and ${ceremonyLive(sql`ts.tenant_id`, sql`ts.student_id`)}
+    and not exists (select 1 from ${s.learnerClaim} lc where lc.tenant_id = ts.tenant_id and lc.tutor_link_id = ts.id and lc.revoked_at is null))`;
 
 /** The learner's live student record through their student identity (a live student grant of the learner's membership), or null. */
 export async function liveStudentOf<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, learnerMembershipId: string) {

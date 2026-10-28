@@ -348,4 +348,28 @@ describe("Staff and parents are not learners (tutor and admin walks A1)", () => 
     await t.f.owner(() => t.f.db.update(s.guardian).set({ revokedAt: new Date() }).where(eq(s.guardian.id, guardian!.id)));
     expect((await shelf("second")).status).toBe(200);
   });
+
+  it("a link the tutor's own claim made is not the rabbi's assignment: once the learner is staff, the claiming tutor loses the shelf and the listing", async () => {
+    const t = await setup();
+    await t.linkBare();
+    await t.save("bare", "Claimed reading", "2026-10-24");
+    expect((await t.call("/api/learners/claim", "second", { learner: t.extra.bare.membershipId })).json.created).toBe(true);
+    expect((await t.links(t.f.students[2].id)).filter(link => !link.revokedAt)).toHaveLength(1);
+    const shelf = (who: Who) => t.call(`/api/saved/learner/readings?learner=${t.extra.bare.membershipId}`, who);
+    expect((await shelf("second")).status).toBe(200);
+    await t.f.owner(() => t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: t.extra.bare.membershipId, role: "tutor" }));
+    expect((await shelf("second")).status).toBe(404);
+    expect(learnerOf(await t.call("/api/learners", "second"), t.extra.bare.membershipId)).toBeUndefined();
+    expect((await shelf("admin")).status).toBe(200);
+  });
+
+  it("a parent whose own student record is archived is not a learner: not listed, and a claim is the unknown 404", async () => {
+    const t = await setup();
+    await t.linkBare(); await makeParent(t);
+    await t.f.owner(() => t.f.db.update(s.student).set({ disabledAt: new Date() }).where(eq(s.student.id, t.f.students[2].id)));
+    expect(learnerOf(await t.call("/api/learners", "second"), t.extra.bare.membershipId)).toBeUndefined();
+    const unknown = await t.call("/api/learners/claim", "second", { learner: randomUUID() });
+    expect(await t.call("/api/learners/claim", "second", { learner: t.extra.bare.membershipId })).toEqual(unknown);
+    expect(await t.claims()).toEqual([]);
+  });
 });
