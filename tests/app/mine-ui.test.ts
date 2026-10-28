@@ -7,7 +7,7 @@ import { EMPTY_LINE, shelfModel, sortOwnReadings, type OwnReadingsState } from "
 import { AccountSection, EmptyShelf, LearnSection, PinnedSection, Shelf, ShelfFoot, SHELF_STRINGS } from "../../src/components/portal/mine/shelf";
 import type { SessionSummary } from "../../src/components/portal/api";
 import { gotCount, pinnedOf, type TodaySlices } from "../../src/components/portal/workspace/today/today";
-import { childCard, ChildrenView, daysWord, orderChildren } from "../../src/components/portal/mine/children";
+import { CHILDREN_STRINGS, childCard, ChildrenView, childrenTitle, daysWord, orderChildren } from "../../src/components/portal/mine/children";
 
 // The shelf's session comes from the workspace; a static render has none, so the one hook is answered here.
 const summary: SessionSummary = { membershipAvailable: true, roles: [], saved: true, approver: false, sessionBinding: "A".repeat(43) };
@@ -154,7 +154,7 @@ describe("the shelf's sections", () => {
   it("wording: the title, the empty line and the foot line", () => {
     expect(renderToStaticMarkup(createElement(Shelf))).toContain(">My Readings</h1>");
     expect(EMPTY_LINE).toBe("You’re signed in. Nothing is saved yet.");
-    expect(renderToStaticMarkup(createElement(ShelfFoot))).toContain("Your tutor and the rabbi can see the readings you keep.");
+    expect(renderToStaticMarkup(createElement(ShelfFoot))).toContain("Tutors and the rabbi can see the readings you keep.");
     // Plan D8: the foot line ends in the way to what the site records.
     expect(renderToStaticMarkup(createElement(ShelfFoot))).toContain(`<a href="/about#accounts">${SHELF_STRINGS.records}</a>`);
     expect(SHELF_STRINGS.records).toBe("What the site records about you");
@@ -190,6 +190,24 @@ describe("A parent's cards, one for each child (Readings for everyone E3)", () =
     expect(daysWord("2026-10-28", now)).toBe("Tomorrow");
     expect(daysWord("2026-10-27", now)).toBe("Today");
     expect(daysWord("2026-10-26", now)).toBeNull();
+  });
+  // Parent walk 2026-10-28 (findings 2, 7, 10): the tutor's ask on the card, a card that says its reading failed, and the heading's number.
+  it("shows the tutor's Before next time, dated, in place of the note when the newest lesson has one", () => {
+    const markup = view([childCard(kid("Noa", "2026-12-12"), { ...detail, ask: { text: "Synthetic ask.", date: "2026-10-24" } }, now)]);
+    expect(markup).toContain('data-testid="child-before-next"'); expect(markup).toContain("Synthetic ask."); expect(markup).toContain('dateTime="2026-10-24"');
+    expect(markup).not.toContain("Synthetic first line.");
+    expect(view([childCard(kid("Noa", "2026-12-12"), detail, now)])).not.toContain('data-testid="child-before-next"');
+  });
+  it("keeps a card whose reading failed, saying so with a way to try again", () => {
+    const markup = view([childCard(kid("Noa", "2026-12-12"), { readings: [], marks: { status: "loading" }, note: null, failed: true } as never, now)]);
+    expect(markup).toMatch(/data-testid="child-card-failed"[^]*<button type="button" class="button-secondary">/);
+    expect(markup).toMatch(new RegExp(`<a [^>]*href="/mine/child/${SID}"`));
+  });
+  it("names the section for one child in the singular and for more in the plural", () => {
+    const one = { status: "ready", cards: [childCard(kid("Noa", "2026-12-12"), detail, now)] } as const;
+    const two = { status: "ready", cards: [childCard(kid("Noa", "2026-12-12"), detail, now), childCard(kid("Eli", "2027-03-06", "b"), detail, now)] } as const;
+    expect(childrenTitle(one)).toBe(CHILDREN_STRINGS.titleOne); expect(childrenTitle(two)).toBe(CHILDREN_STRINGS.title); expect(childrenTitle({ status: "loading" })).toBe(CHILDREN_STRINGS.title);
+    expect(view([...one.cards])).toMatch(new RegExp(`<h2[^>]*data-testid="mine-children-title"[^>]*>${CHILDREN_STRINGS.titleOne}</h2>`));
   });
   it("says plainly when there are none or the cards fail to load", () => {
     expect(renderToStaticMarkup(createElement(ChildrenView, { state: { status: "ready", cards: [] }, busy: false, onRetry: () => {}, onPractice: () => {} }))).toContain("No children are linked to this account yet.");

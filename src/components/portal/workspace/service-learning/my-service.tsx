@@ -22,6 +22,7 @@ export function MyServicePanel({ mode, studentId, baseline,onConnected }: { mode
   const [drafts, setDrafts] = useState<Record<string, Draft>>({}), dirty = useRef(false), generation = useRef(0), controller = useRef<AbortController | null>(null), region = useRef<HTMLDivElement>(null);
   const [catalog,setCatalog]=useState<Catalog|null>(null);
   const staff = mode === "admin" || mode === "tutor";
+  const parentName = mode === "parent" ? baseline?.student.firstName ?? null : null;
   const congregation = useCongregation(Boolean(baseline));
   const clear = useCallback(() => { generation.current++; controller.current?.abort(); setState({ scope: scopeRef.current });setCatalog(null); }, []);
   const reload = useCallback(async () => {
@@ -99,14 +100,15 @@ export function MyServicePanel({ mode, studentId, baseline,onConnected }: { mode
   }
   if (view?.state === "unscheduled") return null;
   return <div className={styles.service} ref={region} aria-labelledby={`${id}-heading`} data-my-service="">
-    <h3 id={`${id}-heading`}>My service</h3>
+    {/* A parent reads the child's service by the child's name, not the student's "My service" (parent walk 2026-10-28, finding 5). */}
+    <h3 id={`${id}-heading`}>{parentName ? <><bdi dir="auto">{parentName}</bdi>’s service</> : "My service"}</h3>
     {view && "ceremony" in view && <p className={styles.ceremony}>{new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${view.ceremony.date}T12:00:00Z`))} · {serviceSlotLine(view.ceremony.type, congregation.services) ?? "Service time to be confirmed"}</p>}
     {view && "ceremony" in view && view.ceremony.needsReconciliation && <p className="reading-review">Your ceremony schedule changed. Your tutor will reconcile the connected service; your practice progress is saved.</p>}
     {view && "ceremony" in view && view.ceremony.scheduleConflict && <p className="reading-review">Students sharing this ceremony have different schedules. Staff need to reconcile the joint ceremony before its setlist schedule can change.</p>}
     {current?.error && <p role="alert">{current.error}</p>}
     {current?.resourceLink&&Date.parse(current.resourceLink.expiresAt)>Date.now()&&<p><a className="button-secondary" href={current.resourceLink.url} target="_blank" rel="noreferrer">Open authorized resource</a></p>}
     {current?.busy && <p role="status">Updating your service…</p>}
-    {!view && !current?.busy && <button type="button" className="button-secondary" onClick={() => void reload()}>Load my service</button>}
+    {!view && !current?.busy && <button type="button" className="button-secondary" onClick={() => void reload()}>{parentName ? "Try again" : "Load my service"}</button>}
     {view && view.state !== "linked" && <p>{view.state === "ambiguous" ? "More than one service matches. Your tutor will connect the right one." : view.state === "review_required" ? "Your service is connected. Your tutor is reviewing the parts and resources." : "Your service connection is queued and retries automatically. The daily fallback may take until tomorrow; your roster and practice work are saved."}</p>}
     {linked && <>
       <h3>Parts I lead</h3>

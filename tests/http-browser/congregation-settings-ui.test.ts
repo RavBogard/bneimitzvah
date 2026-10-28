@@ -121,9 +121,10 @@ it("a parent sees the congregation's service name in the reading header, its tim
   for (const mobile of [false, true]) {
     const parent = await page("tutor", mobile); await navigate(parent, "/workspace/parent");
     await safe(() => goChild(parent, fixture.student.id));
-    const slot = parent.locator(".hero-who .hero-slot");
-    await ui(slot).toHaveText(mobile ? "· Synthetic gathering" : "· Synthetic gathering · 9:30 AM", { useInnerText: true });
-    // E2: the service is one muted line under the title block (it was on the name line), so the header grows by that line on every screen.
+    // Parent walk 2026-10-28: on the parent's This week page the service is its own muted line under the date, with no leading dot; the start time
+    // shows beside it on a wide screen only.
+    const slot = parent.getByTestId("hero-slot");
+    await ui(slot).toHaveText(mobile ? "Synthetic gathering" : "Synthetic gathering · 9:30 AM", { useInnerText: true });
     await ui(parent.getByRole("region", { name: "Preparation summary", exact: true }).getByText("Synthetic consent notice for families.", { exact: true })).toBeVisible();
     await capture(parent, mobile ? "settings-parent-mobile" : "settings-parent-desktop");
   }

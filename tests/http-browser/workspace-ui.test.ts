@@ -184,6 +184,12 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await ui(tab.locator('.study-verses [data-verse-ref="Genesis 1:3"]').first()).toBeVisible();
   await capture(tab, "workspace-child-confirmed-reading");
   await tab.setViewportSize({ width: 390, height: 844 });
+  // Parent walk 2026-10-28: a sitting opens Hebrew first. On a 390x844 phone the first line of the text is on the first screen, above the dock.
+  await safe(() => tab.evaluate(() => scrollTo(0, 0)));
+  // The first verse starts (its first line, about 2.5rem) above the dock.
+  const firstVerse = tab.locator('[aria-label="Assigned text"] .study-verses [data-verse-ref]').first(); await ui(firstVerse).toBeVisible();
+  await ui.poll(() => firstVerse.evaluate(node => { const box = node.getBoundingClientRect(), dock = document.querySelector<HTMLElement>(".reading-toolbar[data-practice]")?.getBoundingClientRect();
+    return box.top >= 0 && box.top + 40 <= Math.min(innerHeight, dock && dock.top > 0 ? dock.top : innerHeight); })).toBe(true);
   // Readings for everyone E2: the practice page has no Refresh reading or Start reading button; the text takes focus where a reader puts it.
   expect(await tab.getByRole("button", { name: "Start reading", exact: true }).count()).toBe(0);
   await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
@@ -218,13 +224,14 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await focus(copied); await ui(copied.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   expect(await tab.evaluate(handle => !location.href.includes(handle) && !document.body.textContent?.includes(handle) && !JSON.stringify({ local: { ...localStorage }, tab: { ...sessionStorage } }).includes(handle), rawHandle)).toBe(true);
   await capture(tab, "workspace-child-practice-empty-assignment");
-  await safe(() => tab.getByRole("button", { name: "Done", exact: true }).click()); await ui(tab.getByTestId("mine-children")).toBeVisible();
-  await ui(tab.locator("#workspace-main").getByText("You’re back in your read-only parent view.", { exact: true })).toBeVisible();
+  // Done goes back to the child's own page, with a plain word that the sitting ended (parent walk 2026-10-28, finding 6).
+  await safe(() => tab.getByRole("button", { name: "Done", exact: true }).click()); await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/mine/child/${sibling.id}`);
+  await ui(tab.getByTestId("workspace-notice")).toHaveText("You’ve finished practicing with Synthetic.");
   await ui(copied.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   await safe(() => switchRole(tab, "Tutor"));
   await safe(() => tab.locator(`a[href="/workspace/tutor/${fixture.student.id}"]`).click());
   await ui(tab.getByRole("region", { name: "Assigned reading", exact: true }).locator(".reading-reference").getByText("Genesis 1:1-3", { exact: true })).toBeVisible();
-  expect(await tab.locator("#workspace-main").getByText("You’re back in your read-only parent view.", { exact: true }).count()).toBe(0);
+  expect(await tab.getByTestId("workspace-notice").count()).toBe(0);
   expect(await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).count()).toBe(0);
   // A real exit response arriving after role navigation must neither announce
   // parent mode nor send the active tutor back to the parent workspace.
@@ -244,7 +251,7 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await ui.poll(() => exitDelivered).toBe(true); await tab.unroute("**/api/practice/exit");
   await safe(() => tab.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))));
   await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/mine`);
-  expect(await tab.locator("#workspace-main").getByText(/read-only parent view|server closure could not be confirmed/).count()).toBe(0);
+  expect(await tab.locator("#workspace-main").getByText(/finished practicing|server closure could not be confirmed/).count()).toBe(0);
   await safe(() => tab.locator(`a[href="/workspace/tutor/${fixture.student.id}"]`).click());
   await ui(tab.getByRole("region", { name: "Assigned reading", exact: true }).locator(".reading-reference").getByText("Genesis 1:1-3", { exact: true })).toBeVisible();
   await capture(tab, "workspace-tutor-reading");

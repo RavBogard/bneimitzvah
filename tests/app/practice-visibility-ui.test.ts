@@ -83,10 +83,12 @@ test("a child who practices only with a parent is told in child practice, and a 
     expect(open).toContain(`data-practice-disclosure="${place}"`); expect(open).toContain('<bdi dir="auto">Noa</bdi>'); expect(open).toContain('role="note"');
   }
   const list = renderToStaticMarkup(createElement(ParentAccountDisclosureList, { names: [{ id: "a", firstName: "Noa" }, { id: "b", firstName: "Eli" }], from: "2026-10-27" }));
-  expect(list.match(/data-practice-disclosure="parent-account"/g)).toHaveLength(2);
+  // One paragraph names every child (parent walk 2026-10-28, finding 18), not one near-identical paragraph each.
+  expect(list.match(/data-practice-disclosure="parent-account"/g)).toHaveLength(1); expect(list).toContain('<bdi dir="auto">Eli</bdi>');
   expect(renderToStaticMarkup(createElement(ParentAccountDisclosureList, { names: [{ id: "a", firstName: "Noa" }], from: null }))).toBe("");
-  // The practice bar shows it for the child being practiced with; the parent's Account shows it for each linked child.
-  expect(source("components/portal/workspace/students.tsx")).toMatch(/\{child && <ChildPracticeDisclosure name=\{child\.firstName\} place="child-practice" \/>\}/);
+  // The sitting shows it for the child being practiced with; the parent's Account shows it for each linked child.
+  // In a sitting it sits under the tutor's ask, one line that opens on a tap (parent walk 2026-10-28, finding 1).
+  expect(source("components/portal/workspace/reading.tsx")).toMatch(/\{mode === "child-practice" && <ChildPracticeDisclosure name=\{student\.firstName\} place="child-practice" \/>\}/);
   expect(source("components/portal/account-page.tsx")).toMatch(/roles\.includes\("parent"\) && <ParentAccountDisclosure load=\{parentChildren\} \/>/);
   expect(source("components/portal/account-page.tsx")).toMatch(/const parentChildren = \(\) => workspaceApi\.students\("parent"\);/);
 });

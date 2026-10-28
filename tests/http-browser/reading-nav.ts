@@ -12,7 +12,10 @@ export async function toSection(tab: Page, section: "service" | "lessons") {
   await tab.locator('[data-testid="reading-loading"]').waitFor({ state: "detached" }).catch(() => undefined);
   // The plan folds once the reading has loaded, so it is opened again until the section stays in view.
   for (let attempt = 0; attempt < 50 && !(await heading.isVisible()); attempt++) {
-    if (await heading.evaluate(node => Boolean(node.closest("details[data-reading-plan]:not([open])")))) await openPlan(tab); else await tab.waitForTimeout(100);
+    if (await heading.evaluate(node => Boolean(node.closest("details[data-reading-plan]:not([open])")))) await openPlan(tab);
+    // A parent's page folds Lesson notes and Service parts into rows that open in place: the row is opened, as a reader would.
+    else if (await heading.evaluate(node => Boolean(node.closest("details[data-section-fold]:not([open])")))) await heading.evaluate(node => { const fold = node.closest<HTMLDetailsElement>("details[data-section-fold]"); fold?.querySelector<HTMLElement>(":scope > summary")?.click(); });
+    else await tab.waitForTimeout(100);
   }
   await heading.scrollIntoViewIfNeeded();
 }
@@ -70,4 +73,18 @@ export async function goChild(tab: Page, studentId: string) {
   if (new URL(tab.url()).pathname !== "/mine") await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click();
   await tab.locator(`a[href="/mine/child/${studentId}"]`).click();
   await tab.waitForURL(url => url.pathname === `/mine/child/${studentId}`);
+  await openChildReading(tab);
+}
+
+/**
+ * A parent's child page opens on This week, with the text folded under "See Noa's reading" (parent walk 2026-10-28). The tests that read or tap the text
+ * open it as a reader would; a page that never shows the reading (not found, access changed, failed) is left as it is.
+ */
+export async function openChildReading(tab: Page) {
+  await tab.waitForFunction(() => {
+    const fold = document.querySelector<HTMLDetailsElement>('[data-testid="parent-reading"]:not([hidden])');
+    if (fold) { if (!fold.open) fold.querySelector<HTMLElement>(":scope > summary")?.click(); return true; }
+    return Boolean(document.querySelector('[data-testid="student-not-found"], [data-workspace-state]:not([data-workspace-state="checking"])'))
+      || [...document.querySelectorAll(".workspace-state h1, .workspace-state h2")].some(node => node.textContent === "Reading unavailable");
+  }, undefined, { timeout: 30_000 }).catch(() => undefined);
 }

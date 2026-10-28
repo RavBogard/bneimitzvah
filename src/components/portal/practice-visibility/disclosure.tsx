@@ -14,13 +14,20 @@ export function PracticeDisclosure({ place, from = PRACTICE_VISIBILITY_FROM }: {
   return <p className="field-help" role="note" data-practice-disclosure={place}>{place === "learn" ? PRACTICE_DISCLOSURE.learn : PRACTICE_DISCLOSURE.account}</p>;
 }
 
-/** The parent line for one child, named (never a pronoun). In child practice the child sits with the parent and reads it too. */
-export function ChildPracticeDisclosure({ name, place, from = PRACTICE_VISIBILITY_FROM }: { name: string; place: "child-practice" | "parent-account"; from?: string | null }) {
+/**
+ * The parent line for one child, named (never a pronoun). In child practice the child sits with the parent and reads it too; there it folds
+ * behind one line, "What Noa’s tutor sees", so the Hebrew stays on the first screen (parent walk 2026-10-28, finding 1). `others` names the
+ * parent's other children on Account, where one paragraph covers them all (finding 18).
+ */
+export function ChildPracticeDisclosure({ name, place, others = [], from = PRACTICE_VISIBILITY_FROM }: { name: string; place: "child-practice" | "parent-account"; others?: readonly string[]; from?: string | null }) {
   if (!practiceVisibilityFrom(from) || !name) return null;
   const parts = PRACTICE_DISCLOSURE.parent.split("{name}");
-  return <p className="field-help" role="note" data-practice-disclosure={place}>
+  const line = <p className="field-help" role="note" data-practice-disclosure={place}>
     {parts.map((part, index) => <Fragment key={index}>{index > 0 && <bdi dir="auto">{name}</bdi>}{part}</Fragment>)}
+    {others.length > 0 && <> The same is true for {others.map((other, index) => <Fragment key={index}>{index > 0 && (index === others.length - 1 ? " and " : ", ")}<bdi dir="auto">{other}</bdi></Fragment>)}.</>}
   </p>;
+  if (place !== "child-practice") return line;
+  return <details className="practice-disclosure" data-testid="practice-disclosure"><summary><span>What <bdi dir="auto">{name}</bdi>’s tutor sees</span></summary>{line}</details>;
 }
 
 /**
@@ -40,7 +47,8 @@ export function ParentAccountDisclosure({ load, from = PRACTICE_VISIBILITY_FROM 
 }
 export function ParentAccountDisclosureList({ names, from = PRACTICE_VISIBILITY_FROM }: { names: readonly { id: string; firstName: string }[]; from?: string | null }) {
   if (!practiceVisibilityFrom(from)) return null;
-  return <>{names.map(child => <ChildPracticeDisclosure key={child.id} name={child.firstName} place="parent-account" from={from} />)}</>;
+  const [first, ...rest] = names;
+  return first ? <ChildPracticeDisclosure name={first.firstName} others={rest.map(child => child.firstName)} place="parent-account" from={from} /> : null;
 }
 
 /**

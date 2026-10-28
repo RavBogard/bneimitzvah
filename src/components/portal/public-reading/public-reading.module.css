@@ -78,4 +78,6 @@
 :global(.reading-hero) .readTitle { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 :global(.reading-hero) .tools { flex: none; flex-wrap: nowrap; }
 :global(.reading-hero) .pill { white-space: nowrap; }
+/* A parent's sitting: the date line sits beside Go to verse on the one row (the name is the practice bar's). */
+:global(.reading-hero) .titleRow > .titleLine { flex: 1 1 8rem; min-width: 0; align-self: center; margin: 0; }
 @media (max-width: 359.98px) { :global(.reading-hero) .pill { padding-inline: 0.75rem; gap: 0.25rem; } }

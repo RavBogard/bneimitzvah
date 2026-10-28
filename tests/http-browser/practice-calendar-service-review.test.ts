@@ -115,6 +115,7 @@ it("drops a held service visit acknowledgement after a real child-context switch
     expect(await days(sibling.id)).toBe(0); expect(await days(fixture.student.id)).toBe(1);
   } finally { release(); }
   await completed; await tab.unroute(target, hold); await marked(tab, false); expect(seen.posts).toHaveLength(1);
-  await click(tab, "Done"); await ui(tab.getByTestId("mine-children")).toBeVisible(); await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/mine`);
+  // Done returns to the child's own page (parent walk 2026-10-28, finding 6).
+  await click(tab, "Done"); await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/mine/child/${sibling.id}`); await ui(tab.getByTestId("parent-this-week")).toBeVisible();
   expect(await tab.locator(".practice-week, .practice-day").count()).toBe(0); expect(seen.posts).toHaveLength(1); expect(seen.rawReads).toEqual([]); await tab.context().close();
 });

@@ -32,13 +32,15 @@ const paths: Record<Pill["icon"], string> = {
 const icon = (name: Pill["icon"]) => <svg className={styles.pillIcon} viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
   <path d={paths[name]} fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
-export function ReaderTitle({ name, line, pills, loading, note, headingId = "public-reading-title", level = 1 }: { name: string; line: ReactNode; pills: readonly Pill[]; loading?: boolean;
+export function ReaderTitle({ name, line, pills, loading, note, headingId = "public-reading-title", level = 1, hideName = false }: { name: string; line: ReactNode; pills: readonly Pill[]; loading?: boolean;
+  /** The name is said elsewhere on screen (a parent's practice bar): the heading stays for screen readers and the line sits beside the pills. */ hideName?: boolean;
   /** The heading's id (the workspace reading keeps `reading-heading`), and its level: 2 on a page that already has its own h1 (the practice bar). */ headingId?: string; level?: 1 | 2;
   /** A status line under the title (Saved to My Readings). */ note?: ReactNode }) {
-  const Heading = level === 1 ? "h1" : "h2";
+  const Heading = level === 1 ? "h1" : "h2", lineNode = <p className={styles.titleLine} data-reading-ranges="">{line}</p>;
   return <div className={styles.titleBlock} aria-busy={loading || undefined}>
     <div className={styles.titleRow}>
-      <Heading id={headingId} className={styles.readTitle} tabIndex={-1}>{name}</Heading>
+      <Heading id={headingId} className={hideName ? "sr-only" : styles.readTitle} tabIndex={-1}>{name}</Heading>
+      {hideName && lineNode}
       <div className={styles.tools}>
         {pills.map(pill => pill.signIn
           ? <ReturnSignInLink key={pill.key} className={`button-hero-secondary ${styles.pill}`} back={pill.signIn}>{pill.label}{icon(pill.icon)}</ReturnSignInLink>
@@ -46,7 +48,7 @@ export function ReaderTitle({ name, line, pills, loading, note, headingId = "pub
             aria-label={pill.accessibleName} aria-haspopup={pill.haspopup} aria-expanded={pill.expanded} aria-controls={pill.controls} disabled={pill.disabled} onClick={pill.onClick}>{pill.label}{icon(pill.icon)}</button>)}
       </div>
     </div>
-    <p className={styles.titleLine} data-reading-ranges="">{line}</p>
+    {!hideName && lineNode}
     {note}
   </div>;
 }
