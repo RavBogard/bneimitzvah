@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { browserProgressStore, courseDone, emptyProgress, type Progress } from "../../../lib/learn/progress";
 import { recommendedLesson } from "../../../lib/learn/recommendation";
 import { ButtonLink, List, ListRow, PageHeader } from "../../ui";
+import { ChildrenSection } from "./children";
 import { AccountRequest } from "../account-request";
+import { AccountRequestsLine } from "../workspace/accounts/workspace";
 import { useWorkspace } from "../workspace/provider";
 import { PINNED_HREF, pinnedOf, PinnedReadingCard, useStudentToday, type TodaySlices } from "../workspace/today/today";
-import { interimRows, shelfModel, type LearnRowState, type PinnedState, type ShelfSection } from "./model";
+import { shelfModel, type LearnRowState, type PinnedState, type ShelfSection } from "./model";
 import { OwnReadings, useOwnReadings } from "./own-readings";
 import { YourStudents } from "./your-students";
 import { FindALearner } from "./find-a-learner";
@@ -31,13 +33,9 @@ export const SHELF_STRINGS = Object.freeze({
   accountMeta: " · roles, email, sign out",
 });
 
-/** The student's pinned reading, first on the shelf (E1), with an interim row to a parent's page until E3's children's cards. */
-export function PinnedSection({ slices, roles }: { slices: TodaySlices; roles: readonly string[] }) {
-  const rows = interimRows(roles);
-  return <section className={styles.section} aria-label="Your reading" data-testid="mine-pinned">
-    {roles.includes("student") && <PinnedReadingCard slices={slices} />}
-    {rows.length > 0 && <List>{rows.map(row => <ListRow key={row.role} title={row.title} meta={<span data-testid={`mine-interim-${row.role}`}>{row.action ?? "Open"}</span>} href={row.href} />)}</List>}
-  </section>;
+/** The student's pinned reading, first on the shelf (E1). */
+export function PinnedSection({ slices }: { slices: TodaySlices }) {
+  return <section className={styles.section} aria-label="Your reading" data-testid="mine-pinned"><PinnedReadingCard slices={slices} /></section>;
 }
 
 /** The Learn row: the course, with where the person is in it. */
@@ -88,11 +86,14 @@ export function Shelf() {
   const pinned: PinnedState | null = found && { name: found.name, ceremony: found.ceremony, done: found.done, total: found.total, href: PINNED_HREF };
   const view = shelfModel({ summary, own, pinned, learn });
   const part = (section: ShelfSection) => section === "students" ? <YourStudents key={section} /> : section === "find" ? <FindALearner key={section} roles={summary.roles} />
-    : section === "pinned" ? <PinnedSection key={section} slices={slices} roles={summary.roles} />
+    : section === "pinned" ? <PinnedSection key={section} slices={slices} />
+    : section === "children" ? <ChildrenSection key={section} />
     : section === "own" ? <OwnReadings key={section} state={own} onRetry={retry} />
       : section === "learn" ? <LearnSection key={section} learn={learn} /> : <AccountSection key={section} />;
   return <section className="role-workspace" data-testid="shelf" aria-busy={own.status === "loading"}>
     <PageHeader title={SHELF_STRINGS.title} actions={<ButtonLink href="/readings?add=1">{SHELF_STRINGS.add}</ButtonLink>} />
+    {/* A tutor an admin chose to approve accounts sees waiting requests here (they were above the tutor's list, which is Your students now), as admins do on This week. */}
+    {summary.approver && summary.roles.includes("tutor") && !summary.roles.includes("admin") && <AccountRequestsLine mode="tutor" />}
     {view.empty && <EmptyShelf line={view.empty.line} linkable={summary.roles.length === 0} />}
     {view.sections.map(part)}
     <MyTutorLine />

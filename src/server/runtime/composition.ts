@@ -239,10 +239,11 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const shortExplorationAudio = createShortExplorationService({ access, practice, loadReading, loadText, signingSecret: purposeSecret(config, "reading-exploration"),
     ...shortMetadata, studentRelease: config.referenceAudio?.studentRelease });
   const readingPreview = createReadingPreviewService({ access, loadReading, loadText, signingSecret:purposeSecret(config,"reading-preview") });
-  const portal = createPortalService({ access, practice, sessionBindingSecret: purposeSecret(config, "session-ui-binding") });
   const relationships = createRelationshipService({ access });
   // Release 1.4: a member's own readings, translation, notes, marks and stars, readable only by that member.
   const saved = createSavedService({ access });
+  // The home's door names the pinned reading and counts what is kept, each through the service that already serves it.
+  const portal = createPortalService({ access, practice, sessionBindingSecret: purposeSecret(config, "session-ui-binding"), door: { progress, saved } });
   // Readings for everyone: the learner directory and tutor claims; counts come from the saved service's own directory read.
   const learners = createLearnersService({ access, saved });
   const offline = createOfflineService({ access, portal, saved, ownerSecret: purposeSecret(config, "offline-owner") });

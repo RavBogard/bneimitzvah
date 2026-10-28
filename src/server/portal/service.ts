@@ -16,6 +16,8 @@ import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import { aliyahStarts } from "../../lib/readings/aliyah-starts";
 import { assignmentReadingKey } from "../../lib/readings/reading-key";
 import type { Snapshot } from "../../lib/readings/proposals";
+import type { createProgressService } from "../progress/service";
+import type { SavedService } from "../saved/service";
 
 const object = (input: unknown): Record<string, unknown> => input !== null && typeof input === "object" && !Array.isArray(input) ? input as Record<string, unknown> : {};
 function date(input: unknown) { try { return parseCeremonyDate(input); } catch { return null; } }
@@ -39,7 +41,23 @@ export function readingView(row: Awaited<ReturnType<typeof confirmedReadings>>[n
       attribution: leyning.source === "Hebcal" ? Object.freeze({ name: "Hebcal", url: "https://www.hebcal.com/" }) : null }) });
 }
 
-export function createPortalService<Q extends PgQueryResultHKT>(input: { access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>; sessionBindingSecret: string }) {
+/**
+ * What the home's door says of the person (Readings for everyone E3): the student's pinned reading and how many verses they have got, a parent's
+ * first child by ceremony, the tutor's nearest student, and how many readings the person keeps. Names and dates only; no verse text, no marks by verse.
+ */
+export type SessionDoor = Readonly<{
+  pinned: Readonly<{ name: string; date: string; got: number; total: number }> | null;
+  child: Readonly<{ name: string; date: string }> | null;
+  nearest: Readonly<{ name: string; date: string }> | null;
+  count: number;
+}>;
+type DoorStudent = Pick<StudentView, "id" | "firstName" | "lastName" | "ceremonyDate">;
+const byCeremony = (a: DoorStudent, b: DoorStudent) => a.ceremonyDate.localeCompare(b.ceremonyDate) || a.id.localeCompare(b.id);
+const nameOf = (student: DoorStudent) => `${student.firstName} ${student.lastName}`;
+
+export function createPortalService<Q extends PgQueryResultHKT>(input: { access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>; sessionBindingSecret: string;
+  /** What the door counts from: a student's own progress and the member's own saved readings, each through its service and its own checks. */
+  door?: Readonly<{ progress: Pick<ReturnType<typeof createProgressService<Q>>, "page">; saved: Pick<SavedService, "list"> }> }) {
   if (typeof input.sessionBindingSecret !== "string" || input.sessionBindingSecret.length < 32) throw new AccessUnavailable();
   /**
    * One summary for both entrances. `saved`: this account keeps its own saved layer, which since readings for everyone
@@ -81,5 +99,36 @@ export function createPortalService<Q extends PgQueryResultHKT>(input: { access:
       Object.freeze({ student: student as StudentView, mode: actor.mode, context: null as PracticeContextView | null,
         readings: Object.freeze((await confirmedReadings(tx, actor.tenantId, student.id)).map(row => readingView(row, student.ceremonyDate))) }));
   }
-  return Object.freeze({ sessionSummary, beginSession, assignedReading });
+  /**
+   * The facts for the home's door. The session is checked first (401 signed out, 403 disabled), and every fact then comes through the service that already
+   * serves it to this person, so the door shows nothing the person's own pages would not: the roles come from the live summary, and a fact that cannot
+   * be read is left out rather than failing the door.
+   */
+  async function sessionDoor(request: AccessRequest): Promise<SessionDoor> {
+    const summary = await sessionSummary(request), roles = summary.roles, today = new Date().toISOString().slice(0, 10);
+    const list = async (mode: "student" | "parent" | "tutor") => { try { return [...await input.access.listStudents(request, { mode, limit: 100 })].sort(byCeremony); } catch { return []; } };
+    let pinned: SessionDoor["pinned"] = null;
+    if (roles.includes("student")) {
+      const own = (await list("student"))[0];
+      if (own) {
+        let got = 0, total = 0;
+        try {
+          const reading = await assignedReading(request, { mode: "student", studentId: own.id });
+          for (const row of reading.readings) {
+            total += row.verses.length;
+            const page = await input.door?.progress.page(request as Request, { studentId: own.id, mode: "student", kind: row.kind, assignmentId: row.id, assignmentRevision: row.revision });
+            if (page && page.ok) got += page.counts.selfCheck["got-it"];
+          }
+        } catch { got = 0; }
+        pinned = Object.freeze({ name: nameOf(own), date: own.ceremonyDate, got, total });
+      }
+    }
+    const child = roles.includes("parent") ? (await list("parent"))[0] : undefined;
+    const upcoming = roles.includes("tutor") ? (await list("tutor")).find(row => row.ceremonyDate >= today) : undefined;
+    let count = 0;
+    if (summary.saved) { try { const saved = await input.door?.saved.list(request as Request); count = saved?.readings.length ?? 0; } catch { count = 0; } }
+    return Object.freeze({ pinned, child: child ? Object.freeze({ name: nameOf(child), date: child.ceremonyDate }) : null,
+      nearest: upcoming ? Object.freeze({ name: nameOf(upcoming), date: upcoming.ceremonyDate }) : null, count });
+  }
+  return Object.freeze({ sessionSummary, sessionDoor, beginSession, assignedReading });
 }
