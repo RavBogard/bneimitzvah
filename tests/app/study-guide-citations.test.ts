@@ -47,3 +47,12 @@ test("a timeout never reads as an invented citation", async () => {
   const result = await createGuideChecker({ related, timeoutMs: 20 })({ kind: "torah", readingKey: "pekudei", studentId: null, verses, body: body([["known-1"]]) });
   expect(result).toMatchObject({ ok: false, problems: [expect.stringContaining("could not be checked")] });
 });
+
+test("an id-only source is filled from Sefaria's entry for that verse; an id from another verse is refused", async () => {
+  const check = createGuideChecker({ related: async verse => verse === "Exodus 40:35" ? parseRelatedMetadata([
+    { _id: "other-verse", sourceRef: "Invented Notes 2", index_title: "Invented Notes", category: "Commentary", anchorRef: verse }], verse) : rows(verse) });
+  const byId = (verse: string, id: string) => guide({ themes: [theme("t", { notes: [note(verse, { sources: [{ id } as never] })] })] });
+  const result = await check({ kind: "torah", readingKey: "pekudei", studentId: null, verses, body: byId("Exodus 40:34", "known-1") });
+  expect(result).toMatchObject({ ok: true, body: { themes: [{ notes: [{ sources: [{ id: "known-1", ref: "Invented Commentary on Exodus 40:34:1", indexTitle: "Invented Commentary on Exodus", category: "Commentary", readable: true }] }] }] } });
+  expect(await check({ kind: "torah", readingKey: "pekudei", studentId: null, verses, body: byId("Exodus 40:34", "other-verse") })).toMatchObject({ ok: false });
+});

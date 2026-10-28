@@ -153,7 +153,7 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
   async function setBaseGuide(authority: RabbiAuthority<Q>, supplied: { kind: unknown; readingKey: unknown; expectedVersion: unknown; body: unknown; origin: unknown; reviewed: unknown; hold: unknown; mutationId: unknown }): Promise<GuideSaveResult> {
     const kind = kindOf(supplied.kind), readingKey = keyOf(supplied.readingKey), expected = versionOf(supplied.expectedVersion), mutationId = mutationOf(supplied.mutationId);
     const origin = originOf(supplied.origin), reviewed = bool(supplied.reviewed), hold = bool(supplied.hold);
-    const shape = validateGuideBody(supplied.body, { allowOverview: true });
+    const shape = validateGuideBody(supplied.body, { allowOverview: true, input: true });
     if (!shape.ok) return invalid(shape.problems);
     const requestDigest = digest(["study-guide/v1", kind, readingKey, expected, origin, reviewed, hold, shape.value]);
     const replay = (row: data.GuideRow) => row.requestDigest === requestDigest && row.kind === kind && row.readingKey === readingKey
@@ -222,7 +222,7 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     const assignmentRevision = versionOf(supplied.assignmentRevision), expected = versionOf(supplied.expectedVersion), mutationId = mutationOf(supplied.mutationId);
     const origin = originOf(supplied.origin), reviewed = bool(supplied.reviewed);
     if (assignmentRevision < 1) throw new AccessDenied(403);
-    const shape = validateGuideBody(supplied.body, { allowOverview: false });
+    const shape = validateGuideBody(supplied.body, { allowOverview: false, input: true });
     if (!shape.ok) return invalid(shape.problems);
     const requestDigest = digest(["study-guide-student/v1", studentId, kind, assignmentId, assignmentRevision, expected, origin, reviewed, shape.value]);
     const replay = (row: data.StudentGuideRow) => row.requestDigest === requestDigest ? Object.freeze({ ok: true as const, replayed: true, version: row.version }) : fail("conflict");

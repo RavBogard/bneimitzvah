@@ -88,3 +88,12 @@ test("rejects every Unicode format character and blank look-alike; keeps ordinar
   for (const text of ["The Mishkan [tabernacle] (from the root for dwelling).", "covered [it]: the tent", "[tabernacle] [lit. dwelling]", "the word [sic] (as written)", "Rashi [2]: he says", "a 1//2 split", "Tel Aviv: a city"])
     expect(ok(guide({ overview: text })), text).toBe(true);
 });
+
+test("a save request may cite a source by id alone; a stored body may not", () => {
+  const byId = guide({ themes: [theme("t", { notes: [note("Exodus 40:34", { sources: [{ id: "known-1" } as never] })] })] });
+  expect(validateGuideBody(byId, { allowOverview: true, input: true }).ok).toBe(true);
+  expect(validateGuideBody(byId, { allowOverview: true }).ok).toBe(false);
+  expect(validateGuideBody(guide({ themes: [theme("t", { notes: [note("Exodus 40:34", { sources: [{ id: "not an id" } as never] })] })] }), { allowOverview: true, input: true }).ok).toBe(false);
+  // A full object is still checked field by field in a request.
+  expect(validateGuideBody(guide({ themes: [theme("t", { notes: [note("Exodus 40:34", { sources: [{ ...source(), readable: "yes" } as never] })] })] }), { allowOverview: true, input: true }).ok).toBe(false);
+});

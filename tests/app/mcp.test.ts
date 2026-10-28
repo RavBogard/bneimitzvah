@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
 import { CALLBACK, ORIGIN, closeMcpFixtures, mcpFixture as fixture } from "./mcp-fixture";
 import { parseRelatedMetadata } from "../../src/server/study/sources/metadata";
+import { GUIDE_PAGE_MAX_BYTES, fitGuidePage } from "../../src/server/mcp/tools";
 
 afterEach(async () => { vi.restoreAllMocks(); await closeMcpFixtures(); });
 
@@ -111,12 +112,64 @@ describe("portal MCP", () => {
     const tokens = await t.connect("admin");
     const first = (await t.call(tokens.access_token, "get_reading_for_guide", { kind: "torah", readingKey: "bereshit" })).json();
     // Genesis 1:1-6:8 is 146 verses.
-    expect(first).toMatchObject({ readingKey: "bereshit", totalVerses: 146, offset: 0, nextOffset: 25 });
+    expect(first).toMatchObject({ readingKey: "bereshit", totalVerses: 146, offset: 0, nextOffset: 10 });
+    expect((await t.call(tokens.access_token, "get_reading_for_guide", { kind: "torah", readingKey: "bereshit", limit: 25 })).json()).toMatchObject({ offset: 0, nextOffset: 25 });
+    expect((await t.call(tokens.access_token, "get_reading_for_guide", { kind: "torah", readingKey: "bereshit", limit: 26 })).isError).toBe(true);
     expect(first.verses.map((v: { ref: string }) => v.ref).slice(0, 2)).toEqual(["Genesis 1:1", "Genesis 1:2"]);
-    const last = (await t.call(tokens.access_token, "get_reading_for_guide", { kind: "torah", readingKey: "bereshit", offset: 125 })).json();
+    const last = (await t.call(tokens.access_token, "get_reading_for_guide", { kind: "torah", readingKey: "bereshit", offset: 125, limit: 25 })).json();
     expect(last).toMatchObject({ totalVerses: 146, offset: 125, nextOffset: null });
     expect(last.verses.at(-1).ref).toBe("Genesis 6:8");
     expect((await t.call(tokens.access_token, "get_reading_for_guide", { kind: "torah", readingKey: "not-a-reading" })).json()).toMatchObject({ totalVerses: 0, verses: [] });
+  });
+
+  it("keeps every guide page under the byte budget and covers each verse exactly once", async () => {
+    // A heavily linked portion: hundreds of sources per verse, with long Hebrew.
+    const related = async (ref: string) => parseRelatedMetadata(Array.from({ length: 250 }, (_, i) => ({ _id: `src-${i}`, sourceRef: `Invented Commentary on ${ref}:${i + 1}`,
+      index_title: `Invented Commentary Number ${i % 40} With A Long Title`, category: "Commentary", anchorRef: ref })), ref);
+    const loadText = async (request: { verses: readonly string[] }) => ({ verses: request.verses.map(ref => ({ ref, hebrew: { text: "ב".repeat(600) }, english: "e".repeat(400) })) });
+    const t = await fixture(true, undefined, { related, loadText: loadText as never });
+    await t.google("admin");
+    const tokens = await t.connect("admin");
+    const seen: string[] = [];
+    let offset: number | null = 0, pages = 0;
+    while (offset !== null && pages++ < 200) {
+      const page = await t.call(tokens.access_token, "get_reading_for_guide", { kind: "torah", readingKey: "bereshit", offset, limit: 25 });
+      expect(Buffer.byteLength(page.text)).toBeLessThanOrEqual(GUIDE_PAGE_MAX_BYTES);
+      const body = page.json();
+      expect(body.offset).toBe(offset);
+      expect(body.verses.length).toBeGreaterThan(0);
+      expect(body.verses[0].sources[0]).toEqual({ id: expect.any(String), ref: expect.any(String), title: expect.any(String), category: "Commentary", readable: expect.any(Boolean) });
+      seen.push(...body.verses.map((v: { ref: string }) => v.ref));
+      offset = body.nextOffset;
+    }
+    expect(seen.length).toBe(146);
+    expect(new Set(seen).size).toBe(146);
+    expect(seen[0]).toBe("Genesis 1:1"); expect(seen.at(-1)).toBe("Genesis 6:8");
+    expect(pages).toBeGreaterThan(146 / 25);
+  });
+
+  it("trims the sources of a single verse that alone overflows a page, and says how many", () => {
+    const sources = Array.from({ length: 4000 }, (_, i) => ({ id: `src-${i}`, ref: `Invented Commentary ${i}`, title: "Invented Commentary With A Long Title", category: "Commentary", readable: false }));
+    const page = fitGuidePage({ kind: "torah", readingKey: "bereshit", totalVerses: 2, offset: 0 }, [{ ref: "Genesis 1:1", hebrew: null, english: null, sources }, { ref: "Genesis 1:2", hebrew: null, english: null, sources }]);
+    expect(Buffer.byteLength(JSON.stringify(page, null, 1))).toBeLessThanOrEqual(GUIDE_PAGE_MAX_BYTES);
+    expect(page.verses).toHaveLength(1);
+    expect(page.nextOffset).toBe(1);
+    expect(page.verses[0].sources.length + (page.verses[0].sourcesOmitted ?? 0)).toBe(4000);
+    expect(page.verses[0].sourcesOmitted).toBeGreaterThan(0);
+  });
+
+  it("saves a guide whose sources are ids alone, storing Sefaria's fields, and refuses an id from another verse", async () => {
+    const related = async (ref: string) => parseRelatedMetadata([{ _id: ref === "Genesis 1:1" ? "first-verse" : "second-verse", sourceRef: `Invented Commentary on ${ref}:1`,
+      index_title: `Invented Commentary on Genesis`, category: "Commentary", anchorRef: ref }], ref);
+    const t = await fixture(true, undefined, { related });
+    await t.google("admin");
+    const tokens = await t.connect("admin");
+    const body = (id: string) => ({ overview: "An overview.", themes: [{ id: "light", title: "Light", intro: "An intro.", notes: [{ verseRef: "Genesis 1:1", body: "A note.", sources: [{ id }] }] }] });
+    const save = (id: string, expectedVersion: number) => t.call(tokens.access_token, "save_guide", { kind: "torah", readingKey: "bereshit", expectedVersion, body: body(id), origin: "claude", reviewed: false, hold: false, mutationId: randomUUID() });
+    expect((await save("second-verse", 0)).json()).toMatchObject({ ok: false, code: "invalid" });
+    expect((await save("first-verse", 0)).json()).toMatchObject({ ok: true, version: 1 });
+    const stored = (await t.call(tokens.access_token, "get_guide", { kind: "torah", readingKey: "bereshit" })).json();
+    expect(stored.visible.body.themes[0].notes[0].sources).toEqual([{ id: "first-verse", ref: "Invented Commentary on Genesis 1:1:1", indexTitle: "Invented Commentary on Genesis", category: "Commentary", labels: expect.any(Object), readable: true }]);
   });
 
   it("never lets an unattended routine mark work reviewed", async () => {
@@ -145,6 +198,23 @@ describe("portal MCP", () => {
     // Revoking the tutor grant ends the connection at once.
     await t.f.owner(async () => { await t.f.db.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, t.f.tutorGrant.id)); });
     expect((await t.rpc(tokens.access_token, "tools/list")).status).toBe(401);
+  });
+
+  it("hides from a tutor a student whose link the tutor's own claim made on someone who is now staff (A1), keeping the rabbi's assignment", async () => {
+    const t = await fixture();
+    await t.google("multi");
+    const tokens = await t.connect("multi", { scope: "portal:read" });
+    const sibling = t.f.students[1];
+    // A second link, to Sibling B, recorded as made by a live claim on the admin's membership (staff, so not a learner).
+    await t.f.owner(async () => {
+      const [link] = await t.f.db.insert(s.tutorStudent).values({ tenantId: "crc", studentId: sibling.id, tutorGrantId: t.f.tutorGrant.id }).returning();
+      await t.f.db.insert(s.learnerClaim).values({ tenantId: "crc", learnerMembershipId: t.f.adminMember.id, tutorGrantId: t.f.tutorGrant.id, tutorLinkId: link.id });
+    });
+    expect((await t.call(tokens.access_token, "list_students")).json().students.map((x: { id: string }) => x.id)).toEqual([t.f.students[0].id]);
+    const refused = await t.call(tokens.access_token, "get_student", { studentId: sibling.id }), unknown = await t.call(tokens.access_token, "get_student", { studentId: randomUUID() });
+    expect(refused.isError).toBe(true); expect(refused.text).toBe(unknown.text);
+    // The rabbi's assignment (no claim behind it) still opens.
+    expect((await t.call(tokens.access_token, "get_student", { studentId: t.f.students[0].id })).json()).toMatchObject({ id: t.f.students[0].id });
   });
 
   it("checks PKCE, rotates refresh tokens and ends the connection on replay", async () => {
