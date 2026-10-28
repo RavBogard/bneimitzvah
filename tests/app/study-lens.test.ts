@@ -5,6 +5,7 @@ import { DEFAULT_WORKS, initialLens, LENS_STORAGE, lensFromSearch, normalizeWork
 import { commentaryCount, commentaryParts, commentarySummary, englishLemma } from "../../src/components/portal/workspace/study/commentary-text";
 import { CommentaryCredits, CommentaryStatus, linkedVerse, VerseRashi, workStatuses } from "../../src/components/portal/workspace/study/commentary-view";
 import { StudyRows } from "../../src/components/portal/workspace/study/study-rows";
+import { VersePanelScope } from "../../src/components/portal/workspace/study/verse-panel";
 import { ReadingToolbar as Toolbar } from "../../src/components/portal/workspace/reading-toolbar";
 const ReadingToolbar = Toolbar as FunctionComponent<NonNullable<Parameters<typeof Toolbar>[0]>>;
 import { LensSwitch } from "../../src/components/portal/workspace/lens-switch";
@@ -26,8 +27,6 @@ const ready = (comments: CommentaryComment[]): CommentaryVerseState => ({ status
 const memory = () => { const data = new Map<string, string>(); return { getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: string) => { data.set(key, value); }, data }; };
 /** What a scope's Works start as: its remembered choice when it has one, else the default (the same read StudyLensScope makes). */
 const initialWorks = (storage: ReturnType<typeof memory> | null, key: string | null) => readRememberedLens(storage, key).works ?? DEFAULT_WORKS;
-/** Server markup has no clicks: a verse "with notes" is the one the rail opens on. */
-const chosen = (ref: string) => ref === "Genesis 1:1";
 const inLens = (node: ReactNode, query: "lein" | "study" | null = "study") => renderToStaticMarkup(createElement(StudyLensScope, { storageKey: null, query, children: node }));
 
 test("the link names the lens; anything else names none", () => {
@@ -65,22 +64,22 @@ test("the remembered choice is a display preference only, read and written defen
 });
 
 test("Works holds registered works only, in registry order, at most three; none is allowed", () => {
-  expect(DEFAULT_WORKS).toEqual(["rashi", "womens"]);
+  expect(DEFAULT_WORKS).toEqual(["rashi"]);
   expect(normalizeWorks(["womens", "rashi", "rashi"])).toEqual(["rashi", "womens"]);
   expect(normalizeWorks(["malbim", "womens", "__proto__"])).toEqual(["womens"]);
   expect(normalizeWorks([])).toEqual([]);
   // Not a list at all: the default.
-  expect(normalizeWorks("rashi")).toEqual(["rashi", "womens"]);
+  expect(normalizeWorks("rashi")).toEqual(["rashi"]);
 });
 
 test("Rashi and the Women's Commentary are on by default for everyone; a remembered choice replaces the default as it always did", () => {
   // Signed out, signed in, student, tutor: any scope that opens fresh (no storage key, or a key with nothing stored) starts with both.
-  expect(initialWorks(null, null)).toEqual(["rashi", "womens"]);
-  expect(initialWorks(memory(), LENS_STORAGE.weekly)).toEqual(["rashi", "womens"]);
-  expect(initialWorks(memory(), LENS_STORAGE.staff)).toEqual(["rashi", "womens"]);
+  expect(initialWorks(null, null)).toEqual(["rashi"]);
+  expect(initialWorks(memory(), LENS_STORAGE.weekly)).toEqual(["rashi"]);
+  expect(initialWorks(memory(), LENS_STORAGE.staff)).toEqual(["rashi"]);
   // Nothing readable in storage falls back to the default too.
   const broken = memory(); broken.setItem(LENS_STORAGE.weekly, "not json");
-  expect(initialWorks(broken, LENS_STORAGE.weekly)).toEqual(["rashi", "womens"]);
+  expect(initialWorks(broken, LENS_STORAGE.weekly)).toEqual(["rashi"]);
   // A remembered choice is respected: another work, one turned off, or none at all.
   for (const [stored, expected] of [[["ramban"], ["ramban"]], [["rashi"], ["rashi"]], [["womens", "ramban"], ["womens", "ramban"]], [[], []]] as const) {
     const storage = memory(); storage.setItem(LENS_STORAGE.weekly, JSON.stringify({ lens: "study", works: stored, english: true }));
@@ -89,25 +88,25 @@ test("Rashi and the Women's Commentary are on by default for everyone; a remembe
   // A scope with no key remembers nothing, so turning a work off there never carries to the next load.
   const storage = memory();
   rememberLens(storage, null, { lens: "study", works: [], english: true });
-  expect(initialWorks(storage, null)).toEqual(["rashi", "womens"]);
+  expect(initialWorks(storage, null)).toEqual(["rashi"]);
 });
 
-test("Study opens with both works on, for the signed-out public page and for the workspace alike; Lein is still the default lens", () => {
+test("Study opens with Rashi on, for the signed-out public page and for the workspace alike; Lein is still the default lens", () => {
   const study = (storageKey: string | null) => renderToStaticMarkup(createElement(StudyLensScope, { storageKey, query: "study", children: createElement(ReadingToolbar, {}) }));
-  for (const key of [null, LENS_STORAGE.weekly, LENS_STORAGE.staff]) expect(study(key)).toContain('aria-label="Works: Rashi, Women’s Commentary"');
+  for (const key of [null, LENS_STORAGE.weekly, LENS_STORAGE.staff]) expect(study(key)).toContain('aria-label="Commentaries: Rashi"');
   const lein = renderToStaticMarkup(createElement(StudyLensScope, { storageKey: null, children: createElement(LensSwitch) }));
   expect(lein).toMatch(/aria-pressed="true" data-lens="lein">(<svg.*?<\/svg>)?<span>Lein<\/span>/);
 });
 
-test("the Women's Commentary covers the Torah only: on a haftarah it is not offered, with no line and no error", () => {
+test("the Women's Commentary covers the Torah only: chosen on a haftarah it says what it covers; Rashi, the default, covers both and says nothing", () => {
   const rows = [{ work: "rashi", status: "ready" as const, retry: () => {} }, { work: "womens", status: "none" as const, retry: () => {} }];
-  expect(workStatuses(rows, "neviim").map(row => row.work)).toEqual(["rashi"]);
-  expect(renderToStaticMarkup(createElement(CommentaryStatus, { works: workStatuses(rows, "neviim") }))).toBe("");
+  expect(workStatuses(rows, "neviim").map(row => [row.work, row.covers])).toEqual([["rashi", true], ["womens", false]]);
+  expect(renderToStaticMarkup(createElement(CommentaryStatus, { works: workStatuses(rows.slice(0, 1), "neviim") }))).toBe("");
   expect(workStatuses(rows, "torah").map(row => [row.work, row.covers])).toEqual([["rashi", true], ["womens", true]]);
   // A work the viewer chose that is not a default still says what it covers.
   expect(workStatuses([{ work: "ramban", status: "none" as const, retry: () => {} }], "neviim").map(row => [row.work, row.covers])).toEqual([["ramban", false]]);
-  // The toolbar's label leaves the Women's Commentary out on a haftarah.
-  expect(inLens(createElement(ReadingToolbar, { worksCorpus: "neviim" }), "study")).toContain('aria-label="Works: Rashi"');
+  // The toolbar's label names the default on a haftarah too.
+  expect(inLens(createElement(ReadingToolbar, { worksCorpus: "neviim" }), "study")).toContain('aria-label="Commentaries: Rashi"');
 });
 
 test("the weekly address carries another Shabbat and the Study lens, and this week's Lein is plain /read", () => {
@@ -158,11 +157,11 @@ test("the English edition's lemma is split off as printed: a bold run, or capita
 test("a busy verse shows three comments per work, then one row for the rest", () => {
   const verses = [verse("Genesis 1:1")];
   const many = ready([1, 2, 3, 4, 5].map(n => comment("קרש", `synthetic comment ${n}`)));
-  const markup = inLens(createElement(StudyRows, { verses, assignment: { kind: "torah", confirmed: true, verses: ["Genesis 1:1"] }, group: "g", hasNotes: chosen, works: () => [{ work: "rashi", state: many }] }));
+  const markup = inLens(createElement(StudyRows, { verses, assignment: { kind: "torah", confirmed: true, verses: ["Genesis 1:1"] }, group: "g", works: () => [{ work: "rashi", state: many }] }));
   expect(markup).toContain("synthetic comment 3");
   expect(markup).not.toContain("synthetic comment 4");
-  expect(markup).toMatch(/<button type="button" class="[^"]*moreComments[^"]*" aria-expanded="false"[^>]*>Rashi: 2 more<\/button>/);
-  const three = inLens(createElement(StudyRows, { verses, assignment: { kind: "torah", confirmed: true, verses: ["Genesis 1:1"] }, group: "g", hasNotes: chosen, works: () => [{ work: "rashi", state: ready([1, 2, 3].map(n => comment("קרש", `synthetic ${n}`))) }] }));
+  expect(markup).toMatch(/<button type="button" class="[^"]*moreWork[^"]*">Rashi: 2 more<\/button>/);
+  const three = inLens(createElement(StudyRows, { verses, assignment: { kind: "torah", confirmed: true, verses: ["Genesis 1:1"] }, group: "g", works: () => [{ work: "rashi", state: ready([1, 2, 3].map(n => comment("קרש", `synthetic ${n}`))) }] }));
   expect(three).not.toContain("more</button>");
 });
 
@@ -176,44 +175,39 @@ test("Rashi (n) counts a verse's comments, and is 0 while loading, after a failu
   expect(commentarySummary([{ status: "none" }])).toBe("none");
 });
 
-test("Study rows: Hebrew, then English, in the row; Rashi English-led with bold quoted words, Hebrew and work credit in the rail; no tikkun", () => {
+test("Study rows: Hebrew, then English, in the row; the commentary sits in the notes column with its lemma, its Hebrew and its English; no tikkun", () => {
   const verses = [verse("Genesis 1:1"), verse("Genesis 1:2")];
   const states: Record<string, CommentaryVerseState> = { "Genesis 1:1": ready([comment("דֵּה וְזַח.", "SYNTHETIC LEMMA — synthetic comment one")]), "Genesis 1:2": ready([]) };
-  const markup = inLens(createElement(StudyRows, { verses, assignment: { kind: "torah", confirmed: true, verses: verses.map(row => row.ref) }, group: "g", hasNotes: chosen,
-    works: ref => [{ work: "rashi", state: states[ref] }] }));
+  const markup = inLens(createElement(StudyRows, { verses, assignment: { kind: "torah", confirmed: true, verses: verses.map(row => row.ref) }, group: "g", works: ref => [{ work: "rashi", state: states[ref] }] }));
   expect(markup).toContain("data-study-rows");
   expect(markup).toContain('aria-label="Choose Genesis 1:1"');
   const row = markup.slice(markup.indexOf('data-verse-ref="Genesis 1:1"'), markup.indexOf('data-verse-ref="Genesis 1:2"'));
   expect(row.indexOf('lang="he"')).toBeLessThan(row.indexOf("Synthetic verse Genesis 1:1"));
-  expect(row).not.toContain(">Rashi</h5>");
-  // The rail is on the chosen verse (the first with notes), and holds its commentary.
-  const first = markup.slice(markup.indexOf("data-study-rail"));
-  expect(first).toContain('data-rail-verse="Genesis 1:1"');
-  // The quoted words are found once in the verse, so they are a button that shows them there.
-  expect(first).toMatch(/<button type="button" class="[^"]*dibburLink[^"]*" aria-pressed="false"><bdi lang="he" dir="rtl" class="[^"]*">דֵּה וְזַח<\/bdi>/);
-  expect(first).toMatch(/<span class="[^"]*lemma[^"]*" data-caps="">SYNTHETIC LEMMA<\/span> — synthetic comment one/);
-  expect(first).toContain(">Hebrew</button>");
-  expect(first).toContain('data-linkable="true"');
-  // A verse Rashi is silent on shows no commentary at all, and no filler.
-  const second = markup.slice(markup.indexOf('data-verse-ref="Genesis 1:2"'), markup.indexOf("data-study-rail"));
-  expect(second).not.toContain("Rashi");
+  // The column opens on the first verse with entries and holds its commentary: the quoted words, the Hebrew after them and the English.
+  const rail = markup.slice(markup.indexOf("data-study-rail"));
+  expect(rail).toContain('data-rail-verse="Genesis 1:1"');
+  expect(rail).toMatch(/<bdi class="[^"]*lem[^"]*" lang="he" dir="rtl">דֵּה וְזַח<\/bdi>/);
+  expect(rail).toContain("synthetic comment one");
+  // The quoted words occur once in the verse, so a letter is set on the word and on the note.
+  expect(row).toContain('class="study-lemma-letter"');
+  expect(rail).toContain('data-lemma-letter="a"');
+  // A verse Rashi is silent on has no line in the column and no dots.
+  expect(rail).not.toContain('data-rail-item="Genesis 1:2"');
   expect(markup).not.toContain("data-tikkun");
   expect(markup).not.toMatch(/no comment/i);
 });
 
-test("quoted words that are not found once in the verse are plain bold text: no link is guessed", () => {
+test("quoted words that are not found once in the verse have no letter: nothing is guessed", () => {
   const verses = [verse("Genesis 1:1")];
-  const markup = inLens(createElement(StudyRows, { verses, assignment: { kind: "torah", confirmed: true, verses: ["Genesis 1:1"] }, group: "g", hasNotes: chosen,
-    works: () => [{ work: "rashi", state: ready([comment("קרש", "synthetic"), comment("אב״ג", "synthetic")]) }] }));
-  expect(markup).not.toContain("dibburLink");
-  expect(markup).not.toContain("data-linkable");
+  const markup = inLens(createElement(StudyRows, { verses, assignment: { kind: "torah", confirmed: true, verses: ["Genesis 1:1"] }, group: "g", works: () => [{ work: "rashi", state: ready([comment("קרש", "synthetic"), comment("אב״ג", "synthetic")]) }] }));
+  expect(markup).not.toContain("study-lemma-letter");
+  expect(markup).not.toContain("data-lemma-letter");
   expect(markup).toContain(">קרש</bdi>");
 });
 
 test("English off in Study hides the translation and keeps the commentary", () => {
   const verses = [verse("Genesis 1:1")];
-  const markup = inLens(createElement(StudyRows, { verses, assignment: { kind: "torah", confirmed: true, verses: ["Genesis 1:1"] }, group: "g", hasNotes: chosen, showEnglish: false,
-    works: () => [{ work: "rashi", state: ready([comment("דה", "synthetic comment")]) }] }));
+  const markup = inLens(createElement(StudyRows, { verses, assignment: { kind: "torah", confirmed: true, verses: ["Genesis 1:1"] }, group: "g", showEnglish: false, works: () => [{ work: "rashi", state: ready([comment("דה", "synthetic comment")]) }] }));
   expect(markup).not.toContain("Synthetic verse Genesis 1:1");
   expect(markup).toContain("synthetic comment");
 });
@@ -260,15 +254,15 @@ test("Lein underlines quoted words only in the verse whose comment is pointed at
   expect(linkedVerse({ ...link, marked: null, markedKey: null }, verses)).toBeNull();
 });
 
-test("the toolbar: Lein keeps Tikkun; Study drops it and adds Works, five items at most", () => {
+test("the toolbar: Lein keeps Tikkun; Study drops it and adds Commentaries, five items at most", () => {
   const items = (markup: string) => markup.match(/class="(toolbar-item|study-tool)"/g)?.length ?? 0;
   const lein = inLens(createElement(ReadingToolbar, { listeningEnabled: true, tikkunAvailable: true, onHear: () => {} }), "lein");
   expect(lein).toContain("Tikkun");
   expect(lein).not.toContain(">Works<");
   const study = inLens(createElement(ReadingToolbar, { listeningEnabled: true, tikkunAvailable: true, onHear: () => {} }), "study");
   expect(study).not.toContain("Tikkun");
-  expect(study).toContain(">Works</span>");
-  expect(study).toContain('aria-label="Works: Rashi, Women’s Commentary"');
+  expect(study).toContain(">Commentaries</span>");
+  expect(study).toContain('aria-label="Commentaries: Rashi"');
   expect(items(study)).toBeLessThanOrEqual(5);
   expect(items(lein)).toBeLessThanOrEqual(5);
   // Study's English starts on, whatever Lein's English is.
@@ -288,25 +282,35 @@ test("the switch is Lein | Study with the current lens pressed, and absent outsi
   expect(renderToStaticMarkup(createElement(LensSwitch))).toBe("");
 });
 
-test("Study is a study sheet: no colours and nothing to hear, verse rows beside a rail, and Notes for the phone; Lein keeps Colors and Hear", () => {
-  const verses = [verse("Genesis 1:1"), verse("Genesis 1:2")];
-  const rows = (notes?: (ref: string) => boolean) => inLens(createElement(StudyRows, { verses, assignment: { kind: "torah", confirmed: true, verses: verses.map(row => row.ref) }, group: "g", hasNotes: notes,
-    works: () => [{ work: "rashi", state: ready([comment("דה", "synthetic comment")]) }] }));
-  const markup = rows(chosen);
+test("Study is a study desk: no colours and nothing to hear, one open verse in a column of only the verses that have entries; Lein keeps Colors and Hear", () => {
+  const verses = [verse("Genesis 1:1"), verse("Genesis 1:2"), verse("Genesis 1:3")];
+  const rows = (silent: string[]) => inLens(createElement(StudyRows, { verses, assignment: { kind: "torah", confirmed: true, verses: verses.map(row => row.ref) }, group: "g",
+    works: ref => [{ work: "rashi", state: silent.includes(ref) ? ready([]) : ready([comment("דה", "synthetic comment")]) }] }));
+  const markup = rows(["Genesis 1:2"]);
   // Plain Hebrew in ink: no phrase family, no verse to hear.
   expect(markup).not.toContain("data-family");
   expect(markup).not.toMatch(/aria-label="Hear /);
   expect(markup).toContain("data-study-sheet");
-  expect(markup).toContain("data-study-rail");
-  // The verse with notes is marked and chosen; the other is not.
-  expect(markup).toMatch(/data-verse-ref="Genesis 1:1"[^>]*data-selected="true"[^>]*data-has-notes="true"/);
-  expect(markup).not.toMatch(/data-verse-ref="Genesis 1:2"[^>]*data-selected/);
-  expect(markup.match(/data-testid="study-notes-open"/g)).toHaveLength(2);
-  // Nothing chosen: the rail says how to choose one.
-  expect(rows()).toContain('data-testid="study-rail-empty"');
-  // Study's tools: English, Works and size; no Colors, no Hear verse, no dock.
+  // The column lists only the verses with entries, exactly one of them open; the silent verse has a row but no line.
+  expect(markup.match(/data-rail-item="/g)).toHaveLength(2);
+  expect(markup).toContain('data-rail-item="Genesis 1:1"'); expect(markup).toContain('data-rail-item="Genesis 1:3"'); expect(markup).not.toContain('data-rail-item="Genesis 1:2"');
+  expect(markup.match(/data-open="true"/g)).toHaveLength(1);
+  expect(markup).toMatch(/data-verse-ref="Genesis 1:1"[^>]*data-current="true"[^>]*data-has-notes="true"/);
+  expect(markup).not.toMatch(/data-verse-ref="Genesis 1:2"[^>]*data-has-notes/);
+  // Dots under the number of a verse that has notes, none under one that does not.
+  const second = markup.slice(markup.indexOf('data-verse-ref="Genesis 1:2"'), markup.indexOf('data-verse-ref="Genesis 1:3"'));
+  expect(second).not.toContain("data-note-dots");
+  expect(markup.slice(markup.indexOf('data-verse-ref="Genesis 1:1"'), markup.indexOf('data-verse-ref="Genesis 1:2"'))).toContain('data-note-dots="classic"');
+  // Nothing has entries: no column at all, and no Sheet and no Notes button anywhere.
+  const none = rows(["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"]);
+  expect(none).not.toContain("data-study-rail");
+  expect(none).not.toContain("study-notes-open");
+  // Study's tools: English, Commentaries and size; no Colors, no Hear verse, no dock, and no Sources button.
   const study = inLens(createElement(ReadingToolbar, { listeningEnabled: true, tikkunAvailable: true, onHear: () => {} }), "study");
   expect(study).toContain('data-testid="study-toolbar"');
+  expect(study).toContain("<span>Commentaries</span>");
+  expect(study).not.toContain("Works");
+  expect(study).not.toContain("Sources");
   expect(study).not.toContain("Colors");
   expect(study).not.toContain("Hear verse");
   expect(study).not.toContain("reading-toolbar");
@@ -315,9 +319,12 @@ test("Study is a study sheet: no colours and nothing to hear, verse rows beside 
   expect(lein).toContain("<span>Hear verse</span>");
 });
 
-test("the Study sheet's wording", () => {
-  const markup = inLens(createElement(StudyRows, { verses: [verse("Genesis 1:1")], group: "g", works: () => [] }));
-  expect(markup).toContain(">On this verse</h3>");
-  expect(markup).toContain(">Choose a verse to see its notes.</p>");
-  expect(markup).toContain(">Notes</button>");
+test("the Study desk's wording", () => {
+  const markup = inLens(createElement(VersePanelScope, { children: createElement(StudyRows, { verses: [verse("Genesis 1:1")], group: "g", works: () => [{ work: "rashi", state: ready([comment("דה", "synthetic comment")]) }] }) }));
+  expect(markup).toContain(">Everything on this verse</button>");
+  expect(markup).toContain(">Copy</button>");
+  expect(markup).toContain(">Open on Sefaria<");
+  expect(markup).toContain(">Rashi</span>");
+  expect(markup).not.toContain("On this verse");
+  expect(markup).not.toContain(">Notes</button>");
 });

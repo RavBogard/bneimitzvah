@@ -44,7 +44,7 @@ async function mock(page: Page, options: { shelf?: "ok" | "fail"; source?: "ok" 
 }
 const row = (page: Page, ref: string) => page.locator(`[data-study-rows] article[data-verse-ref="${ref}"]`);
 /** A verse's More on this verse: with its notes (the rail beside the verses, or its Notes sheet on a phone; Study as a study sheet, 2026-10-28). */
-const more = async (page: Page, ref: string) => (await verseNotes(page, ref)).getByRole("button", { name: "More on this verse", exact: true });
+const more = async (page: Page, ref: string) => (await verseNotes(page, ref)).getByRole("button", { name: "Everything on this verse", exact: true });
 const panel = (page: Page) => page.locator("[data-verse-panel]");
 const pills = (page: Page) => panel(page).getByRole("group", { name: "Kinds of texts" });
 
@@ -121,7 +121,7 @@ test("with reduced motion the panel opens at once, and Lein offers no shelf", as
   await page.keyboard.press("Escape");
   await closeNotes(page);
   await page.getByRole("button", { name: "Lein", exact: true }).click();
-  await expect(page.getByRole("button", { name: "More on this verse", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Everything on this verse", exact: true })).toHaveCount(0);
   await expect(panel(page)).toHaveCount(0);
 });
 

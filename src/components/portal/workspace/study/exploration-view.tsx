@@ -28,6 +28,7 @@ export function ExplorationContent({ state, group, retry, page, refresh, audio }
   const lens = useStudyLens(), study = lens.lens === "study", leinLink = useCommentLink();
   const refs = useMemo(() => current && prepared ? current.verses.map(verse => verse.ref) : [], [current, prepared]);
   const { rashi, works } = useReadingWorks(refs, { ready: refs.length > 0, study, chosen: lens.works, corpus: null });
+  const workStates = useMemo(() => (ref: string) => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) })), [works]);
   const offsetIndex = prepared && current ? prepared.pages.findIndex(row => row.offset === current.offset) : -1;
   const previous = prepared?.pages[offsetIndex - 1]?.offset;
   return <section className="assigned-study" data-testid="proposed-portion" aria-label="Proposed Torah portion" data-size={prefs.size} aria-busy={state.pending}>
@@ -45,7 +46,7 @@ export function ExplorationContent({ state, group, retry, page, refresh, audio }
         {study ? <>
           <CommentaryStatus works={works.map(row => ({ work: row.work, status: row.status, retry: row.retry, covers: true }))} />
           <StudyRows verses={current.verses} assignment={{ kind: "torah", confirmed: false, verses: [] }} group={group} toolsAvailable={false}
-            showEnglish={lens.english} works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))} />
+            showEnglish={lens.english} works={workStates} />
         </> : <FlowingStudyText verses={current.verses} assignment={{ kind: "torah", confirmed: false, verses: [] }} group={group} toolsAvailable={false} activeWord={audio?.activeWord ?? null} onWord={audio?.onWord} onVerse={audio?.onVerse} showEnglish={prefs.translation} tikkun={prefs.tikkunView} linked={linkedVerse(leinLink, current.verses)} />}
         {!study && audio?.player}
         <div className="study-verse-details">{current.verses.map(verse => <div key={verse.ref} className="study-verse-detail" data-testid="study-verse-detail" data-verse-ref={verse.ref}>

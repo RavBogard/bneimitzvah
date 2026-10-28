@@ -74,22 +74,22 @@ test("the marker is on the anchor verses only; opening it shows the sources with
   await expect(button).toBeFocused();
 });
 
-const sourcesButton = (page: Page) => page.locator("[data-sources-open] button");
-/** The sources list from Study's Sources tool, at every width (Study as a study sheet, 2026-10-28); a wide screen also lists them in the rail while no verse is chosen. */
+/** The reading's sources list, at the end of Study's page at every width (Study v6, 2026-10-28): no Sources button, no sheet for the list itself. */
 async function openSources(page: Page) {
   await closeNotes(page);
-  await expect(page.locator("[data-sources-open] button:visible")).toHaveCount(1);
-  await sourcesButton(page).click();
-  return page.getByRole("dialog", { name: "Sources", exact: true }).locator("[data-discussion-list]");
+  const list = page.locator("[data-sources-rail] [data-discussion-list]");
+  await list.scrollIntoViewIfNeeded();
+  await expect(list).toBeVisible();
+  return list;
 }
 
 test("the list is headed 'Sources'; a source opens at its verse with a Claude translation credited by the product name, and Back to this verse", async ({ page }) => {
   await reduced(page);
   await mock(page);
   await page.goto("/read?lens=study");
-  if (await studyRail(page).isVisible()) await expect(studyRail(page).locator("[data-sources-rail] [data-discussion-list]")).toBeVisible();
   const sources = await openSources(page);
-  await expect(page.getByRole("dialog", { name: "Sources", exact: true }).getByRole("heading", { name: "Sources", exact: true })).toBeVisible();
+  await expect(sources.getByRole("heading", { name: "Sources", exact: true })).toBeVisible();
+  await expect(page.locator("[data-sources-open]")).toHaveCount(0);
   await expect(page.getByText("Sources for this reading")).toHaveCount(0);
   await expect(sources.getByText("A synthetic question")).toBeVisible();
   const second = sources.getByRole("button", { name: "Synthetic Midrash 2:2" });
@@ -102,12 +102,12 @@ test("the list is headed 'Sources'; a source opens at its verse with a Claude tr
   await page.getByRole("dialog").getByRole("button", { name: "Back to this verse" }).click();
   await expect(panel(page)).toHaveCount(0);
   await expect(row(page, "Genesis 1:3")).toBeFocused();
-  // Esc from a source hands focus back to what opened it: the Sources button that opened the sheet.
+  // Esc from a source hands focus back to what opened it: the entry in the list.
   const entry = (await openSources(page)).getByRole("button", { name: "Synthetic Midrash 2:2" });
   await entry.click();
   await expect(panel(page)).toHaveAttribute("data-verse-panel", "Genesis 1:3");
   await page.keyboard.press("Escape");
-  await expect(sourcesButton(page)).toBeFocused();
+  await expect(entry).toBeFocused();
 });
 
 test("a source Sefaria could not give shows its credit and its link and no text, never an error page", async ({ page }) => {

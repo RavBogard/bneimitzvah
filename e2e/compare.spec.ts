@@ -32,13 +32,15 @@ async function mock(page: Page, options: { translations?: "ok" | "fail" } = {}) 
   });
   return { calls, recover() { failing = false; } };
 }
+// Study v6 (Daniel, 2026-10-28): the notes column has three actions (Everything on this verse, Copy, Open on Sefaria), so Compare has no entry point in Study for now.
+// These tests are skipped, not deleted, until Daniel says where Compare goes; the verse panel's Compare code and its unit tests are intact.
 const row = (page: Page, ref: string) => page.locator(`[data-study-rows] article[data-verse-ref="${ref}"]`);
 /** A verse's Compare: with its notes (the rail beside the verses, or its Notes sheet on a phone; Study as a study sheet, 2026-10-28). */
 const compare = async (page: Page, ref: string) => (await verseNotes(page, ref)).getByRole("button", { name: "Compare", exact: true });
 const compareSheets = (page: Page) => page.getByRole("dialog", { name: /^Compare / });
 const panel = (page: Page) => page.locator("[data-verse-panel]");
 
-test("Compare opens one sheet for the verse: every other translation credited as Sefaria states it, then the Targum, and Esc gives focus back", async ({ page }) => {
+test.skip("Compare opens one sheet for the verse: every other translation credited as Sefaria states it, then the Targum, and Esc gives focus back", async ({ page }) => {
   const sefaria = await mock(page);
   await page.goto("/read?lens=study");
   await expect(row(page, "Genesis 1:1")).toBeVisible();
@@ -74,7 +76,7 @@ test("Compare opens one sheet for the verse: every other translation credited as
   await expect(page.getByRole("button", { name: "Compare", exact: true })).toHaveCount(0);
 });
 
-test("a failed Compare is one quiet line with Try again, and the reading is untouched", async ({ page }) => {
+test.skip("a failed Compare is one quiet line with Try again, and the reading is untouched", async ({ page }) => {
   const sefaria = await mock(page, { translations: "fail" });
   await page.goto("/read?lens=study");
   await (await compare(page, "Genesis 1:1")).click();
@@ -85,7 +87,7 @@ test("a failed Compare is one quiet line with Try again, and the reading is unto
   await expect(panel(page).getByText("Synthetic rendering one of Genesis 1:1.")).toBeVisible();
 });
 
-test("the Compare sheet is modal: Tab never leaves it, and a tap outside closes it and gives focus back", async ({ page }) => {
+test.skip("the Compare sheet is modal: Tab never leaves it, and a tap outside closes it and gives focus back", async ({ page }) => {
   await mock(page);
   await page.goto("/read?lens=study");
   const button = await compare(page, "Genesis 1:1");

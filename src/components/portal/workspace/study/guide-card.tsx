@@ -19,35 +19,24 @@ export function useGuide(store: GuideStore, kind: StudyKind) {
   useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);
   return store.view(kind);
 }
-/** Every guide note for one verse, base first, then this student's additions. */
+/** The rabbi-written notes on one verse for this student. The Claude-written base guide's verse notes are never drawn (Study v6, Daniel 2026-10-28). */
 export function notesFor(view: StudentGuideView | null, verseRef: string): { theme: GuideTheme; note: GuideNote; label: GuideLabel }[] {
-  if (!view) return [];
-  const from = (part: { themes: GuideTheme[]; label: GuideLabel } | null) => part ? part.themes.flatMap(theme => theme.notes.filter(n => n.verseRef === verseRef).map(note => ({ theme, note, label: part.label }))) : [];
-  return [...from(view.base), ...from(view.additions)];
+  const part = view?.additions;
+  return part ? part.themes.flatMap(theme => theme.notes.filter(n => n.verseRef === verseRef).map(note => ({ theme, note, label: part.label }))) : [];
 }
 
-const check = <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-
-function ThemeRows({ store, kind, themes, tickable }: { store: GuideStore; kind: StudyKind; themes: GuideTheme[]; tickable: boolean }) {
-  return <ul className={styles.themes}>{themes.map(theme => {
-    const pending = store.pending(kind, theme.id), notice = store.notice(kind, theme.id);
-    return <li key={theme.id} className={styles.theme} data-read={theme.read}>
-      <div className={styles.themeText}><span className={styles.themeTitle} dir="auto">{theme.title}</span>
-        <span className={styles.themeIntro} dir="auto">{firstLine(theme.intro)}</span>
-        {notice && <span className={styles.notice} role="status">{notice}</span>}</div>
-      {tickable
-        ? <button type="button" className={styles.tick} data-testid="guide-tick" aria-pressed={theme.read} disabled={pending} aria-label={`I read this: ${theme.title}`}
-            onClick={() => void store.tick(kind, theme.id, !theme.read)}>{theme.read ? <>{check}Read</> : "I read this"}</button>
-        : <span className={styles.state} data-testid="guide-theme-state" data-read={theme.read}>{theme.read ? "Read" : "Not read yet"}</span>}
-    </li>;
-  })}</ul>;
+/** The themes of a rabbi-written guide for this student: a title and its one line each. Nothing to tick: "I read this" is retired. */
+function ThemeRows({ themes }: { themes: GuideTheme[] }) {
+  return <ul className={styles.themes}>{themes.map(theme => <li key={theme.id} className={styles.theme}>
+    <div className={styles.themeText}><span className={styles.themeTitle} dir="auto">{theme.title}</span><span className={styles.themeIntro} dir="auto">{firstLine(theme.intro)}</span></div>
+  </li>)}</ul>;
 }
 
 /**
- * The overview card under the hero: what this reading is about, its themes, and who wrote it.
- * Absent entirely when there is no guide; a parent or tutor sees ticks without the button.
+ * The overview card under the hero in Lein: what this reading is about and who wrote it, and a rabbi-written guide's themes for this student when there is one.
+ * Absent entirely when there is no guide. Study has its own About card (about-card.tsx).
  */
-export function GuideCard({ store, kind, firstName, learner, onStudy }: { store: GuideStore; kind: StudyKind; firstName: string; learner: boolean; onStudy?(): void }) {
+export function GuideCard({ store, kind, firstName, learner }: { store: GuideStore; kind: StudyKind; firstName: string; learner: boolean }) {
   const view = useGuide(store, kind), id = useId();
   // Hebrew stays first on a phone: the guide opens by default only in the wide layout.
   const [open, setOpen] = useState(() => typeof matchMedia === "function" && matchMedia("(min-width: 1001px)").matches);
@@ -55,24 +44,22 @@ export function GuideCard({ store, kind, firstName, learner, onStudy }: { store:
   const sheet = store.sheet(kind), sheetLink = sheet && <p className={styles.sheet}><a className={styles.sourceLink} href={sheet} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">This week’s haftarah study sheet<span aria-hidden="true"> ↗</span><span className="sr-only"> (opens in a new tab)</span></a></p>;
   if (!view) return store.failed(kind) ? <p className={styles.notice} role="status">The study guide didn’t load. <button type="button" className={styles.retry} onClick={() => void store.load(kind)}>Try again</button></p>
     : sheetLink ? <section className={styles.card} aria-label="Haftarah study sheet" data-guide-kind={kind}>{sheetLink}</section> : null;
-  const themes = [...(view.base?.themes ?? []), ...(view.additions?.themes ?? [])], read = themes.filter(t => t.read).length;
-  if (!view.base && themes.length === 0) return sheetLink ? <section className={styles.card} aria-label="Haftarah study sheet" data-guide-kind={kind}>{sheetLink}</section> : null;
+  const themes = view.additions?.themes ?? [];
+  if (!view.base?.overview.trim() && themes.length === 0) return sheetLink ? <section className={styles.card} aria-label="Haftarah study sheet" data-guide-kind={kind}>{sheetLink}</section> : null;
   return <section className={styles.card} aria-labelledby={`${id}-title`} data-guide-kind={kind}>
     <details className={styles.fold} open={open} onToggle={event => setOpen(event.currentTarget.open)}>
     <summary className={styles.foldSummary}><h3 id={`${id}-title`}>{kind === "torah" ? "About this portion" : "About this haftarah"}</h3>
-      {themes.length > 0 && <span className={styles.foldMeta}>{themes.length} {themes.length === 1 ? "theme" : "themes"}{view.tickable && read > 0 ? ` · ${read} read` : ""}</span>}</summary>
-    {view.base && <>
+      {themes.length > 0 && <span className={styles.foldMeta}>{themes.length} {themes.length === 1 ? "theme" : "themes"}</span>}</summary>
+    {view.base && view.base.overview.trim() && <>
       <MarkdownLite text={view.base.overview} className={styles.prose} heClass={styles.he} />
-      {view.base.themes.length > 0 && <><h4>Themes</h4><ThemeRows store={store} kind={kind} themes={view.base.themes} tickable={view.tickable} /></>}
       <p className={styles.label} data-guide-label={guideLabelState(view.base.label)}>{guideLabelText(view.base.label)}</p>
     </>}
-    {view.additions && view.additions.themes.length > 0 && <div className={styles.additions}>
+    {view.additions && themes.length > 0 && <div className={styles.additions}>
       <h4>{learner ? "Added for you" : <>Added for <bdi dir="auto">{firstName}</bdi></>}</h4>
-      <ThemeRows store={store} kind={kind} themes={view.additions.themes} tickable={view.tickable} />
+      <ThemeRows themes={themes} />
       <p className={styles.label} data-guide-label={guideLabelState(view.additions.label)}>{guideLabelText(view.additions.label)}</p>
     </div>}
     {sheetLink}
-    {onStudy && themes.length > 0 && <div className={styles.actions}><button type="button" className={styles.study} data-guide-study onClick={onStudy}>Study the themes</button></div>}
     </details>
   </section>;
 }

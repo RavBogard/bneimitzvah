@@ -72,76 +72,50 @@ afterEach(async () => { for (const value of contexts.splice(0)) { await value.un
 afterAll(async () => { await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); });
 
 // Deliberate wording test for the study guide card: approved copy, change only with the copy.
-it("student sees the overview card with the Claude label, and each note only under its own verse", async () => {
+it("student sees the overview card with the Claude label and nothing else of the base guide: no theme, no verse note", async () => {
   const tab = await page("student");
   await ui(card(tab)).toBeVisible();
   await ui(card(tab).locator('[data-guide-label="claude-draft"]')).toHaveText("Written by Claude for CRC · not yet reviewed by the rabbi");
   const credit = tab.getByRole("contentinfo");
   await ui(credit.locator('a[href="https://danielbogard.com"]')).toBeVisible();
   await ui(card(tab).locator("bdi[lang=he]")).toHaveText("אור");
-  // "Genesis 2:1" is outside the assigned verses; its theme still shows because Genesis 1:1 remains.
-  await ui(card(tab).locator("li")).toHaveCount(2);
-  const notes = async (ref: string) => (await verse(tab, ref)).locator(`[data-guide-notes="${ref}"]`);
-  const third = await notes("Genesis 1:3");
-  await ui(third.getByText("Invented note on the first spoken word.", { exact: true })).toBeVisible();
-  const sefaria = third.locator('a[href^="https://www.sefaria.org/"]');
-  await ui(sefaria).toHaveCount(2);
-  await ui(sefaria.first()).toHaveAttribute("href", "https://www.sefaria.org/Invented_Commentary_on_Exodus_40%3A34%3A1");
-  await ui(await notes("Genesis 1:1")).toBeVisible();
-  await ui(await notes("Genesis 1:2")).toHaveCount(0);
+  // Study v6 (2026-10-28): the base guide's themes and verse notes are the rabbi's, not the student's.
+  await ui(card(tab).locator("li")).toHaveCount(0);
+  await ui(card(tab).getByText("Light first")).toHaveCount(0);
+  await ui(tab.locator("[data-guide-notes]")).toHaveCount(0);
+  const detail = await verse(tab, "Genesis 1:3");
+  await ui(detail.locator("[data-guide-notes]")).toHaveCount(0);
+  await ui(detail.getByText("Invented note on the first spoken word.")).toHaveCount(0);
   await closeVerseTools(tab);
 });
 
-it("Your translation & notes sits under More at the bottom of each verse card, after Sources", async () => {
+it("Your translation & notes sits at the bottom of each verse card", async () => {
   const tab = await page("student");
   const detail = await verse(tab, "Genesis 1:3");
   await ui(detail.getByTestId("verse-work").locator("summary")).toBeVisible();
-  const order = await detail.evaluate(node => [...node.children].map(child => child.matches("[data-guide-notes]") ? "notes" : child.matches('[data-testid="verse-work"]') ? "more" : child.querySelector?.('[aria-label^="Sources for"]') || child.getAttribute("aria-label")?.startsWith("Sources for") ? "sources" : null).filter(Boolean));
-  expect(order.indexOf("notes")).toBeLessThan(order.indexOf("more"));
-  expect(order.at(-1)).toBe("more");
+  expect(await detail.evaluate(node => node.lastElementChild?.matches('[data-testid="verse-work"]') ?? false)).toBe(true);
 });
 
-it("tick toggles and persists across reload", async () => {
+it("\"I read this\" is gone: no tick button, no walk, nothing written", async () => {
   const tab = await page("student");
-  const button = card(tab).getByRole("button", { name: "I read this: Light first", exact: true });
-  await button.click();
-  await ui(card(tab).getByRole("button", { name: "I read this: Light first", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await tab.reload({ waitUntil: "domcontentloaded" });
-  await ui(card(tab).getByRole("button", { name: "I read this: Light first", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await ui(card(tab)).toBeVisible();
+  await ui(tab.getByTestId("guide-tick")).toHaveCount(0);
+  await ui(tab.getByRole("button", { name: /I read this/ })).toHaveCount(0);
+  await ui(card(tab).locator("[data-guide-study]")).toHaveCount(0);
+  await ui(tab.getByTestId("guide-walk")).toHaveCount(0);
   const rows = await fixture.ownerDb.select().from(s.studyThemeRead).where(eq(s.studyThemeRead.studentId, fixture.student.id));
-  expect(rows.map(r => [r.themeId, r.state, r.version])).toEqual([["light", "read", 1]]);
+  expect(rows).toEqual([]);
 });
 
-it("walk opens on the first theme, Next advances through its verses then the next theme, and close returns to the last verse", async () => {
-  const tab = await page("student");
-  await card(tab).locator("[data-guide-study]").click();
-  const walk = tab.getByTestId("guide-walk"), heading = walk.getByTestId("guide-walk-heading");
-  await ui(walk).toBeVisible(); await ui(heading).toHaveText("Light first"); await ui(heading).toHaveAttribute("data-walk-step", "theme");
-  await walk.getByRole("button", { name: "Next", exact: true }).click();
-  await ui(heading).toHaveText("Genesis 1:3"); await ui(heading).toHaveAttribute("data-walk-step", "verse");
-  await ui(walk.locator("[data-word-index]").first()).toBeVisible();
-  await ui(walk.getByText("Invented note on the first spoken word.", { exact: true })).toBeVisible();
-  await walk.getByRole("button", { name: "Next", exact: true }).click();
-  await ui(heading).toHaveText("How beginnings work");
-  await walk.getByRole("button", { name: "Next", exact: true }).click();
-  await ui(heading).toHaveText("Genesis 1:1");
-  await ui(walk.getByRole("button", { name: "Next", exact: true })).toHaveCount(0);
-  await walk.getByRole("button", { name: "Done", exact: true }).click();
-  await ui(walk).toHaveCount(0);
-  // The notes are in the verse tools sheet now, which is not open, so the walk gives focus back to the button that opened it.
-  await ui(card(tab).locator("[data-guide-study]")).toBeFocused();
-});
-
-it("parent sees the card and the tick state but no tick button", async () => {
+it("parent sees the card with no tick button and no read state", async () => {
   const tab = await page("parent");
   await ui(card(tab)).toBeVisible();
   await ui(card(tab).getByTestId("guide-tick")).toHaveCount(0);
-  await ui(card(tab).getByTestId("guide-theme-state")).toHaveCount(2);
-  await ui(card(tab).locator("li").filter({ hasText: "Light first" })).toHaveAttribute("data-read", "true");
-  await ui(card(tab).locator("li").filter({ hasText: "How beginnings work" })).toHaveAttribute("data-read", "false");
+  await ui(card(tab).getByTestId("guide-theme-state")).toHaveCount(0);
+  await ui(card(tab).locator("li")).toHaveCount(0);
 });
 
-it("walk is absent when the guide has no themes", async () => {
+it("the card has no walk, with or without themes", async () => {
   await seed(guide({ overview: "An invented overview with no themes yet.", themes: [] }));
   const tab = await page("student");
   await ui(card(tab).getByText("An invented overview with no themes yet.", { exact: true })).toBeVisible();
@@ -190,10 +164,10 @@ it("the English preference persists across reload", async () => {
   await ui(tab.locator(`${studyVerses} [data-english-ref]`)).toHaveCount(0);
 });
 
-it("tutor sees which themes the student has read, without a tick button", async () => {
+it("tutor sees the card with no tick button and no read state", async () => {
   const tab = await page("tutor");
-  await ui(card(tab).locator("li").filter({ hasText: "Light first" })).toHaveAttribute("data-read", "true");
   await ui(card(tab).getByTestId("guide-tick")).toHaveCount(0);
+  await ui(card(tab).locator("li")).toHaveCount(0);
 });
 
 // Deliberate wording test for the admin study guide status line: approved copy, change only with the copy.

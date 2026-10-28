@@ -4,6 +4,7 @@ import type { StudyKind } from "./api";
 
 export type GuideSource = { id: string; ref: string; indexTitle: string; category: string; labels: { en: string | null; he: string | null }; readable: boolean };
 export type GuideNote = { verseRef: string; body: string; sources: GuideSource[] };
+/** `read` and `readVersion` are the retired "I read this" tick (kept in the payload's shape, always false and 0 now). */
 export type GuideTheme = { id: string; title: string; intro: string; notes: GuideNote[]; read: boolean; readVersion: number };
 export type GuideLabel = { origin: "claude" | "rabbi"; reviewed: boolean; rabbiName: string };
 export type StudentGuideView = {
@@ -11,10 +12,9 @@ export type StudentGuideView = {
   base: { version: number; label: GuideLabel; overview: string; themes: GuideTheme[]; updatedAt: string } | null;
   additions: { version: number; label: GuideLabel; themes: GuideTheme[]; updatedAt: string } | null;
 };
-export type ThemeReadResult = { themeId: string; read: boolean; version: number };
 /** A reading's guide view plus, for the haftarah, that week's public study sheet when the library has one. */
 export type GuideFetch = { view: StudentGuideView | null; sheet: string | null };
-export type GuideOperation = { type: "view" } | { type: "theme-read"; readingKey: string; themeId: string; read: boolean; expectedVersion: number };
+export type GuideOperation = { type: "view" };
 export class GuideError extends PortalRequestError {
   constructor(status: number, public readonly code?: "conflict" | "stale-assignment") { super(status); }
 }
@@ -83,34 +83,23 @@ export function parseGuideView(value: unknown, baseline: Assigned, kind: StudyKi
   if (tickable && (baseline.mode !== "student" && baseline.mode !== "child-practice")) return bad();
   return { kind, readingKey, tickable, base, additions };
 }
-export function parseThemeRead(value: unknown, operation: Extract<GuideOperation, { type: "theme-read" }>): ThemeReadResult {
-  const row = object(value, ["ok", "themeId", "read", "version"]);
-  if (row.ok !== true || row.themeId !== operation.themeId || row.read !== operation.read) return bad();
-  const saved = version(row.version);
-  if (saved !== operation.expectedVersion && saved !== operation.expectedVersion + 1) return bad();
-  return { themeId: operation.themeId, read: operation.read, version: saved };
-}
-
-export async function fetchGuide(baseline: Assigned, kind: StudyKind, operation: GuideOperation, signal: AbortSignal, selection?: Selection): Promise<GuideFetch | ThemeReadResult> {
+export async function fetchGuide(baseline: Assigned, kind: StudyKind, operation: GuideOperation, signal: AbortSignal, selection?: Selection): Promise<GuideFetch> {
   if ((baseline.mode === "child-practice") !== Boolean(selection)) return bad();
   if (selection && (selection.context.studentId !== baseline.student.id || selection.context.id !== baseline.context?.id)) return bad();
   const controller = new AbortController(), abort = () => controller.abort();
   if (signal.aborted) abort(); signal.addEventListener("abort", abort, { once: true }); const timer = setTimeout(abort, 12_000);
   try {
-    const write = operation.type === "theme-read", headers = new Headers({ accept: "application/json" });
+    void operation; const headers = new Headers({ accept: "application/json" });
     if (selection) headers.set("X-Practice-Context", selection.handle);
-    if (write) headers.set("content-type", "application/json");
-    const base = `/api/students/${identifier(baseline.student.id)}/study-guide`;
-    const url = write ? `${base}/theme-read` : `${base}?${new URLSearchParams({ mode: baseline.mode, kind })}`;
-    const body = write ? JSON.stringify({ mode: baseline.mode, kind, readingKey: operation.readingKey, themeId: operation.themeId, read: operation.read, expectedVersion: operation.expectedVersion }) : undefined;
+    const url = `/api/students/${identifier(baseline.student.id)}/study-guide?${new URLSearchParams({ mode: baseline.mode, kind })}`;
     // same-origin keeps a real Origin header on the POST in every engine; no-referrer makes Firefox send Origin: null.
-    const response = await fetch(url, { method: write ? "POST" : "GET", headers, body, signal: controller.signal, credentials: "same-origin", redirect: "error", cache: "no-store", referrerPolicy: "same-origin" });
+    const response = await fetch(url, { method: "GET", headers, signal: controller.signal, credentials: "same-origin", redirect: "error", cache: "no-store", referrerPolicy: "same-origin" });
     if (!response.headers.get("content-type")?.toLowerCase().startsWith("application/json")) throw new GuideError(response.ok ? 503 : response.status);
     const raw = await response.text(); if (raw.length > 320 * 1024) return bad();
     const value: unknown = JSON.parse(raw); if (controller.signal.aborted) return bad();
     if (response.status === 409) { const failure = object(value, ["ok", "code"]); if (failure.ok !== false || (failure.code !== "conflict" && failure.code !== "stale-assignment")) return bad(); throw new GuideError(409, failure.code); }
     if (!response.ok) throw new GuideError([401, 403, 404, 429].includes(response.status) ? response.status : 503);
-    return write ? parseThemeRead(value, operation) : { view: parseGuideView(value, baseline, kind), sheet: parseSheet(value, kind) };
+    return { view: parseGuideView(value, baseline, kind), sheet: parseSheet(value, kind) };
   } catch (error) { if (error instanceof PortalRequestError) throw error; return bad(); }
   finally { clearTimeout(timer); signal.removeEventListener("abort", abort); }
 }

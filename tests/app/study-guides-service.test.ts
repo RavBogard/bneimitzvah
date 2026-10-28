@@ -128,7 +128,7 @@ test("an invented citation refuses the whole save", async () => {
   expect(await f.rows()).toHaveLength(0); expect(await f.audits()).toEqual([]);
 });
 
-test("filters notes to assigned verses, keeps themes with remaining notes", async () => {
+test("the Claude-written base guide reaches a viewer as its overview only; the rabbi-written additions carry their notes", async () => {
   const f = await fixture();
   const body = guide({ themes: [
     theme("cloud", { notes: [note("Exodus 40:34"), note("Exodus 39:1")] }),
@@ -136,9 +136,21 @@ test("filters notes to assigned verses, keeps themes with remaining notes", asyn
     theme("framing", { notes: [] }),
   ] });
   await f.save({ body });
-  const view = await f.read("learner", "student");
-  expect(view?.base?.themes.map(t => [t.id, t.notes.map(n => n.verseRef)])).toEqual([["cloud", ["Exodus 40:34"]], ["framing", []]]);
-  expect(view?.base?.label).toEqual({ origin: "claude", reviewed: false, rabbiName: "the rabbi" });
+  // Study v6 (2026-10-28): no base-guide theme and no base-guide verse note is served, to a student, a parent or a tutor.
+  for (const [who, mode] of [["learner", "student"], ["multi", "parent"], ["multi", "tutor"]] as const) {
+    const view = await f.read(who, mode);
+    expect(view?.base?.themes).toEqual([]);
+    expect(view?.base?.overview).toBeTruthy();
+    expect(JSON.stringify(view)).not.toContain("Exodus 40:34");
+  }
+  expect((await f.read("learner", "student"))?.base?.label).toEqual({ origin: "claude", reviewed: false, rabbiName: "the rabbi" });
+  // A rabbi-written guide for this student does carry its notes (the service refuses any outside the student's verses), and only for this student.
+  const add = await f.guides.setStudentGuide(f.rabbi(), { studentId: f.studentId, kind: "torah", assignmentId: f.assignment.id, assignmentRevision: 1, expectedVersion: 0,
+    body: additions([theme("for-you", { notes: [note("Exodus 40:35")] })]), origin: "rabbi", reviewed: false, mutationId: randomUUID() });
+  expect(add).toMatchObject({ ok: true });
+  const mine = await f.read("learner", "student");
+  expect(mine?.additions?.themes.map(t => [t.id, t.notes.map(n => n.verseRef)])).toEqual([["student--for-you", ["Exodus 40:35"]]]);
+  expect(mine?.base?.themes).toEqual([]);
 });
 
 test("rabbi display name comes from tenant customs", async () => {
@@ -169,23 +181,15 @@ test("student guide is null when readingKey is null and no additions", async () 
   expect(await f.read("learner", "student")).toBeNull();
 });
 
-test("theme tick: student writes, parent 403, tutor reads", async () => {
+test("\"I read this\" is retired: no mode can write a tick, and no view is tickable", async () => {
   const f = await fixture();
   await f.save({ body: guide({ themes: [theme("cloud", { notes: [note("Exodus 40:34")] })] }) });
   const tick = (who: "learner" | "multi", mode: "student" | "parent" | "tutor", extra: Record<string, unknown> = {}) =>
     f.guides.setThemeRead(f.post(who), { mode, studentId: f.studentId, kind: "torah", readingKey: "pekudei", themeId: "cloud", read: true, expectedVersion: 0, ...extra });
-  expect(await tick("learner", "student")).toMatchObject({ ok: true, read: true, version: 1 });
-  expect(await tick("learner", "student")).toMatchObject({ ok: false, code: "conflict" });
-  expect(await denied(() => tick("multi", "parent", { expectedVersion: 1 }))).toBe(true);
-  expect(await denied(() => tick("multi", "tutor", { expectedVersion: 1 }))).toBe(true);
-  expect(await denied(() => tick("learner", "student", { themeId: "not-a-theme", expectedVersion: 1 }), 404)).toBe(true);
-  expect(await tick("learner", "student", { readingKey: "vayakhel", expectedVersion: 1 })).toMatchObject({ ok: false, code: "stale-assignment" });
-  const tutorView = await f.read("multi", "tutor"), parentView = await f.read("multi", "parent");
-  expect(tutorView?.base?.themes[0]).toMatchObject({ id: "cloud", read: true, readVersion: 1 });
-  expect(tutorView?.tickable).toBe(false); expect(parentView?.tickable).toBe(false);
-  expect((await f.read("learner", "student"))?.tickable).toBe(true);
-  expect(await tick("learner", "student", { read: false, expectedVersion: 1 })).toMatchObject({ ok: true, read: false, version: 2 });
-  expect(await f.audits()).toEqual(["study-guide.set", "study-theme.read", "study-theme.read"]);
+  expect(await denied(() => tick("learner", "student"))).toBe(true);
+  expect(await denied(() => tick("multi", "parent"))).toBe(true);
+  expect(await denied(() => tick("multi", "tutor"))).toBe(true);
+  for (const [who, mode] of [["learner", "student"], ["multi", "parent"], ["multi", "tutor"]] as const) expect((await f.read(who, mode))?.tickable).toBe(false);
 });
 
 test("voice: template when empty, versioned saves, conflict on stale version", async () => {
@@ -243,38 +247,32 @@ test("disabled membership or tenant denies every write", async () => {
   expect(await f.rows()).toHaveLength(0);
 });
 
-test("a base theme and an addition with the same id stay separate, and a reading no student has drafts from the catalog", async () => {
+test("a base theme never reaches a viewer, an addition does, and a reading no student has drafts from the catalog", async () => {
   const f = await fixture();
   await f.save({ body: guide({ themes: [theme("for-you", { notes: [note("Exodus 40:34")] })] }) });
   expect(await addition(f, f.rabbi())).toMatchObject({ ok: true, version: 1 });
   const seen = await f.read("learner", "student");
-  expect([seen?.base?.themes[0].id, seen?.additions?.themes[0].id]).toEqual(["for-you", "student--for-you"]);
-  const tick = (themeId: string, expectedVersion = 0) => f.guides.setThemeRead(f.post("learner"), { mode: "student", studentId: f.studentId, kind: "torah", readingKey: "pekudei", themeId, read: true, expectedVersion });
-  expect(await tick("student--for-you")).toMatchObject({ ok: true, version: 1 });
-  const after = await f.read("learner", "student");
-  expect([after?.base?.themes[0].read, after?.additions?.themes[0].read]).toEqual([false, true]);
+  expect([seen?.base?.themes, seen?.additions?.themes[0].id]).toEqual([[], "student--for-you"]);
   // A Torah key no student has drafts from the catalog's full kriyah; a key outside the catalog has no reading.
   expect(await f.save({ readingKey: "not-a-reading" })).toMatchObject({ ok: false, code: "no-reading" });
   expect(await f.save({ readingKey: "bereshit", body: guide({ themes: [theme("t", { notes: [note("Genesis 1:1")] })] }) })).toMatchObject({ ok: true, version: 1 });
   const bereshit = f.check.mock.lastCall![0].verses; expect(bereshit.has("Genesis 1:1") && bereshit.has("Genesis 6:8") && !bereshit.has("Genesis 6:9")).toBe(true);
   // The student's guide still attaches only by the student's own key.
-  expect((await f.read("learner", "student"))?.base?.themes[0].id).toBe("for-you");
+  expect((await f.read("learner", "student"))?.base?.themes).toEqual([]);
   // A haftarah key names its own passage, so it needs no student.
   expect(await f.save({ kind: "haftarah", readingKey: "i-kings-7-51-8-21", body: guide({ themes: [theme("t", { notes: [note("I Kings 8:10")] })] }) })).toMatchObject({ ok: true, version: 1 });
   expect(f.check).toHaveBeenLastCalledWith(expect.objectContaining({ verses: expect.any(Set) }));
   const verses = f.check.mock.lastCall![0].verses; expect(verses.has("I Kings 8:21") && verses.has("I Kings 7:51") && !verses.has("I Kings 8:22")).toBe(true);
 });
 
-test("a parent's child-practice session ticks; admin and parent overview cannot", async () => {
+test("a parent's child-practice session cannot tick either; the child's view is not tickable", async () => {
   const f = await fixture();
   await f.save({ body: guide({ themes: [theme("cloud", { notes: [note("Exodus 40:34")] })] }) });
   const entered = await f.practice.enter(f.post("multi"), { studentId: f.studentId });
   const child = { ...f.request("multi", "http://localhost:3000", { origin: "http://localhost:3000", "X-Practice-Context": entered.handle }), method: "POST" };
   const body = { studentId: f.studentId, kind: "torah", readingKey: "pekudei", themeId: "cloud", read: true, expectedVersion: 0 };
-  expect(await f.guides.setThemeRead(child, { mode: "child-practice", ...body })).toMatchObject({ ok: true, version: 1 });
-  const admin = { ...f.request("admin", "http://localhost:3000", { origin: "http://localhost:3000" }), method: "POST" };
-  expect(await denied(() => f.guides.setThemeRead(admin, { mode: "admin" as never, ...body, expectedVersion: 1 }))).toBe(true);
-  expect((await f.guides.studentGuide(child, { mode: "child-practice", studentId: f.studentId, kind: "torah" }))?.tickable).toBe(true);
+  expect(await denied(() => f.guides.setThemeRead(child, { mode: "child-practice", ...body }))).toBe(true);
+  expect((await f.guides.studentGuide(child, { mode: "child-practice", studentId: f.studentId, kind: "torah" }))?.tickable).toBe(false);
   const audits = await f.owner(async () => (await f.db.select().from(s.auditEvent)).filter(a => a.action === "study-theme.read"));
-  expect(audits).toHaveLength(1); expect(audits[0].mode).toBe("child-practice"); expect(audits[0].guardianId).not.toBeNull();
+  expect(audits).toHaveLength(0);
 });

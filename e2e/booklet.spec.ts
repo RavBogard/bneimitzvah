@@ -44,6 +44,10 @@ test("a student's booklet renders its sections by test id, in trope colour, with
   await page.goto(`/print/booklet/${SID}`);
   for (const id of ["booklet-cover", "booklet-blessings", "booklet-about-torah", "booklet-reading-torah", "booklet-practice-torah", "booklet-haftarah",
     "booklet-about-haftarah", "booklet-reading-haftarah", "booklet-practice-haftarah", "booklet-credits"]) await expect(page.getByTestId(id), id).toBeVisible();
+  // Study v6 (2026-10-28): the mocked guide still carries a base theme and note, and neither prints; the overview does.
+  await expect(page.getByText("A synthetic note.")).toHaveCount(0);
+  await expect(page.getByText("A synthetic theme")).toHaveCount(0);
+  await expect(page.getByText("A synthetic overview.").first()).toBeVisible();
   await expect(page.getByTestId("booklet-service")).toHaveCount(0);
   await expect(page.locator("[data-booklet-aliyah]")).toHaveCount(3);
   await expect(page.locator("[data-booklet-document]")).toHaveAttribute("data-colour", "trope");

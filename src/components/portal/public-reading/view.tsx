@@ -507,6 +507,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   useEffect(() => { const ref = focus !== null && page?.verses[focus] ? page.verses[focus].ref : null; if (ref) onPlace.current?.(ref); }, [focus, page]);
   const corpus = kind === "torah" ? "torah" : "neviim";
   const { rashi, works } = useReadingWorks(refs, { ready: Boolean(page), study, chosen: lens.works, corpus });
+  const workStates = useMemo(() => (ref: string) => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) })), [works]);
   const leinLink = useCommentLink(), clearLink = leinLink.clear;
   // A pinned underline belongs to the verse it was pinned on; choosing another verse lets it go.
   useEffect(() => { clearLink(); }, [focus, textKey, clearLink]);
@@ -657,7 +658,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
             <CommentaryStatus works={workStatuses(works, corpus)} />
             <ReadingPlace refs={allVerses} pageKey={textKey} onJump={jumpTo} onHere={choose?.onPlace ? ref => onPlace.current?.(ref) : undefined} />
             <StudyRows verses={page.verses} assignment={assignment} group={group} showEnglish={lens.english} sections={labels}
-              works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))} choice={choice.view}
+              works={workStates} choice={choice.view}
               onPick={ref => { const at = page.verses.findIndex(row => row.ref === ref); if (at >= 0) release(() => setFocus(at)); }} />
           </> : <FlowingStudyText verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={prefs.translation} englishHidden={drillVerse ? DRILL_STRINGS.hidden : undefined} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
             sections={labels} linked={linkedVerse(leinLink, page.verses)} onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} choice={choice.view} />}

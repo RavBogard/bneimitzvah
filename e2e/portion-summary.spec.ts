@@ -94,27 +94,22 @@ test("with no aliyot to go to (a week the calendar gives none for) the outline i
   await expect(block(page).getByText("Synthetic outline line for aliyah 3")).toBeVisible();
 });
 
-test("the sources are one tap away below laptop width, over no verse, and open at their verse", async ({ page }) => {
-  test.skip(wide(page), "the laptop's column is measured in its own test");
+test("the sources close the page, at every width, and open at their verse; there is no Sources button in the tool row", async ({ page }) => {
   await mock(page);
-  await page.setViewportSize({ width: 360, height: 800 });
   await page.goto(week);
   await expect(firstVerse(page)).toBeVisible();
-  await expect(page.locator("[data-sources-column]")).toBeHidden();
-  const open = page.locator("[data-sources-open] button");
-  await expect(open).toHaveText("Sources");
-  const box = (await open.boundingBox())!;
-  expect(box.height).toBeGreaterThanOrEqual(44);
-  // In flow above the text: it overlaps no verse.
-  for (const row of await page.locator("[data-study-rows] [data-verse-ref]").all()) {
-    const verse = await row.boundingBox();
-    if (verse) expect(box.y + box.height <= verse.y || verse.y + verse.height <= box.y).toBe(true);
-  }
-  await open.click();
-  const sheet = page.getByRole("dialog", { name: "Sources", exact: true });
-  await expect(sheet).toBeVisible();
-  await expect(sheet.getByText("A synthetic question")).toBeVisible();
-  await sheet.getByRole("button", { name: "Synthetic Midrash 2:2" }).click();
+  await expect(page.locator("[data-sources-open], [data-sources-column]")).toHaveCount(0);
+  await expect(page.getByTestId("study-toolbar").getByRole("button", { name: /Sources/ })).toHaveCount(0);
+  const list = page.locator("[data-sources-rail]");
+  await list.scrollIntoViewIfNeeded();
+  await expect(list.getByRole("heading", { name: "Sources", exact: true })).toBeVisible();
+  // After the last verse, not beside or among them.
+  const last = (await page.locator("[data-study-rows] article[data-verse-ref]").last().boundingBox())!, listBox = (await list.boundingBox())!;
+  expect(listBox.y).toBeGreaterThanOrEqual(last.y + last.height - 1);
+  await expect(list.getByText("A synthetic question")).toBeVisible();
+  const entry = list.getByRole("button", { name: "Synthetic Midrash 2:2" });
+  expect((await entry.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await entry.click();
   const panel = page.getByRole("dialog", { name: "Sources on this verse · Genesis 19:22" });
   await expect(panel).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(1);
@@ -122,46 +117,39 @@ test("the sources are one tap away below laptop width, over no verse, and open a
   await panel.getByRole("button", { name: "Back to this verse" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.locator('[data-study-rows] [data-verse-ref="Genesis 19:22"]')).toBeFocused();
-  // Esc from a source returns to the button that opened the sources.
-  await open.click();
-  await page.getByRole("dialog", { name: "Sources", exact: true }).getByRole("button", { name: "Synthetic Midrash 1:1" }).click();
+  // Esc from a source returns to the entry that opened it.
+  const other = list.getByRole("button", { name: "Synthetic Midrash 1:1" });
+  await other.click();
   await page.keyboard.press("Escape");
-  await expect(open).toBeFocused();
+  await expect(other).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test("on a laptop the sources stand in the rail to the right of the verses and the Hebrew keeps its size", async ({ page }) => {
+test("on a laptop the notes column stands to the right of the verses and the Hebrew keeps its size", async ({ page }) => {
   test.skip(!wide(page), "a laptop-width project");
   await mock(page);
   await page.goto(week);
   await expect(firstVerse(page)).toBeVisible();
-  // Study as a study sheet (2026-10-28): the sources stand in the rail beside the verses while no verse is chosen, and the Sources tool stays in Study's tool row.
-  const column = page.locator("[data-study-rail]");
-  await expect(column.locator("[data-sources-rail]")).toBeVisible();
-  await expect(column.getByRole("heading", { name: "Sources", exact: true })).toBeVisible();
   const size = () => page.locator("[data-study-rows] [data-word-index]").first().evaluate(node => parseFloat(getComputedStyle(node).fontSize));
-  const withColumn = await size();
-  // Beside, not over: the column starts to the right of every verse's right edge, and the verses are still wide enough to read.
-  const columnBox = (await column.boundingBox())!;
-  for (const row of await page.locator("[data-study-rows] article[data-verse-ref]").all()) {
-    const verse = (await row.boundingBox())!;
-    expect(verse.x + verse.width).toBeLessThanOrEqual(columnBox.x + 1);
-    expect(verse.width).toBeGreaterThan(320);
+  // The Hebrew is the size setting's own (Standard is 2rem).
+  expect(await size()).toBe(32);
+  // Beside, not over: where the reading has entries the column starts to the right of every verse's right edge, and the verses are still wide enough to read.
+  const column = page.locator("[data-study-rail]");
+  if (await column.count()) {
+    const columnBox = (await column.boundingBox())!;
+    for (const row of await page.locator("[data-study-rows] article[data-verse-ref]").all()) {
+      const verse = (await row.boundingBox())!;
+      expect(verse.x + verse.width).toBeLessThanOrEqual(columnBox.x + 1);
+      expect(verse.width).toBeGreaterThan(320);
+    }
   }
-  // The same size as without a column (no discussions for the reading), and it is the size setting's own (Standard is 2rem).
+  // The same without any discussions.
   await page.unrouteAll({ behavior: "ignoreErrors" });
   await mock(page, { discussions: false });
   await page.goto(week);
   await expect(firstVerse(page)).toBeVisible();
   await expect(page.locator("[data-sources-rail]")).toHaveCount(0);
-  expect(await size()).toBe(withColumn);
-  expect(withColumn).toBe(32);
-  // A source in the column opens in the Sheet at its verse.
-  await page.unrouteAll({ behavior: "ignoreErrors" });
-  await mock(page);
-  await page.goto(week);
-  await page.locator("[data-sources-rail]").getByRole("button", { name: "Synthetic Midrash 2:2" }).click();
-  await expect(page.getByRole("dialog", { name: "Sources on this verse · Genesis 19:22" })).toBeVisible();
+  expect(await size()).toBe(32);
 });
 
 // A signed-in student's own Study: the same block, over the confirmed reading (synthetic session, student, reading and text pages).
@@ -199,8 +187,8 @@ test.describe("a student's own Study", () => {
     await block(page).locator('button[data-outline-aliyah="4"]').click();
     await expect(tab(page, "Aliyah 4")).toHaveAttribute("aria-selected", "true");
     await expect(page.locator('[data-study-rows] [data-verse-ref="Genesis 19:21"]').first()).toBeVisible();
-    // The sources stand in the rail beside the verses here too, while no verse is chosen (Study as a study sheet, 2026-10-28).
-    await expect(page.locator("[data-study-rail] [data-sources-rail]")).toBeVisible();
+    // The sources close the page here too (Study v6, 2026-10-28).
+    await expect(page.locator("[data-sources-rail]")).toBeVisible();
   });
   test("a draft shows nothing; and where the tutor recorded no divisions the outline is plain lines", async ({ page }) => {
     await workspace(page, { summary: "draft" });

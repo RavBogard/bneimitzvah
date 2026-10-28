@@ -1,15 +1,18 @@
-/* The Study lens as a study sheet (2026-10-28), in the app's own look: Bricolage and the Hebrew serif, lake blue, hairlines drawn as
-   inset box-shadows, no elevation and no motion. Plain Hebrew in ink: Study draws no phrase colours. From 900px each verse is a row
-   (English · number · Hebrew) beside a sticky rail; narrower, the verses stack Hebrew first and "Notes" opens the rail's content in the Sheet. */
+/* The Study lens as a study desk (v6, 2026-10-28), after the approved mock (study-desk-v6): the text is one continuous white column of rows
+   (English, verse number, Hebrew) with no card per verse; beside it a sticky column of its own lists only the verses that have entries, folded to one line,
+   with exactly one open as a white card of tinted note cards. Radii, spacing, colours and motion are the mock's. Narrower than 900px the verses stack, Hebrew
+   first, and each verse's entries sit inline under it (study-rows.tsx draws the rail or the inline notes, never both). */
 
-.sheet { min-width: 0; margin-block: 0.5rem 1rem; }
+.sheet { min-width: 0; margin-block: 0.875rem 1rem; }
+.flow { min-width: 0; }
+.key { inline-size: 100%; max-inline-size: none; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.25rem 0.875rem; margin: 0 0 0.625rem; color: var(--color-muted); font-size: 0.8125rem; }
+.key span { display: inline-flex; align-items: center; gap: 0.375rem; }
+.column { min-width: 0; }
 .rows { min-width: 0; }
 
-/* Phone: Hebrew first with its number beside it, the English under it, then Notes. */
-.row { display: grid; grid-template-columns: minmax(0, 1fr) 44px; grid-template-areas: "he num" "en en" "open open"; column-gap: 0.25rem; align-items: start; padding-block: 1.25rem 1rem; scroll-margin-top: 5rem; }
-/* The hairline between verses is its own 1px line, so a chosen row's rounded tint never bends it. */
-.row { position: relative; }
-.row + .row::before, :global(.student-aliyah) + .row::before { content: ""; position: absolute; inset: 0 0 auto; block-size: 1px; background: var(--color-rule); }
+/* Phone: Hebrew first with its number beside it, the English under it, then that verse's entries. */
+.row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 44px; grid-template-areas: "he num" "en en" "inline inline"; column-gap: 0.25rem; align-items: start; padding-block: 1.25rem 1rem; scroll-margin-top: 5rem; }
+.row + .row::before, :global(.student-aliyah) + .row::before, .part + .row::before { content: ""; position: absolute; inset: 0 0 auto; block-size: 1px; background: var(--color-rule); }
 .number { grid-area: num; display: flex; flex-direction: column; align-items: center; gap: 0.125rem; padding-block-start: max(0px, calc((var(--hebrew-size, 2rem) * 2 - 44px) / 2)); }
 .numberButton { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: var(--color-ink); font: 750 0.875rem/1 "Bricolage Grotesque", system-ui, sans-serif; font-variant-numeric: tabular-nums; cursor: pointer; }
 .numberButton > span { display: inline-flex; align-items: center; justify-content: center; min-width: 1.875rem; height: 1.875rem; padding-inline: 0.25rem; border-radius: 999px; background: var(--lake-tint); transition: background-color 160ms var(--ease-settle), color 160ms var(--ease-settle); }
@@ -19,47 +22,105 @@
 /* Choose verses: a chosen verse fills its number and carries a check, never colour alone. */
 .numberButton[aria-label^="Select "][aria-pressed="true"] > span { background: var(--lake); color: #fff; }
 .row[data-verse-picked], .row[data-verse-marked] { background: var(--lake-tint); border-radius: var(--radius-control); }
-.noteMark { display: none; }
+
+/* The dots under a verse number: one for each kind of note the verse has. A colour is never the only sign: the count and the names are in the notes column. */
+.dots { display: inline-flex; gap: 3px; min-block-size: 7px; }
+.dot { display: inline-block; inline-size: 7px; block-size: 7px; border-radius: 50%; background: var(--kc); }
+.dot[data-kind="classic"] { --kc: var(--note-classic); }
+.dot[data-kind="modern"] { --kc: var(--note-modern); }
+.dot[data-kind="rabbi"] { --kc: var(--note-rabbi); }
 
 .hebrewCell { grid-area: he; min-width: 0; direction: rtl; }
-.hebrew:global(.study-hebrew) { margin: 0; color: var(--color-ink); line-height: 2; overflow-wrap: break-word; }
+.hebrew:global(.study-hebrew) { margin: 0; color: var(--color-ink); line-height: 1.85; overflow-wrap: break-word; }
+.hebrew :global(.study-lemma-letter) { margin: 0 1px; font: 700 11px/0 "Bricolage Grotesque", system-ui, sans-serif; color: var(--color-action); vertical-align: super; }
 /* A paragraph break inside the verse keeps its space; its name is read to screen readers and given in the note below. */
 .hebrew :global(.study-paragraph-gap) > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .apparatus { direction: ltr; }
 .apparatus:empty { display: none; }
 .apparatus :global(.study-apparatus) { margin-top: 0.25rem; padding-top: 0; border-top: 0; }
 
-.english:global(.study-english) { grid-area: en; margin: 0.5rem 0 0; color: var(--color-ink); font: 400 1.0625rem/1.7 "Bricolage Grotesque", system-ui, sans-serif; max-inline-size: 62ch; }
+.english:global(.study-english) { grid-area: en; margin: 0.5rem 0 0; color: var(--color-ink); font: 400 1.0625rem/1.65 "Bricolage Grotesque", system-ui, sans-serif; max-inline-size: 62ch; }
+.inline { grid-area: inline; margin-block-start: 0.75rem; min-width: 0; }
 
-.notesOpen { grid-area: open; margin-block-start: 0.625rem; }
-.notesButton { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; padding: 0 1rem; border: 0; border-radius: 999px; background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); color: var(--color-action); font: 600 0.9375rem/1 "Bricolage Grotesque", system-ui, sans-serif; cursor: pointer; }
-.notesButton:hover { background: var(--color-hover); }
-.notesButton:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
-.noteDot { inline-size: 0.5rem; block-size: 0.5rem; border-radius: 999px; background: var(--lake); }
+/* A rabbi-written guide's theme, as a heading in the text where it starts: its title, its one line and the verses it covers. */
+.part { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 1rem; padding-block: 1.5rem 0.375rem; position: relative; scroll-margin-top: 5rem; }
+.part h4 { margin: 0; font-size: 1.375rem; line-height: 1.25; font-weight: 800; letter-spacing: -0.01em; }
+.part p { grid-column: 1; margin: 0.25rem 0 0; color: var(--color-muted); font-size: 1rem; line-height: 1.5; }
+.span { grid-row: 1; grid-column: 2; align-self: center; padding: 0.1875rem 0.625rem; border-radius: 999px; background: var(--lake-tint); color: var(--color-action); font-size: 0.875rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 
-.rail { display: none; }
-.railHeading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.5rem; margin: 0 0 0.875rem; color: var(--color-ink); font-size: 1rem; font-weight: 700; line-height: 1.4; }
-.railRef { color: var(--color-muted); font-weight: 600; font-variant-numeric: tabular-nums; }
-.railEmpty { margin: 0 0 1rem; color: var(--color-muted); font-size: 0.9375rem; line-height: 1.55; }
+/* The tinted note cards: the same in the column and inline. */
 .notesBody { display: grid; min-width: 0; }
 .notesBody > * { min-width: 0; }
+.note { margin: 0 0 0.5rem; padding: 0.75rem 0.875rem; border-radius: 14px; background: var(--tc, var(--note-classic-tint)); color: var(--color-ink); font-size: 0.90625rem; line-height: 1.52; }
+.note[data-note-kind="classic"] { --kc: var(--note-classic); --tc: var(--note-classic-tint); }
+.note[data-note-kind="modern"] { --kc: var(--note-modern); --tc: var(--note-modern-tint); }
+.note[data-note-kind="rabbi"] { --kc: var(--note-rabbi); --tc: var(--note-rabbi-tint); }
+.noteHead { display: flex; align-items: baseline; gap: 0.5rem; }
+.let { font-weight: 800; color: var(--color-action); }
+.src { font-weight: 700; color: var(--kc); }
+.lem { margin-inline-start: auto; font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: calc(1.1875rem * var(--comment-scale, 1)); }
+.hq { margin: 0.375rem 0 0.125rem; font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: calc(1.125rem * var(--comment-scale, 1)); line-height: 1.6; text-align: right; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--lines, 2); line-clamp: var(--lines, 2); }
+.noteText { margin: 0.375rem 0 0; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--lines, 6); line-clamp: var(--lines, 6); }
+.noteLemma { font-weight: 600; }
+.guideBody { margin-block-start: 0.375rem; overflow-wrap: anywhere; }
+.guideBody[data-clamped] .prose { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.prose p, .prose li { margin: 0 0 0.5rem; line-height: 1.52; font-size: inherit; }
+.prose > :last-child { margin-block-end: 0; }
+.hebrewIn { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 1.15em; }
+.sourceList { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.25rem; font-size: 0.875rem; }
+.sourceList a { color: var(--color-action); font-weight: 600; text-underline-offset: 0.2em; }
+.noteLabel { margin: 0.5rem 0 0; color: var(--color-muted); font-size: 0.78125rem; line-height: 1.4; }
+.more, .moreWork { display: inline-flex; align-items: center; min-height: 44px; padding: 0 0.25rem; border: 0; background: none; color: var(--color-action); font: 700 0.84375rem/1 "Bricolage Grotesque", system-ui, sans-serif; cursor: pointer; }
+.more:focus-visible, .moreWork:focus-visible, .act:focus-visible, .vhead:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.moreWork { margin: 0 0 0.5rem; }
+
+/* Everything on this verse, Copy, Open on Sefaria. */
+.acts { display: flex; flex-wrap: wrap; align-items: center; gap: 0 1.125rem; margin: 0.25rem 0.125rem 0.875rem; font-size: 0.8125rem; }
+.act { display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: 0; background: none; color: var(--color-action); font: 600 0.9375rem/1 "Bricolage Grotesque", system-ui, sans-serif; text-decoration: none; cursor: pointer; }
+.act:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+
+.rail { display: none; }
 
 @media (min-width: 900px) {
-  .sheet { display: grid; grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem); column-gap: 2rem; align-items: start; }
-  .rows { grid-column: 1; }
-  /* The row: English at the left, the number in a narrow gutter, the Hebrew at the right, aligned at the top. */
-  .row { grid-template-columns: minmax(0, 1fr) 3rem minmax(0, 1.15fr); grid-template-areas: "en num he"; column-gap: 1.25rem; margin-inline: -0.75rem; padding: 1.25rem 0.75rem 1.5rem; border-radius: var(--radius-control); cursor: pointer; transition: background-color 160ms var(--ease-settle); }
-  .sheet[data-english="off"] .row { grid-template-columns: minmax(0, 1fr) 3rem; grid-template-areas: "he num"; }
-  .row + .row::before, :global(.student-aliyah) + .row::before { inset-inline: 0.75rem; }
-  .row:hover { background: var(--color-hover); }
-  /* The chosen verse: a quiet tint and a filled number. */
-  .row[data-selected] { background: var(--lake-tint); }
-  .numberButton[aria-pressed="true"] > span { background: var(--lake); color: #fff; }
-  .noteMark { display: block; inline-size: 0.375rem; block-size: 0.375rem; border-radius: 999px; background: var(--lake); }
-  /* The English's first line sits on the Hebrew's first line. */
-  .english:global(.study-english) { margin-block-start: max(0px, calc((var(--hebrew-size, 2rem) * 2 - 1.0625rem * 1.7) / 2)); }
-  .notesOpen { display: none; }
-  .rail { display: block; grid-column: 2; grid-row: 1; align-self: start; position: sticky; top: 5rem; max-height: calc(100svh - 6rem); overflow-y: auto; overscroll-behavior: contain; padding: 1.25rem 0 1rem 1.25rem; box-shadow: inset 1px 0 0 var(--color-rule); }
+  .sheet { margin-block-start: 0.875rem; }
+  .flow { display: block; }
+  .sheet[data-railed] .flow { display: grid; grid-template-columns: minmax(0, 1fr) 372px; column-gap: 1.75rem; align-items: start; }
+  /* One continuous white column: no card per verse, no hairline between rows. */
+  .column { padding: 0.625rem 1.5rem; border-radius: 20px; background: var(--color-surface); }
+  .row { grid-template-columns: minmax(0, 1fr) 40px minmax(0, 1.15fr); grid-template-areas: "en num he"; column-gap: 1.125rem; margin-inline: -0.875rem; padding: 0.75rem 0.875rem; border-radius: 14px; transition: background-color 500ms var(--ease-settle); }
+  .sheet[data-english="off"] .row { grid-template-columns: minmax(0, 1fr) 40px; grid-template-areas: "he num"; }
+  .row + .row::before, :global(.student-aliyah) + .row::before, .part + .row::before { display: none; }
+  .row[data-current] { background: var(--row-now); }
+  .number { gap: 6px; padding-block-start: 8px; }
+  .numberButton { width: 40px; height: auto; min-height: 28px; border-radius: 8px; color: var(--color-muted); font-size: 0.875rem; }
+  .numberButton > span { min-width: 0; height: auto; padding: 0; background: transparent; }
+  .numberButton:hover > span { background: transparent; color: var(--color-action); }
+  .row[data-current] .numberButton { color: var(--color-action); }
+  .numberButton[aria-label^="Select "] > span { min-width: 1.875rem; height: 1.875rem; padding-inline: 0.25rem; background: var(--lake-tint); }
+  .numberButton[aria-label^="Select "]:hover > span { background: var(--lake); color: #fff; }
+  .english:global(.study-english) { margin-block-start: 0.25rem; font-size: 1rem; line-height: 1.62; }
+  .part { padding-block-start: 1.625rem; margin-block-start: 0.625rem; border-block-start: 1px solid var(--color-rule); }
+  .column > :first-child .part:first-child, .rows > .part:first-child { border-block-start: 0; margin-block-start: 0; padding-block-start: 1rem; }
+
+  /* The notes column: sticky, its own scroll (scrollbar hidden), lists only the verses that have entries. */
+  .rail { display: block; position: sticky; top: 5rem; max-height: calc(100svh - 6rem); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; padding: 0.875rem 0.375rem 45vh 0.125rem; }
+  .rail::-webkit-scrollbar { display: none; }
+  .vapp { margin-block-end: 6px; border-radius: 18px; transition: background-color 450ms var(--ease-settle), box-shadow 450ms var(--ease-settle); }
+  .vhead { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0.625rem 0.875rem; border: 0; border-radius: 18px; background: none; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+  .ref { min-width: 38px; font-weight: 800; font-size: 0.9375rem; font-variant-numeric: tabular-nums; transition: font-size 450ms var(--ease-settle), color 450ms var(--ease-settle); }
+  .who { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; color: var(--color-muted); font-size: 0.84375rem; }
+  .names { margin-inline-start: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity 300ms; }
+  .count { font-size: 0.75rem; font-weight: 700; color: var(--color-muted); background: var(--color-surface); border-radius: 999px; padding: 1px 8px; transition: opacity 300ms; }
+  .fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 550ms var(--ease-settle); }
+  .inner { overflow: hidden; min-height: 0; padding-inline: 0.75rem; }
+  .vapp[data-open] { background: var(--color-surface); box-shadow: 0 1px 0 var(--color-rule), 0 10px 28px -18px rgba(21, 70, 128, 0.35); }
+  .vapp[data-open] .fold { grid-template-rows: 1fr; }
+  .vapp[data-open] .count, .vapp[data-open] .names { opacity: 0; }
+  .vapp[data-open] .ref { font-size: 1.25rem; color: var(--color-action); }
+  .more, .moreWork { min-height: 32px; }
+  .acts { gap: 0 0.875rem; }
+  .act { font-size: 0.8125rem; }
 }
-@media (prefers-reduced-motion: reduce) { .row, .numberButton > span { transition: none; } }
-@media print { .rail, .notesOpen { display: none; } }
+@media (prefers-reduced-motion: reduce) { .row, .numberButton > span, .vapp, .ref, .names, .count, .fold { transition: none; } }
+@media print { .rail { display: none; } }
+.sheet > :global([data-sources-rail]) { margin-block-start: 1.5rem; }

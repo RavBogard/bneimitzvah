@@ -283,15 +283,16 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     const row = (await confirmedReadings(tx, actor.tenantId, actor.studentId)).find(r => r.kind === kind);
     if (!row) return null;
     const reading = readingView(row, student.ceremonyDate), verses = new Set(reading.verses), name = await nameOf(tx, actor.tenantId);
-    const tickable = actor.mode === "student" || actor.mode === "child-practice";
     const base = reading.readingKey ? servable((await data.guideHeads(tx, actor.tenantId, kind, reading.readingKey)).visible) : null;
     const additions = servable(await data.studentGuideHead(tx, actor.tenantId, actor.studentId, reading.id, reading.revision, kind));
     if (!base && !additions) return null;
-    const reads = new Map((reading.readingKey ? await data.themeReads(tx, actor.tenantId, actor.studentId, kind, reading.readingKey) : []).map(r => [r.themeId, r]));
+    // Study v6 (Daniel, 2026-10-28): a student, parent or tutor gets the Claude-written base guide as its overview only; its themes and verse notes stay with the rabbi.
+    // Stored "I read this" ticks are kept but no longer read or offered; only the rabbi-written per-student additions carry notes.
+    const reads = new Map<string, { state: string; version: number }>();
     return Object.freeze({
-      kind, readingKey: reading.readingKey, tickable: tickable && !!reading.readingKey,
+      kind, readingKey: reading.readingKey, tickable: false,
       base: base ? Object.freeze({ version: base.version, label: Object.freeze({ origin: base.origin, reviewed: base.reviewed, rabbiName: name }), overview: base.body.overview ?? "",
-        themes: Object.freeze(themesFor(base.body.themes, verses, reads)), updatedAt: base.createdAt }) : null,
+        themes: Object.freeze([]), updatedAt: base.createdAt }) : null,
       additions: additions ? Object.freeze({ version: additions.version, label: Object.freeze({ origin: additions.origin, reviewed: additions.reviewed, rabbiName: name }),
         themes: Object.freeze(themesFor(additions.body.themes, verses, reads, ADDITION_PREFIX)), updatedAt: additions.createdAt }) : null,
     });
@@ -310,6 +311,8 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     });
   }
   async function setThemeRead(request: AccessRequest, selection: { mode: Mode; studentId: string; kind: unknown; readingKey: unknown; themeId: unknown; read: unknown; expectedVersion: unknown }) {
+    // Study v6 (Daniel, 2026-10-28): "I read this" is retired. The route and the stored ticks stay, but nothing writes one any more.
+    if (selection.mode) throw new AccessDenied(403);
     const kind = kindOf(selection.kind), readingKey = keyOf(selection.readingKey), read = bool(selection.read), expected = versionOf(selection.expectedVersion);
     if (typeof selection.themeId !== "string" || selection.themeId.length > 73 || !THEME_TICK.test(selection.themeId)) throw new AccessDenied(403);
     const themeId = selection.themeId;

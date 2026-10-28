@@ -278,7 +278,7 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
             const read = await runtime.discussions(verses);
             const { discussions, complete, truncated } = await publicDiscussionsAnswer(read, verses, runtime.pinnedSource, signal);
             const body = JSON.stringify({ ...(query.reading !== undefined ? { reading: query.reading } : { ref: query.ref, kind: query.kind }),
-              productName: read.productName || null, discussions, complete, truncated });
+              productName: read.productName || null, ...read.rabbiName ? { rabbiName: read.rabbiName } : {}, discussions, complete, truncated });
             if (Buffer.byteLength(body) > 2 * 1024 * 1024) return failure(503);
             return new Response(body, { status: 200, headers: { ...common, "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=60",
               "vercel-cdn-cache-control": complete ? "public, s-maxage=300, stale-while-revalidate=3600" : "public, s-maxage=60, stale-while-revalidate=60" } });

@@ -178,7 +178,7 @@ test("commentary Hebrew grows with each size step", async ({ page }) => {
   await withRashi(page);
   await page.goto(`${week}&lens=study`);
   // The comment is with the verse's notes: the rail beside the verses, or the verse's Notes sheet on a phone (Study as a study sheet, 2026-10-28).
-  const comment = async () => (await verseNotes(page, "Genesis 18:1")).locator('[data-work="rashi"] p[lang="he"]').first();
+  const comment = async () => (await verseNotes(page, "Genesis 18:1")).locator('[data-note-work="rashi"] p[lang="he"]').first();
   await expect(await comment()).toBeVisible();
   const sizeOf = async () => (await comment()).evaluate(node => parseFloat(getComputedStyle(node).fontSize));
   const sizes: Record<string, number> = {};
