@@ -78,7 +78,7 @@ export function weekCards(students: readonly NeedsYouStudent[], statuses: Readon
 
 /** A chip's words, and where it leads. */
 export const CHIP_TEXT: Record<ChipCondition, string> = { "no-tutor": "Needs a tutor", "behind": "Behind on practice", "needs-parent": "Needs a parent", "reading-review": "Reading to confirm" };
-/** What a setup line says, then its one verb: one sentence, "Honors not started · Open the honors form". */
+/** What a setup line says, then its one verb: "Honors not started" with its verb inline after it, "Open the honors form". */
 export const TASK_TEXT: Record<TaskCondition, { text: string; verb: string }> = {
   "no-reading": { text: "No reading yet", verb: "Assign the reading" },
   "no-service": { text: "No service date yet", verb: "Set the service" },

@@ -27,8 +27,8 @@ test("service names follow the congregation's settings and fall back to the stan
 
 test("the reading header shows the congregation's name, and its start time only in a part phones hide", () => {
   const render = (serviceSlot: "morning" | "havdalah" | "unknown", value?: typeof services) => renderToStaticMarkup(createElement(ServiceSlotName, { student: { serviceSlot }, services: value }));
-  expect(render("morning")).toBe('<span class="hero-slot"><span aria-hidden="true">· </span>Morning service</span>');
-  expect(render("morning", services)).toBe('<span class="hero-slot"><span aria-hidden="true">· </span>Shabbat morning<span class="hero-slot-time"> · 9:30 AM</span></span>');
+  expect(render("morning")).toBe('<span class="hero-slot">Morning service</span>');
+  expect(render("morning", services)).toBe('<span class="hero-slot">Shabbat morning<span class="hero-slot-time"> · 9:30 AM</span></span>');
   expect(render("unknown", services)).toBe("");
 });
 

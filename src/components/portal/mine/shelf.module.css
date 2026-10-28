@@ -52,5 +52,7 @@
 @media (max-width: 640px) { .chips > * { flex: 1 1 auto; } }
 /* Tutor at a glance (tutor walk 2026-10-28): a Your students row's lines (the next date, the practice line, the latest note) each on its own line. */
 .metaLine { display: block; }
+/* The date is one unit: it moves to its own line before it breaks mid-date. */
+.dateText { white-space: nowrap; }
 .metaLine:empty { display: none; }
 .metaLine > [data-tone] { margin-inline-end: 0.25rem; vertical-align: baseline; }

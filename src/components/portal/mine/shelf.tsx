@@ -97,10 +97,9 @@ export function Shelf() {
     <PageHeader title={SHELF_STRINGS.title} actions={student ? undefined : <ButtonLink href="/readings?add=1">{SHELF_STRINGS.add}</ButtonLink>} />
     {/* A tutor an admin chose to approve accounts sees waiting requests here (they were above the tutor's list, which is Your students now), as admins do on This week. */}
     {summary.approver && summary.roles.includes("tutor") && !summary.roles.includes("admin") && <AccountRequestsLine mode="tutor" />}
-    {/* A tutor arrives to see students (finding 3): the first-reading prompt follows their sections instead of leading the page. */}
-    {view.empty && !tutor && <EmptyShelf line={view.empty.line} linkable={summary.roles.length === 0} />}
+    {/* A tutor arrives to see students (finding 3): the first-reading prompt is for people with no roster, so staff (tutor or admin) never see it (re-walk 2026-10-28). */}
+    {view.empty && !tutor && !summary.roles.includes("admin") && <EmptyShelf line={view.empty.line} linkable={summary.roles.length === 0} />}
     {view.sections.map(part)}
-    {view.empty && tutor && <EmptyShelf line={view.empty.line} linkable={false} />}
     <MyTutorLine />
     {student && <p className={styles.addQuiet}><a href="/readings?add=1">{SHELF_STRINGS.add}</a></p>}
     <ShelfFoot />

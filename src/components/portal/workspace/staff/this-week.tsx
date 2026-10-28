@@ -37,5 +37,5 @@ function taskLine(task: TaskCondition, student: NeedsYouStudent, id: string, dis
   const copy = TASK_TEXT[task];
   const verb = task === "no-reading" ? <WorkspaceLink href={`/workspace/admin/students/${id}/reading`}>{copy.verb}</WorkspaceLink>
     : <button type="button" className="button-text" disabled={disabled} onClick={event => (task === "no-service" ? onEdit : onHonors)(student, event)}>{copy.verb}</button>;
-  return <>{copy.text} · {verb}</>;
+  return <><span className="needs-you-task-text">{copy.text}</span> {verb}</>;
 }

@@ -200,7 +200,7 @@ test("every role that sees the ceremony date also receives the service slot, and
 
 test("the reading header names a confirmed service as the honors sheet does and adds nothing when the slot is unknown", () => {
   const render = (serviceSlot: "morning" | "havdalah" | "unknown" | undefined) => renderToStaticMarkup(createElement(ServiceSlotName, { student: { serviceSlot } }));
-  expect(render("morning")).toBe('<span class="hero-slot"><span aria-hidden="true">· </span>Morning service</span>');
-  expect(render("havdalah")).toBe('<span class="hero-slot"><span aria-hidden="true">· </span>Havdalah service</span>');
+  expect(render("morning")).toBe('<span class="hero-slot">Morning service</span>');
+  expect(render("havdalah")).toBe('<span class="hero-slot">Havdalah service</span>');
   expect(render("unknown")).toBe(""); expect(render(undefined)).toBe("");
 });

@@ -38,8 +38,8 @@ test("a member's shelf: the title, My Readings current in the bar, no tab bar, f
 });
 
 test("with none saved the shelf says so and offers the first reading; a person whose saving is not open yet sees the same shelf without the line", async ({ page }) => {
-  // A tutor: a student's pinned card or a parent's cards stand in for the empty state (E1, E3), so they are not the people this checks.
-  await session(page, ["tutor"]);
+  // A student's pinned card, a parent's cards and a tutor's or admin's roster stand in for the empty state (E1, E3), so they are not the people this checks.
+  await session(page, []);
   await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: [] }));
   await page.goto("/mine");
   await expect(page.getByTestId("mine-empty")).toBeVisible();
@@ -59,6 +59,14 @@ test("with none saved the shelf says so and offers the first reading; a person w
 const LEARNER = "00000000-0000-4000-8000-000000000077";
 const learnerRow = (claimed: boolean) => ({ membershipId: LEARNER, name: "Synthetic Learner", readings: 2, nearest: { name: "Synthetic reading 1", date: "2026-10-24" },
   tutor: claimed ? { name: "Synthetic Tutor", claimed: true, mine: true } : null, student: null });
+
+test("a tutor never sees the first-reading prompt, even with nothing saved (re-walk 2026-10-28)", async ({ page }) => {
+  await session(page, ["tutor"]);
+  await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: [] }));
+  await page.goto("/mine");
+  await expect(page.getByTestId("mine-students")).toBeVisible();
+  await expect(page.getByTestId("mine-empty")).toHaveCount(0);
+});
 
 test("a tutor's shelf: Your students, then Find a learner by name, Add to my students in one tap, then the learner's shelf and its readings", async ({ page }) => {
   let claimed = false; const posted: string[] = [];

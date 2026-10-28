@@ -40,7 +40,7 @@ export function StudentRowMeta({ row, now }: { row: StudentRow; now?: Date }) {
   const date = ceremony ? (next?.chip && next.kind === "ceremony" ? ceremony.label : ceremony.phrase ? `${ceremony.label} · ${ceremony.phrase}` : ceremony.label) : null;
   if (!date && !row.studentId && !row.note) return null;
   return <>
-    {date && <span className={styles.metaLine} data-testid="student-row-date">{next?.chip && <><Chip tone="attention">{next.chip}</Chip> </>}{date}</span>}
+    {date && <span className={styles.metaLine} data-testid="student-row-date">{next?.chip && <><Chip tone="attention">{next.chip}</Chip> </>}<span className={styles.dateText}>{date}</span></span>}
     {row.studentId && <span className={styles.metaLine}><TutorCardLine studentId={row.studentId} /></span>}
     {row.note && <span className={styles.metaLine}>{row.note}</span>}
   </>;

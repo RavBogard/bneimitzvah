@@ -114,10 +114,16 @@ export function RehearsalDates({ student }: { student: Pick<Student, "rehearsal1
  */
 export function ServiceSlotName({ student, services }: { student: Pick<Student, "serviceSlot">; services?: ServiceSettings }) {
   const name = serviceSlotName(student.serviceSlot, services), time = serviceSlotTime(student.serviceSlot, services);
-  return name ? <span className="hero-slot"><span aria-hidden="true">· </span>{name}{time && <span className="hero-slot-time"> · {time}</span>}</span> : null;
+  return name ? <span className="hero-slot">{name}{time && <span className="hero-slot-time">{" "}·{" "}{time}</span>}</span> : null;
 }
 const displayRange = (ranges: string[]) => ranges.join("; ").replace(/(\d)-(\d)/g, "$1\u2013$2");
 
+/** A parent's practice note: two lines at a narrow phone, with Read all to open the rest (re-walk 2026-10-28); full length everywhere else. */
+function ClampedAsk({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return <div className={`practice-ask${open ? "" : " practice-ask-clamped"}`} data-testid="practice-ask"><BeforeNext text={text} own={false} />
+    <button type="button" className="button-text practice-ask-toggle" data-testid="practice-ask-toggle" aria-expanded={open} onClick={() => setOpen(value => !value)}>{open ? "Show less" : "Read all"}</button></div>;
+}
 export function AssignedReadingSummaries({ readings, selectedKind, marked }: { readings: readonly Reading[]; selectedKind: StudyKind; marked?: string | null }) {
   return <div className="hero-reading-summaries" role="group" aria-label="Assigned readings">{readings.map(row => <div key={row.id} className="hero-reading-summary" data-reading-kind={row.kind} data-verse-count={row.verses.length} aria-current={row.kind === selectedKind ? "true" : undefined}>
     <h3>{row.kind === "torah" ? "Torah" : "Haftarah"} <bdi dir="ltr">{displayRange(row.ranges)}</bdi></h3>
@@ -388,7 +394,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   const titleRange = titleReading(readings, exploring, selectedReading?.kind);
   const brief = student ? learnerTitle(student.ceremonyDate) : null;
   // A parent's page opens on what's next: the name and one date line, no ranges or counts (This week has the count, the reading has the ranges).
-  const titleLine = practising && student && brief ? <>{brief.label} · <span className="hero-date" data-testid="hero-date"><time dateTime={student.ceremonyDate}>{brief.date}</time></span>{brief.countdown && ` · ${brief.countdown}`}</>
+  const titleLine = practising && student && brief ? <>{mode === "child-practice" ? null : <>{brief.label} · </>}<span className="hero-date" data-testid="hero-date"><time dateTime={student.ceremonyDate}>{brief.date}</time></span>{brief.countdown && ` · ${brief.countdown}`}</>
     : mode === "parent" && student && countdown ? <>Beit Mitzvah · <span className="hero-date" data-testid="hero-date"><time dateTime={student.ceremonyDate}>{countdown.label}</time></span></>
     : student && countdown ? <>{staffChip}Beit Mitzvah · <span className="hero-date" data-testid="hero-date"><time dateTime={student.ceremonyDate}>{countdown.label}</time></span>{titleRange && ` · ${titleRange}`}{marked && <span className="hero-marked"> · {marked}</span>}</> : null;
   const slotLine = student && congregation.ready ? serviceSlotName(student.serviceSlot, congregation.services) : null;
@@ -446,14 +452,14 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
       {song ? <><header className={`reading-hero${learner ? " reading-current-assignment" : ""}`} aria-labelledby="reading-heading">
         {/* A parent's sitting mirrors the student's Hebrew-first page (parent walk 2026-10-28, finding 1): under the one-line bar, the tutor's ask, then one
             line of what the tutor sees, then the date and Go to verse (the child's name is the bar's, so its heading here is for screen readers only). */}
-        {shownAsk && <div className="practice-ask" data-testid="practice-ask"><BeforeNext text={shownAsk} own={false} /></div>}
+        {shownAsk && <ClampedAsk text={shownAsk} />}
         {mode === "child-practice" && <ChildPracticeDisclosure name={student.firstName} place="child-practice" />}
         <ReaderTitle name={titleName(student)} headingId="reading-heading" level={mode === "child-practice" ? 2 : 1} line={titleLine} pills={pills} note={titleNote} hideName={mode === "child-practice"} />
         {staff && authorizedReading && !concealed && <StaffStudentLines mode={mode} baseline={authorizedReading} />}
         {exploring || readings.length === 0 ? <div className="reading-empty"><h2 className="hero-reference hero-reference-empty">{exploring ? "Explore the full Torah portion" : "No reading has been assigned yet"}</h2><p className="hero-meta">{exploring ? "Read the portion while you and your tutor choose your verses." : staff ? "Choose the verses this student will read." : "Your tutor or rabbi will add your verses here."}</p>
           {(staff || practiceAction) && <div className="hero-actions">{staff && <button type="button" className="button-hero-secondary" onClick={openSheet}>Assign verses</button>}{practiceAction}</div>}</div> : <>
           {/* A student's switch under the title names the reading, and Up close is in the dock (Hebrew first). A parent's ranges are in the reading itself. */}
-          {!practising && mode !== "parent" && readings.length > 1 && <AssignedReadingSummaries readings={readings} selectedKind={selectedReading.kind} />}
+          {!practising && mode !== "parent" && !staff && readings.length > 1 && <AssignedReadingSummaries readings={readings} selectedKind={selectedReading.kind} />}
           {!practising && practiceAction && <div className="hero-actions">{practiceAction}</div>}</>}
       </header>
       {!wide && card}

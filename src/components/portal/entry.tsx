@@ -139,7 +139,10 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
         const typed = code; setCode("");
         const next = parseCodeResult(await requestPortal("/api/auth/sign-in/code", { code: typed }));
         rememberCodeRequest(false); rememberSignedIn(true);
-        window.location.replace(next);
+        // A plain My Readings landing becomes the person's own role home (an admin's This week) so they never see the empty shelf first; any failure keeps the answer.
+        let target = next;
+        if (next === MINE_HREF && !invitation) { try { target = signedInDestination(false, null, (await fetchSession(requestPortal)).roles) ?? next; } catch { target = next; } }
+        window.location.replace(target);
         return;
       } else if (kind === "sign-out") {
         await signOutOfPortal();
