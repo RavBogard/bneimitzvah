@@ -42,13 +42,16 @@ async function page(who: "admin" | "student", mobile = false) {
   expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status).toBe(200); await openAuthMail(tab, fixture.takeMail(email)); cookies.set(who, await context.cookies()); return tab;
 }
 async function loaded(tab: Page, ref: string) { await ui(tab.locator(".study-verses").getByRole("heading", { name: ref, level: 4, exact: true })).toBeVisible({ timeout: 30_000 }); }
-const toolbar = (tab: Page) => tab.getByRole("navigation", { name: "Reading tools", exact: true });
-// The Tikkun control opens a three-way menu; its accessible name carries the current view.
-const tikkunControl = (tab: Page) => toolbar(tab).getByRole("button", { name: /^Tikkun: / });
+// A student's dock (Hebrew first) keeps the three tikkun views, Colors and the text size under Text; the view chosen is the pressed row.
+// These cases are all on a student's page.
+const textMenu = (tab: Page) => tab.getByTestId("dock-text-menu");
+const tikkunRows = (tab: Page) => tab.locator('[data-testid="dock-text-menu"] [data-tikkun-view]');
+async function openText(tab: Page) { if (!(await textMenu(tab).isVisible())) await safe(() => tab.getByTestId("dock-text").click()); await ui(textMenu(tab)).toBeVisible(); }
+async function expectTikkun(tab: Page, view: "Pointed text" | "Side by side" | "Tikkun only") { await ui(tab.locator('[data-testid="dock-text-menu"] [data-tikkun-view][aria-pressed="true"]')).toHaveText(view); }
 async function chooseTikkun(tab: Page, view: "Pointed text" | "Side by side" | "Tikkun only") {
-  await safe(() => tikkunControl(tab).click());
-  await safe(() => toolbar(tab).getByRole("group", { name: "Tikkun view", exact: true }).getByRole("button", { name: view, exact: true }).click());
-  await ui(tikkunControl(tab)).toHaveAccessibleName(`Tikkun: ${view}`);
+  await openText(tab);
+  await safe(() => textMenu(tab).getByRole("group", { name: "Tikkun view", exact: true }).getByRole("button", { name: view, exact: true }).click());
+  await ui(textMenu(tab)).toBeHidden(); await expectTikkun(tab, view);
 }
 /** Each verse row: the tikkun column sits left of the pointed text, top-aligned, both visible. */
 async function besideGeometry(tab: Page, ref: string) {
@@ -99,13 +102,10 @@ afterAll(async () => { await Promise.all(contexts.map(context => context.close()
 it("shows a remembered consonant-only tikkun column in the STaM face beside Torah, and never for the haftarah", async () => {
   const tab = await page("student"); await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab, "Genesis 1:1");
   const flow = tab.locator(".assigned-study .study-verses");
-  await ui(tikkunControl(tab)).toHaveAttribute("data-active", "false");
-  // It opens a menu, like Size: no toggle state of its own; the name states the current view.
-  expect(await tikkunControl(tab).getAttribute("aria-pressed")).toBeNull();
+  await expectTikkun(tab, "Pointed text");
   expect(await flow.locator("[data-tikkun-ref]").count()).toBe(0);
-  await ui(tikkunControl(tab)).toHaveAccessibleName("Tikkun: Pointed text");
   const before = calls;
-  await chooseTikkun(tab, "Side by side"); await ui(tikkunControl(tab)).toHaveAttribute("data-active", "true");
+  await chooseTikkun(tab, "Side by side");
   await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(3);
   expect(calls).toBe(before); // A display preference: no text is fetched again.
   await safe(() => tab.evaluate(async () => { await document.fonts.ready; }));
@@ -127,19 +127,19 @@ it("shows a remembered consonant-only tikkun column in the STaM face beside Tora
   const colored = async () => [await flow.locator(".study-hebrew [data-word-index][data-family]").count(), await flow.locator("[data-tikkun-ref] [data-tikkun-word][data-family]").count()];
   const [pointedColored, tikkunColored] = await colored();
   expect(pointedColored).toBeGreaterThan(0); expect(tikkunColored).toBeGreaterThan(0);
-  const colorsButton = toolbar(tab).getByRole("button", { name: "Colors", exact: true });
+  await openText(tab); const colorsButton = textMenu(tab).getByRole("button", { name: "Colors", exact: true });
   await safe(() => colorsButton.click()); await ui(colorsButton).toHaveAttribute("aria-pressed", "false");
   await ui(flow.locator("[data-family]")).toHaveCount(0);
   await safe(() => colorsButton.click()); await ui(colorsButton).toHaveAttribute("aria-pressed", "true");
-  expect(await colored()).toEqual([pointedColored, tikkunColored]);
+  expect(await colored()).toEqual([pointedColored, tikkunColored]); await safe(() => tab.keyboard.press("Escape"));
   await capture(tab, "tikkun-desktop");
   // Remembered like the other reading choices.
   await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab, "Genesis 1:1");
-  await ui(tikkunControl(tab)).toHaveAttribute("data-active", "true"); await ui(tikkunControl(tab)).toHaveAccessibleName("Tikkun: Side by side");
+  await expectTikkun(tab, "Side by side");
   await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(3);
   // A haftarah is read from a book: no control and no scroll lettering.
   await safe(() => tab.getByRole("button", { name: "Haftarah text", exact: true }).click()); await loaded(tab, "Isaiah 1:1");
-  await ui(tikkunControl(tab)).toHaveCount(0); expect(await tab.locator("[data-tikkun-ref]").count()).toBe(0);
+  await ui(tikkunRows(tab)).toHaveCount(0); expect(await tab.locator("[data-tikkun-ref]").count()).toBe(0);
   await safe(() => tab.getByRole("button", { name: "Torah text", exact: true }).click()); await loaded(tab, "Genesis 1:1");
   await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(3);
 });
@@ -173,7 +173,7 @@ it("on a phone keeps both columns side by side, or shows the tikkun in place of 
   expect(await flow.locator("[data-tikkun-ref]").evaluateAll(markCount)).toBe(0);
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await capture(tab, "tikkun-phone");
-  await chooseTikkun(tab, "Pointed text"); await ui(tikkunControl(tab)).toHaveAttribute("data-active", "false");
+  await chooseTikkun(tab, "Pointed text");
   await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(0);
   await ui(flow.locator(".study-hebrew").first()).toBeVisible();
   // On a phone the print action sits under the reading, so the first verse stays above the fold.
@@ -192,9 +192,9 @@ it("never breaks a Hebrew word in either side-by-side column on a phone, at Larg
   const flow = tab.locator(".assigned-study .study-verses");
   await chooseTikkun(tab, "Side by side"); await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(3);
   for (const size of ["Large", "Huge"] as const) {
-    await safe(() => toolbar(tab).getByRole("button", { name: /^Text size: / }).click());
-    await safe(() => toolbar(tab).getByRole("group", { name: "Hebrew text size", exact: true }).getByRole("button", { name: size, exact: true }).click());
-    await ui(toolbar(tab).getByRole("button", { name: `Text size: ${size}`, exact: true })).toHaveCount(1);
+    await openText(tab);
+    await safe(() => textMenu(tab).getByRole("group", { name: "Hebrew text size", exact: true }).getByRole("button", { name: size, exact: true }).click());
+    await ui(tab.locator(`[data-testid="dock-text-menu"] [data-size="${size.toLowerCase()}"]`)).toHaveAttribute("aria-pressed", "true");
     for (const width of [360, 390]) {
       await safe(() => tab.setViewportSize({ width, height: 844 }));
       const words = await flow.evaluate(root => {
@@ -213,7 +213,7 @@ it("never breaks a Hebrew word in either side-by-side column on a phone, at Larg
 
 it("previews a print-only practice sheet with an optional tikkun column and no English, for the student and staff", async () => {
   const tab = await page("student"); await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab, "Genesis 1:1");
-  await chooseTikkun(tab, "Side by side"); await ui(tikkunControl(tab)).toHaveAttribute("data-active", "true");
+  await chooseTikkun(tab, "Side by side");
   const opener = tab.getByRole("button", { name: "Print practice sheet", exact: true });
   await safe(() => opener.click());
   const dialog = tab.getByRole("dialog", { name: "Practice sheet", exact: true }); await ui(dialog).toBeVisible();

@@ -24,6 +24,8 @@ const week = (tab: Page) => tab.getByTestId("practice-week");
 const signedOutState = '[data-testid="workspace-state"][data-workspace-state="signed-out"]';
 const studyVerses = '[data-testid="study-verses"]';
 const click = (tab: Page, name: string) => safe(() => tab.getByRole("button", { name, exact: true }).click());
+/** A student's Up close is in the dock (Hebrew first); on this fresh reading it opens at Genesis 1:1, the first verse not yet Got it. */
+const upCloseFromDock = (tab: Page) => safe(() => tab.getByTestId("dock-up-close").click());
 async function ready(tab: Page, expectedServiceReads=1, studentId=fixture.student.id, mode="student") {
   const initialUi = await tab.evaluate(() => ({ visible: document.visibilityState === "visible", reading: Boolean(document.querySelector('[data-testid="study-verses"]')), service: Boolean(document.querySelector("[data-my-service]")), signIn: Boolean(document.querySelector('[data-workspace-state="signed-out"]')) }));
   // The week's dots are on the shelf's pinned card now (E1); a student's reading is ready when its text is, and a parent's practice page still has the dots.
@@ -99,7 +101,7 @@ afterAll(async () => { await Promise.all(contexts.map(context => context.close()
 it("conceals the whole own-student workspace when the calendar visit pre-probe finds actual session expiry", async () => {
   // Observe calendar pre-probe denial without starting the separate audio
   // resolver/session probe that main-reading Start intentionally invokes.
-  const tab = await page(), seen = traffic(tab); await expired(); await click(tab, "View Genesis 1:1 up close"); await globallyGone(tab);
+  const tab = await page(), seen = traffic(tab); await expired(); await upCloseFromDock(tab); await globallyGone(tab);
   expect(seen.sessions).toEqual([401, 401]); expect(seen.events).toEqual([]); await tab.context().close();
 });
 
@@ -109,7 +111,7 @@ it("suppresses a committed calendar acknowledgement when the post-probe finds ac
   await tab.route(eventPath(tab), hold);
   // Isolate the calendar's exact pre/post session probes from the separate
   // reference-audio resolver used by main-text Start.
-  try { await click(tab, "View Genesis 1:1 up close"); await ui.poll(() => held).toBe(true); } finally { release(); }
+  try { await upCloseFromDock(tab); await ui.poll(() => held).toBe(true); } finally { release(); }
   await globallyGone(tab); expect(seen.events).toEqual(["POST"]); expect(seen.sessions).toEqual([200, 401, 401]);
   expect(await fixture.ownerDb.select().from(s.practiceEvent).where(eq(s.practiceEvent.studentId, fixture.student.id))).toHaveLength(1); await tab.context().close();
 });
@@ -118,14 +120,14 @@ it("keeps calendar 403 and 404 local but makes a direct POST 401 globally termin
   const tab = await page(), seen = traffic(tab);
   for (const status of [403, 404]) {
     await tab.route(eventPath(tab), route => route.fulfill({ status, contentType: "application/json", body: "{}" }));
-    await click(tab, "View Genesis 1:1 up close"); await ui(week(tab)).toHaveCount(0); await ui(tab.locator(studyVerses)).toBeVisible();
+    await upCloseFromDock(tab); await ui(week(tab)).toHaveCount(0); await ui(tab.locator(studyVerses)).toBeVisible();
     expect(await tab.locator(signedOutState).count()).toBe(0);
     await click(tab, "Close practice view"); await pageFetchesSettled(tab); expect(seen.sessions).toEqual([200]);
     await tab.unroute(eventPath(tab));const expectedServiceReads=selectedReads(tab).length+1;
     await refreshReading(tab); await ready(tab,expectedServiceReads); await pageFetchesSettled(tab); seen.sessions.length = 0;
   }
   await tab.route(eventPath(tab), async route => { await expired(); await route.fulfill({ status: 401, contentType: "application/json", body: "{}" }); });
-  await click(tab, "View Genesis 1:1 up close"); await globallyGone(tab); expect(seen.sessions).toEqual([200, 401]); expect(seen.events).toEqual(["POST", "POST", "POST"]); await tab.context().close();
+  await upCloseFromDock(tab); await globallyGone(tab); expect(seen.sessions).toEqual([200, 401]); expect(seen.events).toEqual(["POST", "POST", "POST"]); await tab.context().close();
 });
 
 it("ignores a held old calendar 401 after a real role and child-context replacement", async () => {
@@ -134,7 +136,7 @@ it("ignores a held old calendar 401 after a real role and child-context replacem
   const hold = async (route: Route) => { held = true; try { await gate; await route.fulfill({ status: 401, contentType: "application/json", body: "{}" }).catch(() => undefined); } finally { complete(); } };
   await tab.route(eventPath(tab), hold);
   try {
-    await click(tab, "View Genesis 1:1 up close"); await ui.poll(() => held).toBe(true); await click(tab, "Close practice view");
+    await upCloseFromDock(tab); await ui.poll(() => held).toBe(true); await click(tab, "Close practice view");
     await switchRole(tab, "Parent"); await goChild(tab, sibling.id);
     await click(tab, "Practice with Synthetic"); await ready(tab,1,sibling.id,"child-practice"); await ui(tab.locator(`${studyVerses} [data-verse-ref="Genesis 2:1"]`)).toBeVisible();
   } finally { release(); }

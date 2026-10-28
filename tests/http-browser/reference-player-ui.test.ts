@@ -24,7 +24,7 @@ import { createShortReferenceAudioService } from "../../src/server/reference-aud
 
 
 import * as s from "../../src/server/db/index";
-import { goChild } from "./reading-nav";
+import { goChild, toSection } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 // A cold CI runner compiles routes on first use and runs several browsers at once. Every wait below is for the real
 // condition; these budgets only bound a genuine hang. Vitest polls for 1 s by default and Playwright for 5 s.
@@ -225,13 +225,14 @@ it("held student and child practice read directly, keep word tools and open opti
       expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0);
       await word(tab, 1, 1).click(); const tools = tab.getByRole("button", { name: "Word tools", exact: true }); await ui(tools).toHaveAttribute("aria-expanded", "true");
       await ui(tab.getByRole("region", { name: "Word tools", exact: true })).toBeVisible(); await ui(tab.getByText("· Word 2 of 2", { exact: false })).toBeVisible(); await ui(tab.getByRole("button", { name: "Hear this word", exact: true })).toHaveCount(0);
-      await tab.getByRole("button", { name: "Word tools", exact: true }).click();
-      await tab.getByRole("button", { name: "Practice up close", exact: true }).click();
+      // A student's word tools open in a sheet over the text (Hebrew first); Esc closes it. Up close is the dock's first item.
+      await tab.keyboard.press("Escape"); await ui(tab.getByRole("dialog")).toHaveCount(0);
+      await tab.getByRole("button", { name: "Up close", exact: true }).click();
       const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
       await ui(dialog.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0);
       const working = dialog.getByRole("button", { name: "Still working", exact: true }); if (await working.getAttribute("aria-pressed") !== "true") await working.click(); await ui(working).toHaveAttribute("aria-pressed", "true");
       expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0); expect(await native(tab)).toMatchObject({ count: 0, allClean: true });
-      await dialog.getByRole("button", { name: "Close practice view", exact: true }).click(); await ui(tab.getByRole("button", { name: "Practice up close", exact: true })).toBeFocused();
+      await dialog.getByRole("button", { name: "Close practice view", exact: true }).click(); await ui(tab.getByRole("button", { name: "Up close", exact: true })).toBeFocused();
       const directory = process.env.HELD_LISTENING_UI_CAPTURE_DIR;
       if (directory) {
         const target = resolve(directory); if (!target.startsWith(resolve(".local-logs") + sep)) throw Error("Held listening capture directory refused");
@@ -242,7 +243,7 @@ it("held student and child practice read directly, keep word tools and open opti
       await tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await goChild(tab, fixture.student.id);
       await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(reading).toBeVisible();
       await reading.focus(); await ui(reading).toBeFocused();
-      await tab.getByRole("button", { name: "Practice up close", exact: true }).click(); await ui(tab.getByRole("dialog", { name: "Genesis 1:1", exact: true })).toBeVisible();
+      await tab.getByRole("button", { name: "Up close", exact: true }).click(); await ui(tab.getByRole("dialog", { name: "Genesis 1:1", exact: true })).toBeVisible();
       expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0); expect(await native(tab)).toMatchObject({ count: 0, allClean: true });
       await tab.getByRole("dialog").getByRole("button", { name: "Close practice view", exact: true }).click();
       expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -255,7 +256,7 @@ it("held tutor text takes focus after the Service parts section and practice sta
   setListeningRelease(false);
   try {
     const { tab, state, idle } = await page(false, "tutor", undefined, { held: true });
-    await idle(); await tab.locator("#service-parts").scrollIntoViewIfNeeded(); await idle();
+    await idle(); await toSection(tab, "service"); await idle();
     // Service parts and the text share one page, so there is no tab to return from and no Start reading button.
     await ui(tab.getByRole("button", { name: "Start reading", exact: true })).toHaveCount(0);
     await tab.locator(".study-verses").focus(); await ui(tab.locator(".study-verses")).toBeFocused();
@@ -401,7 +402,7 @@ it("clears playback on real session denial while quiet unchanged checks retain t
 });
 it("Hear plays the main verse and never requires or reopens the optional close-up", async () => {
   const { tab, state, owner, idle } = await page(false, "admin", contexts[0]);
-  await idle(); await tab.locator("#service-parts").scrollIntoViewIfNeeded(); await idle();
+  await idle(); await toSection(tab, "service"); await idle();
   // E2: Service parts follow the text on one page, so moving to them does not stop a verse, and there is no Start reading button.
   await ui(tab.getByRole("button", { name: "Start reading", exact: true })).toHaveCount(0);
   expect(await native(tab)).toMatchObject({ ...owner, paused: true, src: null, retiredClean: true });

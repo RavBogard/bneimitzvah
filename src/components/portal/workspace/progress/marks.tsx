@@ -29,7 +29,8 @@ function StudentMark({ kind, verseRef, state }: { kind: StudyKind; verseRef: str
 }
 
 /** In the practice view: students mark how a verse is going, tutors and admins assess it. */
-export function LiftProgress({ store, kind, verseRef }: { store: ProgressStore; kind: StudyKind; verseRef: string }) {
+export function LiftProgress({ store, kind, verseRef, listening = true }: { store: ProgressStore; kind: StudyKind; verseRef: string;
+  /** False while the reference recording is not available: the Got it rule then asks for nothing the student never had. */ listening?: boolean }) {
   useStore(store);
   const verse = store.verse(kind, verseRef), stream = store.stream, pending = store.pending(kind, verseRef), notice = store.notice(kind, verseRef);
   const checking = store.loading(kind);
@@ -49,13 +50,18 @@ export function LiftProgress({ store, kind, verseRef }: { store: ProgressStore; 
         onClick={() => { if (!pending && assessment !== state) choose(state, assessment, "not-started"); }}>{state === "solid" && check}{assessmentLabels[state]}</button>)}
     </div> : null}
     {/* 1.9 N19, LD-09 (tier A): what each mark means. The tutor's line names the child, never a pronoun. */}
-    {stream === "self-check" ? <p className="lift-progress-note" role="note" data-criterion="got-it">Got it means you chanted this verse twice without the recording and it matched the reader.</p>
+    {stream === "self-check" ? <p className="lift-progress-note" role="note" data-criterion="got-it">{listening ? "Got it means you chanted this verse twice without the recording and it matched the reader." : "Mark Got it when you can chant this verse twice in a row on your own, smoothly."}</p>
       : stream === "assessment" && store.studentName ? <p className="lift-progress-note" role="note" data-criterion="solid">{`Solid means ${store.studentName} chanted it to you without help.`}</p> : null}
     <p className="lift-progress-note" role="status">{notice}</p>
     {!notice && <p className="lift-progress-note">{stream === "assessment" ? `Student: ${selfLabels[self].toLowerCase()}`
       : stream === "self-check" ? assessment !== "not-started" ? `Your tutor: ${assessmentLabels[assessment].toLowerCase()}` : ""
         : [self !== "unmarked" ? selfLabels[self] : "", assessment !== "not-started" ? `Tutor: ${assessmentLabels[assessment].toLowerCase()}` : ""].filter(Boolean).join(" · ")}</p>}
   </div>;
+}
+
+/** True when the student has marked this verse Got it: the small check beside its number on a learner's page. */
+export function isGotIt(store: ProgressStore, kind: StudyKind, verseRef: string) {
+  return store.verse(kind, verseRef)?.selfCheck.state === "got-it" && !store.unverified(kind, verseRef);
 }
 
 /** "5 got it", and for staff "3 solid" too; nothing until a verse is marked. */

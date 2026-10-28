@@ -277,8 +277,8 @@ export function TikkunVerse({ verse, className = "", projection = null, colors =
   </span>;
 }
 
-function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAvailable, listening, showEnglish, englishHidden, tikkun, linked, choice }: {
-  verse: StudyVerse; assignment: AssignmentEnding; id: string; onVerse?(): void; onWord?(index: number): void; activeWord: number | null; toolsAvailable: boolean; listening: boolean; showEnglish: boolean;
+function FlowVerse({ verse, assignment, id, onVerse, onNumber, gotIt = false, onWord, activeWord, toolsAvailable, listening, showEnglish, englishHidden, tikkun, linked, choice }: {
+  verse: StudyVerse; assignment: AssignmentEnding; id: string; onVerse?(): void; onNumber?(opener: HTMLElement): void; gotIt?: boolean; onWord?(index: number): void; activeWord: number | null; toolsAvailable: boolean; listening: boolean; showEnglish: boolean;
   englishHidden?: string; tikkun: TikkunView; linked: DibburMatch | null; choice?: VerseChoiceView;
 }) {
   const state = verseState(choice, verse.ref);
@@ -299,6 +299,7 @@ function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAv
     <span className={styles.flowHebrew} data-hebrew-ref={verse.ref}>
     <span className="sr-only" role="heading" aria-level={4} lang="en" dir="ltr">{verse.ref}</span>
     {state.choosing && choice ? <button type="button" className={`${styles.verseNumber} ${styles.chooseNumber}`} onClick={event => choice.onToggle(verse.ref, event.shiftKey)} aria-pressed={state.picked} aria-label={`Select ${verse.ref}`} lang="en" dir="ltr" data-verse-number title={verse.ref}>{state.picked && <ChoiceCheck />}{number ?? verse.ref}</button>
+      : onNumber ? <><button type="button" className={styles.verseNumber} onClick={event => onNumber(event.currentTarget)} aria-haspopup="dialog" aria-label={`Verse tools · ${verse.ref}`} lang="en" dir="ltr" data-verse-number data-verse-got-it={gotIt || undefined} title={verse.ref}>{gotIt && <span className={styles.gotIt} data-testid="verse-got-it" aria-hidden="true"><ChoiceCheck /></span>}{number ?? verse.ref}</button>{gotIt && <span className="sr-only" lang="en" dir="ltr"> (Got it)</span>}</>
       : onVerse ? <button type="button" className={styles.verseNumber} onClick={onVerse} aria-label={`Hear ${verse.ref}`} lang="en" dir="ltr" data-verse-number title={verse.ref}>{state.marked && <ChoiceCheck />}{number ?? verse.ref}</button>
         : <sup title={verse.ref} lang="en" dir="ltr" data-verse-number>{state.marked && <ChoiceCheck />}{number ?? verse.ref}</sup>}{state.marked && <span className="sr-only" lang="en" dir="ltr"> (selected)</span>}{aligned ? " " : "\u00a0"}
     {replaced ? <TikkunVerse verse={verse} className={styles.flowTikkunInline} projection={projection} colors={colors} activeWord={activeWord} /> : <StudyHebrew verse={verse} colors={colors} id={id} inline activeWord={activeWord} onWordSelect={state.choosing ? undefined : onWord} wordAction={listening ? "verse" : "tools"} toolsAvailable={toolsAvailable} linked={linked} atoms={aligned ? atoms : null} layout={layout} />}{" "}
@@ -311,9 +312,12 @@ function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAv
   </span>;
 }
 /** "beside" sets the tikkun in a column next to the pointed text on every screen width; "only" shows it instead. */
-export function FlowingStudyText({ verses, assignment, group, sections = [], onVerse, onWord, activeWord, toolsAvailable = true, listening = true, showEnglish = false, englishHidden, tikkun = "off", linked = null, choice }: {
+export function FlowingStudyText({ verses, assignment, group, sections = [], onVerse, onNumber, gotIt, onWord, activeWord, toolsAvailable = true, listening = true, showEnglish = false, englishHidden, tikkun = "off", linked = null, choice }: {
   verses: StudyVerse[]; assignment: AssignmentEnding; group: string; sections?: readonly { index: number; label: string }[];
-  onVerse?(index: number): void; onWord?(verse: number, word: number): void; activeWord: { verse: number; index: number } | null; toolsAvailable?: boolean; listening?: boolean; showEnglish?: boolean;
+  onVerse?(index: number): void;
+  /** A learner's verse number opens that verse's sheet (its mark, Up close and tools) instead of playing it; `gotIt` puts a small check beside the number. */
+  onNumber?(index: number, opener: HTMLElement): void; gotIt?(ref: string): boolean;
+  onWord?(verse: number, word: number): void; activeWord: { verse: number; index: number } | null; toolsAvailable?: boolean; listening?: boolean; showEnglish?: boolean;
   /** Lein's translate drill: while set, each verse's English shows this placeholder instead. A view state only; the English preference is untouched. */
   englishHidden?: string;
   /** Torah only: the caller decides, so a haftarah never shows scroll lettering. */
@@ -327,7 +331,7 @@ export function FlowingStudyText({ verses, assignment, group, sections = [], onV
   return <WordGroup scope={`${verses[0]?.ref}|${verses.length}`} first={first} data-testid="study-verses" className={`study-verses ${styles.flow}`} aria-label="Hebrew reading" tabIndex={-1} data-tikkun={tikkun === "off" ? undefined : tikkun} onCopy={copyHebrew}>
     {studyFlowGroups(verses, sections.map(section => section.index)).map(indices => <div key={verses[indices[0]].ref}>
       {sections.find(section => section.index === indices[0]) && <p className="student-aliyah" data-testid="student-aliyah">{sections.find(section => section.index === indices[0])!.label}</p>}
-      <p className={styles.flowParagraph} lang="he" dir="rtl">{indices.map(index => <FlowVerse key={verses[index].ref} verse={verses[index]} assignment={assignment} id={`${group}-flow-${index}`} onVerse={onVerse ? () => onVerse(index) : undefined} onWord={onWord ? word => onWord(index, word) : undefined} activeWord={activeWord?.verse === index ? activeWord.index : null} toolsAvailable={toolsAvailable} listening={listening} showEnglish={showEnglish} englishHidden={englishHidden} tikkun={tikkun} linked={linked?.verse === index ? linked : null} choice={choice} />)}</p>
+      <p className={styles.flowParagraph} lang="he" dir="rtl">{indices.map(index => <FlowVerse key={verses[index].ref} verse={verses[index]} assignment={assignment} id={`${group}-flow-${index}`} onVerse={onVerse ? () => onVerse(index) : undefined} onNumber={onNumber ? opener => onNumber(index, opener) : undefined} gotIt={gotIt?.(verses[index].ref)} onWord={onWord ? word => onWord(index, word) : undefined} activeWord={activeWord?.verse === index ? activeWord.index : null} toolsAvailable={toolsAvailable} listening={listening} showEnglish={showEnglish} englishHidden={englishHidden} tikkun={tikkun} linked={linked?.verse === index ? linked : null} choice={choice} />)}</p>
     </div>)}
   </WordGroup>;
 }

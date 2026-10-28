@@ -1241,3 +1241,36 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 
 /* While access is checked the page keeps a screen of room, so the shelf or reading that replaces it does not move the foot of the page (E6, CLS). */
 .workspace-state[data-workspace-state="checking"] { min-height: 60svh; }
+
+/* Hebrew first (student phone walk, 2026-10-28). The student's practice bar: Up close first and filled, Listen always there (while it is not released its tap
+   only shows why), and Colors, English, Tikkun and size together under Text. The plan folds into "Your plan" at the foot; the loading state says so at the top. */
+.toolbar-item-primary, .toolbar-item-primary:hover { background: #fff; color: var(--lake-deep); }
+.toolbar-item-primary:disabled { background: rgb(255 255 255 / 0.55); color: var(--lake-deep); }
+.toolbar-note { padding: 0.75rem 1rem; }
+.toolbar-note p { margin: 0; line-height: 1.45; }
+.toolbar-menu-text { max-height: calc(100svh - var(--dock-h, 4.75rem) - 3rem); overflow-y: auto; overscroll-behavior: contain; }
+.toolbar-menu-text > [role="group"] + [role="group"] { margin-top: 0.25rem; padding-top: 0.25rem; box-shadow: inset 0 1px 0 var(--color-rule); }
+.toolbar-menu-text svg { flex: none; }
+.study-verse-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.reading-plan { margin-block: 2rem 1rem; border-top: 1px solid var(--color-rule); }
+.reading-plan > summary { padding-block: 0.75rem; font-size: 1.125rem; font-weight: 700; cursor: pointer; }
+.study-verse-detail > .verse-card-head:not(:has(.verse-mark)) { display: none; }
+.reading-plan-dates { margin-block: 0.25rem 1.25rem; display: grid; gap: 0.25rem; }
+.reading-plan-dates > * { margin: 0; }
+.reading-loading { padding-top: 0.5rem; }
+.reading-skeleton { display: grid; gap: 1rem; margin-top: 1.5rem; }
+.reading-skeleton span { display: block; height: 2.25rem; border-radius: 12px; background: var(--color-rule); opacity: 0.7; }
+.reading-skeleton span:first-child { width: 60%; height: 1.75rem; }
+.reading-skeleton span:nth-child(3) { width: 85%; }
+@media (prefers-reduced-motion: no-preference) { .reading-skeleton span { animation: skeleton-pulse 1.4s ease-in-out infinite alternate; } }
+@keyframes skeleton-pulse { to { opacity: 0.35; } }
+.entry-code-label { display: block; margin-top: 1.25rem; }
+/* Up close: the picker takes the bar's room, the count is one line under the rail, and the stage fades at its foot so a cut-off legend reads as more below. */
+.lift[open] { grid-template-rows: auto auto auto minmax(0, 1fr) auto; }
+.lift-bar { justify-content: space-between; }
+.lift-pick { flex: 1 1 auto; min-width: 0; max-width: 18rem; text-overflow: ellipsis; }
+.lift-count { flex: none; margin: 0; padding: 0.375rem 1rem 0; font-size: 0.9375rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lift-stage { padding-bottom: 2rem; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 1.5rem), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 1.5rem), transparent); }
+/* Up close keeps the phrase legend to one row that scrolls sideways, so the verse and its legend fit the stage and no chip is left cut off above the marks. */
+.lift-stage > ol[aria-label^="Phrase families"] { align-self: stretch; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding-block: 2px; }
+.lift-stage > ol[aria-label^="Phrase families"] > li { flex: none; }

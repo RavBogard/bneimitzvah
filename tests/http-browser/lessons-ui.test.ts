@@ -4,6 +4,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from "playwrig
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
+import { toSection } from "./reading-nav";
 import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
@@ -41,7 +42,7 @@ const sheet = (tab: Page) => tab.locator("dialog.lesson-sheet");
 const entry = (tab: Page, text: string) => lessons(tab).locator(".lesson-entry").filter({ hasText: text });
 const editButton = (tab: Page, text: string) => entry(tab, text).getByRole("button", { name: /^Edit lesson from / });
 async function lessonTab(tab: Page) {
-  await safe(() => tab.locator("#lessons").scrollIntoViewIfNeeded());
+  await safe(() => toSection(tab, "lessons"));
   await ui(lessons(tab).getByRole("button", { name: "Add lesson note", exact: true })).toBeEnabled();
 }
 async function write(tab: Page, text: string, date?: string) {
@@ -166,13 +167,13 @@ it("lets a tutor add, edit and delete lessons, keeps an unsaved note, shows a ch
   // The family reads the same list, with nothing to change.
   const parent = await page("tutor", true); await workspace(parent, "parent");
   // Everyone has the Lessons tab beside the reading (1.9 N10).
-  await safe(() => parent.locator("#lessons").scrollIntoViewIfNeeded());
+  await safe(() => toSection(parent, "lessons"));
   await ui(lessons(parent).getByRole("heading", { name: "Lesson notes", exact: true })).toBeVisible();
   await ui(entry(parent, "Synthetic lesson: all three verses.")).toBeVisible();
   expect(await lessons(parent).getByRole("button").count()).toBe(0);
   const parentRows = await stored(parent, "parent"); expect(parentRows.map(row => [row.canEdit, row.canDelete])).toEqual([[false, false]]);
   const student = await page("student", true); await workspace(student, "student");
-  await safe(() => student.locator("#lessons").scrollIntoViewIfNeeded());
+  await safe(() => toSection(student, "lessons"));
   await ui(entry(student, "Synthetic lesson: all three verses.")).toBeVisible();
   expect(await lessons(student).getByRole("button").count()).toBe(0);
   await safe(() => lessons(student).scrollIntoViewIfNeeded());
@@ -224,14 +225,14 @@ it("lets a tutor add Before next time with the if-then prompt, says too long onc
   expect(rows[0]).toMatchObject({ summary: "Synthetic newest lesson with a next step.", beforeNext: line });
 
   const student = await page("student", true); await workspace(student, "student");
-  await safe(() => student.locator("#lessons").scrollIntoViewIfNeeded());
+  await safe(() => toSection(student, "lessons"));
   await ui(entry(student, "Synthetic newest lesson with a next step.").locator(".lesson-before-next")).toHaveText(`Before your next lesson: ${line}`);
   await ui(lessons(student).getByText("Before your next lesson:", { exact: true })).toHaveCount(1);
   await capture(student, "student-before-next-mobile");
 
   const parent = await page("tutor", true); await workspace(parent, "parent");
   await ui(parent.locator(".parent-study-summary .lesson-before-next")).toHaveText(`Before next time: ${line}`);
-  await safe(() => parent.locator("#lessons").scrollIntoViewIfNeeded());
+  await safe(() => toSection(parent, "lessons"));
   await ui(entry(parent, "Synthetic newest lesson with a next step.").locator(".lesson-before-next")).toHaveText(`Before next time: ${line}`);
   expect((await stored(parent, "parent"))[0]).toMatchObject({ beforeNext: line, canEdit: false });
 }, 180_000);

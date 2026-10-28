@@ -1,5 +1,5 @@
 import { observeSilentAudio, expectSilentAudio, privateRouteFetch, observeInitialShortPage } from "./audio-observation";
-import { closeVerseTools, openVerseTools, selectVerse } from "./verse-tools";
+import { closeVerseTools, openVerseTools, upClose } from "./verse-tools";
 import { openAuthMail, switchRole } from "./auth-navigation";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
@@ -79,15 +79,28 @@ async function firstHebrewInViewport(tab: Page) {
   expect(geometry.scrollY, diagnostic).toBe(0); expect(geometry.top, diagnostic).toBeGreaterThanOrEqual(0); expect(geometry.top, diagnostic).toBeLessThan(geometry.viewportHeight);
   expect(geometry.fits, diagnostic).toBe(true);
 }
-function colorsControl(tab: Page) { return tab.getByRole("navigation", { name: "Reading tools", exact: true }).getByRole("button", { name: "Colors", exact: true }); }
+/** A reading tool by name. A student's dock keeps Colors, English and the text size under Text (Hebrew first), so that menu is opened first. */
+async function readingTool(tab: Page, name: string) {
+  const text = tab.getByTestId("dock-text"), menu = tab.getByTestId("dock-text-menu");
+  if (await text.count()) { if (!(await menu.isVisible())) await safe(() => text.click()); return menu.getByRole("button", { name, exact: true }); }
+  return tab.getByRole("navigation", { name: "Reading tools", exact: true }).getByRole("button", { name, exact: true });
+}
+/** Closes a student's Text menu when it is open, so it covers nothing. */
+async function closeTextMenu(tab: Page) { if (await tab.getByTestId("dock-text-menu").isVisible()) await safe(() => tab.keyboard.press("Escape")); }
+async function textSize(tab: Page, size: "Standard" | "Huge") {
+  const toolbar = tab.getByRole("navigation", { name: "Reading tools", exact: true });
+  if (await tab.getByTestId("dock-text").count()) await safe(() => tab.getByTestId("dock-text").click());
+  else await safe(() => toolbar.getByRole("button", { name: /^Text size:/ }).click());
+  await safe(() => toolbar.getByRole("group", { name: "Hebrew text size", exact: true }).getByRole("button", { name: new RegExp(`${size}$`) }).click());
+}
 async function setColors(tab: Page, on: boolean) {
-  const control = colorsControl(tab);
+  const control = await readingTool(tab, "Colors");
   if (await control.getAttribute("aria-pressed") !== String(on)) await safe(() => control.click());
-  await ui(control).toHaveAttribute("aria-pressed", String(on));
+  await ui(control).toHaveAttribute("aria-pressed", String(on)); await closeTextMenu(tab);
 }
 async function colorVerse(tab: Page, ref: string) {
   const article = verse(tab, ref);
-  if (await colorsControl(tab).count()) await setColors(tab, true);
+  if (await tab.getByRole("navigation", { name: "Reading tools", exact: true }).count()) await setColors(tab, true);
   await ui(article.locator("[data-family]").first()).toBeVisible();
   return article;
 }
@@ -132,11 +145,11 @@ it("keeps compact equal reading summaries and verse-bound English without changi
     const tab = await page("student", mobile); await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab, "Genesis 1:1");
     // Held students intentionally do not prepare reference metadata; real text/colors are ready.
     await colorVerse(tab, "Genesis 1:1");
-    const summaries = tab.getByRole("group", { name: "Assigned readings", exact: true });
-    await ui(summaries.locator('[data-reading-kind="torah"]')).toBeVisible();
-    await ui(summaries.locator('[data-reading-kind="haftarah"]')).toBeVisible();
-    await ui(summaries.locator('[aria-current="true"]')).toHaveAttribute("data-reading-kind", "torah");
-    const toggle = tab.getByRole("navigation", { name: "Reading tools", exact: true }).getByRole("button", { name: "English", exact: true });
+    // A student's page names the reading by the switch under the title (Hebrew first): no summaries above the text.
+    await ui(tab.getByRole("group", { name: "Assigned readings", exact: true })).toHaveCount(0);
+    await ui(tab.getByRole("button", { name: "Torah text", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await ui(tab.getByRole("button", { name: "Haftarah text", exact: true })).toHaveAttribute("aria-pressed", "false");
+    const toggle = await readingTool(tab, "English");
     if (await toggle.getAttribute("aria-pressed") === "true") await toggle.click();
     const flow = tab.getByTestId("study-verses"), before = await flow.innerHTML(), beforeCalls = calls, beforeMetadata = metadataLoads.length;
     for (const enabled of [false, true]) {
@@ -158,11 +171,11 @@ it("keeps compact equal reading summaries and verse-bound English without changi
         captures.push({ file, sha256: createHash("sha256").update(bytes).digest("hex"), width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) });
       }
     }
-    await toggle.click(); await ui(toggle).toHaveAttribute("aria-pressed", "false");
+    await toggle.click(); await ui(toggle).toHaveAttribute("aria-pressed", "false"); await closeTextMenu(tab);
     expect(await flow.innerHTML()).toBe(before); expect(calls).toBe(beforeCalls); expect(metadataLoads.length).toBe(beforeMetadata);
     await click(tab, "Haftarah text"); await loaded(tab, "Isaiah 1:1");
-    await ui(summaries.locator('[aria-current="true"]')).toHaveAttribute("data-reading-kind", "haftarah");
-    await ui(summaries.locator('[data-reading-kind="torah"]')).toBeVisible();
+    await ui(tab.getByRole("button", { name: "Haftarah text", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await ui(tab.getByRole("button", { name: "Torah text", exact: true })).toBeVisible();
   }
   if (process.env.READING_COMPANION_CAPTURE === "1") await writeFile(join(captureRoot, "manifest.json"), JSON.stringify({ synthetic: true, captures }, null, 2)+"\n", { flag: "wx" });
 });
@@ -197,7 +210,7 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   expect(await learner.getByTestId("aliyah-unrecorded").count()).toBe(0);
   expect(await learner.getByTestId("student-aliyah").count()).toBe(0);
   for (const prose of ["Confirmed assignment", "Calendar source", "Selected English edition available.", "Unsent work stays only in this tab"]) expect(await learner.getByText(prose).count(), prose).toBe(0);
-  await ui(colorsControl(learner)).toHaveAttribute("aria-pressed", "true");
+  await ui(await readingTool(learner, "Colors")).toHaveAttribute("aria-pressed", "true"); await closeTextMenu(learner);
   await ui(learner.getByRole("button", { name: "Hear verse", exact: true })).toHaveCount(0); await heldReading(learner);
   await firstHebrewInViewport(learner);
   await capture(learner, "study-student-partial-mobile");
@@ -231,7 +244,7 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   expect(await hebrew.textContent() === original && calls === beforeColors).toBe(true);
   expect(await first.getByTestId("study-ketiv").locator("[data-family]").count()).toBe(0);
   await capture(learner, "study-colors-mobile");
-  await safe(() => learner.getByRole("button", { name: "View Genesis 1:1 up close", exact: true }).click());
+  await safe(() => upClose(learner, "Genesis 1:1"));
   const lifted = learner.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(lifted).toBeVisible();
   await ui(lifted.getByRole("list", { name: "Phrase families for Genesis 1:1", exact: true })).toContainText("etnachta");
   await ui(lifted.getByRole("list", { name: "Phrase families for Genesis 1:1", exact: true })).toContainText("Word 1");
@@ -242,10 +255,8 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   await safe(() => learner.getByRole("button", { name: "Close practice view", exact: true }).click()); await ui(learner.getByRole("dialog")).toHaveCount(0);
   expect(calls).toBe(beforeColors);
   await click(learner, "Haftarah text"); await loaded(learner, "Isaiah 1:1"); expect(await learner.getByTestId("study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true }).count()).toBe(0);
-  const summaries = learner.getByRole("group", { name: "Assigned readings", exact: true });
-  await ui(summaries.locator('[aria-current="true"]')).toHaveAttribute("data-reading-kind", "haftarah");
-  await ui(summaries.locator('[aria-current="true"]')).toContainText("Isaiah 1:1\u20132");
-  await ui(summaries.locator('[aria-current="true"]')).toHaveAttribute("data-verse-count", "2");
+  await ui(learner.getByRole("button", { name: "Haftarah text", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await ui(learner.locator('.study-verses [data-verse-ref]')).toHaveCount(2);
   const middle = await colorVerse(learner, "Isaiah 1:1"), final = await colorVerse(learner, "Isaiah 1:2");
   expect(await middle.locator('[data-family="sof-pasuk"]').count()).toBeGreaterThan(0);
   expect(await final.locator('[data-family="sof-haftarah"]').count()).toBeGreaterThan(0);
@@ -262,9 +273,7 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and keeps Start
     await click(tab, "Torah text"); await refreshReading(tab); await loaded(tab, "Genesis 1:1");
     const first = verse(tab, "Genesis 1:1").getByTestId("study-hebrew");
     for (const size of ["Standard", "Huge"] as const) {
-      const toolbar = tab.getByRole("navigation", { name: "Reading tools", exact: true });
-      await safe(() => toolbar.getByRole("button", { name: /^Text size:/ }).click());
-      await safe(() => toolbar.getByRole("group", { name: "Hebrew text size", exact: true }).getByRole("button", { name: new RegExp(`${size}$`) }).click());
+      await textSize(tab, size);
       await safe(() => tab.evaluate(async () => {
         await document.fonts.ready; scrollTo(0, 0);
         await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
@@ -282,7 +291,8 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and keeps Start
       await safe(() => tab.getByTestId("study-verses").focus());
       await ui(tab.getByTestId("study-verses")).toBeFocused(); await heldReading(tab);
       await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0); await ui(tab.getByRole("dialog")).toHaveCount(0);
-      await selectVerse(tab, "Genesis 1:1"); const closeup = tab.getByRole("button", { name: "View Genesis 1:1 up close", exact: true }); await safe(() => closeup.click());
+      // A student opens Up close from the verse's sheet (its number); closing it gives focus back to that number.
+      const closeup = tab.locator('[data-testid="study-verses"] [data-verse-ref="Genesis 1:1"] button[data-verse-number]'); await safe(() => upClose(tab, "Genesis 1:1"));
       const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
       await ui(dialog.getByRole("button", { name: "Close practice view", exact: true })).toBeVisible();
       expect(await dialog.getByTestId("study-hebrew").textContent()).toBe(readingText);
@@ -311,9 +321,7 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and keeps Start
   } finally {
     longVerse = false;
     if (await tab.getByRole("dialog").count()) await safe(() => tab.keyboard.press("Escape"));
-    const toolbar = tab.getByRole("navigation", { name: "Reading tools", exact: true });
-    await safe(() => toolbar.getByRole("button", { name: /^Text size:/ }).click());
-    await safe(() => toolbar.getByRole("group", { name: "Hebrew text size", exact: true }).getByRole("button", { name: /Standard$/ }).click());
+    await textSize(tab, "Standard");
     await refreshReading(tab); await loaded(tab, "Genesis 1:1");
   }
 });
@@ -322,7 +330,7 @@ it("retains optional close-up during a quiet unchanged access check without requ
   const tab = await page("student", true); await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab, "Genesis 1:1");
   await safe(() => tab.getByTestId("study-verses").focus()); await ui(tab.getByTestId("study-verses")).toBeFocused(); await heldReading(tab);
   await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0); await ui(tab.getByRole("dialog")).toHaveCount(0);
-  await click(tab, "View Genesis 1:1 up close"); const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
+  await safe(() => upClose(tab, "Genesis 1:1")); const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route("**/api/session", async route => { const response = await privateRouteFetch(route, tab); if (!response) return; held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
   try {
@@ -369,7 +377,7 @@ it("discards held old-child text after a switch, keeps another tab independent, 
   try { await click(tab, "Switch to Synthetic Sibling"); await loaded(tab, "Genesis 2:1"); } finally { release(); }
   await tab.unroute(pattern); expect(await tab.getByTestId("study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true }).count()).toBe(0);
   expect(await tab.locator("[data-testid='study-verses'] [data-verse-ref]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-verse-ref")).join(","))).toBe("Genesis 2:1,Genesis 2:2");
-  await ui(colorsControl(tab)).toHaveAttribute("aria-pressed", "true"); await ui(tab.locator("[data-testid='study-verses'] [data-family]").first()).toBeVisible(); // The sibling keeps their own default.
+  await ui(await readingTool(tab, "Colors")).toHaveAttribute("aria-pressed", "true"); await closeTextMenu(tab); await ui(tab.locator("[data-testid='study-verses'] [data-family]").first()).toBeVisible(); // The sibling keeps their own default.
   await colorVerse(tab, "Genesis 2:1");
   await capture(tab, "study-child-sibling-mobile");
   const relationships = await api(adminTab, `/api/admin/students/${sibling.id}/relationships`);

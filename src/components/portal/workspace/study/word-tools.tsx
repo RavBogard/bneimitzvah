@@ -9,6 +9,7 @@ import type { StudyVerse } from "./api";
 import { useOfflineWording } from "../../offline/status";
 import { PLAN as OFFLINE } from "../../../../lib/offline/copy";
 import styles from "./word-tools.module.css";
+import { Sheet } from "../../../ui";
 /** `reveal`: a tap on a word with nothing else to do opens the card and brings it into view, so the tap visibly does something. */
 export type WordToolsHandle = Pick<ReturnType<typeof createWordToolsSelection>, "select" | "selectVerse"> & { reveal(): void };
 const idle: WordToolsState = Object.freeze({ open: false, selection: null, aids: Object.freeze({ status: "idle" }), details: Object.freeze({ status: "idle" }) });
@@ -35,8 +36,10 @@ export function WordElsewhereList({ value, onPlace }: { value: WordElsewhere; on
       {value.total > value.places.length && <p className={styles.note}>Showing the first {value.places.length}.</p>}</details>}
   </>;
 }
-export function WordTools({ scopeKey, verses, register, readAids, readDetails, onHear, onPlace, takePlace }: {
+export function WordTools({ scopeKey, verses, register, readAids, readDetails, onHear, onPlace, takePlace, sheet = false }: {
   scopeKey: string; verses: readonly StudyVerse[]; register(value: WordToolsHandle | null): void;
+  /** A learner's phone page: the card opens in the bottom sheet over the text, so a tapped word never moves the page; closing returns focus to the word. */
+  sheet?: boolean;
   readAids(verse: number, signal: AbortSignal): Promise<StudyWordAids>; readDetails(verse: number, index: number, signal: AbortSignal): Promise<StudyWordDetails>;
   onHear?(verse: number, index: number): void;
   /** Go to another place of this word in the reading; the owner decides how. */
@@ -49,11 +52,12 @@ export function WordTools({ scopeKey, verses, register, readAids, readDetails, o
   // Taken once per mounted instance; a StrictMode effect replay reuses this instance's copy.
   const initialPlace = useRef<Readonly<{ ref: string; wordIndex: number }> | null | undefined>(undefined);
   const [reveal, setReveal] = useState(0), section = useRef<HTMLElement | null>(null);
+  const fromDisclosure = useRef(false);
   const heading = useRef<HTMLHeadingElement | null>(null), focusWord = useRef<Readonly<{ ref: string; wordIndex: number }> | null>(null);
   useLayoutEffect(() => {
     let current = true;
     const tools = createWordToolsSelection({ verses, readAids: (verse, signal) => callbacks.current.readAids(verse, signal), readDetails: (verse, index, signal) => callbacks.current.readDetails(verse, index, signal), onState: value => { if (current) setState(value); } });
-    owner.current = tools; setState(tools.state); register({ select: tools.select, selectVerse: tools.selectVerse, reveal: () => { tools.open(); setReveal(count => count + 1); } });
+    owner.current = tools; setState(tools.state); register({ select: tools.select, selectVerse: tools.selectVerse, reveal: () => { fromDisclosure.current = false; tools.open(); setReveal(count => count + 1); } });
     if (initialPlace.current === undefined) initialPlace.current = callbacks.current.takePlace?.() ?? null;
     const place = initialPlace.current, verse = place ? verses.findIndex(row => row.ref === place.ref) : -1;
     const count = verse >= 0 ? projectStudyVerse(verses[verse].ref, verses[verse].hebrew) : null;
@@ -66,16 +70,19 @@ export function WordTools({ scopeKey, verses, register, readAids, readDetails, o
     if (verses[selection.verse]?.ref === target.ref && selection.index === target.wordIndex) heading.current?.focus();
   }, [state.selection, verses]);
   // The card sits after the whole passage: after a tap, scroll the page no further than it takes to show the card.
-  useEffect(() => { if (reveal > 0 && state.open) section.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" }); }, [reveal, state.open]);
+  useEffect(() => { if (!sheet && reveal > 0 && state.open) section.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" }); }, [reveal, state.open, sheet]);
   const go = onPlace ? (ref: string, wordIndex: number) => { focusWord.current = Object.freeze({ ref, wordIndex }); onPlace(ref, wordIndex); } : undefined;
   const selected = state.selection, verse = selected ? verses[selected.verse] : null, projection = verse ? projectStudyVerse(verse.ref, verse.hebrew) : null;
   const words = projection?.status === "ready" ? projection.projection.words : [];
   const previous = selected && (selected.index > 0 || verses.slice(0, selected.verse).some(row => projectStudyVerse(row.ref, row.hebrew).status === "ready"));
   const next = selected && (selected.index + 1 < words.length || verses.slice(selected.verse + 1).some(row => projectStudyVerse(row.ref, row.hebrew).status === "ready"));
+  const card = <WordCard id={`${id}-panel`} state={state} verse={verse} headingRef={heading} onRetry={() => owner.current?.retry()} onPlace={go}
+    actions={selected && <><button type="button" disabled={!previous} onClick={() => owner.current?.navigate(-1)}>Previous word</button><button type="button" disabled={!next} onClick={() => owner.current?.navigate(1)}>Next word</button>{onHear && <button type="button" onClick={() => onHear(selected.verse, selected.index)}>Hear this word</button>}</>} />;
+  // The word the card is about, on the page: where focus goes back when the sheet closes.
+  const wordOnPage = () => !fromDisclosure.current && verse && selected ? document.querySelector<HTMLElement>(`[data-testid="study-verses"] [data-hebrew-ref="${CSS.escape(verse.ref)}"] [data-word-index="${selected.index}"]`) : null;
   return <section ref={section} className={styles.tools} aria-label="Word tools">
-    <button type="button" className={styles.disclosure} aria-expanded={state.open} aria-controls={`${id}-panel`} onClick={() => state.open ? owner.current?.close() : owner.current?.open()}>Word tools</button>
-    {state.open && <WordCard id={`${id}-panel`} state={state} verse={verse} headingRef={heading} onRetry={() => owner.current?.retry()} onPlace={go}
-      actions={selected && <><button type="button" disabled={!previous} onClick={() => owner.current?.navigate(-1)}>Previous word</button><button type="button" disabled={!next} onClick={() => owner.current?.navigate(1)}>Next word</button>{onHear && <button type="button" onClick={() => onHear(selected.verse, selected.index)}>Hear this word</button>}</>} />}
+    <button type="button" className={styles.disclosure} aria-expanded={state.open} aria-controls={sheet ? undefined : `${id}-panel`} aria-haspopup={sheet ? "dialog" : undefined} onClick={() => { fromDisclosure.current = true; if (state.open) owner.current?.close(); else owner.current?.open(); }}>Word tools</button>
+    {sheet ? <Sheet open={state.open} onClose={() => owner.current?.close()} title="Word tools" closeLabel="Close" returnFocusTo={wordOnPage}>{card}</Sheet> : state.open && card}
   </section>;
 }
 
