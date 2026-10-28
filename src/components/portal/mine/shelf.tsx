@@ -84,6 +84,7 @@ export function Shelf() {
   const { summary } = useWorkspace(), { state: own, retry } = useOwnReadings(), learn = useLearnRow();
   const slices = useStudentToday(summary.roles.includes("student")), found = pinnedOf(slices);
   const pinned: PinnedState | null = found && { name: found.name, ceremony: found.ceremony, done: found.done, total: found.total, href: PINNED_HREF };
+  const student = summary.roles.includes("student");
   const view = shelfModel({ summary, own, pinned, learn });
   const part = (section: ShelfSection) => section === "students" ? <YourStudents key={section} /> : section === "find" ? <FindALearner key={section} roles={summary.roles} />
     : section === "pinned" ? <PinnedSection key={section} slices={slices} />
@@ -91,12 +92,13 @@ export function Shelf() {
     : section === "own" ? <OwnReadings key={section} state={own} onRetry={retry} />
       : section === "learn" ? <LearnSection key={section} learn={learn} /> : <AccountSection key={section} />;
   return <section className="role-workspace" data-testid="shelf" aria-busy={own.status === "loading"}>
-    <PageHeader title={SHELF_STRINGS.title} actions={<ButtonLink href="/readings?add=1">{SHELF_STRINGS.add}</ButtonLink>} />
+    <PageHeader title={SHELF_STRINGS.title} actions={student ? undefined : <ButtonLink href="/readings?add=1">{SHELF_STRINGS.add}</ButtonLink>} />
     {/* A tutor an admin chose to approve accounts sees waiting requests here (they were above the tutor's list, which is Your students now), as admins do on This week. */}
     {summary.approver && summary.roles.includes("tutor") && !summary.roles.includes("admin") && <AccountRequestsLine mode="tutor" />}
     {view.empty && <EmptyShelf line={view.empty.line} linkable={summary.roles.length === 0} />}
     {view.sections.map(part)}
     <MyTutorLine />
+    {student && <p className={styles.addQuiet}><a href="/readings?add=1">{SHELF_STRINGS.add}</a></p>}
     <ShelfFoot />
   </section>;
 }

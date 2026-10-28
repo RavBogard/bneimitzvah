@@ -19,14 +19,14 @@ test.describe("at 390x844", () => {
     await expect(page.getByRole("navigation", { name: "Workspace", exact: true })).toHaveCount(0); // a student has no tab bar (Area A)
   });
 
-  test("before the first rehearsal it names the next one; after both it names none", async ({ page }) => {
+  test("before the first rehearsal it names the next one; after both it names the Beit Mitzvah", async ({ page }) => {
     await mock(page, { today: "2026-10-10" });
     await page.goto("/mine");
-    await expect(card(page).getByText("Next rehearsal: Sat, Oct 17", { exact: true })).toBeVisible();
+    await expect(card(page).getByText("Next: Rehearsal Sat, Oct 17", { exact: true })).toBeVisible();
     await mock(page, { today: "2026-11-20" });
     await page.goto("/mine");
     await expect(card(page).getByText("Sat, Dec 12, 2026")).toBeVisible();
-    await expect(card(page).getByTestId("rehearsal-line")).toHaveCount(0);
+    await expect(card(page).getByTestId("rehearsal-line")).toHaveText("Next: Beit Mitzvah Sat, Dec 12");
   });
 
   test("it says what the student has, as a position: Verses you've got and 9 of the reading", async ({ page }) => {
@@ -51,6 +51,11 @@ test.describe("at 390x844", () => {
     await mock(page, { practised: ["2026-10-14"], got: [0, 1, 2] });
     await page.goto("/mine");
     await expect(card(page).getByRole("link", { name: "Open", exact: true })).toBeVisible();
+    // Open sits in the first viewport, whole, and is the card's full-width primary action.
+    const box = await card(page).getByRole("link", { name: "Open", exact: true }).boundingBox();
+    expect(box && box.y + box.height <= 700 && box.y >= 0).toBe(true);
+    const cardBox = await card(page).boundingBox();
+    expect(box && cardBox && box.width > cardBox.width - 60).toBe(true);
     const clipped = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>("button, a.button, [data-pinned-card] a")].filter(node => node.scrollWidth > node.clientWidth).map(node => node.textContent));
     expect(clipped).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
