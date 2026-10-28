@@ -43,12 +43,18 @@ export function verseRanges(refs: readonly string[]): string {
 }
 const chapterVerse = (ref: string) => { const parsed = parse(ref); return parsed ? cv(parsed) : ref; };
 
-/** TP-02: "Tue Oct 20 · Torah 23:1–23:9 · marked 23:4 Got it", each reading of the day in turn. */
+const inOrder = (refs: readonly string[]) => [...refs].sort((a, b) => { const x = parse(a), y = parse(b); return !x || !y ? 0 : x.chapter - y.chapter || x.verse - y.verse; });
+/**
+ * TP-02: "Tue Oct 20 · Torah 23:1–23:9 · marked 23:4 Got it", each reading of the day in turn. A day of many marks reads as ranges per
+ * state ("marked 1:1–1:6 Got it, 1:7–1:8 Still working"), not one verse at a time (tutor walk 2026-10-28, finding 13).
+ */
 export function dayLine(day: PracticeDay): string {
   const parts = [dayLabel(day.day)];
   for (const reading of day.readings) {
     parts.push(`${KIND[reading.kind]} ${verseRanges(reading.opened)}`.trim());
-    if (reading.marked.length) parts.push(`marked ${reading.marked.map(mark => `${chapterVerse(mark.verseRef)} ${MARK[mark.state]}`).join(", ")}`);
+    const marks = (["got-it", "working"] as const).map(state => [state, inOrder(reading.marked.filter(mark => mark.state === state).map(mark => mark.verseRef))] as const).filter(([, refs]) => refs.length)
+      .map(([state, refs]) => `${verseRanges(refs) || refs.map(chapterVerse).join(", ")} ${MARK[state]}`);
+    if (marks.length) parts.push(`marked ${marks.join(", ")}`);
   }
   return parts.join(" · ");
 }

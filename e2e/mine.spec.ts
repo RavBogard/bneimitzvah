@@ -86,7 +86,9 @@ test("a tutor's shelf: Your students, then Find a learner by name, Add to my stu
   await learnerRowLocator.getByRole("button", { name: "Add to my students: Synthetic Learner", exact: true }).click();
   await expect(find.getByRole("status").filter({ hasText: "Synthetic Learner was added to your students." })).toBeVisible();
   expect(posted).toEqual(["/api/learners/claim"]);
-  await expect(learnerRowLocator.getByRole("button", { name: "Add to my students: Synthetic Learner", exact: true })).toBeDisabled();
+  // The claiming tutor's own undo replaces the Add button (tutor walk 2026-10-28, finding 6).
+  await expect(learnerRowLocator.getByRole("button", { name: "Remove from my students: Synthetic Learner", exact: true })).toBeVisible();
+  await expect(learnerRowLocator.getByRole("button", { name: "Add to my students: Synthetic Learner", exact: true })).toHaveCount(0);
   await learnerRowLocator.getByRole("link", { name: "Synthetic Learner", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/mine/learner/${LEARNER}$`));
   const shelf = page.getByTestId("learner-shelf");

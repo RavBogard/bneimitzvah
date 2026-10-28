@@ -84,9 +84,11 @@ export function Shelf() {
   const { summary } = useWorkspace(), { state: own, retry } = useOwnReadings(), learn = useLearnRow();
   const slices = useStudentToday(summary.roles.includes("student")), found = pinnedOf(slices);
   const pinned: PinnedState | null = found && { name: found.name, ceremony: found.ceremony, done: found.done, total: found.total, href: PINNED_HREF };
-  const student = summary.roles.includes("student");
+  const student = summary.roles.includes("student"), tutor = summary.roles.includes("tutor");
+  // A claim or removal in Find a learner refreshes Your students (tutor walk 2026-10-28, finding 6).
+  const [studentsRound, setStudentsRound] = useState(0);
   const view = shelfModel({ summary, own, pinned, learn });
-  const part = (section: ShelfSection) => section === "students" ? <YourStudents key={section} /> : section === "find" ? <FindALearner key={section} roles={summary.roles} />
+  const part = (section: ShelfSection) => section === "students" ? <YourStudents key={section} round={studentsRound} /> : section === "find" ? <FindALearner key={section} roles={summary.roles} onChange={() => setStudentsRound(value => value + 1)} />
     : section === "pinned" ? <PinnedSection key={section} slices={slices} />
     : section === "children" ? <ChildrenSection key={section} />
     : section === "own" ? <OwnReadings key={section} state={own} onRetry={retry} />
@@ -95,8 +97,10 @@ export function Shelf() {
     <PageHeader title={SHELF_STRINGS.title} actions={student ? undefined : <ButtonLink href="/readings?add=1">{SHELF_STRINGS.add}</ButtonLink>} />
     {/* A tutor an admin chose to approve accounts sees waiting requests here (they were above the tutor's list, which is Your students now), as admins do on This week. */}
     {summary.approver && summary.roles.includes("tutor") && !summary.roles.includes("admin") && <AccountRequestsLine mode="tutor" />}
-    {view.empty && <EmptyShelf line={view.empty.line} linkable={summary.roles.length === 0} />}
+    {/* A tutor arrives to see students (finding 3): the first-reading prompt follows their sections instead of leading the page. */}
+    {view.empty && !tutor && <EmptyShelf line={view.empty.line} linkable={summary.roles.length === 0} />}
     {view.sections.map(part)}
+    {view.empty && tutor && <EmptyShelf line={view.empty.line} linkable={false} />}
     <MyTutorLine />
     {student && <p className={styles.addQuiet}><a href="/readings?add=1">{SHELF_STRINGS.add}</a></p>}
     <ShelfFoot />

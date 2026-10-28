@@ -103,7 +103,8 @@ it("keeps selected-parent saved notes and server-day dates read-only, quiet, and
   const tab = await page("tutor"), noteId = randomUUID(); let seededDay: string | undefined;
   const requests = { lessons: 0, dates: 0, writes: 0, raw: 0 };
   tab.on("request", request => { const path = new URL(request.url()).pathname;
-    if (path.endsWith("/lesson-log")) requests.lessons++;
+    // The account is also a tutor: Your students reads its own students' newest notes in tutor mode, a separate read this parent count leaves out.
+    if (path.endsWith("/lesson-log") && new URL(request.url()).searchParams.get("mode") !== "tutor") requests.lessons++;
     if (path.endsWith("/practice-calendar")) requests.dates++;
     if (/\/(lesson-log|progress|practice-events)(?:\/|$)/.test(path) && request.method() !== "GET") requests.writes++;
     if (path.endsWith("/practice-events")) requests.raw++;

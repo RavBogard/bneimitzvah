@@ -13,7 +13,6 @@
 .account a { display: inline-flex; align-items: center; min-height: 44px; }
 /* Readings for everyone (plan D7): Your students, Find a learner and the Tutor line. */
 .sectionTitle { font-size: 1.125rem; margin: 0 0 0.5rem; }
-.findLabel { display: block; margin: 0.5rem 0 0.25rem; font-size: 0.875rem; color: var(--color-muted); }
 .findInput { width: 100%; min-height: 44px; padding: 0.5rem 0.75rem; border-radius: var(--radius-object); border: 1px solid var(--color-rule); background: var(--color-surface); color: inherit; font: inherit; }
 .findStatus { margin: 0.5rem 0 0; color: var(--color-muted); font-size: 0.875rem; }
 .learnerList { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; gap: 0.5rem; }
@@ -23,6 +22,7 @@
 .learnerName:is(a) { display: inline-flex; align-items: center; min-height: 44px; }
 .learnerMeta { color: var(--color-muted); font-size: 0.875rem; }
 .learnerRow button { min-height: 44px; }
+.learnerState { display: inline-flex; align-items: center; min-height: 44px; color: var(--color-muted); font-size: 0.875rem; font-weight: 600; }
 .tutorLine { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; margin: 1.5rem 0 0; color: var(--color-muted); font-size: 0.875rem; }
 .tutorUndo { min-height: 44px; padding: 0 0.5rem; border: 0; background: none; color: var(--color-accent, inherit); text-decoration: underline; font: inherit; cursor: pointer; }
 /* Readings for everyone (E3): a parent's card for each child. Names and dates are one unit each; text wraps between them, never inside. */
@@ -50,3 +50,7 @@
 /* The section after the children (Also working on) keeps the shelf's one gap (finding 13). */
 .section + :global([data-my-readings]) { margin-top: 1.5rem; }
 @media (max-width: 640px) { .chips > * { flex: 1 1 auto; } }
+/* Tutor at a glance (tutor walk 2026-10-28): a Your students row's lines (the next date, the practice line, the latest note) each on its own line. */
+.metaLine { display: block; }
+.metaLine:empty { display: none; }
+.metaLine > [data-tone] { margin-inline-end: 0.25rem; vertical-align: baseline; }
