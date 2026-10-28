@@ -2,7 +2,7 @@ import { afterAll, beforeAll, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
+import { migratedPglite } from "../helpers/migrated-pglite";
 import { eq } from "drizzle-orm";
 import * as schema from "../../src/server/db/index";
 import { createPersistentStudyCache } from "../../src/server/data/study-cache";
@@ -84,8 +84,7 @@ test.each([
 let client: PGlite;
 let db: ReturnType<typeof drizzle<typeof schema>>;
 beforeAll(async () => {
-  client = new PGlite(); db = drizzle(client, { schema });
-  await migrate(db, { migrationsFolder: "src/server/db/migrations" });
+  client = await migratedPglite(); db = drizzle(client, { schema });
 });
 afterAll(async () => { await client?.close(); });
 
