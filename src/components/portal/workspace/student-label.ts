@@ -1,5 +1,12 @@
 import type { Student } from "./api";
 
+// A route id is only honoured when it is in this account's authorized list; an unknown one never falls back to another student.
+export function selectAuthorizedStudent(rows: readonly { id: string }[], previous: string | null, routeId: string | null | undefined, mode: string): string | null {
+  if (previous && rows.some(row => row.id === previous)) return previous;
+  if (routeId) return rows.some(row => row.id === routeId) ? routeId : null;
+  return (mode === "student" || mode === "parent") && rows.length === 1 ? rows[0].id : null;
+}
+
 export function reconcileSelectedStudent(rows: Student[], selectedId: string | null, current: Student): Student[] {
   if (current.id !== selectedId) return rows;
   const existing = rows.find(row => row.id === selectedId);

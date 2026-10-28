@@ -148,7 +148,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const sameBinding = binding.current === next.sessionBinding;
       if (binding.current && !sameBinding) {
         clearWork();
-        practice.invalidate(); setContext(null);
+        practice.invalidate(); setContext(null); setNotice("");
         if (!practice.pending) try { await practice.exit(); } catch { /* Exact stale-session cleanup only; never restore the old subtree. */ }
       }
       const active = practice.selection;

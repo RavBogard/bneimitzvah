@@ -7,7 +7,7 @@ import { ChildPracticeDisclosure } from "../practice-visibility/disclosure";
 import { TutorCardLine } from "./staff/practice";
 import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "./provider";
 import { ceremonyCountdown, ReadingPanel } from "./reading";
-import { reconcileSelectedStudent, sortStudentsByCeremony } from "./student-label";
+import { reconcileSelectedStudent, selectAuthorizedStudent, sortStudentsByCeremony } from "./student-label";
 import { HonorsCardLine, HonorsEntry, HonorsNote } from "./honors/sheet";
 import { DocumentTitle } from "./document-title";
 
@@ -70,8 +70,7 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
         const known = previous.find(row => row.id === selectedRef.current);
         return known ? reconcileSelectedStudent(values, selectedRef.current, known) : values;
       }); setMore(page.length === 100);
-      // A route id is only honoured when it is in this account's authorized list.
-      setSelected(previous => previous && values.some(row => row.id === previous) ? previous : routeStudentId && values.some(row => row.id === routeStudentId) ? routeStudentId : (mode === "student" || mode === "parent") && values.length === 1 ? values[0].id : null);
+      setSelected(previous => selectAuthorizedStudent(values, previous, routeStudentId, mode));
     } catch (error) { if (!request.signal.aborted && turn === sequence.current) { setError(true); throw error; } }
     finally { if (!request.signal.aborted && turn === sequence.current) setLoading(false); }
   }, [mode, routeStudentId]);

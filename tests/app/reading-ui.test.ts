@@ -1,11 +1,11 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AssignedReadingSummaries } from "../../src/components/portal/workspace/reading";
 import { parseReadingProposal, customReadingRanges, readingBaseline } from "../../src/components/portal/workspace/reading-proposal";
 import { workspaceApi, type Assigned } from "../../src/components/portal/workspace/api";
 import { PortalRequestError } from "../../src/components/portal/api";
-import { reconcileSelectedStudent } from "../../src/components/portal/workspace/student-label";
+import { reconcileSelectedStudent, selectAuthorizedStudent } from "../../src/components/portal/workspace/student-label";
 
 it("keeps both assigned reading summaries equally present and changes only the current indication", () => {
   const value = { id: "synthetic", basis: "custom" as const, revision: 1, needsReview: false, aliyahStarts: null, confirmationDate: null, source: { status: "unknown" as const, fetchedAt: null, date: null, calendar: null, attribution: null } };
@@ -157,4 +157,14 @@ it("keeps the page's tabs, the Start reading and Refresh reading buttons and the
   const source = readFileSync("src/components/portal/workspace/reading.tsx", "utf8");
   for (const gone of ['aria-label="Student page"', 'role="tablist"', ">Start reading<", 'className="hero-icon"', "Set divisions."]) expect(source).not.toContain(gone);
   expect(source).toContain("SECTION_IDS.service"); expect(source).toContain("SECTION_IDS.lessons");
+});
+
+describe("selectAuthorizedStudent", () => {
+  it("never shows a parent their only child at another child's address", () => {
+    const only = [{ id: "child-a" }];
+    expect(selectAuthorizedStudent(only, null, "child-b", "parent")).toBeNull();
+    expect(selectAuthorizedStudent(only, null, "child-a", "parent")).toBe("child-a");
+    expect(selectAuthorizedStudent(only, null, null, "parent")).toBe("child-a");
+    expect(selectAuthorizedStudent(only, null, null, "tutor")).toBeNull();
+  });
 });
