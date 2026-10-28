@@ -19,8 +19,10 @@ export function entryTask(tab: Page, state: EntryState, step?: "address" | "code
   return tab.locator(`[data-testid="entry-task"][data-entry-state="${state}"]${step ? `[data-entry-step="${step}"]` : ""}`);
 }
 
-/** Roles are reached from My Readings (Area A interim rows): open it from the header, then choose the role by its route. */
+/** Roles are reached from My Readings: open it from the header, then choose the role by its route. A tutor's shelf shows Your students (Area D) in place of
+ * a link to the tutor home, which stays reachable by its address until Area E retires it. */
 export async function switchRole(tab: Page, role: "Parent" | "Tutor" | "Student") {
   await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click();
+  if (role === "Tutor") { await tab.getByTestId("mine-students").waitFor(); await tab.goto("/workspace/tutor", { waitUntil: "domcontentloaded" }); return; }
   await tab.locator(`a[href="/workspace/${role.toLowerCase()}"]`).click();
 }
