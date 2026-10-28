@@ -3,6 +3,7 @@ import { commentaryCandidates, commentaryEditionUrl, parseCommentaryChapter } fr
 import { PHRASE_FAMILIES } from "../src/lib/trope/chart-catalog";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
 import { openMore } from "./more-sheet";
+import { verseNotes } from "./study-sheet";
 
 // 1.8.2 P1: Hebrew text, contrast and dark mode, measured in the browser on the built, unconfigured production server.
 // Every reading, commentary and print answer is a synthetic route fulfilment: invented syllables and numbered English only,
@@ -317,7 +318,8 @@ for (const dark of [false, true]) {
 // ---- D15, D18: Study's commentary ----
 test("D15 and D18: Study's credit links and quoted-word buttons are at least 24px, and Hebrew inside Rashi's English is Hebrew in the Hebrew face", async ({ page }) => {
   await open(page, gen18, { width: 360, height: 800, size: "standard", path: "/read?lens=study" });
-  const first = page.locator("[data-study-rows] article").first();
+  // The commentary is with the verse's notes: at 360px, its Notes sheet (Study as a study sheet, 2026-10-28).
+  const first = await verseNotes(page, "Genesis 18:1");
   await expect(first.getByText("SYNTHETIC LEMMA THREE", { exact: false })).toBeVisible();
   const boxes = await page.locator('main a[href*="sefaria.org"], [data-commentary-ref] button[aria-pressed]').evaluateAll(nodes => nodes.map(node => { const rect = node.getBoundingClientRect(); return { width: rect.width, height: rect.height, name: node.textContent?.trim().slice(0, 30) }; }));
   expect(boxes.length).toBeGreaterThanOrEqual(4);

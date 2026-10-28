@@ -44,10 +44,10 @@ export function ExplorationContent({ state, group, retry, page, refresh, audio }
       : !current || !prepared ? <p role="status">Loading the Torah portion…</p> : <>
         {study ? <>
           <CommentaryStatus works={works.map(row => ({ work: row.work, status: row.status, retry: row.retry, covers: true }))} />
-          <StudyRows verses={current.verses} assignment={{ kind: "torah", confirmed: false, verses: [] }} group={group} toolsAvailable={false} activeWord={audio?.activeWord ?? null} onWord={audio?.onWord} onVerse={audio?.onVerse}
+          <StudyRows verses={current.verses} assignment={{ kind: "torah", confirmed: false, verses: [] }} group={group} toolsAvailable={false}
             showEnglish={lens.english} works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))} />
         </> : <FlowingStudyText verses={current.verses} assignment={{ kind: "torah", confirmed: false, verses: [] }} group={group} toolsAvailable={false} activeWord={audio?.activeWord ?? null} onWord={audio?.onWord} onVerse={audio?.onVerse} showEnglish={prefs.translation} tikkun={prefs.tikkunView} linked={linkedVerse(leinLink, current.verses)} />}
-        {audio?.player}
+        {!study && audio?.player}
         <div className="study-verse-details">{current.verses.map(verse => <div key={verse.ref} className="study-verse-detail" data-testid="study-verse-detail" data-verse-ref={verse.ref}>
           <Apparatus verse={verse} learner />
           {!study && <VerseRashi verse={verse} state={rashi.lookup.forVerse(verse.ref)} link={leinLink} retry={rashi.retry} />}

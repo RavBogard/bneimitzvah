@@ -204,13 +204,14 @@ test("Study's DOM is a section, not a hundred verses, and the lens switches in u
     await expect(page.getByRole("button", { name: to, exact: true })).toHaveAttribute("aria-pressed", "true");
     longest.push(Math.round(result.longest));
   }
-  const colors = await longestEvent(page, 4, async () => { await page.getByRole("button", { name: "Colors", exact: true }).click(); });
-  console.log("LENS SWITCH longest event (ms) at 4x CPU", JSON.stringify(longest), "colors", Math.round(colors.longest));
-  info.annotations.push({ type: "lens-switch-ms", description: JSON.stringify({ longest, colors: Math.round(colors.longest) }) });
   expect(Math.max(...longest)).toBeLessThan(500);
   // The passage is not mounted again by a lens change: the same verse element stays in the document across the switch back to Lein.
   await page.getByRole("button", { name: "Lein", exact: true }).click();
   await expect(page.locator(".study-verses [data-verse-ref]").first()).toBeVisible();
+  // Colors is Lein's (Study is a study sheet and colours nothing, 2026-10-28): measured there.
+  const colors = await longestEvent(page, 4, async () => { await page.getByRole("button", { name: "Colors", exact: true }).click(); });
+  console.log("LENS SWITCH longest event (ms) at 4x CPU", JSON.stringify(longest), "colors", Math.round(colors.longest));
+  info.annotations.push({ type: "lens-switch-ms", description: JSON.stringify({ longest, colors: Math.round(colors.longest) }) });
   const player = await page.evaluate(() => { const section = document.querySelector(".assigned-study"); (window as unknown as { __same: Element | null }).__same = section; return Boolean(section); });
   expect(player).toBe(true);
   await page.getByRole("button", { name: "Study", exact: true }).click();

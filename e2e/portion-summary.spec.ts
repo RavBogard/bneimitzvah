@@ -130,15 +130,15 @@ test("the sources are one tap away below laptop width, over no verse, and open a
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test("on a laptop the Sources column stands to the right of the verses and the Hebrew keeps its size", async ({ page }) => {
+test("on a laptop the sources stand in the rail to the right of the verses and the Hebrew keeps its size", async ({ page }) => {
   test.skip(!wide(page), "a laptop-width project");
   await mock(page);
   await page.goto(week);
   await expect(firstVerse(page)).toBeVisible();
-  const column = page.locator("[data-sources-column]");
-  await expect(column).toBeVisible();
+  // Study as a study sheet (2026-10-28): the sources stand in the rail beside the verses while no verse is chosen, and the Sources tool stays in Study's tool row.
+  const column = page.locator("[data-study-rail]");
+  await expect(column.locator("[data-sources-rail]")).toBeVisible();
   await expect(column.getByRole("heading", { name: "Sources", exact: true })).toBeVisible();
-  await expect(page.locator("[data-sources-open]")).toBeHidden();
   const size = () => page.locator("[data-study-rows] [data-word-index]").first().evaluate(node => parseFloat(getComputedStyle(node).fontSize));
   const withColumn = await size();
   // Beside, not over: the column starts to the right of every verse's right edge, and the verses are still wide enough to read.
@@ -153,14 +153,14 @@ test("on a laptop the Sources column stands to the right of the verses and the H
   await mock(page, { discussions: false });
   await page.goto(week);
   await expect(firstVerse(page)).toBeVisible();
-  await expect(page.locator("[data-sources-column]")).toHaveCount(0);
+  await expect(page.locator("[data-sources-rail]")).toHaveCount(0);
   expect(await size()).toBe(withColumn);
   expect(withColumn).toBe(32);
   // A source in the column opens in the Sheet at its verse.
   await page.unrouteAll({ behavior: "ignoreErrors" });
   await mock(page);
   await page.goto(week);
-  await page.locator("[data-sources-column]").getByRole("button", { name: "Synthetic Midrash 2:2" }).click();
+  await page.locator("[data-sources-rail]").getByRole("button", { name: "Synthetic Midrash 2:2" }).click();
   await expect(page.getByRole("dialog", { name: "Sources on this verse · Genesis 19:22" })).toBeVisible();
 });
 
@@ -199,8 +199,8 @@ test.describe("a student's own Study", () => {
     await block(page).locator('button[data-outline-aliyah="4"]').click();
     await expect(tab(page, "Aliyah 4")).toHaveAttribute("aria-selected", "true");
     await expect(page.locator('[data-study-rows] [data-verse-ref="Genesis 19:21"]').first()).toBeVisible();
-    // The sources column stands beside the verses here too.
-    await expect(page.locator("[data-sources-column]")).toBeVisible();
+    // The sources stand in the rail beside the verses here too, while no verse is chosen (Study as a study sheet, 2026-10-28).
+    await expect(page.locator("[data-study-rail] [data-sources-rail]")).toBeVisible();
   });
   test("a draft shows nothing; and where the tutor recorded no divisions the outline is plain lines", async ({ page }) => {
     await workspace(page, { summary: "draft" });

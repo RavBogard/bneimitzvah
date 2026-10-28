@@ -1,5 +1,5 @@
 "use client";
-import { startTransition, useOptimistic } from "react";
+import { startTransition, useOptimistic, type ReactNode } from "react";
 import { icons } from "./study/lift";
 import { LENSES, useStudyLens, type Lens } from "./study-lens";
 
@@ -15,4 +15,9 @@ export function LensSwitch({ onChange }: { onChange?(lens: Lens): void }) {
     {LENSES.map(row => <button key={row.id} type="button" className="button-secondary" aria-pressed={shown === row.id} data-lens={row.id}
       onClick={() => { if (shown !== row.id) { startTransition(() => { setShown(row.id); lens.setLens(row.id); }); onChange?.(row.id); } }}>{row.id === "study" ? icons.works : icons.note}<span>{row.label}</span></button>)}
   </div>;
+}
+
+/** Drawn only in one lens: Study (2026-10-28) moves some things into its own place (the guide's overview) and plays nothing. Outside a lens scope it is Lein. */
+export function LensOnly({ lens, children }: { lens: Lens; children: ReactNode }) {
+  return useStudyLens().lens === lens ? children : null;
 }

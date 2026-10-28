@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
 import { sourceSefariaUrl } from "../src/lib/readings/shelf";
 import { creditLine, licenseLabel } from "../src/lib/readings/edition-credit";
+import { closeNotes, studyRail, verseNotes } from "./study-sheet";
 
 // Curated discussions in the reader on the built, unconfigured production server. Every answer is a synthetic route
 // fulfilment: invented titles, citations and editions, numbered English only; the curator's name is invented too.
@@ -37,7 +38,8 @@ async function mock(page: Page, options: { none?: boolean; withText?: boolean } 
   });
 }
 const row = (page: Page, ref: string) => page.locator(`[data-study-rows] article[data-verse-ref="${ref}"]`);
-const marker = (page: Page, ref: string) => row(page, ref).getByRole("button", { name: "Sources on this verse", exact: true });
+/** A verse's "Sources on this verse": with its notes (the rail beside the verses, or its Notes sheet on a phone; Study as a study sheet, 2026-10-28). */
+const marker = async (page: Page, ref: string) => (await verseNotes(page, ref)).getByRole("button", { name: "Sources on this verse", exact: true });
 const panel = (page: Page) => page.locator("[data-verse-panel]");
 const list = (page: Page) => page.locator("[data-discussion-list]");
 const reduced = async (page: Page) => page.emulateMedia({ reducedMotion: "reduce" });
@@ -45,10 +47,13 @@ const reduced = async (page: Page) => page.emulateMedia({ reducedMotion: "reduce
 test("the marker is on the anchor verses only; opening it shows the sources with their credits, 'Selected by' apart, and Esc returns focus", async ({ page }) => {
   await mock(page);
   await page.goto("/read?lens=study");
-  await expect(marker(page, "Genesis 1:2")).toBeVisible();
-  await expect(marker(page, "Genesis 1:3")).toBeVisible();
-  await expect(marker(page, "Genesis 1:1")).toHaveCount(0);
-  const button = marker(page, "Genesis 1:2");
+  await expect(await marker(page, "Genesis 1:2")).toBeVisible();
+  await expect(await marker(page, "Genesis 1:3")).toBeVisible();
+  await expect(await marker(page, "Genesis 1:1")).toHaveCount(0);
+  // An anchor verse carries the row's quiet marker; a verse without sources does not.
+  await expect(row(page, "Genesis 1:2")).toHaveAttribute("data-has-notes", "true");
+  await expect(row(page, "Genesis 1:1")).not.toHaveAttribute("data-has-notes", "true");
+  const button = await marker(page, "Genesis 1:2");
   await button.scrollIntoViewIfNeeded();
   expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   const scrolled = await page.evaluate(() => scrollY);
@@ -69,12 +74,11 @@ test("the marker is on the anchor verses only; opening it shows the sources with
   await expect(button).toBeFocused();
 });
 
-const sourcesColumn = (page: Page) => page.locator("[data-sources-column]");
 const sourcesButton = (page: Page) => page.locator("[data-sources-open] button");
-/** The sources list where this width has it (1.9 N7): the laptop's column, or below 1180px the Sources sheet that the Sources button opens. */
+/** The sources list from Study's Sources tool, at every width (Study as a study sheet, 2026-10-28); a wide screen also lists them in the rail while no verse is chosen. */
 async function openSources(page: Page) {
-  await expect(page.locator("[data-sources-column]:visible, [data-sources-open] button:visible")).toHaveCount(1);
-  if (await sourcesColumn(page).isVisible()) return sourcesColumn(page).locator("[data-discussion-list]");
+  await closeNotes(page);
+  await expect(page.locator("[data-sources-open] button:visible")).toHaveCount(1);
   await sourcesButton(page).click();
   return page.getByRole("dialog", { name: "Sources", exact: true }).locator("[data-discussion-list]");
 }
@@ -83,8 +87,9 @@ test("the list is headed 'Sources'; a source opens at its verse with a Claude tr
   await reduced(page);
   await mock(page);
   await page.goto("/read?lens=study");
+  if (await studyRail(page).isVisible()) await expect(studyRail(page).locator("[data-sources-rail] [data-discussion-list]")).toBeVisible();
   const sources = await openSources(page);
-  await expect(page.getByRole("heading", { name: "Sources", exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Sources", exact: true }).getByRole("heading", { name: "Sources", exact: true })).toBeVisible();
   await expect(page.getByText("Sources for this reading")).toHaveCount(0);
   await expect(sources.getByText("A synthetic question")).toBeVisible();
   const second = sources.getByRole("button", { name: "Synthetic Midrash 2:2" });
@@ -97,24 +102,24 @@ test("the list is headed 'Sources'; a source opens at its verse with a Claude tr
   await page.getByRole("dialog").getByRole("button", { name: "Back to this verse" }).click();
   await expect(panel(page)).toHaveCount(0);
   await expect(row(page, "Genesis 1:3")).toBeFocused();
-  // Esc from a source hands focus back to what opened it: its entry in the column, or the Sources button that opened the sheet.
+  // Esc from a source hands focus back to what opened it: the Sources button that opened the sheet.
   const entry = (await openSources(page)).getByRole("button", { name: "Synthetic Midrash 2:2" });
   await entry.click();
   await expect(panel(page)).toHaveAttribute("data-verse-panel", "Genesis 1:3");
   await page.keyboard.press("Escape");
-  await expect(await sourcesColumn(page).isVisible() ? entry : sourcesButton(page)).toBeFocused();
+  await expect(sourcesButton(page)).toBeFocused();
 });
 
 test("a source Sefaria could not give shows its credit and its link and no text, never an error page", async ({ page }) => {
   await mock(page, { withText: false });
   await page.goto("/read?lens=study");
-  await marker(page, "Genesis 1:3").click();
+  await (await marker(page, "Genesis 1:3")).click();
   await expect(panel(page).getByText(`Claude translation for ${PRODUCT}`)).toBeVisible();
   await expect(panel(page).getByRole("link", { name: /on Sefaria$/ })).toBeVisible();
   await expect(panel(page).getByText("Synthetic translated")).toHaveCount(0);
   await expect(panel(page).getByText(/isn’t available|something went wrong|error/i)).toHaveCount(0);
   await page.keyboard.press("Escape");
-  await marker(page, "Genesis 1:2").click();
+  await (await marker(page, "Genesis 1:2")).click();
   await expect(panel(page).getByText(EN, { exact: true })).toBeVisible();
   await expect(panel(page).getByText("Synthetic first source.")).toHaveCount(0);
 });
@@ -123,17 +128,17 @@ test("a reading with no discussions shows no heading and no marker, in Study and
   await mock(page, { none: true });
   await page.goto("/read?lens=study");
   await expect(row(page, "Genesis 1:2")).toBeVisible();
-  await expect(page.locator("[data-sources-column], [data-sources-open]")).toHaveCount(0);
+  await expect(page.locator("[data-sources-column], [data-sources-open], [data-sources-rail]")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Sources on this verse" })).toHaveCount(0);
   await page.goto("/read");
-  await expect(page.locator("[data-sources-column], [data-sources-open]")).toHaveCount(0);
+  await expect(page.locator("[data-sources-column], [data-sources-open], [data-sources-rail]")).toHaveCount(0);
 });
 
 test("Lein is for chanting: no list and no marker even where discussions exist", async ({ page }) => {
   await mock(page);
   await page.goto("/read");
   await expect(page.locator("[data-verse-ref]").first()).toBeVisible();
-  await expect(page.locator("[data-sources-column], [data-sources-open]")).toHaveCount(0);
+  await expect(page.locator("[data-sources-column], [data-sources-open], [data-sources-rail]")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Sources on this verse" })).toHaveCount(0);
 });
 

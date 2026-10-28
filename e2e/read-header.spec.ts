@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { commentaryCandidates, commentaryEditionUrl, parseCommentaryChapter } from "../src/lib/readings/commentary";
 import { mockVayera, VAYERA_DATE } from "./aliyot-fixture";
 import { closeMore, moreButton, moreSheet, openMore } from "./more-sheet";
+import { closeNotes, verseNotes } from "./study-sheet";
 
 // 1.9 N5 on the built, unconfigured production server: the public /read header and its Change sheet (B6).
 // Synthetic data only (aliyot-fixture.ts): invented syllables and numbered English. The browser clock is pinned so 2026-10-31 is another week.
@@ -24,8 +25,9 @@ test("on a Pixel 7 the first Hebrew starts above y 400 on /read with the week's 
   // C1 re-pin (320 before): the title block now carries the date and ranges line that used to sit in the Change sheet, and Torah | Haftarah, Lein | Study with Start reading, and the aliyah tabs
   // stand in three rows above the text. Measured 384 in Lein and 437 in Study; the text still opens in the top half of the screen.
   expect(measured.lein, "Lein").toBeLessThan(400);
-  // Study carries the place row (the reference and the chapter jump) above its first verse, so it starts lower; it still opens in the top half of the screen.
-  expect(measured.study, "Study").toBeLessThan(450);
+  // Study carries the place row (the reference and the chapter jump) above its first verse, so it starts lower. Re-pinned 2026-10-28 (437 before, 493 measured): Study's
+  // tools are now one compact row at the top of the text instead of the dock at the foot of the screen, so the first verse sits one 44px row lower.
+  expect(measured.study, "Study").toBeLessThan(510);
 });
 
 test("the title block is the name, one muted line of date and ranges, and the Change and Save pills; the rest is in Change, and Print and the blessings are at the foot", async ({ page }) => {
@@ -175,11 +177,13 @@ async function withRashi(page: Page) {
 test("commentary Hebrew grows with each size step", async ({ page }) => {
   await withRashi(page);
   await page.goto(`${week}&lens=study`);
-  const comment = page.locator('[data-study-rows] [data-work="rashi"] p[lang="he"]').first();
-  await expect(comment).toBeVisible();
-  const sizeOf = () => comment.evaluate(node => parseFloat(getComputedStyle(node).fontSize));
+  // The comment is with the verse's notes: the rail beside the verses, or the verse's Notes sheet on a phone (Study as a study sheet, 2026-10-28).
+  const comment = async () => (await verseNotes(page, "Genesis 18:1")).locator('[data-work="rashi"] p[lang="he"]').first();
+  await expect(await comment()).toBeVisible();
+  const sizeOf = async () => (await comment()).evaluate(node => parseFloat(getComputedStyle(node).fontSize));
   const sizes: Record<string, number> = {};
   for (const [id, label] of [["small", "Small"], ["standard", "Standard"], ["large", "Large"], ["huge", "Huge"]] as const) {
+    await closeNotes(page);
     await page.getByRole("button", { name: /^Text size/ }).click();
     await page.locator(`.toolbar-menu [data-size="${id}"]`).click();
     await expect(page.getByRole("button", { name: `Text size: ${label}`, exact: true })).toBeVisible();

@@ -1,0 +1,65 @@
+/* The Study lens as a study sheet (2026-10-28), in the app's own look: Bricolage and the Hebrew serif, lake blue, hairlines drawn as
+   inset box-shadows, no elevation and no motion. Plain Hebrew in ink: Study draws no phrase colours. From 900px each verse is a row
+   (English · number · Hebrew) beside a sticky rail; narrower, the verses stack Hebrew first and "Notes" opens the rail's content in the Sheet. */
+
+.sheet { min-width: 0; margin-block: 0.5rem 1rem; }
+.rows { min-width: 0; }
+
+/* Phone: Hebrew first with its number beside it, the English under it, then Notes. */
+.row { display: grid; grid-template-columns: minmax(0, 1fr) 44px; grid-template-areas: "he num" "en en" "open open"; column-gap: 0.25rem; align-items: start; padding-block: 1.25rem 1rem; scroll-margin-top: 5rem; }
+/* The hairline between verses is its own 1px line, so a chosen row's rounded tint never bends it. */
+.row { position: relative; }
+.row + .row::before, :global(.student-aliyah) + .row::before { content: ""; position: absolute; inset: 0 0 auto; block-size: 1px; background: var(--color-rule); }
+.number { grid-area: num; display: flex; flex-direction: column; align-items: center; gap: 0.125rem; padding-block-start: max(0px, calc((var(--hebrew-size, 2rem) * 2 - 44px) / 2)); }
+.numberButton { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: var(--color-ink); font: 750 0.875rem/1 "Bricolage Grotesque", system-ui, sans-serif; font-variant-numeric: tabular-nums; cursor: pointer; }
+.numberButton > span { display: inline-flex; align-items: center; justify-content: center; min-width: 1.875rem; height: 1.875rem; padding-inline: 0.25rem; border-radius: 999px; background: var(--lake-tint); transition: background-color 160ms var(--ease-settle), color 160ms var(--ease-settle); }
+.numberButton > span svg { margin-inline-end: 0.125rem; }
+.numberButton:hover > span { background: var(--lake); color: #fff; }
+.numberButton:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+/* Choose verses: a chosen verse fills its number and carries a check, never colour alone. */
+.numberButton[aria-label^="Select "][aria-pressed="true"] > span { background: var(--lake); color: #fff; }
+.row[data-verse-picked], .row[data-verse-marked] { background: var(--lake-tint); border-radius: var(--radius-control); }
+.noteMark { display: none; }
+
+.hebrewCell { grid-area: he; min-width: 0; direction: rtl; }
+.hebrew:global(.study-hebrew) { margin: 0; color: var(--color-ink); line-height: 2; overflow-wrap: break-word; }
+/* A paragraph break inside the verse keeps its space; its name is read to screen readers and given in the note below. */
+.hebrew :global(.study-paragraph-gap) > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.apparatus { direction: ltr; }
+.apparatus:empty { display: none; }
+.apparatus :global(.study-apparatus) { margin-top: 0.25rem; padding-top: 0; border-top: 0; }
+
+.english:global(.study-english) { grid-area: en; margin: 0.5rem 0 0; color: var(--color-ink); font: 400 1.0625rem/1.7 "Bricolage Grotesque", system-ui, sans-serif; max-inline-size: 62ch; }
+
+.notesOpen { grid-area: open; margin-block-start: 0.625rem; }
+.notesButton { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; padding: 0 1rem; border: 0; border-radius: 999px; background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); color: var(--color-action); font: 600 0.9375rem/1 "Bricolage Grotesque", system-ui, sans-serif; cursor: pointer; }
+.notesButton:hover { background: var(--color-hover); }
+.notesButton:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.noteDot { inline-size: 0.5rem; block-size: 0.5rem; border-radius: 999px; background: var(--lake); }
+
+.rail { display: none; }
+.railHeading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.5rem; margin: 0 0 0.875rem; color: var(--color-ink); font-size: 1rem; font-weight: 700; line-height: 1.4; }
+.railRef { color: var(--color-muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+.railEmpty { margin: 0 0 1rem; color: var(--color-muted); font-size: 0.9375rem; line-height: 1.55; }
+.notesBody { display: grid; min-width: 0; }
+.notesBody > * { min-width: 0; }
+
+@media (min-width: 900px) {
+  .sheet { display: grid; grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem); column-gap: 2rem; align-items: start; }
+  .rows { grid-column: 1; }
+  /* The row: English at the left, the number in a narrow gutter, the Hebrew at the right, aligned at the top. */
+  .row { grid-template-columns: minmax(0, 1fr) 3rem minmax(0, 1.15fr); grid-template-areas: "en num he"; column-gap: 1.25rem; margin-inline: -0.75rem; padding: 1.25rem 0.75rem 1.5rem; border-radius: var(--radius-control); cursor: pointer; transition: background-color 160ms var(--ease-settle); }
+  .sheet[data-english="off"] .row { grid-template-columns: minmax(0, 1fr) 3rem; grid-template-areas: "he num"; }
+  .row + .row::before, :global(.student-aliyah) + .row::before { inset-inline: 0.75rem; }
+  .row:hover { background: var(--color-hover); }
+  /* The chosen verse: a quiet tint and a filled number. */
+  .row[data-selected] { background: var(--lake-tint); }
+  .numberButton[aria-pressed="true"] > span { background: var(--lake); color: #fff; }
+  .noteMark { display: block; inline-size: 0.375rem; block-size: 0.375rem; border-radius: 999px; background: var(--lake); }
+  /* The English's first line sits on the Hebrew's first line. */
+  .english:global(.study-english) { margin-block-start: max(0px, calc((var(--hebrew-size, 2rem) * 2 - 1.0625rem * 1.7) / 2)); }
+  .notesOpen { display: none; }
+  .rail { display: block; grid-column: 2; grid-row: 1; align-self: start; position: sticky; top: 5rem; max-height: calc(100svh - 6rem); overflow-y: auto; overscroll-behavior: contain; padding: 1.25rem 0 1rem 1.25rem; box-shadow: inset 1px 0 0 var(--color-rule); }
+}
+@media (prefers-reduced-motion: reduce) { .row, .numberButton > span { transition: none; } }
+@media print { .rail, .notesOpen { display: none; } }

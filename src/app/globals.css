@@ -784,6 +784,20 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
   .reading-sources-column > section { margin-block: 0; max-inline-size: none; }
 }
 
+/* Study's tools (2026-10-28): Study is a study sheet, so its tools are one compact row of 44px pills at the top of the text, not the dock. English, Works,
+   the text size and the reading's Sources; no Colors and no Hear verse. The Sources button above the text gives way to the row's own. */
+.study-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem; margin-block: 0.25rem 0.75rem; }
+.study-tool { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; padding: 0 0.875rem; border: 0; border-radius: 999px; background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); color: var(--color-ink); font: 600 0.9375rem/1 "Bricolage Grotesque", system-ui, sans-serif; cursor: pointer; transition: background-color 160ms var(--ease-settle); }
+.study-tool svg { inline-size: 20px; block-size: 20px; flex: none; }
+.study-tool:hover { background: var(--color-hover); }
+.study-tool[aria-pressed="true"] { background: var(--lake); color: #fff; box-shadow: none; }
+.study-tool:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.study-tool-sources { display: contents; }
+body:has(.study-toolbar) .reading-sources-open { display: none; }
+/* A phone keeps the row to one line: the words stay, the icons step aside. */
+@media (max-width: 479.98px) { .study-tool svg { display: none; } .study-tool { padding-inline: 0.75rem; } }
+@media print { .study-toolbar { display: none; } }
+
 /* The selected verse's bar (1.9 N4): its tools (one Sheet), Up close and its mark, under the passage. */
 .study-verse-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; margin-block: 1.25rem 0; }
 .study-verse-detail { display: grid; gap: 0.75rem; min-width: 0; }

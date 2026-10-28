@@ -39,10 +39,31 @@ export function ReadingToolbar({ onHear, listeningEnabled = false, tikkunAvailab
     measure();
     const observer = new ResizeObserver(measure); observer.observe(node);
     return () => { observer.disconnect(); root.style.removeProperty("--dock-h"); };
-  }, []);
+  }, [study]);
   const covers = (work: string) => Boolean(COMMENTARY_WORKS[work]?.editions[worksCorpus]);
   const shown = lens.works.filter(covers);
   const hide = (event: { currentTarget: HTMLElement }) => (event.currentTarget.closest("[popover]") as HTMLElement & { hidePopover?(): void } | null)?.hidePopover?.();
+  const worksPopover = <div id={worksMenu} popover="auto" className="toolbar-menu" role="group" aria-label="Commentaries under each verse">
+    {STUDY_WORKS.map(work => {
+      const on = lens.works.includes(work), full = !on && lens.works.length >= MAX_INLINE_WORKS;
+      return <button type="button" key={work} aria-pressed={on} disabled={full} data-work={work}
+        onClick={() => lens.setWorks(on ? lens.works.filter(row => row !== work) : [...lens.works, work])}>
+        <span className="toolbar-menu-check" aria-hidden="true">{on && <svg viewBox="0 0 24 24" width="20" height="20"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /></svg>}</span><span className="toolbar-menu-label">{workLabel(work)}{!covers(work) && <span className="toolbar-menu-note">{workCoverageNote(work)}</span>}</span></button>;
+    })}
+  </div>;
+  // Study (2026-10-28) is a study sheet: it plays nothing and colours nothing, so its tools are a compact row at the top of the text, not the dock:
+  // English, Works, the text size and, where the reading has them, its Sources. Colors and Hear verse belong to Lein, and the colour preference is left as it was.
+  if (study) return <nav className="study-toolbar" aria-label="Reading tools" data-lens="study" data-testid="study-toolbar">
+    <button type="button" className="study-tool" aria-pressed={lens.english} onClick={() => lens.setEnglish(!lens.english)}>{icons.translate}<span>English</span></button>
+    <button type="button" className="study-tool" popoverTarget={worksMenu} aria-label={`Works: ${shown.length ? shown.map(workLabel).join(", ") : "none"}`}>{icons.works}<span>Works</span></button>
+    {worksPopover}
+    <button type="button" className="study-tool" popoverTarget={menu} aria-label={`Text size: ${size.label}`}>{icons.size}<span>{size.label}</span></button>
+    <div id={menu} popover="auto" className="toolbar-menu" role="group" aria-label="Hebrew text size">
+      {textSizes.map(row => <button type="button" key={row.id} aria-pressed={prefs.size === row.id} data-size={row.id} onClick={event => { setReadingPrefs({ size: row.id }); hide(event); }}>
+        <span className="toolbar-menu-sample" lang="he" dir="rtl" aria-hidden="true">אָ</span>{row.label}</button>)}
+    </div>
+    <SourcesDockItem className="study-tool" wrapper="study-tool-sources" />
+  </nav>;
   if (practice) {
     const listenWhy = `${id}-listen-why`, textMenu = `${id}-text`, englishOn = englishHidden && !study ? false : study ? lens.english : prefs.translation;
     return <nav ref={nav} className="reading-toolbar" aria-label="Reading tools" data-practice="" data-lens={study ? "study" : "lein"} data-hidden={keyboard ? "" : undefined}>
@@ -52,17 +73,6 @@ export function ReadingToolbar({ onHear, listeningEnabled = false, tikkunAvailab
           <button type="button" className="toolbar-item" data-testid="dock-listen" aria-disabled="true" aria-describedby={listenWhy} popoverTarget={`${listenWhy}-tip`}>{icons.hear}<span>Listen</span></button>
           <span id={listenWhy} className="sr-only">{practice.listenReason}</span>
           <div id={`${listenWhy}-tip`} popover="auto" className="toolbar-menu toolbar-note" data-testid="dock-listen-reason"><p>{practice.listenReason}</p></div></>}
-      {study && <>
-        <button type="button" className="toolbar-item" popoverTarget={worksMenu} aria-label={`Works: ${shown.length ? shown.map(workLabel).join(", ") : "none"}`}>{icons.works}<span>Works</span></button>
-        <div id={worksMenu} popover="auto" className="toolbar-menu" role="group" aria-label="Commentaries under each verse">
-          {STUDY_WORKS.map(work => {
-            const on = lens.works.includes(work), full = !on && lens.works.length >= MAX_INLINE_WORKS;
-            return <button type="button" key={work} aria-pressed={on} disabled={full} data-work={work}
-              onClick={() => lens.setWorks(on ? lens.works.filter(row => row !== work) : [...lens.works, work])}>
-              <span className="toolbar-menu-check" aria-hidden="true">{on && <svg viewBox="0 0 24 24" width="20" height="20"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /></svg>}</span><span className="toolbar-menu-label">{workLabel(work)}{!covers(work) && <span className="toolbar-menu-note">{workCoverageNote(work)}</span>}</span></button>;
-          })}
-        </div>
-      </>}
       <SourcesDockItem />
       <button type="button" className="toolbar-item" popoverTarget={textMenu} data-testid="dock-text">{icons.size}<span>Text</span></button>
       <div id={textMenu} popover="auto" className="toolbar-menu toolbar-menu-text" data-testid="dock-text-menu">
@@ -96,17 +106,6 @@ export function ReadingToolbar({ onHear, listeningEnabled = false, tikkunAvailab
       <div id={tikkunMenu} popover="auto" className="toolbar-menu" role="group" aria-label="Tikkun view">
         {tikkunViews.map(row => <button type="button" key={row.id} aria-pressed={prefs.tikkunView === row.id} data-tikkun-view={row.id}
           onClick={event => { setReadingPrefs({ tikkunView: row.id }); (event.currentTarget.parentElement as HTMLElement & { hidePopover?(): void }).hidePopover?.(); }}>{row.label}</button>)}
-      </div>
-    </>}
-    {study && <>
-      <button type="button" className="toolbar-item" popoverTarget={worksMenu} aria-label={`Works: ${shown.length ? shown.map(workLabel).join(", ") : "none"}`}>{icons.works}<span>Works</span></button>
-      <div id={worksMenu} popover="auto" className="toolbar-menu" role="group" aria-label="Commentaries under each verse">
-        {STUDY_WORKS.map(work => {
-          const on = lens.works.includes(work), full = !on && lens.works.length >= MAX_INLINE_WORKS;
-          return <button type="button" key={work} aria-pressed={on} disabled={full} data-work={work}
-            onClick={() => lens.setWorks(on ? lens.works.filter(row => row !== work) : [...lens.works, work])}>
-            <span className="toolbar-menu-check" aria-hidden="true">{on && <svg viewBox="0 0 24 24" width="20" height="20"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /></svg>}</span><span className="toolbar-menu-label">{workLabel(work)}{!covers(work) && <span className="toolbar-menu-note">{workCoverageNote(work)}</span>}</span></button>;
-        })}
       </div>
     </>}
     <SourcesDockItem />
