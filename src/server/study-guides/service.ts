@@ -14,7 +14,7 @@ import * as s from "../db/index";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import { expandReadingRanges, readingSegments } from "../../lib/readings/ranges";
 import { haftarahRefForKey } from "../../lib/readings/reading-key";
-import { guideCatalogEntries } from "../../lib/readings/guide-catalog";
+import { catalogTorahVerses, guideCatalogEntries } from "../../lib/readings/guide-catalog";
 import { validateGuideBody, validateVoice, type GuideBody, type GuideNote, type GuideTheme } from "./validation";
 import { STARTER_VOICE } from "./starter-voice";
 import { effectiveRabbiName, type CongregationSettings } from "../settings/validation";
@@ -110,7 +110,10 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       const ref = haftarahRefForKey(readingKey, TANAKH_VERSE_COUNTS);
       return new Set(ref ? expandReadingRanges(readingSegments(ref), "haftarah", TANAKH_VERSE_COUNTS) : []);
     }
-    return data.torahPassageVerses(tx, tenantId, readingKey, TANAKH_VERSE_COUNTS);
+    // An assigned student's confirmed snapshot comes first, so a key students have keeps exactly the verses it had (a special
+    // Shabbat's maftir included). A key no student has falls back to the catalog's full kriyah; a key outside it stays empty.
+    const assigned = await data.torahPassageVerses(tx, tenantId, readingKey, TANAKH_VERSE_COUNTS);
+    return assigned.size ? assigned : new Set(catalogTorahVerses(readingKey, TANAKH_VERSE_COUNTS));
   }
 
   // Voice ----------------------------------------------------------------------------------------
@@ -373,7 +376,8 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
   }
   /**
    * Every guide key in CRC's rite (diaspora calendar), in catalog order, with its base-guide status. Read-only, no student data.
-   * `draftable` is whether `passage()` (what get_reading_for_guide and save_guide use) returns verses for the key today.
+   * `draftable` is whether `passage()` (what get_reading_for_guide and save_guide use) returns verses for the key: an assigned
+   * student's snapshot or, failing that, the catalog's own passage.
    */
   async function guideCatalog(authority: RabbiAuthority<Q>) {
     const { entries, unresolved } = guideCatalogEntries(TANAKH_VERSE_COUNTS);

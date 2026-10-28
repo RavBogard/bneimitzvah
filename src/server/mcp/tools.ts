@@ -182,7 +182,7 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
     },
     {
       name: "list_guide_catalog", roles: ["admin"], scope: SCOPES.read, annotations: readOnly,
-      description: "Every guide key CRC's rite can read, in calendar order, whether or not a student has it: the parashot and doubled weeks (Torah keys), each regular haftarah, the special-Shabbat haftarot, and holiday and fast-day readings. Each entry has kind, readingKey, name, group (a Torah book, special or holiday), verseCount, `draftable` (false when get_reading_for_guide and save_guide cannot yet return verses for the key) and base: none, held-draft, published-unreviewed or reviewed, with versions. `unresolved` lists catalog readings that produce no key. No student data.",
+      description: "Every guide key CRC's rite can read, in calendar order, whether or not a student has it: the parashot and doubled weeks (Torah keys), each regular haftarah, the special-Shabbat haftarot, and holiday and fast-day readings. Each entry has kind, readingKey, name, group (a Torah book, special or holiday), verseCount, `draftable` (whether get_reading_for_guide and save_guide return verses for the key: an assigned student's reading, or the catalog's own passage) and base: none, held-draft, published-unreviewed or reviewed, with versions. `unresolved` lists catalog readings that produce no key. No student data.",
       inputSchema: closed({}),
       handler: async (_input, ctx) => ctx.guides.guideCatalog(rabbiAuthority(ctx)),
     },

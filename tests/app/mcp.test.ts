@@ -4,6 +4,7 @@ vi.mock("server-only", () => ({}));
 import { eq } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
 import { CALLBACK, ORIGIN, closeMcpFixtures, mcpFixture as fixture } from "./mcp-fixture";
+import { parseRelatedMetadata } from "../../src/server/study/sources/metadata";
 
 afterEach(async () => { vi.restoreAllMocks(); await closeMcpFixtures(); });
 
@@ -97,10 +98,25 @@ describe("portal MCP", () => {
     expect((await t.call(tokens.access_token, "get_study_voice")).json()).toMatchObject({ template: true, version: 0 });
     const voice = (await t.call(tokens.access_token, "save_study_voice", { expectedVersion: 0, body: "# CRC voice\n\nWrite plainly.", mutationId: randomUUID() })).json();
     expect(voice).toMatchObject({ ok: true, version: 1 });
-    // Attended: a reviewed save passes the review gate and stops only for the missing reading.
+    // Attended: a reviewed save passes the review gate and stops only for the missing reading (a key outside the catalog).
     const guide = { overview: "An overview.", themes: [] };
-    expect((await t.call(tokens.access_token, "save_guide", { kind: "torah", readingKey: "bamidbar", expectedVersion: 0, body: guide, origin: "claude", reviewed: true, hold: false, mutationId: randomUUID() })).json()).toMatchObject({ ok: false, code: "no-reading" });
+    expect((await t.call(tokens.access_token, "save_guide", { kind: "torah", readingKey: "not-a-reading", expectedVersion: 0, body: guide, origin: "claude", reviewed: true, hold: false, mutationId: randomUUID() })).json()).toMatchObject({ ok: false, code: "no-reading" });
     expect((await t.call(tokens.access_token, "get_student", { studentId: unrelated, extra: 1 })).text).toContain("unknown argument extra");
+  });
+
+  it("pages a Torah reading no student is assigned, from the catalog", async () => {
+    const loadText = vi.fn(async (request: { verses: readonly string[] }) => ({ verses: request.verses.map(ref => ({ ref, hebrew: { text: "synthetic" }, english: null })) }));
+    const t = await fixture(true, undefined, { related: async (ref: string) => parseRelatedMetadata([], ref), loadText: loadText as never });
+    await t.google("admin");
+    const tokens = await t.connect("admin");
+    const first = (await t.call(tokens.access_token, "get_reading_for_guide", { kind: "torah", readingKey: "bereshit" })).json();
+    // Genesis 1:1-6:8 is 146 verses.
+    expect(first).toMatchObject({ readingKey: "bereshit", totalVerses: 146, offset: 0, nextOffset: 25 });
+    expect(first.verses.map((v: { ref: string }) => v.ref).slice(0, 2)).toEqual(["Genesis 1:1", "Genesis 1:2"]);
+    const last = (await t.call(tokens.access_token, "get_reading_for_guide", { kind: "torah", readingKey: "bereshit", offset: 125 })).json();
+    expect(last).toMatchObject({ totalVerses: 146, offset: 125, nextOffset: null });
+    expect(last.verses.at(-1).ref).toBe("Genesis 6:8");
+    expect((await t.call(tokens.access_token, "get_reading_for_guide", { kind: "torah", readingKey: "not-a-reading" })).json()).toMatchObject({ totalVerses: 0, verses: [] });
   });
 
   it("never lets an unattended routine mark work reviewed", async () => {

@@ -243,7 +243,7 @@ test("disabled membership or tenant denies every write", async () => {
   expect(await f.rows()).toHaveLength(0);
 });
 
-test("a base theme and an addition with the same id stay separate, and a reading no student has gets no base guide", async () => {
+test("a base theme and an addition with the same id stay separate, and a reading no student has drafts from the catalog", async () => {
   const f = await fixture();
   await f.save({ body: guide({ themes: [theme("for-you", { notes: [note("Exodus 40:34")] })] }) });
   expect(await addition(f, f.rabbi())).toMatchObject({ ok: true, version: 1 });
@@ -253,7 +253,12 @@ test("a base theme and an addition with the same id stay separate, and a reading
   expect(await tick("student--for-you")).toMatchObject({ ok: true, version: 1 });
   const after = await f.read("learner", "student");
   expect([after?.base?.themes[0].read, after?.additions?.themes[0].read]).toEqual([false, true]);
-  expect(await f.save({ readingKey: "bereshit" })).toMatchObject({ ok: false, code: "no-reading" });
+  // A Torah key no student has drafts from the catalog's full kriyah; a key outside the catalog has no reading.
+  expect(await f.save({ readingKey: "not-a-reading" })).toMatchObject({ ok: false, code: "no-reading" });
+  expect(await f.save({ readingKey: "bereshit", body: guide({ themes: [theme("t", { notes: [note("Genesis 1:1")] })] }) })).toMatchObject({ ok: true, version: 1 });
+  const bereshit = f.check.mock.lastCall![0].verses; expect(bereshit.has("Genesis 1:1") && bereshit.has("Genesis 6:8") && !bereshit.has("Genesis 6:9")).toBe(true);
+  // The student's guide still attaches only by the student's own key.
+  expect((await f.read("learner", "student"))?.base?.themes[0].id).toBe("for-you");
   // A haftarah key names its own passage, so it needs no student.
   expect(await f.save({ kind: "haftarah", readingKey: "i-kings-7-51-8-21", body: guide({ themes: [theme("t", { notes: [note("I Kings 8:10")] })] }) })).toMatchObject({ ok: true, version: 1 });
   expect(f.check).toHaveBeenLastCalledWith(expect.objectContaining({ verses: expect.any(Set) }));
