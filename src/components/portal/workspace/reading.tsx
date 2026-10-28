@@ -337,7 +337,9 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
     : student && countdown ? <>Beit Mitzvah · <span className="hero-date" data-testid="hero-date"><time dateTime={student.ceremonyDate}>{countdown.label}</time></span>{titleRange && ` · ${titleRange}`}{marked && <span className="hero-marked"> · {marked}</span>}</> : null;
   const slotLine = student && congregation.ready ? serviceSlotName(student.serviceSlot, congregation.services) : null;
   // The parent's service sits on its own line with no leading dot (finding 14); This week says the next rehearsal, so the dates are not repeated (finding 3).
-  const titleNote = student && !practising && (mode === "parent" ? slotLine && <p className="hero-who" data-testid="hero-slot">{slotLine}</p>
+  // Its start time shows beside it on wider screens only, as on every reading header.
+  const slotTime = student && congregation.ready ? serviceSlotTime(student.serviceSlot, congregation.services) : null;
+  const titleNote = student && !practising && (mode === "parent" ? slotLine && <p className="hero-who" data-testid="hero-slot"><span className="hero-slot">{slotLine}{slotTime && <span className="hero-slot-time"> · {slotTime}</span>}</span></p>
     : <>{slotLine && <p className="hero-who"><ServiceSlotName student={student} services={congregation.services} /></p>}<RehearsalDates student={student} /></>);
   const pillByKey = { change: { key: "change", label: learner ? "Go to verse" : "Change", icon: "chevron", haspopup: "dialog", expanded: changeOpen, onClick: () => setChangeOpen(true) },
     manage: { key: "manage", label: "Manage", icon: "sliders", haspopup: "dialog", expanded: manageOpen, onClick: () => setManageOpen(true) } } satisfies Record<"change" | "manage", Pill>;
