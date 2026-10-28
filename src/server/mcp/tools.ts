@@ -89,7 +89,10 @@ export function validateInput(schema: JsonSchema, input: Record<string, unknown>
       if (typeof rule.pattern === "string" && !new RegExp(rule.pattern).test(value)) problems.push(`${key} is not in the expected form`);
       if (Array.isArray(rule.enum) && !rule.enum.includes(value)) problems.push(`${key} must be one of ${rule.enum.join(", ")}`);
     } else if (rule.type === "integer") {
-      if (!Number.isSafeInteger(value) || (value as number) < (rule.minimum as number) || (value as number) > (rule.maximum as number)) problems.push(`${key} must be a whole number from ${rule.minimum} to ${rule.maximum}`);
+      // A client holding an older tool list (one without this argument's schema) sends a whole number as text: accept plain digits only.
+      if (typeof value === "string" && /^\d{1,9}$/.test(value)) { input[key] = Number(value); }
+      const whole = input[key];
+      if (!Number.isSafeInteger(whole) || (whole as number) < (rule.minimum as number) || (whole as number) > (rule.maximum as number)) problems.push(`${key} must be a whole number from ${rule.minimum} to ${rule.maximum}`);
     } else if (rule.type === "boolean") {
       if (typeof value !== "boolean") problems.push(`${key} must be true or false`);
     } else if (rule.type === "object") {
@@ -197,7 +200,9 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
         const { verses } = await ctx.guides.guidePassage(rabbiAuthority(ctx), input as never);
         if (!verses.length) return { kind: input.kind, readingKey: input.readingKey, totalVerses: 0, verses: [], nextOffset: null, note: "No reading is known for this key." };
         const offset = (input.offset as number | undefined) ?? 0, limit = Math.min((input.limit as number | undefined) ?? GUIDE_PAGE_DEFAULT_VERSES, GUIDE_PAGE_MAX_VERSES);
-        const page = verses.slice(offset, offset + limit);
+        // A page never crosses from one passage into the next (a portion into a special maftir, or a haftarah's second range):
+        // the text loader takes contiguous ranges, and a mixed page failed.
+        const page = firstRun(verses.slice(offset, offset + limit));
         if (!page.length) return { kind: input.kind, readingKey: input.readingKey, totalVerses: verses.length, verses: [], nextOffset: null };
         const text = await ctx.loadText({ kind: input.kind as "torah" | "haftarah", ranges: rangesOf(page), verses: page, offset: 0, translation: "jps2023", signal: ctx.signal });
         const byRef = new Map(text.verses.map(v => [v.ref, v]));
@@ -258,11 +263,21 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
   ] satisfies Tool<Q>[]);
 }
 
+/** The leading verses of `verses` that run on without a gap, so a page ends where its passage ends. */
+export function firstRun(verses: readonly string[]): string[] {
+  if (verses.length < 2) return [...verses];
+  const [first, ...rest] = verses, out = [first];
+  let prev = parseRef(first);
+  for (const ref of rest) { const next = parseRef(ref); if (!follows(prev, next)) break; out.push(ref); prev = next; }
+  return out;
+}
+const parseRef = (ref: string) => { const m = /^(.+) (\d+):(\d+)$/.exec(ref); if (!m) throw new AccessDenied(404); return { book: m[1], chapter: Number(m[2]), verse: Number(m[3]) }; };
+const follows = (a: ReturnType<typeof parseRef>, b: ReturnType<typeof parseRef>) => a.book === b.book && ((b.chapter === a.chapter && b.verse === a.verse + 1)
+  || (b.chapter === a.chapter + 1 && b.verse === 1 && a.verse === TANAKH_VERSE_COUNTS[a.book]?.[a.chapter - 1]));
+
 /** Contiguous runs of a page's verses as canonical ranges ("Numbers 1:1-1:25"). */
 function rangesOf(verses: readonly string[]): string[] {
-  const parse = (ref: string) => { const m = /^(.+) (\d+):(\d+)$/.exec(ref); if (!m) throw new AccessDenied(404); return { book: m[1], chapter: Number(m[2]), verse: Number(m[3]) }; };
-  const follows = (a: ReturnType<typeof parse>, b: ReturnType<typeof parse>) => a.book === b.book && ((b.chapter === a.chapter && b.verse === a.verse + 1)
-    || (b.chapter === a.chapter + 1 && b.verse === 1 && a.verse === TANAKH_VERSE_COUNTS[a.book]?.[a.chapter - 1]));
+  const parse = parseRef;
   const ranges: string[] = [];
   let start = parse(verses[0]), end = start;
   const flush = () => ranges.push(`${start.book} ${start.chapter}:${start.verse}-${end.chapter}:${end.verse}`);

@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
 import { CALLBACK, ORIGIN, closeMcpFixtures, mcpFixture as fixture } from "./mcp-fixture";
 import { parseRelatedMetadata } from "../../src/server/study/sources/metadata";
-import { GUIDE_PAGE_MAX_BYTES, fitGuidePage } from "../../src/server/mcp/tools";
+import { GUIDE_PAGE_MAX_BYTES, firstRun, fitGuidePage, validateInput } from "../../src/server/mcp/tools";
 
 afterEach(async () => { vi.restoreAllMocks(); await closeMcpFixtures(); });
 
@@ -146,6 +146,22 @@ describe("portal MCP", () => {
     expect(new Set(seen).size).toBe(146);
     expect(seen[0]).toBe("Genesis 1:1"); expect(seen.at(-1)).toBe("Genesis 6:8");
     expect(pages).toBeGreaterThan(146 / 25);
+  });
+
+  it("takes a whole number sent as plain digits (a client with an older tool list) and still refuses anything else", () => {
+    const schema = { type: "object", properties: { limit: { type: "integer", minimum: 1, maximum: 25 } }, required: [] };
+    const sent: Record<string, unknown> = { limit: "6" };
+    expect(validateInput(schema, sent)).toEqual([]);
+    expect(sent.limit).toBe(6);
+    for (const bad of ["26", "0", "-1", "6.0", " 6", "6e0", "abc", "", 6.5]) expect(validateInput(schema, { limit: bad })).toHaveLength(1);
+  });
+
+  it("ends a guide page where its passage ends: a portion before its special maftir, a haftarah before its second range, across chapters", () => {
+    expect(firstRun(["Genesis 11:31", "Genesis 11:32", "Numbers 28:9", "Numbers 28:10"])).toEqual(["Genesis 11:31", "Genesis 11:32"]);
+    expect(firstRun(["Isaiah 7:5", "Isaiah 7:6", "Isaiah 9:5"])).toEqual(["Isaiah 7:5", "Isaiah 7:6"]);
+    expect(firstRun(["Genesis 1:31", "Genesis 2:1", "Genesis 2:2"])).toEqual(["Genesis 1:31", "Genesis 2:1", "Genesis 2:2"]);
+    expect(firstRun(["Numbers 28:9"])).toEqual(["Numbers 28:9"]);
+    expect(firstRun([])).toEqual([]);
   });
 
   it("trims the sources of a single verse that alone overflows a page, and says how many", () => {
