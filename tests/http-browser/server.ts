@@ -5,6 +5,9 @@ import { join, resolve, sep } from "node:path";
 import next from "next";
 import { createHttpDispatcher, type HttpRuntimeScope } from "../../src/server/http/dispatch";
 import { authRouteMethods } from "../../src/server/http/auth";
+// The tutor walk (2026-10-28, H1): learners and practice visibility fell through to Next's production composition and answered 503.
+import { learnersRouteMethods } from "../../src/server/http/learners";
+import { practiceVisibilityRouteMethods } from "../../src/server/http/practice-visibility";
 import { portalRouteMethods } from "../../src/server/http/portal";
 import { sourceAssignmentsRouteMethods } from "../../src/server/http/source-assignments";
 import { honorsRouteMethods } from "../../src/server/http/honors";
@@ -120,7 +123,7 @@ export async function startBrowserServer(withRuntime: HttpRuntimeScope, withPubl
       if (referenceReviewRouteMethods(pathname)
         // Signed-out reading: the dispatcher's exact allowlist serves its routes and refuses every other /api/public path.
         || publicReadingRouteMethods(pathname) || isPublicReadingPath(pathname)) { await send(res, await dispatch(request)); return; }
-      if (!serviceEcosystemRouteMethods(pathname) && !honoreeManagementRouteMethods(pathname) && !honorsRouteMethods(pathname) && !sourceContentRouteMethods(pathname) && !sourceAssignmentsRouteMethods(pathname) && !authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname) && !serviceLearningRouteMethods(pathname) && !progressRouteMethods(pathname) && !lessonLogRouteMethods(pathname) && !practiceCalendarRouteMethods(pathname) && !studyGuidesRouteMethods(pathname) && !congregationSettingsRouteMethods(pathname) && !claudeConnectionsRouteMethods(pathname) && !notificationsRouteMethods(pathname) && !savedRouteMethods(pathname) && !offlineRouteMethods(pathname) && !accountsRouteMethods(pathname) && !courseProgressRouteMethods(pathname) && !serviceCourseRouteMethods(pathname) && !verseReviewRouteMethods(pathname) && !staffRouteMethods(pathname)) { await nextHandler(req, res); return; }
+      if (!learnersRouteMethods(pathname) && !practiceVisibilityRouteMethods(pathname) && !serviceEcosystemRouteMethods(pathname) && !honoreeManagementRouteMethods(pathname) && !honorsRouteMethods(pathname) && !sourceContentRouteMethods(pathname) && !sourceAssignmentsRouteMethods(pathname) && !authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname) && !serviceLearningRouteMethods(pathname) && !progressRouteMethods(pathname) && !lessonLogRouteMethods(pathname) && !practiceCalendarRouteMethods(pathname) && !studyGuidesRouteMethods(pathname) && !congregationSettingsRouteMethods(pathname) && !claudeConnectionsRouteMethods(pathname) && !notificationsRouteMethods(pathname) && !savedRouteMethods(pathname) && !offlineRouteMethods(pathname) && !accountsRouteMethods(pathname) && !courseProgressRouteMethods(pathname) && !serviceCourseRouteMethods(pathname) && !verseReviewRouteMethods(pathname) && !staffRouteMethods(pathname)) { await nextHandler(req, res); return; }
       await send(res, await dispatch(request));
     } catch { if (!res.headersSent) await send(res, new Response(null, { status: 503 })); else res.destroy(); }
   });

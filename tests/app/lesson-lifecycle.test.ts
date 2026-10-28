@@ -46,7 +46,7 @@ test.each(["authority clear", "unmount"])("%s cancels a pending lesson departure
   let tree = render();
   find(tree, props => props.className === "button-primary lesson-add")!.props.onClick({ currentTarget: {} });
   tree = render();
-  find(tree, props => props.rows === 8)!.props.onChange({ target: { value: "Synthetic unsent lesson" } });
+  find(tree, props => props.rows === 5)!.props.onChange({ target: { value: "Synthetic unsent lesson" } });
   render();
   const continuation = host.guard!();
   let resolved = false; void continuation.then(() => { resolved = true; }); await Promise.resolve();
@@ -98,7 +98,7 @@ function errors(node: ReactNode, found: string[] = []): string[] {
 async function openNote(summary = "Synthetic lesson: verse one.") {
   await host.reload!.reload({ ...parentBaseline(), mode: "tutor" }, new AbortController().signal); render();
   find(render(), props => props.className === "button-primary lesson-add")!.props.onClick({ currentTarget: {} });
-  find(render(), props => props.rows === 8)!.props.onChange({ target: { value: summary } });
+  find(render(), props => props.rows === 5)!.props.onChange({ target: { value: summary } });
 }
 const nextField = (tree: ReactNode) => find(tree, props => props.id === "synthetic-lesson-next")!;
 const submit = async () => { find(render(), props => props.className === "lesson-form")!.props.onSubmit({ preventDefault() {} }); await flush(); };
@@ -126,11 +126,11 @@ test("a Before next time line over the limit shows one error, under its field, a
   expect(host.reader.mock.calls.filter(call => call[2].type !== "page")).toHaveLength(0);
   expect(errors(render())).toEqual(["Too long to save. Shorten this note a little."]);
   // Both fields too long: still one line each, and nothing from Save on top of them.
-  find(render(), props => props.rows === 8)!.props.onChange({ target: { value: "x".repeat(4100) } }); await submit();
+  find(render(), props => props.rows === 5)!.props.onChange({ target: { value: "x".repeat(4100) } }); await submit();
   expect(errors(render())).toEqual(["Too long to save. Shorten this note a little.", "Too long to save. Shorten this note a little."]);
   expect(host.reader.mock.calls.filter(call => call[2].type !== "page")).toHaveLength(0);
   // Back within the limit: the error goes and the line saves.
-  find(render(), props => props.rows === 8)!.props.onChange({ target: { value: "Synthetic lesson." } });
+  find(render(), props => props.rows === 5)!.props.onChange({ target: { value: "Synthetic lesson." } });
   nextField(render()).props.onChange({ target: { value: "x".repeat(1024) } });
   expect(errors(render())).toEqual([]);
   await submit(); expect(host.reader.mock.calls.find(call => call[2].type === "create")![2]).toMatchObject({ beforeNext: "x".repeat(1024) });

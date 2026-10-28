@@ -14,7 +14,7 @@ export type RevokedBy = "learner" | "tutor" | "admin";
 const escapeLike = (value: string) => value.replace(/[\\%_]/g, match => `\\${match}`);
 
 /**
- * Every live membership of the tenant but the caller's own, by the account's name (case-folded) then id, at most `limit`;
+ * Every live membership of the tenant but the caller's own, the staff and the parents (see learnerOnly), by the account's name (case-folded) then id, at most `limit`;
  * `q` is a case-insensitive prefix on the name; `after` continues past that membership. Raw names: the caller shows them through
  * displayName, so an address-shaped name is never shown. Never an email.
  */
@@ -27,11 +27,20 @@ export async function listLearners<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenant
     cursor = { name: row.name, id: row.id };
   }
   return tx.select({ membershipId: s.membership.id, name: s.user.name }).from(s.membership).innerJoin(s.user, eq(s.user.id, s.membership.userId))
-    .where(and(eq(s.membership.tenantId, tenantId), isNull(s.membership.disabledAt), sql`${s.membership.id} <> ${input.exceptMembershipId}::uuid`,
+    .where(and(eq(s.membership.tenantId, tenantId), isNull(s.membership.disabledAt), sql`${s.membership.id} <> ${input.exceptMembershipId}::uuid`, learnerOnly(tenantId),
       input.q ? sql`lower(${s.user.name}) like ${escapeLike(input.q.toLowerCase()) + "%"} escape '\\'` : undefined,
       cursor ? sql`(lower(${s.user.name}), ${s.membership.id}) > (lower(${cursor.name}), ${cursor.id}::uuid)` : undefined))
     .orderBy(sql`lower(${s.user.name})`, asc(s.membership.id)).limit(input.limit);
 }
+
+/**
+ * Not staff and not a parent (A1, tutor and admin walks 2026-10-28): no live admin or tutor grant, and no live guardian link through a
+ * live parent grant. Staff are colleagues and parents are family, not learners: never listed, claimed or opened as one.
+ */
+const learnerOnly = (tenantId: string) => sql`not exists (select 1 from ${s.roleGrant} where ${s.roleGrant.tenantId} = ${tenantId}
+  and ${s.roleGrant.membershipId} = ${s.membership.id} and ${s.roleGrant.revokedAt} is null and (${s.roleGrant.role} in ('admin', 'tutor')
+  or (${s.roleGrant.role} = 'parent' and exists (select 1 from ${s.guardian} where ${s.guardian.tenantId} = ${s.roleGrant.tenantId}
+    and ${s.guardian.parentGrantId} = ${s.roleGrant.id} and ${s.guardian.revokedAt} is null))))`;
 
 /** The learner's live student record through their student identity (a live student grant of the learner's membership), or null. */
 export async function liveStudentOf<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, learnerMembershipId: string) {

@@ -62,13 +62,14 @@ async function setup() {
 const learnerOf = (list: { json: Record<string, any> }, id: string) => (list.json.learners as { membershipId: string }[]).find(row => row.membershipId === id) as Record<string, unknown> | undefined; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 describe("Find a learner", () => {
-  it("lists every other live membership by name with counts, nearest dates, tutors and student records, never an email; for a live tutor or admin only", async () => {
+  it("lists every other live membership but the staff by name with counts, nearest dates, tutors and student records, never an email; for a live tutor or admin only", async () => {
     const t = await setup();
     await t.save("bare", "Noach", "2026-10-24"); await t.save("bare", "Lech Lecha", "2099-10-31"); await t.save("bare", "Vayera", "2099-11-07");
     await t.save("learner", "Student reading", null);
     const list = await t.call("/api/learners", "multi");
     expect(list.status).toBe(200);
-    expect(list.json.learners.map((row: { name: string }) => row.name)).toEqual(["A learner (no name yet)", "Synthetic Bare", "Synthetic Rabbi", "Synthetic Second"]);
+    // The rabbi (admin) and the other tutor are staff, never learners (tutor walk A1).
+    expect(list.json.learners.map((row: { name: string }) => row.name)).toEqual(["A learner (no name yet)", "Synthetic Bare"]);
     expect(JSON.stringify(list.json)).not.toContain("@");
     expect(learnerOf(list, t.extra.bare.membershipId)).toEqual({ membershipId: t.extra.bare.membershipId, name: "Synthetic Bare", readings: 3, nearest: { name: "Lech Lecha", date: "2099-10-31" }, tutor: null, student: null });
     // The fixture's learner is students[0]'s student, assigned to multi by the rabbi: that tutor shows, unclaimed, and is "mine" to multi.
@@ -76,10 +77,11 @@ describe("Find a learner", () => {
       student: { id: t.f.students[0].id, firstName: "Synthetic", lastName: "Sibling A", ceremonyDate: "2027-01-02" } });
     expect(learnerOf(await t.call("/api/learners", "second"), t.f.learnerMember.id)).toMatchObject({ tutor: { name: "Synthetic Tutor", claimed: false, mine: false } });
     // The rabbi lists too (never "mine": an admin without a tutor grant claims nothing); the prefix search is case-insensitive; the cursor continues.
-    expect((await t.call("/api/learners", "admin")).json.learners.map((row: { name: string }) => row.name)).toEqual(["A learner (no name yet)", "Synthetic Bare", "Synthetic Second", "Synthetic Tutor"]);
+    expect((await t.call("/api/learners", "admin")).json.learners.map((row: { name: string }) => row.name)).toEqual(["A learner (no name yet)", "Synthetic Bare"]);
     expect((await t.call("/api/learners?q=synthetic%20b", "multi")).json.learners.map((row: { name: string }) => row.name)).toEqual(["Synthetic Bare"]);
     expect((await t.call("/api/learners?q=%25", "multi")).json.learners).toEqual([]);
-    expect((await t.call(`/api/learners?after=${t.extra.bare.membershipId}`, "multi")).json.learners.map((row: { name: string }) => row.name)).toEqual(["Synthetic Rabbi", "Synthetic Second"]);
+    expect((await t.call(`/api/learners?after=${t.f.learnerMember.id}`, "multi")).json.learners.map((row: { name: string }) => row.name)).toEqual(["Synthetic Bare"]);
+    expect((await t.call(`/api/learners?after=${t.extra.bare.membershipId}`, "multi")).json.learners).toEqual([]);
     expect((await t.call(`/api/learners?after=${randomUUID()}`, "multi")).json.learners).toEqual([]);
     for (const [who, status] of [["anonymous", 401], ["recipient", 403], ["learner", 404], ["bare", 404], ["away", 403]] as const) expect((await t.call("/api/learners", who)).status, who).toBe(status);
     for (const query of ["q=" + "x".repeat(81), "q=a%0ab", "after=nope", "limit=5"]) expect((await t.call(`/api/learners?${query}`, "multi")).status, query).toBe(400);
@@ -239,5 +241,84 @@ describe("Add to my students and its undo", () => {
       for (const path of ["/api/learners", "/api/mine/tutor", `/api/saved/learner/readings?learner=${t.extra.bare.membershipId}`]) await t.call(path, who);
       for (const path of ["/api/learners/claim", "/api/learners/unclaim", "/api/mine/tutor/remove"]) await t.call(path, who, { bad: true });
     }
+  });
+});
+
+/** Makes the bare membership a parent: a parent grant and, unless `linked` is false, a live guardian link to the unrelated student. */
+const makeParent = (t: Awaited<ReturnType<typeof setup>>, linked = true) => t.f.owner(async () => {
+  const [grant] = await t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: t.extra.bare.membershipId, role: "parent" }).returning();
+  const guardian = linked ? (await t.f.db.insert(s.guardian).values({ tenantId: "crc", studentId: t.f.students[2].id, parentGrantId: grant.id, linkProvenance: "synthetic" }).returning())[0] : null;
+  return { grant, guardian };
+});
+
+describe("Staff and parents are not learners (tutor and admin walks A1)", () => {
+  it("leaves a member with a live admin or tutor grant out of the list, and lists them again once the grant is revoked", async () => {
+    const t = await setup();
+    const names = async () => (await t.call("/api/learners?q=synthetic", "multi")).json.learners.map((row: { name: string }) => row.name);
+    expect(await names()).toEqual(["Synthetic Bare"]);
+    for (const role of ["tutor", "admin"] as const) {
+      const [grant] = await t.f.owner(() => t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: t.extra.bare.membershipId, role }).returning());
+      expect(await names(), role).toEqual([]);
+      expect(await t.call("/api/learners?q=synthetic%20b", "second"), role).toMatchObject({ status: 200, json: { learners: [] } });
+      await t.f.owner(() => t.f.db.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, grant.id)));
+      expect(await names(), role).toEqual(["Synthetic Bare"]);
+    }
+    // A parent grant with no live child link is still a learner; with a live guardian link it is a parent, and is left out until the link ends.
+    const { grant } = await makeParent(t, false);
+    expect(await names()).toEqual(["Synthetic Bare"]);
+    const [guardian] = await t.f.owner(() => t.f.db.insert(s.guardian).values({ tenantId: "crc", studentId: t.f.students[2].id, parentGrantId: grant.id, linkProvenance: "synthetic" }).returning());
+    expect(await names()).toEqual([]);
+    await t.f.owner(() => t.f.db.update(s.guardian).set({ revokedAt: new Date() }).where(eq(s.guardian.id, guardian.id)));
+    expect(await names()).toEqual(["Synthetic Bare"]);
+  });
+
+  it("refuses a claim on the rabbi, another tutor or a parent with the same 404 an unknown learner gets, and writes nothing", async () => {
+    const t = await setup();
+    const unknown = await t.call("/api/learners/claim", "second", { learner: randomUUID() });
+    expect(unknown.status).toBe(404);
+    for (const learner of [t.f.adminMember.id, t.f.multiMember.id]) expect(await t.call("/api/learners/claim", "second", { learner }), learner).toEqual(unknown);
+    // A plain member who becomes a parent, or a tutor, is refused the same way.
+    await makeParent(t);
+    expect(await t.call("/api/learners/claim", "second", { learner: t.extra.bare.membershipId })).toEqual(unknown);
+    await t.f.owner(() => t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: t.extra.bare.membershipId, role: "tutor" }));
+    expect(await t.call("/api/learners/claim", "second", { learner: t.extra.bare.membershipId })).toEqual(unknown);
+    expect(await t.claims()).toEqual([]);
+    expect(await t.audits("learner.claim")).toEqual([]);
+  });
+
+  it("an existing claim on someone who is staff no longer opens their shelf to the tutor; the rabbi still reads it; the claim's tutor may still remove it", async () => {
+    const t = await setup();
+    await t.save("bare", "Kept", "2026-10-24");
+    expect((await t.call("/api/learners/claim", "second", { learner: t.extra.bare.membershipId })).json.created).toBe(true);
+    const shelf = (who: Who) => t.call(`/api/saved/learner/readings?learner=${t.extra.bare.membershipId}`, who);
+    const [reading] = (await shelf("second")).json.readings;
+    expect(reading.name).toBe("Kept");
+    // The claimed person is given a tutor grant (or a claim on staff predates A1): the shelf, a reading and its pages are the same 404 a stranger gets.
+    const [grant] = await t.f.owner(() => t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: t.extra.bare.membershipId, role: "tutor" }).returning());
+    expect((await shelf("second")).status).toBe(404);
+    expect((await t.call(`/api/saved/learner/reading?learner=${t.extra.bare.membershipId}&id=${reading.id}`, "second")).status).toBe(404);
+    expect((await t.call(`/api/saved/learner/page?learner=${t.extra.bare.membershipId}&id=${reading.id}&offset=0`, "second")).status).toBe(404);
+    expect((await shelf("admin")).status).toBe(200);
+    expect(learnerOf(await t.call("/api/learners", "second"), t.extra.bare.membershipId)).toBeUndefined();
+    expect((await t.call("/api/learners/unclaim", "multi", { learner: t.extra.bare.membershipId })).status).toBe(404);
+    // The grant ends: the claim opens the shelf again, and the tutor's own removal still works.
+    await t.f.owner(() => t.f.db.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, grant.id)));
+    expect((await shelf("second")).status).toBe(200);
+    expect((await t.call("/api/learners/unclaim", "second", { learner: t.extra.bare.membershipId })).status).toBe(200);
+    expect((await shelf("second")).status).toBe(404);
+  });
+
+  it("an existing claim on someone who becomes a parent no longer opens their shelf to the tutor, until the guardian link ends", async () => {
+    const t = await setup();
+    await t.save("bare", "Kept", "2026-10-24");
+    expect((await t.call("/api/learners/claim", "second", { learner: t.extra.bare.membershipId })).json.created).toBe(true);
+    const shelf = (who: Who) => t.call(`/api/saved/learner/readings?learner=${t.extra.bare.membershipId}`, who);
+    expect((await shelf("second")).status).toBe(200);
+    const { guardian } = await makeParent(t);
+    expect((await shelf("second")).status).toBe(404);
+    expect((await shelf("admin")).status).toBe(200);
+    expect(learnerOf(await t.call("/api/learners", "second"), t.extra.bare.membershipId)).toBeUndefined();
+    await t.f.owner(() => t.f.db.update(s.guardian).set({ revokedAt: new Date() }).where(eq(s.guardian.id, guardian!.id)));
+    expect((await shelf("second")).status).toBe(200);
   });
 });

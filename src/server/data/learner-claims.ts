@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
 import { notCeremonyDone } from "./ceremony-done";
@@ -20,6 +20,22 @@ export async function liveStaffGrant<Q extends PgQueryResultHKT>(tx: Tx<Q>, tena
     .where(and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.membershipId, membershipId), isNull(s.roleGrant.revokedAt))).orderBy(asc(s.roleGrant.role), asc(s.roleGrant.id)).for("share");
   const grant = rows.find(row => row.role === prefer) ?? rows.find(row => row.role === "admin" || row.role === "tutor");
   return grant ? Object.freeze({ id: grant.id, role: grant.role as StaffRole }) : null;
+}
+
+/**
+ * Whether a membership is staff or a parent rather than a learner (A1, tutor and admin walks 2026-10-28): a live admin or tutor grant,
+ * or a live parent grant with a live guardian link. Share-locked like the viewer's own grants. Such a person is never claimed, and a
+ * tutor never opens their shelf, even through a claim made before this rule.
+ */
+export async function notALearner<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, membershipId: string): Promise<boolean> {
+  const grants = await tx.select({ id: s.roleGrant.id, role: s.roleGrant.role }).from(s.roleGrant)
+    .where(and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.membershipId, membershipId), isNull(s.roleGrant.revokedAt), inArray(s.roleGrant.role, ["admin", "tutor", "parent"]))).orderBy(asc(s.roleGrant.id)).for("share");
+  if (grants.some(grant => grant.role !== "parent")) return true;
+  const parents = grants.map(grant => grant.id);
+  if (!parents.length) return false;
+  const [link] = await tx.select({ id: s.guardian.id }).from(s.guardian)
+    .where(and(eq(s.guardian.tenantId, tenantId), inArray(s.guardian.parentGrantId, parents), isNull(s.guardian.revokedAt))).limit(1);
+  return Boolean(link);
 }
 
 /**
@@ -48,14 +64,16 @@ export async function liveTutorLinksOf<Q extends PgQueryResultHKT>(tx: Tx<Q>, te
 }
 
 /**
- * Whether the viewer may read the learner's shelf: a live admin grant; or a live tutor grant that holds the learner's unrevoked
- * claim, or an unrevoked tutor link to the student whose live identity is the learner's. Null for everyone else, which the
+ * Whether the viewer may read the learner's shelf: a live admin grant; or a live tutor grant, on a learner who is neither staff nor a
+ * parent (notALearner), that holds the learner's unrevoked claim, or an unrevoked tutor link to the student whose live identity is the learner's. Null for everyone else, which the
  * caller turns into the same 404 a missing learner gets. Both memberships are the same tenant's; nothing crosses it.
  */
 export async function canView<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, viewerMembershipId: string, learnerMembershipId: string): Promise<StaffGrant | null> {
   const grant = await liveStaffGrant(tx, tenantId, viewerMembershipId);
   if (!grant) return null;
   if (grant.role === "admin") return grant;
+  // A1 (tutor and admin walks 2026-10-28): a tutor never opens a colleague's, the rabbi's or a parent's shelf, even through a claim or link made before they were refused.
+  if (await notALearner(tx, tenantId, learnerMembershipId)) return null;
   const claim = await activeClaimOf(tx, tenantId, learnerMembershipId);
   if (claim && claim.tutorGrantId === grant.id) return grant;
   const links = await liveTutorLinksOf(tx, tenantId, learnerMembershipId);

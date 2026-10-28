@@ -147,8 +147,8 @@ it("retains a tutor draft during visible access revalidation, invalidates edited
   await safe(()=>tab.locator(".reading-other-assignments > summary").click());
   for(const kind of ["Torah","Haftarah"]){
     const assignment=tab.locator(".confirmed-reading").filter({has:tab.getByRole("heading",{name:kind,exact:true})});
-    await ui(assignment.locator(".reading-review")).toContainText("Needs review with your tutor or rabbi");
-    await ui(assignment.locator(".reading-review")).toBeVisible();
+    // The staff chip's words changed (tutor walk 2026-10-28, finding 12); the state is what this asserts.
+    await ui(assignment.locator('.reading-review[data-needs-review="true"]')).toBeVisible();
   }
   await ui(tab.getByLabel("Student", { exact: true }).locator('[aria-current="page"]')).toContainText(/Synthetic Learner\s*Sat, Jan 9, 2027/);
   await openEditor(tab); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-3"); // The draft survives closing the sheet.

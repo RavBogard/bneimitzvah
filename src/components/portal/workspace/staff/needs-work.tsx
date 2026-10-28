@@ -11,7 +11,7 @@ type Result = { scope: string; working: string[]; marked: boolean } | { scope: s
  * reading. Built only from the marks this tutor or admin already reads verse by verse (the same progress pages, read in turn); it
  * reads nothing new. When nothing is marked, or nothing is marked Still working, it says so in Daniel's words.
  */
-export function NeedsWork({ baseline }: { baseline: Assigned }) {
+export function NeedsWork({ baseline, level = 2 }: { baseline: Assigned; level?: 2 | 3 }) {
   const { readProgress } = useWorkspace(), firstName = baseline.student.firstName;
   const scope = JSON.stringify([baseline.mode, baseline.student.id, baseline.readings.map(row => [row.id, row.revision])]);
   const [result, setResult] = useState<Result | null>(null);
@@ -36,8 +36,9 @@ export function NeedsWork({ baseline }: { baseline: Assigned }) {
   }, [baseline, readProgress, scope]);
   const current = result?.scope === scope ? result : null;
   if (!current || "failed" in current || !baseline.readings.length) return null;
+  const Heading = level === 3 ? "h3" : "h2";
   return <section className="needs-work" aria-labelledby="needs-work-heading" data-testid="needs-work">
-    <h2 id="needs-work-heading">Needs work</h2>
+    <Heading id="needs-work-heading">Needs work</Heading>
     <p>{current.working.length ? stillWorkingLine(firstName, current.working) : current.marked ? "Nothing marked Still working." : `Nothing marked yet. Marks appear here when ${firstName} uses Still working or Got it.`}</p>
   </section>;
 }

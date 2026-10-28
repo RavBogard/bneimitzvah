@@ -4,7 +4,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { fetchLearnerPage, fetchLearnerReadings, fetchLearners, parseLearners, parseMyTutor, type Learner } from "../../src/components/portal/mine/api";
 import { FIND_STRINGS, FindALearnerView, LearnerRow, learnerShelfHref } from "../../src/components/portal/mine/find-a-learner";
 import { MY_TUTOR_STRINGS, MyTutorView } from "../../src/components/portal/mine/my-tutor";
-import { firstLine, studentRows, YOUR_STUDENTS_STRINGS, YourStudentsView } from "../../src/components/portal/mine/your-students";
+import { firstLine, StudentRowMeta, studentRows, YOUR_STUDENTS_STRINGS, YourStudentsView } from "../../src/components/portal/mine/your-students";
+import { nextDate } from "../../src/components/portal/workspace/reading";
 import { LEARNER_SHELF_STRINGS, LearnerShelfView, learnerReadingHref } from "../../src/components/portal/mine/learner-shelf";
 import { PortalRequestError } from "../../src/components/portal/api";
 import { parseSavedReading } from "../../src/components/portal/saved/api";
@@ -57,24 +58,31 @@ describe("the shelf's learners client", () => {
 describe("Find a learner", () => {
   const view = (rows: readonly Learner[], roles: string[] = ["tutor"], extra: Partial<Parameters<typeof FindALearnerView>[0]> = {}) => renderToStaticMarkup(createElement(FindALearnerView, { query: "", state: { status: "ready", rows },
     tutor: roles.includes("tutor"), admin: roles.includes("admin"), pending: null, status: null, problem: null, inputId: "find", onQuery: () => {}, onClaim: () => {}, onUnclaim: () => {}, ...extra }));
-  it("is a search field named Find a learner, with each row's name, count, nearest date and tutor, and one Add to my students", () => {
+  it("is a search field named Find a learner, with each row's name, count, nearest date and tutor; Add to my students only for a learner with no tutor", () => {
     const markup = view([learner(), learner({ membershipId: M2, name: "Synthetic Other", readings: 1, nearest: null, tutor: { name: "Synthetic Tutor", claimed: true, mine: false } })]);
     expect(markup).toContain('<label for="find"');
     expect(markup).toContain('type="search"');
     expect(markup).toContain(`>${FIND_STRINGS.title}</label>`);
     expect(markup).toContain("3 readings"); expect(markup).toContain("1 reading ");
-    expect(markup).toContain("Saturday, October 24, 2026"); expect(markup).toContain("no date");
+    expect(markup).toContain("Saturday, October 24, 2026");
+    // A learner with no dated reading has no "next" part at all (finding 8).
+    expect(markup.split('data-learner="')[2]).not.toContain(FIND_STRINGS.next);
     expect(markup).toContain(FIND_STRINGS.noTutor); expect(markup).toContain("Tutor: <bdi dir=\"auto\">Synthetic Tutor</bdi>");
-    expect(markup.match(/aria-label="Add to my students: /g)).toHaveLength(2);
+    // A learner who already has a tutor says so in place of the button (finding 7).
+    expect(markup.match(/aria-label="Add to my students: /g)).toHaveLength(1);
+    expect(markup).toContain('data-testid="learner-state"');
     expect(markup).not.toContain("Remove from my students");
     // Nobody's name is a link until the claim is the viewer's own: the shelf behind it is 404 to anyone else.
     expect(markup).not.toContain(`href="${learnerShelfHref(M1)}"`);
   });
-  it("a claimed learner of the viewer's own shows the tutor's name in the disabled button and opens the learner's shelf; an admin gets Remove from my students", () => {
+  it("the tutor who claimed a learner may remove the claim and opens the learner's shelf; an assigned student has no undo; an admin gets Remove from my students", () => {
     const mine = learner({ tutor: { name: "Synthetic Me", claimed: true, mine: true } });
     const markup = view([mine]);
-    expect(markup).toMatch(/<button[^>]*disabled=""[^>]*aria-label="Add to my students: Synthetic Learner">Synthetic Me<\/button>/);
+    expect(markup).toContain('aria-label="Remove from my students: Synthetic Learner"');
+    expect(markup).not.toContain("Add to my students");
     expect(markup).toContain(`href="${learnerShelfHref(M1)}"`);
+    const assigned = view([learner({ tutor: { name: "Synthetic Me", claimed: false, mine: true } })]);
+    expect(assigned).not.toContain("Remove from my students"); expect(assigned).not.toContain("Add to my students"); expect(assigned).toContain('data-testid="learner-state"');
     const admin = view([mine, learner({ membershipId: M2, name: "Rabbi's claim", tutor: { name: "Synthetic Tutor", claimed: true, mine: false } })], ["admin"]);
     expect(admin.match(/Remove from my students: /g)).toHaveLength(2);
     expect(admin).not.toContain("Add to my students");
@@ -86,6 +94,9 @@ describe("Find a learner", () => {
     expect(after).toContain('role="status">Synthetic Learner was added to your students.</p>');
     expect(view([learner()], ["tutor"], { problem: FIND_STRINGS.hasTutor })).toContain('role="alert"');
     expect(view([])).toContain(FIND_STRINGS.none);
+    // Before anything is typed there is only the search field: no rows and no "No learners found." (finding 8).
+    const idle = view([], ["tutor"], { state: { status: "idle" } });
+    expect(idle).toContain('type="search"'); expect(idle).not.toContain("learner-row"); expect(idle).not.toContain(FIND_STRINGS.none);
     for (const markup of [after, view([]), view([learner()], ["tutor"], { state: { status: "failed" } })]) expect(markup).not.toMatch(/!/);
     expect(renderToStaticMarkup(createElement(LearnerRow, { row: learner(), tutor: true, admin: false, pending: true, onClaim: () => {}, onUnclaim: () => {} }))).toMatch(/disabled=""/);
   });
@@ -109,6 +120,21 @@ describe("Your students", () => {
     expect(markup).toContain("days to go"); expect(markup).toContain("Practiced the first aliyah"); expect(markup).toContain(">Open<");
     expect(markup).toContain(`href="/workspace/tutor/${R1}"`);
     expect(renderToStaticMarkup(createElement(YourStudentsView, { state: { status: "ready", rows: [] }, onRetry: () => {} }))).toContain(YOUR_STUDENTS_STRINGS.none);
+  });
+  it("leads a row with the next rehearsal or Beit Mitzvah only when it is two weeks away or less (findings 1 and 2)", () => {
+    const now = new Date(2026, 9, 28);
+    const at = (rehearsal1: string | null, ceremonyDate: string) => ({ ceremonyDate, rehearsal1, rehearsal2: null });
+    expect(nextDate(at("2026-10-29", "2026-12-12"), now)).toMatchObject({ kind: "rehearsal", days: 1, chip: "Rehearsal tomorrow" });
+    expect(nextDate(at("2026-10-28", "2026-12-12"), now)).toMatchObject({ kind: "rehearsal", days: 0, chip: "Rehearsal today" });
+    expect(nextDate(at("2026-11-07", "2026-11-14"), now)).toMatchObject({ kind: "rehearsal", days: 10, chip: "Rehearsal in 10 days" });
+    expect(nextDate(at(null, "2026-11-06"), now)).toMatchObject({ kind: "ceremony", days: 9, chip: "Beit Mitzvah in 9 days" });
+    expect(nextDate(at("2026-11-12", "2027-04-10"), now)).toMatchObject({ kind: "rehearsal", days: 15, chip: null });
+    expect(nextDate(at("2026-10-01", "2026-10-20"), now)).toBeNull();
+    const row = studentRows([{ ...student(R1, "Linked", "2026-12-12"), rehearsal1: "2026-10-29", rehearsal2: "2026-11-01" }], [])[0];
+    const markup = renderToStaticMarkup(createElement(StudentRowMeta, { row, now }));
+    expect(markup).toMatch(/data-testid="student-row-date"><span[^>]*data-tone="attention"[^>]*>Rehearsal tomorrow<\/span>/);
+    expect(markup).toContain("45 days to go");
+    expect(renderToStaticMarkup(createElement(StudentRowMeta, { row: studentRows([student(R1, "Later", "2027-06-05")], [])[0], now }))).not.toContain('data-tone="attention"');
     expect(renderToStaticMarkup(createElement(YourStudentsView, { state: { status: "failed" }, onRetry: () => {} }))).toContain(">Try again</button>");
   });
 });
