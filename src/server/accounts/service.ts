@@ -8,7 +8,7 @@ import type { AccessDatabase, AccessRequest, AccessTransaction, Actor } from "..
 import { withTenantTransaction } from "../db/runtime";
 import { requireCookieMutation } from "../http/mutations";
 import type { AccountMailKind, AccountMailOutcome } from "../mail/transport";
-import { memberEligible as savedEligible } from "../access/eligibility";
+import { linkRequestedStudent } from "../learners/link";
 import * as s from "../db/index";
 import * as data from "./data";
 import * as validate from "./validation";
@@ -22,6 +22,8 @@ import * as validate from "./validation";
 export type AccountMailSender = (kind: AccountMailKind, to: string, tenant: Readonly<{ name: string; productName: string }>, idempotencyKey: string) => Promise<AccountMailOutcome>;
 type Request = AccessRequest & { method?: string };
 type Mode = validate.ApproverMode;
+// Readings for everyone (plan D6, decision 4): approving with a target links the account to a student record through the
+// invitation layer's writes in src/server/learners/link.ts, the one grant an approval ever causes (the structural test names it).
 const failed = <C extends string>(code: C) => ({ ok: false as const, code });
 /** A stable UUID from a string, for the provider's idempotency key. */
 const derivedKey = (value: string) => {
@@ -69,7 +71,7 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
         // The account's own name, when it is a plain name rather than an address.
         const shown = account ? validate.shownName(account.name) : "", suggestedName = shown === "Portal member" ? "" : shown;
         const { productName } = await data.tenantNames(tx, identity.tenantId);
-        if (identity.membership && await savedEligible(tx, identity.tenantId, identity.membership.id)) return { ok: true as const, state: "member" as const, suggestedName, productName };
+        if (identity.membership && await data.activeMember(tx, identity.tenantId, identity.membership.id)) return { ok: true as const, state: "member" as const, suggestedName, productName };
         const pending = await data.requestOf(tx, identity.tenantId, identity.userId);
         return { ok: true as const, state: pending ? "pending" as const : "requestable" as const, suggestedName, productName };
       });
@@ -79,7 +81,7 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
     async request(request: Request, supplied: unknown) {
       const value = validate.request(supplied);
       const result = await input.access.withVerifiedIdentity(request, { intent: "data-write", mutation: true }, async (tx, identity) => {
-        if (identity.membership && await savedEligible(tx, identity.tenantId, identity.membership.id)) return { ok: true as const, state: "member" as const, mail: null };
+        if (identity.membership && await data.activeMember(tx, identity.tenantId, identity.membership.id)) return { ok: true as const, state: "member" as const, mail: null };
         await data.lockRequestQueue(tx, identity.tenantId);
         if (await data.requestOf(tx, identity.tenantId, identity.userId)) return { ok: true as const, state: "pending" as const, mail: null };
         const at = now();
@@ -87,7 +89,9 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
         if (await data.pendingCount(tx, identity.tenantId) >= data.ACCOUNT_LIMITS.pendingPerTenant) return failed("busy");
         if (!await data.consume(tx, { tenantId: identity.tenantId, scope: "account-request", subject: identity.userId, limit: data.ACCOUNT_LIMITS.requestsPerDay, secret: input.throttleSecret, now: at }))
           return failed("rate-limited");
-        const row = await data.insertRequest(tx, identity.tenantId, identity.userId, value.name, value.purpose);
+        // A named student record must be this congregation's and enabled; the approver still chooses whom to link.
+        if (value.studentId && !await data.requestableStudent(tx, identity.tenantId, value.studentId)) throw new AccessDenied(404);
+        const row = await data.insertRequest(tx, identity.tenantId, identity.userId, value.name, value.purpose, value.studentId);
         if (!row) return { ok: true as const, state: "pending" as const, mail: null };
         // Over the congregation's hourly mail budget the request still waits in the list; only its email is skipped.
         if (!await data.consume(tx, { tenantId: identity.tenantId, scope: "account-mail", subject: "requests", limit: data.ACCOUNT_LIMITS.requestMailsPerHour, secret: input.throttleSecret, now: at })) {
@@ -113,11 +117,14 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
     async requests(request: Request, mode: Mode) {
       return withApprover(request, mode, "read-accounts", async (tx, actor) => ({ ok: true as const,
         requests: (await data.listRequests(tx, actor.tenantId, data.ACCOUNT_LIMITS.pendingPerTenant)).map(row => ({ id: row.id, name: row.name, purpose: row.purpose,
-          email: row.verified ? row.email : null, requestedAt: row.requestedAt.toISOString() })), productName: (await data.tenantNames(tx, actor.tenantId)).productName }));
+          email: row.verified ? row.email : null, requestedAt: row.requestedAt.toISOString(),
+          student: row.studentId && row.studentFirstName && row.studentLastName ? { id: row.studentId, firstName: row.studentFirstName, lastName: row.studentLastName } : null })), productName: (await data.tenantNames(tx, actor.tenantId)).productName }));
     },
     /**
-     * Approve: the Member role and, when it is new, one email to that person. Never a role grant. An approver never
-     * decides their own request (someone who asked, then became a designated tutor); it is kept for another approver.
+     * Approve: the Member role and, when it is new, one email to that person. With a target student (plan D6), the account is
+     * linked to that student record first, which does grant the student role, as accepting a student invitation would; the email
+     * then says "linked". An approver never decides their own request (someone who asked, then became a designated tutor); it is
+     * kept for another approver.
      */
     async approve(request: Request, supplied: unknown) {
       const value = validate.decision(supplied);
@@ -132,18 +139,20 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
         let member = await data.activeMember(tx, actor.tenantId, membership.id, "update"), created = false;
         // Only an admin approves again someone an admin ended (Decided here, 2026-10-23); the request is kept for one.
         if (!member && actor.mode !== "admin" && requester.membership && await data.wasEnded(tx, actor.tenantId, membership.id)) return failed("admin-only");
+        // The link comes first: a refusal (identity taken, account already linked) keeps the request and writes no member row.
+        if (value.studentId) { const linked = await linkRequestedStudent(tx, actor, membership.id, value.studentId); if (!linked.ok) return linked; }
         if (!member) { member = await data.insertMember(tx, { tenantId: actor.tenantId, membershipId: membership.id, userId: pending.userId, displayName: pending.displayName, approvedBy: actor.membershipId }); created = true; }
         if (!await data.deleteRequest(tx, actor.tenantId, pending.id)) throw new Error("Account request unavailable");
         await data.audit(tx, actor, "account-request.approve", "tenant_member", member.id, randomUUID());
         const mail = created && requester.account.verified ? { tenantId: actor.tenantId, memberId: member.id, to: requester.account.email, names: await data.tenantNames(tx, actor.tenantId) } : null;
-        return { ok: true as const, memberId: member.id, mail };
+        return { ok: true as const, memberId: member.id, linked: value.studentId !== null, mail };
       });
       if (!result.ok) return result;
       if (result.mail) {
         const mail = result.mail;
-        await deliver(mail.tenantId, [{ to: mail.to, key: mail.memberId }], "account-approved", mail.names, (tx, status) => data.markWelcome(tx, mail.tenantId, mail.memberId, status, new Date(now())));
+        await deliver(mail.tenantId, [{ to: mail.to, key: mail.memberId }], result.linked ? "account-linked" : "account-approved", mail.names, (tx, status) => data.markWelcome(tx, mail.tenantId, mail.memberId, status, new Date(now())));
       }
-      return { ok: true as const, memberId: result.memberId };
+      return { ok: true as const, memberId: result.memberId, linked: result.linked };
     },
     /**
      * Decline: the request is removed and nothing is sent. One's own request may be declined: it grants nothing, and it

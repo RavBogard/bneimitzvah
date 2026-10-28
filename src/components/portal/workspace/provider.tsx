@@ -4,7 +4,7 @@ import { createDepartureGuards, type DeparturePurpose } from "./departure-guards
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { parseSession, PortalRequestError, requestPortal, type SessionSummary } from "../api";
+import { fetchSession, parseSession, PortalRequestError, requestPortal, type SessionSummary } from "../api";
 import { workspaceApi, type Assigned, type Context, type ReadingMode } from "./api";
 import { PracticeCoordinator } from "./practice";
 import { fetchStudyPage, type StudyKind, type StudyPage, type StudyVerse } from "./study/api";
@@ -141,7 +141,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const request = new AbortController(); sessionAbort.current = request;
     checkingRef.current = true; practice.pause(); work.current.forEach(value => value.pause()); setChecking(true); setFailure(null);
     void (async () => {
-      const next = parseSession(await requestPortal("/api/session", undefined, request.signal));
+      // A sign-in with no membership yet gets one here (plan D1): the workspace never shows a person without a shelf.
+      const next = await fetchSession(requestPortal, request.signal);
       if (request.signal.aborted || turn !== sequence.current) return;
       const sameBinding = binding.current === next.sessionBinding;
       if (binding.current && !sameBinding) {

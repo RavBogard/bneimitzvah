@@ -24,21 +24,21 @@ test("a signed-in account with no role asks for one on the front door and on /ac
       return json(route, 200, { ok: true, state: "requestable", suggestedName: "Ruth Synthetic", productName: "CRC Torah" });
     });
     await page.goto(path);
-    await expect(page.getByRole("heading", { name: "Ask for an account", exact: true })).toBeVisible();
-    await expect(page.getByText("An account keeps your saved readings, your place in Learn to lein, your preferred commentaries and your settings. Everything else on CRC Torah is open without one.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ask to be linked", exact: true })).toBeVisible();
+    await expect(page.getByText("Preparing a Beit Mitzvah at CRC? Ask the rabbi to connect this account to your student record.", { exact: true })).toBeVisible();
     await expect(page.getByLabel("Your name")).toHaveValue("Ruth Synthetic");
     await expect(page.getByText("No congregation role is linked")).toHaveCount(0);
-    await page.getByLabel("What would you like to work on? (optional)").fill("Learning\nthe haftarah");
+    await page.getByLabel("Who you are (the student’s name and ceremony date, or whose parent you are)").fill("Learning\nthe haftarah");
     for (const name of ["Send request"]) { const box = await page.getByRole("button", { name, exact: true }).boundingBox(); expect(box && box.height >= 44).toBe(true); }
     expect(await noHorizontalScroll(page)).toBe(true);
     await page.getByRole("button", { name: "Send request", exact: true }).click();
-    await expect(page.getByText("You’ll get one email when it’s approved.", { exact: true })).toBeVisible();
+    await expect(page.getByText("You’ll get one email when it’s been linked.", { exact: true })).toBeVisible();
     expect(posted).toEqual([{ name: "Ruth Synthetic", purpose: "Learning the haftarah" }]);
     expect(await noHorizontalScroll(page)).toBe(true);
   }
 });
 
-test("a pending request says so, a full day or queue is refused plainly, and a member is told the account can save readings", async ({ page }) => {
+test("a pending request says so, a full day or queue is refused plainly, and an approved Member role shows no request at all", async ({ page }) => {
   await week(page);
   let state = "pending", answer: { status: number; body: unknown } = { status: 429, body: { ok: false, code: "rate-limited" } };
   await page.route("**/api/session", route => json(route, 200, session([], state === "member")));
@@ -54,8 +54,9 @@ test("a pending request says so, a full day or queue is refused plainly, and a m
   await page.getByRole("button", { name: "Send request", exact: true }).click();
   await expect(page.locator(".account-request").getByRole("alert")).toHaveText("Many requests are waiting right now. Try again later.");
   state = "member"; await page.reload();
-  await expect(page.getByRole("heading", { name: "Your account can save readings", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "This week’s reading", exact: true })).toHaveAttribute("href", "/read");
+  // Plan D6: the shelf is everyone's, so the Member role leaves nothing to ask for; the request block is gone.
+  await expect(page.getByRole("heading", { name: "Ask to be linked", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Your account can save readings", exact: true })).toHaveCount(0);
 });
 
 test("parents, tutors, admins and students are not offered a request on /account (G20: a student already has an account)", async ({ page }) => {
@@ -68,12 +69,12 @@ test("parents, tutors, admins and students are not offered a request on /account
   await page.route("**/api/account/request", route => json(route, 200, { ok: true, state: "requestable", suggestedName: "", productName: "CRC Torah" }));
   await page.goto("/account");
   await expect(page.getByRole("list", { name: "Roles" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Ask for an account", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Ask to be linked", exact: true })).toHaveCount(0);
   expect(asked).toEqual([]);
   roles = ["student"]; saved = false;
   await page.reload();
   await expect(page.getByRole("list", { name: "Roles" }).getByRole("link", { name: /^Student/ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Ask for an account", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Ask to be linked", exact: true })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveCount(0);
   expect(asked).toEqual([]);
 });

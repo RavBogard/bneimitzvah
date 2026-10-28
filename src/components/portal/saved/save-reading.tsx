@@ -2,7 +2,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Sheet } from "../../ui";
 import { createSavedReading, fetchSavedReadings, type SavedKind } from "./api";
-import { parseSession, requestPortal } from "../api";
 import { rememberSignedIn, signedInHint, signInPending } from "../signed-in-hint";
 import { ReturnSignInLink } from "../return-sign-in-link";
 import type { Pill } from "../public-reading/reader-title";
@@ -22,8 +21,8 @@ const kindName = (kind: SavedKind) => kind === "torah" ? "Torah" : "Haftarah";
 export function suggestedName(passage: SavablePassage): string {
   return Array.from(`${passage.title ?? "Shabbat reading"} · ${passage.label ?? kindName(passage.kind)}`).slice(0, 80).join("");
 }
-/** What a signed-in student sees on pressing Save (1.9 N20-1 and N20-2; Daniel, 2026-10-25, "Keep it"): why, and where their own reading is. */
-export const STUDENT_LINE = "Student accounts don’t save other readings. Your assigned reading is always under Reading.";
+/** The one account that cannot save (plan D2): a membership turned off, which the server refuses with 403. Lead's wording, listed as a gap. */
+export const NOT_AVAILABLE_LINE = "Saving isn’t available for this account.";
 const problems: Record<Exclude<SaveProblem, null>, string> = {
   invalid: "Use a name of 1 to 80 characters and a real date, or leave the date empty.",
   limit: "You have 100 saved readings, the most an account keeps. Remove one to save another.",
@@ -47,8 +46,8 @@ const rangeText = (ranges: readonly string[]) => ranges.join("; ").replace(/(\d)
  * portion, or Choose verses, which closes the sheet and starts choosing) and one button, Add. An account that cannot save is told why
  * inside it. `open` is whether it is showing; the state is kept by `useSaveReading`.
  */
-export function SaveReadingView({ step, open, problem, name, date, panelId, student = false, verses, screenLine, wholeLine, canChoose, onName, onDate, onVerses, onSubmit, onClose }: {
-  step: SaveStep; open: boolean; problem: SaveProblem; name: string; date: string; panelId: string; student?: boolean; verses: SaveVerses;
+export function SaveReadingView({ step, open, problem, name, date, panelId, verses, screenLine, wholeLine, canChoose, onName, onDate, onVerses, onSubmit, onClose }: {
+  step: SaveStep; open: boolean; problem: SaveProblem; name: string; date: string; panelId: string; verses: SaveVerses;
   /** What is on screen, named with its range; the whole portion's range (null when there is no such choice); whether Choose verses is offered. */
   screenLine: string; wholeLine: string | null; canChoose: boolean;
   onName: (value: string) => void; onDate: (value: string) => void; onVerses: (value: SaveVerses) => void; onSubmit: () => void; onClose: () => void;
@@ -58,9 +57,8 @@ export function SaveReadingView({ step, open, problem, name, date, panelId, stud
     <input type="radio" name={`${panelId}-verses`} value={value} checked={verses === value} disabled={busy} onChange={() => onVerses(value)} /><span>{label}</span></label>;
   return <Sheet open={open} onClose={onClose} title={SAVE_STRINGS.title} closeLabel="Close" dismissible={!busy}>
     <div className={styles.sheetBody} data-save-step={step}>
-      {step === "not-eligible" && (student
-        ? <p className={styles.line} data-save-student="">{STUDENT_LINE} <a href="/workspace/student?tab=reading">Open your reading</a></p>
-        : <p className={styles.line}><a href="/account">Ask for an account to save readings</a></p>)}
+      {/* Readings for everyone (plan D2): every signed-in account saves, students included; "not-eligible" is only a membership turned off, with nothing to ask for. */}
+      {step === "not-eligible" && <p className={styles.line} role="status">{NOT_AVAILABLE_LINE}</p>}
       {step === "unavailable" && <p className={styles.line} role="status">Saving isn’t available right now. Try again.</p>}
       {form && <form id={panelId} className={styles.sheetForm} aria-label="Add this reading" onSubmit={event => { event.preventDefault(); onSubmit(); }}>
         <div><label htmlFor={`${panelId}-name`}>Name</label>
@@ -104,20 +102,13 @@ export function useSaveReading({ passage, whole, back, offer, onChoose, onSaved 
   const base: SavablePassage = passage ?? { title: null, label: null, kind: "torah", ranges: [], date: null };
   const [step, setStep] = useState<SaveStep>("idle"), [problem, setProblem] = useState<SaveProblem>(null), [savedId, setSavedId] = useState<string | null>(null), [shown, setShown] = useState(false);
   const [fixed, setFixed] = useState<Ask | null>(null), [verses, setVerses] = useState<SaveVerses>("screen");
-  const [name, setName] = useState(() => suggestedName(base)), [date, setDate] = useState(base.date ?? ""), [student, setStudent] = useState(false);
+  const [name, setName] = useState(() => suggestedName(base)), [date, setDate] = useState(base.date ?? "");
   const panelId = useId(), live = useRef<AbortController | null>(null);
   const subject = fixed?.passage ?? base;
   // Another passage on screen starts over; nothing typed for the last one carries across.
   const key = JSON.stringify([base.kind, base.ranges, base.date, base.title, base.label]);
   useLayoutEffect(() => { live.current?.abort(); setStep(signedInHint() ? "idle" : "signed-out"); setProblem(null); setShown(false); setFixed(null); setVerses("screen"); setName(suggestedName(base)); setDate(base.date ?? ""); }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => live.current?.abort(), []);
-  // An account that cannot save is told why only when it is a student's (G20: a student already has an account to ask for); any other keeps the way to ask.
-  useEffect(() => {
-    if (step !== "not-eligible") { setStudent(false); return; }
-    const request = new AbortController();
-    requestPortal("/api/session", undefined, request.signal).then(value => { if (!request.signal.aborted) setStudent(parseSession(value).roles.includes("student")); }, () => { /* The way to ask stays. */ });
-    return () => request.abort();
-  }, [step]);
   const begin = () => { live.current?.abort(); const controller = new AbortController(); live.current = controller; return controller; };
   const check = (spend?: { current: boolean }) => {
     const controller = begin(); setStep("checking");
@@ -153,7 +144,7 @@ export function useSaveReading({ passage, whole, back, offer, onChoose, onSaved 
   const close = () => { live.current?.abort(); setShown(false); setProblem(null); setStep(current => current === "saving" ? "form" : current); };
   const wholeLine = !fixed && whole && whole.length > 0 ? rangeText(whole) : null;
   const open = shown && (step === "form" || step === "saving" || step === "not-eligible" || step === "unavailable");
-  const sheet = <SaveReadingView step={step} open={open} problem={problem} name={name} date={date} panelId={panelId} student={student} verses={verses}
+  const sheet = <SaveReadingView step={step} open={open} problem={problem} name={name} date={date} panelId={panelId} verses={verses}
     screenLine={`${subject.label ?? kindName(subject.kind)} · ${rangeText(subject.ranges)}`} wholeLine={wholeLine} canChoose={Boolean(onChoose) && !fixed}
     onName={setName} onDate={setDate} onSubmit={submit} onClose={close}
     onVerses={value => { if (value === "choose") { close(); window.setTimeout(() => onChoose?.(), 0); return; } setVerses(value); }} />;

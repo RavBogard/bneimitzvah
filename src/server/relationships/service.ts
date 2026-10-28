@@ -7,12 +7,13 @@ import { requireCookieMutation, type CookieMutationRequest } from "../http/mutat
 import { identifier, revision } from "../students/validation";
 import * as data from "./data";
 import { isCeremonyDone } from "../data/ceremony-done";
+import { auditClaim, liveClaimForLink, liveClaimsOfGrant, revokeClaim } from "../learners/data";
 import type { AdminSelection, EligibleTutor, FlagSelection, LinkSelection } from "./types";
 
 const conflict = () => Object.freeze({ ok: false as const, code: "stale-state" as const });
 function active(value: unknown) { if (value !== "active") throw new AccessDenied(403); }
 function boolean(value: unknown): boolean { if (typeof value !== "boolean") throw new AccessDenied(403); return value; }
-export function displayName(value: string, fallback: "Parent" | "Student" | "Tutor" = "Tutor") {
+export function displayName(value: string, fallback: "Parent" | "Student" | "Tutor" | "Learner" = "Tutor") {
   const label = value.trim();
   // This is only the label of an already tenant-authorized tutor, never an
   // arbitrary global-user search. Do not turn email-shaped names into contacts.
@@ -45,6 +46,10 @@ export async function writeTutorRevocation<Q extends PgQueryResultHKT>(tx: Acces
   const link = await data.tutorLink(tx, actor.tenantId, studentId, linkId);
   if (link.revokedAt || !await data.revokeTutor(tx, actor.tenantId, link.id, new Date())) return conflict();
   await data.audit(tx, actor, "tutor.revoke", link.id, studentId);
+  // Readings for everyone (plan D5): a link a tutor's claim made ends with the claim, whoever revokes it (the admin on the access
+  // page, the tutor or an admin on the shelf), audited as learner.unclaim in the revoker's own mode and grant.
+  const claim = await liveClaimForLink(tx, actor.tenantId, link.id);
+  if (claim && await revokeClaim(tx, actor.tenantId, claim.id, actor.mode === "admin" ? "admin" : "tutor", actor.membershipId)) await auditClaim(tx, actor, "learner.unclaim", claim.id);
   return Object.freeze({ ok: true as const, id: link.id });
 }
 
@@ -145,6 +150,10 @@ export function createRelationshipService<Q extends PgQueryResultHKT>(input: { a
       if (!updated) return conflict();
       await data.revokeContexts(tx, actor.tenantId, { kind: "grant", id: grantId }, now);
       await data.audit(tx, actor, "grant.revoke", grantId);
+      // Readings for everyone: a revoked tutor grant ends every claim it holds, as the admin's act, so the learner's line clears and another tutor may claim.
+      for (const claim of await liveClaimsOfGrant(tx, actor.tenantId, grantId)) {
+        if (await revokeClaim(tx, actor.tenantId, claim.id, "admin", actor.membershipId)) await auditClaim(tx, actor, "learner.unclaim", claim.id);
+      }
       return Object.freeze({ ok: true as const, id: grantId, revision: updated.revision });
     });
   }

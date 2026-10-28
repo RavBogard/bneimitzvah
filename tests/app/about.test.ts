@@ -37,6 +37,10 @@ test("every credit is one the repository already records, and the privacy and in
   // The page body shows no image of the mural; the site bar's brand disc is the only one, and it lives in the header.
   expect(page.slice(page.indexOf("<main"), page.indexOf("</main>"))).not.toMatch(/<img|<picture|background-image/);
   expect(text).toContain("Your account stays private.");
+  // Readings for everyone, decision 16 (plan D8): the one sentence, under the records heading, and the anchor the shelf's foot links to.
+  expect(text).toContain("Readings you keep, with their marks and notes, can be seen by your tutor and the rabbi.");
+  expect(page).toContain('<section id="accounts" aria-labelledby="about-records">');
+  expect(text.indexOf("What the site records about you")).toBeLessThan(text.indexOf("Readings you keep, with their marks and notes"));
   for (const line of [PLAN.installHint("CRC Torah"), PLAN.iphoneSteps, PLAN.ipadSteps, PLAN.androidMenu]) expect(text).toContain(line);
   expect(page).toContain('href="https://www.centralreform.org/"');
 });

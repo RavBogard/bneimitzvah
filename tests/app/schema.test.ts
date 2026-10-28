@@ -89,6 +89,23 @@ describe("tenant schema and transaction boundary", () => {
     expect(await fails(() => f.db.insert(schema.roleGrant).values({ tenantId: "crc", membershipId: f.memberA.id, role: "student", isCantor: true }), "23514")).toBe(true);
   });
 
+  it("keeps one live claim per learner, by a tutor grant of the same congregation, revoked whole or not at all", async () => {
+    const f = await fixture();
+    const claim = (learnerMembershipId: string, tutorGrantId: string, tenantId = "crc") => f.db.insert(schema.learnerClaim).values({ tenantId, learnerMembershipId, tutorGrantId }).returning();
+    expect(await fails(() => claim(f.memberA.id, f.parent.id))).toBe(true);
+    expect(await fails(() => claim(f.memberA.id, f.otherParent.id))).toBe(true);
+    expect(await fails(() => claim(f.memberB.id, f.tutor.id))).toBe(true);
+    expect(await fails(() => claim(f.memberA.id, f.tutor.id, "other"))).toBe(true);
+    const [first] = await claim(f.memberA.id, f.tutor.id);
+    expect(await fails(() => claim(f.memberA.id, f.tutor.id), "23505")).toBe(true);
+    expect(await fails(() => f.db.update(schema.learnerClaim).set({ revokedAt: new Date() }).where(eq(schema.learnerClaim.id, first.id)), "23514")).toBe(true);
+    expect(await fails(() => f.db.update(schema.learnerClaim).set({ revokedAt: new Date(), revokedBy: "rabbi" as never, revokedByMembershipId: f.memberA.id }).where(eq(schema.learnerClaim.id, first.id)), "23514")).toBe(true);
+    expect(await fails(() => f.db.update(schema.learnerClaim).set({ revokedAt: new Date(), revokedBy: "learner", revokedByMembershipId: f.memberB.id }).where(eq(schema.learnerClaim.id, first.id)))).toBe(true);
+    await f.db.update(schema.learnerClaim).set({ revokedAt: new Date(), revokedBy: "learner", revokedByMembershipId: f.memberA.id }).where(eq(schema.learnerClaim.id, first.id));
+    const [second] = await claim(f.memberA.id, f.tutor.id);
+    expect(second.id).not.toBe(first.id);
+  });
+
   it("binds context to actual session, actor, grant and exact guardian-child pair", async () => {
     const f = await fixture();
     await f.db.insert(schema.session).values([

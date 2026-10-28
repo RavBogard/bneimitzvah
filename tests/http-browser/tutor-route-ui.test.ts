@@ -8,7 +8,7 @@ import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
 import { closeVerseTools, openVerseTools, workPanel } from "./verse-tools";
-import { openAuthMail } from "./auth-navigation";
+import { openAuthMail, switchRole } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
 vi.mock("server-only", () => ({}));
@@ -67,7 +67,7 @@ it("opens authorized card and copied direct routes, captures tutor home and phon
   await safe(() => tab.setViewportSize({ width: 390, height: 844 })); await capture(tab, "phone-home");
   await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click(); await tab.locator('a[href="/workspace/parent"]').click(); })());
   await ui(tab.getByRole("list", { name: "Child", exact: true })).toBeVisible(); await capture(tab, "phone-parent-home");
-  await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click(); await tab.locator('a[href="/workspace/tutor"]').click(); })());
+  await safe(() => (async () => { await switchRole(tab, "Tutor"); })());
   await safe(() => card(tab, fixture.student.id).focus()); await safe(() => tab.keyboard.press("Enter")); await loaded(tab, "Genesis 1:1");
   await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/workspace/tutor/${fixture.student.id}`);
   await capture(tab, "phone-reading");

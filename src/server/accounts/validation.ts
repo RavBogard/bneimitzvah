@@ -30,13 +30,15 @@ export function uuid(value: unknown): string {
 export type ApproverMode = "admin" | "tutor";
 export const mode = (value: unknown): ApproverMode => value === "admin" || value === "tutor" ? value : invalid();
 
+/** Readings for everyone (plan D6): a request may name the student record it asks to be linked to; an approval may pick one. */
+const target = (value: unknown): string | null => value === undefined || value === null ? null : uuid(value);
 export function request(value: unknown) {
-  const row = closedObject(value, ["name"], ["purpose"]);
-  return Object.freeze({ name: name(row.name), purpose: purpose(row.purpose) });
+  const row = closedObject(value, ["name"], ["purpose", "studentId"]);
+  return Object.freeze({ name: name(row.name), purpose: purpose(row.purpose), studentId: target(row.studentId) });
 }
 export function decision(value: unknown) {
-  const row = closedObject(value, ["mode", "requestId"]);
-  return Object.freeze({ mode: mode(row.mode), requestId: uuid(row.requestId) });
+  const row = closedObject(value, ["mode", "requestId"], ["studentId"]);
+  return Object.freeze({ mode: mode(row.mode), requestId: uuid(row.requestId), studentId: target(row.studentId) });
 }
 export const endMember = (value: unknown) => Object.freeze({ memberId: uuid(closedObject(value, ["memberId"]).memberId) });
 export const addApprover = (value: unknown) => Object.freeze({ tutorGrantId: uuid(closedObject(value, ["tutorGrantId"]).tutorGrantId) });

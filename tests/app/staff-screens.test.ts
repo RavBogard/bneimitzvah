@@ -137,9 +137,15 @@ describe("Tutor hand-over (N15, G11)", () => {
     const teaching = await t.call("/api/admin/tutor-students", "admin");
     expect(teaching.status).toBe(200);
     expect(teaching.json.tutors).toEqual([{ tutorGrantId: t.f.tutorGrant.id, students: [{ id: t.own.id, firstName: t.own.firstName, lastName: t.own.lastName }] }]);
+    // Readings for everyone: a claim the departing tutor holds ends with the grant, so it never blocks the learner's next tutor.
+    const [claim] = await t.f.owner(() => t.f.db.insert(s.learnerClaim).values({ tenantId: "crc", learnerMembershipId: t.f.adminMember.id, tutorGrantId: t.f.tutorGrant.id }).returning());
     const moved = await handOver(t, { expectedRevision: 1, toTutorGrantId: t.secondTutor.id, studentIds: [t.own.id] });
     expect(moved.status).toBe(200);
     expect(moved.json).toEqual({ ok: true, id: t.f.tutorGrant.id, revision: 2, moved: 1 });
+    const [ended] = await t.f.owner(() => t.f.db.select().from(s.learnerClaim).where(eq(s.learnerClaim.id, claim.id)));
+    expect(ended).toMatchObject({ revokedBy: "admin", revokedByMembershipId: t.f.adminMember.id });
+    expect(ended.revokedAt).not.toBeNull();
+    expect(await t.f.owner(() => t.f.db.select().from(s.auditEvent).where(and(eq(s.auditEvent.action, "learner.unclaim"), eq(s.auditEvent.targetId, claim.id))))).toHaveLength(1);
     expect(await t.liveTutors(t.own.id)).toEqual([t.secondTutor.id]);
     expect((await t.grantOf(t.f.tutorGrant.id)).revokedAt).not.toBeNull();
     // The old tutor reads nothing now; the new one reads the student.

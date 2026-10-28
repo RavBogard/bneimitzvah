@@ -42,7 +42,7 @@ test("two devices merging at once: the write lock makes the second merge see the
   expect(Object.keys(row.progress.lessons).sort()).toEqual(["intro-phrases", "torah-sof-pasuk"]);
 });
 
-test("revoking the grant a progress request holds waits for it, and without any live grant the progress is out of reach but kept", async () => {
+test("revoking the grant a progress request holds waits for it; without any live grant the progress stays (every live membership keeps it), and a membership turned off puts it out of reach but kept", async () => {
   const f = await fixture();
   const grants = await f.ownerDb.select().from(s.roleGrant).where(eq(s.roleGrant.membershipId, f.member.id));
   const entered = deferred(), release = deferred();
@@ -59,6 +59,9 @@ test("revoking the grant a progress request holds waits for it, and without any 
   expect(await a).toMatchObject({ ok: true, version: 1 });
   await revoke;
   await query(f.owner, "UPDATE role_grant SET revoked_at = now() WHERE membership_id = $1 AND revoked_at IS NULL", [f.member.id]);
+  // Readings for everyone (plan D1): a live membership is the whole rule, so the progress stays without a grant; a membership turned off is refused.
+  expect(await safe(f.courseB.get(f.request("tutor")))).toMatchObject({ ok: true, version: 1 });
+  await query(f.owner, "UPDATE membership SET disabled_at = now() WHERE id = $1", [f.member.id]);
   expect(await safe(f.courseB.get(f.request("tutor")))).toEqual({ denied: 403 });
   expect((await query(f.owner, "SELECT count(*)::int AS n FROM course_progress WHERE membership_id=$1", [f.member.id])).rows[0].n).toBe(1);
 });

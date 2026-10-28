@@ -131,20 +131,28 @@ it("Save, then sign in with the emailed code, comes back to the same reading wit
   await fixture.ownerDb.delete(s.savedReading).where(inArray(s.savedReading.id, rows.map(row => row.id)));
 }, 120_000);
 
-it("an account without saved readings is pointed to /account, and its front door has no My readings", async () => {
-  const { tab, seen, prefs } = await visitor(390);
+it("a first sign-in has a shelf at once, so Save opens the form; a membership turned off is told saving isn't available", async () => {
+  const { tab, seen } = await visitor(390);
   await signIn(tab, "saved-ui-recipient@example.test");
   await ui(tab.locator('[data-door="beit-mitzvah"]')).toBeVisible();
-  await ui(tab.locator("[data-my-readings]")).toHaveCount(0);
-  expect(seen).toEqual([]);
-  // An account that keeps no saved readings keeps no preferences either: neither the front door nor /read asks.
-  expect(prefs).toEqual([]);
+  // The entry made the membership at sign-in (plan D1): one row, no role, no approval.
+  const [account] = await fixture.ownerDb.select({ id: s.user.id }).from(s.user).where(eq(s.user.email, "saved-ui-recipient@example.test"));
+  const memberships = await fixture.ownerDb.select().from(s.membership).where(eq(s.membership.userId, account.id));
+  expect(memberships).toHaveLength(1);
+  expect(await fixture.ownerDb.select().from(s.roleGrant).where(eq(s.roleGrant.membershipId, memberships[0].id))).toEqual([]);
   await tab.goto("/read", { waitUntil: "domcontentloaded" });
   await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
   await tab.getByRole("button", { name: "Save to My Readings", exact: true }).click();
-  await ui(tab.getByRole("link", { name: "Ask for an account to save readings", exact: true })).toHaveAttribute("href", "/account");
+  await ui(tab.getByRole("form", { name: "Add this reading" })).toBeVisible();
+  expect(seen).toContain("GET /api/saved/readings");
+  // The membership turned off (plan D2): the server answers 403 and the sheet says so, with no form and nothing to ask for.
+  await fixture.ownerDb.update(s.membership).set({ disabledAt: new Date() }).where(eq(s.membership.id, memberships[0].id));
+  await tab.goto("/read", { waitUntil: "domcontentloaded" });
+  await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
+  await tab.getByRole("button", { name: "Save to My Readings", exact: true }).click();
+  await ui(tab.getByRole("status").filter({ hasText: "Saving isn’t available for this account." })).toBeVisible();
   await ui(tab.getByRole("form", { name: "Add this reading" })).toHaveCount(0);
-  expect(prefs).toEqual([]);
+  await fixture.ownerDb.update(s.membership).set({ disabledAt: null }).where(eq(s.membership.id, memberships[0].id));
 }, 120_000);
 
 it("the member opens the saved reading from My readings, marks a verse that stays marked after a reload, renames it and removes it", async () => {

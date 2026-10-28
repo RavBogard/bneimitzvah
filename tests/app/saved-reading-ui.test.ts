@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { conflictMark, fetchSavedPage, parseSavedPage, removeSavedReading, SavedRequestError, setSavedMark, updateSavedReading } from "../../src/components/portal/saved/api";
-import { SavedReadingPage, SavedReadingEdit, SavedReadingState, SavedVerseMarks, type EditStep } from "../../src/components/portal/saved/saved-reading";
+import { SavedReadingPage, SavedReadingEdit, SavedReadingState, SavedVerseMarkReadOnly, SavedVerseMarks, type EditStep } from "../../src/components/portal/saved/saved-reading";
 import { parseReadAddress, readAddress } from "../../src/components/portal/public-reading/urls";
 
 // Synthetic saved readings only.
@@ -21,6 +21,15 @@ describe("the saved reading's address", () => {
     expect(parseReadAddress(`?saved=${ID}&verse=2&lens=study`)).toEqual({ target: { mode: "saved", id: ID }, verse: 2, study: true });
     expect(parseReadAddress(`?saved=${ID.toUpperCase()}`).target).toEqual({ mode: "saved", id: ID });
     for (const bad of ["?saved=", "?saved=nope", `?saved=${ID}x`, "?saved=../api"]) expect(parseReadAddress(bad).target, bad).toBeNull();
+  });
+  it("carries a learner with the saved id for the staff view (plan D7), and drops it without one or when it is not an id", () => {
+    const learner = "00000000-0000-4000-8000-000000000002";
+    expect(parseReadAddress(`?saved=${ID}&learner=${learner.toUpperCase()}`).target).toEqual({ mode: "saved", id: ID, learner });
+    expect(readAddress({ mode: "saved", id: ID, learner })).toBe(`/read?saved=${ID}&learner=${learner}`);
+    expect(readAddress({ mode: "saved", id: ID, learner }, { verse: 2, study: true })).toBe(`/read?saved=${ID}&learner=${learner}&verse=2&lens=study`);
+    expect(parseReadAddress(`?saved=${ID}&learner=nope`).target).toEqual({ mode: "saved", id: ID });
+    expect(parseReadAddress(`?learner=${learner}`).target).toEqual({ mode: "week", date: null, kind: null });
+    expect(parseReadAddress(`?saved=nope&learner=${learner}`).target).toBeNull();
   });
 });
 
@@ -107,10 +116,20 @@ describe("the saved reading page's parts", () => {
     expect(marks({ state: "got-it", version: 2 }, true)).toContain('aria-disabled="true"');
     expect(marks(null, false, "This mark changed elsewhere. It shows what’s saved now.")).toContain("This mark changed elsewhere");
   });
+  it("the learner view's mark is read-only: the learner's state in words, no buttons, nothing when unmarked", () => {
+    const view = (mark: Parameters<typeof SavedVerseMarkReadOnly>[0]["mark"]) => renderToStaticMarkup(createElement(SavedVerseMarkReadOnly, { verseRef: "Genesis 1:2", mark }));
+    expect(view({ state: "working", version: 1 })).toContain("Still working");
+    expect(view({ state: "got-it", version: 3 })).toContain("Got it");
+    expect(view({ state: "got-it", version: 3 })).toContain('data-testid="learner-mark"');
+    for (const markup of [view({ state: "working", version: 1 }), view({ state: "got-it", version: 3 })]) { expect(markup).not.toContain("<button"); expect(markup).not.toContain("aria-pressed"); }
+    expect(view({ state: "unmarked", version: 2 })).toBe("");
+    expect(view(null)).toBe(""); expect(view(undefined)).toBe("");
+  });
   it("says plainly why a saved reading cannot open", () => {
     const state = (status: Parameters<typeof SavedReadingState>[0]["status"]) => renderToStaticMarkup(createElement(SavedReadingState, { status, onRetry: () => {} }));
     expect(state("signed-out")).toContain('href="/sign-in">Sign in</a>');
-    expect(state("not-eligible")).toContain('href="/account">Ask for an account</a>');
+    expect(state("not-eligible")).toContain("Saving isn’t available for this account.");
+    expect(state("not-eligible")).not.toContain("/account");
     expect(state("missing")).toContain("This reading isn’t in your saved readings");
     expect(state("missing")).toContain('href="/read">Go to this week</a>');
     expect(state("failed")).toContain(">Try again</button>");

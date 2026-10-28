@@ -1,12 +1,14 @@
 import { sql } from "drizzle-orm";
 import { check, foreignKey, pgTable, text, timestamp, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
-import { membership, role, roleGrant, tenant } from "./tenant-schema";
+import { membership, role, roleGrant, student, tenant } from "./tenant-schema";
 
 /**
  * Release 1.4 accounts (accounts plan section 1b). A person asks for an account (`account_request`, the pending
  * queue only); an approver turns it into the Member role (`tenant_member`, never a portal_role grant); admins
  * designate tutors who may also approve (`account_approver`). None of these ever grants a workspace mode.
+ * Readings for everyone (plan D6, 2026-10-27): a request is a link request. `student_id` is the student record the person
+ * named when asking, or the one the approver picks; approving with one links the account to that student.
  */
 const tenantId = () => text("tenant_id").notNull().references(() => tenant.id);
 const createdAt = () => timestamp("created_at", { withTimezone: true }).defaultNow().notNull();
@@ -19,10 +21,11 @@ export const accountRequest = pgTable("account_request", {
   id: uuid("id").defaultRandom().primaryKey(), tenantId: tenantId(), userId: text("user_id").notNull().references(() => user.id),
   displayName: text("display_name").notNull(), purpose: text("purpose"), createdAt: createdAt(),
   notifyStatus: text("notify_status").$type<"pending" | "sent" | "failed" | "skipped">().default("pending").notNull(),
-  notifyAttemptedAt: timestamp("notify_attempted_at", { withTimezone: true }),
+  notifyAttemptedAt: timestamp("notify_attempted_at", { withTimezone: true }), studentId: uuid("student_id"),
 }, t => [
   unique("account_request_tenant_id_key").on(t.tenantId, t.id),
   unique("account_request_user_key").on(t.tenantId, t.userId),
+  foreignKey({ name: "account_request_student_fk", columns: [t.tenantId, t.studentId], foreignColumns: [student.tenantId, student.id] }),
   check("account_request_name", sql`${t.displayName} = btrim(${t.displayName}) and char_length(${t.displayName}) between 1 and 80 and ${clean(t.displayName)}`),
   check("account_request_purpose", sql`${t.purpose} is null or (${t.purpose} = btrim(${t.purpose}) and char_length(${t.purpose}) between 1 and 500 and ${clean(t.purpose)})`),
   check("account_request_notify_shape", sql`(${t.notifyStatus} in ('pending','skipped') and ${t.notifyAttemptedAt} is null) or (${t.notifyStatus} in ('sent','failed') and ${t.notifyAttemptedAt} is not null)`),

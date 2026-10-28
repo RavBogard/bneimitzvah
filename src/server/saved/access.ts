@@ -5,11 +5,17 @@ import type { createAccessService } from "../access/service";
 import { AccessDenied } from "../access/errors";
 import type { AccessRequest, AccessTransaction } from "../access/types";
 import { savedEligibility } from "../data/saved";
+import { canView, liveStaffGrant, type StaffGrant } from "../data/learner-claims";
 import type { createMcpAuthService, McpActor } from "../mcp/service";
 
+/** The person whose rows a saved read is about: the owner's own, or (readings for everyone) a learner a staff viewer may see. */
+export type SavedScope = Readonly<{ tenantId: string; membershipId: string }>;
 /** The verified owner of a saved layer, fixed for one request. */
-export type SavedOwner = Readonly<{ tenantId: string; membershipId: string; userId: string; sessionExpiresAt: number }>;
+export type SavedOwner = SavedScope & Readonly<{ userId: string; sessionExpiresAt: number }>;
 export type SavedIntent = "read" | "data-write";
+/** The staff person reading a learner's shelf: their own membership and the live grant that lets them. */
+export type Viewer = Readonly<{ membershipId: string; grant: StaffGrant }>;
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /**
  * The one private binding both entrances share (a structural test holds this): inside a tenant transaction that
@@ -81,4 +87,55 @@ export async function withConnectionOwner<Q extends PgQueryResultHKT, T>(mcp: Pi
     assertLive();
     return result;
   });
+}
+
+/**
+ * Readings for everyone (Daniel, 2026-10-27; plan decision 3): the staff read path. The one private binding that sets
+ * app.saved_viewer (a structural test holds this): the same tenant check as bindOwner, the learner a live, undisabled
+ * membership of this tenant under a share lock, then the transaction-local viewer setting that 0054's staff_read policies
+ * read. The owner setting is never set on this path, so owner_only's WITH CHECK admits no insert, and no row is visible to an
+ * update or delete: the database refuses a write here whatever the action asks.
+ */
+async function bindViewer<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, learner: SavedScope) {
+  const [scope] = await tx.select({ tenant: sql<string | null>`current_setting('app.tenant_id', true)` }).from(sql`(select 1) as scope`);
+  if (!scope || scope.tenant !== learner.tenantId) throw new AccessDenied(403);
+  if (!await savedEligibility(tx, learner.tenantId, learner.membershipId)) throw new AccessDenied(404);
+  await tx.execute(sql`select set_config('app.saved_viewer', ${learner.membershipId}, true)`);
+}
+
+/**
+ * The staff entrances to other people's shelves, read-only, both under a verified cookie session with a membership in the
+ * host's tenant (never a practice-context header):
+ * - withSavedViewer: canView decides, from the viewer's own live grants in this tenant, whether this learner's shelf is theirs
+ *   to see (a live admin grant; a tutor grant holding the learner's live claim, or linked to the learner's student); anyone
+ *   else, a learner id of another tenant and a learner that does not exist are the same 404. Then bindViewer, then the action
+ *   with the learner as its scope. Nothing a request sends is ever bound without canView.
+ * - withDirectory: a live admin or tutor grant, else 404; then the transaction-local directory setting that 0054's
+ *   directory_read policy reads on the readings table alone, so the learner directory can count readings and find the
+ *   nearest date and nothing more. Only the saved service's directory read calls it (a structural test holds this).
+ */
+export function createSavedViewerAccess<Q extends PgQueryResultHKT>(input: { access: Pick<ReturnType<typeof createAccessService<Q>>, "withVerifiedIdentity"> }) {
+  async function withSavedViewer<T>(request: AccessRequest & { method?: string }, learnerMembershipId: string, action: (tx: AccessTransaction<Q>, scope: SavedScope, viewer: Viewer) => Promise<T>): Promise<T> {
+    if (typeof learnerMembershipId !== "string" || !uuid.test(learnerMembershipId)) throw new AccessDenied(404);
+    return input.access.withVerifiedIdentity(request, { intent: "read" }, async (tx, identity) => {
+      if (!identity.membership) throw new AccessDenied(403);
+      const grant = await canView(tx, identity.tenantId, identity.membership.id, learnerMembershipId);
+      if (!grant) throw new AccessDenied(404);
+      const scope: SavedScope = Object.freeze({ tenantId: identity.tenantId, membershipId: learnerMembershipId });
+      await bindViewer(tx, scope);
+      return action(tx, scope, Object.freeze({ membershipId: identity.membership.id, grant }));
+    });
+  }
+  async function withDirectory<T>(request: AccessRequest & { method?: string }, action: (tx: AccessTransaction<Q>, actor: Viewer & Readonly<{ tenantId: string }>) => Promise<T>): Promise<T> {
+    return input.access.withVerifiedIdentity(request, { intent: "read" }, async (tx, identity) => {
+      if (!identity.membership) throw new AccessDenied(403);
+      const grant = await liveStaffGrant(tx, identity.tenantId, identity.membership.id);
+      if (!grant) throw new AccessDenied(404);
+      const [scope] = await tx.select({ tenant: sql<string | null>`current_setting('app.tenant_id', true)` }).from(sql`(select 1) as scope`);
+      if (!scope || scope.tenant !== identity.tenantId) throw new AccessDenied(403);
+      await tx.execute(sql`select set_config('app.saved_directory', 'on', true)`);
+      return action(tx, Object.freeze({ tenantId: identity.tenantId, membershipId: identity.membership.id, grant }));
+    });
+  }
+  return Object.freeze({ withSavedViewer, withDirectory });
 }

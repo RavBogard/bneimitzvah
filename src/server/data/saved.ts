@@ -2,16 +2,17 @@ import "server-only";
 import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
-import type { SavedOwner } from "../saved/access";
+import type { SavedOwner, SavedScope } from "../saved/access";
 import { memberEligible } from "../access/eligibility";
 import type { MarkState, SavedKind, WorkStream } from "../saved/validation";
 import * as s from "../db/index";
 
 /**
  * Saved-layer queries. Imported only from src/server/saved/* (a structural test holds this).
- * Every query runs under the forced owner_only policy AND filters on the owner's tenant and
- * membership itself, so a forgotten WHERE still sees nothing and a forgotten policy still
- * filters. Nothing here writes an audit row: audit is staff-readable.
+ * Every query runs under the forced policies AND filters on the scope's tenant and membership
+ * itself, so a forgotten WHERE still sees nothing and a forgotten policy still filters. The reads
+ * take a SavedScope (the owner's own, or a learner a bound staff viewer may see: readings for
+ * everyone, 0054); the writes take the owner. Nothing here writes an audit row: audit is staff-readable.
  */
 type Tx<Q extends PgQueryResultHKT> = AccessTransaction<Q>;
 
@@ -23,18 +24,18 @@ export async function lockOwnerWrites<Q extends PgQueryResultHKT>(tx: Tx<Q>, own
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`portal-saved-owner:${owner.tenantId}:${owner.membershipId}`}, 0))`);
 }
 
-const readingOwner = (owner: SavedOwner) => and(eq(s.savedReading.tenantId, owner.tenantId), eq(s.savedReading.membershipId, owner.membershipId));
+const readingOwner = (owner: SavedScope) => and(eq(s.savedReading.tenantId, owner.tenantId), eq(s.savedReading.membershipId, owner.membershipId));
 export type SavedReadingRow = typeof s.savedReading.$inferSelect;
 
-export async function countReadings<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner) {
+export async function countReadings<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedScope) {
   const [row] = await tx.select({ n: count() }).from(s.savedReading).where(readingOwner(owner));
   return row?.n ?? 0;
 }
-export async function listReadings<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, limit: number) {
+export async function listReadings<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedScope, limit: number) {
   return tx.select().from(s.savedReading).where(readingOwner(owner))
     .orderBy(sql`${s.savedReading.readingDate} desc nulls last`, desc(s.savedReading.createdAt), asc(s.savedReading.id)).limit(limit);
 }
-export async function reading<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, id: string) {
+export async function reading<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedScope, id: string) {
   const [row] = await tx.select().from(s.savedReading).where(and(readingOwner(owner), eq(s.savedReading.id, id))).limit(1);
   return row ?? null;
 }
@@ -58,8 +59,8 @@ export async function deleteReading<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner
   return rows.length === 1;
 }
 
-const workOwner = (owner: SavedOwner) => and(eq(s.savedVerseWork.tenantId, owner.tenantId), eq(s.savedVerseWork.membershipId, owner.membershipId));
-const markOwner = (owner: SavedOwner) => and(eq(s.savedVerseMark.tenantId, owner.tenantId), eq(s.savedVerseMark.membershipId, owner.membershipId));
+const workOwner = (owner: SavedScope) => and(eq(s.savedVerseWork.tenantId, owner.tenantId), eq(s.savedVerseWork.membershipId, owner.membershipId));
+const markOwner = (owner: SavedScope) => and(eq(s.savedVerseMark.tenantId, owner.tenantId), eq(s.savedVerseMark.membershipId, owner.membershipId));
 export type WorkRow = typeof s.savedVerseWork.$inferSelect;
 export type MarkRow = typeof s.savedVerseMark.$inferSelect;
 
@@ -71,11 +72,11 @@ export async function countMarks<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: S
   const [row] = await tx.select({ n: count() }).from(s.savedVerseMark).where(markOwner(owner));
   return row?.n ?? 0;
 }
-export async function workForVerses<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, readingId: string, verses: readonly string[]) {
+export async function workForVerses<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedScope, readingId: string, verses: readonly string[]) {
   if (!verses.length) return [];
   return tx.select().from(s.savedVerseWork).where(and(workOwner(owner), eq(s.savedVerseWork.savedReadingId, readingId), inArray(s.savedVerseWork.verseRef, [...verses])));
 }
-export async function marksForVerses<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, readingId: string, verses: readonly string[]) {
+export async function marksForVerses<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedScope, readingId: string, verses: readonly string[]) {
   if (!verses.length) return [];
   return tx.select().from(s.savedVerseMark).where(and(markOwner(owner), eq(s.savedVerseMark.savedReadingId, readingId), inArray(s.savedVerseMark.verseRef, [...verses])));
 }
@@ -133,6 +134,23 @@ export async function insertStar<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: S
 /** Unstarring is the member's own delete of the row, so the cap counts only live stars. */
 export async function deleteStar<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, work: string, verseRef: string, comment: number) {
   await tx.delete(s.starredComment).where(oneStar(owner, work, verseRef, comment));
+}
+
+/**
+ * The learner directory's reads (readings for everyone, plan D5), under 0054's directory_read policy alone, which the saved
+ * access module turns on for a live admin or tutor: how many readings each membership of the tenant keeps, and the name and date
+ * of its nearest dated reading from today. Never a note, mark, star or translation: no other saved table is readable on that
+ * path. At most 5000 memberships.
+ */
+export type DirectoryRow = Readonly<{ membershipId: string; readings: number; nearest: Readonly<{ name: string; date: string }> | null }>;
+export async function directoryRows<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string): Promise<DirectoryRow[]> {
+  const counts = await tx.select({ membershipId: s.savedReading.membershipId, readings: count() }).from(s.savedReading)
+    .where(eq(s.savedReading.tenantId, tenantId)).groupBy(s.savedReading.membershipId).orderBy(asc(s.savedReading.membershipId)).limit(5000);
+  const nearest = await tx.selectDistinctOn([s.savedReading.membershipId], { membershipId: s.savedReading.membershipId, name: s.savedReading.name, date: s.savedReading.readingDate }).from(s.savedReading)
+    .where(and(eq(s.savedReading.tenantId, tenantId), sql`${s.savedReading.readingDate} >= current_date`))
+    .orderBy(asc(s.savedReading.membershipId), asc(s.savedReading.readingDate), desc(s.savedReading.createdAt), asc(s.savedReading.id)).limit(5000);
+  const next = new Map(nearest.map(row => [row.membershipId, row.date ? Object.freeze({ name: row.name, date: row.date }) : null]));
+  return counts.map(row => Object.freeze({ membershipId: row.membershipId, readings: Number(row.readings), nearest: next.get(row.membershipId) ?? null }));
 }
 
 // Release 1.7 M3b: the member's own reading preferences, one document per member, replaced under its revision.

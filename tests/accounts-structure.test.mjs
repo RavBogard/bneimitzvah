@@ -25,10 +25,16 @@ test("the accounts code never writes a role grant, never imports a grant writer,
     assert.doesNotMatch(file.text, /(insert|update|delete)\(s\.roleGrant\)/, `${file.path} writes role_grant`);
     assert.doesNotMatch(file.text, /\binsertGrant\b|\brevokeRoleGrant\b/, `${file.path} uses a grant writer`);
     for (const spec of importsOf(file.text)) assert.doesNotMatch(spec, /(^|\/)(data\/invitations|relationships|data\/saved|saved)(\/|$)/, `${file.path} imports ${spec}`);
+    // Readings for everyone (plan D6, decision 4): approving a link request with a target links the account to a student record, which
+    // does grant the student role, through the invitation layer's own writes in src/server/learners/link.ts; the service imports that
+    // one module and nothing else of the learners code, and the link write is reached by the accounts service alone.
+    assert.deepEqual(importsOf(file.text).filter(spec => /learners/.test(spec)), file.path === "src/server/accounts/service.ts" ? ["../learners/link"] : [], `${file.path} imports the learners code`);
     assert.doesNotMatch(file.text, /\b(savedReading|savedVerseWork|savedVerseMark|starredComment)\b/, `${file.path} names a saved table`);
     // The product name comes from the one shared reader (Daniel, E1), never a second query or a fixed "CRC Torah".
     assert.doesNotMatch(file.text, /\bs\.tenant\b|product_name|CRC Torah/, `${file.path} reads or fixes the product name itself`);
   }
+  const linkers = sources.filter(file => file.path !== "src/server/learners/link.ts" && /\blinkRequestedStudent\b/.test(file.text)).map(file => file.path);
+  assert.deepEqual(linkers, ["src/server/accounts/service.ts"]);
   const reader = sources.find(file => file.path === "src/server/data/product-name.ts");
   assert.ok(reader && /export async function readProductName\b/.test(reader.text) && /export async function readTenantNames\b/.test(reader.text));
   // No server code but the reader selects the column itself: the notification emails take it from the reader too.

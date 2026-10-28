@@ -14,21 +14,22 @@ const ORIGIN = "http://localhost:3000";
 const opened: { client: { close(): Promise<void> } }[] = [];
 afterEach(async () => { await Promise.all(opened.splice(0).map(f => f.client.close())); });
 
-type Who = "admin" | "multi" | "learner" | "recipient" | "parentOnly" | "disabled" | "revoked" | "anonymous";
+type Who = "admin" | "multi" | "learner" | "recipient" | "parentOnly" | "disabled" | "revoked" | "bare" | "anonymous";
 async function setup() {
   const f = await portalRoutesFixture(); opened.push(f);
-  // Three more synthetic people: a parent-only account, a parent whose membership is disabled, and one whose parent grant was revoked.
+  // Four more synthetic people: a parent-only account, a parent whose membership is disabled, one whose parent grant was revoked, and a bare
+  // membership with no grant and no tenant_member row (what a first sign-in makes, plan D1).
   const extra = await f.owner(async () => {
     const people: Record<string, { id: string; cookie: string; membershipId: string; grantId: string }> = {};
-    for (const [key, email] of [["parentOnly", "saved-parent@example.test"], ["disabled", "saved-disabled@example.test"], ["revoked", "saved-revoked@example.test"]] as const) {
+    for (const [key, email] of [["parentOnly", "saved-parent@example.test"], ["disabled", "saved-disabled@example.test"], ["revoked", "saved-revoked@example.test"], ["bare", "saved-bare@example.test"]] as const) {
       // Fixture sign-ins share one synthetic address; clear the magic-link throttle between them.
       await f.db.delete(s.rateLimit);
       const { cookie } = await f.signIn(email);
       const proof = await f.auth.api.getSession({ headers: new Headers({ cookie }), query: { disableRefresh: true, disableCookieCache: true } });
       if (!proof) throw new Error("Synthetic saved identity failed");
       const [member] = await f.db.insert(s.membership).values({ tenantId: "crc", userId: proof.user.id, disabledAt: key === "disabled" ? new Date() : null }).returning();
-      const [grant] = await f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: member.id, role: "parent", revokedAt: key === "revoked" ? new Date() : null }).returning();
-      people[key] = { id: proof.user.id, cookie, membershipId: member.id, grantId: grant.id };
+      const [grant] = key === "bare" ? [null] : await f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: member.id, role: "parent", revokedAt: key === "revoked" ? new Date() : null }).returning();
+      people[key] = { id: proof.user.id, cookie, membershipId: member.id, grantId: grant?.id ?? "" };
     }
     return people;
   });
@@ -52,10 +53,11 @@ async function setup() {
 }
 
 describe("the saved layer: who may use it", () => {
-  it("is 401 signed out, 403 without a membership or with only a student role, a disabled membership or a revoked grant, and open to parents, tutors and admins", async () => {
+  it("is 401 signed out, 403 without a membership or with a disabled one, and open to every live membership: students, a revoked grant and a bare membership included", async () => {
     const t = await setup();
     const body = { name: "Reading", date: null, kind: "torah", ranges: "Genesis 1:1-5" };
-    const expected: [Who, number][] = [["anonymous", 401], ["recipient", 403], ["learner", 403], ["disabled", 403], ["revoked", 403], ["parentOnly", 200], ["multi", 200], ["admin", 200]];
+    // Readings for everyone (Daniel, 2026-10-27): the shelf needs a live membership and nothing else; no role and no approval gates it.
+    const expected: [Who, number][] = [["anonymous", 401], ["recipient", 403], ["disabled", 403], ["learner", 200], ["revoked", 200], ["bare", 200], ["parentOnly", 200], ["multi", 200], ["admin", 200]];
     for (const [who, status] of expected) {
       expect((await t.call("/api/saved/readings", who)).status, who).toBe(status);
       expect((await t.call("/api/saved/stars", who)).status, who).toBe(status);
@@ -81,28 +83,32 @@ describe("the saved layer: who may use it", () => {
     expect((await t.call("/api/saved/readings?mode=admin", "multi")).status).toBe(400);
   });
 
-  it("ends with the last eligible grant and returns, rows intact, when eligibility comes back", async () => {
+  it("keeps the shelf whatever happens to the grants, ends it only while the membership is disabled, and returns it rows intact", async () => {
     const t = await setup();
     const made = await t.create("parentOnly");
     expect(made.status).toBe(200);
+    // Revoking the last grant changes nothing: a shelf is the membership's, not a role's.
     await t.f.owner(async () => { await t.f.db.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, t.extra.parentOnly.grantId)); });
+    expect((await t.call("/api/saved/readings", "parentOnly")).json.readings.map((r: { id: string }) => r.id)).toEqual([made.json.reading.id]);
+    expect((await t.call(`/api/saved/reading?id=${made.json.reading.id}`, "parentOnly")).status).toBe(200);
+    // A disabled membership is refused everywhere; enabled again, the same rows are there.
+    await t.f.owner(async () => { await t.f.db.update(s.membership).set({ disabledAt: new Date() }).where(eq(s.membership.id, t.extra.parentOnly.membershipId)); });
     expect((await t.call("/api/saved/readings", "parentOnly")).status).toBe(403);
     expect((await t.call(`/api/saved/reading?id=${made.json.reading.id}`, "parentOnly")).status).toBe(403);
-    await t.f.owner(async () => { await t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: t.extra.parentOnly.membershipId, role: "tutor" }); });
+    expect((await t.call("/api/saved/readings/create", "parentOnly", { name: "R", date: null, kind: "torah", ranges: "Genesis 1:1" })).status).toBe(403);
+    await t.f.owner(async () => { await t.f.db.update(s.membership).set({ disabledAt: null }).where(eq(s.membership.id, t.extra.parentOnly.membershipId)); });
     expect((await t.call("/api/saved/readings", "parentOnly")).json.readings.map((r: { id: string }) => r.id)).toEqual([made.json.reading.id]);
-    // A member with two eligible grants keeps access when one is revoked.
+    // A member with two grants keeps access when one is revoked, and when both are.
     await t.f.owner(async () => { await t.f.db.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, t.f.parentGrant.id)); });
+    expect((await t.call("/api/saved/readings", "multi")).status).toBe(200);
+    await t.f.owner(async () => { await t.f.db.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, t.f.tutorGrant.id)); });
     expect((await t.call("/api/saved/readings", "multi")).status).toBe(200);
   });
 
   it("keeps each congregation's saved layer to that congregation", async () => {
     const t = await setup();
     const mine = await t.create("multi");
-    // multi is a student only in the other congregation, so has no saved layer there at all.
-    expect((await t.dispatch(new Request("http://localhost:3101/api/saved/readings", { headers: { cookie: t.f.identities.multi.cookie } }))).status).toBe(403);
-    const otherMember = await t.f.owner(async () => (await t.f.db.select().from(s.membership).where(eq(s.membership.tenantId, "other")))[0]);
-    await t.f.owner(async () => { await t.f.db.insert(s.roleGrant).values({ tenantId: "other", membershipId: otherMember.id, role: "parent" }); });
-    // Now eligible there too, the same person sees none of this congregation's rows, even by id.
+    // multi is a student only in the other congregation: a shelf there too, with none of this congregation's rows in it, even by id.
     const there = await t.dispatch(new Request("http://localhost:3101/api/saved/readings", { headers: { cookie: t.f.identities.multi.cookie } }));
     expect(there.status).toBe(200); expect((await there.json()).readings).toEqual([]);
     const read = await t.dispatch(new Request(`http://localhost:3101/api/saved/reading?id=${mine.json.reading.id}`, { headers: { cookie: t.f.identities.multi.cookie } }));

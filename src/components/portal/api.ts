@@ -20,6 +20,18 @@ function role(value: unknown): Role {
   if (typeof value !== "string" || !Object.hasOwn(roleNames, value)) return unavailable();
   return value as Role;
 }
+/**
+ * The session summary, with the first sign-in's membership made (plan D1): a summary with no membership is answered by one
+ * POST /api/session/begin, whose summary is used instead, so a fresh sign-in has its shelf before any page decides what to
+ * show. A refusal of that POST (signed out, disabled) is the caller's to handle; any other failure keeps the first summary.
+ * `request` is the caller's own requestPortal binding, so a page's test harness that replaces it is honoured here too.
+ */
+export async function fetchSession(request: typeof requestPortal, signal?: AbortSignal): Promise<SessionSummary> {
+  const first = parseSession(await request("/api/session", undefined, signal));
+  if (first.membershipAvailable) return first;
+  try { return parseSession(await request("/api/session/begin", {}, signal)); }
+  catch (error) { if (error instanceof PortalRequestError && (error.status === 401 || error.status === 403)) throw error; return first; }
+}
 export function parseSession(value: unknown): SessionSummary {
   const row = record(value, ["membershipAvailable", "roles", "saved", "approver", "sessionBinding"]);
   if (typeof row.membershipAvailable !== "boolean" || !Array.isArray(row.roles) || row.roles.length > 4 || typeof row.saved !== "boolean" || typeof row.approver !== "boolean"
@@ -85,8 +97,8 @@ export function parseAcceptance(value: unknown) {
 
 // A closed endpoint set prevents callers from turning this helper into an
 // arbitrary fetch/redirect surface. No response diagnostics cross the boundary.
-type Endpoint = "/api/session" | "/api/auth/sign-in/social" | "/api/auth/google/challenge" | "/api/auth/google/redirect" | "/api/auth/sign-in/magic-link" | "/api/auth/sign-in/code" | "/api/auth/sign-out" | "/api/invitations/pending" | "/api/invitations/accept";
-const endpoints = new Set<string>(["/api/session", "/api/auth/sign-in/social", "/api/auth/google/challenge", "/api/auth/google/redirect", "/api/auth/sign-in/magic-link", "/api/auth/sign-in/code", "/api/auth/sign-out", "/api/invitations/pending", "/api/invitations/accept"]);
+type Endpoint = "/api/session" | "/api/session/begin" | "/api/auth/sign-in/social" | "/api/auth/google/challenge" | "/api/auth/google/redirect" | "/api/auth/sign-in/magic-link" | "/api/auth/sign-in/code" | "/api/auth/sign-out" | "/api/invitations/pending" | "/api/invitations/accept";
+const endpoints = new Set<string>(["/api/session", "/api/session/begin", "/api/auth/sign-in/social", "/api/auth/google/challenge", "/api/auth/google/redirect", "/api/auth/sign-in/magic-link", "/api/auth/sign-in/code", "/api/auth/sign-out", "/api/invitations/pending", "/api/invitations/accept"]);
 export async function requestPortal(endpoint: Endpoint, body?: Record<string, unknown>, signal?: AbortSignal): Promise<unknown> {
   if (!endpoints.has(endpoint)) return unavailable();
   const controller = new AbortController(), abort = () => controller.abort();

@@ -22,12 +22,40 @@ const sources = await Promise.all([...await files("src"), ...await files("script
 assert.ok(sources.some(file => file.path.startsWith("scripts/")), "the scripts are scanned");
 const importsOf = text => [...text.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)].map(m => m[1]);
 
-test("only src/server/saved/access.ts and the 0036 and 0041 migrations name app.saved_owner", () => {
+test("only src/server/saved/access.ts and the 0036, 0041 and 0054 migrations name a saved setting, and each is set in exactly one statement", () => {
   const naming = sources.filter(file => file.text.includes("app.saved_owner")).map(file => file.path).sort();
   // 0041 (release 1.7 M3b) puts the member's own preferences on the same owner binding; its own test pins its one policy.
   assert.deepEqual(naming, ["src/server/db/migrations/0036_saved_layer.sql", "src/server/db/migrations/0041_account_preferences.sql", "src/server/saved/access.ts"]);
+  // Readings for everyone (0054, plan decision 3): the read-only viewer and directory settings, named by that migration and set only in access.ts.
+  for (const name of ["app.saved_viewer", "app.saved_directory"]) {
+    assert.deepEqual(sources.filter(file => file.text.includes(name)).map(file => file.path).sort(), ["src/server/db/migrations/0054_readings_for_everyone.sql", "src/server/saved/access.ts"], name);
+  }
+  // No other app.saved_* setting exists anywhere.
+  for (const file of sources) for (const match of file.text.matchAll(/app\.saved_\w+/g)) assert.ok(["app.saved_owner", "app.saved_viewer", "app.saved_directory"].includes(match[0]), `${file.path} names ${match[0]}`);
   const access = sources.find(file => file.path === "src/server/saved/access.ts").text;
   assert.equal(access.match(/set_config\('app\.saved_owner'/g)?.length, 1, "the owner is set in exactly one statement");
+  assert.equal(access.match(/set_config\('app\.saved_viewer', \$\{learner\.membershipId\}, true\)/g)?.length, 1, "the viewer is set in exactly one statement, to the learner canView admitted");
+  assert.equal(access.match(/set_config\('app\.saved_viewer'/g)?.length, 1);
+  assert.equal(access.match(/set_config\('app\.saved_directory', 'on', true\)/g)?.length, 1, "the directory is set in exactly one statement, to the one word the policy reads");
+  assert.equal(access.match(/set_config\('app\.saved_directory'/g)?.length, 1);
+  // The viewer binding is private, admits a learner only after canView, and never sets the owner; the directory needs a live staff grant first.
+  const bindViewer = access.match(/\nasync function bindViewer[\s\S]*?\n\}\n/)?.[0];
+  assert.ok(bindViewer, "bindViewer is a module-private function");
+  assert.doesNotMatch(access, /export[^\n]*bindViewer|export\s*\{[^}]*bindViewer/, "bindViewer is never exported");
+  assert.match(bindViewer, /current_setting\('app\.tenant_id', true\)[\s\S]*scope\.tenant !== learner\.tenantId[\s\S]*savedEligibility\(tx, learner\.tenantId, learner\.membershipId\)[\s\S]*set_config\('app\.saved_viewer'/);
+  assert.doesNotMatch(bindViewer, /saved_owner/);
+  const viewer = access.slice(access.indexOf("export function createSavedViewerAccess"));
+  assert.match(viewer, /const grant = await canView\(tx, identity\.tenantId, identity\.membership\.id, learnerMembershipId\);\s*if \(!grant\) throw new AccessDenied\(404\);[\s\S]*?await bindViewer\(tx, scope\);/);
+  assert.equal(viewer.match(/bindViewer\(/g)?.length, 1, "bindViewer is called only by withSavedViewer");
+  assert.doesNotMatch(viewer, /bindOwner|saved_owner|"data-write"/, "the staff entrances never bind an owner and never take a write intent");
+  assert.match(viewer, /const grant = await liveStaffGrant\(tx, identity\.tenantId, identity\.membership\.id\);\s*if \(!grant\) throw new AccessDenied\(404\);[\s\S]*?set_config\('app\.saved_directory'/);
+  // Only the saved service composes the staff entrances, and its directory read calls nothing but directoryRows inside withDirectory.
+  const viewerUsers = sources.filter(file => file.path !== "src/server/saved/access.ts" && /\b(createSavedViewerAccess|withSavedViewer|withDirectory)\b/.test(file.text)).map(file => file.path);
+  assert.deepEqual(viewerUsers, ["src/server/saved/service.ts"]);
+  const service = sources.find(file => file.path === "src/server/saved/service.ts").text;
+  const directory = service.match(/withDirectory\(request, async \(tx, actor\) => \(\{ ok: true as const, actor, rows: await data\.directoryRows\(tx, actor\.tenantId\) \}\)\)/g);
+  assert.equal(directory?.length, 1, "the directory action reads directoryRows and nothing else");
+  assert.equal(service.match(/withDirectory\(/g)?.length, 1);
   // The one statement lives in a private bindOwner, after the tenant and eligibility checks; both entrances call it with a verified membership.
   const bind = access.match(/\nasync function bindOwner[\s\S]*?\n\}\n/)?.[0];
   assert.ok(bind, "bindOwner is a module-private function");
@@ -83,7 +111,9 @@ test("no code outside the saved layer names the saved tables, and the MCP import
     // 0040 lets the owner revise their own reading's ranges (release 1.7 "Change verses"); its own test pins it to that one grant.
     "src/server/db/migrations/0040_saved_reading_ranges.sql",
     // 0041 adds the member's own preferences to the saved layer (release 1.7 M3b).
-    "src/server/db/migrations/0041_account_preferences.sql"]);
+    "src/server/db/migrations/0041_account_preferences.sql",
+    // 0054 adds the read-only staff_read and directory_read policies (readings for everyone, plan decision 3); its own test pins them.
+    "src/server/db/migrations/0054_readings_for_everyone.sql"]);
   for (const file of sources) {
     if (allowed.has(file.path) || /^src\/server\/db\/migrations\/meta\/\d{4}_snapshot\.json$/.test(file.path) && Number(file.path.match(/(\d{4})_snapshot/)[1]) > 36) continue;
     assert.doesNotMatch(file.text, /\b(savedReading|savedVerseWork|savedVerseMark|starredComment|accountPreference)\b|\b(saved_reading|saved_verse_work|saved_verse_mark|starred_comment|account_preference)\b/, `${file.path} names a saved table`);

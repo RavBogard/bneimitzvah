@@ -93,10 +93,18 @@ export async function mailboxHasParentIdentity<Q extends PgQueryResultHKT>(tx: A
   return rows.length > 0;
 }
 
+/**
+ * The verified person's membership in the host's tenant, made when they have none: accepting an invitation and the first
+ * sign-in (POST /api/session/begin, plan D1) both come here. Two requests of the same person at once both see none; the
+ * unique (tenant, user) key lets exactly one insert, and the other takes the row it finds. Never another tenant's or person's.
+ */
 export async function obtainMembership<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, identity: VerifiedIdentity) {
   if (identity.membership) return identity.membership.id;
-  const [row] = await tx.insert(s.membership).values({ tenantId: identity.tenantId, userId: identity.userId }).returning({ id: s.membership.id });
-  return row.id;
+  const [row] = await tx.insert(s.membership).values({ tenantId: identity.tenantId, userId: identity.userId }).onConflictDoNothing().returning({ id: s.membership.id });
+  if (row) return row.id;
+  const [existing] = await tx.select({ id: s.membership.id }).from(s.membership).where(and(eq(s.membership.tenantId, identity.tenantId), eq(s.membership.userId, identity.userId))).for("share");
+  if (!existing) throw new AccessDenied(403);
+  return existing.id;
 }
 export async function lockMembershipGrants<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, membershipId: string, intent: LockIntent = "authority-write") {
   return tx.select().from(s.roleGrant).where(and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.membershipId, membershipId))).orderBy(s.roleGrant.id).for(lockStrength(intent));

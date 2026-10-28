@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { parseAcceptance, parseAcknowledgement, parseCodeResult, parseInvitation, parseSession, PortalRequestError, requestPortal, roleNames,
+import { fetchSession, parseAcceptance, parseAcknowledgement, parseCodeResult, parseInvitation, PortalRequestError, requestPortal, roleNames,
   type InvitationReview, type SessionSummary } from "./api";
 import { GoogleContinue } from "./google-sign-in";
 import { rememberSignedIn } from "./signed-in-hint";
@@ -83,9 +83,10 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
     controller.current?.abort();
     const request = new AbortController(); controller.current = request;
     setView({ kind: "loading" }); setMessage(""); setLinkRequested(codeRequested()); setCode("");
-    void requestPortal(invitation ? "/api/invitations/pending" : "/api/session", undefined, request.signal)
-      .then(value => {
-        const next: View = invitation ? { kind: "invitation", review: parseInvitation(value) } : { kind: "signed-in", summary: parseSession(value) };
+    // A sign-in with no membership yet gets one here (plan D1), so the door it lands on already has a shelf.
+    void (invitation ? requestPortal("/api/invitations/pending", undefined, request.signal).then(value => ({ kind: "invitation", review: parseInvitation(value) } as View))
+      : fetchSession(requestPortal, request.signal).then(summary => ({ kind: "signed-in", summary } as View)))
+      .then(next => {
         if (next.kind === "signed-in") { rememberCodeRequest(false); rememberSignedIn(true); }
         // Signed in already, on the sign-in form: back to the page the person left (G16), or My Readings when none is named. The
         // front door itself never leaves: it shows the role's door.

@@ -61,8 +61,13 @@ export async function consume<Q extends PgQueryResultHKT>(tx: Tx<Q>, input: { te
       set: { count: sql`${s.invitationThrottle.count} + 1` }, setWhere: sql`${s.invitationThrottle.count} < ${input.limit}` }).returning({ count: s.invitationThrottle.count });
   return Boolean(counter);
 }
-export async function insertRequest<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, userId: string, displayName: string, purpose: string | null) {
-  const [row] = await tx.insert(s.accountRequest).values({ tenantId, userId, displayName, purpose }).onConflictDoNothing().returning({ id: s.accountRequest.id });
+export async function insertRequest<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, userId: string, displayName: string, purpose: string | null, studentId: string | null = null) {
+  const [row] = await tx.insert(s.accountRequest).values({ tenantId, userId, displayName, purpose, studentId }).onConflictDoNothing().returning({ id: s.accountRequest.id });
+  return row ?? null;
+}
+/** A student record of this tenant a request may name, enabled, share-locked; null otherwise. */
+export async function requestableStudent<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, studentId: string) {
+  const [row] = await tx.select({ id: s.student.id }).from(s.student).where(and(eq(s.student.tenantId, tenantId), eq(s.student.id, studentId), isNull(s.student.disabledAt))).limit(1).for("share");
   return row ?? null;
 }
 export async function markRequestNotice<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, id: string, status: "sent" | "failed" | "skipped", at: Date) {
@@ -89,9 +94,12 @@ export async function approverRecipients<Q extends PgQueryResultHKT>(tx: Tx<Q>, 
 }
 export { readTenantNames as tenantNames } from "../data/product-name";
 
+/** The queue, each with the student record it named, if any (plan D6: a link request). */
 export async function listRequests<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, limit: number) {
-  return tx.select({ id: s.accountRequest.id, name: s.accountRequest.displayName, purpose: s.accountRequest.purpose, email: s.user.email, verified: s.user.emailVerified, requestedAt: s.accountRequest.createdAt })
+  return tx.select({ id: s.accountRequest.id, name: s.accountRequest.displayName, purpose: s.accountRequest.purpose, email: s.user.email, verified: s.user.emailVerified, requestedAt: s.accountRequest.createdAt,
+    studentId: s.student.id, studentFirstName: s.student.firstName, studentLastName: s.student.lastName })
     .from(s.accountRequest).innerJoin(s.user, eq(s.user.id, s.accountRequest.userId))
+    .leftJoin(s.student, and(eq(s.student.tenantId, s.accountRequest.tenantId), eq(s.student.id, s.accountRequest.studentId)))
     .where(eq(s.accountRequest.tenantId, tenantId)).orderBy(asc(s.accountRequest.createdAt), asc(s.accountRequest.id)).limit(limit);
 }
 export async function lockRequest<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, id: string) {

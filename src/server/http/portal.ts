@@ -18,12 +18,12 @@ import { closedObject, uniqueQuery } from "./query";
 import { requireCookieMutation } from "./mutations";
 import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
 
-type Kind = "short-explore-page" | "short-reference-page" | "explore-prepare" | "explore-page" | "preview-prepare" | "preview-page" | "session" | "students" | "student" | "reading" | "study-text" | "study-word-aids" | "study-word-details" | "study-sources" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
+type Kind = "short-explore-page" | "short-reference-page" | "explore-prepare" | "explore-page" | "preview-prepare" | "preview-page" | "session" | "session-begin" | "students" | "student" | "reading" | "study-text" | "study-word-aids" | "study-word-details" | "study-sources" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
   | "admin-students" | "edit" | "disable" | "ceremony-done" | "ceremony-reverse" | "csv-preview" | "csv-confirm" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "invite-copy" | "invite-needed" | "pending" | "accept"
   | "eligible-tutors" | "relationships" | "tutor-assign" | "tutor-unassign" | "guardian-revoke" | "identity-revoke" | "guardian-practice" | "grant-revoke" | "cantor";
 type Route = { kind: Kind; methods: readonly string[]; id?: string; linkId?: string };
 const exact: Record<string, Route> = {
-  "/api/session": { kind: "session", methods: ["GET"] }, "/api/students": { kind: "students", methods: ["GET"] },
+  "/api/session": { kind: "session", methods: ["GET"] }, "/api/session/begin": { kind: "session-begin", methods: ["POST"] }, "/api/students": { kind: "students", methods: ["GET"] },
   "/api/practice/read": { kind: "practice-read", methods: ["GET"] },
   "/api/practice/enter": { kind: "practice-enter", methods: ["POST"] }, "/api/practice/switch": { kind: "practice-switch", methods: ["POST"] },
   "/api/practice/exit": { kind: "practice-exit", methods: ["POST"] },
@@ -297,6 +297,11 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
       }
       case "session": {
         uniqueQuery(request.url, []); const value = await runtime.portal.sessionSummary(request);
+        return privateJson({ membershipAvailable: value.membershipAvailable, roles: value.roles.map(role => role), saved: value.saved, approver: value.approver, sessionBinding: value.sessionBinding });
+      }
+      case "session-begin": {
+        // The first sign-in's membership (plan D1): an empty body, the cookie-mutation rule already applied above, the same summary as GET.
+        uniqueQuery(request.url, []); await objectBody(request, []); const value = await runtime.portal.beginSession(request);
         return privateJson({ membershipAvailable: value.membershipAvailable, roles: value.roles.map(role => role), saved: value.saved, approver: value.approver, sessionBinding: value.sessionBinding });
       }
       case "students": {

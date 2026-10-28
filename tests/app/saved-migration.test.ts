@@ -75,7 +75,8 @@ test("0036 adds only the four saved tables, leaves existing rows and the audit l
     const rls = await client.query("select relname, relrowsecurity, relforcerowsecurity from pg_class where relname = any($1) and relkind='r' order by relname", [TABLES]);
     expect(rls.rows).toEqual(TABLES.map(relname => ({ relname, relrowsecurity: true, relforcerowsecurity: true })));
     const owner = "((tenant_id = NULLIF(current_setting('app.tenant_id'::text, true), ''::text)) AND (membership_id = (NULLIF(current_setting('app.saved_owner'::text, true), ''::text))::uuid))";
-    const policies = await client.query("select tablename, policyname, cmd, permissive, roles::text[] as roles, qual, with_check from pg_policies where tablename = any($1) order by tablename", [TABLES]);
+    // 0036's own policy; 0054 adds the read-only staff_read and directory_read beside it (readings-for-everyone-migration.test.ts pins those).
+    const policies = await client.query("select tablename, policyname, cmd, permissive, roles::text[] as roles, qual, with_check from pg_policies where tablename = any($1) and policyname = 'owner_only' order by tablename", [TABLES]);
     expect(policies.rows).toEqual(TABLES.map(tablename => ({ tablename, policyname: "owner_only", cmd: "ALL", permissive: "PERMISSIVE", roles: ["portal_runtime"], qual: owner, with_check: owner })));
     const tableGrants = await client.query("select table_name, privilege_type from information_schema.table_privileges where grantee='portal_runtime' and table_name = any($1) order by table_name, privilege_type", [TABLES]);
     expect(tableGrants.rows).toEqual([...["DELETE", "INSERT", "SELECT"].map(p => ({ table_name: "saved_reading", privilege_type: p })),

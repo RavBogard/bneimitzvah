@@ -1,14 +1,14 @@
 import "server-only";
 import { createHmac } from "node:crypto";
-import { AccessUnavailable } from "../access/errors";
+import { AccessDenied, AccessUnavailable } from "../access/errors";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAccessService } from "../access/service";
-import type { ActiveMode, AccessRequest } from "../access/types";
+import type { ActiveMode, AccessRequest, AccessTransaction, VerifiedIdentity } from "../access/types";
 import type { createPracticeService } from "../practice/service";
 import type { PracticeContextView } from "../practice/types";
 import type { StudentView } from "../data/students";
-import { confirmedReadings, availableRoles } from "../data/portal";
-import { savedEligibleRole } from "../saved/eligibility";
+import { confirmedReadings, availableRoles, membershipOf } from "../data/portal";
+import { obtainMembership } from "../data/invitations";
 import { activeMember, approves } from "../accounts/data";
 import { expandReadingRanges, parseCeremonyDate } from "../../lib/readings/ranges";
 import { assignmentNeedsReview } from "../../lib/readings/review";
@@ -41,18 +41,35 @@ export function readingView(row: Awaited<ReturnType<typeof confirmedReadings>>[n
 
 export function createPortalService<Q extends PgQueryResultHKT>(input: { access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>; sessionBindingSecret: string }) {
   if (typeof input.sessionBindingSecret !== "string" || input.sessionBindingSecret.length < 32) throw new AccessUnavailable();
+  /**
+   * One summary for both entrances. `saved`: this account keeps its own saved layer, which since readings for everyone
+   * (Daniel, 2026-10-27) is every live membership; `approver`: it may approve link requests. The Member role (an approved
+   * request) and approving are worked out live, never granted (accounts plan choice B).
+   */
+  async function summarize(tx: AccessTransaction<Q>, identity: VerifiedIdentity, membership: VerifiedIdentity["membership"]) {
+    const grants = membership ? await availableRoles(tx, identity.tenantId, membership.id) : [];
+    const member = membership ? await activeMember(tx, identity.tenantId, membership.id) : null;
+    const approver = membership ? await approves(tx, identity.tenantId, membership.id) : false;
+    const sessionBinding = createHmac("sha256", input.sessionBindingSecret).update(JSON.stringify(["session-ui-binding:v2", identity.origin, identity.tenantId, identity.userId,
+      identity.authSessionId, membership?.id ?? null, membership?.authorityRevision ?? null, grants.map(grant => [grant.role, grant.id, grant.revision]),
+      member?.id ?? null, approver])).digest("base64url");
+    return Object.freeze({ membershipAvailable: membership !== null, roles: Object.freeze(grants.map(grant => grant.role)), saved: membership !== null, approver, sessionBinding });
+  }
   async function sessionSummary(request: AccessRequest) {
-    return input.access.withVerifiedIdentity(request, { intent: "read" }, async (tx, identity) => {
-      const grants = identity.membership ? await availableRoles(tx, identity.tenantId, identity.membership.id) : [];
-      // The Member role (an approved account request) and approving accounts are worked out live, never granted (accounts plan choice B).
-      const member = identity.membership ? await activeMember(tx, identity.tenantId, identity.membership.id) : null;
-      const approver = identity.membership ? await approves(tx, identity.tenantId, identity.membership.id) : false;
-      const sessionBinding = createHmac("sha256", input.sessionBindingSecret).update(JSON.stringify(["session-ui-binding:v2", identity.origin, identity.tenantId, identity.userId,
-        identity.authSessionId, identity.membership?.id ?? null, identity.membership?.authorityRevision ?? null, grants.map(grant => [grant.role, grant.id, grant.revision]),
-        member?.id ?? null, approver])).digest("base64url");
-      // `saved`: this account keeps its own saved layer; `approver`: it may approve account requests.
-      return Object.freeze({ membershipAvailable: identity.membership !== null, roles: Object.freeze(grants.map(grant => grant.role)),
-        saved: member !== null || grants.some(grant => savedEligibleRole(grant.role)), approver, sessionBinding });
+    return input.access.withVerifiedIdentity(request, { intent: "read" }, (tx, identity) => summarize(tx, identity, identity.membership));
+  }
+  /**
+   * The first sign-in's membership (plan D1): called once by the entry after a summary with no membership, under the
+   * cookie-mutation rule (POST, exact Origin). A verified, enabled account in the host's tenant gets its membership row
+   * here, as accepting an invitation would have made it; a disabled one is refused before anything is written (403). The
+   * answer is the same summary sessionSummary builds, now with a shelf. Idempotent: a membership that exists is reused.
+   */
+  async function beginSession(request: AccessRequest & { method?: string }) {
+    return input.access.withVerifiedIdentity(request, { intent: "data-write", mutation: true }, async (tx, identity) => {
+      const membershipId = await obtainMembership(tx, identity);
+      const membership = await membershipOf(tx, identity.tenantId, membershipId);
+      if (!membership || membership.disabledAt) throw new AccessDenied(403);
+      return summarize(tx, identity, Object.freeze({ id: membership.id, authorityRevision: membership.authorityRevision }));
     });
   }
   async function assignedReading(request: AccessRequest, selection: { mode: ActiveMode | "child-practice"; studentId: string }) {
@@ -64,5 +81,5 @@ export function createPortalService<Q extends PgQueryResultHKT>(input: { access:
       Object.freeze({ student: student as StudentView, mode: actor.mode, context: null as PracticeContextView | null,
         readings: Object.freeze((await confirmedReadings(tx, actor.tenantId, student.id)).map(row => readingView(row, student.ceremonyDate))) }));
   }
-  return Object.freeze({ sessionSummary, assignedReading });
+  return Object.freeze({ sessionSummary, beginSession, assignedReading });
 }

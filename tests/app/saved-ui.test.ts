@@ -66,7 +66,9 @@ describe("Save on /read (Add to My Readings)", () => {
     onName: () => {}, onDate: () => {}, onVerses: () => {}, onSubmit: () => {}, onClose: () => {}, ...extra }));
   it("is a sheet that answers by the account's state, and says why when an account cannot save", () => {
     expect(view("form")).toContain(">Add to My Readings</h");
-    expect(view("not-eligible")).toContain('<a href="/account">Ask for an account to save readings</a>');
+    // Plan D2: every signed-in account saves; "not-eligible" is only a membership turned off, told so in the sheet with nothing to ask for.
+    expect(view("not-eligible")).toContain("Saving isn’t available for this account.");
+    expect(view("not-eligible")).not.toContain("/account");
     expect(view("not-eligible")).not.toContain("<form");
     expect(view("unavailable")).toContain("Saving isn’t available right now. Try again.");
     expect(renderToStaticMarkup(createElement(SaveReadingView, { step: "form", open: false, problem: null, name: "", date: "", panelId: "p", verses: "screen", screenLine: "", wholeLine: null, canChoose: false,
