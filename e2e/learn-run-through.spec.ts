@@ -53,7 +53,7 @@ test("Noa runs through her reading with the colours off and nothing playing, and
     }
     await page.getByRole("button", { name: i === 1 ? "Stumbled" : "Clean", exact: true }).click();
   }
-  await expect(page.locator("[data-run-summary]")).toHaveText("Practise verse 2 again.");
+  await expect(page.locator("[data-run-summary]")).toHaveText("Practice verse 2 again.");
   await expect(page.getByText(/Clean: | of 3/)).toHaveCount(0);
   // Nothing played and nothing asked for a recording: no audio element, no clip, no reference metadata.
   expect(await page.evaluate(() => (window as unknown as { learnPlays: string[] }).learnPlays)).toEqual([]);

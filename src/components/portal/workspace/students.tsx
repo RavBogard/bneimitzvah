@@ -87,20 +87,20 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
     } catch { if (turn === sequence.current) setError(true); }
     finally { gate.current = false; setPaging(false); }
   }
-  // The one compact practice bar (1.9 N13, tier B "Practising with Noa · Switch to Eli · Done"): the child's first name, a switch for each
+  // The one compact practice bar (1.9 N13, tier B "Practicing with Noa · Switch to Eli · Done"): the child's first name, a switch for each
   // other linked child, Done, and the one coaching line. It uses names only: the app stores no pronouns.
   if (switching) {
     const child = rows.find(row => row.id === context?.studentId), others = ordered.filter(row => row.id !== context?.studentId);
     return <section className="practice-bar" aria-label="Practice">
       <div className="practice-bar-row">
-        {child ? <h1 className="practice-bar-title" data-testid="practice-bar-title">Practising with <bdi dir="auto">{child.firstName}</bdi></h1> : <h1 className="sr-only">Practice</h1>}
+        {child ? <h1 className="practice-bar-title" data-testid="practice-bar-title">Practicing with <bdi dir="auto">{child.firstName}</bdi></h1> : <h1 className="sr-only">Practice</h1>}
         {others.length > 0 && <ul className="practice-switches">{others.map(row => <li key={row.id}><button className="button-secondary" aria-label={`Switch to ${row.firstName} ${row.lastName}`} disabled={busy} onClick={() => void selectChild(row.id)}>Switch to <bdi dir="auto">{row.firstName}</bdi></button></li>)}</ul>}
         <button className="button-hero-secondary practice-done" disabled={busy} onClick={() => void exitPractice()}>{busy ? "Closing practice…" : "Done"}</button>
       </div>
       {loading ? <p role="status">Loading linked children…</p> : error ? <><p role="alert">Linked children couldn’t be loaded.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload children</button></>
         : <>{more && <button className="button-text" disabled={busy || paging} onClick={() => void loadMore()}>{paging ? "Loading children…" : "Load more children"}</button>}
           {child && <p className="field-help practice-coach">Sit with <bdi dir="auto">{child.firstName}</bdi> for each verse. Tap Got it only when <bdi dir="auto">{child.firstName}</bdi> reads it without stopping.</p>}
-          {/* 1.9 N23: a child who practises only with a parent is told here what the tutor sees, behind the same release gate. */}
+          {/* 1.9 N23: a child who practices only with a parent is told here what the tutor sees, behind the same release gate. */}
           {child && <ChildPracticeDisclosure name={child.firstName} place="child-practice" />}</>}
     </section>;
   }

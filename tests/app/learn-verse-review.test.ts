@@ -104,15 +104,15 @@ describe("the Run-through", () => {
     expect(verseRunDone(run)).toBe(true);
     expect(stumbledRefs(run)).toEqual(["Genesis 23:3", "Genesis 23:8"]);
     const line = practiseAgain(stumbledRefs(run));
-    expect(line).toBe("Practise verses 3 and 8 again.");
+    expect(line).toBe("Practice verses 3 and 8 again.");
     expect(line).not.toMatch(/Clean|of 9|\b7\b|\b9\b/);
   });
   it("words the summary for one verse, several, across chapters and across books, and says nothing when nothing stumbled", () => {
-    expect(practiseAgain(["Genesis 23:3"])).toBe("Practise verse 3 again.");
-    expect(practiseAgain(["Genesis 23:10", "Genesis 23:3", "Genesis 23:8"])).toBe("Practise verses 3, 8 and 10 again.");
-    expect(practiseAgain(["Genesis 24:2", "Genesis 23:20"])).toBe("Practise verses 23:20 and 24:2 again.");
-    expect(practiseAgain(["Isaiah 61:10", "Isaiah 62:1"])).toBe("Practise verses 61:10 and 62:1 again.");
-    expect(practiseAgain(["Isaiah 54:1", "I Kings 2:1"])).toBe("Practise verses I Kings 2:1 and Isaiah 54:1 again.");
+    expect(practiseAgain(["Genesis 23:3"])).toBe("Practice verse 3 again.");
+    expect(practiseAgain(["Genesis 23:10", "Genesis 23:3", "Genesis 23:8"])).toBe("Practice verses 3, 8 and 10 again.");
+    expect(practiseAgain(["Genesis 24:2", "Genesis 23:20"])).toBe("Practice verses 23:20 and 24:2 again.");
+    expect(practiseAgain(["Isaiah 61:10", "Isaiah 62:1"])).toBe("Practice verses 61:10 and 62:1 again.");
+    expect(practiseAgain(["Isaiah 54:1", "I Kings 2:1"])).toBe("Practice verses I Kings 2:1 and Isaiah 54:1 again.");
     expect(practiseAgain([])).toBeNull();
   });
   it("suggests the fade and never locks it: a Run-through starts with the colours off, settled verses suggest the tikkun", () => {

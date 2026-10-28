@@ -65,7 +65,7 @@ export function rowState(verses: readonly ProgressVerse[], start: number, end: n
 }
 export const stateWord: Record<RowState, string> = { "not-started": "Not started", working: "Working", solid: "Solid" };
 
-/** The seven days ending on the server's day, oldest first, each with whether the student practised. Dates only: no count, ever. */
+/** The seven days ending on the server's day, oldest first, each with whether the student practiced. Dates only: no count, ever. */
 export function lastSevenDays(serverDay: string, dates: ReadonlySet<string>): readonly { date: string; practised: boolean; today: boolean; weekday: number }[] {
   const end = dayOrdinal(serverDay);
   return Array.from({ length: 7 }, (_, index) => {

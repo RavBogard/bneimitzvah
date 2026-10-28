@@ -60,7 +60,7 @@ const LEARNER = "00000000-0000-4000-8000-000000000077";
 const learnerRow = (claimed: boolean) => ({ membershipId: LEARNER, name: "Synthetic Learner", readings: 2, nearest: { name: "Synthetic reading 1", date: "2026-10-24" },
   tutor: claimed ? { name: "Synthetic Tutor", claimed: true, mine: true } : null, student: null });
 
-test("a tutor's shelf: Your students, then Find a learner by name, Claim as my student in one tap, then the learner's shelf and its readings", async ({ page }) => {
+test("a tutor's shelf: Your students, then Find a learner by name, Add to my students in one tap, then the learner's shelf and its readings", async ({ page }) => {
   let claimed = false; const posted: string[] = [];
   await session(page, ["tutor"]);
   await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: [] }));
@@ -83,10 +83,10 @@ test("a tutor's shelf: Your students, then Find a learner by name, Claim as my s
   const learnerRowLocator = find.getByTestId("learner-row");
   await expect(learnerRowLocator).toHaveCount(1);
   await expect(learnerRowLocator).toContainText("No tutor yet");
-  await learnerRowLocator.getByRole("button", { name: "Claim as my student: Synthetic Learner", exact: true }).click();
-  await expect(find.getByRole("status").filter({ hasText: "Synthetic Learner is now your student." })).toBeVisible();
+  await learnerRowLocator.getByRole("button", { name: "Add to my students: Synthetic Learner", exact: true }).click();
+  await expect(find.getByRole("status").filter({ hasText: "Synthetic Learner was added to your students." })).toBeVisible();
   expect(posted).toEqual(["/api/learners/claim"]);
-  await expect(learnerRowLocator.getByRole("button", { name: "Claim as my student: Synthetic Learner", exact: true })).toBeDisabled();
+  await expect(learnerRowLocator.getByRole("button", { name: "Add to my students: Synthetic Learner", exact: true })).toBeDisabled();
   await learnerRowLocator.getByRole("link", { name: "Synthetic Learner", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/mine/learner/${LEARNER}$`));
   const shelf = page.getByTestId("learner-shelf");

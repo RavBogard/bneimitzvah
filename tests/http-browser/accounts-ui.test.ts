@@ -65,7 +65,7 @@ it("a person asks, an admin sees the count and approves, and the new member save
     const admin = await tab(width);
     await signIn(admin, "pg-admin@example.test");
     await admin.goto("/workspace/admin/students?tab=students", { waitUntil: "domcontentloaded" });
-    const line = admin.getByRole("link", { name: "Link requests (1) · Review", exact: true });
+    const line = admin.getByRole("link", { name: "1 link request waiting · Review", exact: true });
     await ui(line).toBeVisible();
     await line.click();
     await ui(admin.getByRole("heading", { level: 1, name: "Members", exact: true })).toBeVisible();
@@ -138,7 +138,7 @@ it("an admin designates a tutor, who then sees and approves requests from the tu
   const tutor = await tab(360);
   await signIn(tutor, "pg-tutor@example.test");
   await tutor.goto("/workspace/tutor", { waitUntil: "domcontentloaded" });
-  await tutor.getByRole("link", { name: "Link requests (1) · Review", exact: true }).click();
+  await tutor.getByRole("link", { name: "1 link request waiting · Review", exact: true }).click();
   await ui(tutor.getByRole("heading", { level: 1, name: "Link requests", exact: true })).toBeVisible();
   await ui(tutor.getByRole("region", { name: "Members" })).toHaveCount(0);
   await ui(tutor.getByRole("region", { name: "Approvers" })).toHaveCount(0);

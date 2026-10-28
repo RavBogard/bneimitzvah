@@ -229,7 +229,7 @@ function Done({ lesson, complete, nextId, fallback }: { lesson: Lesson; complete
   return <>
     <div className={styles.doneHead}><h2 className={styles.doneTitle}>{lesson.title}</h2><p className={styles.doneWord}>Done</p></div>
     {/* A first verse leaves the Done line off rather than show a false or certifying sentence (CHANTING-RECONCILIATION.md, N17 amendment); its ending is "You can lein this verse.", gated on "Same as the reader". */}
-    {!lesson.activities.some(activity => activity.type === "first-verse") && <p className={styles.doneLine} data-testid="lesson-done-line">Return to this phrase whenever you need it. You can keep practising or use it in a reading.</p>}
+    {!lesson.activities.some(activity => activity.type === "first-verse") && <p className={styles.doneLine} data-testid="lesson-done-line">Return to this phrase whenever you need it. You can keep practicing or use it in a reading.</p>}
     {week && <ThisWeekSection activity={week} lesson={lesson} fallback={fallback} />}
     {next && <p className={styles.nextName} data-testid="next-lesson-name" data-lesson={next.id}>Next: {next.title}</p>}
     <Footer>

@@ -88,7 +88,7 @@ export function recordAnswer(progress: Progress, id: CardId, right: boolean, tod
   options.moved?.add(id);
   return Object.freeze({ ...progress, cards: Object.freeze({ ...progress.cards, [id]: answerCard(card, right, today, options.until) }) });
 }
-/** The skills a lesson's drills practise, for its family in its melody. */
+/** The skills a lesson's drills practice, for its family in its melody. */
 export function lessonCards(lesson: Lesson): CardId[] {
   if (!lesson.family) return [];
   const skills = new Set(lesson.activities.filter(isDrill).map(drillSkill));

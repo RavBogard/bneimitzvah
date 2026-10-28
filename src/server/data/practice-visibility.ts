@@ -47,7 +47,7 @@ export async function learn<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: str
   return result.rows.length === 1 ? result.rows[0] : null;
 }
 
-/** How many of these days (dates only, already visible to the student's staff under ruling 45) the student practised. */
+/** How many of these days (dates only, already visible to the student's staff under ruling 45) the student practiced. */
 export async function practisedDays<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, studentId: string, since: string, through: string) {
   const d = s.practiceDay;
   const [row] = await tx.select({ n: count() }).from(d).where(and(eq(d.tenantId, tenantId), eq(d.studentId, studentId), gte(d.practiceDay, since), lte(d.practiceDay, through)));

@@ -171,9 +171,9 @@ function PinnedReady({ slices, assigned, headingId }: { slices: TodaySlices; ass
         <li key={day.date} data-testid="practice-day" className={`practice-day${day.practised ? " practice-day-done" : ""}${day.today ? " practice-day-today" : ""}`}>
           <span aria-hidden="true" className="practice-day-letter">{weekdayLetters[day.weekday]}</span>
           <span className="practice-day-dot" aria-hidden="true" />
-          <span className="sr-only">{weekdayNames[day.weekday]}{day.today ? ", today" : ""}: {day.practised ? "practised" : "not practised"}</span>
+          <span className="sr-only">{weekdayNames[day.weekday]}{day.today ? ", today" : ""}: {day.practised ? "practiced" : "not practiced"}</span>
         </li>)}</ol>
-      <p id={caption} className={styles.caption}>Days you practised · a day fills when you open your reading up close</p>
+      <p id={caption} className={styles.caption}>Days you practiced · a day fills when you open your reading up close</p>
     </div>}
     {readings.length > 0 && dates.status === "unavailable" && <p className={styles.caption}>Practice days couldn’t be loaded.</p>}
     {dates.status === "loading" && <div className={styles.holdCalendar} aria-hidden="true" />}

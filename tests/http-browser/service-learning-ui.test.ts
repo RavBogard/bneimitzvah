@@ -364,7 +364,7 @@ it("clears a denied tutor draft and material immediately when the actual relatio
 it("fences a late selected-unit response across linked-child switching and never restores the prior child's material", async () => {
   const admin = await page("admin"); await assign(admin, sibling.id, [content.second]);
   const parent = await page("tutor"); await workspace(parent, "parent"); await click(parent, "Practice with Synthetic");
-  await ui(parent.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeVisible();
+  await ui(parent.getByRole("heading", { name: /^Practicing with /, level: 1 })).toBeVisible();
   await safe(() => parent.locator("#service-parts").scrollIntoViewIfNeeded());
   let release!: () => void, held = false, delivered = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await parent.route("**/service-plan/unit", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); delivered = true; });

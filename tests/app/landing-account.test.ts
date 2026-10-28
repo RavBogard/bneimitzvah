@@ -60,11 +60,11 @@ describe("the root never leaves for the workspace", () => {
 describe("the signed-in door", () => {
   test("every role but the admin has Your readings, opening My Readings; the admin keeps This week", () => {
     for (const role of ["student", "parent", "tutor"] as const) expect(signedInDoor(role)).toEqual({ title: "Your readings", line: null, action: "Open My Readings" });
-    expect(signedInDoor("admin")).toEqual({ title: "This week", line: "Needs you, ceremonies and rehearsals.", action: "Open This week" });
+    expect(signedInDoor("admin")).toEqual({ title: "This week", line: "Needs you, ceremonies and rehearsals.", action: "See this week" });
   });
   test("the line is the pinned reading when there is one, else how many are saved, else nothing", () => {
     expect(signedInDoor("student", { pinned: { name: "Noa", ceremony: "2027-05-01", done: 3, total: 12 } }).line).toBe("Noa · Beit Mitzvah, Sat, May 1, 2027 · 3 of 12 verses");
-    expect(signedInDoor("tutor", { count: 3 }).line).toBe("3 saved");
+    expect(signedInDoor("tutor", { count: 3 }).line).toBe("3 saved readings");
     expect(signedInDoor("tutor", { count: 0 }).line).toBeNull();
     expect(signedInDoor("parent", { count: null }).line).toBeNull();
   });
@@ -88,7 +88,7 @@ describe("the signed-in door", () => {
     // No remembered role among these: the highest leads.
     const both = door(["parent", "admin"]);
     expect(both).toContain(">This week</h2>");
-    expect(both).toMatch(/href="\/workspace\/admin\/students"[^>]*>Open This week<\/a>/);
+    expect(both).toMatch(/href="\/workspace\/admin\/students"[^>]*>See this week<\/a>/);
     expect(both).not.toContain("Sign in");
     // The role last in leads: a parent who is also an admin, last in as a parent, gets the readings door.
     rememberRole("parent");
@@ -163,12 +163,12 @@ describe("wording", () => {
     expect(words(door("loading"))).toEqual(["Your readings", out, "One moment while we check your access."]);
     rememberRole("tutor");
     expect(words(door(["tutor", "student"]))).toEqual(["Your readings", "Open My Readings"]);
-    expect(words(door(["tutor"], 3))).toEqual(["Your readings", "3 saved", "Open My Readings"]);
+    expect(words(door(["tutor"], 3))).toEqual(["Your readings", "3 saved readings", "Open My Readings"]);
     rememberRole("student");
     expect(words(door(["student"], null, { name: "Noa", ceremony: "2027-05-01", done: 3, total: 12 }))).toEqual(["Your readings", "Noa · Beit Mitzvah, Sat, May 1, 2027 · 3 of 12 verses", "Open My Readings"]);
     expect(words(door(["parent"]))).toEqual(["Your readings", "Open My Readings"]);
     rememberRole("admin");
-    expect(words(door(["admin"]))).toEqual(["This week", "Needs you, ceremonies and rehearsals.", "Open This week"]);
+    expect(words(door(["admin"]))).toEqual(["This week", "Needs you, ceremonies and rehearsals.", "See this week"]);
     rememberRole("student");
     const learn = renderToStaticMarkup(createElement(FrontDoor, { account: null, children: null }));
     expect(words(learn.slice(learn.indexOf('<h2 id="learn-title"')))).toEqual(["Learn to lein", "Hear the phrases, then lein a verse of this week's reading.", "Start", "Trope chart"]);

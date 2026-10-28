@@ -19,6 +19,7 @@ import type { Pill } from "../public-reading/reader-title";
 import styles from "./saved.module.css";
 import { ReturnSignInLink } from "../return-sign-in-link";
 import { fetchLearner, fetchLearnerPage } from "../mine/api";
+import { NAMELESS_LEARNER } from "../../../lib/learner-name";
 
 const kindName = (kind: SavedReading["kind"]) => kind === "torah" ? "Torah" : "Haftarah";
 const workOf = (row: Extract<SavedPage, { state: "ready" }>["verses"][number]): VerseWork => ({ translation: row.translation, note: row.note });
@@ -294,7 +295,7 @@ export function SavedReadingPage({ id, verse, learner = null }: { id: string; ve
   // The private name stays on the page; the tab title (and so browser history) only ever says "My reading", or "A learner's reading" for a staff viewer; the header line says whose it is.
   return <MoreScope><Shell title={viewing ? "A learner’s reading" : "My reading"} signedIn={header.status === "ready"}>
     <ReadHeader name={reading ? reading.name : header.status === "loading" ? (viewing ? "Loading the reading" : "Loading your reading") : "Reading unavailable"} loading={header.status === "loading"} pills={editPill ? [editPill] : []}
-      line={reading ? <>{viewing && <><bdi dir="auto">{learnerName ?? "Learner"}</bdi>’s reading · </>}{reading.date ? <time dateTime={reading.date}>{longDate(reading.date)}</time> : "No date"} · {kindName(reading.kind)} <bdi dir="ltr">{displayRange([reading.ranges])}</bdi></> : ""} />
+      line={reading ? <>{viewing && <>{learnerName && learnerName !== NAMELESS_LEARNER ? <><bdi dir="auto">{learnerName}</bdi>’s</> : "A learner’s"} reading · </>}{reading.date ? <time dateTime={reading.date}>{longDate(reading.date)}</time> : "No date"} · {kindName(reading.kind)} <bdi dir="ltr">{displayRange([reading.ranges])}</bdi></> : ""} />
     {reading && !viewing && <SavedReadingEdit step={edit} panelId={editId} name={draft.name} date={draft.date} notice={editNotice}
       onName={value => setDraft(current => ({ ...current, name: value }))} onDate={value => setDraft(current => ({ ...current, date: value }))}
       onSave={save} onCancel={() => { live.current?.abort(); setEdit("closed"); setEditNotice(""); }} onAskRemove={() => { setEditNotice(""); setEdit("confirm"); }} onRemove={remove} onKeep={() => setEdit("open")} />}

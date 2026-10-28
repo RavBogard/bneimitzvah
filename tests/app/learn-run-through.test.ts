@@ -109,9 +109,9 @@ describe("the Got it and Solid criteria", () => {
 describe("N19's words", () => {
   const sources = ["src/components/learn/verse-run.tsx", "src/components/learn/run-through.tsx", "src/lib/learn/verse-review.ts", "src/components/portal/workspace/progress/marks.tsx"].map(read).join("\n");
   it("carry Daniel's approved strings word for word, and no tally", () => {
-    for (const line of ["Run-through", "Chant this verse", "Clean", "Stumbled", "Help: ", "Colors", "Marks only", "Tikkun", "Try it in the tikkun.", "Practise ", " again.",
+    for (const line of ["Run-through", "Chant this verse", "Clean", "Stumbled", "Help: ", "Colors", "Marks only", "Tikkun", "Try it in the tikkun.", "Practice ", " again.",
       "Got it means you chanted this verse twice without the recording and it matched the reader.", "Solid means ${store.studentName} chanted it to you without help."]) expect(sources).toContain(line);
-    expect(sources).not.toMatch(/Clean: |of \$\{|Colours →|Practice verses/);
+    expect(sources).not.toMatch(/Clean: |of \$\{|Colours →/);
   });
   it("use straight apostrophes and no exclamation in any string a learner sees", () => {
     const strings = [...sources.matchAll(/"([^"\n]*)"|`([^`\n]*)`|>([^<>{}\n]+)</g)].map(m => m[1] ?? m[2] ?? m[3]).filter(text => /[A-Za-z]{3}/.test(text));

@@ -65,7 +65,7 @@ export class ParentSummaryStore {
 }
 const label = (date: string) => new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
 /**
- * The parent's "This week" card (1.9 N13): the next date in relative words, the days practised this week, and the latest lesson note, open.
+ * The parent's "This week" card (1.9 N13): the next date in relative words, the days practiced this week, and the latest lesson note, open.
  * Everything on it is read through reads the parent already has (the child's dates, the practice calendar, the lesson notes).
  * notice: the congregation's consent notice from its settings (what is stored, who hears it, when it is deleted); nothing when unset.
  */
@@ -78,7 +78,7 @@ export function ParentStudySummary({ store, baseline, scope, concealed, notice =
     {next && <p className="parent-summary-next">{next}</p>}
     <div className="parent-summary-practised">
       {dates.status === "loading" ? <p role="status">Loading practice dates…</p> : dates.status === "unavailable" ? <p>Practice dates couldn’t be loaded.</p>
-        : dates.dates.length ? <><span id={practised}>Practised this week:</span> <ul className="parent-summary-dates" aria-labelledby={practised}>{dates.dates.map(date => <li key={date}><time dateTime={date}>{weekdayShort(date)}</time></li>)}</ul></>
+        : dates.dates.length ? <><span id={practised}>Practiced this week:</span> <ul className="parent-summary-dates" aria-labelledby={practised}>{dates.dates.map(date => <li key={date}><time dateTime={date}>{weekdayShort(date)}</time></li>)}</ul></>
           : <p>No practice dates recorded in these seven days.</p>}
     </div>
     <div className="parent-summary-lesson">

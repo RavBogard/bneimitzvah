@@ -221,7 +221,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
         </>}
         {view.kind === "invitation" && <><p>Check the details before joining. Accepting adds this access to your signed-in account.</p>
           <dl className="invitation-details"><div><dt>Access</dt><dd>{roleNames[view.review.role]}</dd></div>{view.review.student && <div><dt>Student</dt><dd><bdi dir="auto">{view.review.student.firstName} {view.review.student.lastName}</bdi></dd></div>}</dl>
-          {view.review.role === "parent" && view.review.student && <p>You'll be able to follow <bdi dir="auto">{view.review.student.firstName}</bdi>'s reading and practise with <bdi dir="auto">{view.review.student.firstName}</bdi>.</p>}
+          {view.review.role === "parent" && view.review.student && <p>You'll be able to follow <bdi dir="auto">{view.review.student.firstName}</bdi>'s reading and practice with <bdi dir="auto">{view.review.student.firstName}</bdi>.</p>}
           <p className="field-help">This invitation expires <time dateTime={view.review.expiresAt}>{new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(view.review.expiresAt))}</time>.</p>
           <button type="button" className="button-primary" data-testid="invitation-accept" disabled={pending !== null} onClick={() => void action("accept")}>{pending === "accept" ? "Accepting invitation…" : "Accept invitation"}</button>
           <button type="button" className="button-text" disabled={pending !== null} onClick={() => void action("sign-out")}>Sign out to use another account</button>

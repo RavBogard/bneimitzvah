@@ -179,7 +179,7 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   let rawHandle = "";
   await tab.route("**/api/practice/enter", async route => { const response = await route.fetch(); rawHandle = (await response.json()).handle; await route.fulfill({ response }); });
   await safe(() => tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click());
-  await ui(tab.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: /^Practicing with /, level: 1 })).toBeVisible();
   await ui(tab.getByText(/Torah Genesis 1:1\u20133/)).toBeVisible();
   await capture(tab, "workspace-child-confirmed-reading");
   await tab.setViewportSize({ width: 390, height: 844 });
@@ -230,7 +230,7 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await safe(() => switchRole(tab, "Parent"));
   await safe(() => goChild(tab, fixture.student.id));
   await safe(() => tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click());
-  await ui(tab.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: /^Practicing with /, level: 1 })).toBeVisible();
   let finishExit!: () => void, exitHeld = false, exitDelivered = false;
   const exitGate = new Promise<void>(resolve => { finishExit = resolve; });
   await tab.route("**/api/practice/exit", async route => { const response = await route.fetch(); exitHeld = true; await exitGate; await route.fulfill({ response }); exitDelivered = true; });

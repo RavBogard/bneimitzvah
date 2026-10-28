@@ -127,7 +127,7 @@ it("shows the student's week on the pinned card, reports explicit inline verse v
     // Back on the shelf the card's day has filled.
     await safe(() => tab.goto("/mine", { waitUntil: "domcontentloaded" }));
     await ui(week(tab).getByRole("listitem")).toHaveCount(7); await todayMarked(tab, true);
-    await ui(week(tab).locator(".practice-day-today .sr-only")).toContainText("today: practised");
+    await ui(week(tab).locator(".practice-day-today .sr-only")).toContainText("today: practiced");
     // Same-authority quiet verification retains the calendar and sends no visit.
     let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
     const hold = async (route: Route) => { held = true; await gate; await route.fallback().catch(() => undefined); };
@@ -199,7 +199,7 @@ it("shows read-only parent dates, then the selected child practice week with con
   await ui(tab.getByRole("button", { name: "Practice with Synthetic", exact: true })).toBeVisible();
   expect(await week(tab).count()).toBe(0); expect(seen.reads).toEqual([request.url()]); expect(seen.posts).toHaveLength(0); expect(await rows()).toEqual(beforeParent);
   const day = await serverDay(tab, () => click(tab, "Practice with Synthetic"));
-  await ui(tab.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: /^Practicing with /, level: 1 })).toBeVisible();
   await ui(week(tab).getByRole("listitem")).toHaveCount(7); await todayMarked(tab, true);
   // The parent's own dates may be read again as the page settles; once practice begins every read is the child-practice one.
   const modes = seen.reads.map(url => new URL(url).searchParams.get("mode")), firstPractice = modes.indexOf("child-practice");
@@ -211,7 +211,7 @@ it("shows read-only parent dates, then the selected child practice week with con
   await heldReading(tab);
   await capture(tab, "practice-calendar-child");
   await click(tab, "Done");
-  await ui(tab.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeHidden();
+  await ui(tab.getByRole("heading", { name: /^Practicing with /, level: 1 })).toBeHidden();
   expect(await tab.locator(".practice-week, .practice-day").count()).toBe(0); expect(seen.posts).toHaveLength(1);
   await safe(() => tab.context().close());
 });

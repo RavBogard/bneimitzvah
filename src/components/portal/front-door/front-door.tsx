@@ -37,11 +37,11 @@ export type SignedInDoor = Readonly<{ title: string; line: string | null; action
 const shortDate = (date: string) => new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
 /** The door of a signed-in person: My Readings for every role but the admin (decisions 12 and 22), This week for the admin. */
 export function signedInDoor(role: Role, facts: DoorFacts = {}): SignedInDoor {
-  if (role === "admin") return { title: "This week", line: "Needs you, ceremonies and rehearsals.", action: "Open This week" };
+  if (role === "admin") return { title: "This week", line: "Needs you, ceremonies and rehearsals.", action: "See this week" };
   const line = facts.pinned ? `${facts.pinned.name} · Beit Mitzvah, ${shortDate(facts.pinned.ceremony)} · ${facts.pinned.done} of ${facts.pinned.total} verses`
     : role === "parent" && facts.child ? `${facts.child.name} · Beit Mitzvah, ${shortDate(facts.child.ceremony)}`
-      : role === "tutor" && facts.nearest ? `${facts.nearest.name} · Beit Mitzvah, ${shortDate(facts.nearest.ceremony)}`
-        : facts.count ? `${facts.count} saved` : null;
+      : role === "tutor" && facts.nearest ? `Next: ${facts.nearest.name} · Beit Mitzvah, ${shortDate(facts.nearest.ceremony)}`
+        : facts.count ? `${facts.count} saved ${facts.count === 1 ? "reading" : "readings"}` : null;
   return { title: "Your readings", line, action: "Open My Readings" };
 }
 /** Whether the door leads the home, under the hero: the person keeps a reading or has one pinned (decision 22). */

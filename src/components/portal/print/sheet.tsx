@@ -363,7 +363,7 @@ function MyReadings({ onOpen }: { onOpen(reading: SavedReading): void }) {
   const shown = useMemo(() => readings ?? [], [readings]);
   if (!shown.length) return null;
   return <section className={styles.mine} aria-labelledby="print-my-readings">
-    <h3 id="print-my-readings">My readings</h3>
+    <h3 id="print-my-readings">My Readings</h3>
     <ul className={styles.mineList}>{shown.map(reading => <li key={reading.id}><button type="button" onClick={() => onOpen(reading)}>
       <span className={styles.mineName}><bdi>{reading.name}</bdi></span>
       <span className={styles.mineMeta}>{reading.date && <><time dateTime={reading.date}>{longDate(reading.date)}</time> · </>}{kindName(reading.kind)} <bdi dir="ltr">{displayRange([reading.ranges])}</bdi></span>

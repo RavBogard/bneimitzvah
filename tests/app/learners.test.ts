@@ -68,15 +68,15 @@ describe("Find a learner", () => {
     await t.save("learner", "Student reading", null);
     const list = await t.call("/api/learners", "multi");
     expect(list.status).toBe(200);
-    expect(list.json.learners.map((row: { name: string }) => row.name)).toEqual(["Learner", "Synthetic Bare", "Synthetic Rabbi", "Synthetic Second"]);
+    expect(list.json.learners.map((row: { name: string }) => row.name)).toEqual(["A learner (no name yet)", "Synthetic Bare", "Synthetic Rabbi", "Synthetic Second"]);
     expect(JSON.stringify(list.json)).not.toContain("@");
     expect(learnerOf(list, t.extra.bare.membershipId)).toEqual({ membershipId: t.extra.bare.membershipId, name: "Synthetic Bare", readings: 3, nearest: { name: "Lech Lecha", date: "2099-10-31" }, tutor: null, student: null });
     // The fixture's learner is students[0]'s student, assigned to multi by the rabbi: that tutor shows, unclaimed, and is "mine" to multi.
-    expect(learnerOf(list, t.f.learnerMember.id)).toEqual({ membershipId: t.f.learnerMember.id, name: "Learner", readings: 1, nearest: null, tutor: { name: "Synthetic Tutor", claimed: false, mine: true },
+    expect(learnerOf(list, t.f.learnerMember.id)).toEqual({ membershipId: t.f.learnerMember.id, name: "A learner (no name yet)", readings: 1, nearest: null, tutor: { name: "Synthetic Tutor", claimed: false, mine: true },
       student: { id: t.f.students[0].id, firstName: "Synthetic", lastName: "Sibling A", ceremonyDate: "2027-01-02" } });
     expect(learnerOf(await t.call("/api/learners", "second"), t.f.learnerMember.id)).toMatchObject({ tutor: { name: "Synthetic Tutor", claimed: false, mine: false } });
     // The rabbi lists too (never "mine": an admin without a tutor grant claims nothing); the prefix search is case-insensitive; the cursor continues.
-    expect((await t.call("/api/learners", "admin")).json.learners.map((row: { name: string }) => row.name)).toEqual(["Learner", "Synthetic Bare", "Synthetic Second", "Synthetic Tutor"]);
+    expect((await t.call("/api/learners", "admin")).json.learners.map((row: { name: string }) => row.name)).toEqual(["A learner (no name yet)", "Synthetic Bare", "Synthetic Second", "Synthetic Tutor"]);
     expect((await t.call("/api/learners?q=synthetic%20b", "multi")).json.learners.map((row: { name: string }) => row.name)).toEqual(["Synthetic Bare"]);
     expect((await t.call("/api/learners?q=%25", "multi")).json.learners).toEqual([]);
     expect((await t.call(`/api/learners?after=${t.extra.bare.membershipId}`, "multi")).json.learners.map((row: { name: string }) => row.name)).toEqual(["Synthetic Rabbi", "Synthetic Second"]);
@@ -91,7 +91,7 @@ describe("Find a learner", () => {
   });
 });
 
-describe("Claim as my student and its undo", () => {
+describe("Add to my students and its undo", () => {
   it("claims a member with no student record: a claim row, no tutor link, an audit in the tutor's own mode; one tutor at a time; idempotent", async () => {
     const t = await setup();
     const claimed = await t.call("/api/learners/claim", "second", { learner: t.extra.bare.membershipId });

@@ -185,7 +185,7 @@ test("every role that sees the ceremony date also receives the service slot, and
     const reading = await json(await f.call(`/api/students/${id}/reading?mode=${mode}`, { who }));
     expect(parseAssigned(reading, mode, id).student).toMatchObject({ ceremonyDate: "2027-01-30", serviceSlot: "havdalah" });
   }
-  // A parent practising with the child reads the same slot through the practice context.
+  // A parent practicing with the child reads the same slot through the practice context.
   const entered = await json(await f.call("/api/practice/enter", { body: { studentId: id } }));
   expect((await json(await f.call(`/api/students/${id}/reading?mode=child-practice`, { handle: entered.handle }))).student).toMatchObject({ serviceSlot: "havdalah" });
   // The admin roster keeps one serviceSlot key and still parses.

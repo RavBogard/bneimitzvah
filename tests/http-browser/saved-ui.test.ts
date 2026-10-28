@@ -55,7 +55,7 @@ async function signIn(tab: Page, email: string) {
 }
 const noHorizontalScroll = (tab: Page) => tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
-it("a tutor-and-parent saves this week's Torah from /read and finds it under My readings; the reading itself never asks first", async () => {
+it("a tutor-and-parent saves this week's Torah from /read and finds it under My Readings; the reading itself never asks first", async () => {
   for (const width of [360, 1280]) {
     const { tab, seen, prefs } = await visitor(width);
     await tab.goto("/read", { waitUntil: "domcontentloaded" });
@@ -155,7 +155,7 @@ it("a first sign-in has a shelf at once, so Save opens the form; a membership tu
   await fixture.ownerDb.update(s.membership).set({ disabledAt: null }).where(eq(s.membership.id, memberships[0].id));
 }, 120_000);
 
-it("the member opens the saved reading from My readings, marks a verse that stays marked after a reload, renames it and removes it", async () => {
+it("the member opens the saved reading from My Readings, marks a verse that stays marked after a reload, renames it and removes it", async () => {
   const { tab, seen } = await visitor(390);
   await signIn(tab, "pg-admin@example.test");
   await tab.goto("/read", { waitUntil: "domcontentloaded" });

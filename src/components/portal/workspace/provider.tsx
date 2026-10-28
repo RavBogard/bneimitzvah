@@ -224,7 +224,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const timer = setTimeout(() => {
       if (practice.selection?.context.id !== context.id) return;
       clearWork(); practice.invalidate(); setContext(null); setEpoch(value => value + 1);
-      if (currentPath.current === `/workspace/practice/${context.studentId}`) { setNotice("This practice session expired. Open your child’s reading again to practise."); router.replace("/mine"); }
+      if (currentPath.current === `/workspace/practice/${context.studentId}`) { setNotice("This practice session ended. Choose Practice with your child to start again."); router.replace("/mine"); }
     }, Math.min(remaining, 2_147_483_647));
     return () => clearTimeout(timer);
   }, [context, practice, router, clearWork]);
@@ -588,7 +588,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     <SiteBar signedIn onNavigate={controlledLink} />
     <main id="workspace-main" className="workspace-main">
       {(checking || !summary) && <section className="workspace-state" data-testid="workspace-state" data-workspace-state={failure === null ? "checking" : failure === 401 ? "signed-out" : failure === 403 || failure === 404 ? "access-changed" : "unavailable"} aria-live="polite"><h1>{failure === null ? "Checking your access" : failure === 401 ? "Sign in to continue" : failure === 403 || failure === 404 ? "Access has changed" : "Workspace unavailable"}</h1>
-        <p>{failure === null ? "Your student information is hidden until access has been checked." : failure === 401 ? "Use the account on your invitation." : failure === 403 || failure === 404 ? "The requested access is not available. Your previous student view has been cleared." : "We couldn’t load the workspace. Please try again shortly."}</p>
+        <p>{failure === null ? "Your student information is hidden until access has been checked." : failure === 401 ? "Sign in with the email address your invitation was sent to." : failure === 403 || failure === 404 ? "The requested access is not available. Your previous student view has been cleared." : "We couldn’t load the workspace. Please try again shortly."}</p>
         {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={() => { denials.current = []; refresh(); }}>Check access again</button>}</section>
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>

@@ -85,7 +85,7 @@ test("the Readings index opens a parashah, a holiday and a custom passage of the
   // Any passage of the Prophets.
   await page.goto("/readings");
   const custom = page.getByRole("region", { name: "Any verses", exact: true });
-  await custom.getByRole("group", { name: "Kind of passage" }).getByRole("button", { name: "Prophets", exact: true }).click();
+  await custom.getByRole("group", { name: "Kind of reading" }).getByRole("button", { name: "Prophets", exact: true }).click();
   await custom.getByLabel("Book", { exact: true }).selectOption("Jonah");
   await custom.getByLabel("End verse", { exact: true }).selectOption("5");
   await custom.getByRole("button", { name: "Open", exact: true }).click();

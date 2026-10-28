@@ -167,7 +167,7 @@ test("the door names the pinned reading, a parent's first child and a tutor's ne
   expect(markup(["student"])).toContain("Synthetic Learner · Beit Mitzvah, Sat, May 1, 2027 · 9 of 14 verses");
   expect(frontDoorAccount({ kind: "signed-in", summary: summary(["parent"]), door })).toMatchObject({ child: { name: "Synthetic Child", ceremony: "2027-06-05" }, nearest: { name: "Synthetic Student" }, count: 3 });
   expect(signedInDoor("parent", { child: { name: "Synthetic Child", ceremony: "2027-06-05" }, count: 3 }).line).toBe("Synthetic Child · Beit Mitzvah, Sat, Jun 5, 2027");
-  expect(signedInDoor("tutor", { nearest: { name: "Synthetic Student", ceremony: "2027-04-03" }, count: 3 }).line).toBe("Synthetic Student · Beit Mitzvah, Sat, Apr 3, 2027");
-  expect(signedInDoor("tutor", { count: 3 }).line).toBe("3 saved");
-  expect(markup(["tutor"])).toContain("Synthetic Student · Beit Mitzvah, Sat, Apr 3, 2027");
+  expect(signedInDoor("tutor", { nearest: { name: "Synthetic Student", ceremony: "2027-04-03" }, count: 3 }).line).toBe("Next: Synthetic Student · Beit Mitzvah, Sat, Apr 3, 2027");
+  expect(signedInDoor("tutor", { count: 3 }).line).toBe("3 saved readings");
+  expect(markup(["tutor"])).toContain("Next: Synthetic Student · Beit Mitzvah, Sat, Apr 3, 2027");
 });
