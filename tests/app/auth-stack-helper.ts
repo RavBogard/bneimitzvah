@@ -1,14 +1,12 @@
 import { randomBytes } from "node:crypto";
-import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
+import { migratedPglite } from "../helpers/migrated-pglite";
 import { createAuthStack } from "../../src/server/auth/factory";
 import * as schema from "../../src/server/db/auth-schema";
 
 export async function authFixture() {
-  const client = new PGlite();
+  const client = await migratedPglite();
   const db = drizzle(client, { schema });
-  await migrate(db, { migrationsFolder: "src/server/db/migrations" });
   const delivered: { email: string; url: string; token: string }[] = [];
   const auth = createAuthStack(db, schema, {
     origin: "http://localhost:3000",

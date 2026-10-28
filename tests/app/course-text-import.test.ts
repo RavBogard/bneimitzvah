@@ -1,6 +1,4 @@
-import { PGlite } from "@electric-sql/pglite";
-import { drizzle } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
+import { migratedPglite } from "../helpers/migrated-pglite";
 import { expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 // @ts-expect-error The operator script is plain JavaScript with no declarations.
@@ -16,9 +14,8 @@ test("the script's pin and identity are the app's", () => {
 });
 
 test("it imports a verified build once, refuses other bytes and a different active build, and touches nothing else", async () => {
-  const client = new PGlite();
+  const client = await migratedPglite();
   try {
-    await migrate(drizzle(client), { migrationsFolder: "src/server/db/migrations" });
     const build = syntheticBuild();
     const catalogBefore = (await client.query("select count(*)::int as n from service_catalog")).rows;
     // Bytes that are not the pin, a licensed pin or an unknown congregation write nothing.

@@ -2,6 +2,8 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    // Migrate once and snapshot the data directory; fixtures clone it instead of re-running every migration.
+    globalSetup: ["tests/helpers/pglite-global-setup.ts"],
     include: ["tests/app/**/*.test.ts"],
     environment: "node",
     passWithNoTests: false,

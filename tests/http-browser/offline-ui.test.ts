@@ -111,7 +111,8 @@ it("signing out removes the saved readings from the device", async () => {
   await tab.goto("/account", { waitUntil: "domcontentloaded" });
   await tab.getByRole("button", { name: "Sign out", exact: true }).click();
   await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
-  expect(await tab.evaluate(async () => (await caches.keys()).filter(key => key === "crc-offline-v1"))).toEqual([]);
+  // The sign-in form can paint before the wipe finishes; a cache that comes back (an in-flight pack re-creating it) still fails after the wait.
+  await expect.poll(() => tab.evaluate(async () => (await caches.keys()).filter(key => key === "crc-offline-v1")), { timeout: 10_000 }).toEqual([]);
   await ui(tab.getByText("Saved on this device", { exact: true })).toHaveCount(0);
 }, 300_000);
 

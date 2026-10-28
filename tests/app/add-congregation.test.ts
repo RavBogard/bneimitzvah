@@ -1,14 +1,12 @@
 import { afterEach, expect, test } from "vitest";
 import { PGlite } from "@electric-sql/pglite";
-import { drizzle } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
+import { migratedPglite } from "../helpers/migrated-pglite";
 import { addCongregation, congregation, CongregationError, parseArgs, type CongregationInput } from "../../scripts/add-congregation.mjs";
 
 const clients: PGlite[] = [];
 afterEach(async () => { await Promise.all(clients.splice(0).map(c => c.close())); });
 async function database() {
-  const client = new PGlite(); clients.push(client);
-  await migrate(drizzle(client), { migrationsFolder: "src/server/db/migrations" });
+  const client = await migratedPglite(); clients.push(client);
   return client;
 }
 const input: CongregationInput = { id: "synthetic-shul", name: "Synthetic Congregation", productName: "Synthetic B'nei Mitzvah", host: "portal.synthetic.example",
