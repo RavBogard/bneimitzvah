@@ -15,7 +15,7 @@ import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { dayOrdinal, parsePracticeDates } from "../../src/components/portal/workspace/practice-calendar/api";
 import * as s from "../../src/server/db/index";
-import { goChild } from "./reading-nav";
+import { goChild, toSection } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 // Quiet dates: the student's calendar, a selected parent's summary, and explicitly selected child practice.
@@ -54,6 +54,13 @@ async function page(role: "student" | "tutor", mobile = false, reuse = false) {
   return tab;
 }
 const click = (tab: Page, name: string) => safe(() => tab.getByRole("button", { name, exact: true }).click());
+/** Opens a verse on a word, as a reader does. A student's word opens its tools in a sheet over the text (Hebrew first); it is closed again so the next tap reaches the page. */
+async function tapWord(tab: Page, ref: string) {
+  await safe(() => tab.locator(`.study-verses [data-verse-ref="${ref}"] [data-word-index="0"]`).first().click());
+  const sheet = tab.getByRole("dialog", { name: "Word tools", exact: true });
+  await sheet.waitFor({ timeout: 2_000 }).catch(() => undefined);
+  if (await sheet.count()) { await safe(() => tab.keyboard.press("Escape")); await ui(sheet).toHaveCount(0); }
+}
 const week = (tab: Page) => tab.getByRole("list", { name: "Practice this week", exact: true });
 const checking = (tab: Page) => tab.locator("#workspace-main").getByRole("heading", { name: "Checking your access", exact: true });
 const isCalendar = (request: Request) => new URL(request.url()).pathname.endsWith("/practice-calendar");
@@ -113,14 +120,14 @@ it("shows the student's week on the pinned card, reports explicit inline verse v
     await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
     // Loading the reading page and its text is not practice either; there is no Start reading button, a verse opens on a word.
     expect(seen.posts).toHaveLength(0); expect(await tab.getByRole("button", { name: "Start reading", exact: true }).count()).toBe(0);
-    await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:1"] [data-word-index="0"]').first().click());
+    await tapWord(tab, "Genesis 1:1");
     await heldReading(tab);
     await ui.poll(() => seen.posts.length).toBe(1);
     expect(seen.posts[0]).toEqual({ context: null, body: { mode: "student", eventId: expect.stringMatching(/^[0-9a-f-]{36}$/), expectedDay: day, action: "visit", target: { type: "verse", kind: "torah", assignmentId, assignmentRevision: 1, verseRef: "Genesis 1:1" } } });
     // Opening another verse is a new visit; opening the same one again adds nothing.
-    await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:2"] [data-word-index="0"]').first().click()); await ui.poll(() => seen.posts.length).toBe(2);
+    await tapWord(tab, "Genesis 1:2"); await ui.poll(() => seen.posts.length).toBe(2);
     expect(seen.posts[1].body).toMatchObject({ expectedDay: day, target: { verseRef: "Genesis 1:2" } }); expect(seen.posts[1].body.eventId).not.toBe(seen.posts[0].body.eventId);
-    await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:2"] [data-word-index="0"]').first().click());
+    await tapWord(tab, "Genesis 1:2");
     expect(seen.posts).toHaveLength(2);
     await ui.poll(() => seen.acks).toEqual([200, 200]);
     await ui.poll(async () => (await rows()).events - before.events).toBe(2); const after = await rows(); expect(after.days).toBe(1); expect(after.events - before.events).toBe(2);
@@ -171,9 +178,9 @@ it("re-reads after a stale day without resending, and the next explicit open use
   let stale = true;
   await safe(() => tab.route("**/practice-events", async route => { if (!stale) return route.fallback(); stale = false; await route.fulfill({ status: 409, contentType: "application/json", body: '{"ok":false,"code":"stale-day"}' }); }));
   const reread = tab.waitForResponse(response => isCalendar(response.request()) && response.status() === 200);
-  await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:3"] [data-word-index="0"]').first().click()); await safe(() => reread);
+  await tapWord(tab, "Genesis 1:3"); await safe(() => reread);
   expect(seen.posts).toHaveLength(1); await safe(() => tab.waitForTimeout(600)); // the re-read has been answered and the store has taken it
-  await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:3"] [data-word-index="0"]').first().click()); await ui.poll(() => seen.posts.length).toBe(2);
+  await tapWord(tab, "Genesis 1:3"); await ui.poll(() => seen.posts.length).toBe(2);
   await heldReading(tab);
   expect(seen.posts[1].body).toMatchObject({ expectedDay: day, target: { verseRef: "Genesis 1:3" } }); expect(seen.posts[1].body.eventId).not.toBe(seen.posts[0].body.eventId);
   await safe(() => tab.context().close());
@@ -205,7 +212,7 @@ it("shows read-only parent dates, then the selected child practice week with con
   const modes = seen.reads.map(url => new URL(url).searchParams.get("mode")), firstPractice = modes.indexOf("child-practice");
   expect(firstPractice).toBeGreaterThan(0); expect(modes.slice(firstPractice).every(mode => mode === "child-practice")).toBe(true);
   expect(seen.posts).toHaveLength(0);
-  await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:1"] [data-word-index="0"]').first().click()); await ui.poll(() => seen.posts.length).toBe(1);
+  await tapWord(tab, "Genesis 1:1"); await ui.poll(() => seen.posts.length).toBe(1);
   expect(seen.posts[0].context).toEqual(expect.any(String));
   expect(seen.posts[0].body).toMatchObject({ mode: "child-practice", expectedDay: day, action: "visit", target: { type: "verse", assignmentId, verseRef: "Genesis 1:1" } });
   await heldReading(tab);
@@ -227,14 +234,14 @@ it("shows an assigned tutor the student's practice days on the Lessons tab, date
     const dates = parsePracticeDates(await safe(() => response.json()), "tutor", fixture.student.id, url.searchParams.get("fromDate") ?? "", url.searchParams.get("throughDate") ?? "");
     // The header keeps no practice week for staff; the dates sit with the lessons.
     expect(await tab.locator(".reading-hero .practice-week").count()).toBe(0);
-    await safe(() => tab.locator("#lessons").scrollIntoViewIfNeeded());
+    await safe(() => toSection(tab, "lessons"));
     const section = tab.getByRole("region", { name: "Practice days", exact: true });
     await ui(section.getByText("Dates only.", { exact: false })).toBeVisible();
     await ui(week(tab).getByRole("listitem")).toHaveCount(7); await todayMarked(tab, dates.dates.includes(dates.serverDay));
     await capture(tab, "practice-calendar-tutor");
     await safe(() => tab.locator("[data-testid=\"reading-workspace\"]").scrollIntoViewIfNeeded());
     await ui(tab.locator(".study-verses").first()).toBeVisible();
-    await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:1"] [data-word-index="0"]').first().click());
+    await tapWord(tab, "Genesis 1:1");
     await safe(() => tab.waitForTimeout(300));
     expect(seen.posts).toHaveLength(0); expect(seen.reads.every(value => new URL(value).searchParams.get("mode") === "tutor")).toBe(true); expect(await rows()).toEqual(before);
     await safe(() => tab.context().close());

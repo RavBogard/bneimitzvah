@@ -22,6 +22,7 @@ export const icons = {
   scroll: icon("M6 3v18M18 3v18M6 6h12M6 18h12M9.5 10h5M9.5 14h5"),
   print: icon("M7 9V3h10v6M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v7H7z"),
   note: icon("M9 18V6l10-2v12M9 18a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM19 16a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"),
+  closeup: icon("M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5M9 12h6"),
   works: icon("M3 5.5c2.5-1 5.5-.8 9 1.2 3.5-2 6.5-2.2 9-1.2v13c-2.5-1-5.5-.8-9 1.2-3.5-2-6.5-2.2-9-1.2zM12 6.7v13.2"),
 };
 
@@ -104,7 +105,6 @@ export function LiftedLine({ verses, assignment, index, total, offset, onIndex, 
   return <dialog ref={dialog} className="lift" aria-labelledby={`${id}-title`} onCancel={event => { event.preventDefault(); onClose(); }} onKeyDown={key}>
     <div className="lift-bar">
       <button type="button" className="lift-icon" onClick={onClose} aria-label="Close practice view">{icons.close}</button>
-      <p className="lift-count" id={`${id}-count`} data-testid="lift-count" data-lift-verse={number} data-lift-total={total} aria-live="polite">Verse {number} of {total}{phrases.length > 1 && <span className="lift-count-phrase"> · phrase {currentPhrase + 1} of {phrases.length}</span>}</p>
       {/* 1.9 N14 (G7): a verse picker, so any verse on this page is two taps away (open the list, choose the verse). */}
       {verses.length > 1 && <select className="lift-pick" aria-label="Choose a verse" data-testid="lift-verse-picker" value={index} onChange={event => { playback.current?.suspend(); setPlayingWord(null); onIndex(Number(event.target.value)); }}>
         {verses.map((row, position) => <option key={row.ref} value={position}>{row.ref}</option>)}
@@ -112,6 +112,8 @@ export function LiftedLine({ verses, assignment, index, total, offset, onIndex, 
       <button type="button" className="lift-icon" aria-pressed={prefs.colors} aria-label="Phrase colors" onClick={() => setReadingPrefs({ colors: !prefs.colors })}>{icons.colors}</button>
     </div>
     <ol className="lift-rail" aria-hidden="true">{verses.map((row, position) => <li key={row.ref} data-state={position < index ? "past" : position === index ? "current" : undefined} />)}</ol>
+    {/* One line under the rail, so the bar keeps its room for the verse picker on a small phone. */}
+    <p className="lift-count" id={`${id}-count`} data-testid="lift-count" data-lift-verse={number} data-lift-total={total} aria-live="polite">Verse {number} of {total}{phrases.length > 1 && <span className="lift-count-phrase"> · phrase {currentPhrase + 1} of {phrases.length}</span>}</p>
     <div ref={stage} className="lift-stage" data-testid="lift-stage" onPointerDown={down} onPointerUp={up} onPointerCancel={() => { pointer.current = null; }}>
       <h2 id={`${id}-title`} className="lift-ref"><bdi dir="ltr">{verse.ref}</bdi></h2>
       <StudyHebrew key={verse.ref} verse={verse} colors={colors} id={`${id}-v`} activeWord={activeWord} onWordSelect={reference || colors ? word => {

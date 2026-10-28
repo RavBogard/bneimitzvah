@@ -9,7 +9,7 @@ import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
 import { openAuthMail } from "./auth-navigation";
-import { markOf } from "./verse-tools";
+import { markOf, upClose } from "./verse-tools";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
 import { refreshReading } from "./reading-nav";
@@ -39,7 +39,7 @@ async function workspace(tab: Page, role: "tutor" | "student") {
   if (role === "tutor") await safe(() => tab.locator(`a[href="/workspace/tutor/${fixture.student.id}"]`).click());
   await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", level: 4, exact: true })).toBeVisible();
 }
-async function openPractice(tab: Page) { await safe(() => tab.getByRole("button", { name: "View Genesis 1:1 up close", exact: true }).click()); await ui(lift(tab)).toBeVisible(); }
+async function openPractice(tab: Page) { await safe(() => upClose(tab, "Genesis 1:1")); }
 const lift = (tab: Page) => tab.locator("dialog.lift");
 async function liftTo(tab: Page, ref: string) {
   for (let step = 0; step < 12 && (await lift(tab).locator(".lift-ref").textContent()) !== ref; step++) await safe(() => lift(tab).locator(".lift-step-next").click());
@@ -96,7 +96,7 @@ it("lets a student mark verses in practice and a tutor assess them, keeping the 
   await ui(await markOf(student, "Genesis 1:1")).toHaveText("Got it");
   await ui(await markOf(student, "Genesis 1:2")).toHaveText("Still working");
   await ui(await markOf(student, "Genesis 1:3")).toHaveCount(0);
-  await ui(student.locator(".hero-marked")).toHaveText(/^\s*·\s*1 got it$/);
+  await ui(student.getByTestId("verse-got-it")).toHaveCount(1); await ui(student.locator(".hero-marked")).toHaveCount(0); // a check beside the verse number, no tally (Hebrew first)
   await capture(student, "student-list-mobile");
 
   const tutor = await page("tutor"); await workspace(tutor, "tutor");
@@ -171,7 +171,7 @@ it("keeps an uncertain mark unverified until an explicit read succeeds, without 
     await ui(lift(student).locator(".lift-progress-note[role=status]")).toHaveText("That mark may not have saved. The latest mark is shown.");
     expect(posts).toBe(1);
     await safe(() => student.keyboard.press("Escape"));
-    await ui(student.locator(".hero-marked")).toContainText("1 got it");
+    await ui(student.getByTestId("verse-got-it")).toHaveCount(1);
     await ui(await markOf(student, "Genesis 1:1")).toHaveText("Got it");
   } finally { release(); await student.unroute(pattern); }
 });

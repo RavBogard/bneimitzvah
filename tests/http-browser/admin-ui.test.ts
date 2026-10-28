@@ -8,7 +8,7 @@ import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
-import { openVerseEditor } from "./reading-nav";
+import { openVerseEditor, toSection } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -143,7 +143,7 @@ it("opens a student's page with the staff tabs and verse sheet, and links to the
     await safe(() => openVerseEditor(tab));
     await ui(tab.getByRole("dialog", { name: /verses|reading/i })).toBeVisible();
     await safe(() => tab.getByRole("button", { name: "Close verse editor", exact: true }).click());
-    await safe(() => tab.locator("#lessons").scrollIntoViewIfNeeded());
+    await safe(() => toSection(tab, "lessons"));
     await ui(tab.getByRole("button", { name: "Add lesson note", exact: true })).toBeVisible();
     await safe(() => tab.getByRole("link", { name: "People and access", exact: true }).click());
     await ui(tab.getByRole("heading", { name: "People and access", level: 1, exact: true })).toBeVisible();

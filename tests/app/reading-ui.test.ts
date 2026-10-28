@@ -131,7 +131,9 @@ it("keeps unknown-slot manual review truthful and rejects false derived dates or
 });
 
 // Readings for everyone E2: the workspace reading's title block, as its pure model. The pages render it with the shared ReaderTitle.
-import { titleLineText, titleName, titlePillKeys, titleReading } from "../../src/components/portal/workspace/reading-title";
+import { learnerTitle, titleLineText, titleName, titlePillKeys, titleReading } from "../../src/components/portal/workspace/reading-title";
+import { ReadingToolbar } from "../../src/components/portal/workspace/reading-toolbar";
+type ToolbarProps = NonNullable<Parameters<typeof ReadingToolbar>[0]>;
 const synthetic = (kind: "torah" | "haftarah", ranges: string[]) => ({ id: kind, kind, ranges, verses: [], basis: "custom", revision: 1, needsReview: false, aliyahStarts: null, confirmationDate: null, source: { status: "unknown", fetchedAt: null, date: null, calendar: null, attribution: null } }) as never;
 
 it("names the student, then one muted line: Beit Mitzvah, the date and the Torah ranges (the one wording test for the line)", () => {
@@ -145,6 +147,26 @@ it("names the student, then one muted line: Beit Mitzvah, the date and the Torah
 it("says only the date while no reading is assigned or the portion is only being explored", () => {
   expect(titleLineText("Sat, May 1, 2027", titleReading([], false))).toBe("Beit Mitzvah · Sat, May 1, 2027");
   expect(titleLineText("Sat, May 1, 2027", titleReading([synthetic("haftarah", ["Isaiah 1:1-2"])], true))).toBe("Beit Mitzvah · Sat, May 1, 2027");
+});
+
+// Hebrew first (2026-10-28): a student's title is one line, the date without its year and the days to go; the shown reading is the one the line names elsewhere.
+it("gives a student one line under the name: the ceremony, the short date and the days to go (the one wording test for it)", () => {
+  const now = new Date(2026, 9, 28);
+  expect(learnerTitle("2026-12-26", now).text).toBe("Beit Mitzvah · Sat, Dec 26 · 59 days");
+  expect(learnerTitle("2026-10-29", now).countdown).toBe("Tomorrow"); expect(learnerTitle("2026-10-28", now).countdown).toBe("Today");
+  expect(learnerTitle("2026-10-01", now).countdown).toBeNull(); expect(learnerTitle("2026-10-01", now).text).not.toMatch(/days|Today|Tomorrow/);
+  expect(titleReading([synthetic("torah", ["Genesis 1:1-3"]), synthetic("haftarah", ["Isaiah 1:1-2"])], false, "haftarah")).toBe("Haftarah Isaiah 1:1–2");
+});
+
+it("puts Up close first in a student's dock and keeps Listen there, disabled with its reason and no way to play, while listening is not released", () => {
+  const markup = renderToStaticMarkup(createElement<ToolbarProps>(ReadingToolbar, { practice: { onUpClose() {}, listenReason: "Synthetic reason." } }));
+  const items = [...markup.matchAll(/data-testid="(dock-[a-z-]+)"/g)].map(match => match[1]);
+  expect(items.slice(0, 3)).toEqual(["dock-up-close", "dock-listen", "dock-listen-reason"]);
+  expect(markup).toMatch(/aria-disabled="true"[^>]*data-testid="dock-listen"|data-testid="dock-listen"[^>]*aria-disabled="true"/);
+  expect(markup).not.toMatch(/<audio|Hear verse/);
+  // Released: Listen is a real button that plays through the page's own Hear.
+  const released = renderToStaticMarkup(createElement<ToolbarProps>(ReadingToolbar, { listeningEnabled: true, onHear() {}, practice: { onUpClose() {}, listenReason: "Synthetic reason." } }));
+  expect(released).not.toContain("dock-listen-reason"); expect(released).not.toMatch(/data-testid="dock-listen"[^>]*aria-disabled/);
 });
 
 it("gives a learner one pill, Change, and staff two, Change and Manage", () => {

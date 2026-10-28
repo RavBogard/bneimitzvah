@@ -12,7 +12,7 @@ import { installLoopbackFetchGuard } from "./egress";
 import { closeVerseTools, openVerseTools, workPanel } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import * as s from "../../src/server/db/index";
-import { manage } from "./reading-nav";
+import { manage, toSection } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser;
@@ -41,7 +41,7 @@ async function page(fresh = false) {
   await ui(tab.locator(".study-verses")).toBeVisible(); return tab;
 }
 async function choose(tab: Page, part = 1) {
-  await safe(() => tab.locator("#service-parts").scrollIntoViewIfNeeded());
+  await safe(() => toSection(tab, "service"));
   await ui(panel(tab).getByText("Checking assigned service parts…", { exact: true })).toBeHidden();
   await click(tab, "Choose service parts");
   await safe(() => panel(tab).getByRole("checkbox", { name: new RegExp(`Synthetic part ${part}`) }).check());
@@ -90,7 +90,7 @@ afterAll(async () => { await Promise.all(contexts.map(context => context.close()
 
 it("retains only the rightful service decision during a quiet check, preserving both drafts and focus while another tab stays independent", async () => {
   const tab = await page(), other = await page(), writes = countWrites(tab);
-  await choose(other, 2); await safe(() => other.locator("#service-parts").scrollIntoViewIfNeeded());
+  await choose(other, 2); await safe(() => toSection(other, "service"));
   await pendingService(tab); const hold = await holdSession(tab);
   try {
     await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await hold.ready();
@@ -106,7 +106,7 @@ it("retains only the rightful service decision during a quiet check, preserving 
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
   await safe(() => tab.keyboard.press("Escape")); await ui(sheet(tab)).toBeHidden(); expect(await modalCount(tab)).toBe(0);
   await ui(tab.getByRole("button", { name: "Manage", exact: true })).toBeFocused();
-  await safe(() => tab.locator("#service-parts").scrollIntoViewIfNeeded());
+  await safe(() => toSection(tab, "service"));
   await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked();
   await ui(panel(other).getByRole("checkbox", { name: /Synthetic part 2/ })).toBeChecked(); expect(writes).toEqual({ confirm: 0, note: 0 });
   await hold.remove(); await safe(() => tab.context().close()); await safe(() => other.context().close());

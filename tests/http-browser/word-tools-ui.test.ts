@@ -147,8 +147,11 @@ it("supports phone keyboard study with no loaded audio; qere/maqaf, independent 
   const tonic = tools(tab).locator('[data-stress="tonic"]'); await ui(tonic).toHaveCount(1);
   const description = await tonic.getAttribute("aria-describedby"); expect(description).toBeTruthy(); await ui(tab.locator(`[id="${description}"]`)).toContainText("primary stress");
   await ui(tools(tab).getByRole("heading", { name: "דָּ֖ג", exact: true })).toBeVisible();
-  await tab.getByRole("button", { name: "Colors", exact: true }).dispatchEvent("click"); /* no bottom tab bar now: the dev indicator sits over the toolbar */ await ui(tab.locator(".study-verses [data-family]")).toHaveCount(0);
-  await word(tab, 1, 0).click(); await playing(tab); await ui(tools(tab)).toContainText("Word 1 of 2");
+  // A student's word tools are a sheet over the text (Hebrew first): Esc closes it, and Colors is under the dock's Text.
+  await tab.keyboard.press("Escape"); await ui(tab.getByRole("dialog", { name: "Word tools", exact: true })).toHaveCount(0);
+  await tab.getByTestId("dock-text").dispatchEvent("click"); /* no bottom tab bar now: the dev indicator sits over the toolbar */
+  await tab.getByTestId("dock-text-menu").getByRole("button", { name: "Colors", exact: true }).click(); await tab.keyboard.press("Escape"); await ui(tab.locator(".study-verses [data-family]")).toHaveCount(0);
+  await word(tab, 1, 0).click(); await playing(tab); await disclosure.click(); await ui(tools(tab)).toContainText("Word 1 of 2");
   await tab.route("**/study-word-details?**", route => route.fulfill({ status: 503, contentType: "application/json", body: '{"ok":false}' }));
   await tools(tab).getByRole("button", { name: "Next word", exact: true }).click(); await ui(tools(tab).getByRole("button", { name: "Try word tools again", exact: true })).toBeVisible();
   await ui(tools(tab).locator('[data-stress="tonic"]')).toHaveCount(1); await tools(tab).getByRole("button", { name: "Hear this word", exact: true }).click(); await playing(tab);
@@ -175,7 +178,8 @@ it("clears selected private tools on actual assignment and child-context changes
   const { tab } = await page(false, "tutor"); await openTools(tab);
   await switchRole(tab, "Parent"); await ui(tools(tab)).toHaveCount(0);
   await goChild(tab, fixture.student.id); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(tab.locator(".study-verses")).toBeVisible(); await openTools(tab);
-  await tab.getByRole("button", { name: "Switch to Synthetic Sibling", exact: true }).click(); await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
+  // Child practice shows word tools in a sheet over the text (Hebrew first): it is closed before the page's own controls are used.
+  await tab.keyboard.press("Escape"); await tab.getByRole("button", { name: "Switch to Synthetic Sibling", exact: true }).click(); await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   await ui(tools(tab).getByRole("button", { name: "Word tools", exact: true })).toHaveAttribute("aria-expanded", "false"); await ui(tools(tab).getByText("Synthetic dictionary sense", { exact: true })).toHaveCount(0);
   await openTools(tab);
   const [assignment] = await fixture.ownerDb.select().from(s.assignment).where(eq(s.assignment.studentId, siblingId));
