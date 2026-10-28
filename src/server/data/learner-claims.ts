@@ -83,6 +83,25 @@ export async function assignedLinksOf<Q extends PgQueryResultHKT>(tx: Tx<Q>, ten
 }
 
 /**
+ * A1 for a tutor link (fix round, PR #153): a link the rabbi assigned opens the student; a link a live claim made opens it only while that
+ * claim passes canView, so a claim never opens a colleague's, the rabbi's or a parent's student. False means the same 404 an unknown student gets.
+ */
+export async function tutorLinkPassesA1<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, viewerMembershipId: string, linkId: string): Promise<boolean> {
+  const [claim] = await tx.select({ learnerMembershipId: s.learnerClaim.learnerMembershipId }).from(s.learnerClaim)
+    .where(and(eq(s.learnerClaim.tenantId, tenantId), eq(s.learnerClaim.tutorLinkId, linkId), isNull(s.learnerClaim.revokedAt))).limit(1);
+  if (!claim) return true;
+  return (await canView(tx, tenantId, viewerMembershipId, claim.learnerMembershipId)) !== null;
+}
+
+/** The learner membership behind a student record: its live identity's live student grant; null when no one has signed in as the student. */
+export async function learnerMembershipOf<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, studentId: string): Promise<string | null> {
+  const [row] = await tx.select({ membershipId: s.roleGrant.membershipId }).from(s.studentIdentity)
+    .innerJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.studentIdentity.tenantId), eq(s.roleGrant.id, s.studentIdentity.roleGrantId), isNull(s.roleGrant.revokedAt), eq(s.roleGrant.role, "student")))
+    .where(and(eq(s.studentIdentity.tenantId, tenantId), eq(s.studentIdentity.studentId, studentId), isNull(s.studentIdentity.revokedAt))).orderBy(asc(s.studentIdentity.id)).limit(1);
+  return row?.membershipId ?? null;
+}
+
+/**
  * Whether the viewer may read the learner's shelf: a live admin grant; or a live tutor grant, on a learner who is neither staff nor a
  * parent (notALearner), that holds the learner's unrevoked claim, or an unrevoked tutor link to the student whose live identity is the learner's. Null for everyone else, which the
  * caller turns into the same 404 a missing learner gets. Both memberships are the same tenant's; nothing crosses it.

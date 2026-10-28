@@ -123,4 +123,38 @@ describe("who may open a student's booklet", () => {
     // multi still reads own's booklet: the guardian link there is live.
     expect((await t.booklet("multi", own.id)).json).toMatchObject({ mode: "parent" });
   });
+  it("is one 404 for everyone on a disabled student, and for an admin whose grant is revoked", async () => {
+    const t = await setup(), [own, sibling] = t.f.students;
+    await t.f.owner(() => t.f.db.update(s.student).set({ disabledAt: new Date() }).where(eq(s.student.id, own.id)));
+    for (const who of ["learner", "multi", "admin"]) expect((await t.booklet(who, own.id)).status, who).toBe(404);
+    expect((await t.booklet("admin", sibling.id)).status).toBe(200);
+    await t.f.owner(() => t.f.db.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, t.f.adminGrant.id)));
+    expect((await t.booklet("admin", sibling.id)).status).toBe(404);
+  });
+
+  it("opens a ceremony-done student's booklet for the learner, the parent and the admin, never for the tutor", async () => {
+    const t = await setup(), sibling = t.f.students[1];
+    expect((await t.send("/api/learners/claim", "claimer", { body: { learner: t.people.bare.membershipId } })).json).toMatchObject({ ok: true, created: true });
+    expect((await t.booklet("claimer", sibling.id)).status).toBe(200);
+    await t.f.owner(() => t.f.db.insert(s.studentCeremonyDone).values({ tenantId: "crc", studentId: sibling.id, setByGrantId: t.f.adminGrant.id }));
+    expect((await t.booklet("bare", sibling.id)).json).toMatchObject({ mode: "student" });
+    expect((await t.booklet("multi", sibling.id)).json).toMatchObject({ mode: "parent" });
+    expect((await t.booklet("admin", sibling.id)).json).toMatchObject({ mode: "admin" });
+    expect((await t.booklet("claimer", sibling.id)).status).toBe(404);
+  });
+});
+
+describe("A1 on the tutor's existing reading route (fix round)", () => {
+  it("refuses a tutor whose own claim made the link once the learner is staff, and keeps the rabbi's assignment open", async () => {
+    const t = await setup(), [, sibling, unrelated] = t.f.students;
+    const reading = (who: string, id: string) => t.send(`/api/students/${id}/reading?mode=tutor`, who);
+    expect((await t.send("/api/learners/claim", "claimer", { body: { learner: t.people.bare.membershipId } })).json).toMatchObject({ ok: true, created: true });
+    expect((await reading("claimer", sibling.id)).status).toBe(200);
+    expect((await t.send("/api/students?mode=tutor&limit=100", "claimer")).json.students).toEqual([expect.objectContaining({ id: sibling.id })]);
+    await t.f.owner(() => t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: t.people.bare.membershipId, role: "tutor" }));
+    expect((await reading("claimer", sibling.id)).status).toBe(404);
+    expect((await t.send("/api/students?mode=tutor&limit=100", "claimer")).json.students).toEqual([]);
+    // The rabbi's assignment is unaffected, and so is a student whose learner is now staff when the rabbi assigned the tutor.
+    expect((await reading("assigned", unrelated.id)).status).toBe(200);
+  });
 });

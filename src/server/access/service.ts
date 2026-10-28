@@ -4,6 +4,7 @@ import type { createAuthStack } from "../auth/factory";
 import { lockRoleGrant, lockStudent, lockStudentRelationship } from "../data/authority";
 import { createVerifiedIdentityAccess } from "./identity";
 import { lockVisibleStudentCandidates } from "../data/students";
+import { tutorLinkPassesA1 } from "../data/learner-claims";
 import type { StudentPage, StudentView } from "../data/students";
 import { requireCookieMutation } from "../http/mutations";
 import { AccessDenied } from "./errors";
@@ -75,6 +76,8 @@ export function createAccessService<Q extends PgQueryResultHKT>(input: {
       if (!student || student.disabledAt) throw new AccessDenied(404);
       const relationship = await lockStudentRelationship(tx, actor.tenantId, student.id, actor.roleGrantId, actor.mode, intent);
       if (!relationship) throw new AccessDenied(404);
+      // A1 (fix round, PR #153): a link a tutor's own claim made opens the student only while the claim passes canView; the rabbi's assignment always does.
+      if (actor.mode === "tutor" && relationship.id && !await tutorLinkPassesA1(tx, actor.tenantId, actor.membershipId, relationship.id)) throw new AccessDenied(404);
       // First establish view access, then distinguish forbidden action from an
       // unavailable target. Foreign/missing/unrelated IDs share the same denial.
       if (selection.capability === "set-reading" && actor.mode !== "admin" && actor.mode !== "tutor") throw new AccessDenied(403);
@@ -134,7 +137,8 @@ export function createAccessService<Q extends PgQueryResultHKT>(input: {
       const candidates = await lockVisibleStudentCandidates(tx, actor, selection);
       const visible: (StudentView & { ownAdultHonors: boolean })[] = [];
       for (const student of candidates) {
-        if (await lockStudentRelationship(tx, actor.tenantId, student.id, actor.roleGrantId, actor.mode, "read")) visible.push(Object.freeze({ ...studentView(student), ownAdultHonors: actor.mode === "student" && student.studentKind === "adult" }));
+        const link = await lockStudentRelationship(tx, actor.tenantId, student.id, actor.roleGrantId, actor.mode, "read");
+        if (link && (actor.mode !== "tutor" || !link.id || await tutorLinkPassesA1(tx, actor.tenantId, actor.membershipId, link.id))) visible.push(Object.freeze({ ...studentView(student), ownAdultHonors: actor.mode === "student" && student.studentKind === "adult" }));
       }
       return visible;
     }),

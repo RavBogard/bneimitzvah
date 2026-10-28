@@ -4,6 +4,7 @@ import { studentCeremonyDone } from "../db/ceremony-done-schema";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
 import * as s from "../db/index";
+import { activeClaimOf, liveTutorLinksOf } from "../data/learner-claims";
 
 /**
  * The learner directory's people queries and the claim writes (readings for everyone, plan D5). The visibility rule and the
@@ -77,7 +78,7 @@ export async function liveClaimsOfGrant<Q extends PgQueryResultHKT>(tx: Tx<Q>, t
 }
 /** The account name behind a grant of this tenant, raw (the caller applies displayName), with the grant's membership and whether the grant is revoked; null for another tenant's grant. */
 export async function grantHolder<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, grantId: string) {
-  const [row] = await tx.select({ name: s.user.name, membershipId: s.membership.id, revokedAt: s.roleGrant.revokedAt }).from(s.roleGrant)
+  const [row] = await tx.select({ name: s.user.name, membershipId: s.membership.id, revokedAt: s.roleGrant.revokedAt, disabledAt: s.membership.disabledAt }).from(s.roleGrant)
     .innerJoin(s.membership, and(eq(s.membership.tenantId, s.roleGrant.tenantId), eq(s.membership.id, s.roleGrant.membershipId)))
     .innerJoin(s.user, eq(s.user.id, s.membership.userId)).where(and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.id, grantId))).limit(1);
   return row ?? null;
@@ -123,4 +124,21 @@ export async function anyLiveGrant<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenant
 export async function auditClaim<Q extends PgQueryResultHKT>(tx: Tx<Q>, actor: Readonly<{ tenantId: string; userId: string; membershipId: string; roleGrantId: string; mode: "student" | "parent" | "tutor" | "admin" }>, action: "learner.claim" | "learner.unclaim", claimId: string) {
   await tx.insert(s.auditEvent).values({ tenantId: actor.tenantId, actorUserId: actor.userId, actorMembershipId: actor.membershipId, roleGrantId: actor.roleGrantId, mode: actor.mode,
     action, targetType: "learner_claim", targetId: claimId, requestId: crypto.randomUUID() });
+}
+
+/**
+ * The learner's tutor, from the claim (undoable) or, for a linked student, the first tutor link (the rabbi's assignment). A revoked grant or a
+ * disabled membership is nobody's tutor (as on the staff screens). The name is raw; the caller applies displayName. Shared by the learner's own
+ * tutor line and the study booklet's cover.
+ */
+export async function tutorOfLearner<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, learnerMembershipId: string) {
+  // The claim's grant is live (activeClaimOf checks); a link's tutor grant may not be.
+  const claim = await activeClaimOf(tx, tenantId, learnerMembershipId);
+  const candidates = claim ? [claim.tutorGrantId] : (await liveTutorLinksOf(tx, tenantId, learnerMembershipId)).map(link => link.tutorGrantId);
+  for (const grantId of candidates) {
+    const holder = await grantHolder(tx, tenantId, grantId);
+    if (!holder || holder.revokedAt || holder.disabledAt) continue;
+    return Object.freeze({ grantId, name: holder.name, claimed: claim !== null, claimId: claim?.id ?? null });
+  }
+  return null;
 }
