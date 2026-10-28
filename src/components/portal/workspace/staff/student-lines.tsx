@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import type { Assigned } from "../api";
 import { relationshipApi, type Relationships } from "../relationships/api";
-import { WorkspaceLink } from "../provider";
 import { staffApi, type Family } from "./api";
 import { familyLine, parentLine, tutorLine, waitingForDivisions, waitingLine } from "./model";
 
@@ -24,7 +23,7 @@ export function StaffStudentLines({ mode, baseline }: { mode: "tutor" | "admin";
     staffApi.family("tutor", studentId, request.signal).then(value => { if (!request.signal.aborted) setFamily({ id: studentId, value }); }, () => undefined);
     return () => request.abort();
   }, [mode, studentId]);
-  // The admin's header line: who teaches and whether a parent joined, from the same read the People page uses (no address is in it).
+  // The admin's header line: who teaches and whether a parent joined, from the same read the People page uses (no address is in it). The "People and access" link is the crumb above the page.
   const [people, setPeople] = useState<{ id: string; value: Relationships } | null>(null);
   useEffect(() => {
     if (mode !== "admin") return;
@@ -40,8 +39,7 @@ export function StaffStudentLines({ mode, baseline }: { mode: "tutor" | "admin";
   if (!lines.length && !waiting && !review.length && !shown) return null;
   return <div className="staff-lines" data-testid="staff-student-lines">
     {shown && <p data-testid="admin-people-line"><bdi dir="auto">{[tutorLine(shown.tutors.find(row => row.effectiveRead)?.displayName ?? null, shown.tutors.filter(row => row.effectiveRead).length),
-      shown.guardians.length || !shown.identities.length ? parentLine(shown.guardians.some(row => row.effectiveRead) ? "joined" : "none") : null].filter(Boolean).join(". ")}</bdi>{" "}
-      <WorkspaceLink href={`/workspace/admin/students/${encodeURIComponent(studentId)}/access`}>People and access</WorkspaceLink></p>}
+      shown.guardians.length || !shown.identities.length ? parentLine(shown.guardians.some(row => row.effectiveRead) ? "joined" : "none") : null].filter(Boolean).join(". ")}</bdi></p>}
     {lines.map(line => <p key={line} data-testid="family-line"><bdi dir="auto">{line}</bdi></p>)}
     {waiting && <p data-testid="honors-status"><bdi dir="auto">{waitingLine(firstName)}</bdi></p>}
     {review.map(reading => <p key={reading.id} className="reading-review-clear" data-testid="reading-review"><span className="roster-chip">Reading needs review</span>

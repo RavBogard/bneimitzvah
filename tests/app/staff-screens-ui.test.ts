@@ -101,7 +101,9 @@ describe("Needs you and the roster chips (N14)", () => {
   it("refuses a status page with unknown keys or states", () => {
     const row = { id: id(1), tutors: 0, family: "none", reading: "none", honors: false, tutorName: null, got: 0, total: 0 };
     expect(parseStatuses({ students: [row] })).toHaveLength(1);
-    for (const bad of [{ ...row, email: "x@example.test" }, { ...row, family: "maybe" }, { ...row, tutors: -1 }, { ...row, got: 2, total: 1 }, { ...row, tutorName: "x@example.test" }]) expect(() => parseStatuses({ students: [bad] })).toThrow();
+    // A tutor name that is not a clean name loses only the name, not the page.
+    expect(parseStatuses({ students: [{ ...row, tutorName: "x@example.test" }, { ...row, id: id(2), tutorName: "Synthetic Tutor" }] }).map(value => value.tutorName)).toEqual([null, "Synthetic Tutor"]);
+    for (const bad of [{ ...row, email: "x@example.test" }, { ...row, family: "maybe" }, { ...row, tutors: -1 }, { ...row, got: 2, total: 1 }]) expect(() => parseStatuses({ students: [bad] })).toThrow();
   });
 });
 
