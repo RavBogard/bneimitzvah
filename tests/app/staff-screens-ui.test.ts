@@ -11,7 +11,8 @@ import { normalizeHebrew } from "../../src/server/study/normalize";
 import { LiftedLine } from "../../src/components/portal/workspace/study/lift";
 import { ExplorationContent } from "../../src/components/portal/workspace/study/exploration-view";
 import { NeedsYou } from "../../src/components/portal/workspace/staff/needs-you";
-import { familyLine, isSunday, needsYouRows, savedSections, statusChips, stillWorkingLine, teachesLine, verseList, waitingForDivisions, waitingLine, type StudentStatus } from "../../src/components/portal/workspace/staff/model";
+import { ManageSheet, manageRows } from "../../src/components/portal/workspace/staff/manage-sheet";
+import { familyLine, isSunday, linkRequestLine, needsYouRows, savedSections, statusChips, stillWorkingLine, teachesLine, verseList, waitingForDivisions, waitingLine, type StudentStatus } from "../../src/components/portal/workspace/staff/model";
 import { parseFamily, parseNeeded, parseStatuses } from "../../src/components/portal/workspace/staff/api";
 import { explorationPrepared } from "./exploration-client-helper";
 
@@ -32,7 +33,7 @@ describe("Needs you and the roster chips (N14)", () => {
     const statuses = new Map<string, StudentStatus>([
       [id(1), { id: id(1), ...ready, tutors: 0 }], [id(2), { id: id(2), ...ready, family: "expired", reading: "review", honors: false }],
       [id(3), { id: id(3), ...ready, tutors: 0 }], [id(4), { id: id(4), ...ready, tutors: 0 }], [id(5), { id: id(5), ...ready, tutors: 0 }]]);
-    const rows = needsYouRows(students, statuses, today).map(row => [row.student.id, row.condition]);
+    const rows = needsYouRows(students, statuses, today).map(row => [row.student?.id, row.condition]);
     expect(rows).toEqual([[id(2), "invitation-expired"], [id(2), "reading-review"], [id(2), "no-service"], [id(2), "honors"], [id(1), "no-tutor"]]);
     const markup = parseFragment(renderToStaticMarkup(createElement(NeedsYou, { rows: needsYouRows(students, statuses, today), disabled: false, onEdit() {}, onHonors() {} })));
     const items = nodes(markup).filter(node => attr(node, "data-condition"));
@@ -56,11 +57,23 @@ describe("Needs you and the roster chips (N14)", () => {
   });
   it("says so when nothing needs the admin, and takes only student ids from the invitations service", () => {
     const empty = renderToStaticMarkup(createElement(NeedsYou, { rows: [], disabled: false, onEdit() {}, onHonors() {} }));
-    expect(empty).toContain("Nothing needs you this week.");
+    // E4: the empty line says what was checked.
+    expect(empty).toContain("Nothing needs you this week: no readings to review, no link requests, no invitations waiting.");
     const row = { memberId: id(9), name: "Synthetic Parent", email: "synthetic-parent@example.test", student: { id: id(1), firstName: "Synthetic", lastName: "Student" } };
     expect([...parseNeeded({ needed: [row] })]).toEqual([id(1)]);
     expect(() => parseNeeded({ needed: [{ ...row, extra: 1 }] })).toThrow();
     expect(() => parseNeeded({ needed: [{ ...row, student: { ...row.student, id: "x" } }] })).toThrow();
+  });
+  it("puts link requests waiting first, as one row that opens Account requests, and says nothing for none (Readings for everyone E4)", () => {
+    const students = [{ id: id(1), firstName: "Synthetic", lastName: "Student", ceremonyDate: "2026-11-08", serviceSlot: "morning" as const, disabledAt: null }];
+    const statuses = new Map([[id(1), { id: id(1), tutors: 0, family: "joined" as const, reading: "confirmed" as const, honors: true }]]);
+    const rows = needsYouRows(students, statuses, today, new Set(), 3);
+    expect(rows.map(row => row.condition)).toEqual(["link-request", "no-tutor"]);
+    expect(needsYouRows(students, statuses, today, new Set(), 0).map(row => row.condition)).toEqual(["no-tutor"]);
+    const markup = parseFragment(renderToStaticMarkup(createElement(NeedsYou, { rows, disabled: false, onEdit() {}, onHonors() {} })));
+    const row = nodes(markup).find(node => attr(node, "data-condition") === "link-request")!, link = nodes(row).find(node => "tagName" in node && node.tagName === "a")!;
+    expect(text(link)).toBe("3 link requests waiting"); expect(attr(link, "href")).toBe("/workspace/accounts");
+    expect(linkRequestLine(1)).toBe("1 link request waiting");
   });
   it("flags a Sunday ceremony only", () => { expect(isSunday("2026-11-08")).toBe(true); expect(isSunday("2026-11-07")).toBe(false); expect(isSunday("")).toBe(false); });
   it("refuses a status page with unknown keys or states", () => {
@@ -126,5 +139,36 @@ describe("Tutor lines and honors row (N13, N15)", () => {
       redressingTorah: [person("D")], closingArk: [person("E")], parentalBlessing: { participation: "no" as const } };
     expect(savedSections(form)).toBe(6);
     expect(savedSections({ ...form, parentalBlessing: { participation: null } })).toBe(5);
+  });
+});
+
+describe("The Manage sheet (Readings for everyone E3)", () => {
+  const student = { id: id(1), firstName: "Synthetic", lastName: "Learner" };
+  const reading = (kind: "torah" | "haftarah", needsReview: boolean) => ({ id: id(kind === "torah" ? 2 : 3), kind, revision: 1, ranges: ["Genesis 1:1-3"], verses: [], needsReview, aliyahStarts: null, source: { status: "unknown", fetchedAt: null, date: null, calendar: null, attribution: null }, confirmationDate: null, basis: "custom" });
+  const noop = () => {};
+  const actions = { open: true, onClose: noop, setDivisions: noop, changeVerses: noop, printPractice: noop, printDisabled: false, printWholeHref: "/print?ref=Genesis%201%3A1-3", writeNote: noop, refresh: noop, reload: async () => undefined };
+  const render = (mode: "tutor" | "admin", readings: ReturnType<typeof reading>[]) => renderToStaticMarkup(createElement(ManageSheet, { mode, student, baseline: { student, readings } as never, actions }));
+  it("lists the rows in order, with Set divisions unpunctuated, and the admin's two links last", () => {
+    expect(manageRows("tutor", [], false)).toEqual(["Set divisions", "Change verses", "Print practice sheet", "Print the whole reading", "Write a lesson note", "Refresh reading"]);
+    expect(manageRows("admin", [], false).slice(-2)).toEqual(["People and access", "All students"]);
+    expect(manageRows("tutor", ["torah", "haftarah"], true).slice(0, 2)).toEqual(["Confirm reading is still right:Torah", "Confirm reading is still right:Haftarah"]);
+    const markup = render("tutor", []);
+    const titles = [...markup.matchAll(/<span class="[^"]*rowTitle[^"]*">([^<]*)<\/span>/g)].map(match => match[1]);
+    expect(titles).toEqual(manageRows("tutor", [], false));
+    expect(markup).toContain(">Manage<");
+    expect(markup).not.toContain("People and access");
+  });
+  it("names each reading that needs review, Torah or Haftarah, only when there are two; a reading that does not need it has no row", () => {
+    const both = render("tutor", [reading("torah", true), reading("haftarah", true)]);
+    expect(both.match(/Confirm reading is still right/g)).toHaveLength(2);
+    expect(both).toContain(">Torah<"); expect(both).toContain(">Haftarah<");
+    const one = render("tutor", [reading("torah", true)]);
+    expect(one.match(/Confirm reading is still right/g)).toHaveLength(1);
+    expect(render("tutor", [reading("torah", false)])).not.toContain("Confirm reading is still right");
+  });
+  it("gives an admin the links to this student's People and access and to All students", () => {
+    const markup = render("admin", []);
+    expect(markup).toContain(`href="/workspace/admin/students/${id(1)}/access"`);
+    expect(markup).toContain('href="/workspace/admin/students"');
   });
 });

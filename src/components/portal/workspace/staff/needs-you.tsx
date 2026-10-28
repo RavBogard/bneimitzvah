@@ -2,7 +2,7 @@
 import type { ReactNode } from "react";
 import { WorkspaceLink } from "../provider";
 import { ceremonyCountdown } from "../reading";
-import { NEEDS_YOU_TEXT, type NeedsYouRow, type NeedsYouStudent } from "./model";
+import { linkRequestLine, NEEDS_YOU_EMPTY, NEEDS_YOU_TEXT, type NeedsYouRow, type NeedsYouStudent } from "./model";
 
 type Open = (student: NeedsYouStudent, event: { currentTarget: HTMLElement }) => void;
 /**
@@ -12,7 +12,9 @@ type Open = (student: NeedsYouStudent, event: { currentTarget: HTMLElement }) =>
 export function NeedsYou({ rows, disabled, onEdit, onHonors }: { rows: readonly NeedsYouRow[]; disabled: boolean; onEdit: Open; onHonors: Open }) {
   return <section className="needs-you" aria-labelledby="needs-you-heading" data-testid="needs-you">
     <h2 id="needs-you-heading">Needs you</h2>
-    {!rows.length ? <p className="needs-you-empty">Nothing needs you this week.</p> : <ul className="roster-list">{rows.map(row => {
+    {!rows.length ? <p className="needs-you-empty">{NEEDS_YOU_EMPTY}</p> : <ul className="roster-list">{rows.map(row => {
+      if (row.condition === "link-request") return <li key="link-request" className="roster-row needs-you-row" data-condition="link-request">
+        <div className="roster-row-main"><span className="needs-you-task"><WorkspaceLink href="/workspace/accounts">{linkRequestLine(row.count)}</WorkspaceLink></span></div></li>;
       const { student, condition } = row, id = encodeURIComponent(student.id), when = ceremonyCountdown(student.ceremonyDate), copy = NEEDS_YOU_TEXT[condition];
       let verb: ReactNode;
       if (condition === "no-tutor") verb = <WorkspaceLink href={`/workspace/admin/students/${id}/access`}>{copy.verb}</WorkspaceLink>;
