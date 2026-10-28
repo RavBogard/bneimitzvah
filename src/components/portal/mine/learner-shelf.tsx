@@ -18,13 +18,15 @@ type State = Readonly<{ status: "loading" } | { status: "ready"; readings: Learn
 export function LearnerShelfView({ membershipId, learner, state, onRetry }: { membershipId: string; learner: Learner | null; state: State; onRetry: () => void }) {
   const name = learner?.name ?? LEARNER_SHELF_STRINGS.fallback;
   const readings = state.status === "ready" && state.readings.state === "ready" ? sortOwnReadings(state.readings.readings) : [];
+  // A learner who isn't the viewer's to see has no "Also working on" heading over the refusal (tutor walk 2026-10-28).
+  const denied = state.status === "ready" && state.readings.state !== "ready";
   return <section className="role-workspace" data-testid="learner-shelf" data-learner={membershipId} aria-busy={state.status === "loading"}>
     <PageHeader title={name} description={learner?.student ? `${learner.student.firstName} ${learner.student.lastName} · ${longDate(learner.student.ceremonyDate)}` : undefined} />
-    <section className={styles.mine} aria-labelledby="learner-readings-title" data-testid="learner-own">
-      <h2 id="learner-readings-title" className={styles.mineTitle}>{LEARNER_SHELF_STRINGS.title}</h2>
+    <section className={styles.mine} aria-labelledby={denied ? undefined : "learner-readings-title"} data-testid="learner-own">
+      {!denied && <h2 id="learner-readings-title" className={styles.mineTitle}>{LEARNER_SHELF_STRINGS.title}</h2>}
       {state.status === "loading" && <p className={styles.mineLine}>Finding the readings.</p>}
       {state.status === "failed" && <><p className={styles.mineLine} role="status">{LEARNER_SHELF_STRINGS.failed}</p><button type="button" className={`button-secondary ${styles.more}`} onClick={onRetry}>Try again</button></>}
-      {state.status === "ready" && state.readings.state !== "ready" && <p className={styles.mineLine} role="status">{LEARNER_SHELF_STRINGS.missing}</p>}
+      {denied && <p className={styles.mineLine} role="status">{LEARNER_SHELF_STRINGS.missing}</p>}
       {state.status === "ready" && state.readings.state === "ready" && readings.length === 0 && <p className={styles.mineLine}>{LEARNER_SHELF_STRINGS.none}</p>}
       {readings.length > 0 && <ul className={styles.list}>
         {readings.map(reading => <li key={reading.id}><a className={styles.item} href={learnerReadingHref(membershipId, reading.id)}>

@@ -31,6 +31,9 @@ test("the lines' small cases: ranges across chapters, one verse, no lesson, noth
   expect(markLine("got-it", null)).toBe("Student: got it");
   expect(dayLine({ day: "2026-10-21", readings: [{ kind: "torah", opened: ["Exodus 23:1"], marked: [] }, { kind: "haftarah", opened: ["Isaiah 1:1", "Isaiah 1:2"], marked: [{ verseRef: "Isaiah 1:2", state: "working" }] }] }))
     .toBe("Wed Oct 21 · Torah 23:1 · Haftarah 1:1–1:2 · marked 1:2 Still working");
+  // A day of many marks reads as a range per state, not every verse in turn (tutor walk 2026-10-28, finding 13).
+  const marked: { verseRef: string; state: "got-it" | "working" }[] = [...[1, 2, 3, 4, 5, 6].map(verse => ({ verseRef: `Genesis 1:${verse}`, state: "got-it" as const })), { verseRef: "Genesis 1:8", state: "working" }, { verseRef: "Genesis 1:7", state: "working" }];
+  expect(dayLine({ day: "2026-10-28", readings: [{ kind: "torah", opened: Array.from({ length: 8 }, (_, i) => `Genesis 1:${i + 1}`), marked }] })).toBe("Wed Oct 28 · Torah 1:1–1:8 · marked 1:1–1:6 Got it, 1:7–1:8 Still working");
   expect(canHearLines({ torah: { heard: 0, of: 10 }, haftarah: { heard: 0, of: 11 }, mixedUp: null })).toEqual(["Can hear: 0 of 10 Torah phrases"]);
   expect(canHearLines({ torah: { heard: 6, of: 10 }, haftarah: { heard: 2, of: 11 }, mixedUp: null })).toEqual(["Can hear: 6 of 10 Torah phrases", "Can hear: 2 of 11 haftarah phrases"]);
 });

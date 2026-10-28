@@ -30,7 +30,7 @@ import { GuideWalk } from "./study/guide-walk";
 import { GuideStatusLine } from "./study/guide-status";
 import type { StudyVerse } from "./study/api";
 import { isGotIt, LiftProgress, useProgressSummary, VerseMark } from "./progress/marks";
-import { BeforeNext, LessonLog, type LessonReload } from "./lessons/panel";
+import { BeforeNext, LastTime, LessonLog, type LessonReload } from "./lessons/panel";
 import { ChildPracticeDisclosure } from "../practice-visibility/disclosure";
 import { PracticeCalendar } from "./practice-calendar/store";
 import { PracticeDays, StaffPracticeDays } from "./practice-calendar/view";
@@ -47,7 +47,7 @@ import { ManageSheet } from "./staff/manage-sheet";
 import { ReaderTitle, type Pill } from "../public-reading/reader-title";
 import { ReadingFoot } from "../public-reading/reading-foot";
 import { readingChapters } from "./study/reading-place-model";
-import { Sheet } from "../../ui";
+import { Chip, Sheet } from "../../ui";
 import { learnerTitle, titleName, titlePillKeys, titleReading } from "./reading-title";
 
 const dayMs = 86_400_000;
@@ -57,6 +57,49 @@ export function ceremonyCountdown(date: string, now = new Date()) {
   const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()), days = Math.round((ceremony - today) / dayMs);
   const label = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(ceremony);
   return { label, days, phrase: days > 1 ? `${days} days to go` : days === 1 ? "Tomorrow" : days === 0 ? "Today" : null };
+}
+/** How near a date has to be before the tutor's views lead with it as a chip (tutor walk 2026-10-28, finding 2). */
+export const NEXT_DATE_CHIP_DAYS = 14;
+/**
+ * The student's next date, rehearsal or Beit Mitzvah, whichever comes first from today (a rehearsal first on the same day), with its
+ * chip ("Rehearsal tomorrow", "Beit Mitzvah in 9 days") when it is two weeks away or less; null when every date has passed.
+ */
+export function nextDate(student: Pick<Student, "ceremonyDate" | "rehearsal1" | "rehearsal2">, now = new Date()) {
+  const dates = [...[student.rehearsal1, student.rehearsal2].filter((value): value is string => !!value).map(date => ({ kind: "rehearsal" as const, date })), { kind: "ceremony" as const, date: student.ceremonyDate }]
+    .map(row => ({ ...row, ...ceremonyCountdown(row.date, now) })).filter(row => row.days >= 0).sort((a, b) => a.days - b.days || (a.kind === "rehearsal" ? -1 : 1));
+  const first = dates[0];
+  if (!first) return null;
+  const name = first.kind === "rehearsal" ? "Rehearsal" : "Beit Mitzvah";
+  const chip = first.days > NEXT_DATE_CHIP_DAYS ? null : first.days === 0 ? `${name} today` : first.days === 1 ? `${name} tomorrow` : `${name} in ${first.days} days`;
+  return { kind: first.kind, date: first.date, label: first.label, days: first.days, chip };
+}
+/** Where the tutor's lesson rail sits beside the text; narrower, its card sits under the title (tutor walk 2026-10-28, whole-screen rethink). */
+const RAIL_QUERY = "(min-width: 1200px)";
+const subscribeRail = (change: () => void) => { if (typeof matchMedia !== "function") return () => undefined; const query = matchMedia(RAIL_QUERY); query.addEventListener("change", change); return () => query.removeEventListener("change", change); };
+const railWide = () => typeof matchMedia === "function" && matchMedia(RAIL_QUERY).matches;
+/** The next date as the lesson card says it: the chip within two weeks, else the kind, the date and the days to go. */
+function NextDateLine({ student }: { student: Pick<Student, "ceremonyDate" | "rehearsal1" | "rehearsal2"> }) {
+  const next = nextDate(student);
+  if (!next) return null;
+  const phrase = ceremonyCountdown(next.date).phrase;
+  return <p className="lesson-prep-next" data-testid="lesson-next-date" data-next-kind={next.kind}>
+    {next.chip ? <><Chip tone="attention">{next.chip}</Chip> <time dateTime={next.date}>{next.label}</time></>
+      : <>{next.kind === "rehearsal" ? "Rehearsal" : "Beit Mitzvah"} · <time dateTime={next.date}>{next.label}</time>{phrase && ` · ${phrase}`}</>}
+  </p>;
+}
+/**
+ * The lesson card (tutor walk 2026-10-28, finding 4 and the whole-screen rethink): what a tutor needs before and after a lesson, at the top
+ * of the rail beside the text (or under the title on a narrower screen): the next date, Needs work, the last "Before next time" and Add
+ * lesson note. On the wide rail the Lessons list follows right under it, with its own Add lesson note, so the card has none there.
+ */
+function LessonCard({ baseline, ask, ready, addButton, onAdd }: { baseline: Assigned; ask: string | null; ready: boolean; addButton: boolean; onAdd(origin: HTMLElement): void }) {
+  return <section className="lesson-prep" aria-labelledby="lesson-prep-heading" data-testid="lesson-prep">
+    <h2 id="lesson-prep-heading">Lesson</h2>
+    <NextDateLine student={baseline.student} />
+    <NeedsWork baseline={baseline} level={3} />
+    {ask && <LastTime text={ask} headingId="lesson-prep-last" />}
+    {addButton && <button type="button" className="button-primary lesson-prep-add" data-testid="lesson-prep-add" disabled={!ready} onClick={event => onAdd(event.currentTarget)}>Add lesson note</button>}
+  </section>;
 }
 /** The saved rehearsals in order, labelled like the ceremony date. Nothing when none is set. */
 export function RehearsalDates({ student }: { student: Pick<Student, "rehearsal1" | "rehearsal2"> }) {
@@ -82,11 +125,11 @@ export function AssignedReadingSummaries({ readings, selectedKind, marked }: { r
   </div>)}</div>;
 }
 
-function AssignmentContext({ row, current = false }: { row: Reading; current?: boolean }) {
+function AssignmentContext({ row, current = false, staff }: { row: Reading; current?: boolean; staff: boolean }) {
   return <article className={`confirmed-reading${current ? " reading-current-assignment" : ""}`}>
     <h3>{row.kind === "torah" ? "Torah" : "Haftarah"}</h3>
     <p className="reading-reference">{row.ranges.join("; ")}</p>
-    <p className={row.needsReview ? "reading-review status-chip status-chip-attention" : "field-help status-chip"} data-testid="reading-assignment-chip" data-needs-review={String(row.needsReview)}>{row.needsReview ? "Needs review with your tutor or rabbi" : "Confirmed assignment"} · Revision {row.revision}</p>
+    <p className={row.needsReview ? "reading-review status-chip status-chip-attention" : "field-help status-chip"} data-testid="reading-assignment-chip" data-needs-review={String(row.needsReview)}>{row.needsReview ? staff ? "Needs review" : "Needs review with your tutor or rabbi" : "Confirmed assignment"} · Revision {row.revision}</p>
     <details><summary>Assigned verse references ({row.verses.length})</summary><ol className="verse-references">{row.verses.map((verse, index) => <li key={`${index}:${verse}`}>{verse}</li>)}</ol>
       <p className="field-help">Calendar source: {row.source.attribution ? <a href={row.source.attribution.url} target="_blank" rel="noopener noreferrer">{row.source.attribution.name}</a> : "not recorded"}. {row.source.status === "unavailable" ? "Calendar source was unavailable when this assignment was confirmed." : row.source.status === "unknown" ? "Source availability is not recorded." : "Calendar source was available at confirmation."}</p>
       {row.confirmationDate && <p className="field-help">Ceremony date at confirmation: {row.confirmationDate}</p>}
@@ -209,6 +252,17 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
     });
   }, [mode, concealed, authorizedReading, key]);
   const shownAsk = mode === "child-practice" && ask?.key === key && !concealed ? ask.text : null;
+  // The tutor's lesson card reads the same snapshot: the newest "Before next time", and whether the list is ready for a new note.
+  const staffView = mode === "tutor" || mode === "admin";
+  const [lessonCard, setLessonCard] = useState<{ key: string; ready: boolean; ask: string | null } | null>(null);
+  useLayoutEffect(() => {
+    if (!staffView || concealed || !authorizedReading) return;
+    lessons.current?.snapshot?.(value => {
+      if (value.baseline !== authorizedReading) return;
+      setLessonCard({ key, ready: value.lesson.status === "ready", ask: value.lesson.status === "ready" ? value.lesson.latest?.beforeNext ?? null : null });
+    });
+  }, [staffView, concealed, authorizedReading, key]);
+  const wide = useSyncExternalStore(subscribeRail, railWide, () => false);
   const congregation = useCongregation(Boolean(authorizedReading && !concealed)), links = congregation.links;
   useLayoutEffect(() => {
     if (mode !== "parent" || concealed || !authorizedReading || !parentSummary.matches(authorizedReading, parentScope)) return;
@@ -327,6 +381,8 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   const discussionPassage = student && authorizedReading && !concealed && !exploring && selectedReading && printSheetRef ? { ref: printSheetRef, kind: selectedReading.kind } : null;
   const practiceAction = mode !== "parent" && readings.length > 0 && <button type="button" className="button-hero-secondary reading-practice-action" disabled={!practiceReady || concealed || current?.loading} onClick={openPractice}>{exploring ? "Practice assigned Haftarah up close" : "Practice up close"}</button>;
   const countdown = student ? ceremonyCountdown(student.ceremonyDate) : null, marked = useProgressSummary(progress, selectedReading?.kind);
+  // Staff see a rehearsal or Beit Mitzvah two weeks away or less first on the title line (tutor walk 2026-10-28, finding 2).
+  const staffNext = staff && student ? nextDate(student) : null, staffChip = staffNext?.chip ? <><Chip tone="attention">{staffNext.chip}</Chip> </> : null;
   // The title block (Readings for everyone E2): the name, one muted line, and the pills that act on the reading as a whole. A learner has Change (Go to verse);
   // staff have Change and Manage, where every other action went.
   const titleRange = titleReading(readings, exploring, selectedReading?.kind);
@@ -334,7 +390,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   // A parent's page opens on what's next: the name and one date line, no ranges or counts (This week has the count, the reading has the ranges).
   const titleLine = practising && student && brief ? <>{brief.label} · <span className="hero-date" data-testid="hero-date"><time dateTime={student.ceremonyDate}>{brief.date}</time></span>{brief.countdown && ` · ${brief.countdown}`}</>
     : mode === "parent" && student && countdown ? <>Beit Mitzvah · <span className="hero-date" data-testid="hero-date"><time dateTime={student.ceremonyDate}>{countdown.label}</time></span></>
-    : student && countdown ? <>Beit Mitzvah · <span className="hero-date" data-testid="hero-date"><time dateTime={student.ceremonyDate}>{countdown.label}</time></span>{titleRange && ` · ${titleRange}`}{marked && <span className="hero-marked"> · {marked}</span>}</> : null;
+    : student && countdown ? <>{staffChip}Beit Mitzvah · <span className="hero-date" data-testid="hero-date"><time dateTime={student.ceremonyDate}>{countdown.label}</time></span>{titleRange && ` · ${titleRange}`}{marked && <span className="hero-marked"> · {marked}</span>}</> : null;
   const slotLine = student && congregation.ready ? serviceSlotName(student.serviceSlot, congregation.services) : null;
   // The parent's service sits on its own line with no leading dot (finding 14); This week says the next rehearsal, so the dates are not repeated (finding 3).
   // Its start time shows beside it on wider screens only, as on every reading header.
@@ -367,7 +423,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   }, [authorizedReading, concealed, toSection]);
   const serviceBlock = tabPanel("service", <><ServiceLearningPanel id={serviceId} headingId={SECTION_IDS.service} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} onDepartureActive={setServiceDepartureActive} onVisit={(plan, unitId) => calendar.visitUnit(plan, unitId)} />
       {authorizedReading && !concealed && <p className="field-help"><a href={links.siddurUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">CRC digital siddur collection</a>{links.musicUrl && <> · <a href={links.musicUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Service music</a></>}</p>}</>);
-  const lessonsBlock = tabPanel("lessons", <>{staff && student && authorizedReading && !concealed && <NeedsWork baseline={authorizedReading} />}{staff && student && authorizedReading && !concealed && <TutorPracticeDays />}{staff && student && authorizedReading && !concealed && <StaffPracticeDays calendar={calendar} firstName={student.firstName} />}<LessonLog mode={mode} studentId={studentId} register={registerLessons} tabbed={false} headingId={SECTION_IDS.lessons} firstName={student?.firstName ?? firstName} /></>);
+  const lessonsBlock = tabPanel("lessons", <>{staff && student && authorizedReading && !concealed && <TutorPracticeDays />}{staff && student && authorizedReading && !concealed && <StaffPracticeDays calendar={calendar} firstName={student.firstName} />}<LessonLog mode={mode} studentId={studentId} register={registerLessons} tabbed={false} headingId={SECTION_IDS.lessons} firstName={student?.firstName ?? firstName} /></>);
   // A parent reads the lesson notes first (what the tutor asked), then the service parts; everyone else keeps the page's order.
   const parts = mode === "parent" ? <>{sectionFold("lessons", "Lesson notes", lessonsBlock)}{sectionFold("service", "Service parts", serviceBlock)}</> : <>{serviceBlock}{lessonsBlock}</>;
   // N3's section chip row (the tutor's aliyot, with "Service parts" last) is built in `study/view.tsx` and sits in a sticky bar above the passage for every role;
@@ -375,7 +431,11 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   // Learners (students, child practice, parents) always open in Lein; staff open in the lens they last used.
   // 1.9 N23: the assigned tutor's read of this student's practice is held by the scope itself, so its answer re-renders only the lines
   // that use it, never this panel (and never its playback). Nothing is asked for anyone else, or while the gate is closed.
-  return <TutorPracticeScope mode={mode} studentId={studentId} concealed={concealed}><ReadingPrefsScope studentId={studentId} englishOnWide={!staff}><StudyLensScope storageKey={staff ? LENS_STORAGE.staff : null}><DepartureReview coordinator={work} />
+  // Staff (tutor walk 2026-10-28, whole-screen rethink): the text and Service parts on the left, and a lesson rail on the right that stays in view,
+  // with the lesson card over the Lessons list. Narrower, the card sits under the title and the Lessons follow Service parts, as before.
+  const card = staff && student && authorizedReading && !concealed ? <LessonCard baseline={authorizedReading} ask={lessonCard?.key === key ? lessonCard.ask : null} ready={lessonCard?.key === key && lessonCard.ready}
+    addButton={!wide} onAdd={origin => lessons.current?.add?.(origin)} /> : null;
+  const body = <>
     {/* 1.9 N16 re-measure (CLS): while the reading loads it keeps a screen of room, so what follows it never jumps into view and out again. */}
     {current?.loading && <div className="reading-loading-space reading-loading" data-testid="reading-loading"><p role="status">Checking the current assignment, text and saved work…</p>
       <div className="reading-skeleton" aria-hidden="true"><span /><span /><span /><span /><span /></div></div>}<div className="reading-workspace reading-with-work" data-testid="reading-workspace" hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
@@ -396,10 +456,11 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
           {!practising && mode !== "parent" && readings.length > 1 && <AssignedReadingSummaries readings={readings} selectedKind={selectedReading.kind} />}
           {!practising && practiceAction && <div className="hero-actions">{practiceAction}</div>}</>}
       </header>
+      {!wide && card}
       {/* The parent's page is a This week page (the whole-screen rethink): the card with Practice with the child, then Lesson notes and Service parts as
           rows that open in place, then Family honors, and last the text behind "See Noa's reading". */}
       {mode === "parent" && <ParentStudySummary store={parentSummary} baseline={authorizedReading ?? null} scope={parentScope} concealed={concealed} notice={congregation.consentNotice} action={practiceWith} readProgress={readProgress} />}
-      {!learner && readings.length > 0 && <AssignmentContext row={selectedReading} current />}
+      {!learner && readings.length > 0 && <AssignmentContext row={selectedReading} current staff={staff} />}
       </> : <>
       <h2 id="reading-heading"><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>
       <div className="reading-student-context"><p className="reading-date">Ceremony date: <time dateTime={student.ceremonyDate}>{student.ceremonyDate}</time></p>
@@ -407,7 +468,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
 </div>
       {current?.loading && <p role="status">Checking the current assignment…</p>}
       {readings.length === 0 ? <div className="reading-empty"><h3>No reading has been assigned yet</h3><p>Your tutor or rabbi will confirm the verses here.</p></div>
-        : <AssignmentContext row={selectedReading} current />}</>}</>}
+        : <AssignmentContext row={selectedReading} current staff={staff} />}</>}</>}
       {/* The rows stay mounted whether or not the reading has loaded, as the plan's parts always were, so their reloads run with the page's. */}
       {mode === "parent" && parts}{mode === "parent" && student && afterSummary}
       {readingFold(tabPanel("reading", <>{student && authorizedReading && !concealed && !exploring && selectedReading && mode === "admin" && <GuideStatusLine kind={selectedReading.kind} readingKey={selectedReading.readingKey ?? null} />}{student && authorizedReading && !concealed && !exploring && selectedReading && <div className={`guide-place guide-place-wide`}><GuideCard store={guide} kind={selectedReading.kind} firstName={student.firstName} learner={learner} onStudy={() => setWalking(true)} /></div>}{walking && selectedReading && guide.view(selectedReading.kind) && <GuideWalk view={guide.view(selectedReading.kind)!} lookup={ref => verseLookup.current?.(ref) ?? null} onClose={closeWalk} />}<VersePanelScope passage={discussionPassage}><SourcesButton /><div className="reading-passage-layout" ref={readingPanel}>{student && song && <ReadingToolbar practice={practising ? { onUpClose: practiceReady && !concealed && !current?.loading ? openPractice : undefined, listenReason: LISTENING_OFF } : undefined} listeningEnabled={listeningEnabled} tikkunAvailable={exploring || selectedReading?.kind === "torah"} worksCorpus={exploring || selectedReading?.kind !== "haftarah" ? "torah" : "neviim"} onHear={(exploring ? proposedHearReady : hearReady) && !concealed && !current?.loading ? startReading : undefined} />}
@@ -424,7 +485,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
       {student && authorizedReading && !concealed && !exploring && selectedReading && <div className={`guide-place guide-place-narrow`}><GuideCard store={guide} kind={selectedReading.kind} firstName={student.firstName} learner={learner} onStudy={() => setWalking(true)} /></div>}
       {work.notice && <p className="field-help" role="status">{work.notice}</p>}
       {authorizedReading && !concealed && !practisingMode && guideLink}
-      {!learner && otherReadings.length > 0 && <details className="reading-other-assignments"><summary>Other confirmed reading details</summary>{otherReadings.map(row => <AssignmentContext key={row.id} row={row} />)}</details>}
+      {!learner && otherReadings.length > 0 && <details className="reading-other-assignments"><summary>Other confirmed reading details</summary>{otherReadings.map(row => <AssignmentContext key={row.id} row={row} staff={staff} />)}</details>}
       {/* The parent's text already ends in Trope chart and Print practice sheet, and its rows sit above it: one foot row, not two (finding 16). */}
       {student && song && authorizedReading && !concealed && mode !== "parent" && <ReadingFoot printLast print={printSheetHref ?? undefined} lead={practisingMode ? undefined : <><a href={`#${SECTION_IDS.service}`}>Service parts</a><a href={`#${SECTION_IDS.lessons}`}>Lessons</a></>} more={mode === "student" ? <LearnReviewAction /> : undefined} />}</>))}
     </section>
@@ -434,11 +495,15 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
       <p><WorkspaceLink href="/trope-chart">Open the printable trope chart</WorkspaceLink></p>
       <p className="field-help">Unsent work stays only in this tab. Controlled workspace changes ask you to review it.</p>
     </aside>}
-  </div>{editor && (staff ? <dialog ref={sheet} id={editorId} className="editor-sheet" aria-labelledby="reading-editor-title" closedby={editorBusy ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); closeSheet(); }}>
+  </div>
+  </>;
+  return <TutorPracticeScope mode={mode} studentId={studentId} concealed={concealed}><ReadingPrefsScope studentId={studentId} englishOnWide={!staff}><StudyLensScope storageKey={staff ? LENS_STORAGE.staff : null}><DepartureReview coordinator={work} />
+    {staff ? <div className="staff-layout" data-testid="staff-layout"><div className="staff-main">{body}{serviceBlock}</div>
+      <div className="lesson-rail" data-testid="lesson-rail">{wide && card}{lessonsBlock}</div></div> : body}{editor && (staff ? <dialog ref={sheet} id={editorId} className="editor-sheet" aria-labelledby="reading-editor-title" closedby={editorBusy ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); closeSheet(); }}>
       <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close verse editor" disabled={editorBusy} onClick={closeSheet}>{icons.close}</button></div>{editor}
     </dialog> : <div id={editorId} className="reading-editor-anchor">{editor}</div>)}
     {plan(<>{student && practisingMode && authorizedReading && !concealed && <div className="reading-plan-dates">{slotLine && <p className="hero-slot" data-testid="plan-service">{slotLine}</p>}<RehearsalDates student={student} />{guideLink}</div>}
-    {mode !== "parent" && parts}</>)}
+    {mode !== "parent" && !staff && parts}</>)}
     {student && song && <Sheet open={changeOpen} onClose={() => setChangeOpen(false)} title={learner ? "Go to verse" : "Change reading"} closeLabel="Close">
       <div data-change-sheet="">{chapters.length > 0 && <label className="reading-go-to"><span>Go to verse</span>
         <select aria-label="Go to verse" value="" onChange={event => { const next = chapters.find(row => row.key === event.target.value); if (next) goToVerse(next.first); }}>

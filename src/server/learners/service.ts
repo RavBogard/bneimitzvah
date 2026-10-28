@@ -5,7 +5,7 @@ import type { createAccessService } from "../access/service";
 import type { AccessRequest, AccessTransaction, Actor, VerifiedIdentity } from "../access/types";
 import { lockRoleGrant } from "../data/authority";
 import { isCeremonyDone } from "../data/ceremony-done";
-import { activeClaimOf, liveStaffGrant, liveTutorLinksOf } from "../data/learner-claims";
+import { activeClaimOf, assignedLinksOf, liveStaffGrant, liveTutorLinksOf, notALearner } from "../data/learner-claims";
 import { membershipOf } from "../data/portal";
 import { closedObject } from "../http/query";
 import { requireCookieMutation } from "../http/mutations";
@@ -83,7 +83,7 @@ export function createLearnersService<Q extends PgQueryResultHKT>(input: { acces
 
   return Object.freeze({
     /**
-     * Find a learner: every live membership of the congregation but one's own, by name, with how many readings each keeps and the
+     * Find a learner: every live membership of the congregation but one's own, the staff's and the parents', by name, with how many readings each keeps and the
      * nearest dated one (the saved service's directory read, for a live admin or tutor), the tutor if any, and the student record if any.
      * Never an email: names go through displayName. `mine` is judged by the caller's own tutor grant.
      */
@@ -95,7 +95,7 @@ export function createLearnersService<Q extends PgQueryResultHKT>(input: { acces
         if (!identity.membership) throw new AccessDenied(403);
         const grant = await liveStaffGrant(tx, identity.tenantId, identity.membership.id, "tutor");
         if (!grant) throw new AccessDenied(404);
-        const rows = await data.listLearners(tx, identity.tenantId, { exceptMembershipId: identity.membership.id, q, after, limit: LIMIT });
+        const rows = await data.listLearners(tx, identity.tenantId, { exceptMembershipId: identity.membership.id, tutorGrantId: grant.id, q, after, limit: LIMIT });
         const learners = [];
         for (const row of rows) {
           const tutor = await tutorOf(tx, identity.tenantId, row.membershipId), student = await data.liveStudentOf(tx, identity.tenantId, row.membershipId), shelf = shelves.get(row.membershipId);
@@ -110,7 +110,7 @@ export function createLearnersService<Q extends PgQueryResultHKT>(input: { acces
      * Claim as my student: a tutor's act (an admin without a tutor grant cannot). One tutor at a time: another tutor's live claim
      * or tutor link is 409 has-tutor (the rabbi reassigns on the access page). The same tutor claiming again, or claiming someone
      * the rabbi already assigned them, changes nothing. A learner with a live student identity gets the tutor link too, unless
-     * the ceremony is done; a disabled, missing or other-congregation learner, and oneself, are 404.
+     * the ceremony is done; a disabled, missing or other-congregation learner, a staff member or a parent (notALearner) and oneself, are 404.
      */
     async claim(request: Request, supplied: unknown) {
       const learner = learnerOf(supplied);
@@ -120,6 +120,10 @@ export function createLearnersService<Q extends PgQueryResultHKT>(input: { acces
         if (learner === actor.membershipId) throw new AccessDenied(404);
         const member = await membershipOf(tx, actor.tenantId, learner);
         if (!member || member.disabledAt) throw new AccessDenied(404);
+        // A1 (tutor and admin walks 2026-10-28): the rabbi and the tutors are colleagues and parents are family, not learners: the same 404 an unknown
+        // learner gets. The rabbi's assignment wins: a student already assigned to this tutor is never refused (claiming them changes nothing, below).
+        const assigned = (await assignedLinksOf(tx, actor.tenantId, learner)).some(link => link.tutorGrantId === actor.roleGrantId);
+        if (!assigned && await notALearner(tx, actor.tenantId, learner)) throw new AccessDenied(404);
         await data.lockLearnerClaims(tx, actor.tenantId, learner);
         const existing = await activeClaimOf(tx, actor.tenantId, learner, "update");
         if (existing) return existing.tutorGrantId === actor.roleGrantId ? { ok: true as const, learner, created: false } : failed("has-tutor");

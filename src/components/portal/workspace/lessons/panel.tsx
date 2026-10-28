@@ -8,7 +8,8 @@ import type { LessonLogEntry } from "../../../../lib/lesson-log/types";
 import { beforeNextLimit, beforeNextValue, LessonError, summaryBytes, summaryLimit, type LessonOperation, type LessonPage } from "./api";
 
 export type LessonSummarySnapshot = { scope: string; baseline: Assigned | null; generation: number; lesson: { status: "loading" } | { status: "unavailable" } | { status: "ready"; latest: Pick<LessonLogEntry, "lessonDate" | "displayName" | "summary" | "beforeNext"> | null } };
-export type LessonReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void>; snapshot?(publish: (value: LessonSummarySnapshot) => void): void };
+/** `add` opens a new note from a button elsewhere on the page (the lesson card), with focus returning to that button. */
+export type LessonReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void>; snapshot?(publish: (value: LessonSummarySnapshot) => void): void; add?(origin: HTMLElement): void };
 /** An open note: a new lesson (no base) or an edit of the saved version it started from. */
 type Draft = { entryId: string; base: LessonLogEntry | null; lessonDate: string; summary: string; beforeNext: string; changedElsewhere?: boolean; uncertain?: boolean };
 type List = { scope: string; page?: LessonPage; loading?: boolean; more?: boolean; error?: number };
@@ -30,6 +31,11 @@ export const authorName = (name: string, mode: ReadingMode, firstName?: string |
 /** The newest note's "Before next time" line (N12). A learner reads it as theirs; everyone else, and every older note, by its field name. */
 export function BeforeNext({ text, own }: { text: string; own: boolean }) {
   return <p className="lesson-before-next"><span className="lesson-before-next-label">{own ? "Before your next lesson:" : "Before next time:"}</span> <bdi dir="auto">{text}</bdi></p>;
+}
+
+/** The newest note's "Before next time", read-only, under the heading "Last time": in the lesson rail and at the top of a new note. */
+export function LastTime({ text, headingId }: { text: string; headingId: string }) {
+  return <section className="lesson-last" aria-labelledby={headingId} data-testid="lesson-last-time"><h3 id={headingId}>Last time</h3><p dir="auto"><bdi dir="auto">{text}</bdi></p></section>;
 }
 
 export function LessonLog({ mode, studentId, register, tabbed, headingId, firstName }: { mode: ReadingMode; studentId: string; register(value: LessonReload): () => void; tabbed: boolean; headingId?: string; firstName?: string }) {
@@ -88,7 +94,8 @@ export function LessonLog({ mode, studentId, register, tabbed, headingId, firstN
     // Cleanup cannot grant the navigation that was waiting for a user decision.
     departure.current?.(false); departure.current = null; setLeaving(false); clearList();
   }, [clearList]);
-  useLayoutEffect(() => register({ clear: clearList, reload, snapshot: observe }), [register, clearList, reload, observe]);
+  const addElsewhere = useRef<(origin: HTMLElement) => void>(() => undefined);
+  useLayoutEffect(() => register({ clear: clearList, reload, snapshot: observe, add: origin => addElsewhere.current(origin) }), [register, clearList, reload, observe]);
   useLayoutEffect(() => registerWork({
     pause() { listRequest.current?.abort(); publish({ status: "loading" }); setPaused(true); },
     clear: discardAll,
@@ -240,6 +247,7 @@ export function LessonLog({ mode, studentId, register, tabbed, headingId, firstN
     publish(paused || !current || current.loading ? { status: "loading" } : current.error ? { status: "unavailable" }
       : { status: "ready", latest: latest ? { lessonDate: latest.lessonDate, displayName: latest.displayName, summary: latest.summary, beforeNext: latest.beforeNext } : null }, projectionTurn);
   }, [current, paused, scope, publish, projectionTurn]);
+  addElsewhere.current = origin => { if (staff && !busy && current?.page) open(null, { currentTarget: origin }); };
   const bytes = draft ? summaryBytes(draft.summary) : 0, nextBytes = draft ? summaryBytes(beforeNextValue(draft.beforeNext) ?? "") : 0, title = staff ? "Lessons" : "Lesson notes";
   return <section className={`lesson-log${tabbed ? " lesson-log-tabbed" : ""}`} aria-labelledby={headingId ?? `${id}-heading`} aria-busy={current?.loading || undefined}>
     <div className="lesson-log-head"><h2 id={headingId ?? `${id}-heading`} tabIndex={headingId ? -1 : undefined}>{title}</h2>
@@ -265,8 +273,10 @@ export function LessonLog({ mode, studentId, register, tabbed, headingId, firstN
       {draft && <form className="lesson-form" noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
         <h2 id={`${id}-sheet-title`}>{draft.base ? "Edit lesson note" : "Add lesson note"}</h2>
         <p className="lesson-form-help">The student and their family can read this.</p>
+        {/* What the tutor is following up on stays in view while the next note is written (tutor walk 2026-10-28, finding 5). */}
+        {!draft.base && entries[0]?.beforeNext && <LastTime text={entries[0].beforeNext} headingId={`${id}-last`} />}
         <div className="lesson-field"><label htmlFor={`${id}-date`}>Lesson date</label><input id={`${id}-date`} type="date" required value={draft.lessonDate} disabled={busy} onChange={event => edit({ lessonDate: event.target.value })} /></div>
-        <div className="lesson-field"><label htmlFor={`${id}-summary`}>What you worked on</label><textarea ref={field} id={`${id}-summary`} rows={8} required dir="auto" value={draft.summary} disabled={busy} onChange={event => edit({ summary: event.target.value })} /></div>
+        <div className="lesson-field"><label htmlFor={`${id}-summary`}>What you worked on</label><textarea ref={field} id={`${id}-summary`} rows={5} required dir="auto" value={draft.summary} disabled={busy} onChange={event => edit({ summary: event.target.value })} /></div>
         {bytes > summaryLimit * 0.9 && <p className={bytes > summaryLimit ? "request-error" : "field-help"} aria-live="polite">{bytes > summaryLimit ? "Too long to save. Shorten this note a little." : "Nearly at the length limit."}</p>}
         <div className="lesson-field"><label htmlFor={`${id}-next`}>Before next time</label><p id={`${id}-next-help`} className="field-help">When ___, I will ___</p>
           <textarea ref={nextField} id={`${id}-next`} rows={3} dir="auto" aria-describedby={`${id}-next-help`} value={draft.beforeNext} disabled={busy} onChange={event => edit({ beforeNext: event.target.value })} /></div>
