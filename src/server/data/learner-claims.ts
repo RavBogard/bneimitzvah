@@ -24,8 +24,8 @@ export async function liveStaffGrant<Q extends PgQueryResultHKT>(tx: Tx<Q>, tena
 
 /**
  * Whether a membership is staff or a parent rather than a learner (A1, tutor and admin walks 2026-10-28): a live admin or tutor grant,
- * or a live parent grant with a live guardian link. Share-locked like the viewer's own grants. Such a person is never claimed, and a
- * tutor never opens their shelf, even through a claim made before this rule.
+ * or a live parent grant with a live guardian link and no live student identity (an adult student who is also a parent is a learner). Share-locked like the viewer's own grants. Such a person is never claimed, and a
+ * claim never opens their shelf; the rabbi's assignment (a tutor link) still does.
  */
 export async function notALearner<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, membershipId: string): Promise<boolean> {
   const grants = await tx.select({ id: s.roleGrant.id, role: s.roleGrant.role }).from(s.roleGrant)
@@ -35,7 +35,12 @@ export async function notALearner<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantI
   if (!parents.length) return false;
   const [link] = await tx.select({ id: s.guardian.id }).from(s.guardian)
     .where(and(eq(s.guardian.tenantId, tenantId), inArray(s.guardian.parentGrantId, parents), isNull(s.guardian.revokedAt))).limit(1);
-  return Boolean(link);
+  if (!link) return false;
+  // An adult student who is also a parent is a learner: a live student identity through a live student grant of this membership.
+  const [identity] = await tx.select({ id: s.studentIdentity.id }).from(s.studentIdentity)
+    .innerJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.studentIdentity.tenantId), eq(s.roleGrant.id, s.studentIdentity.roleGrantId), isNull(s.roleGrant.revokedAt), eq(s.roleGrant.role, "student")))
+    .where(and(eq(s.studentIdentity.tenantId, tenantId), eq(s.roleGrant.membershipId, membershipId), isNull(s.studentIdentity.revokedAt))).limit(1);
+  return !identity;
 }
 
 /**
@@ -72,10 +77,11 @@ export async function canView<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: s
   const grant = await liveStaffGrant(tx, tenantId, viewerMembershipId);
   if (!grant) return null;
   if (grant.role === "admin") return grant;
-  // A1 (tutor and admin walks 2026-10-28): a tutor never opens a colleague's, the rabbi's or a parent's shelf, even through a claim or link made before they were refused.
+  // The rabbi's assignment always wins: a tutor linked to the learner's student sees the shelf, whatever else the learner is.
+  const links = await liveTutorLinksOf(tx, tenantId, learnerMembershipId);
+  if (links.some(link => link.tutorGrantId === grant.id)) return grant;
+  // A1 (tutor and admin walks 2026-10-28): a claim never opens a colleague's, the rabbi's or a parent's shelf, even one made before they were refused.
   if (await notALearner(tx, tenantId, learnerMembershipId)) return null;
   const claim = await activeClaimOf(tx, tenantId, learnerMembershipId);
-  if (claim && claim.tutorGrantId === grant.id) return grant;
-  const links = await liveTutorLinksOf(tx, tenantId, learnerMembershipId);
-  return links.some(link => link.tutorGrantId === grant.id) ? grant : null;
+  return claim && claim.tutorGrantId === grant.id ? grant : null;
 }

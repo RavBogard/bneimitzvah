@@ -308,6 +308,33 @@ describe("Staff and parents are not learners (tutor and admin walks A1)", () => 
     expect((await shelf("second")).status).toBe(404);
   });
 
+  it("an adult student who is also a parent is a learner: listed, claimable, and their assigned tutor sees the shelf", async () => {
+    const t = await setup();
+    await t.linkBare(); await makeParent(t);
+    await t.save("bare", "Adult reading", "2026-10-24");
+    expect(learnerOf(await t.call("/api/learners", "second"), t.extra.bare.membershipId)).toMatchObject({ student: { id: t.f.students[2].id }, tutor: null });
+    expect((await t.call("/api/learners/claim", "second", { learner: t.extra.bare.membershipId })).json).toMatchObject({ ok: true, created: true });
+    const shelf = (who: Who) => t.call(`/api/saved/learner/readings?learner=${t.extra.bare.membershipId}`, who);
+    expect((await shelf("second")).status).toBe(200);
+    expect((await shelf("multi")).status).toBe(404);
+  });
+
+  it("the rabbi's assignment wins: a member with a tutor grant is refused as a claim, but the assigned tutor still lists, claims (no change) and sees the shelf", async () => {
+    const t = await setup();
+    await t.linkBare();
+    await t.f.owner(() => t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: t.extra.bare.membershipId, role: "tutor" }));
+    await t.f.owner(() => t.f.db.insert(s.tutorStudent).values({ tenantId: "crc", studentId: t.f.students[2].id, tutorGrantId: t.f.tutorGrant.id }));
+    await t.save("bare", "Assigned reading", "2026-10-24");
+    const unknown = await t.call("/api/learners/claim", "second", { learner: randomUUID() });
+    expect(await t.call("/api/learners/claim", "second", { learner: t.extra.bare.membershipId })).toEqual(unknown);
+    expect(learnerOf(await t.call("/api/learners", "second"), t.extra.bare.membershipId)).toBeUndefined();
+    expect(learnerOf(await t.call("/api/learners", "multi"), t.extra.bare.membershipId)).toMatchObject({ tutor: { claimed: false, mine: true } });
+    expect((await t.call("/api/learners/claim", "multi", { learner: t.extra.bare.membershipId })).json).toEqual({ ok: true, learner: t.extra.bare.membershipId, created: false });
+    expect((await t.call(`/api/saved/learner/readings?learner=${t.extra.bare.membershipId}`, "multi")).status).toBe(200);
+    expect((await t.call(`/api/saved/learner/readings?learner=${t.extra.bare.membershipId}`, "second")).status).toBe(404);
+    expect(await t.claims()).toEqual([]);
+  });
+
   it("an existing claim on someone who becomes a parent no longer opens their shelf to the tutor, until the guardian link ends", async () => {
     const t = await setup();
     await t.save("bare", "Kept", "2026-10-24");
