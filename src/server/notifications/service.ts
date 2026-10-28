@@ -6,6 +6,7 @@ import { AccessDenied, AccessUnavailable } from "../access/errors";
 import type { createAccessService } from "../access/service";
 import type { AccessDatabase, AccessRequest, AccessTransaction, ActiveMode } from "../access/types";
 import { lockRoleGrant, lockStudent, lockStudentRelationship } from "../data/authority";
+import { tutorLinkPassesA1 } from "../data/learner-claims";
 import * as data from "../data/notifications";
 import { calendar } from "../data/practice-calendar";
 import { lockVisibleStudentCandidates } from "../data/students";
@@ -67,7 +68,10 @@ export function createNotificationDelivery<Q extends PgQueryResultHKT>(input: {
     const choice = await data.preference(tx, row.tenantId, row.membershipId, "tutor-draft");
     if (choice && !choice.enabled) return null;
     const student = await lockStudent(tx, row.tenantId, row.studentId, "read");
-    if (!student || student.disabledAt || !(await lockStudentRelationship(tx, row.tenantId, student.id, recipient.grant.id, "tutor", "read"))) return null;
+    if (!student || student.disabledAt) return null;
+    const link = await lockStudentRelationship(tx, row.tenantId, student.id, recipient.grant.id, "tutor", "read");
+    // A1 (PR #153 follow-up): a link the tutor's own claim made reaches the tutor only while that claim passes canView.
+    if (!link?.id || !(await tutorLinkPassesA1(tx, row.tenantId, row.membershipId, link.id))) return null;
     const l = links(row.tenantId, row.membershipId, "tutor-draft");
     return { email: recipient.email, unsubscribe: l.header, message: tutorDraftMessage({ product: recipient.productName, tutorName: greetingName(recipient.name),
       studentFirstName: plainName(student.firstName) ?? "Your student", links: l.body }) };

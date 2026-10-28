@@ -47,7 +47,13 @@ export function markdown(value: unknown, maxBytes: number, problems: string[], w
   return true;
 }
 
-function source(value: unknown, problems: string[], where: string): value is GuideSource {
+function source(value: unknown, problems: string[], where: string, idOnly: boolean): value is GuideSource {
+  // A caller may cite by id alone; the citation check then fills every other field from Sefaria (it overwrites them anyway).
+  if (idOnly && object(value) && exactKeys(value, ["id"])) {
+    const ok = typeof value.id === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value.id);
+    if (!ok) problems.push(`${where}: source id`);
+    return ok;
+  }
   if (!object(value) || !exactKeys(value, ["id", "ref", "indexTitle", "category", "labels", "readable"])) { problems.push(`${where}: source shape`); return false; }
   const labels = value.labels;
   const ok = typeof value.id === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value.id) && plain(value.ref, 512) && plain(value.indexTitle, 512) && plain(value.category, 128)
@@ -57,7 +63,11 @@ function source(value: unknown, problems: string[], where: string): value is Gui
   return ok;
 }
 
-export function validateGuideBody(body: unknown, opts: { allowOverview: boolean }): Result<GuideBody> {
+/**
+ * `input: true` is a caller's save request: a source may be `{ id }` alone. Such a body is not storable until the
+ * citation check resolves it; stored and resolved bodies are always validated without `input`.
+ */
+export function validateGuideBody(body: unknown, opts: { allowOverview: boolean; input?: boolean }): Result<GuideBody> {
   const problems: string[] = [];
   if (!object(body)) return { ok: false, problems: ["body must be an object"] };
   const keys = opts.allowOverview ? ["overview", "themes"] : ["themes"];
@@ -86,7 +96,7 @@ export function validateGuideBody(body: unknown, opts: { allowOverview: boolean 
       if (!Array.isArray(note.sources) || note.sources.length > LIMITS.sources) { problems.push(`${nat}.sources: at most ${LIMITS.sources}`); return; }
       const seen = new Set<string>();
       note.sources.forEach((s, k) => {
-        if (source(s, problems, `${nat}.sources[${k}]`)) { if (seen.has(s.id)) problems.push(`${nat}.sources[${k}]: duplicate`); seen.add(s.id); }
+        if (source(s, problems, `${nat}.sources[${k}]`, opts.input === true)) { if (seen.has(s.id)) problems.push(`${nat}.sources[${k}]: duplicate`); seen.add(s.id); }
       });
     });
   });

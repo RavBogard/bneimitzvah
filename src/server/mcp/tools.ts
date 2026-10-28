@@ -5,11 +5,13 @@ import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { AccessDenied } from "../access/errors";
 import type { AccessDatabase } from "../access/types";
 import { lockStudent, lockStudentRelationship } from "../data/authority";
+import { tutorLinkPassesA1 } from "../data/learner-claims";
 import { confirmedReadings } from "../data/portal";
 import { lockVisibleStudentCandidates } from "../data/students";
 import { readingView } from "../portal/service";
 import { lockRabbi } from "../study-guides/authority";
 import { readableInApp } from "../study-guides/citations";
+import { projectRelatedCatalog } from "../study/sources/discovery";
 import type { createStudyGuideService, RabbiAuthority } from "../study-guides/service";
 import type { RelatedSourceCatalog } from "../study/sources/metadata";
 import type { createDelegatedSourceAssignments } from "../study/source-assignments-service";
@@ -67,7 +69,7 @@ const studentId = str("A portal student id from list_students.", { pattern: UUID
 const mutationId = str("A fresh random UUID for this write; resending the same one replays the saved result instead of writing twice.", { pattern: UUID_PATTERN });
 const expectedVersion = { type: "integer", minimum: 0, maximum: 1000000, description: "The current version from your last read (0 when none exists)." };
 const guideBody = { type: "object", description: "The guide: { overview, themes: [{ id, title, intro, notes: [{ verseRef, body, sources: [{ id }] }] }] }. Each source id must be one get_reading_for_guide listed for that verse; the server fills in the rest of each source from Sefaria." };
-const additionsBody = { type: "object", description: "Per-student additions: { themes: [{ id, title, intro, notes: [...] }] } with no overview; notes only on that student's own verses." };
+const additionsBody = { type: "object", description: "Per-student additions: { themes: [{ id, title, intro, notes: [{ verseRef, body, sources: [{ id }] }] }] } with no overview; notes only on that student's own verses." };
 const origin = { type: "string", enum: ["claude", "rabbi"], description: "\"claude\" for any text Claude wrote or rewrote; \"rabbi\" only for words the rabbi wrote himself." };
 const reviewed = { type: "boolean", description: "True only when the rabbi has read this exact text in this conversation and said it is reviewed." };
 const closed = (properties: Record<string, unknown>, required: string[] = []) => ({ type: "object", properties, required, additionalProperties: false });
@@ -134,7 +136,7 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
         const candidates = await lockVisibleStudentCandidates(tx, portal, { afterId: input.cursor as string | undefined, limit: limit + 1 });
         const visible = [];
         for (const student of candidates.slice(0, limit)) {
-          if (await lockStudentRelationship(tx, actor.tenantId, student.id, actor.roleGrantId, actor.role, "read"))
+          if (await mcpSeesStudent(tx, actor, student.id))
             visible.push({ id: student.id, name: `${student.firstName} ${student.lastName}`, ceremonyDate: student.ceremonyDate, studentKind: student.studentKind });
         }
         return { students: visible, next: candidates.length > limit ? candidates[limit - 1].id : null };
@@ -146,7 +148,7 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
       inputSchema: closed({ studentId }, ["studentId"]),
       handler: async (input, ctx) => ctx.mcp.withLive(ctx.actor, "read", async (tx, actor) => {
         const student = await lockStudent(tx, actor.tenantId, input.studentId as string, "read");
-        if (!student || student.disabledAt || !(await lockStudentRelationship(tx, actor.tenantId, student.id, actor.roleGrantId, actor.role, "read"))) throw new AccessDenied(404);
+        if (!student || student.disabledAt || !(await mcpSeesStudent(tx, actor, student.id))) throw new AccessDenied(404);
         const [extra] = await tx.select({ hebrewName: s.student.hebrewName, serviceSlot: s.student.serviceSlot }).from(s.student)
           .where(and(eq(s.student.tenantId, actor.tenantId), eq(s.student.id, student.id))).limit(1);
         const readings = (await confirmedReadings(tx, actor.tenantId, student.id)).map(row => {
@@ -188,24 +190,29 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
     },
     {
       name: "get_reading_for_guide", roles: ["admin"], scope: SCOPES.read, annotations: readOnly, deadlineMs: 55_000,
-      description: "The text to draft a base guide from, 25 verses per page: Hebrew (Miqra According to the Masorah) and the JPS 2023 English for your drafting only (never paste English verse text into a guide), and for each verse the Sefaria sources a note may cite. `readable:true` sources open in the portal's reader; the rest link out to Sefaria. Pass `offset` from `nextOffset` for the next page.",
-      inputSchema: closed({ kind, readingKey, offset: { type: "integer", minimum: 0, maximum: 1000, description: "Verse offset, from the previous page's nextOffset." } }, ["kind", "readingKey"]),
+      description: "The text to draft a base guide from, a few verses per page (`limit`, default 10, at most 25; a page is shortened further when its verses carry very many sources, so always follow `nextOffset`): Hebrew (Miqra According to the Masorah) and the JPS 2023 English for your drafting only (never paste English verse text into a guide), and for each verse the Sefaria sources a note may cite (id, ref, title, category, readable). Cite a source in save_guide by its id alone. `readable:true` sources open in the portal's reader; the rest link out to Sefaria. Pass `offset` from `nextOffset` for the next page.",
+      inputSchema: closed({ kind, readingKey, offset: { type: "integer", minimum: 0, maximum: 1000, description: "Verse offset, from the previous page's nextOffset." },
+        limit: { type: "integer", minimum: 1, maximum: GUIDE_PAGE_MAX_VERSES, description: `Verses per page, default ${GUIDE_PAGE_DEFAULT_VERSES}.` } }, ["kind", "readingKey"]),
       handler: async (input, ctx) => {
         const { verses } = await ctx.guides.guidePassage(rabbiAuthority(ctx), input as never);
         if (!verses.length) return { kind: input.kind, readingKey: input.readingKey, totalVerses: 0, verses: [], nextOffset: null, note: "No reading is known for this key." };
-        const offset = (input.offset as number | undefined) ?? 0, page = verses.slice(offset, offset + 25);
+        const offset = (input.offset as number | undefined) ?? 0, limit = Math.min((input.limit as number | undefined) ?? GUIDE_PAGE_DEFAULT_VERSES, GUIDE_PAGE_MAX_VERSES);
+        const page = verses.slice(offset, offset + limit);
         if (!page.length) return { kind: input.kind, readingKey: input.readingKey, totalVerses: verses.length, verses: [], nextOffset: null };
         const text = await ctx.loadText({ kind: input.kind as "torah" | "haftarah", ranges: rangesOf(page), verses: page, offset: 0, translation: "jps2023", signal: ctx.signal });
         const byRef = new Map(text.verses.map(v => [v.ref, v]));
-        const out = [];
+        const out: GuideVerse[] = [], head = { kind: input.kind, readingKey: input.readingKey, totalVerses: verses.length, offset };
         for (const ref of page) {
-          const catalog = await ctx.related(ref, ctx.signal);
           const verse = byRef.get(ref);
-          out.push({ ref, hebrew: verse?.hebrew.text ?? null, english: verse?.english ?? null,
-            sources: catalog.entries.map(e => ({ id: e.id, ref: e.ref, title: e.labels.en ?? e.indexTitle, category: e.category, readable: readableInApp(e) })) });
+          // The same projection the save-time citation check resolves ids against, so every id listed here is one save_guide accepts.
+          let sources: GuideVerse["sources"] | null;
+          try { sources = projectRelatedCatalog(await ctx.related(ref, ctx.signal), ref).entries.map(e => ({ id: e.id, ref: e.ref, title: e.labels.en ?? e.indexTitle, category: e.category, readable: readableInApp(e) })); }
+          catch { sources = null; }
+          out.push({ ref, hebrew: verse?.hebrew.text ?? null, english: verse?.english ?? null, sources: sources ?? [], ...(sources ? {} : { sourcesUnavailable: true }) });
+          // Stop fetching once the page is full: the next page starts from the first verse left out.
+          if (guidePageBytes(head, out) > GUIDE_PAGE_MAX_BYTES) break;
         }
-        const next = offset + page.length;
-        return { kind: input.kind, readingKey: input.readingKey, totalVerses: verses.length, offset, nextOffset: next < verses.length ? next : null, verses: out };
+        return fitGuidePage(head, out);
       },
     },
     {
@@ -262,4 +269,50 @@ function rangesOf(verses: readonly string[]): string[] {
   for (const ref of verses.slice(1)) { const next = parse(ref); if (follows(end, next)) end = next; else { flush(); start = end = next; } }
   flush();
   return ranges;
+}
+
+export const GUIDE_PAGE_DEFAULT_VERSES = 10, GUIDE_PAGE_MAX_VERSES = 25;
+/** A get_reading_for_guide page, serialized as the transport sends it, stays under this (a 25-verse page once reached 1.19 MB and was refused by the client). */
+export const GUIDE_PAGE_MAX_BYTES = 200_000;
+type GuideVerse = { ref: string; hebrew: string | null; english: string | null; sources: { id: string; ref: string; title: string; category: string; readable: boolean }[]; sourcesUnavailable?: true; sourcesOmitted?: number };
+
+/**
+ * Shorten a page until its serialized text fits GUIDE_PAGE_MAX_BYTES; nextOffset follows the verses kept, so
+ * paging still covers every verse exactly once. A single verse whose sources alone overflow keeps as many as fit
+ * and says how many it left out.
+ */
+type GuidePageHead = { kind: unknown; readingKey: unknown; totalVerses: number; offset: number };
+const guidePage = (head: GuidePageHead, kept: GuideVerse[]) => {
+  const next = head.offset + kept.length;
+  return { ...head, nextOffset: next < head.totalVerses ? next : null, verses: kept };
+};
+/** The page's size as textResult serializes it. */
+const guidePageBytes = (head: GuidePageHead, kept: GuideVerse[]) => Buffer.byteLength(JSON.stringify(guidePage(head, kept), null, 1));
+export function fitGuidePage(head: GuidePageHead, verses: GuideVerse[]) {
+  const build = (kept: GuideVerse[]) => guidePage(head, kept);
+  const size = (value: unknown) => Buffer.byteLength(JSON.stringify(value, null, 1));
+  let kept = verses;
+  while (kept.length > 1 && size(build(kept)) > GUIDE_PAGE_MAX_BYTES) kept = kept.slice(0, -1);
+  let result = build(kept), over = size(result);
+  if (over > GUIDE_PAGE_MAX_BYTES) {
+    const all = kept[0].sources;
+    let count = all.length;
+    while (over > GUIDE_PAGE_MAX_BYTES && count > 0) {
+      count = Math.max(0, Math.min(count - 1, Math.floor(count * (GUIDE_PAGE_MAX_BYTES / over) * 0.97)));
+      result = build([{ ...kept[0], sources: all.slice(0, count), sourcesOmitted: all.length - count }]);
+      over = size(result);
+    }
+  }
+  return result;
+}
+
+/**
+ * Whether this connection may read the student: the admin always; a tutor through a live tutor link, where a link the
+ * tutor's own learner claim made also has to pass A1 (tutorLinkPassesA1, PR #153). False is the same 404 or omission an unknown student gets.
+ */
+async function mcpSeesStudent<Q extends PgQueryResultHKT>(tx: Parameters<typeof lockStudentRelationship<Q>>[0], actor: McpActor, studentId: string): Promise<boolean> {
+  const link = await lockStudentRelationship(tx, actor.tenantId, studentId, actor.roleGrantId, actor.role, "read");
+  if (!link) return false;
+  if (actor.role !== "tutor") return true;
+  return link.id !== null && await tutorLinkPassesA1(tx, actor.tenantId, actor.membershipId, link.id);
 }

@@ -199,6 +199,15 @@ describe("tutor draft notices", () => {
     expect(await later.run("crc")).toMatchObject({ sent: 0, skipped: 1 }); expect(f.sent).toEqual([]);
     expect(await f.owner(() => f.db.select().from(s.translationDraft))).toHaveLength(2);
   });
+  it("skip a tutor whose link a claim made on someone who is now staff (A1), and send again once the claim is gone", async () => {
+    const f = await setup(); await f.switches({ tutorDraft: true });
+    // The tutor's link to Ada recorded as made by a live claim on a staff member: A1 says that link opens nothing.
+    const [claim] = await f.owner(() => f.db.insert(s.learnerClaim).values({ tenantId: "crc", learnerMembershipId: f.adminMember.id, tutorGrantId: f.tutorGrant.id, tutorLinkId: f.tutorLink.id }).returning());
+    expect(await f.draft("Synthetic draft one", 1)).toMatchObject({ ok: true }); expect(f.sent).toEqual([]);
+    await f.owner(() => f.db.update(s.learnerClaim).set({ revokedAt: new Date(), revokedBy: "admin", revokedByMembershipId: f.adminMember.id }).where(eq(s.learnerClaim.id, claim.id)));
+    f.clock.now += DAY; await f.draft("Synthetic draft two", 2); expect(f.sent).toHaveLength(1);
+  });
+
   it("a notice queue that throws inside the draft save still leaves the student's draft committed", async () => {
     const f = await setup(); await f.switches({ tutorDraft: true });
     // Every ledger insert fails, so the queue throws inside the student's own write.
