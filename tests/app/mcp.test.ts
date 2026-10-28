@@ -86,7 +86,7 @@ describe("portal MCP", () => {
     expect(init.body.result.protocolVersion).toBe("2025-06-18");
     expect(init.body.result.instructions).toContain("Never invent a citation");
     const names = (await t.rpc(tokens.access_token, "tools/list")).body.result.tools.map((x: { name: string }) => x.name);
-    expect(names).toEqual(expect.arrayContaining(["list_students", "get_student", "get_study_voice", "save_guide", "publish_guide", "save_student_guide"]));
+    expect(names).toEqual(expect.arrayContaining(["list_students", "get_student", "get_study_voice", "list_guide_catalog", "save_guide", "publish_guide", "save_student_guide"]));
     const list = (await t.call(tokens.access_token, "list_students")).json();
     expect(list.students.map((x: { name: string }) => x.name).sort()).toEqual(["Synthetic Sibling A", "Synthetic Sibling B", "Synthetic Unrelated"]);
     const unrelated = t.f.students[2].id, foreign = t.f.students[3].id;

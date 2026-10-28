@@ -14,6 +14,7 @@ import * as s from "../db/index";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import { expandReadingRanges, readingSegments } from "../../lib/readings/ranges";
 import { haftarahRefForKey } from "../../lib/readings/reading-key";
+import { guideCatalogEntries } from "../../lib/readings/guide-catalog";
 import { validateGuideBody, validateVoice, type GuideBody, type GuideNote, type GuideTheme } from "./validation";
 import { STARTER_VOICE } from "./starter-voice";
 import { effectiveRabbiName, type CongregationSettings } from "../settings/validation";
@@ -370,6 +371,31 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       return Object.freeze({ work: Object.freeze(work), customReadings: Object.freeze(unkeyed.map(x => Object.freeze(x))) });
     });
   }
+  /**
+   * Every guide key in CRC's rite (diaspora calendar), in catalog order, with its base-guide status. Read-only, no student data.
+   * `draftable` is whether `passage()` (what get_reading_for_guide and save_guide use) returns verses for the key today.
+   */
+  async function guideCatalog(authority: RabbiAuthority<Q>) {
+    const { entries, unresolved } = guideCatalogEntries(TANAKH_VERSE_COUNTS);
+    return authority.run(async (tx, writer) => {
+      const t = s.studyGuide;
+      const rows = await tx.select({ kind: t.kind, readingKey: t.readingKey, version: t.version, hold: t.hold, reviewed: t.reviewed }).from(t)
+        .where(eq(t.tenantId, writer.tenantId)).orderBy(asc(t.kind), asc(t.readingKey), asc(t.version)).limit(20000);
+      const heads = new Map<string, { version: number; hold: boolean; visible: number | null; visibleReviewed: boolean }>();
+      for (const row of rows) {
+        const id = `${row.kind}:${row.readingKey}`, prior = heads.get(id);
+        heads.set(id, { version: row.version, hold: row.hold, visible: row.hold ? prior?.visible ?? null : row.version, visibleReviewed: row.hold ? prior?.visibleReviewed ?? false : row.reviewed });
+      }
+      const out = [];
+      for (const entry of entries) {
+        const head = heads.get(`${entry.kind}:${entry.readingKey}`);
+        const status = !head ? "none" : head.hold ? "held-draft" : head.visibleReviewed ? "reviewed" : "published-unreviewed";
+        const draftable = (await passage(tx, writer.tenantId, entry.kind, entry.readingKey)).size > 0;
+        out.push(Object.freeze({ ...entry, draftable, base: Object.freeze({ status, version: head?.version ?? 0, visibleVersion: head?.visible ?? null }) }));
+      }
+      return Object.freeze({ calendar: "diaspora", entries: Object.freeze(out), unresolved: Object.freeze(unresolved) });
+    });
+  }
   /** The verses a base guide for this reading may annotate, in reading order. */
   async function guidePassage(authority: RabbiAuthority<Q>, supplied: { kind: unknown; readingKey: unknown }) {
     const kind = kindOf(supplied.kind), readingKey = keyOf(supplied.readingKey);
@@ -389,7 +415,7 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       return Object.freeze({ studentId, kind, assignment: reading ? Object.freeze({ assignmentId: reading.id, assignmentRevision: reading.revision, readingKey: reading.readingKey, verses: reading.verses }) : null, view });
     });
   }
-  return Object.freeze({ getVoice, setVoice, getBaseGuide, setBaseGuide, publishBaseGuide, setStudentGuide, studentGuide, readingDate, setThemeRead, staffGuide, staffVoice, guideWork, guidePassage, rabbiStudentGuide });
+  return Object.freeze({ getVoice, setVoice, getBaseGuide, setBaseGuide, publishBaseGuide, setStudentGuide, studentGuide, readingDate, setThemeRead, staffGuide, staffVoice, guideWork, guideCatalog, guidePassage, rabbiStudentGuide });
 }
 
 /** The only part the web HTTP runtime receives: reads, theme ticks and staff status. No guide or voice writes (S10). */
