@@ -62,15 +62,8 @@ export function createLearnersService<Q extends PgQueryResultHKT>(input: { acces
   }
   /** The learner's tutor, from the claim (undoable) or, for a linked student, the first tutor link (the rabbi's assignment). */
   async function tutorOf(tx: AccessTransaction<Q>, tenantId: string, learnerMembershipId: string) {
-    // The claim's grant is live (activeClaimOf checks); a link's tutor grant may not be: a revoked tutor is nobody's tutor.
-    const claim = await activeClaimOf(tx, tenantId, learnerMembershipId);
-    const candidates = claim ? [claim.tutorGrantId] : (await liveTutorLinksOf(tx, tenantId, learnerMembershipId)).map(link => link.tutorGrantId);
-    for (const grantId of candidates) {
-      const holder = await data.grantHolder(tx, tenantId, grantId);
-      if (!holder || holder.revokedAt) continue;
-      return Object.freeze({ grantId, name: displayName(holder.name, "Tutor"), claimed: claim !== null, claimId: claim?.id ?? null });
-    }
-    return null;
+    const tutor = await data.tutorOfLearner(tx, tenantId, learnerMembershipId);
+    return tutor ? Object.freeze({ ...tutor, name: displayName(tutor.name, "Tutor") }) : null;
   }
   /** Ends a claim as a tutor or admin: the link it made goes first, through the one tutor-revocation write, whose hook ends the claim and audits it; a claim with no live link is ended here. */
   async function endClaim(tx: AccessTransaction<Q>, actor: Actor, claim: { id: string; tutorLinkId: string | null }) {

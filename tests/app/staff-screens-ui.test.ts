@@ -180,7 +180,7 @@ describe("The Manage sheet (Readings for everyone E3)", () => {
   const actions = { open: true, onClose: noop, setDivisions: noop, changeVerses: noop, printPractice: noop, printDisabled: false, printWholeHref: "/print?ref=Genesis%201%3A1-3", writeNote: noop, refresh: noop, reload: async () => undefined };
   const render = (mode: "tutor" | "admin", readings: ReturnType<typeof reading>[]) => renderToStaticMarkup(createElement(ManageSheet, { mode, student, baseline: { student, readings } as never, actions }));
   it("lists the rows in order, with Set divisions unpunctuated, and the admin's two links last", () => {
-    expect(manageRows("tutor", [], false)).toEqual(["Set divisions", "Change verses", "Print practice sheet", "Print the whole reading", "Write a lesson note", "Refresh reading"]);
+    expect(manageRows("tutor", [], false)).toEqual(["Set divisions", "Change verses", "Print practice sheet", "Print the whole reading", "Print booklet", "Write a lesson note", "Refresh reading"]);
     expect(manageRows("admin", [], false).slice(-2)).toEqual(["People and access", "All students"]);
     expect(manageRows("tutor", ["torah", "haftarah"], true).slice(0, 2)).toEqual(["Confirm reading is still right:Torah", "Confirm reading is still right:Haftarah"]);
     const markup = render("tutor", []);

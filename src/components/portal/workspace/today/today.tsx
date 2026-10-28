@@ -2,6 +2,7 @@
 // The student's pinned reading (Readings for everyone E1; the 1.9 N11 Today, now the first card on /mine). Everything on it is read through the
 // student's own workspace reads (the same ones the reading page uses): the student list and assigned reading, the verse marks, the practice
 // calendar's dates and the lesson notes. It reads nobody else. It records nothing: showing the card is not practice.
+import { bookletHref } from "../../print/booklet-href";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { PortalRequestError } from "../../api";
 import { workspaceApi, type Assigned, type Reading, type Student } from "../api";
@@ -182,7 +183,7 @@ function PinnedReady({ slices, assigned, headingId }: { slices: TodaySlices; ass
     {dates.status !== "loading" && <div className={styles.calendar}><PracticeMonths today={calendarDay} first={dates.status === "ready" ? dayOrdinal(dates.fromDate) : calendarDay - 364}
       practiced={ordinal => dates.status === "ready" && dates.dates.has(dayString(ordinal))} marks={dayMarks} lastDay={dayOrdinal(student.ceremonyDate)} /></div>}
     {readings.length > 0 && <div className={styles.actions}>
-      {readings.length > 0 && <ul className={styles.links} aria-label="In your reading"><li><a href={`${PINNED_HREF}#service-parts`}>Service parts</a></li><li><a href={`${PINNED_HREF}#lessons`}>Lessons</a></li></ul>}
+      {readings.length > 0 && <ul className={styles.links} aria-label="In your reading"><li><a href={`${PINNED_HREF}#service-parts`}>Service parts</a></li><li><a href={`${PINNED_HREF}#lessons`}>Lessons</a></li><li><a href={bookletHref(student.id)} data-testid="print-booklet">Print booklet</a></li></ul>}
     </div>}
     {own?.ownAdultHonors === true && <HonorsEntry key={student.id} mode="student" studentId={student.id} name={`${student.firstName} ${student.lastName}`} />}
   </section>;
