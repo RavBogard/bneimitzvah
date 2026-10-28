@@ -20,7 +20,7 @@ export type DiscussionSource = Shared & ({ kind: "edition"; edition: string; cre
   | { kind: "translation"; translation: Readonly<{ body: string; originalEdition: string }> });
 export type Discussion = Readonly<{ slug: string; title: string; kind: "torah" | "haftarah"; anchors: readonly string[]; sources: readonly DiscussionSource[] }>;
 /** `truncated`: the route left later discussions out to stay within its limits; the ones shown are complete in themselves, and nothing is said of the rest. */
-export type DiscussionsAnswer = Readonly<{ discussions: readonly Discussion[]; productName: string | null; complete: boolean; truncated: boolean }>;
+export type DiscussionsAnswer = Readonly<{ discussions: readonly Discussion[]; productName: string | null; /** The rabbi's display name (the congregation's setting), for the "From {name}" label. */ rabbiName?: string; complete: boolean; truncated: boolean }>;
 
 /** One discussion's sources that sit on one verse, in the discussion's own order. */
 export type VerseDiscussion = Readonly<{ discussion: Discussion; sources: readonly DiscussionSource[] }>;

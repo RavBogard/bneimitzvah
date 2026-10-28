@@ -25,7 +25,9 @@ import styles from "./commentary.module.css";
  */
 export type { VersePanelKind } from "./verse-panel-state";
 type Open = PanelOpen;
-type Scope = Readonly<{ open: Open | null; active: boolean; listOpen: boolean; openList(trigger: HTMLElement): void; toggle(verse: string, kind: VersePanelKind, trigger: HTMLElement): void; close(): void; closeWord(): void;
+type Scope = Readonly<{ open: Open | null; active: boolean; listOpen: boolean; openList(trigger: HTMLElement): void; toggle(verse: string, kind: VersePanelKind, trigger: HTMLElement): void;
+  /** Changes the open panel to another kind for the same verse (Compare from "Everything on this verse"), keeping what focus returns to. */
+  swap(verse: string, kind: VersePanelKind): void; close(): void; closeWord(): void;
   /** A source in a reading's list: the discussion panel at its verse, brought into view first. */
   openFromList(verse: string, trigger: HTMLElement): void; backToVerse(): void;
   /** Study's word tap: the word card for one word, in the sheet. Null when no text page has registered a host. */
@@ -60,6 +62,7 @@ export function VersePanelScope({ children, passage }: { children: ReactNode; pa
     const shown = current.current, next = moveWord(shown, verse, word); if (!shown || next === shown) return;
     trigger.current = null; setOpen(next); host.current?.onVisit?.(verse);
   }, []);
+  const swap = useCallback((verse: string, kind: VersePanelKind) => { setOpen(Object.freeze({ verse, kind, id: `${base}-panel` })); }, [base]);
   const close = useCallback(() => { setOpen(null); }, []);
   const openList = useCallback((element: HTMLElement) => { listTrigger.current = element; setListOpen(true); }, []);
   const closeList = useCallback(() => { setListOpen(false); }, []);
@@ -86,12 +89,14 @@ export function VersePanelScope({ children, passage }: { children: ReactNode; pa
   useEffect(() => { if (!active) { setOpen(null); setListOpen(false); } }, [active]);
   // A source chosen in the phone's Sources sheet: that sheet gives way to the verse's own in the same render, and the Sources button is where focus comes back to.
   const openFromSheet = useCallback((verse: string, element: HTMLElement) => { setListOpen(false); openFromList(verse, listTrigger.current?.isConnected ? listTrigger.current : element); }, [openFromList]);
-  const value = useMemo<Scope>(() => ({ open: active ? open : null, active, listOpen, openList, toggle, close, closeWord, openFromList, backToVerse, openWord: hasWords ? openWord : null, moveWord: stepWord, host, setHost }),
-    [active, open, listOpen, openList, toggle, close, closeWord, openFromList, backToVerse, hasWords, openWord, stepWord, setHost]);
+  const value = useMemo<Scope>(() => ({ open: active ? open : null, active, listOpen, openList, toggle, swap, close, closeWord, openFromList, backToVerse, openWord: hasWords ? openWord : null, moveWord: stepWord, host, setHost }),
+    [active, open, listOpen, openList, toggle, swap, close, closeWord, openFromList, backToVerse, hasWords, openWord, stepWord, setHost]);
   const scope = <Context.Provider value={value}>{children}{active && open && <VersePanelSheet open={open} onClose={close} returnTarget={returnTarget} />}{active && listOpen && !open && <SourcesSheet onClose={closeList} onOpen={openFromSheet} />}</Context.Provider>;
   return passage === undefined ? scope : <DiscussionsSource passage={passage} active={active}>{scope}</DiscussionsSource>;
 }
 const usePanel = () => useContext(Context);
+/** Opens a verse's panel (More on this verse, a curated discussion) from a note or an action in Study; null outside a VersePanelScope. */
+export const useVersePanelOpener = (): ((verse: string, kind: VersePanelKind, trigger: HTMLElement) => void) | null => usePanel()?.toggle ?? null;
 /** The verse the open panel is on, if one is open. */
 export const useOpenPanelVerse = (): string | null => usePanel()?.open?.verse ?? null;
 /** Study's word tap: the card opener, or null when there is no card here (Lein, the proposed portion, a page not yet loaded). */
@@ -104,23 +109,10 @@ export function DiscussionList() {
   const scope = usePanel(), view = useDiscussionsView();
   return scope?.active && view ? <div className="reading-sources-column" data-sources-column=""><DiscussionListView view={view} onOpen={scope.openFromList} /></div> : null;
 }
-/** The reading's sources in the Study sheet's rail (2026-10-28), shown there while no verse is chosen: the same list as the column, the same way into a verse's sources. */
+/** The reading's curated sources at the end of Study's page (v6, 2026-10-28): each opens its verse's sources in the verse panel. */
 export function RailSources() {
   const scope = usePanel(), view = useDiscussionsView();
   return scope?.active && view ? <div data-sources-rail=""><DiscussionListView view={view} onOpen={scope.openFromList} /></div> : null;
-}
-/** On a phone or a tablet the sources are one tap away, in the Sheet: the button is in flow above the text, never over a verse; at laptop width the column replaces it. */
-export function SourcesButton() {
-  const scope = usePanel(), view = useDiscussionsView();
-  return scope?.active && view ? <p className="reading-sources-open" data-sources-open="">
-    <button type="button" className="button-secondary" aria-haspopup="dialog" onClick={event => scope.openList(event.currentTarget)}>{DISCUSSION_LABELS.column}</button></p> : null;
-}
-/** Sources as a dock item (Readings for everyone C1): it left the reader's top row, and joins the dock beside Works. Works chooses the commentaries under each verse; Sources lists where this passage is discussed, so the two stay separate. At laptop width the column beside the verses replaces it. */
-export function SourcesDockItem({ className = "toolbar-item", wrapper = "reading-sources-dock" }: { className?: string; wrapper?: string } = {}) {
-  const scope = usePanel(), view = useDiscussionsView();
-  // A wrapper that draws no box, so the dock lays its items out as before and "[data-sources-open] button" still finds it.
-  return scope?.active && view ? <span className={wrapper} data-sources-open=""><button type="button" className={className} aria-haspopup="dialog" onClick={event => scope.openList(event.currentTarget)}>
-    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 5h14v10H9l-4 4zM9 9h6M9 12h4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg><span>{DISCUSSION_LABELS.column}</span></button></span> : null;
 }
 /** The Sources sheet: the column's list, titled by the sheet; a source opens its verse's sources in the same Sheet (this one gives way). */
 function SourcesSheet({ onClose, onOpen }: { onClose(): void; onOpen(verse: string, trigger: HTMLElement): void }) {
@@ -139,7 +131,8 @@ export function WordPanelSource({ host }: { host: WordPanelHost | null }) {
 }
 
 const ACTIONS: readonly { kind: VersePanelKind; label: string }[] = [{ kind: "compare", label: "Compare" }, { kind: "shelf", label: "More on this verse" }];
-/** The verse's actions, under its row in Study: Compare, More on this verse, (on a verse that anchors a discussion) its sources, and where the page has verse tools, "Verse tools". Nothing outside a VersePanelScope. */
+/** Not drawn in Study v6 (its notes column has three actions of its own, study-notes.tsx); kept, with its tests, until Daniel says where Compare goes.
+ *  The verse's actions, under its row in Study: Compare, More on this verse, (on a verse that anchors a discussion) its sources, and where the page has verse tools, "Verse tools". Nothing outside a VersePanelScope. */
 export function VerseActions({ verse, onTools }: { verse: string; onTools?(opener: HTMLElement): void }) {
   const scope = usePanel(), anchored = useIsAnchor(verse), comparable = parseCompareVerse(verse);
   if (!scope || (!comparable && !onTools)) return null;
@@ -166,7 +159,7 @@ function PanelBody({ open }: { open: Open }) {
     {open.kind === "compare" ? <CompareView verse={open.verse} />
       : open.kind === "discussion" ? <DiscussionPanelBody verse={open.verse} />
       : open.kind === "word" ? word && open.word !== undefined && scope ? <WordPanelBody key={word.scopeKey} host={word} verse={open.verse} word={open.word} onMove={scope.moveWord} onGone={scope.close} /> : null
-        : <ShelfView key={open.verse} verse={open.verse} inline={lens.works} />}
+        : <>{parseCompareVerse(open.verse) && scope && <p><button type="button" className="button-secondary" onClick={() => scope.swap(open.verse, "compare")}>Compare translations</button></p>}<ShelfView key={open.verse} verse={open.verse} inline={lens.works} /></>}
   </div>;
 }
 /** The one Sheet of the verse panel, mounted while a panel is open. `focusKey` keeps the same sheet (and the reader's place on its buttons) while a word card steps on. */

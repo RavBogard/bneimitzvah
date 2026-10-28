@@ -166,8 +166,6 @@ export function BookletDocument({ input, colour, productName }: { input: Booklet
           case "about": return <>
             <Sub kind={section.reading}>{section.reading === "torah" ? "About this portion" : "About this haftarah"}</Sub>
             <MarkdownLite text={section.overview} className={booklet.prose} />
-            {section.themes.length > 0 && <><h4 className={booklet.minor}>Themes</h4>
-              {section.themes.map((theme, i) => <div key={i} className={booklet.theme}><p className={booklet.themeTitle}><bdi dir="auto">{theme.title}</bdi></p><MarkdownLite text={theme.intro} className={booklet.prose} /></div>)}</>}
             <p className={booklet.label} data-guide-label={guideLabelState(section.label)}>{guideLabelText(section.label)}</p>
           </>;
           case "reading": return <>

@@ -57,7 +57,8 @@ export function parseDiscussionsAnswer(value: unknown, passage: DiscussionPassag
       anchors: Object.freeze(item.anchors.map(anchor => typeof anchor === "string" && VERSE.test(anchor) && sources.some(entry => entry.anchorRef === anchor) ? anchor : bad())) });
   });
   if (new Set(discussions.map(item => item.slug)).size !== discussions.length || discussions.length > 0 && productName === null) return bad();
-  return Object.freeze({ discussions: Object.freeze(discussions), productName, complete: row.complete, truncated: row.truncated === true });
+  const rabbiName = row.rabbiName === undefined ? undefined : plain(row.rabbiName, 320);
+  return Object.freeze({ discussions: Object.freeze(discussions), productName, ...rabbiName ? { rabbiName } : {}, complete: row.complete, truncated: row.truncated === true });
 }
 
 /** The discussions for a passage, or a rejection (any failure: the reader shows nothing). */

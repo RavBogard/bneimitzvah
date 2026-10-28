@@ -1,6 +1,7 @@
 import { expect, test, vi } from "vitest";
 import { GuideStore } from "../../src/components/portal/workspace/study/guide-store";
-import { GuideError, parseGuideView, type GuideOperation, type StudentGuideView } from "../../src/components/portal/workspace/study/guide-api";
+import type { StudyKind } from "../../src/components/portal/workspace/study/api";
+import { parseGuideView, type GuideOperation, type StudentGuideView } from "../../src/components/portal/workspace/study/guide-api";
 import type { Assigned } from "../../src/components/portal/workspace/api";
 
 const a = "10000000-0000-4000-8000-000000000001", b = "10000000-0000-4000-8000-000000000002";
@@ -21,39 +22,13 @@ test("loads view for kind", async () => {
   expect(store.view("torah")?.base?.themes[0].id).toBe("cloud"); expect(store.loaded("torah")).toBe(true);
 });
 
-test("tick sends expectedVersion and applies result", async () => {
-  const calls: GuideOperation[] = [];
-  const store = new GuideStore(async (_b, _k, op) => { calls.push(op); return op.type === "view" ? { view: view([theme("cloud", false, 4)]), sheet: null } : { themeId: "cloud", read: true, version: 5 }; });
-  store.configure(baseline()); await store.load("torah");
-  const pending = store.tick("torah", "cloud", true);
-  expect(store.view("torah")?.base?.themes[0].read).toBe(true); expect(store.pending("torah", "cloud")).toBe(true);
-  await pending;
-  expect(calls[1]).toEqual({ type: "theme-read", readingKey: "pekudei", themeId: "cloud", read: true, expectedVersion: 4 });
-  expect(store.view("torah")?.base?.themes[0]).toMatchObject({ read: true, readVersion: 5 }); expect(store.pending("torah", "cloud")).toBe(false);
-});
-
-test("conflict refetches", async () => {
-  let views = 0;
-  const store = new GuideStore(async (_b, _k, op) => {
-    if (op.type === "view") { views++; return { view: view([theme("cloud", views > 1, views > 1 ? 1 : 0)]), sheet: null }; }
-    throw new GuideError(409, "conflict");
-  });
-  store.configure(baseline()); await store.load("torah");
-  await store.tick("torah", "cloud", true);
-  expect(views).toBe(2);
-  expect(store.view("torah")?.base?.themes[0]).toMatchObject({ read: true, readVersion: 1 });
-  expect(store.notice("torah", "cloud")).toContain("latest");
-});
-
-test("a failed tick reverts and never retries; a view that is not tickable offers nothing", async () => {
-  const request = vi.fn(async (_b: Assigned, _k: string, op: GuideOperation) => { if (op.type === "view") return { view: view(), sheet: null }; throw new GuideError(503); });
+test("\"I read this\" is gone: the store has no tick, no pending state and no notice, and the only request it ever makes is the view", async () => {
+  const request = vi.fn(async (_b: Assigned, _k: StudyKind, op: GuideOperation) => { expect(op).toEqual({ type: "view" }); return { view: view(), sheet: null }; });
   const store = new GuideStore(request); store.configure(baseline()); await store.load("torah");
-  await store.tick("torah", "cloud", true);
-  expect(store.view("torah")?.base?.themes[0].read).toBe(false); expect(store.notice("torah", "cloud")).toContain("Couldn't save");
-  expect(request).toHaveBeenCalledTimes(2);
-  const parent = new GuideStore(vi.fn(async () => ({ view: view(undefined, false), sheet: null }))); parent.configure(baseline("parent")); await parent.load("torah");
-  await parent.tick("torah", "cloud", true);
-  expect(parent.view("torah")?.base?.themes[0].read).toBe(false);
+  for (const name of ["tick", "pending", "notice"]) expect(name in store).toBe(false);
+  expect(request).toHaveBeenCalledTimes(1);
+  // The payload's read marks are inert: nothing in the store or the view writes them.
+  expect(store.view("torah")?.base?.themes.every(row => row.read === false)).toBe(true);
 });
 
 test("a new student or assignment scope drops the old guide", async () => {

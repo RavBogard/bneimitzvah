@@ -17,7 +17,8 @@ import { LENS_STORAGE, lensFromSearch, StudyLensScope, useStudyLens, type Lens }
 import { StudyRows } from "../workspace/study/study-rows";
 import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi, workStatuses } from "../workspace/study/commentary-view";
 import { VersePanelScope, WordPanelSource } from "../workspace/study/verse-panel";
-import { PortionSummaryBlock, usePortionSummary } from "../workspace/study/portion-summary";
+import { usePortionSummary } from "../workspace/study/portion-summary";
+import { PublicAbout } from "../workspace/study/about-card";
 import type { ApprovedPortionSummary } from "../../../lib/portion-summary/credit";
 import { parashahSlug } from "../../../lib/portion-summary/reading";
 import type { WordPanelHost } from "../workspace/study/word-panel";
@@ -507,6 +508,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   useEffect(() => { const ref = focus !== null && page?.verses[focus] ? page.verses[focus].ref : null; if (ref) onPlace.current?.(ref); }, [focus, page]);
   const corpus = kind === "torah" ? "torah" : "neviim";
   const { rashi, works } = useReadingWorks(refs, { ready: Boolean(page), study, chosen: lens.works, corpus });
+  const workStates = useMemo(() => (ref: string) => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) })), [works]);
   const leinLink = useCommentLink(), clearLink = leinLink.clear;
   // A pinned underline belongs to the verse it was pinned on; choosing another verse lets it go.
   useEffect(() => { clearLink(); }, [focus, textKey, clearLink]);
@@ -639,7 +641,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
           <option value="" disabled>Chapter</option>{chapters.map(row => <option key={row.key} value={row.key}>{row.label}</option>)}
         </select></label>}</>, more.slot)}
     {/* The portion summary (1.9 N7): atop Study, only an approved one, only on a parashah's Torah. Its outline goes to an aliyah where the page has it as a section. */}
-    {study && kind === "torah" && summary && <PortionSummaryBlock summary={summary} aliyot={summaryJump ? sections.map(row => row.n) : undefined} onAliyah={goAliyah} />}
+    {study && kind === "torah" && summary && <PublicAbout kind={kind} summary={summary} />}
     {/* Curated discussions (1.7 M6b), in Study, only where this passage has any: one tap to the Sheet here; on a laptop they are the column beside the verses, below. */}
     {sources.length > 1 && !more && <p className={`field-help ${styles.passageNote}`}><bdi dir="ltr">{displayRange(passage.ranges)}</bdi></p>}
     {/* The section chips (N3): a tab for each aliyah, in the sticky bar above the text. The page below changes with the tab, so one panel serves them all. */}
@@ -657,7 +659,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
             <CommentaryStatus works={workStatuses(works, corpus)} />
             <ReadingPlace refs={allVerses} pageKey={textKey} onJump={jumpTo} onHere={choose?.onPlace ? ref => onPlace.current?.(ref) : undefined} />
             <StudyRows verses={page.verses} assignment={assignment} group={group} showEnglish={lens.english} sections={labels}
-              works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))} choice={choice.view}
+              works={workStates} choice={choice.view}
               onPick={ref => { const at = page.verses.findIndex(row => row.ref === ref); if (at >= 0) release(() => setFocus(at)); }} />
           </> : <FlowingStudyText verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={prefs.translation} englishHidden={drillVerse ? DRILL_STRINGS.hidden : undefined} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
             sections={labels} linked={linkedVerse(leinLink, page.verses)} onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} choice={choice.view} />}

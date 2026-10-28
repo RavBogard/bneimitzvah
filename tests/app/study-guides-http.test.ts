@@ -43,21 +43,23 @@ test("student GET 200 with the view; parent GET 200 identical", async () => {
   const student = await f.send(view(f.studentId, "student"), { who: "learner" });
   expect(student.status).toBe(200); expect(student.cache).toContain("no-store");
   expect(student.body.view.base).toMatchObject({ version: 1, label: { origin: "claude", reviewed: false, rabbiName: "the rabbi" } });
-  expect(student.body.view.base.themes.map((t: { id: string }) => t.id)).toEqual(["cloud"]);
+  // Study v6: the base guide is its overview only; its themes and notes are never served.
+  expect(student.body.view.base.themes).toEqual([]);
+  expect(student.body.view.base.overview).toBeTruthy();
   const parent = await f.send(view(f.studentId, "parent"), { who: "multi" });
   expect(parent.status).toBe(200);
-  expect({ ...parent.body.view, tickable: true }).toEqual(student.body.view);
+  expect(parent.body.view).toEqual(student.body.view);
   expect(parent.body.view.tickable).toBe(false);
 });
 
-test("parent POST theme-read 403; tutor POST 403; student POST 200 then GET shows read:true", async () => {
+test("theme-read is retired: parent, tutor and student POSTs are all refused, and the view shows no read mark", async () => {
   const f = await fixture(), path = `/api/students/${f.studentId}/study-guide/theme-read`;
   expect((await f.send(path, { who: "multi", body: tick(f, "parent") })).status).toBe(403);
   expect((await f.send(path, { who: "multi", body: tick(f, "tutor") })).status).toBe(403);
-  const done = await f.send(path, { who: "learner", body: tick(f, "student") });
-  expect(done).toMatchObject({ status: 200, body: { ok: true, themeId: "cloud", read: true, version: 1 } });
-  expect((await f.send(path, { who: "learner", body: tick(f, "student") })).status).toBe(409);
-  expect((await f.send(view(f.studentId, "tutor"), { who: "multi" })).body.view.base.themes[0]).toMatchObject({ read: true, readVersion: 1 });
+  expect((await f.send(path, { who: "learner", body: tick(f, "student") })).status).toBe(403);
+  expect((await f.send(view(f.studentId, "tutor"), { who: "multi" })).body.view.tickable).toBe(false);
+  // Nothing was written: no tick row exists after any of the refused posts.
+  expect(await f.owner(async () => f.db.select().from(s.studyThemeRead))).toEqual([]);
   // Cross-site and malformed writes never reach the service.
   expect((await f.send(path, { who: "learner", body: tick(f, "student", { expectedVersion: 1 }), headers: { origin: "https://evil.example" } })).status).toBe(403);
   expect((await f.send(path, { who: "learner", body: { ...tick(f, "student"), extra: 1 } })).status).toBe(400);

@@ -5,7 +5,6 @@ import { textSizes, tikkunViews, useReadingPrefs, useSetReadingPrefs } from "./r
 import { MAX_INLINE_WORKS, STUDY_WORKS, useStudyLens } from "./study-lens";
 import { COMMENTARY_WORKS } from "../../../lib/readings/commentary";
 import { icons } from "./study/lift";
-import { SourcesDockItem } from "./study/verse-panel";
 
 /** Short names for the Works menu; the full title and edition are in each work's credit. */
 export const WORK_LABELS: Readonly<Record<string, string>> = Object.freeze({ rashi: "Rashi", womens: "Women’s Commentary", ramban: "Ramban", "ibn-ezra": "Ibn Ezra",
@@ -20,7 +19,7 @@ export function workCoverageNote(key: string): "Torah only" | "Prophets only" | 
 /** One toolbar drives every verse on the page through shared preferences. On a phone it is the tool dock (1.9 N4): fixed in the thumb zone above the tab bar, hidden only
  *  while the on-screen keyboard is open, and measured so the passage keeps matching padding below it (globals.css, --dock-h). On a wide screen it is the rail beside the text. */
 /** The Tikkun control appears only beside Torah text in Lein; a haftarah is read from a printed book, not a scroll,
- *  and Study is about meaning. In Study, Works chooses the commentaries shown under each verse (`worksCorpus`
+ *  and Study is about meaning. In Study, Commentaries chooses the commentaries shown under each verse (`worksCorpus`
  *  says which ones cover this text: the Women's Commentary covers the Torah only). */
 export function ReadingToolbar({ onHear, listeningEnabled = false, tikkunAvailable = false, worksCorpus = "torah", englishHidden = false, practice }: { onHear?(): void; listeningEnabled?: boolean; tikkunAvailable?: boolean; worksCorpus?: "torah" | "neviim";
   /** The translate drill is hiding the English: the button then reads not pressed and says why it does nothing, and the reader's own choice is kept. */
@@ -52,17 +51,16 @@ export function ReadingToolbar({ onHear, listeningEnabled = false, tikkunAvailab
     })}
   </div>;
   // Study (2026-10-28) is a study sheet: it plays nothing and colours nothing, so its tools are a compact row at the top of the text, not the dock:
-  // English, Works, the text size and, where the reading has them, its Sources. Colors and Hear verse belong to Lein, and the colour preference is left as it was.
+  // English, Commentaries and the text size (v6: Sources moved to the end of the page). Colors and Hear verse belong to Lein, and the colour preference is left as it was.
   if (study) return <nav className="study-toolbar" aria-label="Reading tools" data-lens="study" data-testid="study-toolbar">
     <button type="button" className="study-tool" aria-pressed={lens.english} onClick={() => lens.setEnglish(!lens.english)}>{icons.translate}<span>English</span></button>
-    <button type="button" className="study-tool" popoverTarget={worksMenu} aria-label={`Works: ${shown.length ? shown.map(workLabel).join(", ") : "none"}`}>{icons.works}<span>Works</span></button>
+    <button type="button" className="study-tool" popoverTarget={worksMenu} aria-label={`Commentaries: ${shown.length ? shown.map(workLabel).join(", ") : "none"}`}>{icons.works}<span>Commentaries</span>{shown.length > 0 && <em className="study-tool-names">{shown.map(workLabel).join(", ")}</em>}</button>
     {worksPopover}
     <button type="button" className="study-tool" popoverTarget={menu} aria-label={`Text size: ${size.label}`}>{icons.size}<span>{size.label}</span></button>
     <div id={menu} popover="auto" className="toolbar-menu" role="group" aria-label="Hebrew text size">
       {textSizes.map(row => <button type="button" key={row.id} aria-pressed={prefs.size === row.id} data-size={row.id} onClick={event => { setReadingPrefs({ size: row.id }); hide(event); }}>
         <span className="toolbar-menu-sample" lang="he" dir="rtl" aria-hidden="true">אָ</span>{row.label}</button>)}
     </div>
-    <SourcesDockItem className="study-tool" wrapper="study-tool-sources" />
   </nav>;
   if (practice) {
     const listenWhy = `${id}-listen-why`, textMenu = `${id}-text`, englishOn = englishHidden && !study ? false : study ? lens.english : prefs.translation;
@@ -73,7 +71,6 @@ export function ReadingToolbar({ onHear, listeningEnabled = false, tikkunAvailab
           <button type="button" className="toolbar-item" data-testid="dock-listen" aria-disabled="true" aria-describedby={listenWhy} popoverTarget={`${listenWhy}-tip`}>{icons.hear}<span>Listen</span></button>
           <span id={listenWhy} className="sr-only">{practice.listenReason}</span>
           <div id={`${listenWhy}-tip`} popover="auto" className="toolbar-menu toolbar-note" data-testid="dock-listen-reason"><p>{practice.listenReason}</p></div></>}
-      <SourcesDockItem />
       <button type="button" className="toolbar-item" popoverTarget={textMenu} data-testid="dock-text">{icons.size}<span>Text</span></button>
       <div id={textMenu} popover="auto" className="toolbar-menu toolbar-menu-text" data-testid="dock-text-menu">
         <div role="group" aria-label="Reading tools">
@@ -108,7 +105,6 @@ export function ReadingToolbar({ onHear, listeningEnabled = false, tikkunAvailab
           onClick={event => { setReadingPrefs({ tikkunView: row.id }); (event.currentTarget.parentElement as HTMLElement & { hidePopover?(): void }).hidePopover?.(); }}>{row.label}</button>)}
       </div>
     </>}
-    <SourcesDockItem />
     <button type="button" className="toolbar-item" popoverTarget={menu} aria-label={`Text size: ${size.label}`}>{icons.size}<span>{size.label}</span></button>
     <div id={menu} popover="auto" className="toolbar-menu" role="group" aria-label="Hebrew text size">
       {textSizes.map(row => <button type="button" key={row.id} aria-pressed={prefs.size === row.id} data-size={row.id}

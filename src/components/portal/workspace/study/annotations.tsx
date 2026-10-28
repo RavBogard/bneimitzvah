@@ -98,13 +98,15 @@ export function useVerseColors(verse: StudyVerse, assignment: AssignmentEnding, 
   return useMemo(() => enabled ? colorStudyVerse(verse.ref, verse.hebrew, { kind, confirmed, verses: verses ? verses.split("\n") : [] }) : null, [enabled, verse, kind, confirmed, verses]);
 }
 
-export function StudyHebrew({ verse, colors, id, className = "", activeWord = null, onWordSelect, inline = false, wordAction = "word", toolsAvailable = true, linked = null, atoms = null, layout = null }: { verse: StudyVerse; inline?: boolean; colors: Ready | null; id: string; className?: string; activeWord?: number | null;
+export function StudyHebrew({ verse, colors, id, className = "", activeWord = null, onWordSelect, inline = false, wordAction = "word", toolsAvailable = true, linked = null, atoms = null, layout = null, marks = null }: { verse: StudyVerse; inline?: boolean; colors: Ready | null; id: string; className?: string; activeWord?: number | null;
   /** Side-by-side tikkun: the verse as aligned atoms, set in the rows `layout` gives (the same rows as the scroll column). */
   atoms?: readonly StudyAtom[] | null; layout?: TikkunLayout | null;
   /** `element` is the word that was chosen, so a card opened from it can hand focus back. */
   onWordSelect?(index: number, element?: HTMLElement): void; wordAction?: "word" | "verse" | "tools" | "phrase" | "card"; toolsAvailable?: boolean;
   /** Words a commentary quotes, underlined while its comment is pointed at (the comment-to-word link). */
-  linked?: DibburMatch | null }) {
+  linked?: DibburMatch | null;
+  /** Study's lemma letters: a small raised letter after the word a commentary's opening words end on (word index to its letters). */
+  marks?: ReadonlyMap<number, string> | null }) {
   const projection = useMemo(() => {
     if (colors) return colors.projection;
     const result = projectStudyVerse(verse.ref, verse.hebrew);
@@ -138,7 +140,7 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
     return <span key={index} role={button ? "button" : undefined} tabIndex={button ? tabStop ? 0 : -1 : undefined}
       data-word-index={part.wordIndex ?? undefined} data-family={family?.id} data-phrase={word?.phrase ?? undefined}
       data-phrase-end={family && part.wordIndex !== null && phraseEnds?.has(part.wordIndex) ? "" : undefined} data-reference-active={active ? "true" : undefined} data-linked={quoted ? "true" : undefined} className={[family ? styles.word : "", active ? referenceStyles.activeWord : "", quoted ? styles.linked : ""].filter(Boolean).join(" ") || undefined} style={family ? { "--phrase-color": phraseFill(family.id), "--w": part.wordIndex } as CSSProperties : undefined}
-      aria-describedby={[button ? actionId : undefined, phraseId].filter(Boolean).join(" ") || undefined}>{part.text}</span>;
+      aria-describedby={[button ? actionId : undefined, phraseId].filter(Boolean).join(" ") || undefined}>{part.text}{firstPart && part.wordIndex !== null && marks?.has(part.wordIndex) && <sup className="study-lemma-letter" aria-hidden="true" data-copy-skip="" lang="en" dir="ltr">{marks.get(part.wordIndex)}</sup>}</span>;
   }));
   // G18: the qere is what is chanted, so it is set full size (and is the tap target); the chip says so, and the ketiv, which the scroll writes, follows small.
   const alternative = (written: string, read: ReactNode) => <><span className="study-read-alternative">{read}</span> <span className="study-read-chip" lang="en" dir="ltr" data-copy-skip="">read<span className="sr-only">. Chant this word (qere). The scroll writes it differently (ketiv).</span></span> <span className="study-ketiv" data-testid="study-ketiv">{maqafChains(written).map((run, at) => run.chain ? <span key={at} className={styles.chain}>{run.text}</span> : run.text)}</span></>;

@@ -1,7 +1,11 @@
 import "server-only";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
+import { eq } from "drizzle-orm";
+import * as s from "../db/index";
 import { readProductName } from "../data/product-name";
+import { currentSettings } from "../data/tenant-settings";
+import { effectiveRabbiName } from "../settings/validation";
 import { sourceSefariaUrl } from "../../lib/readings/shelf";
 import { claudeTranslationCredit, selectedByDetail } from "../../lib/discussions/labels";
 import type { PinnedEdition, PinnedSourceReader, SourceText } from "../study/source-text";
@@ -17,12 +21,16 @@ import { publicDiscussionRows, type PublicSourceRow } from "./data";
  * past that, further discussions are left out (truncated: true), rather than failing the whole answer.
  */
 export const PUBLIC_DISCUSSION_LIMITS = Object.freeze({ discussions: 8, fetches: 48, concurrency: 6, deadlineMs: 8000, answerBytes: 1536 * 1024 });
-export type PublicDiscussionsRead = Readonly<{ rows: readonly PublicSourceRow[]; truncated: boolean; productName: string }>;
+export type PublicDiscussionsRead = Readonly<{ rows: readonly PublicSourceRow[]; truncated: boolean; productName: string;
+  /** The rabbi's display name from the congregation's settings, for the reader's "From {name}" label; absent where a harness has none. */
+  rabbiName?: string }>;
 
 /** One read transaction's worth: the rows for these verses and the product name the translation credit needs. */
 export async function readPublicDiscussions<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, verses: readonly string[]): Promise<PublicDiscussionsRead> {
   const { rows, truncated } = await publicDiscussionRows(tx, tenantId, verses, PUBLIC_DISCUSSION_LIMITS.discussions);
-  return Object.freeze({ rows, truncated, productName: rows.length ? await readProductName(tx, tenantId) : "" });
+  if (!rows.length) return Object.freeze({ rows, truncated, productName: "" });
+  const [tenant] = await tx.select({ customs: s.tenant.customs }).from(s.tenant).where(eq(s.tenant.id, tenantId)).limit(1);
+  return Object.freeze({ rows, truncated, productName: await readProductName(tx, tenantId), rabbiName: effectiveRabbiName(await currentSettings(tx, tenantId), tenant?.customs) });
 }
 
 type Fetch = Readonly<{ ref: string; edition: PinnedEdition }>;

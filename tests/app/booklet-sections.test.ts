@@ -24,10 +24,12 @@ function reading(kind: "torah" | "haftarah", refs: string[], aliyahStarts: strin
   const chapter = { ref: refs[0].replace(/:\d+$/, ""), sefariaUrl: "https://example.test/c", fetchedAt: 0, hash: "x".repeat(64), editions: EDITIONS };
   return { reading: row, text: { verses: refs.map(verse), chapters: [chapter as never] }, guide };
 }
-const guide = (kind: "torah" | "haftarah", noteRef: string): StudentGuideView => ({ kind, readingKey: kind === "torah" ? "vayeshev" : null, tickable: false, additions: null,
-  base: { version: 1, label: LABEL, overview: "A synthetic overview of the whole portion.", updatedAt: "2026-10-28T00:00:00Z",
-    themes: [{ id: "first-theme", title: "A synthetic theme", intro: "A synthetic intro.", read: false, readVersion: 0,
-      notes: [{ verseRef: noteRef, body: "A synthetic note.", sources: [{ id: "s1", ref: "Rashi on Genesis 37:2:1", indexTitle: "Rashi on Genesis", category: "Commentary", labels: { en: "Rashi", he: null }, readable: true }] }] }] } });
+const theme = (id: string, title: string, noteRef: string, body: string) => ({ id, title, intro: "A synthetic intro.", read: false, readVersion: 0,
+  notes: [{ verseRef: noteRef, body, sources: [{ id: "s1", ref: "Rashi on Genesis 37:2:1", indexTitle: "Rashi on Genesis", category: "Commentary", labels: { en: "Rashi", he: null }, readable: true }] }] });
+/** Study v6: the base guide still arrives with themes here (a stale payload), and must never print; only the additions' notes do. */
+const guide = (kind: "torah" | "haftarah", noteRef: string): StudentGuideView => ({ kind, readingKey: kind === "torah" ? "vayeshev" : null, tickable: false,
+  additions: { version: 1, label: { origin: "rabbi", reviewed: true, rabbiName: "Synthetic Rabbi" }, updatedAt: "2026-10-28T00:00:00Z", themes: [theme("student--for-you", "A rabbi theme for you", noteRef, "A rabbi-written note.")] },
+  base: { version: 1, label: LABEL, overview: "A synthetic overview of the whole portion.", updatedAt: "2026-10-28T00:00:00Z", themes: [theme("first-theme", "A claude base theme", noteRef, "A claude base note.")] } });
 const TORAH = ["Genesis 37:1", "Genesis 37:2", "Genesis 37:3", "Genesis 37:4"], HAFTARAH = ["Amos 2:6", "Amos 2:7"];
 const part = (unitId: string, lesson: string | null): BookletPart => ({ unitId, name: unitId, lesson, material: {} as never, teaching: lesson ? { text: "A synthetic teaching.", approved: "2026-10-24" } : null });
 const full: BookletInput = { student: STUDENT, tutor: "Synthetic Tutor", parts: [part("torah.blessing-before-the-torah-reading@bm-shacharit", "torah-before"), part("shma.shma@bm-shacharit", "shma")],
@@ -49,7 +51,7 @@ describe("the study booklet's sections", () => {
     const runs = aliyahRuns(full.torah!.reading, full.torah!.text.verses);
     expect(runs.map(run => [run.label, run.verses.map(v => v.ref)])).toEqual([["Aliyah 1", ["Genesis 37:1", "Genesis 37:2"]], ["Aliyah 2", ["Genesis 37:3", "Genesis 37:4"]]]);
     expect(aliyahRuns(full.haftarah!.reading, full.haftarah!.text.verses).map(run => run.label)).toEqual([null]);
-    expect(notesOn(full.torah!.guide, runs[0].verses).map(note => note.verseRef)).toEqual(["Genesis 37:2"]);
+    expect(notesOn(full.torah!.guide, runs[0].verses).map(note => [note.verseRef, note.note.body])).toEqual([["Genesis 37:2", "A rabbi-written note."]]);
     expect(notesOn(full.torah!.guide, runs[1].verses)).toEqual([]);
     expect(bookletRange([{ ref: "Genesis 37:23" }, { ref: "Genesis 38:5" }])).toBe("Genesis 37:23–38:5");
   });
@@ -78,6 +80,9 @@ describe("the study booklet's sections", () => {
       expect(markup).toContain("Written by Claude for CRC · not yet reviewed by Synthetic Rabbi");
       expect(markup).toContain(bookletTitle("Noa", "Synthetic").replace("'", "&#x27;"));
       expect(markup).not.toMatch(/translit/i);
+      // Study v6: the base guide's themes and verse notes never print; its overview and this student's rabbi-written notes do.
+      expect(markup).not.toContain("A claude base note."); expect(markup).not.toContain("A claude base theme"); expect(markup).not.toContain("Themes");
+      expect(markup).toContain("A synthetic overview of the whole portion."); expect(markup).toContain("A rabbi-written note.");
     }
     expect(bookletTitle("Noa", "Synthetic")).toBe("Noa Synthetic's study booklet");
     expect(bookletHref(STUDENT.id)).toBe(`/print/booklet/${STUDENT.id}`);

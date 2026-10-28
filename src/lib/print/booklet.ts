@@ -29,7 +29,7 @@ type Edition = StudyChapter["editions"][number];
 export type BookletSection =
   | Readonly<{ kind: "cover"; name: string; ceremonyDate: string; rehearsals: readonly string[]; tutor: string | null; readings: readonly CoverReading[] }>
   | Readonly<{ kind: "blessings"; groups: readonly BlessingGroup[] }>
-  | Readonly<{ kind: "about"; reading: BookletKind; overview: string; themes: readonly Readonly<{ title: string; intro: string }>[]; label: GuideLabel }>
+  | Readonly<{ kind: "about"; reading: BookletKind; overview: string; label: GuideLabel }>
   | Readonly<{ kind: "reading"; reading: BookletKind; ranges: readonly string[]; aliyot: readonly BookletAliyah[] }>
   | Readonly<{ kind: "practice"; reading: BookletKind; ranges: readonly string[]; verses: readonly StudyVerse[] }>
   | Readonly<{ kind: "service"; parts: readonly BookletPart[] }>
@@ -62,11 +62,11 @@ export function aliyahRuns(reading: Pick<Reading, "kind" | "aliyahStarts" | "ver
   return runs;
 }
 
-/** The guide's notes on these verses in verse order, base guide before the tutor's additions, each with its theme's title and review label. */
+/** The notes on these verses in verse order: only the rabbi-written additions for this student, each with its theme's title and review label. The Claude-written base guide's verse notes never print (Study v6, Daniel 2026-10-28). */
 export function notesOn(guide: StudentGuideView | null, verses: readonly StudyVerse[]): BookletNote[] {
   if (!guide) return [];
   const order = new Map(verses.map((verse, index) => [verse.ref, index])), out: BookletNote[] = [];
-  for (const part of [guide.base, guide.additions]) {
+  for (const part of [guide.additions]) {
     if (!part) continue;
     for (const theme of part.themes) for (const note of theme.notes) if (order.has(note.verseRef)) out.push({ verseRef: note.verseRef, theme: theme.title, note, label: part.label });
   }
@@ -85,7 +85,7 @@ export function bookletSections(input: BookletInput, portionName: (reading: Read
     parts: BLESSING_LESSONS[kind].flatMap(lesson => input.parts.filter(part => part.lesson === lesson && part.material !== null)) })) });
   for (const [kind, row] of readings) {
     const base = row.guide?.base;
-    if (base && (base.overview.trim() || base.themes.length)) sections.push({ kind: "about", reading: kind, overview: base.overview, themes: base.themes.map(theme => ({ title: theme.title, intro: theme.intro })), label: base.label });
+    if (base && base.overview.trim()) sections.push({ kind: "about", reading: kind, overview: base.overview, label: base.label });
     sections.push({ kind: "reading", reading: kind, ranges: row.reading.ranges, aliyot: aliyahRuns(row.reading, row.text.verses).map(run => ({ ...run, notes: notesOn(row.guide, run.verses) })) });
     sections.push({ kind: "practice", reading: kind, ranges: row.reading.ranges, verses: row.text.verses });
   }

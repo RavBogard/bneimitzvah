@@ -17,8 +17,6 @@ import { LensSwitch } from "../lens-switch";
 import { StudyRows } from "./study-rows";
 import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi, workStatuses } from "./commentary-view";
 import { VersePanelScope, WordPanelSource } from "./verse-panel";
-import { StudySummary } from "./portion-summary";
-import { parashahSlug } from "../../../../lib/portion-summary/reading";
 import type { WordPanelHost } from "./word-panel";
 import { ReadingPlace, scrollToVerse } from "./reading-place";
 import { aliyahPosition } from "../../../../lib/readings/aliyah-starts";
@@ -29,7 +27,8 @@ import { PortalRequestError } from "../../api";
 import { watchReadingAudioDeadline } from "./reading-player-intent";
 import type { ShortReferenceOwner } from "./short-reference-bridge";
 import type { GuideStore } from "./guide-store";
-import { notesFor } from "./guide-card";
+import { additionsFor, themeHeadings } from "./notes-model";
+import { firstLine } from "./markdown-lite";
 
 const noGuide = () => () => {}, noVersion = () => 0;
 /** The guide's view for one text, kept current; null without a guide. */
@@ -215,6 +214,11 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const corpus = state.kind === "haftarah" ? "neviim" : "torah";
   const guideView = useGuideView(guide, state.kind);
   const { rashi, works } = useReadingWorks(commentaryRefs, { ready: commentaryRefs.length > 0, study, chosen: lens.works, corpus: state.kind === "torah" ? "torah" : "neviim" });
+  // Study's notes (v6): only the rabbi-written per-student notes and headings come from the guide; the base guide's notes and themes are never drawn.
+  const workStates = useMemo(() => (ref: string) => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) })), [works]);
+  const additionsOf = useCallback((ref: string) => additionsFor(guideView, ref), [guideView]);
+  const readingVerses = baseline?.readings.find(row => row.kind === state.kind)?.verses;
+  const headings = useMemo(() => themeHeadings(guideView, readingVerses ?? [], firstLine), [guideView, readingVerses]);
   const clearLink = leinLink.clear;
   useEffect(() => { clearLink(); }, [livePage, study, clearLink]);
   useEffect(() => { if (shown) onShown?.(...shown); }, [livePage]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -308,11 +312,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     {sections.length > 0 && <SectionTabs sticky label="Reading sections" current={sectionNow >= 0 ? sections[sectionNow].n : null}
       tabs={[...sections.map(row => ({ id: row.n, label: row.label })), ...onService ? [{ id: SERVICE_CHIP, label: "Service parts" }] : []]}
       onSelect={id => { if (id === SERVICE_CHIP) onService?.(); else goSection(sections.findIndex(row => row.n === id)); }} />}
-    {/* The portion summary (1.9 N7), atop Study: only an approved one, only on a calendar parashah's Torah. A line goes to its aliyah only where the tutor
-        recorded the whole portion aliyah by aliyah (seven sections); a student's own divisions are not the calendar's, so then the outline is plain text. */}
+    {/* Study's About card (v6) is the one overview: the guide's, else the approved portion summary's text. The old summary block and its outline are gone. */}
     {study && renderIntro && <div className="study-intro">{renderIntro(kind)}</div>}
-    {study && kind === "torah" && <StudySummary slug={parashahSlug(assignment?.readingKey)} active={active && !concealed} aliyot={sections.length >= 7 ? sections.map(row => row.n) : undefined}
-      onAliyah={n => { const target = sections.find(row => row.n === n); if (target && assignment) jumpTo(assignment.verses[target.start]); }} />}
     {!current || current.loading ? <p role="status">Loading the assigned text…</p> : current.error ? <div role="status" data-testid="study-text-state" data-text-state={current.error === 409 ? "assignment-changed" : [401, 403, 404].includes(current.error) ? "access-changed" : "unavailable"}><h4>{current.error === 409 ? "Assignment changed" : [401, 403, 404].includes(current.error) ? "Text access changed" : "Text unavailable"}</h4>
       <p>{current.error === 409 ? learner ? "Your reading was just updated. Load the new version to keep going." : "Refresh the reading metadata before loading this assignment’s text again." : learner ? "The verses didn’t load. Check your connection and try again." : "No previous text is being shown. Confirmed references and the reading review form remain separate."}</p>
       <button className="button-secondary" onClick={() => { if (current.error === 409) void reloadMetadata().catch(() => undefined); else void explicitLoad(kind, selection.current?.offset ?? 0); }}>{current.error === 409 ? "Refresh reading and text" : "Reload assigned text"}</button>
@@ -322,9 +323,9 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
         <CommentaryStatus works={workStatuses(works, corpus)} />
         <ReadingPlace refs={assignment!.verses} pageKey={wordScope} onJump={jumpTo} />
         <StudyRows verses={livePage.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} showEnglish={lens.english}
-          sections={aliyahSections(kind, assignment!, livePage.verses)} works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))}
-          notes={renderGuide ? ref => renderGuide(kind, ref) : undefined} hasNotes={guide ? ref => notesFor(guideView, ref).length > 0 : undefined}
-          onPick={ref => { setPicked(ref); onVisit?.(kind, ref); }} onTools={(ref, opener) => openTools(ref, opener)} />
+          sections={aliyahSections(kind, assignment!, livePage.verses)} works={workStates}
+          additions={additionsOf} headings={headings} rabbiName={guideView?.additions?.label.rabbiName ?? guideView?.base?.label.rabbiName}
+          onPick={ref => { setPicked(ref); onVisit?.(kind, ref); }} />
       </> : <FlowingStudyText verses={livePage.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord} listening={listeningEnabled} showEnglish={songSession && prefs.translation} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
         sections={aliyahSections(kind, assignment!, livePage.verses)} linked={linkedVerse(leinLink, livePage.verses)}
         onNumber={practising ? (index, opener) => { openTools(livePage!.verses[index].ref, opener); onVisit?.(kind, livePage!.verses[index].ref); } : undefined} gotIt={gotIt ? ref => gotIt(kind, ref) : undefined}
@@ -381,7 +382,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
             {listeningEnabled && <button type="button" className="button-secondary" onClick={() => hear(livePage!, livePage!.verses.indexOf(toolsVerse))}>Hear verse</button>}
           </div>}
           {!songSession && !study && <p className="study-english" data-testid="detail-english" lang="en" dir="ltr">{toolsVerse.english ?? "English reference unavailable for this verse."}</p>}
-          <Apparatus verse={toolsVerse} learner={learner} />{renderGuide?.(kind, toolsVerse.ref)}
+          <Apparatus verse={toolsVerse} learner={learner} />{!study && renderGuide?.(kind, toolsVerse.ref)}
           {!study && <VerseRashi verse={toolsVerse} state={rashi.lookup.forVerse(toolsVerse.ref)} link={leinLink} retry={rashi.retry} />}
           {!concealed && <SourcesPanel key={`sources:${JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage!.offset, generation.current, toolsVerse.ref])}`}
             scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage!.offset, generation.current, toolsVerse.ref])} baseline={baseline} kind={kind} offset={livePage!.offset + livePage.verses.indexOf(toolsVerse)} onRefreshReading={reloadMetadata} />}
