@@ -129,3 +129,32 @@ it("keeps unknown-slot manual review truthful and rejects false derived dates or
  const holiday=parseReadingProposal({...empty(),manualFallback:"holiday",snapshot:{...empty().snapshot,reading:{parashah:"Synthetic holiday",source:"Hebcal",type:"holiday",aliyot:[aliyah(1,"Genesis 1:1-3")],triennial:null}}},"torah",student.ceremonyDate);
  expect(holiday.status==="needs-selection" && holiday.choices.length===0).toBe(true);
 });
+
+// Readings for everyone E2: the workspace reading's title block, as its pure model. The pages render it with the shared ReaderTitle.
+import { titleLineText, titleName, titlePillKeys, titleReading } from "../../src/components/portal/workspace/reading-title";
+const synthetic = (kind: "torah" | "haftarah", ranges: string[]) => ({ id: kind, kind, ranges, verses: [], basis: "custom", revision: 1, needsReview: false, aliyahStarts: null, confirmationDate: null, source: { status: "unknown", fetchedAt: null, date: null, calendar: null, attribution: null } }) as never;
+
+it("names the student, then one muted line: Beit Mitzvah, the date and the Torah ranges (the one wording test for the line)", () => {
+  expect(titleName({ firstName: "Synthetic", lastName: "Learner" })).toBe("Synthetic Learner");
+  expect(titleLineText("Sat, May 1, 2027", titleReading([synthetic("torah", ["Genesis 23:1-9"])], false))).toBe("Beit Mitzvah · Sat, May 1, 2027 · Torah Genesis 23:1\u20139");
+  // Two readings: the line names the Torah; the summaries under it carry both.
+  expect(titleReading([synthetic("haftarah", ["Isaiah 1:1-2"]), synthetic("torah", ["Genesis 1:1-3"])], false)).toBe("Torah Genesis 1:1\u20133");
+  expect(titleReading([synthetic("haftarah", ["Isaiah 1:1-2"])], false)).toBe("Haftarah Isaiah 1:1\u20132");
+});
+
+it("says only the date while no reading is assigned or the portion is only being explored", () => {
+  expect(titleLineText("Sat, May 1, 2027", titleReading([], false))).toBe("Beit Mitzvah · Sat, May 1, 2027");
+  expect(titleLineText("Sat, May 1, 2027", titleReading([synthetic("haftarah", ["Isaiah 1:1-2"])], true))).toBe("Beit Mitzvah · Sat, May 1, 2027");
+});
+
+it("gives a learner one pill, Change, and staff two, Change and Manage", () => {
+  expect(titlePillKeys(false)).toEqual(["change"]);
+  expect(titlePillKeys(true)).toEqual(["change", "manage"]);
+});
+
+it("keeps the page's tabs, the Start reading and Refresh reading buttons and the Set divisions full stop out of the reading page", async () => {
+  const { readFileSync } = await import("node:fs");
+  const source = readFileSync("src/components/portal/workspace/reading.tsx", "utf8");
+  for (const gone of ['aria-label="Student page"', 'role="tablist"', ">Start reading<", 'className="hero-icon"', "Set divisions."]) expect(source).not.toContain(gone);
+  expect(source).toContain("SECTION_IDS.service"); expect(source).toContain("SECTION_IDS.lessons");
+});

@@ -1,7 +1,4 @@
-import { StudentWorkspace } from "../../../components/portal/workspace/students";
-import type { Metadata } from "next";
-import { signedInTitle } from "../../../lib/site/signed-in-title";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: signedInTitle("Your assigned students") };
-
-export default function TutorPage() { return <StudentWorkspace mode="tutor" />; }
+/** The tutor's list of students is Your students on the shelf now (Readings for everyone D7, E2). A student's own page, /workspace/tutor/<id>, stays. */
+export default function TutorRedirect() { redirect("/mine"); }

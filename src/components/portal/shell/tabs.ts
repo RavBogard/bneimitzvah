@@ -6,11 +6,6 @@ export type ShellRole = Role;
 export type TabIcon = "week" | "students" | "people" | "more";
 export type ShellTab = { key: string; label: string; href: string; icon: TabIcon; current: boolean };
 
-/** The three views of a student's page, and the value each takes in `?tab=`. */
-export const readingTabs = ["reading", "service", "lessons"] as const;
-export type ReadingTab = (typeof readingTabs)[number];
-export const parseReadingTab = (value: string | null | undefined): ReadingTab | null => readingTabs.find(tab => tab === value) ?? null;
-
 /** Highest authority first: where a page that belongs to no one role (Account, Email) takes its tabs from, absent a remembered role. */
 const priority: readonly ShellRole[] = ["admin", "tutor", "parent", "student"];
 

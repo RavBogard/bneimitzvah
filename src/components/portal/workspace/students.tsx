@@ -1,9 +1,6 @@
 "use client";
-import { AccountRequestsLine } from "./accounts/workspace";
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { parseReadingTab } from "../shell/tabs";
 import Link from "next/link";
 import { workspaceApi, type Student } from "./api";
 import { ChildPracticeDisclosure } from "../practice-visibility/disclosure";
@@ -14,11 +11,12 @@ import { reconcileSelectedStudent, sortStudentsByCeremony } from "./student-labe
 import { HonorsCardLine, HonorsEntry, HonorsNote } from "./honors/sheet";
 import { DocumentTitle } from "./document-title";
 
+/**
+ * A student's reading page: /mine/reading (mode student, the signed-in student's own), /mine/child/<id> (mode parent) and /workspace/tutor/<id> (mode tutor).
+ * The lists that used to open these (the student, parent and tutor home pages) are the shelf now, so a page names its student.
+ */
 export function StudentWorkspace({ mode, studentId }: { mode: "student" | "parent" | "tutor"; studentId?: string }) {
-  const { summary } = useWorkspace();
-  // A tutor an admin chose to approve accounts sees waiting requests here, as admins do on Students.
-  return <RequireRole role={mode}>{mode === "tutor" && !studentId && summary.approver && !summary.roles.includes("admin") && <AccountRequestsLine mode="tutor" />}
-    <StudentSelection key={studentId ?? ""} mode={mode} routeStudentId={studentId} /></RequireRole>;
+  return <RequireRole role={mode}><StudentSelection key={studentId ?? ""} mode={mode} routeStudentId={studentId} /></RequireRole>;
 }
 
 /** A student as a card: name first, then the date and how far away it is. */
@@ -37,8 +35,8 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
   const [rows, setRows] = useState<Student[]>([]), [selected, setSelected] = useState<string | null>(null), [error, setError] = useState(false), [loading, setLoading] = useState(true), [more, setMore] = useState(false);
   const [retry, setRetry] = useState(0), gate = useRef(false), sequence = useRef(0);
   const [paging, setPaging] = useState(false);
-  // ?tab= is the view of a student's page (Reading, Service parts, Lessons); a tutor's student cards open that same view. "honors" brings a parent to Family honors.
-  const tabParam = useSearchParams().get("tab"), viewTab = parseReadingTab(tabParam), honorsView = mode === "parent" && tabParam === "honors";
+  // "?tab=honors" brings a parent to Family honors on the child's page.
+  const search = useSearchParams(), honorsView = mode === "parent" && search.get("tab") === "honors";
   const abort = useRef<AbortController | null>(null), rowsRef = useRef(rows), selectedRef = useRef(selected);
   rowsRef.current = rows; selectedRef.current = selected;
   const ordered = useMemo(() => sortStudentsByCeremony(rows), [rows]), strip = useRef<HTMLUListElement | null>(null);
@@ -110,21 +108,22 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
   const selectedRow = rows.find(row => row.id === selected), selectedName = `${selectedRow?.firstName ?? ""} ${selectedRow?.lastName ?? ""}`;
   // A parent's honors row follows the "This week" summary (focused when the Honors tab brought the parent here).
   const selectedHonors = selected && !context && mode === "parent" ? <HonorsEntry key={`parent:${selected}`} mode="parent" studentId={selected} name={selectedName} focusOnShow={honorsView} /> : undefined;
-  const heading = mode === "student" ? "Your assigned reading" : mode === "parent" ? "Your children’s readings" : "Your assigned students";
+  const heading = mode === "student" ? "Your reading" : mode === "parent" ? "Your child’s reading" : "Your students";
   const focused = Boolean(routeStudentId);
   // On a student's own page the h1 is the student's name (and so is the tab title), once the list has said who that is.
   // A parent with one child has no list to choose from: the page is that child's summary, headed with the child's name.
   const onlyChild = mode === "parent" && !more && rows.length === 1;
   const named = focused || onlyChild ? rows.find(row => row.id === selected) : undefined, studentName = named ? `${named.firstName} ${named.lastName}` : null;
-  return <section className={`role-workspace${focused ? " role-workspace-focused" : ""}`}>{studentName ? <><h1 className="sr-only"><bdi dir="auto">{studentName}</bdi></h1><DocumentTitle heading={studentName} /></> : <h1 className="sr-only">{heading}</h1>}
-    {mode !== "student" && !focused && !selected && <p className="selection-lede">{mode === "parent" ? "Choose a child to see their reading." : "Who are you teaching today?"}</p>}
+  // A chosen student's page has the reading's title block for its h1 (the loading and failure states carry their own); until one is chosen the page has an h1 of its own.
+  const parentTitle = mode === "parent" && named ? `${named.firstName}’s reading` : studentName;
+  return <section className={`role-workspace${focused ? " role-workspace-focused" : ""}`}>{parentTitle && <DocumentTitle heading={parentTitle} />}{!selected && <h1 className="sr-only">{heading}</h1>}
     {loading ? <p role="status">Loading available students…</p> : error ? <div role="alert"><p>Students couldn’t be loaded. No previous selection is being shown.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload students</button></div>
       : !rows.length ? <p>No student is currently linked to this role. Ask the congregation for help with your assignment.</p>
-        : <>{(mode !== "student" || rows.length !== 1) && <><ul ref={strip} className={`student-cards${focused || selected ? " student-cards-compact" : ""}`} aria-label={mode === "parent" ? "Child" : "Student"}>{ordered.map(row => <li key={row.id}>
-            {mode === "tutor" ? <WorkspaceLink href={`/workspace/tutor/${row.id}${viewTab ? `?tab=${viewTab}` : ""}`} className="student-card" data-student-id={row.id} aria-current={selected === row.id ? "page" : undefined}><StudentCardBody row={row} practice={!focused && !selected} /></WorkspaceLink>
+        : <>{(mode !== "student" || rows.length !== 1) && !(mode === "parent" && focused) && <><ul ref={strip} className={`student-cards${focused || selected ? " student-cards-compact" : ""}`} aria-label={mode === "parent" ? "Child" : "Student"}>{ordered.map(row => <li key={row.id}>
+            {mode === "tutor" ? <WorkspaceLink href={`/workspace/tutor/${row.id}`} className="student-card" data-student-id={row.id} aria-current={selected === row.id ? "page" : undefined}><StudentCardBody row={row} practice={!focused && !selected} /></WorkspaceLink>
               : <button type="button" className="student-card" data-student-id={row.id} aria-pressed={selected === row.id} onClick={() => { void guardDeparture().then(leave => { if (leave) setSelected(row.id); }); }}><StudentCardBody row={row} honors={mode === "parent" && rows.length > 1 && !focused && !selected} /></button>}
           </li>)}</ul>{more && <button className="button-text" disabled={paging} onClick={() => void loadMore()}>{paging ? "Loading students…" : "Load more students"}</button>}</>}
-          {focused && !selected && <div className="workspace-state" data-testid="student-not-found"><h2>Student not found</h2><p>This student isn’t in your list. Choose one of your students above.</p></div>}
+          {focused && !selected && <div className="workspace-state" data-testid="student-not-found"><h2>Student not found</h2>{mode === "parent" ? <p>This student isn’t in your list. <Link href="/mine">My Readings</Link></p> : <p>This student isn’t in your list. Choose one of your students above.</p>}</div>}
           {selected && <ReadingPanel mode={mode} studentId={selected} onStudentReload={reconcileStudent} afterSummary={selectedHonors} />}
           {/* An adult's own honors entry sits after the reading (G20). A parent's sits right after the summary, inside the panel (above). */}
           {selected && !context && mode === "student" && selectedRow?.ownAdultHonors === true && <HonorsEntry key={`student:${selected}`} mode="student" studentId={selected} name={selectedName} />}
@@ -134,8 +133,8 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
 
 export function PracticeWorkspace({ studentId }: { studentId: string }) {
   const { context, busy } = useWorkspace(), router = useRouter();
-  useEffect(() => { if (!context && !busy) router.replace("/workspace/parent"); }, [context, busy, router]);
-  if (!context || context.studentId !== studentId) return <section className="workspace-state"><h1>Choose a child to practice</h1><p>This tab does not have a matching practice selection. Reloading never restores a practice handle.</p><Link href="/workspace/parent">Choose a linked child</Link></section>;
+  useEffect(() => { if (!context && !busy) router.replace("/mine"); }, [context, busy, router]);
+  if (!context || context.studentId !== studentId) return <section className="workspace-state"><h1>Open your child’s reading</h1><p>This tab does not have a matching practice selection. Reloading never restores a practice handle.</p><Link href="/mine">Open your child’s reading</Link></section>;
   return <RequireRole role="parent"><section className="role-workspace">
     <StudentSelection mode="parent" switching />
     <ReadingPanel mode="child-practice" studentId={studentId} />

@@ -1,7 +1,4 @@
-import { StudentWorkspace } from "../../../components/portal/workspace/students";
-import type { Metadata } from "next";
-import { signedInTitle } from "../../../lib/site/signed-in-title";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: signedInTitle("Your children’s readings") };
-
-export default function ParentPage() { return <StudentWorkspace mode="parent" />; }
+/** A parent's home is the shelf now, with a card for each child (Readings for everyone E2, E3). */
+export default function ParentRedirect() { redirect("/mine"); }

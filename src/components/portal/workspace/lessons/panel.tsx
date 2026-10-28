@@ -29,7 +29,7 @@ export function BeforeNext({ text, own }: { text: string; own: boolean }) {
   return <p className="lesson-before-next"><span className="lesson-before-next-label">{own ? "Before your next lesson:" : "Before next time:"}</span> <bdi dir="auto">{text}</bdi></p>;
 }
 
-export function LessonLog({ mode, studentId, register, tabbed }: { mode: ReadingMode; studentId: string; register(value: LessonReload): () => void; tabbed: boolean }) {
+export function LessonLog({ mode, studentId, register, tabbed, headingId }: { mode: ReadingMode; studentId: string; register(value: LessonReload): () => void; tabbed: boolean; headingId?: string }) {
   const { summary, epoch, readLessons, registerWork, registerDeparture } = useWorkspace();
   const staff = mode === "tutor" || mode === "admin", id = useId();
   const scope = JSON.stringify([summary.sessionBinding, epoch, mode, studentId]), scopeRef = useRef(scope); scopeRef.current = scope;
@@ -238,10 +238,10 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
       : { status: "ready", latest: latest ? { lessonDate: latest.lessonDate, displayName: latest.displayName, summary: latest.summary, beforeNext: latest.beforeNext } : null }, projectionTurn);
   }, [current, paused, scope, publish, projectionTurn]);
   const bytes = draft ? summaryBytes(draft.summary) : 0, nextBytes = draft ? summaryBytes(beforeNextValue(draft.beforeNext) ?? "") : 0, learner = mode === "student" || mode === "child-practice", title = staff ? "Lessons" : "Lesson notes";
-  return <section className={`lesson-log${tabbed ? " lesson-log-tabbed" : ""}`} aria-labelledby={`${id}-heading`} aria-busy={current?.loading || undefined}>
-    <div className="lesson-log-head"><h2 id={`${id}-heading`}>{title}</h2>
+  return <section className={`lesson-log${tabbed ? " lesson-log-tabbed" : ""}`} aria-labelledby={headingId ?? `${id}-heading`} aria-busy={current?.loading || undefined}>
+    <div className="lesson-log-head"><h2 id={headingId ?? `${id}-heading`} tabIndex={headingId ? -1 : undefined}>{title}</h2>
       {staff && tabbed && <p className="lesson-log-lede">Notes after each lesson. The student and their family can read them.</p>}
-      {staff && <button type="button" id={`${id}-add`} className="button-primary lesson-add" disabled={busy || !current?.page} onClick={event => open(null, event)}>Add lesson note</button>}</div>
+      {staff && <button type="button" id={`${id}-add`} data-lesson-add="" className="button-primary lesson-add" disabled={busy || !current?.page} onClick={event => open(null, event)}>Add lesson note</button>}</div>
     <p className="lesson-log-notice" role="status">{listNotice}</p>
     {!current || current.loading ? <p className="field-help">Loading lessons…</p>
       : current.error ? <div className="lesson-log-empty"><p>{title} couldn’t be loaded.</p><button type="button" className="button-secondary" onClick={() => void retry()}>Try again</button></div>

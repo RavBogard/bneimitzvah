@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { adminArea, keyboardIsOpen, parseReadingTab, roleOfPath, shellRole, tabsFor, type ShellRole } from "../../src/components/portal/shell/tabs";
+import { adminArea, keyboardIsOpen, roleOfPath, shellRole, tabsFor, type ShellRole } from "../../src/components/portal/shell/tabs";
 
 // Area A: only the admin has a tab bar, and only on admin pages. Browser-measured checks are in e2e/tab-bar.spec.ts.
 const labels = (role: ShellRole, pathname: string, tab: string | null = null) => tabsFor({ role, pathname, tab }).map(item => item.label);
@@ -47,9 +47,6 @@ describe("the role whose tabs a page shows", () => {
     expect(roleOfPath("/workspace/more")).toBeNull();
     expect(roleOfPath("/workspace/admin/people")).toBe("admin");
   });
-  it("reads only the three views from ?tab=", () => {
-    expect(["reading", "service", "lessons", "honors", "", null, undefined, "READING"].map(value => parseReadingTab(value))).toEqual(["reading", "service", "lessons", null, null, null, null, null]);
-  });
 });
 
 describe("the on-screen keyboard", () => {
@@ -80,13 +77,14 @@ describe("the shell's files", () => {
     expect(stripped).toMatch(/@media \(min-width: 1000px\)[\s\S]*\.bar\[data-hidden\] \{ display: block; \}/);
   });
   it("write nothing to web storage (the student-work privacy test allows none)", () => {
-    for (const file of ["role-memory.ts", "tab-bar.tsx", "tab-param.ts", "tabs.ts", "more.tsx", "people-nav.tsx"]) {
+    for (const file of ["role-memory.ts", "tab-bar.tsx", "tabs.ts", "more.tsx", "people-nav.tsx"]) {
       expect(readFileSync(`src/components/portal/shell/${file}`, "utf8").replace(/\/\/.*$/gm, ""), file).not.toMatch(/sessionStorage|localStorage|indexedDB|document\.cookie/);
     }
   });
   it("keep the print links to the approved pair", () => {
-    const reading = readFileSync("src/components/portal/workspace/reading.tsx", "utf8"), study = readFileSync("src/components/portal/workspace/study/view.tsx", "utf8");
+    // The reading's print rows moved into the Manage sheet (Readings for everyone E3); the learner's own are in the study view.
+    const reading = readFileSync("src/components/portal/workspace/staff/manage-sheet.tsx", "utf8"), study = readFileSync("src/components/portal/workspace/study/view.tsx", "utf8");
     for (const source of [reading, study]) { expect(source).toContain("Print the whole reading"); expect(source).toContain("Print practice sheet"); }
-    expect(reading).not.toMatch(/service-entry/);
+    expect(readFileSync("src/components/portal/workspace/reading.tsx", "utf8")).not.toMatch(/service-entry/);
   });
 });

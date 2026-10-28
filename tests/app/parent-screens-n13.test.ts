@@ -29,8 +29,8 @@ test("every retired TP-14 row is gone from the parent, practice and honors scree
   for (const approved of ["Sit down with", "Open the honors form", "Remember to tap Save honors.", "Blessing from family", "Not part of my service", "Send a new code", "Sit with <bdi", "Practising with <bdi", "reading and practise with"]) expect(all).toContain(approved);
   expect(source("workspace/service-learning/panel.tsx")).toContain("Your service parts will show up here soon. Nothing you've practised is lost.");
   expect(source("entry.tsx")).toContain("RESEND_AFTER_MS = 60_000");
-  // The pre-choice line only shows before a child is chosen.
-  expect(source("workspace/students.tsx")).toMatch(/!focused && !selected && <p className="selection-lede">/);
+  // The pre-choice lines went with the lists they sat above: a child's page is opened from the shelf's card, so nothing here asks who to choose (E2, E5).
+  for (const retired of ["Choose a child to see their reading.", "Who are you teaching today?", "Choose a child to practice"]) expect(source("workspace/students.tsx")).not.toContain(retired);
 });
 
 test("the parent's honors row follows the summary inside the reading, and an adult's follows the reading", () => {

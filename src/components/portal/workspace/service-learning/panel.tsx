@@ -13,8 +13,8 @@ import { useCongregation } from "../settings/links";
 import { SiddurPageLink } from "../../siddur-link";
 
 export type ServiceReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
-export function ServiceLearningPanel({ id, mode, studentId, baseline, register, reloadReading, onDepartureActive, onVisit }: {
-  id: string; mode: ReadingMode; studentId: string; baseline: Assigned | null;
+export function ServiceLearningPanel({ id, headingId, mode, studentId, baseline, register, reloadReading, onDepartureActive, onVisit }: {
+  id: string; /** The heading's id, when a link names it (#service-parts). */ headingId?: string; mode: ReadingMode; studentId: string; baseline: Assigned | null;
   register(value: ServiceReload): () => void; reloadReading(): Promise<Assigned>; onDepartureActive(active: boolean): void;
   /** Called only when the reader chooses a part and it opens; a reload that restores the choice is not a visit. */
   onVisit?(plan: ServicePlan, unitId: string): void;
@@ -66,8 +66,8 @@ export function ServiceLearningPanel({ id, mode, studentId, baseline, register, 
   }
   const current = state.scope === scope ? state : null, assigned = current?.metadata;
   async function confirmed() { await reloadReading(); if (!metadata.current) throw new Error("Service plan reload unavailable"); return metadata.current; }
-  return <section id={id} className="service-learning-panel" aria-labelledby={`${id}-heading`}>
-    <h2 id={`${id}-heading`} tabIndex={-1}>Service parts</h2>
+  return <section id={id} className="service-learning-panel" aria-labelledby={headingId ?? `${id}-heading`}>
+    <h2 id={headingId ?? `${id}-heading`} tabIndex={-1}>Service parts</h2>
     {assigned?.state === "assigned" && <SiddurPageLink siddurUrl={congregation.links.siddurUrl} page={assigned.serviceStart} block>Your whole service in the siddur, from page {assigned.serviceStart}</SiddurPageLink>}
     <MyServicePanel mode={mode} studentId={studentId} baseline={baseline} onConnected={connectionChanged} />
     {(mode === "admin" || mode === "tutor") && baseline && current && !current.loading && !current.error && assigned && <FinishedParts key={`${scope}|${servicePlanKey(assigned)}`} mode={mode} studentId={studentId} firstName={baseline.student.firstName} />}

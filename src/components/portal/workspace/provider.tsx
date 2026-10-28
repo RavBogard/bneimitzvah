@@ -98,7 +98,7 @@ export const statusOf = (error: unknown) => error instanceof PortalRequestError 
 export const DENIAL_REFRESH_LIMIT = 3, DENIAL_REFRESH_WINDOW_MS = 60_000;
 /** Said when a parent's practice access ends; the notice also carries its kind, for a test or a style. */
 const PRACTICE_ACCESS_CHANGED = "Practice access changed. Choose an available child again.";
-const isParentPath = (path: string) => path === "/workspace/parent" || path.startsWith("/workspace/practice/");
+const isParentPath = (path: string) => path === "/mine" || path.startsWith("/mine/child/") || path.startsWith("/workspace/practice/");
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const router = useRouter(), pathname = usePathname();
@@ -169,7 +169,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             clearWork(); practice.invalidate(); setContext(null); setEpoch(value => value + 1);
             setNotice(PRACTICE_ACCESS_CHANGED);
             // Keep checking/hidden until this route's fresh session and roster finish.
-            router.replace("/workspace/parent"); return;
+            router.replace("/mine"); return;
           }
         }
       }
@@ -223,7 +223,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const timer = setTimeout(() => {
       if (practice.selection?.context.id !== context.id) return;
       clearWork(); practice.invalidate(); setContext(null); setEpoch(value => value + 1);
-      if (currentPath.current === `/workspace/practice/${context.studentId}`) { setNotice("This practice session expired. Choose a child to enter again."); router.replace("/workspace/parent"); }
+      if (currentPath.current === `/workspace/practice/${context.studentId}`) { setNotice("This practice session expired. Open your child’s reading again to practise."); router.replace("/mine"); }
     }, Math.min(remaining, 2_147_483_647));
     return () => clearTimeout(timer);
   }, [context, practice, router, clearWork]);
@@ -240,8 +240,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (next && route === routeRevision.current) { setContext(next); router.push(`/workspace/practice/${next.studentId}`); }
     } catch {
       if (route === routeRevision.current) {
-        setNotice("Practice selection couldn’t be confirmed. Choose a child again; no previous practice view has been restored.");
-        router.replace("/workspace/parent");
+        setNotice("Practice selection couldn’t be confirmed. Open your child’s reading again; no previous practice view has been restored.");
+        router.replace("/mine");
       }
     } finally { setBusy(false); }
   }
@@ -254,7 +254,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setBusy(true); setContext(null); setEpoch(value => value + 1);
     try { await practice.exit(); if (route === routeRevision.current) setNotice("You’re back in your read-only parent view."); }
     catch { if (route === routeRevision.current) setNotice("This tab no longer has an active practice view. Its server closure could not be confirmed; choose a child again if needed."); }
-    finally { setBusy(false); if (route === routeRevision.current) router.replace("/workspace/parent"); }
+    finally { setBusy(false); if (route === routeRevision.current) router.replace("/mine"); }
   }
   const read = useCallback(async (mode: ReadingMode, id: string, signal: AbortSignal) => {
     const generation = practice.generation, active = practice.selection;
@@ -265,7 +265,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       return value;
     } catch (error) {
       if (!signal.aborted && generation === practice.generation && mode === "child-practice" && currentPath.current === `/workspace/practice/${id}` && [401, 403, 404].includes(statusOf(error))) {
-        practice.invalidate(); setContext(null); setNotice(PRACTICE_ACCESS_CHANGED); setEpoch(value => value + 1); router.replace("/workspace/parent");
+        practice.invalidate(); setContext(null); setNotice(PRACTICE_ACCESS_CHANGED); setEpoch(value => value + 1); router.replace("/mine");
       }
       throw error;
     }
@@ -312,7 +312,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         const active = practice.selection;
         clearWork(); practice.invalidate(); setContext(null); setEpoch(value => value + 1);
         if (active && currentPath.current === `/workspace/practice/${active.context.studentId}`) {
-          setNotice(PRACTICE_ACCESS_CHANGED); router.replace("/workspace/parent");
+          setNotice(PRACTICE_ACCESS_CHANGED); router.replace("/mine");
         }
         quietEnvironment.current.refresh();
       },
@@ -327,7 +327,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       return value;
     } catch (error) {
       if (!signal.aborted && generation === practice.generation && mode === "child-practice" && currentPath.current === `/workspace/practice/${id}` && [401, 403, 404].includes(statusOf(error))) {
-        practice.invalidate(); setContext(null); setNotice(PRACTICE_ACCESS_CHANGED); setEpoch(value => value + 1); router.replace("/workspace/parent");
+        practice.invalidate(); setContext(null); setNotice(PRACTICE_ACCESS_CHANGED); setEpoch(value => value + 1); router.replace("/mine");
       }
       throw error;
     }
@@ -344,7 +344,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       return value;
     } catch (error) {
       if (!signal.aborted && generation === practice.generation && mode === "child-practice" && currentPath.current === `/workspace/practice/${id}` && [401, 403, 404].includes(statusOf(error)) && !(operation.type === "receipt" && statusOf(error) === 404)) {
-        clearWork(); practice.invalidate(); setContext(null); setNotice(PRACTICE_ACCESS_CHANGED); setEpoch(value => value + 1); router.replace("/workspace/parent");
+        clearWork(); practice.invalidate(); setContext(null); setNotice(PRACTICE_ACCESS_CHANGED); setEpoch(value => value + 1); router.replace("/mine");
       }
       throw error;
     }
@@ -358,7 +358,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       return value;
     } catch (error) {
       if (!signal.aborted && generation === practice.generation && mode === "child-practice" && currentPath.current === `/workspace/practice/${id}` && [401, 403, 404].includes(statusOf(error))) {
-        clearWork(); practice.invalidate(); setContext(null); setNotice(PRACTICE_ACCESS_CHANGED); setEpoch(value => value + 1); router.replace("/workspace/parent");
+        clearWork(); practice.invalidate(); setContext(null); setNotice(PRACTICE_ACCESS_CHANGED); setEpoch(value => value + 1); router.replace("/mine");
       }
       throw error;
     }
@@ -373,14 +373,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       return value;
     } catch (error) {
       if (!signal.aborted && generation === practice.generation && mode === "child-practice" && currentPath.current === `/workspace/practice/${id}` && [401, 403, 404].includes(statusOf(error))) {
-        clearWork(); practice.invalidate(); setContext(null); setNotice(PRACTICE_ACCESS_CHANGED); setEpoch(value => value + 1); router.replace("/workspace/parent");
+        clearWork(); practice.invalidate(); setContext(null); setNotice(PRACTICE_ACCESS_CHANGED); setEpoch(value => value + 1); router.replace("/mine");
       }
       throw error;
     }
   }, [practice, router, clearWork]);
   const deny = useCallback((status: number, mode: ReadingMode, id: string) => {
     if (status !== 401 && mode === "child-practice" && currentPath.current === `/workspace/practice/${id}`) {
-      clearWork(); practice.invalidate(); setContext(null); setNotice(PRACTICE_ACCESS_CHANGED); setEpoch(value => value + 1); router.replace("/workspace/parent");
+      clearWork(); practice.invalidate(); setContext(null); setNotice(PRACTICE_ACCESS_CHANGED); setEpoch(value => value + 1); router.replace("/mine");
     } else refreshAfterDenial(status);
   }, [practice, clearWork, router, refreshAfterDenial]);
   // Optional material (reference-audio metadata) can be refused for reasons of its own. Such a
@@ -508,7 +508,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (signal.aborted || !sameOwner() || ![401, 403, 404].includes(statusOf(error))) return;
       clearWork();
       if (base.mode === "child-practice" && currentPath.current === `/workspace/practice/${base.student.id}`) {
-        practice.invalidate(); setContext(null); setNotice(PRACTICE_ACCESS_CHANGED); setEpoch(value => value + 1); router.replace("/workspace/parent");
+        practice.invalidate(); setContext(null); setNotice(PRACTICE_ACCESS_CHANGED); setEpoch(value => value + 1); router.replace("/mine");
       } else refreshAfterDenial(statusOf(error));
     };
     async function run<T>(signal: AbortSignal, action: () => Promise<T>, mutation: boolean): Promise<T> {
@@ -544,7 +544,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (isSourceMissing(error) || signal.aborted || !sameOwner() || ![401, 403, 404].includes(statusOf(error))) return;
       clearWork();
       if (base.mode === "child-practice" && currentPath.current === `/workspace/practice/${base.student.id}`) {
-        practice.invalidate(); setContext(null); setNotice(PRACTICE_ACCESS_CHANGED); setEpoch(value => value + 1); router.replace("/workspace/parent");
+        practice.invalidate(); setContext(null); setNotice(PRACTICE_ACCESS_CHANGED); setEpoch(value => value + 1); router.replace("/mine");
       } else refreshAfterDenial(statusOf(error));
     };
     async function run<T>(signal: AbortSignal, action: (signal: AbortSignal) => Promise<T>): Promise<T> {
