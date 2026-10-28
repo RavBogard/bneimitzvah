@@ -52,7 +52,7 @@ export type SessionDoor = Readonly<{
   count: number;
 }>;
 type DoorStudent = Pick<StudentView, "id" | "firstName" | "lastName" | "ceremonyDate">;
-const byCeremony = (a: DoorStudent, b: DoorStudent) => a.ceremonyDate.localeCompare(b.ceremonyDate) || a.id.localeCompare(b.id);
+const byCeremony = (a: DoorStudent, b: DoorStudent) => a.ceremonyDate.localeCompare(b.ceremonyDate) || a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName) || a.id.localeCompare(b.id);
 const nameOf = (student: DoorStudent) => `${student.firstName} ${student.lastName}`;
 
 export function createPortalService<Q extends PgQueryResultHKT>(input: { access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>; sessionBindingSecret: string;

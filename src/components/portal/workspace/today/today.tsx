@@ -152,7 +152,7 @@ function PinnedReady({ slices, assigned, headingId }: { slices: TodaySlices; ass
     <h2 id={headingId} className={styles.name}><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>
     {(readings.length > 0 || slot) && <p className={styles.ranges}>{readings.flatMap(reading => refSegments(reading.ranges).map((segment, index) => `${index === 0 ? `${reading.kind === "torah" ? "Torah" : "Haftarah"} ` : ""}${segment}`))
       .map((text, index) => <span key={index}>{index > 0 && " · "}<span data-nobreak>{text}</span></span>)}{slot && <>{readings.length > 0 && " · "}<span data-nobreak>{slot}</span></>}</p>}
-    {rehearsal && <p className={styles.rehearsal} data-nobreak>{rehearsal}</p>}
+    {rehearsal && <p className={styles.rehearsal} data-testid="rehearsal-line" data-nobreak>{rehearsal}</p>}
     {readings.length === 0 ? <p className={styles.empty}>Your tutor or rabbi will add your verses here.</p>
       : <div className={styles.got} data-testid="pinned-progress">
         <p className={styles.gotLabel}>Verses you’ve got</p>

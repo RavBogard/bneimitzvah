@@ -26,7 +26,7 @@ test.describe("at 390x844", () => {
     await mock(page, { today: "2026-11-20" });
     await page.goto("/mine");
     await expect(card(page).getByText("Sat, Dec 12, 2026")).toBeVisible();
-    await expect(card(page).getByText(/rehearsal/i)).toHaveCount(0);
+    await expect(card(page).getByTestId("rehearsal-line")).toHaveCount(0);
   });
 
   test("it says what the student has, as a position: Verses you've got and 9 of the reading", async ({ page }) => {
