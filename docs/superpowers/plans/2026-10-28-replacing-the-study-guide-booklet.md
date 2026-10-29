@@ -185,6 +185,11 @@ More rules:
 
 The re-walk fix PR ("One staff student header, no orphan separators, no empty shelf for staff") is in flight now. It touches `reading.tsx` and `students.tsx`. B3's entrance on the student page must wait for it to merge, or rebase onto it, so that two open PRs never share that hot file.
 
+Later rulings, same day (2026-10-28, binding):
+
+14. **Voice approved, with one rule:** always "Shabbat", never "Sabbath".
+15. **Base guides are overviews only for students** (supersedes 1 and 7 for what students see). Themes and verse notes are for the rabbi to write per student; a per-student guide shows in Study and in that student's booklet. Base themes and notes already drafted stay stored as the rabbi's private starting point. The commentary column shows Sefaria commentaries and the rabbi's curated notes only. Shipped in #157.
+
 ## Decided here (Claude, logged)
 
 - **The sample portions are Bereshit, Yitro, Ki Teitzei and Isaiah 40 (Nachamu).** They cover three books, narrative and law, and the haftarah of consolation.
@@ -194,4 +199,4 @@ The re-walk fix PR ("One staff student header, no orphan separators, no empty sh
 
 ## Open items that wait on Daniel
 
-- His verdict on the G2 sample, and any corrections to the voice. Nothing in G3 starts before it.
+- None. The G2 verdict came on 2026-10-28 (rulings 14–15); G3 overviews cover every catalog key. Daniel marks guides reviewed as he reads them.
