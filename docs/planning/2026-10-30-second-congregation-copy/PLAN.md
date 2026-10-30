@@ -41,3 +41,4 @@ Started 2026-10-30. Rabbi Paul Kipnes wants his own copy of the app for his cong
 ## Status
 
 - 2026-10-30: plan written; A, C and D dispatched.
+- 2026-10-30 evening: C (#159, plus release reference-kit-v1), D (#158, 0055) and A (#160, 0056) merged and applied. B (#162) is in a local rehearsal. Decided: email sign-in required, Google optional; discussions not imported.
