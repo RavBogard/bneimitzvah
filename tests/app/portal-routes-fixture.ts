@@ -30,6 +30,7 @@ import { createPortalService } from "../../src/server/portal/service";
 import { createRelationshipService } from "../../src/server/relationships/service";
 import { createPracticeService } from "../../src/server/practice/service";
 import { createProgressService } from "../../src/server/progress/service";
+import { createGuideShareService } from "../../src/server/guide-share/service";
 import { createStudyGuideService, studyGuideWebSurface } from "../../src/server/study-guides/service";
 import { createHaftarahSheets } from "../../src/server/study-guides/haftarah-sheets";
 import { createLessonLogService } from "../../src/server/lesson-log/service";
@@ -59,6 +60,8 @@ import { createReferenceReviewService } from "../../src/server/reference-review/
 import { ReviewUnavailable } from "../../src/server/reference-review/batch-contract";
 
 export async function portalRoutesFixture() {
+  // Guide sharing resolves citations through this; a test swaps it with setRelated (default: no related sources for any verse).
+  let relatedImpl: (ref: string, signal: AbortSignal) => Promise<ReturnType<typeof parseRelatedMetadata>> = async ref => parseRelatedMetadata([], ref);
   const f = await accessFixture();
   let recipient!: { id: string; cookie: string; sessionId: string };
   await f.owner(async () => {
@@ -92,7 +95,7 @@ export async function portalRoutesFixture() {
     sourceAssignments: createSourceAssignmentsService({ access: f.service, practice, related: async ref => parseRelatedMetadata([], ref) }),
     studySources: createStudySourceDiscoveryService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); }, related: async ref => parseRelatedMetadata([], ref) }),
     studyWordDetails: createStudyWordDetailsService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); }, source: { book: async () => Object.freeze([]), lexicon: async () => Object.freeze([]) } }),
-    study: createStudyService({ access: f.service, practice, load: async () => { throw new StudyUnavailable("upstream"); } }), progress: createProgressService({ access: f.service, practice }), haftarahSheets: createHaftarahSheets({ fetch: async () => { throw new Error("No haftarah library in tests"); } }), studyGuides: studyGuideWebSurface(createStudyGuideService({ access: f.service, practice, check: async ({ body }) => ({ ok: true as const, body }) })), lessonLog: createLessonLogService({ access: f.service, practice }), practiceCalendar: createPracticeCalendarService({ access: f.service, practice }), recordings: createStudentRecordingService({ access: f.service, practice }),
+    study: createStudyService({ access: f.service, practice, load: async () => { throw new StudyUnavailable("upstream"); } }), progress: createProgressService({ access: f.service, practice }), haftarahSheets: createHaftarahSheets({ fetch: async () => { throw new Error("No haftarah library in tests"); } }), guideShare: createGuideShareService({ access: f.service, related: (ref, signal) => relatedImpl(ref, signal) }), studyGuides: studyGuideWebSurface(createStudyGuideService({ access: f.service, practice, check: async ({ body }) => ({ ok: true as const, body }) })), lessonLog: createLessonLogService({ access: f.service, practice }), practiceCalendar: createPracticeCalendarService({ access: f.service, practice }), recordings: createStudentRecordingService({ access: f.service, practice }),
     portal, relationships: createRelationshipService({ access: f.service }), pendingInvitations,
     serviceLearning, serviceCoursePath: createServiceCoursePath({ access: f.service, serviceLearning }), servicePartFinished: createServicePartFinished({ access: f.service }), practiceVisibility: createPracticeVisibilityService({ access: f.service }), ceremonyDone: createCeremonyDoneService({ access: f.service }), staff: createStaffService({ access: f.service }),
     referenceReview: createReferenceReviewService({ access: f.service, reviewer: undefined, get: async () => { throw new ReviewUnavailable(); } }),
@@ -125,7 +128,7 @@ export async function portalRoutesFixture() {
     const response = pendingInvitations.exchange(new Request("http://localhost:3000/api/invitations/open", { method: "POST", headers: { origin: "http://localhost:3000" } }), token);
     return { token, cookie: response.headers.getSetCookie()[0].split(";")[0] };
   }
-  return { ...f, identities, runtime, request, call, pending, deliveries, failSend: (value: boolean) => { sendFails = value; } };
+  return { ...f, setRelated: (impl: typeof relatedImpl) => { relatedImpl = impl; }, identities, runtime, request, call, pending, deliveries, failSend: (value: boolean) => { sendFails = value; } };
 }
 import { createServiceEcosystemService } from "../../src/server/service-ecosystem/service";
 import { createMusicBroker } from "../../src/server/service-ecosystem/broker";
