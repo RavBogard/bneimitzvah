@@ -1,6 +1,6 @@
 # Running your own copy of this portal
 
-This is the runbook for a congregation that runs its own copy (a fork) of the CRC B'nei Mitzvah portal on its own GitHub, Vercel, Neon, Google and Resend accounts. It is written for the AI assistant (Claude) who does the work for a non-technical rabbi. Every command and value below is exact. A step marked **(unverified)** could not be confirmed from this repository's code or records, so check it as you go and do not assume.
+This is the runbook for a congregation that runs its own copy (a fork) of the CRC B'nei Mitzvah portal on its own GitHub, Vercel, Neon, Google and Resend accounts. It is written for the AI assistant (Claude) who does the work for a non-technical rabbi. Every command and value below is exact. A step marked **(unverified)** could not be confirmed, so check it as you go and do not assume. Sections 3, 4 and 9 and the build and start in section 8 were rehearsed end to end on a disposable local Postgres with a fork identity (no real Neon, Vercel, Google or Resend account); everything that needs those live services is still unverified.
 
 Ground rules for the assistant:
 
@@ -16,8 +16,8 @@ Ground rules for the assistant:
 | GitHub | Holds your fork of the code | Free |
 | Vercel | Hosts the portal; its Blob storage holds the optional reference audio | See note below |
 | Neon | The Postgres database | Free tier exists; check current limits and price |
-| Google Cloud | The "Sign in with Google" client | Free |
-| Resend | Sends the sign-in and invitation emails | Free tier exists; check current limits |
+| Resend | Sends the email sign-in link and the family invitations. **Required.** | Free tier exists; check current limits |
+| Google Cloud | An optional additional "Sign in with Google" button | Free |
 | A domain you control | The portal's address (for example `torah.example.org`) | Optional but recommended; a `*.vercel.app` address also works |
 
 Also needed on the machine that runs commands: Node 24 LTS, npm, Git, and the GitHub CLI (`gh`). The `psql` client is useful but not required, because Neon has a web SQL editor.
@@ -33,7 +33,7 @@ Also needed on the machine that runs commands: Node 24 LTS, npm, Git, and the Gi
 3. Add the upstream remote so you can update later (section 11): `git remote add upstream https://github.com/RavBogard/bneimitzvah.git`.
 4. In Vercel, choose Add New, then Project, and import your fork. Framework preset: Next.js (it is detected). Leave the build command and output directory at their defaults. In Settings, then General, set Node.js Version to 24.x.
 5. Do not connect Vercel's Neon integration. Create the Neon project yourself in section 3, so that the database owner's password never enters Vercel. (If the integration is already connected, delete every database variable it injected, such as `DATABASE_URL`, `POSTGRES_*`, `PG*`, `NEON_*`, before continuing; the portal refuses an owner login and refuses to start with `DATABASE_MIGRATION_URL` set.)
-6. The first build can run with no environment variables. `npm run build` runs two small `prebuild` probes (`scripts/private-media-oidc-probe.mjs` and `scripts/private-media-object-probe.mjs`). Without their special flags they print nothing and exit 0, so they need no setup. They contain CRC's fixed Vercel identifiers, which are harmless and unused in a fork.
+6. The first build can run with no environment variables (verified: `npm run build` completes with none set). `npm run build` runs two small `prebuild` probes (`scripts/private-media-oidc-probe.mjs` and `scripts/private-media-object-probe.mjs`). Without their special flags they print nothing and exit 0, so they need no setup (verified). They contain CRC's fixed Vercel identifiers, which are harmless and unused in a fork.
 7. Add your domain under Settings, then Domains, and add the DNS record Vercel shows. Wait until Vercel shows the domain as valid with a certificate. Decide the one canonical address now (for example `https://torah.example.org`); it is used in several places below and must match exactly everywhere: `https://`, no trailing slash, no path, no port.
 
 The portal will not work until sections 3 to 7 are done. A failed first request is expected.
@@ -49,7 +49,7 @@ The app checks this on every request (`src/server/db/runtime.ts`) and refuses to
 
 ### 3.1 Create the Neon project
 
-1. In Neon, create a project. Pick a region near your congregation (US East is closest to Vercel's default functions region; check Vercel's current default, unverified). Use Postgres 16 or newer. Keep the default database name (usually `neondb`) and owner.
+1. In Neon, create a project. Pick a region near your congregation (US East is closest to Vercel's default functions region; check Vercel's current default; unverified). Use Postgres 16 or newer. Keep the default database name (usually `neondb`) and owner.
 2. From the Connect dialog, copy the **direct** connection string for the owner. Direct means the host does not contain `-pooler` (turn off "Connection pooling" in the dialog). Migrations and the operator scripts refuse a pooled host.
 3. Create a private operator file named `.env.operator` in the repository root. Git ignores `.env*` files. Put these lines in it (replace the value; keep `?sslmode=require` and delete any `channel_binding=...` or other options Neon adds, unless noted):
 
@@ -65,14 +65,14 @@ The app checks this on every request (`src/server/db/runtime.ts`) and refuses to
 node --env-file=.env.operator scripts/db-migrate.mjs
 ```
 
-(`npm run db:migrate` runs the same script; use `node --env-file` so the private file is loaded.) Expected output: `Database migrations completed`. Any failure prints one fixed sentence and no detail; the usual causes are a pooled host, a wrong password, or a missing `?sslmode=require`.
+(`npm run db:migrate` runs the same script, but it does not load `.env.operator`; use `node --env-file` as shown.) Expected output: `Database migrations completed`. Running it again is safe and prints the same line. Any failure prints one fixed sentence and no detail; the usual causes are a pooled host, a wrong password, or a missing `?sslmode=require`.
 
-This applies every migration in `src/server/db/migrations/` in order, `0000` through the latest. It creates the `portal_runtime` group role and seeds one tenant with the internal id `crc`. **A fork keeps that internal id.** It is never shown to anyone; your congregation's name comes from settings (section 4). Do not rename the tenant.
+This applies every migration in `src/server/db/migrations/` in order, `0000` through the latest (56 files when rehearsed). It creates the `portal_runtime` group role and seeds one tenant with the internal id `crc`. **A fork keeps that internal id.** It is never shown to anyone; your congregation's name comes from settings (section 4). Do not rename the tenant.
 
-Verify (Neon SQL editor, as the owner):
+Verify (Neon SQL editor, as the owner; these checks were run on a local Postgres 18):
 
 ```sql
-SELECT count(*) FROM drizzle.__drizzle_migrations;          -- the number of migration files
+SELECT count(*) FROM drizzle.__drizzle_migrations;          -- the number of migration files (56 when rehearsed)
 SELECT relname, relrowsecurity, relforcerowsecurity FROM pg_class
  WHERE relname IN ('student','membership','role_grant','audit_event');  -- all true, true
 ```
@@ -119,7 +119,7 @@ On Postgres 16 and newer, owning the tables is not enough: the owner needs permi
 GRANT portal_runtime TO CURRENT_USER WITH ADMIN FALSE, INHERIT FALSE, SET TRUE;
 ```
 
-(unverified on a fresh Neon project; this is the correction CRC applied. If it errors, read the error and consult the PostgreSQL `GRANT` documentation for your version.)
+(Verified on a local Postgres 18 as a login with CREATEROLE; not checked on a fresh Neon project, where it is the correction CRC applied. If it errors, read the error and consult the PostgreSQL `GRANT` documentation for your version.)
 
 ### 3.5 First owner (bootstrap)
 
@@ -140,8 +140,8 @@ Order of events (do sections 4 to 8 first; the person can only sign in after the
    node --env-file=.env.operator scripts/bootstrap-owner.mjs --confirm
    ```
 
-   Expected: `Owner bootstrap completed; remove private bootstrap configuration`. A failure prints one fixed sentence. Likely causes: the person has not signed in yet, the email is not verified, the owner cannot `SET ROLE portal_runtime` (section 3.4), or an admin already exists that this script did not create (it refuses to adopt one).
-4. Remove `BOOTSTRAP_OWNER_EMAIL` from `.env.operator`. Re-running it for the same person is safe and reports already configured.
+   Expected: `Owner bootstrap completed; remove private bootstrap configuration`. Running it before the person has signed in fails with `Owner bootstrap failed; verify private operator configuration` (verified). A failure prints one fixed sentence. Likely causes: the person has not signed in yet, the email is not verified, the owner cannot `SET ROLE portal_runtime` (section 3.4), or an admin already exists that this script did not create (it refuses to adopt one).
+4. Remove `BOOTSTRAP_OWNER_EMAIL` from `.env.operator`. Re-running it for the same person is safe and changes nothing; it prints the same completed line.
 5. The rabbi reloads the portal and sees the admin areas (Settings, Share guides, and so on). Adding more admins later is done with `scripts/manage-admin.mjs`, a private operator tool that needs a prepared review file; see `docs/planning/2026-10-15-kickoff/PROVIDER-SETUP.md` section 6. Ordinary staff are invited from inside the portal instead.
 
 ## 4. Identity settings and the host row
@@ -174,15 +174,13 @@ Steps:
    node --env-file=.env.operator scripts/add-congregation-host.mjs --summary-credit "Rabbi Example" --confirm
    ```
 
-   `--summary-credit` is required. It is the plain-text name (no `@`, no `<` or `>`, 240 characters at most) printed under every approved portion summary. Use the rabbi's name as the rabbi wants it credited. **Until the credit is set, portion summaries cannot be approved** (migration `0056` makes the database fail closed). Expected: `Congregation host configured; remove private operator configuration`. Running it again with the same address reports already configured and updates the credit. To change only the credit later, add `--credit-only` and leave out the `CANONICAL_ORIGIN` line (the migration's comment says `--set-summary-credit-only`; the script's flag is `--credit-only`).
+   `--summary-credit` and `--confirm` are required. It is the plain-text name (no `@`, no `<` or `>`, 240 characters at most) printed under every approved portion summary. Use the rabbi's name as the rabbi wants it credited. **Until the credit is set, portion summaries cannot be approved** (migration `0056` makes the database fail closed). Expected: `Congregation host configured; remove private operator configuration` (verified). Running it again with the same address prints `Congregation host already-configured; remove private operator configuration` and updates the credit. The address must be https, a real DNS name, with no port or path, and not one of CRC's own hosts. To change only the credit later, add `--credit-only` and leave out the `CANONICAL_ORIGIN` line (the migration's comment says `--set-summary-credit-only`; the script's flag is `--credit-only`). Approving a portion summary fails until the credit is set.
 4. Aliases need no database row.
-5. Review Settings in the portal as the owner, because the seeded tenant settings were written for CRC. Check the credits line and any text that names a congregation (unverified which fields: the seed in `0002_tenant_security.sql` writes `"credits":{"issuedBy":"Central Reform Congregation"}`; open the settings page and change anything that still says CRC).
+5. Review Settings in the portal as the owner, because the seeded tenant settings were written for CRC. The seed in `0002_tenant_security.sql` writes `"credits":{"issuedBy":"Central Reform Congregation"}` and the tenant's stored name is still CRC's (verified in the rehearsal database; the pages still showed your name, because it comes from the identity variables). Open the settings page and change anything that still says CRC (which fields that page lets you edit is unverified).
 
-## 5. Google sign-in
+## 5. Google sign-in (optional, in addition to the email link)
 
-Google sign-in is optional. Set both `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, or neither. Setting only one makes the app refuse to start.
-
-**Can Google be the only sign-in method? No, not as the code stands.** The email link is always on: the app requires `RESEND_API_KEY` and `RESEND_FROM` to start, and the email link is how invitations and the fallback sign-in work. The sign-in page keeps the email option visible so a family whose Google popup is blocked can still get in. Whether the email option could be hidden is unverified and would need a code change, which this guide does not make. Plan on offering both. The honest trade-off for the rabbi: Google is quicker for people who have a Google account; the email link works for everyone and needs no account.
+The email link (section 6, Resend) is **required** and is also how family invitations go out; the app will not start without `RESEND_API_KEY` and `RESEND_FROM` (verified in `loadRuntimeConfig`). Google is an optional additional method, shown beside the email option. The email option is always shown, so the portal cannot be Google-only. Set both `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, or neither. Setting only one makes the app refuse to start. The honest trade-off for the rabbi: Google is quicker for people who have a Google account; the email link works for everyone and needs no account.
 
 Setup in Google Cloud Console (an existing or new project owned by the congregation):
 
@@ -194,7 +192,9 @@ Setup in Google Cloud Console (an existing or new project owned by the congregat
 
 Signing in with Google establishes identity only. It does not grant any role. A person sees a child's information only after an explicit invitation is accepted.
 
-## 6. Email link via Resend
+## 6. Email link via Resend (required)
+
+This is the primary sign-in and the way invitations reach families. Set it up before the first sign-in.
 
 1. Create a Resend account. Under Domains, add the domain you will send from (a subdomain such as `mail.example.com` keeps sign-in mail separate from your normal mail). Resend shows DNS records; add each exactly as shown at your DNS host: the SPF record (TXT), the DKIM record(s), and any return-path (MX or CNAME) record. Keep any email records the congregation already has. Wait until the domain shows Verified.
 2. In the domain's settings, turn **off** open tracking and click tracking. Sign-in mail must not be rewritten. (The code sends plain text and no tracking, but Resend also applies domain settings.)
@@ -213,9 +213,9 @@ Set these in Vercel under Settings, then Environment Variables, for the **Produc
 | `BETTER_AUTH_URL` | The one canonical origin; cookies, links and Google are bound to it. Must equal `CANONICAL_ORIGIN`. | No | `https://torah.example.org` |
 | `BETTER_AUTH_SECRET` | Signs sessions and sign-in codes. 32 to 512 characters, random, unique to you. Changing it signs everyone out. | **Yes** | generate with `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"` |
 | `DATABASE_URL` | The restricted runtime login (section 3.3). | **Yes** | the string from section 3.3 |
-| `RESEND_API_KEY` | Sends email. | **Yes** | `re_...` |
+| `RESEND_API_KEY` | Sends email (required). | **Yes** | `re_...` |
 | `RESEND_FROM` | Sender address on the verified domain. | No | `login@example.com` |
-| `GOOGLE_CLIENT_ID` | Google sign-in (optional pair). | No | `123...apps.googleusercontent.com` |
+| `GOOGLE_CLIENT_ID` | Google sign-in (optional extra method; set both or neither). | No | `123...apps.googleusercontent.com` |
 | `GOOGLE_CLIENT_SECRET` | Google sign-in (optional pair). | **Yes** | from Google |
 | `CONGREGATION_NAME` | Identity (section 4). | No | `Temple Example` |
 | `CONGREGATION_SHORT_NAME` | Identity. | No | `Example` |
@@ -235,17 +235,17 @@ Never set these, in Vercel or anywhere the app runs: `DATABASE_MIGRATION_URL` an
 
 Leave all of these unset in a fork: `PORTAL_RECORDINGS_ENABLED` (student recordings are parked), `CHANT_BLOB_TOKEN`, `BEIT_MITZVAH_MUSIC_URL`, `BEIT_MITZVAH_SERVICE_TOKEN` (CRC's own music service), `GOOGLE_SHEETS_SERVICE_ACCOUNT`, `GOOGLE_ROSTER_SHEET_ID` (CRC's roster sheet), `PORTAL_OFFLINE_ENABLED` (the offline pack is CRC-only), `FINKEL_REVIEW_*`, `CRC_COMPONENT_PAGE`, `BLOB_READ_WRITE_TOKEN` (used only on your own computer for section 9, never in Vercel Production).
 
-The three entries in `vercel.json` `crons` call internal routes for music, roster sheet and notifications. With the related variables unset they should do nothing or refuse (unverified); check Vercel's cron logs once after deploying and tell the rabbi if any report errors.
+The three entries in `vercel.json` `crons` call internal routes for music, roster sheet and notifications. With the related variables unset all three answer `503` and do nothing (verified locally), so Vercel's cron log shows a failed run each day. That is expected and harmless in a fork; tell the rabbi so it does not look like an outage.
 
 ## 8. Deploy and verify
 
 1. After the variables are saved, trigger a new Production deployment: Vercel, then Deployments, then the three dots on the latest, then Redeploy. Wait for Ready.
 2. Open `https://<your canonical origin>/`. You should see the portal's front door titled with your congregation's name or "Beit Mitzvah" and **no CRC name and no CRC artwork**. If you see an error page, open Vercel's runtime logs: a configuration mistake is reported as an unavailable runtime, with no detail by design. Re-check section 7 against these rules: exactly one of the Google pair is set; `DATABASE_URL` user is not `neondb_owner` or `postgres`; its host ends in `.neon.tech` and the query is only `?sslmode=require`; `BETTER_AUTH_URL` equals `CANONICAL_ORIGIN` and has no trailing slash; `PORTAL_ENVIRONMENT` and `PORTAL_DEPLOYMENT` are both `production`.
-3. The CRC artwork must not be served: `curl -I https://<your origin>/brand/favicon-48.png` should return 404.
+3. The CRC artwork must not be served: `curl -I https://<your origin>/brand/favicon-48.png` should return 404 (verified: every path under `/brand/` returns 404 on a fork host, although the files sit in `public/brand/`). In the rehearsal the page title and body showed the fork's name, with no CRC name and no floor art.
 4. Sign-in by email link: on the sign-in page, enter the rabbi's address. An email arrives from your `RESEND_FROM`. Opening the link shows a confirmation button; pressing it signs in. The email wording names your congregation and product.
 5. Sign-in with Google (if configured): the Google button appears; the popup completes and returns signed in. If the button is missing or the popup says "origin not allowed", recheck section 5, step 3.
 6. Run the first-owner step (section 3.5). Reload as the rabbi and open Settings. Confirm an anonymous visitor in a private window cannot open the workspace.
-7. In Neon, confirm the app connects as the restricted login: `SELECT usename FROM pg_stat_activity WHERE datname = 'neondb';` shows `portal_app` for the app's connections (unverified output format).
+7. In Neon, confirm the app connects as the restricted login: `SELECT usename FROM pg_stat_activity WHERE datname = 'neondb';` shows `portal_app` for the app's connections (unverified; on a local Postgres the owner login could not see other logins' sessions, so on Neon expect `portal_app` and check).
 8. Run the repository's own checks locally on your fork before relying on it: `npx tsc --noEmit --incremental false`, `node --test tests/never-in-repo.test.mjs`. CI (`.github/workflows/ci.yml`) runs the full suite on your fork's GitHub Actions; it needs no repository secrets (unverified; read the workflow if a job fails for a missing secret).
 
 Then add students and tutors from inside the portal. Importing a roster from CRC's Maven system is CRC-only and not available to you.
@@ -254,14 +254,14 @@ Then add students and tutors from inside the portal. Importing a roster from CRC
 
 The portal can play the PocketTorah reference recordings word by word. The recordings come from an openly published kit, not from the repository: release `reference-kit-v1` at https://github.com/RavBogard/bneimitzvah/releases/tag/reference-kit-v1 (about 900 MB; licence CC BY-SA 3.0; credit "PocketTorah (not-a-box media lab), CC BY-SA 3.0"). The installer verifies every file against a hash pinned in its own script before uploading anything, and uploads into **your own** private Vercel Blob store.
 
-Cost note: this stores about 7,030 objects, roughly 900 MB, in your Blob store. Check Vercel's current Blob pricing and get the rabbi's agreement first.
+Cost note: this stores about 7,030 objects (7,028 clips plus the catalog and manifest), roughly 900 MB, in your Blob store. Check Vercel's current Blob pricing and get the rabbi's agreement first.
 
 1. In Vercel, Storage, create a **Blob** store. Choose **private** access. Connect it to your project. Connecting adds `BLOB_READ_WRITE_TOKEN` to the project and shows the store id (`store_...`).
-2. On your computer, put that token in your shell only for this command (for example run `vercel env pull .env.blob` and then load it, or paste it into the shell for the session; do not write it into the repository or a tracked file). Then:
+2. The dry run needs no token and no Blob store at all (verified: it downloaded the kit, checked the catalog, manifest and all 7,028 clips, uploaded nothing and printed the variables; about 15 seconds; the files land in `.reference-kit/`, which Git ignores). Run it first. For the real upload, put the token in your shell only for that command (for example run `vercel env pull .env.blob` and then load it, or paste it into the shell for the session; do not write it into the repository or a tracked file). Then:
 
    ```
-   npm run reference-kit:install -- --dry-run     # downloads and verifies, uploads nothing
-   npm run reference-kit:install                  # verifies, then uploads
+   npm run reference-kit:install -- --dry-run     # downloads and verifies, uploads nothing, needs no token
+   npm run reference-kit:install                  # verifies, then uploads (needs BLOB_READ_WRITE_TOKEN)
    ```
 
    Uploads are create-only, so re-running keeps what is already there. `-- --from <directory>` uses a kit already on disk. Errors print short fixed codes. The token is never printed.
@@ -274,7 +274,7 @@ Cost note: this stores about 7,030 objects, roughly 900 MB, in your Blob store. 
 
 A rabbi at CRC can export reviewed study guides, approved portion summaries and published discussions as one `guide-export/v1` file. Ask Daniel's office for the file; it contains no student information, ids, emails or verse text.
 
-1. Sign in as an administrator and open More, then Share guides (`/workspace/admin/guide-sharing`).
+1. Sign in as an administrator and open More, then Share guides (`/workspace/admin/guide-sharing`). The route exists and is in the build (verified: its page shell loads, titled "Share guides"; its signed-in contents and the import itself were not exercised).
 2. Choose the file. The portal shows a preview and imports nothing yet.
 3. Confirm. Citations are looked up again in your own catalog; any that do not match are dropped and counted in the preview.
 4. What to expect: guides arrive **held** (not visible to students) and unreviewed, credited "From <author>", and are never written over a reading that already has a guide. Portion summaries arrive as drafts, and approving one needs the credit set in section 4 (it is stamped with your congregation's credit, not the original author's). Discussions are listed but are not imported. Importing the same file twice changes nothing.
