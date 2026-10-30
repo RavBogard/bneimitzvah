@@ -68,6 +68,8 @@ test("export carries only reviewed, visible work, with stable keys and no ids, e
     // An approved summary and a draft; a published discussion and a withdrawn one.
     const draft = (revision: number, text: string) => f.db.insert(s.portionSummary).values({ tenantId: "crc", readingKey: "vayera", revision, status: "draft", summary: text, outline: OUTLINE, draftedBy: f.adminMember.id, mutationId: randomUUID(), requestDigest: digest });
     await draft(1, "An approved synthetic summary.");
+    // Since 0056 an approval needs the congregation's stored credit.
+    await f.db.update(s.tenant).set({ summaryCredit: "Rabbi Daniel Bogard" }).where(eq(s.tenant.id, "crc"));
     await f.db.update(s.portionSummary).set({ status: "approved", approvedBy: f.adminMember.id, approvedGrantId: f.adminGrant.id, approvedRole: "admin", approvedAt: sql`now()`, credit: "Rabbi Daniel Bogard" }).where(eq(s.portionSummary.readingKey, "vayera"));
     await draft(2, "DRAFT-SUMMARY-CANARY");
     // One transaction: the source guard wants the discussion stamped in the same instant.
