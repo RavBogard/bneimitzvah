@@ -1,5 +1,5 @@
 -- The congregation's portion summary credit moves from a hard-coded CRC value to a nullable tenant column, so a fork credits its own rabbi.
--- Additive. No backfill here: an operator sets it (scripts/add-congregation-host.mjs --summary-credit, or --set-summary-credit-only),
+-- Additive. No backfill here: an operator sets it (scripts/add-congregation-host.mjs --summary-credit, or --credit-only),
 -- and until then approving a non-import summary fails closed (the function returns NULL, which no stamped credit can equal).
 -- The runtime role has SELECT on tenant and no UPDATE, so it can read the credit but never set it. The guard trigger is unchanged.
 ALTER TABLE "tenant" ADD COLUMN "summary_credit" text;--> statement-breakpoint

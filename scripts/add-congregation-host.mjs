@@ -90,7 +90,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const argv = process.argv.slice(2), at = argv.indexOf("--summary-credit");
     const credit = at >= 0 ? argv[at + 1] : undefined;
     const only = argv.includes("--credit-only"), origin = process.env.CANONICAL_ORIGIN;
-    if (!value || credit === undefined || (!only && !origin) || !argv.includes("--confirm")) throw new Error();
+    if (!value || credit === undefined || credit.startsWith("--") || (!only && !origin) || !argv.includes("--confirm")) throw new Error();
     const url = new URL(value);
     if (!["postgres:", "postgresql:"].includes(url.protocol) || url.hostname.includes("-pooler")) throw new Error();
     client = new pg.Client({ connectionString: value });
