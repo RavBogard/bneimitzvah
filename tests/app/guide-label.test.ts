@@ -9,7 +9,8 @@ test("the label says who wrote it and whether the rabbi reviewed it", () => {
 });
 
 test("an imported guide keeps its original author's credit beside the review state, and a guide written here carries none", () => {
-  expect(guideLabelText({ origin: "rabbi", reviewed: false, rabbiName: "Rabbi Kipnes", importedFrom: "Rabbi Daniel Bogard" })).toContain("From Rabbi Daniel Bogard");
+  expect(guideLabelText({ origin: "rabbi", reviewed: false, rabbiName: "Rabbi Kipnes", importedFrom: "Rabbi Daniel Bogard" })).toBe("Written by Rabbi Daniel Bogard · draft");
+  expect(guideLabelText({ origin: "claude", reviewed: false, rabbiName: "Rabbi Kipnes", importedFrom: "Rabbi Daniel Bogard" })).toBe("Written by Rabbi Daniel Bogard · draft");
   expect(guideLabelText({ origin: "claude", reviewed: true, rabbiName: "Rabbi Kipnes", importedFrom: "Rabbi Daniel Bogard" })).toBe("Reviewed by Rabbi Kipnes · From Rabbi Daniel Bogard");
   expect(guideLabelText({ origin: "claude", reviewed: true, rabbiName: "Rabbi Kipnes" })).not.toContain("From");
 });

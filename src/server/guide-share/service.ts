@@ -222,7 +222,7 @@ export function createGuideShareService<Q extends PgQueryResultHKT>(input: { acc
         const plan = sums.find(x => x.reading === summary.reading)!, revisions = await summaries.revisionsOf(tx, actor.tenantId, summary.reading, true);
         if (revisions.some(row => row.summary === summary.summary && row.outline.length === summary.outline.length && row.outline.every((line, i) => line === summary.outline[i]))) { plan.status = "skipped"; plan.reason = "already-imported"; continue; }
         const row = await summaries.insertDraft(tx, { tenantId: actor.tenantId, membershipId: actor.membershipId, readingKey: summary.reading, revision: (revisions[0]?.revision ?? 0) + 1,
-          summary: summary.summary, outline: summary.outline, mutationId: randomUUID(), requestDigest: sha(["portion-summary-import/v1", summary.reading, summary.summary, summary.outline]) });
+          summary: summary.summary, outline: summary.outline, mutationId: randomUUID(), requestDigest: sha(["portion-summary-import/v1", summary.reading, summary.summary, summary.outline]), importCredit: summary.credit });
         if (row) summaryCount++; else { plan.status = "skipped"; plan.reason = "already-imported"; }
       }
       if (landed.size || summaryCount) await data.auditGuideImport(tx, actor);

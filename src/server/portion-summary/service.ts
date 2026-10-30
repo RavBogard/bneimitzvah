@@ -95,12 +95,13 @@ export async function approveSummary<Q extends PgQueryResultHKT>(authority: Summ
   if ("ok" in wanted) return wanted;
   return authority.run(async (tx, writer, live) => {
     if (!writer.attended) return fail("attended-only");
-    const credit = portionSummaryCredit(writer.tenantId);
-    if (!credit) return fail("no-credit");
     const rows = await data.revisionsOf(tx, writer.tenantId, wanted.readingKey, true), row = rows.find(r => r.revision === wanted.revision);
     if (!row) return fail("not-found");
     if (row.status === "withdrawn") return fail("withdrawn");
     if (row.status !== "draft") return fail("not-draft");
+    // A summary that arrived by import keeps its original author; any other carries the congregation's own credit.
+    const credit = row.importCredit ?? portionSummaryCredit(writer.tenantId);
+    if (!credit) return fail("no-credit");
     const current = rows.find(r => r.status === "approved");
     live();
     if (current && !await data.withdraw(tx, writer.tenantId, current.id, "approved")) return fail("conflict");

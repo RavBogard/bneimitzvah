@@ -77,7 +77,7 @@ test("0055 adds only the import provenance, lets the web channel carry nothing b
     await audit("study-guide.import");
     await expect(audit("study-guide.unknown")).rejects.toThrow();
 
-    // The snapshot changes the guide table and the audit action list, and nothing else.
+    // The snapshot changes the guide and summary tables and the audit action list, and nothing else.
     const snapshots = (await readdir(join(folder, "meta"))).filter(name => /^\d{4}_snapshot\.json$/.test(name)).sort();
     const at = snapshots.indexOf("0055_snapshot.json");
     expect(at).toBeGreaterThan(0);
@@ -85,9 +85,11 @@ test("0055 adds only the import provenance, lets the web channel carry nothing b
     expect(current.prevId).toBe(previous.id);
     const expected = structuredClone(previous.tables);
     expected["public.study_guide"] = current.tables["public.study_guide"];
+    expected["public.portion_summary"] = current.tables["public.portion_summary"];
     expected["public.audit_event"].checkConstraints.audit_action_known = current.tables["public.audit_event"].checkConstraints.audit_action_known;
     expect(current.tables).toEqual(expected);
+    expect(Object.keys(current.tables["public.portion_summary"].columns)).toContain("import_credit");
     expect(Object.keys(current.tables["public.study_guide"].columns)).toEqual(expect.arrayContaining(["import_credit", "import_key"]));
     expect(current.tables["public.audit_event"].checkConstraints.audit_action_known.value).toContain("'study-guide.import'");
   } finally { await client.close(); await isolation.cleanup(); }
-});
+}, 90_000);

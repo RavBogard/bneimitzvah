@@ -249,3 +249,44 @@ test("an imported guide, once published through the existing path, keeps its ori
   const view = await guides.getBaseGuide(authority, { kind: "torah", readingKey: "pekudei" });
   expect(view.visible).toMatchObject({ importedFrom: "Rabbi Daniel Bogard", reviewed: false });
 });
+
+test("credit holds through the importer's own save, review and publish: an export still names the original author", async () => {
+  const f = await fixture();
+  await f.post(IMPORT, fileOf({ guides: [shareGuide()] }));
+  const { createStudyGuideService } = await import("../../src/server/study-guides/service");
+  const { membershipRabbiAuthority } = await import("../../src/server/study-guides/authority");
+  const { createPracticeService } = await import("../../src/server/practice/service");
+  const grant = await f.owner(async () => (await f.db.select().from(s.roleGrant).where(and(eq(s.roleGrant.tenantId, "other"), eq(s.roleGrant.role, "admin"))))[0]);
+  const member = await f.owner(async () => (await f.db.select().from(s.membership).where(eq(s.membership.tenantId, "other")))[0]);
+  const guides = createStudyGuideService({ access: f.service, practice: createPracticeService({ access: f.service }), check: async ({ body }) => ({ ok: true as const, body }) });
+  const authority = membershipRabbiAuthority({ db: f.db, tenantId: "other", membershipId: member.id, channel: "mcp", mayReview: true, bound: { roleGrantId: grant.id, roleGrantRevision: grant.revision, authorityRevision: member.authorityRevision } });
+  const edited = guide({ overview: "The importing rabbi's own edit of the overview." });
+  const saved = await guides.setBaseGuide(authority, { kind: "torah", readingKey: "pekudei", expectedVersion: 1, body: edited, origin: "rabbi", reviewed: true, hold: true, mutationId: randomUUID() });
+  expect(saved).toMatchObject({ ok: true, version: 2, held: true });
+  expect(await guides.publishBaseGuide(authority, { kind: "torah", readingKey: "pekudei", version: 2, mutationId: randomUUID() })).toMatchObject({ ok: true, version: 3 });
+  const rows = await f.guides("other");
+  expect(rows.map(r => [r.version, r.importCredit])).toEqual([[1, "Rabbi Daniel Bogard"], [2, "Rabbi Daniel Bogard"], [3, "Rabbi Daniel Bogard"]]);
+  const exportedFile = await f.send(EXPORT, { who: "multi", origin: OTHER });
+  expect(exportedFile.body.guides).toHaveLength(1);
+  expect(exportedFile.body.guides[0]).toMatchObject({ readingKey: "pekudei", credit: "Rabbi Daniel Bogard" });
+});
+
+test("an imported summary keeps its author through approval, public read and export, though this congregation has no credit of its own", async () => {
+  const f = await fixture();
+  const summary = { reading: "vayera", summary: "An approved synthetic summary.", outline: OUTLINE, credit: "Rabbi Daniel Bogard" };
+  expect((await f.post(IMPORT, fileOf({ summaries: [summary] }))).body.imported.summaries).toBe(1);
+  const { approveSummary } = await import("../../src/server/portion-summary/service");
+  const { lockRabbi } = await import("../../src/server/study-guides/authority");
+  const { withTenantTransaction } = await import("../../src/server/db/runtime");
+  const { readApprovedPortionSummary } = await import("../../src/server/portion-summary/public");
+  const member = await f.owner(async () => (await f.db.select().from(s.membership).where(eq(s.membership.tenantId, "other")))[0]);
+  const authority = { run: <T,>(action: (tx: never, writer: { tenantId: string; membershipId: string; roleGrantId: string; attended: boolean }, live: () => void) => Promise<T>) => withTenantTransaction(f.db, { tenantId: "other" }, async tx => {
+    const rabbi = await lockRabbi(tx as never, "other", member.id);
+    return action(tx as never, { tenantId: "other", membershipId: rabbi.membershipId, roleGrantId: rabbi.roleGrantId, attended: true }, () => {});
+  }) };
+  expect(await approveSummary(authority as never, { reading: "vayera", revision: 1 })).toMatchObject({ ok: true, status: "approved", credit: "Rabbi Daniel Bogard" });
+  const shown = await withTenantTransaction(f.db, { tenantId: "other" }, tx => readApprovedPortionSummary(tx as never, "other", "vayera"));
+  expect(shown).toMatchObject({ reading: "vayera", credit: "Rabbi Daniel Bogard" });
+  const exportedFile = await f.send(EXPORT, { who: "multi", origin: OTHER });
+  expect(exportedFile.body.summaries).toEqual([summary]);
+});

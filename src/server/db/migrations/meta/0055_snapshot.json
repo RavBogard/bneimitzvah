@@ -1,5 +1,5 @@
 {
-  "id": "e9adc3ed-a4b7-4344-b5eb-9f6f2e52615d",
+  "id": "5e4a208c-3dae-4040-b949-bf96d7c7e58b",
   "prevId": "a149255e-343b-4e63-9535-a957f4f1dbfd",
   "version": "7",
   "dialect": "postgresql",
@@ -4420,6 +4420,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "import_credit": {
+          "name": "import_credit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "mutation_id": {
           "name": "mutation_id",
           "type": "uuid",
@@ -4592,6 +4598,10 @@
         "portion_summary_credit": {
           "name": "portion_summary_credit",
           "value": "\"portion_summary\".\"credit\" is null or (public.portal_source_plain(\"portion_summary\".\"credit\", 240) and strpos(\"portion_summary\".\"credit\", '@') = 0)"
+        },
+        "portion_summary_import_credit": {
+          "name": "portion_summary_import_credit",
+          "value": "\"portion_summary\".\"import_credit\" is null or (public.portal_source_plain(\"portion_summary\".\"import_credit\", 240) and strpos(\"portion_summary\".\"import_credit\", '@') = 0)"
         },
         "portion_summary_digest": {
           "name": "portion_summary_digest",

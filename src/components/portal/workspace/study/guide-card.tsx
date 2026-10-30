@@ -9,6 +9,8 @@ import styles from "./guide.module.css";
 
 /** Exactly the label the spec fixes: what is Claude's and whether the rabbi has reviewed it. */
 export function guideLabelText(label: GuideLabel) {
+  // An imported guide the importing rabbi has not reviewed is its author's draft, never the local rabbi's.
+  if (label.importedFrom && !label.reviewed) return `Written by ${label.importedFrom} · draft`;
   const credit = label.importedFrom ? ` · From ${label.importedFrom}` : "";
   if (label.reviewed) return `Reviewed by ${label.rabbiName}${credit}`;
   // Daniel, 2026-10-21: a draft the rabbi wrote himself is not labelled as Claude's.

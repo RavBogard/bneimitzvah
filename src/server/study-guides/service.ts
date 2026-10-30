@@ -195,7 +195,9 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       const effectiveHold = hold || (!reviewed && heads.anyReviewed);
       if (heads.head && canonical(heads.head.body) === canonical(body) && heads.head.origin === origin && heads.head.reviewed === reviewed && heads.head.hold === effectiveHold) return fail("no-change");
       live();
-      const row = await data.appendGuide(tx, writer, { kind, readingKey, expected, origin, reviewed, hold: effectiveHold, body, mutationId, digest: requestDigest, publish: false });
+      const row = await data.appendGuide(tx, writer, { kind, readingKey, expected, origin, reviewed, hold: effectiveHold, body, mutationId, digest: requestDigest, publish: false,
+        // A stream that began as an import keeps its original author through the rabbi's own saves, until the credit is no longer wanted.
+        importCredit: heads.head?.importCredit ?? null, importKey: heads.head?.importKey ?? null });
       live();
       if (!row) { const raced = await data.guideReceipt(tx, writer, mutationId); return raced ? replay(raced) : fail("conflict"); }
       return Object.freeze({ ok: true as const, replayed: false, version: row.version, held: row.hold, heldBecauseReviewed: effectiveHold && !hold });

@@ -72,7 +72,7 @@ function GuideSharingPage() {
     </section>
     <section className="people-card" aria-labelledby="guide-share-import-head">
       <div className="people-card-head"><h2 id="guide-share-import-head">Import</h2>
-        <p>Choose a file another congregation exported. You see what it holds before anything is saved. Imported guides stay held, credited to their author, until you publish them. Nothing you already have is changed.</p></div>
+        <p>Choose a file another congregation exported. You see what it holds before anything is saved. Imported guides stay held until you publish them, credited to the authors the file names. Nothing you already have is changed.</p></div>
       <div className="roster-field"><label htmlFor="guide-share-file">Guide export file</label>
         <input id="guide-share-file" ref={input} type="file" accept="application/json,.json" disabled={pending} onChange={event => void choose(event)} data-testid="guide-share-file" />
         {name && <p className="field-help">{name}</p>}</div>
