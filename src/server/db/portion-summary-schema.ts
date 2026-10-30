@@ -21,6 +21,9 @@ export const portionSummary = pgTable("portion_summary", {
   approvedBy: uuid("approved_by"), approvedGrantId: uuid("approved_grant_id"), approvedRole: role("approved_role"),
   approvedAt: timestamp("approved_at", { withTimezone: true }), credit: text("credit"),
   withdrawnAt: timestamp("withdrawn_at", { withTimezone: true }),
+  // Migration 0055 (guide sharing): the original author of a summary that arrived by import. Set at insert, never changed; an approval of
+  // such a revision carries exactly this credit instead of the congregation's own.
+  importCredit: text("import_credit"),
   mutationId: uuid("mutation_id").notNull(), requestDigest: text("request_digest").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -44,6 +47,7 @@ export const portionSummary = pgTable("portion_summary", {
   check("portion_summary_approved_state", sql`(${t.status} = 'draft' and ${t.approvedBy} is null) or (${t.status} = 'approved' and ${t.approvedBy} is not null) or ${t.status} = 'withdrawn'`),
   check("portion_summary_withdrawn_state", sql`(${t.status} = 'withdrawn') = (${t.withdrawnAt} is not null)`),
   check("portion_summary_credit", sql`${t.credit} is null or (public.portal_source_plain(${t.credit}, 240) and strpos(${t.credit}, '@') = 0)`),
+  check("portion_summary_import_credit", sql`${t.importCredit} is null or (public.portal_source_plain(${t.importCredit}, 240) and strpos(${t.importCredit}, '@') = 0)`),
   check("portion_summary_digest", sql`${t.requestDigest} ~ '^[a-f0-9]{64}$'`),
   check("portion_summary_instants", sql`isfinite(${t.createdAt}) and isfinite(${t.updatedAt}) and (${t.approvedAt} is null or isfinite(${t.approvedAt})) and (${t.withdrawnAt} is null or isfinite(${t.withdrawnAt}))`),
 ]);

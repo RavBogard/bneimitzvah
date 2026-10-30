@@ -6,7 +6,7 @@ export type GuideSource = { id: string; ref: string; indexTitle: string; categor
 export type GuideNote = { verseRef: string; body: string; sources: GuideSource[] };
 /** `read` and `readVersion` are the retired "I read this" tick (kept in the payload's shape, always false and 0 now). */
 export type GuideTheme = { id: string; title: string; intro: string; notes: GuideNote[]; read: boolean; readVersion: number };
-export type GuideLabel = { origin: "claude" | "rabbi"; reviewed: boolean; rabbiName: string };
+export type GuideLabel = { origin: "claude" | "rabbi"; reviewed: boolean; rabbiName: string; importedFrom?: string };
 export type StudentGuideView = {
   kind: StudyKind; readingKey: string | null; tickable: boolean;
   base: { version: number; label: GuideLabel; overview: string; themes: GuideTheme[]; updatedAt: string } | null;
@@ -51,9 +51,9 @@ function theme(value: unknown, verses: ReadonlySet<string>): GuideTheme {
   return { id: row.id, title: line(row.title, 480), intro: text(row.intro, 4096), notes: list(row.notes, 12, item => note(item, verses)), read: bool(row.read), readVersion: version(row.readVersion) };
 }
 function label(value: unknown): GuideLabel {
-  const row = object(value, ["origin", "reviewed", "rabbiName"]);
+  const row = object(value, value && typeof value === "object" && Object.hasOwn(value, "importedFrom") ? ["origin", "reviewed", "rabbiName", "importedFrom"] : ["origin", "reviewed", "rabbiName"]);
   if (row.origin !== "claude" && row.origin !== "rabbi") return bad();
-  return { origin: row.origin, reviewed: bool(row.reviewed), rabbiName: line(row.rabbiName, 320) };
+  return { origin: row.origin, reviewed: bool(row.reviewed), rabbiName: line(row.rabbiName, 320), ...(row.importedFrom === undefined ? {} : { importedFrom: line(row.importedFrom, 240) }) };
 }
 export function parseSheet(value: unknown, kind: StudyKind): string | null {
   const sheet = value && typeof value === "object" && Object.hasOwn(value, "sheet") ? (value as { sheet: unknown }).sheet : null;
