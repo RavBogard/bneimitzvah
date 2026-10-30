@@ -25,6 +25,9 @@ shirei-*.pdf
 .bneimitzvah-cache/
 .haftarah-cache/
 
+# The openly published reference-audio kit (GitHub Release asset, never tracked) and its downloads.
+.reference-kit/
+
 # audio, renders, model files (never committed)
 *.mp3
 *.wav
