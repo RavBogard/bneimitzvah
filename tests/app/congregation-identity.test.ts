@@ -18,12 +18,19 @@ const forkEnv = { PORTAL_ENVIRONMENT: "production", PORTAL_DEPLOYMENT: "producti
 const ARTWORK = /brand\/(?:mural|icon|maskable|apple|favicon)/;
 
 describe("congregation identity", () => {
-  it("is CRC's exactly on CRC's origins and in an unconfigured local run, with no settings", () => {
+  it("is CRC's only on a positive signal: one of CRC's origins, or a localhost origin outside production", () => {
     for (const env of [{ BETTER_AUTH_URL: "https://beitmitzvah.centralreform.org", PORTAL_ENVIRONMENT: "production" }, { BETTER_AUTH_URL: "https://bneimitzvah.vercel.app" },
-      { BETTER_AUTH_URL: "http://localhost:3000", PORTAL_ENVIRONMENT: "local" }, {}]) {
+      { BETTER_AUTH_URL: "http://localhost:3000", PORTAL_ENVIRONMENT: "local" }, { BETTER_AUTH_URL: "http://127.0.0.1:3100", NODE_ENV: "test" }]) {
       expect(resolveIdentity(env)).toBe(CRC_IDENTITY);
     }
     expect(CRC_IDENTITY).toMatchObject({ productName: "CRC Torah", name: "Central Reform Congregation", logo: { kind: "crc" } });
+  });
+
+  it("an unset or unknown origin, or localhost in production, is never CRC", () => {
+    for (const env of [{}, { PORTAL_ENVIRONMENT: "local" }, { NODE_ENV: "development" }, { BETTER_AUTH_URL: "https://unknown.example" }, { BETTER_AUTH_URL: "https://preview-1.vercel.app" },
+      { BETTER_AUTH_URL: "http://localhost:3000", NODE_ENV: "production" }, { BETTER_AUTH_URL: "http://localhost:3000", PORTAL_ENVIRONMENT: "production" }, { BETTER_AUTH_URL: "https://beitmitzvah.centralreform.org.evil.example" }]) {
+      expect(resolveIdentity(env)).toMatchObject({ crc: false, productName: "Beit Mitzvah", logo: { kind: "none" } });
+    }
   });
 
   it("settings never change CRC's identity on a CRC origin", () => {
@@ -31,7 +38,7 @@ describe("congregation identity", () => {
   });
 
   it("falls back to the generic name with no logo anywhere else", () => {
-    for (const env of [{ BETTER_AUTH_URL: FORK, PORTAL_ENVIRONMENT: "production" }, { BETTER_AUTH_URL: "https://preview-123.vercel.app", PORTAL_ENVIRONMENT: "preview" }, { PORTAL_ENVIRONMENT: "production" }]) {
+    for (const env of [{ BETTER_AUTH_URL: FORK, PORTAL_ENVIRONMENT: "production" }, { BETTER_AUTH_URL: "https://preview-123.vercel.app", PORTAL_ENVIRONMENT: "preview" }, { PORTAL_ENVIRONMENT: "production" }, {}]) {
       expect(resolveIdentity(env)).toMatchObject({ crc: false, name: "Beit Mitzvah", productName: "Beit Mitzvah", logo: { kind: "none" } });
     }
   });

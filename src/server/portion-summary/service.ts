@@ -3,7 +3,6 @@ import { createHash } from "node:crypto";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
 import { canonical } from "../study-guides/service";
-import { portionSummaryCredit } from "../../lib/portion-summary/credit";
 import * as data from "./data";
 import { parashahOf, validateSummary } from "./validation";
 
@@ -95,7 +94,7 @@ export async function approveSummary<Q extends PgQueryResultHKT>(authority: Summ
   if ("ok" in wanted) return wanted;
   return authority.run(async (tx, writer, live) => {
     if (!writer.attended) return fail("attended-only");
-    const credit = portionSummaryCredit(writer.tenantId);
+    const credit = await data.summaryCredit(tx, writer.tenantId);
     if (!credit) return fail("no-credit");
     const rows = await data.revisionsOf(tx, writer.tenantId, wanted.readingKey, true), row = rows.find(r => r.revision === wanted.revision);
     if (!row) return fail("not-found");

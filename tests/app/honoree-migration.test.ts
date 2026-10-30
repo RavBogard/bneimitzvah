@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { readFile, mkdir, copyFile, writeFile } from "node:fs/promises";
@@ -21,7 +22,8 @@ test("0023 backfills current committed nonempty groups, preserves existing data/
     for(const entry of entries) await copyFile(join(folder,entry.tag+".sql"),join(prior,entry.tag+".sql"));
     const db=drizzle(client,{schema:s}); await migrate(db,{migrationsFolder:prior});
     await source.owner(async()=>{
-      await db.insert(s.tenant).values(await source.db.select().from(s.tenant)).onConflictDoNothing();
+      // This database is migrated only to 0023, before tenant.summary_credit (0056) exists.
+      for (const row of await source.db.select().from(s.tenant)) await db.execute(sql`insert into tenant (id, name, product_name, enabled, customs) values (${row.id}, ${row.name}, ${row.productName}, ${row.enabled}, ${JSON.stringify(row.customs)}::jsonb) on conflict do nothing`);
       await db.insert(s.user).values(await source.db.select().from(s.user));
       await db.insert(s.membership).values(await source.db.select().from(s.membership));
       await db.insert(s.roleGrant).values(await source.db.select().from(s.roleGrant));

@@ -65,13 +65,16 @@ export function configuredLogo(value: string | undefined): Logo {
   return file && /^[A-Za-z0-9][A-Za-z0-9._-]{0,80}\.(?:png|webp|jpe?g)$/.test(file) && !file.includes("..") ? { kind: "custom", src: `/${file}` } : NONE;
 }
 
-/** Whether the CRC identity applies to this environment: exactly CRC's origins, or an unconfigured local run. */
+/**
+ * Whether the CRC identity applies: only on a positive signal. BETTER_AUTH_URL is one of CRC's origins, or it is a localhost address
+ * outside production (development and tests). An unset or unknown origin is never CRC, so a build with missing settings cannot bake CRC art.
+ */
 export function isCrcEnvironment(env: Environment): boolean {
   const origin = env.BETTER_AUTH_URL;
-  if (origin && CRC_ORIGINS.includes(origin)) return true;
+  if (!origin) return false;
+  if (CRC_ORIGINS.includes(origin)) return true;
   if (env.CONGREGATION_NAME || env.CANONICAL_ORIGIN) return false;
-  if (!origin) return !env.PORTAL_ENVIRONMENT || env.PORTAL_ENVIRONMENT === "local";
-  return env.PORTAL_ENVIRONMENT !== "production" && /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(origin);
+  return env.NODE_ENV !== "production" && env.PORTAL_ENVIRONMENT !== "production" && /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(origin);
 }
 
 export function resolveIdentity(env: Environment = process.env): Identity {

@@ -379,6 +379,13 @@
       "when": 1793126426497,
       "tag": "0054_readings_for_everyone",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1793400000000,
+      "tag": "0056_tenant_summary_credit",
+      "breakpoints": true
     }
   ]
 }

@@ -16,6 +16,8 @@ export const tenant = pgTable("tenant", {
   name: text("name").notNull(),
   productName: text("product_name").notNull(),
   enabled: boolean("enabled").default(true).notNull(),
+  // The credit an approved portion summary carries (migration 0056); NULL until an operator sets it, and approval fails closed meanwhile.
+  summaryCredit: text("summary_credit"),
   customs: jsonb("customs").$type<Record<string, unknown>>().default({}).notNull(),
 });
 

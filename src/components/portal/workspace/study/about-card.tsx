@@ -5,6 +5,7 @@ import type { ApprovedPortionSummary } from "../../../../lib/portion-summary/cre
 import { parashahSlug } from "../../../../lib/portion-summary/reading";
 import type { StudyKind } from "./api";
 import { guideLabelState, guideLabelText } from "./guide-card";
+
 import type { GuideStore } from "./guide-store";
 import { MarkdownLite } from "./markdown-lite";
 import { usePortionSummary } from "./portion-summary";
@@ -41,13 +42,14 @@ function AboutView({ kind, text, label, labelState, source, sheetLink }: { kind:
  * one. Never both, and the base guide's themes never appear. `store` is absent where there is no guide to read (a visitor, an admin exploring).
  */
 export function AboutCard({ store, kind, readingKey }: { store?: GuideStore; kind: StudyKind; readingKey?: string | null }) {
+  const shortName = useIdentity().shortName;
   useSyncExternalStore(store?.subscribe ?? none, store?.snapshot ?? zero, store?.snapshot ?? zero);
   useEffect(() => { store?.ensure(kind); }, [store, kind]);
   const view = store?.view(kind) ?? null, overview = view?.base?.overview.trim() ? view.base : null;
   const summary = usePortionSummary(!overview && kind === "torah" ? parashahSlug(readingKey) : null, true);
   const sheet = store?.sheet(kind) ?? null;
   const sheetLink = sheet && <p className={styles.sheet}><a href={sheet} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">This week’s haftarah study sheet<span aria-hidden="true"> ↗</span><span className="sr-only"> (opens in a new tab)</span></a></p>;
-  if (overview) return <AboutView kind={kind} text={overview.overview} label={guideLabelText(overview.label)} labelState={guideLabelState(overview.label)} source="guide" sheetLink={sheetLink} />;
+  if (overview) return <AboutView kind={kind} text={overview.overview} label={guideLabelText(overview.label, shortName)} labelState={guideLabelState(overview.label)} source="guide" sheetLink={sheetLink} />;
   if (summary) return <AboutView kind={kind} text={summary.summary} label={summary.credit} source="summary" sheetLink={sheetLink} />;
   return sheetLink ? <section className={styles.about} aria-label="Haftarah study sheet" data-study-about="sheet" data-guide-kind={kind}><div className={styles.body}>{sheetLink}</div></section> : null;
 }

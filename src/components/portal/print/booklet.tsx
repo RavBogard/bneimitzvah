@@ -6,6 +6,7 @@ import { fetchStudyPage, type StudyKind, type StudyVerse } from "../workspace/st
 import type { StudyChapter } from "../workspace/study/credits";
 import { fetchGuide, type GuideFetch } from "../workspace/study/guide-api";
 import { guideLabelState, guideLabelText } from "../workspace/study/guide-card";
+import { useIdentity } from "../../site/identity-context";
 import { MarkdownLite } from "../workspace/study/markdown-lite";
 import { PhraseLegend, StudyHebrew } from "../workspace/study/annotations";
 import { icons } from "../workspace/study/lift";
@@ -102,6 +103,7 @@ function Part({ part }: { part: BookletPart }) {
 
 /** The verses of one aliyah: Hebrew (trope colour unless "Black and white") beside the JPS 2023 English, then the guide's notes on them. */
 function ReadingSection({ section, row, name, colour, productName, date }: { section: Extract<BookletSection, { kind: "reading" }>; row: BookletReading; name: string; colour: boolean; productName: string; date: string }) {
+  const shortName = useIdentity().shortName;
   const ending = useMemo(() => ({ kind: row.reading.kind, confirmed: true, verses: row.reading.verses }), [row.reading]);
   const hebrew = colour ? (verse: StudyVerse) => {
     const result = colorStudyVerse(verse.ref, verse.hebrew, ending);
@@ -121,7 +123,7 @@ function ReadingSection({ section, row, name, colour, productName, date }: { sec
           <MarkdownLite text={note.note.body} className={booklet.prose} />
           {note.note.sources.length > 0 && <ul className={booklet.sources} aria-label="Sources for this note">{note.note.sources.map(source => <li key={source.id}>
             <bdi dir="auto">{source.labels.en ?? source.indexTitle}</bdi> · <bdi dir="ltr">{source.ref}</bdi></li>)}</ul>}
-          <p className={booklet.label} data-guide-label={guideLabelState(note.label)}>{guideLabelText(note.label)}</p>
+          <p className={booklet.label} data-guide-label={guideLabelState(note.label)}>{guideLabelText(note.label, shortName)}</p>
         </article>)}
       </section>}
     </div>;
@@ -135,6 +137,7 @@ const testId = (section: BookletSection) => section.kind === "about" || section.
 
 /** The booklet itself, as it prints: one section to a page run, in the plan's order. Pure over its input, so the layout is testable. */
 export function BookletDocument({ input, colour, productName }: { input: BookletInput; colour: boolean; productName: string }) {
+  const shortName = useIdentity().shortName;
   const sections = useMemo(() => bookletSections(input, parashahName), [input]), name = `${input.student.firstName} ${input.student.lastName}`;
   const rowOf = (kind: BookletKind) => (kind === "torah" ? input.torah : input.haftarah)!;
   let haftarahOpened = false;
@@ -166,7 +169,7 @@ export function BookletDocument({ input, colour, productName }: { input: Booklet
           case "about": return <>
             <Sub kind={section.reading}>{section.reading === "torah" ? "About this portion" : "About this haftarah"}</Sub>
             <MarkdownLite text={section.overview} className={booklet.prose} />
-            <p className={booklet.label} data-guide-label={guideLabelState(section.label)}>{guideLabelText(section.label)}</p>
+            <p className={booklet.label} data-guide-label={guideLabelState(section.label)}>{guideLabelText(section.label, shortName)}</p>
           </>;
           case "reading": return <>
             <Sub kind={section.reading}>Your reading</Sub>
@@ -187,7 +190,7 @@ export function BookletDocument({ input, colour, productName }: { input: Booklet
               .filter((line, i, all) => all.indexOf(line) === i).map(line => <p key={line} className={booklet.meta}>{line}</p>)}
             {section.tikkun && <p className={booklet.meta}>Practice pages: Stam Ashkenaz CLM, Culmus project (GNU GPL 2 with font exception).</p>}
             {section.teaching && <p className={booklet.meta}>{CRC_TENANT.credit}</p>}
-            {[...new Set(section.guideLabels.map(guideLabelText))].map(text => <p key={text} className={booklet.label}>{text}</p>)}
+            {[...new Set(section.guideLabels.map(l => guideLabelText(l, shortName)))].map(text => <p key={text} className={booklet.label}>{text}</p>)}
           </>;
         }
       })();
