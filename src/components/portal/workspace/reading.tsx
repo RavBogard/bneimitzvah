@@ -1,5 +1,6 @@
 "use client";
 
+import { useIdentity } from "../../site/identity-context";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { type Assigned, type Reading, type ReadingMode, type Student } from "./api";
 import { LearnReviewAction } from "../../learn/hero-actions";
@@ -158,6 +159,7 @@ const LISTENING_OFF_PARENT = "Listening isn’t available yet. You can read and 
  */
 export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, firstName }: { mode: ReadingMode; studentId: string; onStudentReload?(student: Student): void; afterSummary?: ReactNode; firstName?: string }) {
   const { readVerified: read, readWork, readProgress, readGuide, readPracticeCalendar, summary, epoch, busy, concealed, selectChild, registerReload, registerQuiet, registerWork, completeWork, registerDeparture, guardDeparture, serviceAuthorityFailed } = useWorkspace();
+  const identity = useIdentity();
   const key = `${mode}:${studentId}:${epoch}`;
   const parentScope = JSON.stringify([summary.sessionBinding, epoch, mode, studentId]);
   const serviceId = useId();
@@ -340,7 +342,8 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   // It wraps for the whole life of a student page (never only once the reading loads), so nothing inside remounts; it starts folded only once there is a
   // reading to practise (a student with only service parts, or a portion still being explored, sees them open).
   const plan = (children: ReactNode) => practisingMode ? <details className="reading-plan" data-reading-plan="" data-testid="reading-plan" open={!practising || undefined}><summary>Your plan</summary>{children}</details> : children;
-  const guideLink = <p className="field-help"><a href="https://www.centralreform.org/beit-mitzvah/" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">CRC preparation guide</a></p>;
+  // These two links are CRC's own resources: off CRC's origins they are hidden, never relabelled.
+  const guideLink = !identity.crc ? null : <p className="field-help"><a href="https://www.centralreform.org/beit-mitzvah/" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">CRC preparation guide</a></p>;
   const tabPanel = (value: "reading" | "service" | "lessons", children: ReactNode) => value === "reading" ? children : <div className="reading-section" data-section={value}>{children}</div>;
   // A parent's page folds its rows and its text so it opens on This week (the whole-screen rethink). The parts stay mounted inside either way, so
   // reloads, access checks and the lesson snapshot that feeds This week behave exactly as on one long page.
@@ -420,7 +423,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
     if (sectionIds.includes(id)) requestAnimationFrame(() => toSection(id));
   }, [authorizedReading, concealed, toSection]);
   const serviceBlock = tabPanel("service", <><ServiceLearningPanel id={serviceId} headingId={SECTION_IDS.service} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} onDepartureActive={setServiceDepartureActive} onVisit={(plan, unitId) => calendar.visitUnit(plan, unitId)} />
-      {authorizedReading && !concealed && <p className="field-help"><a href={links.siddurUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">CRC digital siddur collection</a>{links.musicUrl && <> · <a href={links.musicUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Service music</a></>}</p>}</>);
+      {identity.crc && authorizedReading && !concealed && <p className="field-help"><a href={links.siddurUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">CRC digital siddur collection</a>{links.musicUrl && <> · <a href={links.musicUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Service music</a></>}</p>}</>);
   const lessonsBlock = tabPanel("lessons", <>{staff && student && authorizedReading && !concealed && <TutorPracticeDays />}{staff && student && authorizedReading && !concealed && <StaffPracticeDays calendar={calendar} firstName={student.firstName} />}<LessonLog mode={mode} studentId={studentId} register={registerLessons} tabbed={false} headingId={SECTION_IDS.lessons} firstName={student?.firstName ?? firstName} /></>);
   // A parent reads the lesson notes first (what the tutor asked), then the service parts; everyone else keeps the page's order.
   const parts = mode === "parent" ? <>{sectionFold("lessons", "Lesson notes", lessonsBlock)}{sectionFold("service", "Service parts", serviceBlock)}</> : <>{serviceBlock}{lessonsBlock}</>;

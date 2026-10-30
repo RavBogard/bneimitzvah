@@ -1,5 +1,5 @@
 import "server-only";
-import { PRODUCTION_ORIGINS } from "../runtime/config";
+import { isProductionOrigin } from "../../lib/site/identity";
 import { ReferenceUnavailable } from "./catalog";
 import { createPublicShortHandler, type PublicShortHandler } from "./public-short";
 import type { ReferenceCatalogGet } from "./storage";
@@ -12,7 +12,7 @@ const digest = (value: unknown): value is string => typeof value === "string" &&
 function select(env: Environment): Config | null {
   if (env.REFERENCE_AUDIO_SHORT_PUBLIC_RELEASE !== "true" || env.PORTAL_ENVIRONMENT !== "production" || env.PORTAL_DEPLOYMENT !== "production"
     || env.VERCEL !== "1" || env.VERCEL_ENV !== "production" || env.NODE_ENV !== "production"
-    || !PRODUCTION_ORIGINS.includes(env.BETTER_AUTH_URL ?? "") || !digest(env.REFERENCE_AUDIO_CATALOG_SHA256) || !digest(env.REFERENCE_AUDIO_SHORT_MANIFEST_SHA256)
+    || !isProductionOrigin(env.BETTER_AUTH_URL ?? "", env) || !digest(env.REFERENCE_AUDIO_CATALOG_SHA256) || !digest(env.REFERENCE_AUDIO_SHORT_MANIFEST_SHA256)
     || typeof env.BLOB_STORE_ID !== "string" || !/^store_[A-Za-z0-9]{8,64}$/.test(env.BLOB_STORE_ID)
     || env.VERCEL_BLOB_API_URL !== undefined || env.NEXT_PUBLIC_VERCEL_BLOB_API_URL !== undefined) return null;
   return Object.freeze({ origin: env.BETTER_AUTH_URL!, parentCatalogSHA256: env.REFERENCE_AUDIO_CATALOG_SHA256, manifestSHA256: env.REFERENCE_AUDIO_SHORT_MANIFEST_SHA256, storeId: env.BLOB_STORE_ID });
@@ -25,7 +25,7 @@ export function createRuntimePublicShort(env: Environment): PublicShortHandler {
     reportShortDiagnostic("config-rejected", () => ({
       release: env.REFERENCE_AUDIO_SHORT_PUBLIC_RELEASE === "true", portalEnvironment: env.PORTAL_ENVIRONMENT === "production",
       portalDeployment: env.PORTAL_DEPLOYMENT === "production", platform: env.VERCEL === "1", platformEnvironment: env.VERCEL_ENV === "production",
-      nodeEnvironment: env.NODE_ENV === "production", origin: PRODUCTION_ORIGINS.includes(env.BETTER_AUTH_URL ?? ""),
+      nodeEnvironment: env.NODE_ENV === "production", origin: isProductionOrigin(env.BETTER_AUTH_URL ?? "", env),
       catalogDigest: digest(env.REFERENCE_AUDIO_CATALOG_SHA256), manifestDigest: digest(env.REFERENCE_AUDIO_SHORT_MANIFEST_SHA256),
       storeShape: typeof env.BLOB_STORE_ID === "string" && /^store_[A-Za-z0-9]{8,64}$/.test(env.BLOB_STORE_ID),
       serverOverrideAbsent: env.VERCEL_BLOB_API_URL === undefined, publicOverrideAbsent: env.NEXT_PUBLIC_VERCEL_BLOB_API_URL === undefined,

@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
 import { shelfSefariaUrl, sourceSefariaUrl } from "../src/lib/readings/shelf";
 import { creditLine, licenseLabel } from "../src/lib/readings/edition-credit";
+import { parseCommentaryChapter, commentaryCandidates, commentaryEditionUrl } from "../src/lib/readings/commentary";
 import { closeNotes, verseNotes } from "./study-sheet";
 
 // More on this verse on the built, unconfigured production server. Every answer is a synthetic route
@@ -37,6 +38,12 @@ async function mock(page: Page, options: { shelf?: "ok" | "fail"; source?: "ok" 
       if (sourceFails) return json({ error: "unavailable" }, 503);
       return json({ ref, sefariaUrl: sourceSefariaUrl(ref), segments: [{ hebrew: [{ text: "אָב גַּד" }], english: [{ text: `Synthetic comment one of ${ref}.` }] }, { hebrew: [{ text: "הוּ זַח" }], english: null }],
         editions: [edition(ref, "he", "Synthetic Hebrew Edition", "Public Domain"), edition(ref, "en", "Synthetic English Edition", "")] });
+    }
+    // A verse has a notes card (and so "Everything on this verse") only where something speaks on it, so Rashi speaks on all three verses (Study v6).
+    if (url.pathname === "/api/public/commentary") {
+      const work = q.get("work")!, chapter = q.get("chapter")!, parsed = parseCommentaryChapter(work, chapter), c = parsed ? commentaryCandidates(parsed) : null;
+      const editions = parsed && c ? [c.he[0], c.en[0]].filter(Boolean).map(item => ({ language: item.language, title: item.title, license: item.license, credit: item.credit, url: commentaryEditionUrl(parsed, item) })) : [];
+      return json({ work, chapter, verses: work === "rashi" ? Object.fromEntries(["1", "2", "3"].map(n => [n, { comments: [{ hebrew: null, english: [{ text: `Synthetic comment ${n}` }] }] }])) : {}, editions });
     }
     return json({ error: "unavailable" }, 503);
   });

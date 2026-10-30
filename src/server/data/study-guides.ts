@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
 import type { ProgressActor } from "./progress";
@@ -23,7 +23,7 @@ const actorValues = (writer: RabbiWriter, mutationId: string, requestDigest: str
   actorUserId: writer.userId, actorMembershipId: writer.membershipId, roleGrantId: writer.roleGrantId, role: "admin" as const, mode: "admin" as const,
   channel: writer.channel, mutationId, requestDigest,
 });
-async function audit<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, writer: RabbiWriter, action: "study-voice.set" | "study-guide.set" | "study-guide.publish" | "study-guide-student.set",
+async function audit<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, writer: RabbiWriter, action: "study-voice.set" | "study-guide.set" | "study-guide.publish" | "study-guide.import" | "study-guide-student.set",
   targetType: string, targetId: string, studentId: string | null) {
   await tx.insert(s.auditEvent).values({ tenantId: writer.tenantId, actorUserId: writer.userId, actorMembershipId: writer.membershipId, roleGrantId: writer.roleGrantId,
     mode: "admin", actingStudentId: studentId, action, targetType, targetId, requestId: randomUUID() });
@@ -63,12 +63,50 @@ export async function guideReceipt<Q extends PgQueryResultHKT>(tx: AccessTransac
 }
 export async function appendGuide<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, writer: RabbiWriter, write: {
   kind: GuideKind; readingKey: string; expected: number; origin: "claude" | "rabbi"; reviewed: boolean; hold: boolean; body: GuideBody; mutationId: string; digest: string; publish: boolean;
+  /** Carried forward unchanged when an imported guide is published, so the original author's credit stays with it. */
+  importCredit?: string | null; importKey?: string | null;
 }) {
   const [row] = await tx.insert(s.studyGuide).values({ tenantId: writer.tenantId, kind: write.kind, readingKey: write.readingKey, ...versions(write.expected),
-    origin: write.origin, reviewed: write.reviewed, hold: write.hold, body: write.body, ...actorValues(writer, write.mutationId, write.digest) }).onConflictDoNothing().returning();
+    origin: write.origin, reviewed: write.reviewed, hold: write.hold, body: write.body, importCredit: write.importCredit ?? null, importKey: write.importKey ?? null,
+    ...actorValues(writer, write.mutationId, write.digest) }).onConflictDoNothing().returning();
   if (row) await audit(tx, writer, write.publish ? "study-guide.publish" : "study-guide.set", "study_guide", row.id, null);
   return row ?? null;
 }
+/**
+ * One imported guide: version one of a reading that has no guide, held and unreviewed, with the original author's credit and its content
+ * key. Written by an admin from the web (channel "web"; the database allows nothing else to carry import provenance in). Null when the
+ * stream was taken in the meantime or this content is already there. The caller writes the one audit event for the whole import.
+ */
+export async function importGuide<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: { tenantId: string; userId: string; membershipId: string; roleGrantId: string }, write: {
+  kind: GuideKind; readingKey: string; origin: "claude" | "rabbi"; body: GuideBody; credit: string; key: string; digest: string;
+}) {
+  const [row] = await tx.insert(s.studyGuide).values({ tenantId: actor.tenantId, kind: write.kind, readingKey: write.readingKey, ...versions(0), origin: write.origin,
+    reviewed: false, hold: true, body: write.body, importCredit: write.credit, importKey: write.key, actorUserId: actor.userId, actorMembershipId: actor.membershipId,
+    roleGrantId: actor.roleGrantId, role: "admin", mode: "admin", channel: "web", mutationId: randomUUID(), requestDigest: write.digest }).onConflictDoNothing().returning({ id: s.studyGuide.id });
+  return row ?? null;
+}
+export async function auditGuideImport<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: { tenantId: string; userId: string; membershipId: string; roleGrantId: string }) {
+  await audit(tx, { ...actor, channel: "operator", mayReview: false }, "study-guide.import", "study_guide_import", randomUUID(), null);
+}
+/** Every stream of this tenant that has any version at all, for the import's "already has a guide" check. */
+export async function guideStreamKeys<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string) {
+  const t = s.studyGuide;
+  const rows = await tx.selectDistinct({ kind: t.kind, readingKey: t.readingKey }).from(t).where(eq(t.tenantId, tenantId)).limit(5000);
+  return new Set(rows.map(r => `${r.kind}:${r.readingKey}`));
+}
+/** Every guide version of this tenant that was imported, by content key. */
+export async function importedKeys<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string) {
+  const t = s.studyGuide;
+  const rows = await tx.selectDistinct({ kind: t.kind, readingKey: t.readingKey, importKey: t.importKey }).from(t).where(and(eq(t.tenantId, tenantId), isNotNull(t.importKey))).limit(5000);
+  return new Set(rows.map(r => `${r.kind}:${r.readingKey}:${r.importKey}`));
+}
+/** The latest visible, reviewed version of every guide stream: what an export carries. Held and unreviewed work never appears here. */
+export async function reviewedVisibleGuides<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, limit: number) {
+  const t = s.studyGuide;
+  return tx.selectDistinctOn([t.kind, t.readingKey], { kind: t.kind, readingKey: t.readingKey, origin: t.origin, reviewed: t.reviewed, body: t.body, importCredit: t.importCredit })
+    .from(t).where(and(eq(t.tenantId, tenantId), eq(t.hold, false))).orderBy(t.kind, t.readingKey, desc(t.version)).limit(limit);
+}
+
 /** Every (kind, readingKey) stream's head, for the "what needs a guide" list. */
 export async function guideStreams<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string) {
   const t = s.studyGuide;

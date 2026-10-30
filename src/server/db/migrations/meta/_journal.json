@@ -379,6 +379,20 @@
       "when": 1793126426497,
       "tag": "0054_readings_for_everyone",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1793387561272,
+      "tag": "0055_guide_import_provenance",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1793400000000,
+      "tag": "0056_tenant_summary_credit",
+      "breakpoints": true
     }
   ]
 }

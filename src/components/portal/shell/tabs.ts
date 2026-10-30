@@ -30,7 +30,7 @@ const MORE_PATHS = ["/workspace/more", "/workspace/email", "/workspace/claude"] 
 /** Where "More" lists its destinations. */
 export const MORE_HREF = "/workspace/more";
 const PEOPLE_PATHS = ["/workspace/admin/invitations", "/workspace/admin/tutors", "/workspace/accounts"] as const;
-const isMore = (path: string) => MORE_PATHS.some(base => under(path, base)) || under(path, "/workspace/admin/settings") || under(path, "/workspace/admin/reference-review");
+const isMore = (path: string) => MORE_PATHS.some(base => under(path, base)) || under(path, "/workspace/admin/settings") || under(path, "/workspace/admin/guide-sharing") || under(path, "/workspace/admin/reference-review");
 const isPeople = (path: string) => PEOPLE_PATHS.some(base => under(path, base));
 
 /**

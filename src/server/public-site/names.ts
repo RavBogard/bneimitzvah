@@ -1,5 +1,5 @@
 import "server-only";
-import { FALLBACK_PRODUCT_NAME } from "../../lib/site/product-name";
+import { resolveIdentity } from "../../lib/site/identity";
 import { createPublicRuntimeScope } from "../runtime/public-composition";
 import type { PublicRuntimeScope } from "../http/public-reading";
 
@@ -12,6 +12,9 @@ let remembered: { name: string; at: number } | null = null;
  * never reaches a visitor, it falls back and is not remembered.
  */
 export async function readPublicProductName(scope?: PublicRuntimeScope, now: () => number = Date.now): Promise<string> {
+  // A fork's name comes from its settings, never from the stored tenant row (which keeps CRC's internal id and name).
+  const identity = resolveIdentity();
+  if (!identity.crc) return identity.productName;
   if (remembered && now() - remembered.at < TTL_MS) return remembered.name;
   try {
     const found: { name: string | null } = { name: null };
@@ -19,6 +22,6 @@ export async function readPublicProductName(scope?: PublicRuntimeScope, now: () 
     const name = found.name;
     if (typeof name === "string" && name.trim() !== "") { remembered = { name, at: now() }; return name; }
   } catch { /* Fall through to the default. */ }
-  return FALLBACK_PRODUCT_NAME;
+  return identity.productName;
 }
 export function forgetPublicProductName() { remembered = null; }

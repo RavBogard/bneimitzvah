@@ -1,3 +1,4 @@
+import { resolveIdentity } from "../site/identity";
 /**
  * The web app manifest (§3.8 with E1): name and short_name are the congregation's productName (CRC's is
  * "CRC Torah"), so the route is not a fixed string. No push fields. The page links it only on the torah
@@ -10,13 +11,14 @@ const CONTROLS = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u
 export function plainProductName(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 && value.trim() === value && Array.from(value).length <= 120 && !CONTROLS.test(value) ? value : null;
 }
-export function webManifest(productName: string) {
+export function webManifest(productName: string, crcIcons: boolean = resolveIdentity().crc) {
   const name = plainProductName(productName);
   if (!name) throw new Error("Product name refused");
   return Object.freeze({
     id: "/", name, short_name: name, start_url: "/", scope: "/", display: "standalone",
     theme_color: MANIFEST_THEME, background_color: MANIFEST_BACKGROUND,
-    icons: [
+    // CRC's floor artwork only for CRC; a fork's manifest names no icon (its own logo is not a set of install icons).
+    icons: !crcIcons ? [] : [
       { src: "/brand/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/brand/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
       { src: "/brand/maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },

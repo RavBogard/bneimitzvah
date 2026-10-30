@@ -12,7 +12,6 @@ import { priorColumns } from "../helpers/prior-columns";
 import { accessFixture } from "./access-fixture";
 import { withTenantTransaction } from "../../src/server/db/runtime";
 import { readApprovedPortionSummary } from "../../src/server/portion-summary/public";
-import { portionSummaryCredit } from "../../src/lib/portion-summary/credit";
 
 // Release 1.9 N6: portion summaries (decision 4, "Claude drafts, you approve"), migration 0044. Synthetic text only.
 const TAG = "0044_portion_summary", TABLE = "portion_summary", VIEW = "portion_summary_public";
@@ -115,10 +114,12 @@ test("as portal_runtime: a draft is never public, only a live admin grant approv
   const CREDIT = "Rabbi Daniel Bogard";
   const approve = (reading: string, revision: number, member: string, grant: string, extra = "", credit = CREDIT) =>
     `update portion_summary set status='approved', approved_by='${member}', approved_grant_id='${grant}', approved_role='admin', approved_at=now(), credit='${credit}'${extra} where reading_key='${reading}' and revision=${revision}`;
-  // The database's credit is the configured one, and no other congregation has any.
-  expect(await rows("crc", "select public.portal_portion_summary_credit('crc') as crc, public.portal_portion_summary_credit('other') as other"))
-    .toEqual([{ crc: portionSummaryCredit("crc"), other: portionSummaryCredit("other") }]);
-  expect(portionSummaryCredit("crc")).toBe(CREDIT);
+  // The database's credit is the tenant's own column: none until an operator sets it, then exactly that text; other congregations have none.
+  expect(await rows("crc", "select public.portal_portion_summary_credit('crc') as crc")).toEqual([{ crc: null }]);
+  expect(await state("crc", "update tenant set summary_credit='Someone Else' where id='crc'")).toBe("42501"); // the runtime role cannot set it
+  await f.owner(async () => { await f.client.query("update tenant set summary_credit=$1 where id='crc'", [CREDIT]); });
+  expect(await rows("crc", "select public.portal_portion_summary_credit('crc') as crc")).toEqual([{ crc: CREDIT }]);
+  expect(await rows("other", "select public.portal_portion_summary_credit('other') as other")).toEqual([{ other: null }]);
   const admin = f.adminMember.id, grant = f.adminGrant.id;
 
   expect(await state("crc", draft("crc", "vayera", 1, admin))).toBe("accepted");

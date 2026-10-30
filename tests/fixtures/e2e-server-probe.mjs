@@ -6,7 +6,8 @@ import { join } from "node:path";
 const env = process.env;
 await writeFile(join(process.cwd(), "lifecycle.json"), JSON.stringify({ home: env.HOME }));
 const isolated = env.NODE_ENV === "production" && env.NEXT_TELEMETRY_DISABLED === "1"
-  && !env.BETTER_AUTH_SECRET && !env.BETTER_AUTH_URL && !env.DATABASE_URL
+  // The gate sets exactly CRC's identity origin itself (builtE2eServer); the inherited synthetic value must be gone.
+  && !env.BETTER_AUTH_SECRET && env.BETTER_AUTH_URL === "https://beitmitzvah.centralreform.org" && !env.DATABASE_URL
   && !env.DATABASE_MIGRATION_URL && !env.BOOTSTRAP_OWNER_EMAIL
   && !env.GOOGLE_CLIENT_ID && !env.GOOGLE_CLIENT_SECRET && !env.RESEND_API_KEY
   && !env.PORTAL_ENVIRONMENT && !env.PORTAL_DEPLOYMENT && !env.E2E_POISON

@@ -4,6 +4,7 @@ import { DISCUSSION_LABELS } from "../../../../lib/discussions/labels";
 import { shelfSefariaUrl } from "../../../../lib/readings/shelf";
 import { Runs, INLINE_COMMENTS } from "./commentary-view";
 import { sefariaUrl, guideLabelText } from "./guide-card";
+import { useIdentity } from "../../../site/identity-context";
 import { MarkdownLite } from "./markdown-lite";
 import { StarButton, useOwnLayer, type OwnStars } from "./own-layer";
 import { useDiscussionsView } from "./discussions";
@@ -63,6 +64,7 @@ function DiscussionCard({ note, verse }: { note: DiscussionNote; verse: StudyVer
 }
 
 function GuideCard({ note, verse, phone }: { note: GuideNoteEntry; verse: StudyVerse; phone: boolean }) {
+  const shortName = useIdentity().shortName;
   const [open, setOpen] = useState(false), id = useId();
   return <article className={styles.note} data-note-kind="rabbi" data-note-id={note.id} data-guide-notes={verse.ref} aria-label={`${note.source} on ${verse.ref}`}>
     <header className={styles.noteHead}><span className={styles.src}>{note.source}</span></header>
@@ -72,7 +74,7 @@ function GuideCard({ note, verse, phone }: { note: GuideNoteEntry; verse: StudyV
         <a href={sefariaUrl(source)} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">On Sefaria<span aria-hidden="true"> ↗</span><span className="sr-only"> (opens in a new tab)</span></a></li>)}</ul>}
     </div>
     {phone && <MoreButton open={open} onToggle={() => setOpen(value => !value)} controls={`${id}-text`} />}
-    <p className={styles.noteLabel}>{guideLabelText(note.label)}</p>
+    <p className={styles.noteLabel}>{guideLabelText(note.label, shortName)}</p>
   </article>;
 }
 

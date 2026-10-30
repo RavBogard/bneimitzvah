@@ -40,6 +40,8 @@ test("real PostgreSQL: portion summaries are tenant-isolated, public only when a
     const checkout = async () => { const client = await pool.connect(); await query(client, "SET ROLE portal_runtime"); return client; };
 
     await query(owner, "INSERT INTO tenant (id,name,product_name) VALUES ('test-other','Synthetic other','Synthetic')");
+    // Migration 0056 backfills nothing: the operator sets CRC's credit (the other tenant has none, so it can never approve).
+    await query(owner, "UPDATE tenant SET summary_credit='Rabbi Daniel Bogard' WHERE id='crc'");
     const people = {};
     for (const [key, tenant, role] of [["rabbi", "crc", "admin"], ["tutor", "crc", "tutor"], ["x", "test-other", "admin"]]) {
       const user = `summary-${key}-${suffix}`, member = randomUUID(), grant = randomUUID();

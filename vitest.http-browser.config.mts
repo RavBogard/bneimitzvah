@@ -8,6 +8,6 @@ export default defineConfig({
     maxWorkers: 1,
     testTimeout: 120_000,
     hookTimeout: 120_000,
-    env: { HTTP_BROWSER_TEST: "1" },
+    env: { HTTP_BROWSER_TEST: "1", BETTER_AUTH_URL: "http://localhost:3000" },
   },
 });

@@ -2,7 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { SHORT_SOURCE_ATTRIBUTION, SHORT_SOURCE_PREFIX, SHORT_SOURCE_LIMITS } from "../../lib/reference-audio/short-source";
 import { SHORT_SOURCE_FFMPEG_TAGS } from "../../lib/reference-audio/short-source-tags";
-import { PRODUCTION_ORIGINS } from "../runtime/config";
+import { isProductionOrigin } from "../../lib/site/identity";
 import { REFERENCE_CATALOG_LIMITS, ReferenceUnavailable } from "./catalog";
 import { createShortSourceManifestLoader, lookupShortSource, readShortSourceEntry, shortSourceManifestMatches, type ShortSourceManifest } from "./short-source-manifest";
 import { verifyShortSourceBody, readVerifiedShortSourceBody } from "./short-source-body";
@@ -48,7 +48,7 @@ export function createPublicShortHandler(input?: Readonly<{
   origin: string; parentCatalogSHA256: string; manifestSHA256: string; get: ReferenceCatalogGet; live?: () => boolean;
   loadManifest?: (signal?: AbortSignal) => Promise<ShortSourceManifest>;
 }>): PublicShortHandler {
-  if (!input || !PRODUCTION_ORIGINS.includes(input.origin) || !digest(input.parentCatalogSHA256) || !digest(input.manifestSHA256)) return async () => failure(404);
+  if (!input || !isProductionOrigin(input.origin) || !digest(input.parentCatalogSHA256) || !digest(input.manifestSHA256)) return async () => failure(404);
   const { origin, parentCatalogSHA256, manifestSHA256, get, loadManifest } = input, configured = input.live ?? (() => true);
   return async request => {
     if (!configured()) { reportShortDiagnostic("config-drift"); return failure(404); }

@@ -6,12 +6,16 @@ import type { GuideLabel, GuideNote, GuideTheme, StudentGuideView } from "./guid
 import type { GuideStore } from "./guide-store";
 import { firstLine, MarkdownLite } from "./markdown-lite";
 import styles from "./guide.module.css";
+import { useIdentity } from "../../../site/identity-context";
 
 /** Exactly the label the spec fixes: what is Claude's and whether the rabbi has reviewed it. */
-export function guideLabelText(label: GuideLabel) {
-  if (label.reviewed) return `Reviewed by ${label.rabbiName}`;
+export function guideLabelText(label: GuideLabel, shortName = "CRC") {
+  // An imported guide the importing rabbi has not reviewed is its author's draft, never the local rabbi's.
+  if (label.importedFrom && !label.reviewed) return `Written by ${label.importedFrom} · draft`;
+  const credit = label.importedFrom ? ` · From ${label.importedFrom}` : "";
+  if (label.reviewed) return `Reviewed by ${label.rabbiName}${credit}`;
   // Daniel, 2026-10-21: a draft the rabbi wrote himself is not labelled as Claude's.
-  return label.origin === "rabbi" ? `Written by ${label.rabbiName} · draft` : `Written by Claude for CRC · not yet reviewed by ${label.rabbiName}`;
+  return (label.origin === "rabbi" ? `Written by ${label.rabbiName} · draft` : `Written by Claude for ${shortName} · not yet reviewed by ${label.rabbiName}`) + credit;
 }
 /** The review state as a stable word, for a test or a style, whatever the label says. */
 export const guideLabelState = (label: GuideLabel) => label.reviewed ? "reviewed" : label.origin === "rabbi" ? "rabbi-draft" : "claude-draft";
@@ -37,6 +41,7 @@ function ThemeRows({ themes }: { themes: GuideTheme[] }) {
  * Absent entirely when there is no guide. Study has its own About card (about-card.tsx).
  */
 export function GuideCard({ store, kind, firstName, learner }: { store: GuideStore; kind: StudyKind; firstName: string; learner: boolean }) {
+  const shortName = useIdentity().shortName;
   const view = useGuide(store, kind), id = useId();
   // Hebrew stays first on a phone: the guide opens by default only in the wide layout.
   const [open, setOpen] = useState(() => typeof matchMedia === "function" && matchMedia("(min-width: 1001px)").matches);
@@ -52,12 +57,12 @@ export function GuideCard({ store, kind, firstName, learner }: { store: GuideSto
       {themes.length > 0 && <span className={styles.foldMeta}>{themes.length} {themes.length === 1 ? "theme" : "themes"}</span>}</summary>
     {view.base && view.base.overview.trim() && <>
       <MarkdownLite text={view.base.overview} className={styles.prose} heClass={styles.he} />
-      <p className={styles.label} data-guide-label={guideLabelState(view.base.label)}>{guideLabelText(view.base.label)}</p>
+      <p className={styles.label} data-guide-label={guideLabelState(view.base.label)}>{guideLabelText(view.base.label, shortName)}</p>
     </>}
     {view.additions && themes.length > 0 && <div className={styles.additions}>
       <h4>{learner ? "Added for you" : <>Added for <bdi dir="auto">{firstName}</bdi></>}</h4>
       <ThemeRows themes={themes} />
-      <p className={styles.label} data-guide-label={guideLabelState(view.additions.label)}>{guideLabelText(view.additions.label)}</p>
+      <p className={styles.label} data-guide-label={guideLabelState(view.additions.label)}>{guideLabelText(view.additions.label, shortName)}</p>
     </div>}
     {sheetLink}
     </details>
@@ -73,9 +78,10 @@ export function sefariaUrl(source: { ref: string; indexTitle: string }) {
 
 /** The guide's notes for one verse, between the verse and its Sources. Nothing at all for a verse without one. */
 export function GuideVerseNotes({ store, kind, verseRef }: { store: GuideStore; kind: StudyKind; verseRef: string }) {
+  const shortName = useIdentity().shortName;
   const view = useGuide(store, kind), notes = notesFor(view, verseRef);
   if (!notes.length) return null;
-  const labels = [...new Set(notes.map(n => guideLabelText(n.label)))];
+  const labels = [...new Set(notes.map(n => guideLabelText(n.label, shortName)))];
   return <section className={styles.notes} aria-label={`Study notes for ${verseRef}`} data-guide-notes={verseRef} tabIndex={-1}>
     {notes.map(({ theme, note }, i) => <article key={`${theme.id}-${i}`} className={styles.note}>
       <p className={styles.noteTheme} dir="auto">{theme.title}</p>

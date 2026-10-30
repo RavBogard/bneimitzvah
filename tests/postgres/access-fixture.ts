@@ -106,7 +106,8 @@ export async function postgresAccessFixture(options: { migrationsFolder?: string
     }
     const admin=await signIn("pg-admin");
     const tutor=await signIn("pg-tutor");
-    await ownerDb.insert(s.tenant).values({id:"other",name:"Synthetic other",productName:"Synthetic"});
+    // Raw SQL: this fixture also runs on databases migrated only to 0023, which has no tenant.summary_credit (0056) for a Drizzle insert to omit.
+    await query(owner,"INSERT INTO tenant(id,name,product_name) VALUES ($1,$2,$3)",["other","Synthetic other","Synthetic"]);
     await ownerDb.insert(s.tenantHost).values([
       {host:"localhost:3000",tenantId:"crc",environment:"test",deployment:"postgres",origin:"http://localhost:3000"},
       {host:"localhost:3101",tenantId:"other",environment:"test",deployment:"postgres",origin:"http://localhost:3101"},

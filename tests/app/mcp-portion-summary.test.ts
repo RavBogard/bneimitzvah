@@ -19,8 +19,10 @@ const TOOLS = ["draft_portion_summary", "list_portion_summaries", "approve_porti
 const OUTLINE = Array.from({ length: 7 }, (_, i) => `Synthetic aliyah ${i + 1}: a short line.`);
 const SUMMARY = "A synthetic summary of the parashah.\n\nA second *synthetic* paragraph.";
 
-async function setup(who: "admin" | "multi" = "admin", options: { unattended?: boolean; scope?: string } = {}, shared?: Awaited<ReturnType<typeof mcpFixture>>) {
+async function setup(who: "admin" | "multi" = "admin", options: { unattended?: boolean; scope?: string; noCredit?: boolean } = {}, shared?: Awaited<ReturnType<typeof mcpFixture>>) {
   const t = shared ?? await mcpFixture(true);
+  // Migration 0056 sets no credit: an operator does. The CRC fixture is credited the way CRC's production will be.
+  await t.f.owner(async () => { await t.f.client.query("update tenant set summary_credit=$1 where id='crc'", [options.noCredit ? null : "Rabbi Daniel Bogard"]); });
   await t.google(who);
   const token = (await t.connect(who, options)).access_token as string;
   const texts: string[] = [];
@@ -97,6 +99,12 @@ describe("portion summary tools", () => {
     // An unknown argument (an introduction, a student, a question for students) is refused by the closed schema before anything runs.
     for (const extra of [{ intro: "x" }, { studentId: randomUUID() }, { questions: ["Think about it"] }, { mutationId: "not-a-uuid" }]) expect((await t.call(token, "draft_portion_summary", { ...draft(), ...extra })).isError).toBe(true);
     expect(await count()).toEqual({ n: 1 });
+  });
+
+  it("refuses approval while the congregation has no credit set, and stamps the stored credit once it has", async () => {
+    const { json } = await setup("admin", { noCredit: true });
+    const draftRow = await json("draft_portion_summary", draft());
+    expect(await json("approve_portion_summary", { reading: "vayera", revision: draftRow.revision })).toMatchObject({ ok: false, code: "no-credit" });
   });
 
   it("shows nothing until the rabbi approves; then shows that exact revision credited to Rabbi Daniel Bogard; a new draft stays hidden; withdrawing hides it for good", async () => {
