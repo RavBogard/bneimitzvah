@@ -24,7 +24,9 @@ export function ReadingPlace({ refs, pageKey, onJump, onHere }: { refs: readonly
     setHere(rows[0]?.dataset.verseRef ?? null);
     if (!rows.length) return;
     let tick = false;
-    const sync = () => { tick = false; const line = window.innerHeight * FOLLOW.line; const row = rows.find(item => item.getBoundingClientRect().bottom > line); if (row) setHere(row.dataset.verseRef!); };
+    const sync = () => { tick = false; const line = window.innerHeight * FOLLOW.line; const row = rows.find(item => item.getBoundingClientRect().bottom > line);
+      // Above the text (the title block and its Change button) no verse has reached the line yet: the place the reader was at holds, so Change and Whole portion open there.
+      if (row && row.getBoundingClientRect().top <= line) setHere(row.dataset.verseRef!); };
     const onScroll = () => { if (!tick) { tick = true; requestAnimationFrame(sync); } };
     window.addEventListener("scroll", onScroll, { passive: true }); window.addEventListener("resize", onScroll);
     sync();
