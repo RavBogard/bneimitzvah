@@ -193,5 +193,6 @@ test("commentary Hebrew grows with each size step", async ({ page }) => {
   expect(sizes.small).toBeLessThan(sizes.standard);
   expect(sizes.standard).toBeLessThan(sizes.large);
   expect(sizes.large).toBeLessThan(sizes.huge);
-  expect(sizes.standard, "Standard keeps the size it had").toBeCloseTo(19, 0);
+  // Study v6 sets a note's quoted Hebrew at 1.125rem (18px) at Standard; the other steps scale from it.
+  expect(sizes.standard, "Standard is the size the notes column sets").toBeCloseTo(18, 0);
 });

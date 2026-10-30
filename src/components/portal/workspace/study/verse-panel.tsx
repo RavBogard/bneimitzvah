@@ -45,10 +45,12 @@ export function VersePanelScope({ children, passage }: { children: ReactNode; pa
   const lens = useStudyLens(), active = lens.available && lens.lens === "study";
   const [open, setOpen] = useState<Open | null>(null), [listOpen, setListOpen] = useState(false), base = useId(), listTrigger = useRef<HTMLElement | null>(null);
   const trigger = useRef<HTMLElement | null>(null), lastWord = useRef<{ verse: string; word: number } | null>(null), toVerse = useRef<string | null>(null);
+  // A list entry opens its verse by first taking the reader to the verse's section, which rebuilds the page and the list inside it: the entry is found again by its own key.
+  const triggerList = useRef<string | null>(null);
   const current = useRef(open); current.current = open;
   const request = useCallback((verse: string, kind: VersePanelKind, element: HTMLElement | null, word?: number, from?: "list") => {
     const next = requestPanel(current.current, { verse, kind, word, from }, `${base}-panel`);
-    if (!next.restoreFocus) { trigger.current = element; if (kind !== "word") lastWord.current = null; }
+    if (!next.restoreFocus) { trigger.current = element; triggerList.current = element?.getAttribute("data-discussion-open") ?? null; if (kind !== "word") lastWord.current = null; }
     setOpen(next.open);
   }, [base]);
   const toggle = useCallback((verse: string, kind: VersePanelKind, element: HTMLElement) => request(verse, kind, element), [request]);
@@ -81,6 +83,7 @@ export function VersePanelScope({ children, passage }: { children: ReactNode; pa
     let target: HTMLElement | null = null;
     if (back) { try { target = document.querySelector<HTMLElement>(`[data-study-rows] [data-verse-ref="${CSS.escape(back)}"]`); } catch { target = null; } if (target) target.tabIndex = -1; }
     else if (trigger.current?.isConnected) target = trigger.current;
+    else if (triggerList.current) { try { target = document.querySelector<HTMLElement>(`[data-discussion-open="${CSS.escape(triggerList.current)}"]`); } catch { target = null; } }
     else if (lastWord.current) target = wordElement(lastWord.current.verse, lastWord.current.word);
     // Next word may have taken the card off screen: bring the word back, no further than it takes.
     if (target && !inView(target)) { try { target.scrollIntoView({ block: "center" }); } catch { /* Stay where the page is. */ } }
@@ -150,9 +153,10 @@ const titleOf = (open: Open) => open.kind === "discussion" ? `${DISCUSSION_LABEL
 function PanelBody({ open }: { open: Open }) {
   const body = useRef<HTMLDivElement | null>(null), lens = useStudyLens(), scope = usePanel(), size = useReadingPrefs().size;
   useEffect(() => {
-    if (open.kind !== "word") return;
+    // Compare swaps into the same sheet from the shelf's "Compare translations" button, which unmounts under the reader's focus: the title takes it, as on any other opening.
+    if (open.kind !== "word" && open.kind !== "compare") return;
     const at = document.activeElement;
-    if ((at instanceof HTMLButtonElement && at.disabled) || at === document.body) body.current?.closest("dialog")?.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
+    if ((open.kind === "word" && at instanceof HTMLButtonElement && at.disabled) || at === document.body) body.current?.closest("dialog")?.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
   });
   const word = open.kind === "word" ? scope?.host.current : null;
   return <div id={open.id} ref={body} className={styles.versePanel} data-verse-panel={open.verse} data-size={size}>
