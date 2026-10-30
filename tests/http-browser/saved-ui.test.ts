@@ -253,7 +253,7 @@ it("on their own saved reading a member sees stored translation and note text re
   await ui(first.locator("textarea, form")).toHaveCount(0);
   await ui(first.getByRole("button", { name: "Save to My Readings", exact: true })).toHaveCount(0);
   // A star on the inline Rashi comment: pressed in place, and listed in Yours.
-  const star = tab.locator('[data-study-notes="Genesis 1:1"] [data-star="rashi|Genesis 1:1|1"]');
+  const star = tab.getByRole("article", { name: "Rashi on Genesis 1:1" }).locator('[data-star="rashi|Genesis 1:1|1"]');
   await ui(star).toHaveAttribute("aria-pressed", "false");
   await star.click();
   await ui(star).toHaveAttribute("aria-pressed", "true");
@@ -265,7 +265,7 @@ it("on their own saved reading a member sees stored translation and note text re
   await tab.reload({ waitUntil: "domcontentloaded" });
   await ui(tab.locator("[data-study-rows]")).toBeVisible();
   await studyNotes(tab, "Genesis 1:1");
-  await ui(tab.locator('[data-study-notes="Genesis 1:1"] [data-star="rashi|Genesis 1:1|1"]').first()).toHaveAttribute("aria-pressed", "true");
+  await ui(tab.getByRole("article", { name: "Rashi on Genesis 1:1" }).locator('[data-star="rashi|Genesis 1:1|1"]')).toHaveAttribute("aria-pressed", "true");
   await tab.locator('[data-yours-ref="Genesis 1:1"]').getByTestId("yours-toggle").click();
   await ui(tab.locator('[data-yours-ref="Genesis 1:1"]').getByText("Synthetic own words for the first verse.", { exact: true })).toBeVisible();
   // Lein: the drill reveals JPS only, with no own translation and no way into Yours.
@@ -280,8 +280,8 @@ it("on their own saved reading a member sees stored translation and note text re
   await tab.getByRole("group", { name: "Reading lens", exact: true }).getByRole("button", { name: "Study", exact: true }).click();
   await ui(tab.locator("[data-study-rows]")).toBeVisible();
   await studyNotes(tab, "Genesis 1:1");
-  await tab.locator('[data-study-notes="Genesis 1:1"] [data-star="rashi|Genesis 1:1|1"]').first().click();
-  await ui(tab.locator('[data-study-notes="Genesis 1:1"] [data-star="rashi|Genesis 1:1|1"]').first()).toHaveAttribute("aria-pressed", "false");
+  await tab.getByRole("article", { name: "Rashi on Genesis 1:1" }).locator('[data-star="rashi|Genesis 1:1|1"]').click();
+  await ui(tab.getByRole("article", { name: "Rashi on Genesis 1:1" }).locator('[data-star="rashi|Genesis 1:1|1"]')).toHaveAttribute("aria-pressed", "false");
   // Nothing was written or audited by the page: the two stored rows are untouched, and only the star was posted.
   const work = await fixture.ownerDb.select().from(s.savedVerseWork).where(eq(s.savedVerseWork.savedReadingId, id));
   expect(work.map(row => [row.verseRef, row.stream, row.text, row.version]).sort()).toEqual([["Genesis 1:1", "note", "Synthetic private note.", 1], ["Genesis 1:1", "translation", "Synthetic own words for the first verse.", 1]]);
