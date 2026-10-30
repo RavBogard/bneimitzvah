@@ -171,12 +171,12 @@ Steps:
    (add that line to `.env.operator`), then run:
 
    ```
-   node --env-file=.env.operator scripts/add-congregation-host.mjs --summary-credit "Rabbi Example" --confirm
+   node --env-file=.env.operator scripts/add-congregation-host.mjs --summary-credit "Rabbi Example" --congregation-name "Temple Example" --confirm
    ```
 
-   `--summary-credit` and `--confirm` are required. It is the plain-text name (no `@`, no `<` or `>`, 240 characters at most) printed under every approved portion summary. Use the rabbi's name as the rabbi wants it credited. **Until the credit is set, portion summaries cannot be approved** (migration `0056` makes the database fail closed). Expected: `Congregation host configured; remove private operator configuration` (verified). Running it again with the same address prints `Congregation host already-configured; remove private operator configuration` and updates the credit. The address must be https, a real DNS name, with no port or path, and not one of CRC's own hosts. To change only the credit later, add `--credit-only` and leave out the `CANONICAL_ORIGIN` line (the migration's comment says `--set-summary-credit-only`; the script's flag is `--credit-only`). Approving a portion summary fails until the credit is set.
+   `--summary-credit`, `--congregation-name` and `--confirm` are required. `--congregation-name` (plain text, no `@`, `<`, `>`, `&` or quotes, 80 characters at most; use the same value as `CONGREGATION_NAME`) replaces the stored name that the database seed gave the tenant ("Central Reform Congregation"), the stored product name (`<CONGREGATION_SHORT_NAME> Torah`, or the full name when no short name is set in the operator file) and the "issued by" credit in the tenant settings. `--credit-only` leaves these alone. It is the plain-text name (no `@`, no `<` or `>`, 240 characters at most) printed under every approved portion summary. Use the rabbi's name as the rabbi wants it credited. **Until the credit is set, portion summaries cannot be approved** (migration `0056` makes the database fail closed). Expected: `Congregation host configured; remove private operator configuration` (verified). Running it again with the same address prints `Congregation host already-configured; remove private operator configuration` and updates the credit. The address must be https, a real DNS name, with no port or path, and not one of CRC's own hosts. To change only the credit later, add `--credit-only` and leave out the `CANONICAL_ORIGIN` line (the migration's comment says `--set-summary-credit-only`; the script's flag is `--credit-only`). Approving a portion summary fails until the credit is set.
 4. Aliases need no database row.
-5. Review Settings in the portal as the owner, because the seeded tenant settings were written for CRC. The seed in `0002_tenant_security.sql` writes `"credits":{"issuedBy":"Central Reform Congregation"}` and the tenant's stored name is still CRC's (verified in the rehearsal database; the pages still showed your name, because it comes from the identity variables). Open the settings page and change anything that still says CRC (which fields that page lets you edit is unverified).
+5. Review Settings in the portal as the owner, because the seeded tenant settings were written for CRC. The host command in step 3 already replaced the seed's name, product name and "issued by" credit with yours. Open the settings page and check any other field that still reflects CRC (which fields that page lets you edit is unverified).
 
 ## 5. Google sign-in (optional, in addition to the email link)
 
@@ -222,6 +222,7 @@ Set these in Vercel under Settings, then Environment Variables, for the **Produc
 | `CANONICAL_ORIGIN` | Identity; same value as `BETTER_AUTH_URL`. | No | `https://torah.example.org` |
 | `ORIGIN_ALIASES` | Optional redirect-only hosts. | No | `www.torah.example.org` |
 | `CONGREGATION_LOGO` | Optional file in `public/`. | No | `logo.png` |
+| `CREDIT_UPSTREAM` | Optional, your choice. Only `true` turns it on: the footer then says "Built on the CRC Beit Mitzvah app by Rabbi Daniel Bogard", linking to the project. Off by default; a fork's footer shows no personal credit otherwise. | No | `true` |
 | `BLOB_STORE_ID` | Your private Blob store id; only for reference audio (section 9). | No | `store_...` |
 | `REFERENCE_AUDIO_CATALOG_SHA256` | Reference audio (section 9). Printed by the installer. | No | 64 hex characters |
 | `REFERENCE_AUDIO_SHORT_MANIFEST_SHA256` | Reference audio. Printed by the installer. | No | 64 hex characters |
