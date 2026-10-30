@@ -23,7 +23,9 @@ export async function startBuiltE2eServer(projectRoot, port) {
     probe.once("error", () => reject(new Error("Production browser gate port unavailable")));
     probe.listen({ host: "127.0.0.1", port, exclusive: true }, () => probe.close(resolve));
   });
-  const isolation = await isolatedEnv({ NODE_ENV: "production", NEXT_TELEMETRY_DISABLED: "1", CRC_COMPONENT_PAGE: "1" });
+  const isolation = await isolatedEnv({ NODE_ENV: "production", NEXT_TELEMETRY_DISABLED: "1", CRC_COMPONENT_PAGE: "1",
+    // The browser gate runs as CRC: its identity needs a positive signal, and this build is not a production deployment (PORTAL_ENVIRONMENT stays unset).
+    BETTER_AUTH_URL: "https://beitmitzvah.centralreform.org" });
   let child;
   let closed = false;
   let failed = false;

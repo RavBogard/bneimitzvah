@@ -3,6 +3,7 @@
 import { useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { BetaMark } from "./beta-mark";
+import { markImage, useIdentity } from "./identity-context";
 import { ReturnSignInLink } from "../portal/return-sign-in-link";
 import { signedInHint } from "../portal/signed-in-hint";
 
@@ -28,8 +29,11 @@ export function currentSiteLink(pathname: string | null | undefined): SiteLink |
  * "CRC Torah"; the width and height are set so the bar does not shift while it loads. The 2x file serves dense screens.
  */
 export function BrandMark() {
+  // The mark is CRC's floor only on CRC's origins; a fork shows its own file or no mark at all.
+  const image = markImage(useIdentity().logo, "small");
+  if (!image) return null;
   // eslint-disable-next-line @next/next/no-img-element -- a 28px disc from public/brand; next/image would add a resizing hop for two fixed files
-  return <img className="site-bar-mark" src="/brand/mural-64.webp" srcSet="/brand/mural-64.webp 1x, /brand/mural-128.webp 2x" width={28} height={28} alt="" decoding="async" />;
+  return <img className="site-bar-mark" src={image.src} srcSet={image.srcSet} width={28} height={28} alt="" decoding="async" />;
 }
 
 /** The bookmark icon the My Readings control draws (it is decoration; the control is named "My Readings"). */
@@ -68,9 +72,10 @@ export function SiteBar(props: SiteBarProps) {
 
 export function SiteBarView({ mode = "site", signedIn = false, back, onNavigate, productName, className, pathname }: SiteBarProps & { signedIn: boolean }) {
   const current = currentSiteLink(pathname);
+  const identity = useIdentity(), name = productName ?? identity.productName;
   const link = (key: SiteLink, href: string, children: ReactNode, extra = "", label?: string) => <a className={`site-bar-link${extra}`} href={href} aria-label={label} aria-current={current === key ? "page" : undefined} onClick={onNavigate ? event => onNavigate(event, href) : undefined}>{children}</a>;
   return <header className={`portal-header app-bar site-bar${className ? ` ${className}` : ""}`} data-site-bar={mode}>
-    <div className="portal-brand-group"><a className="portal-brand" data-testid="site-brand" href="/" onClick={onNavigate ? event => onNavigate(event, "/") : undefined}><BrandMark />{mode === "site" && signedIn ? <span className="site-bar-name">{productName ?? "CRC Torah"}</span> : (productName ?? "CRC Torah")}</a><BetaMark /></div>
+    <div className="portal-brand-group"><a className="portal-brand" data-testid="site-brand" href="/" onClick={onNavigate ? event => onNavigate(event, "/") : undefined}><BrandMark />{mode === "site" && signedIn ? <span className="site-bar-name">{name}</span> : name}</a><BetaMark /></div>
     {mode === "site" && <nav className="site-bar-nav" aria-label="Site">
       {link("read", "/read", <span className="site-bar-text">Read</span>)}
       {link("learn", "/learn", <span className="site-bar-text">Learn</span>)}

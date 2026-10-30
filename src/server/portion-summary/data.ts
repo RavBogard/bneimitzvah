@@ -40,6 +40,11 @@ export async function insertDraft<Q extends PgQueryResultHKT>(tx: AccessTransact
     .onConflictDoNothing().returning({ id: p.id, revision: p.revision });
   return row ?? null;
 }
+/** The congregation's own credit (tenant.summary_credit), or null while an operator has not set one. */
+export async function summaryCredit<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string): Promise<string | null> {
+  const [row] = await tx.select({ credit: s.tenant.summaryCredit }).from(s.tenant).where(eq(s.tenant.id, tenantId)).limit(1);
+  return row?.credit ?? null;
+}
 /** Approve one draft under the approver's own admin grant, stamped now with the congregation's credit. */
 export async function approveDraft<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, approver: Approver, id: string, credit: string) {
   const [row] = await tx.update(p).set({ status: "approved", approvedBy: approver.membershipId, approvedGrantId: approver.roleGrantId, approvedRole: "admin",

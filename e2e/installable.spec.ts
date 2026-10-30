@@ -12,7 +12,7 @@ test("/sw.js is plain JavaScript revalidated on every check, and the favicon, th
   const source = await worker.text();
   expect(source.startsWith('"use strict";\nconst POLICY = Object.freeze(')).toBe(true);
   for (const name of ["push", "notificationclick", "sync"]) expect(source.includes(`"${name}"`), name).toBe(false);
-  const manifestIcons = webManifest("CRC Torah").icons;
+  const manifestIcons = webManifest("CRC Torah", true).icons; // the server under test runs as CRC; this process is unconfigured
   expect(manifestIcons.map(icon => `${icon.purpose}:${icon.src}`)).toEqual(["any:/brand/icon-192.png", "any:/brand/icon-512.png", "maskable:/brand/maskable-512.png"]);
   for (const path of [...manifestIcons.map(icon => icon.src), "/brand/apple-180.png", "/brand/favicon-48.png", "/favicon.ico"]) {
     const icon = await request.get(path);

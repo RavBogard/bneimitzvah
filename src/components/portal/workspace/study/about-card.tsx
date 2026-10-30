@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useId, useState, useSyncExternalStore } from "react";
+import { markImage, useIdentity } from "../../../site/identity-context";
 import type { ApprovedPortionSummary } from "../../../../lib/portion-summary/credit";
 import { parashahSlug } from "../../../../lib/portion-summary/reading";
 import type { StudyKind } from "./api";
 import { guideLabelState, guideLabelText } from "./guide-card";
+
 import type { GuideStore } from "./guide-store";
 import { MarkdownLite } from "./markdown-lite";
 import { usePortionSummary } from "./portion-summary";
@@ -18,9 +20,9 @@ export function splitOverview(text: string): { first: string; rest: string } {
 const none = () => () => {}, zero = () => 0;
 /** The one card: the mural medallion, the heading, the first paragraph, "Read more" for the rest and a label line. */
 function AboutView({ kind, text, label, labelState, source, sheetLink }: { kind: StudyKind; text: string; label: string; labelState?: string; source: "guide" | "summary"; sheetLink?: React.ReactNode }) {
-  const id = useId(), [open, setOpen] = useState(false), overview = splitOverview(text);
+  const id = useId(), [open, setOpen] = useState(false), overview = splitOverview(text), medal = markImage(useIdentity().logo, "large");
   return <section className={styles.about} aria-labelledby={`${id}-title`} data-study-about={source} data-guide-kind={kind} data-open={open || undefined}>
-    <img className={styles.medal} src="/brand/mural-512.png" width={84} height={84} alt="" decoding="async" />
+    {medal && <img className={styles.medal} src={medal.src} width={84} height={84} alt="" decoding="async" />}
     <div className={styles.body}>
       <h3 id={`${id}-title`} className={styles.title}>{kind === "torah" ? "About this portion" : "About this haftarah"}</h3>
       <MarkdownLite text={overview.first} className={styles.lede} heClass={styles.he} />
@@ -40,13 +42,14 @@ function AboutView({ kind, text, label, labelState, source, sheetLink }: { kind:
  * one. Never both, and the base guide's themes never appear. `store` is absent where there is no guide to read (a visitor, an admin exploring).
  */
 export function AboutCard({ store, kind, readingKey }: { store?: GuideStore; kind: StudyKind; readingKey?: string | null }) {
+  const shortName = useIdentity().shortName;
   useSyncExternalStore(store?.subscribe ?? none, store?.snapshot ?? zero, store?.snapshot ?? zero);
   useEffect(() => { store?.ensure(kind); }, [store, kind]);
   const view = store?.view(kind) ?? null, overview = view?.base?.overview.trim() ? view.base : null;
   const summary = usePortionSummary(!overview && kind === "torah" ? parashahSlug(readingKey) : null, true);
   const sheet = store?.sheet(kind) ?? null;
   const sheetLink = sheet && <p className={styles.sheet}><a href={sheet} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">This week’s haftarah study sheet<span aria-hidden="true"> ↗</span><span className="sr-only"> (opens in a new tab)</span></a></p>;
-  if (overview) return <AboutView kind={kind} text={overview.overview} label={guideLabelText(overview.label)} labelState={guideLabelState(overview.label)} source="guide" sheetLink={sheetLink} />;
+  if (overview) return <AboutView kind={kind} text={overview.overview} label={guideLabelText(overview.label, shortName)} labelState={guideLabelState(overview.label)} source="guide" sheetLink={sheetLink} />;
   if (summary) return <AboutView kind={kind} text={summary.summary} label={summary.credit} source="summary" sheetLink={sheetLink} />;
   return sheetLink ? <section className={styles.about} aria-label="Haftarah study sheet" data-study-about="sheet" data-guide-kind={kind}><div className={styles.body}>{sheetLink}</div></section> : null;
 }

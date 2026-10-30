@@ -1,4 +1,5 @@
 "use client";
+import { useIdentity } from "../../site/identity-context";
 import { useEffect, useState } from "react";
 import { APPROVED, PLAN } from "../../../lib/offline/copy";
 import { purgeOffline, savedPacks } from "../../../lib/offline/pack-index";
@@ -56,10 +57,11 @@ export function OfflineShelf() {
  */
 export function OfflineShelfView(props: Readonly<{ live: boolean | null; packs: readonly Pack[] | null; removed: boolean; productName: string | null; onRemove(): void }>) {
   const { live, packs, removed, productName } = props;
+  const identity = useIdentity();
   const empty = <p className={styles.shelfEmpty} role="status" data-testid="offline-empty">{removed ? APPROVED.removed : APPROVED.nothingSaved}</p>;
   return <div className="portal-shell">
     <a className="skip-link" href="#offline-main">Skip to main content</a>
-    <SiteBar mode="minimal" productName={productName ?? "CRC Torah"} />
+    <SiteBar mode="minimal" productName={productName ?? identity.productName} />
     <main id="offline-main" className={styles.shelfMain}>
       <h1 className={styles.shelfTitle}>{PLAN.saved}</h1>
       {live === false && empty}

@@ -1,3 +1,4 @@
+import { resolveIdentity } from "../../lib/site/identity";
 import "server-only";
 import { createHash } from "node:crypto";
 import { errorResponse, HttpBoundaryError, privateHeaders } from "./responses";
@@ -148,10 +149,11 @@ export function honoreeLanding(request: Request): Response {
   }
   const url = new URL(request.url);
   if (url.pathname !== "/honoree" || url.search || url.hash) return errorResponse(new HttpBoundaryError(404));
+  const product = resolveIdentity().productName;
   const digest = (value: string) => createHash("sha256").update(value).digest("base64");
   const headers = privateHeaders();
   headers.set("content-type", "text/html; charset=utf-8");
   headers.set("content-security-policy", `default-src 'none'; script-src 'sha256-${digest(script)}'; style-src 'sha256-${digest(style)}'; font-src 'self'; connect-src 'self'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'`);
   headers.set("x-frame-options", "DENY"); headers.set("x-robots-tag", "noindex, nofollow, noarchive");
-  return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="referrer" content="no-referrer"><title>Your aliyah blessings · CRC Torah</title><script>${script}</script><style>${style}</style></head><body><header class="masthead"><div>CRC Torah · Beit Mitzvah blessings</div></header><main><h1 id="heading">Your aliyah blessings</h1><p id="status" role="status" aria-live="polite">Opening your invitation…</p><div id="reading" hidden></div><noscript><p>This invitation requires JavaScript. Reopen the original invitation in a browser with JavaScript enabled.</p></noscript></main></body></html>`, { headers });
+  return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="referrer" content="no-referrer"><title>Your aliyah blessings · ${product}</title><script>${script}</script><style>${style}</style></head><body><header class="masthead"><div>${product} · Beit Mitzvah blessings</div></header><main><h1 id="heading">Your aliyah blessings</h1><p id="status" role="status" aria-live="polite">Opening your invitation…</p><div id="reading" hidden></div><noscript><p>This invitation requires JavaScript. Reopen the original invitation in a browser with JavaScript enabled.</p></noscript></main></body></html>`, { headers });
 }

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
+import { useIdentity } from "../site/identity-context";
 
 /**
  * Asking to be linked (readings for everyone, plan D6; was "Ask for an account", release 1.4 plan section 5). Everyone who signs in
@@ -50,6 +51,7 @@ export function AccountRequestView({ view, level, name, purpose, problem, sendin
   view: RequestView; level: 3 | 4; name: string; purpose: string; problem: Problem; sending: boolean; formId: string;
   onName(value: string): void; onPurpose(value: string): void; onSubmit(): void; onRetry(): void;
 }) {
+  const identity = useIdentity();
   const Heading = level === 3 ? "h3" : "h4";
   if (view.status === "loading") return <div className="account-request" aria-busy="true"><p role="status">Checking your account…</p></div>;
   if (view.status === "failed") return <div className="account-request"><p role="status">Account requests aren’t available right now.</p><button type="button" className="button-secondary" onClick={onRetry}>Try again</button></div>;
@@ -58,7 +60,7 @@ export function AccountRequestView({ view, level, name, purpose, problem, sendin
   if (view.state === "pending") return <div className="account-request" data-request-state="pending"><Heading>Your request is in</Heading>
     <p role="status">You’ll get one email when it’s been linked.</p></div>;
   return <div className="account-request" data-request-state="requestable"><Heading id={`${formId}-title`}>Ask to be linked</Heading>
-    <p>Preparing a Beit Mitzvah at CRC? Ask the rabbi to connect this account to your student record.</p>
+    <p>Preparing a Beit Mitzvah at {identity.shortName}? Ask the rabbi to connect this account to your student record.</p>
     <form aria-labelledby={`${formId}-title`} onSubmit={event => { event.preventDefault(); onSubmit(); }}>
       <label htmlFor={`${formId}-name`}>Your name</label>
       <input id={`${formId}-name`} name="name" value={name} maxLength={80} required autoComplete="name" disabled={sending} onChange={event => onName(event.target.value)} />

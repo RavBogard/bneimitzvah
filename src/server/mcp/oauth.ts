@@ -1,3 +1,4 @@
+import { resolveIdentity } from "../../lib/site/identity";
 import "server-only";
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
@@ -70,7 +71,7 @@ export const authorizationMetadata = (origin: string) => ({
 });
 export const resourceMetadata = (origin: string) => ({
   resource: `${origin}${MCP_PATH}`, authorization_servers: [origin], scopes_supported: [SCOPES.read, SCOPES.study, SCOPES.roster],
-  bearer_methods_supported: ["header"], resource_name: "CRC Torah",
+  bearer_methods_supported: ["header"], resource_name: resolveIdentity().productName,
 });
 
 /** The scopes a client asked for, closed to ours; none asked means the role's default. */

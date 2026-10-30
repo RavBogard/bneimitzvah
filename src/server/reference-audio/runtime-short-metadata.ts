@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { PRODUCTION_ORIGINS, type RuntimeConfig } from "../runtime/config";
+import type { RuntimeConfig } from "../runtime/config";
+import { isProductionOrigin } from "../../lib/site/identity";
 import { parseReferenceCatalog, REFERENCE_CATALOG_LIMITS, ReferenceUnavailable, type ReferenceCatalog } from "./catalog";
 import { createShortSourceManifestLoader, type ShortSourceManifest } from "./short-source-manifest";
 import type { ReferenceCatalogGet } from "./storage";
@@ -14,7 +15,7 @@ const digest = (v: unknown): v is string => typeof v === "string" && /^[a-f0-9]{
 function select(config: Runtime, env: Environment): Selection | null {
   const reference = config.referenceAudio;
   if (!reference || config.deployment.environment !== "production" || config.deployment.deployment !== "production"
-    || !PRODUCTION_ORIGINS.includes(config.origin) || env.BETTER_AUTH_URL !== config.origin
+    || !isProductionOrigin(config.origin, env) || env.BETTER_AUTH_URL !== config.origin
     || env.PORTAL_ENVIRONMENT !== "production" || env.PORTAL_DEPLOYMENT !== "production" || env.VERCEL !== "1"
     || env.VERCEL_ENV !== "production" || env.NODE_ENV !== "production" || env.REFERENCE_AUDIO_SHORT_PUBLIC_RELEASE !== "true"
     || !digest(reference.catalogSha256) || env.REFERENCE_AUDIO_CATALOG_SHA256 !== reference.catalogSha256

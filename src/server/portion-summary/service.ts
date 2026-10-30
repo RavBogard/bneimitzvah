@@ -3,7 +3,6 @@ import { createHash } from "node:crypto";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
 import { canonical } from "../study-guides/service";
-import { portionSummaryCredit } from "../../lib/portion-summary/credit";
 import * as data from "./data";
 import { parashahOf, validateSummary } from "./validation";
 
@@ -100,7 +99,7 @@ export async function approveSummary<Q extends PgQueryResultHKT>(authority: Summ
     if (row.status === "withdrawn") return fail("withdrawn");
     if (row.status !== "draft") return fail("not-draft");
     // A summary that arrived by import keeps its original author; any other carries the congregation's own credit.
-    const credit = row.importCredit ?? portionSummaryCredit(writer.tenantId);
+    const credit = row.importCredit ?? await data.summaryCredit(tx, writer.tenantId);
     if (!credit) return fail("no-credit");
     const current = rows.find(r => r.status === "approved");
     live();
