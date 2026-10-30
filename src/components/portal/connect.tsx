@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { GoogleSignIn } from "./google-sign-in";
 import { browserStores, forgetPendingRequest, rememberPendingRequest, resolvePendingRequest, tabStores } from "./pending-request";
 import { SiteBar } from "../site/site-bar";
+import { useIdentity } from "../site/identity-context";
 
 // The portal MCP consent page (Decided here, 2026-10-21). Claude sends the staff member here with
 // a signed request in the URL fragment; Google sign-in proves who they are; Allow returns Claude a code.
@@ -38,6 +39,7 @@ const PHONE_HELP = [
 ] as const;
 
 export function ConnectClaude() {
+  const identity = useIdentity();
   const request = useRef<string | null>(null);
   const [view, setView] = useState<View>({ kind: "loading" });
   const [unattended, setUnattended] = useState(false);
@@ -74,7 +76,7 @@ export function ConnectClaude() {
       const target = safeRedirect(value.redirect);
       if (target) { forgetPendingRequest(); window.location.assign(target); return; }
       if (value.error === "google") setMessage("Sign in with Google first; Claude connects only from a Google sign-in.");
-      else if (value.error === "staff") setMessage("Only CRC clergy, staff and tutors can connect Claude.");
+      else if (value.error === "staff") setMessage(`Only ${identity.shortName} clergy, staff and tutors can connect Claude.`);
       else if (value.error === "expired" || value.error === "used") { forgetPendingRequest(); setView({ kind: value.error === "used" ? "used" : "expired" }); }
       else if (value.error === "account") { setMessage("You switched accounts in another window. Check the account below and try again."); void load(); }
       else setMessage("That didn’t go through. Try again.");
@@ -90,7 +92,7 @@ export function ConnectClaude() {
       <div className="entry-introduction">
         <h1>Connect Claude</h1>
         <p>Let Claude work in the portal as you, with exactly your access, for up to 30 days.</p>
-        <div className="entry-notes"><p>For CRC clergy, staff and tutors.</p><p>You can disconnect it any time in Claude’s connector settings.</p></div>
+        <div className="entry-notes"><p>For {identity.shortName} clergy, staff and tutors.</p><p>You can disconnect it any time in Claude’s connector settings.</p></div>
       </div>
       <section className="entry-task" data-testid="connect-task" data-connect-state={view.kind} aria-labelledby="connect-title" aria-busy={view.kind === "loading" || busy}>
         {view.kind === "loading" && <h2 id="connect-title">Checking this request…</h2>}
@@ -102,7 +104,7 @@ export function ConnectClaude() {
           <p className="field-help">Continue only if you just chose Connect in Claude yourself.</p>
           {message && <p className="request-error" role="alert">{message}</p>}
           {!signedInWithGoogle && <>
-            <p className="field-help">{account ? "Confirm it’s you with Google to continue." : "Sign in with your CRC Google account to continue."}</p>
+            <p className="field-help">{account ? "Confirm it’s you with Google to continue." : `Sign in with your ${identity.shortName} Google account to continue.`}</p>
             <GoogleSignIn disabled={busy} onBegin={() => true} onFinish={() => { setMessage(""); void load(); }}
               waitingText="Continue in the Google window. If it didn’t open, cancel and try again."
               failureText="Google sign-in didn’t open here."
@@ -111,7 +113,7 @@ export function ConnectClaude() {
               onFailed={() => { if (request.current) rememberPendingRequest(request.current, browserStores()); }}
               beforeRedirect={() => { if (request.current) rememberPendingRequest(request.current, tabStores().length ? tabStores() : browserStores()); }} />
           </>}
-          {signedInWithGoogle && !staff && <p className="field-help">Only CRC clergy, staff and tutors can connect Claude. You’re signed in as {account!.name}.</p>}
+          {signedInWithGoogle && !staff && <p className="field-help">Only {identity.shortName} clergy, staff and tutors can connect Claude. You’re signed in as {account!.name}.</p>}
           {signedInWithGoogle && staff && <>
             <p>Signed in as <strong>{account!.name}</strong>. Claude will be able to:</p>
             <ul className="role-list">

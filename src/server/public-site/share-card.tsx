@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { readPublicProductName } from "./names";
+import { resolveIdentity } from "../../lib/site/identity";
 
 /**
  * The plain share card every public page sends to link previews (MISSION 2026-10-23, item 10; the mark changed 2026-10-26): the page
@@ -35,25 +36,33 @@ const readFonts = () => fonts ??= Promise.all([loadFont("bricolage-grotesque/Bri
 let mural: Promise<string> | null = null;
 /** The 512 px disc (public/brand/mural-512.png) as a data address, read once. */
 const readMural = () => mural ??= readFile(join(process.cwd(), "public", "brand", "mural-512.png")).then(bytes => `data:image/png;base64,${bytes.toString("base64")}`).catch(error => { mural = null; throw error; });
+/** The card's mark: CRC's floor only on CRC's origins, a fork's own file from public/, or nothing (the mural file is never read for a fork). */
+const MIME: Record<string, string> = { png: "image/png", webp: "image/webp", jpg: "image/jpeg", jpeg: "image/jpeg" };
+async function readMark(): Promise<string | null> {
+  const logo = resolveIdentity().logo;
+  if (logo.kind === "crc") return readMural();
+  if (logo.kind === "none") return null;
+  try { return `data:${MIME[logo.src.split(".").pop()!.toLowerCase()] ?? "image/png"};base64,${(await readFile(join(process.cwd(), "public", logo.src.slice(1)))).toString("base64")}`; } catch { return null; }
+}
 
 /** A long title steps down so it still sits in a few calm lines inside TITLE_MAX_WIDTH. */
 export const titleSize = (title: string) => title.length <= 14 ? 104 : title.length <= 24 ? 84 : title.length <= 40 ? 68 : 56;
 
 export async function renderShareCard(title: string, productName?: string): Promise<ImageResponse> {
-  const [name, [sans, hebrew], disc] = await Promise.all([productName ?? readPublicProductName(), readFonts(), readMural()]);
+  const [name, [sans, hebrew], disc] = await Promise.all([productName ?? readPublicProductName(), readFonts(), readMark()]);
   const family = "Bricolage Grotesque, Noto Serif Hebrew";
   return new ImageResponse(
     <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", position: "relative", background: LAKE, padding: "72px 88px", fontFamily: family, color: WHITE }}>
       {/* eslint-disable-next-line @next/next/no-img-element -- rendered to a PNG by ImageResponse, never to the page */}
-      <img src={disc} width={MURAL.size} height={MURAL.size} alt="" style={{ position: "absolute", top: MURAL.top, right: MURAL.right }} />
+      {disc && <img src={disc} width={MURAL.size} height={MURAL.size} alt="" style={{ position: "absolute", top: MURAL.top, right: MURAL.right }} />}
       <div style={{ display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", width: 120, height: 12, background: MARIGOLD, borderRadius: 6, marginBottom: 40 }} />
         <div style={{ display: "flex", fontSize: titleSize(title), fontWeight: 800, lineHeight: 1.08, letterSpacing: -2, maxWidth: TITLE_MAX_WIDTH }}>{title}</div>
       </div>
       <div style={{ display: "flex", alignItems: "center" }}>
         {/* eslint-disable-next-line @next/next/no-img-element -- rendered to a PNG by ImageResponse, never to the page */}
-        <img src={disc} width={56} height={56} alt="" />
-        <div style={{ display: "flex", marginLeft: 20, fontSize: 40, fontWeight: 750, color: WHITE }}>{name}</div>
+        {disc && <img src={disc} width={56} height={56} alt="" />}
+        <div style={{ display: "flex", marginLeft: disc ? 20 : 0, fontSize: 40, fontWeight: 750, color: WHITE }}>{name}</div>
       </div>
     </div>,
     { ...SHARE_CARD_SIZE, fonts: [{ name: "Bricolage Grotesque", data: sans, weight: 800, style: "normal" }, { name: "Noto Serif Hebrew", data: hebrew, weight: 400, style: "normal" }] },

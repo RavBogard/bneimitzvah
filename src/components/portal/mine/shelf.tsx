@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { browserProgressStore, courseDone, emptyProgress, type Progress } from "../../../lib/learn/progress";
 import { recommendedLesson } from "../../../lib/learn/recommendation";
 import { ButtonLink, List, ListRow, PageHeader } from "../../ui";
+import { useIdentity } from "../../site/identity-context";
 import { ChildrenSection } from "./children";
 import { AccountRequest } from "../account-request";
 import { AccountRequestsLine } from "../workspace/accounts/workspace";
@@ -26,7 +27,7 @@ export const SHELF_STRINGS = Object.freeze({
   emptyHeading: "Add your first reading",
   thisShabbat: "This Shabbat",
   find: "Find a reading",
-  linkTitle: "Preparing a Beit Mitzvah at CRC?",
+  linkTitle: (shortName: string) => `Preparing a Beit Mitzvah at ${shortName}?`,
   learnTitle: "Learn to lein",
   learnStart: "Start the course",
   account: "Account",
@@ -52,6 +53,7 @@ export function AccountSection() {
 
 /** The first sign-in: how to add a reading, and, for an account with no role, how to ask to be linked to a Beit Mitzvah. */
 export function EmptyShelf({ line, linkable }: { line: string | null; linkable: boolean }) {
+  const identity = useIdentity();
   return <section className={styles.empty} aria-labelledby="shelf-empty-title" data-testid="mine-empty">
     {line && <p className={styles.emptyLine}>{line}</p>}
     <h2 id="shelf-empty-title" className={styles.emptyTitle}>{SHELF_STRINGS.emptyHeading}</h2>
@@ -61,7 +63,7 @@ export function EmptyShelf({ line, linkable }: { line: string | null; linkable: 
       <ButtonLink href="/readings">{SHELF_STRINGS.find}</ButtonLink>
     </div>
     {linkable && <section className={styles.card} aria-labelledby="shelf-link-title">
-      <h3 id="shelf-link-title" className={styles.cardTitle}>{SHELF_STRINGS.linkTitle}</h3>
+      <h3 id="shelf-link-title" className={styles.cardTitle}>{SHELF_STRINGS.linkTitle(identity.shortName)}</h3>
       <AccountRequest level={4} />
     </section>}
   </section>;

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useId, useState, useSyncExternalStore } from "react";
+import { markImage, useIdentity } from "../../../site/identity-context";
 import type { ApprovedPortionSummary } from "../../../../lib/portion-summary/credit";
 import { parashahSlug } from "../../../../lib/portion-summary/reading";
 import type { StudyKind } from "./api";
@@ -18,9 +19,9 @@ export function splitOverview(text: string): { first: string; rest: string } {
 const none = () => () => {}, zero = () => 0;
 /** The one card: the mural medallion, the heading, the first paragraph, "Read more" for the rest and a label line. */
 function AboutView({ kind, text, label, labelState, source, sheetLink }: { kind: StudyKind; text: string; label: string; labelState?: string; source: "guide" | "summary"; sheetLink?: React.ReactNode }) {
-  const id = useId(), [open, setOpen] = useState(false), overview = splitOverview(text);
+  const id = useId(), [open, setOpen] = useState(false), overview = splitOverview(text), medal = markImage(useIdentity().logo, "large");
   return <section className={styles.about} aria-labelledby={`${id}-title`} data-study-about={source} data-guide-kind={kind} data-open={open || undefined}>
-    <img className={styles.medal} src="/brand/mural-512.png" width={84} height={84} alt="" decoding="async" />
+    {medal && <img className={styles.medal} src={medal.src} width={84} height={84} alt="" decoding="async" />}
     <div className={styles.body}>
       <h3 id={`${id}-title`} className={styles.title}>{kind === "torah" ? "About this portion" : "About this haftarah"}</h3>
       <MarkdownLite text={overview.first} className={styles.lede} heClass={styles.he} />

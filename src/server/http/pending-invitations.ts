@@ -3,7 +3,7 @@ import { createCipheriv, createDecipheriv, createHmac, randomBytes } from "node:
 import { HttpBoundaryError, privateJson } from "./responses";
 import { requireCookieMutation } from "./mutations";
 import { closedObject, uniqueQuery } from "./query";
-import { PRODUCTION_ORIGINS } from "../runtime/config";
+import { isProductionOrigin } from "../../lib/site/identity";
 
 const LIFETIME = 10 * 60_000;
 const localName = "portal_pending_invitation";
@@ -24,8 +24,8 @@ export function createPendingInvitations(input: { secret: string; origin: string
     if (!["production", "preview", "local"].includes(input.environment)) throw 0;
     if (local ? !(origin.protocol === "http:" && ["localhost", "127.0.0.1"].includes(origin.hostname) && origin.port)
       : !(origin.protocol === "https:" && !origin.port && !/^\d+(?:\.\d+){3}$/.test(origin.hostname) && origin.hostname !== "localhost" && !origin.hostname.endsWith(".localhost"))) throw 0;
-    if (input.environment === "production" && !PRODUCTION_ORIGINS.includes(input.origin)) throw 0;
-    if (input.environment === "preview" && PRODUCTION_ORIGINS.includes(input.origin)) throw 0;
+    if (input.environment === "production" && !isProductionOrigin(input.origin)) throw 0;
+    if (input.environment === "preview" && isProductionOrigin(input.origin)) throw 0;
     secure = !local; name = secure ? secureName : localName;
     key = createHmac("sha256", input.secret).update(`crc-portal:v1:pending-invitations:${input.environment}:${input.origin}`).digest();
   } catch { throw new Error("Pending invitation configuration unavailable"); }

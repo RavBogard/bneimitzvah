@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { createHmac } from "node:crypto";
 import { emailOTP, magicLink } from "better-auth/plugins";
+import { resolveIdentity } from "../../lib/site/identity";
 
 // Only the private HTTP adapter constructs this header. Never trust a caller's
 // value or mount the unprojected SDK handler as an application route.
@@ -33,7 +34,7 @@ export function createAuthStack(
   }
   if (typeof input.codeSecret !== "string" || input.codeSecret.length < 32) throw new Error("Invalid sign-in code secret");
   return betterAuth({
-    appName: "CRC Torah",
+    appName: resolveIdentity().productName,
     baseURL: input.origin,
     secret: input.secret,
     trustedOrigins: [input.origin],

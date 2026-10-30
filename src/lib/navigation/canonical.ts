@@ -1,12 +1,13 @@
+import { CRC_ALIAS_HOSTS, configuredAliases, configuredOrigin } from "../site/identity";
 // Navigation policy only: this module grants no session, tenant or API authority.
-// Exactly two hard-coded CRC origins can be canonical. Production configuration
-// (BETTER_AUTH_URL) selects one; the other becomes a navigation alias like the
-// rest. Navigation can never point anywhere but one of these two origins.
+// Exactly two hard-coded CRC origins can be canonical, plus the one a fork configures (CANONICAL_ORIGIN).
+// Production configuration (BETTER_AUTH_URL) selects one; the other becomes a navigation alias like the
+// rest. Navigation can never point anywhere but one of these origins. A fork's ORIGIN_ALIASES are navigation
+// aliases only: they redirect GET/HEAD pages to the canonical origin and grant nothing else.
 export const CANONICAL_ORIGINS = Object.freeze(["https://beitmitzvah.centralreform.org", "https://torah.centralreform.org"] as const);
-export type CanonicalOrigin = (typeof CANONICAL_ORIGINS)[number];
-const aliases: ReadonlySet<string> = new Set([
-  "barmitzvah.centralreform.org", "batmitzvah.centralreform.org",
-  "bnaimitzvah.centralreform.org", "bneimitzvah.centralreform.org", "bneimitzvah.vercel.app",
+export type CanonicalOrigin = string;
+const crcAliases: ReadonlySet<string> = new Set([
+  ...CRC_ALIAS_HOSTS,
   // Whichever canonical is not selected is an alias; the selected one is excluded per request.
   ...CANONICAL_ORIGINS.map(origin => new URL(origin).host),
 ]);
@@ -16,7 +17,10 @@ type Environment = Readonly<Record<string, string | undefined>>;
 export function selectedCanonicalOrigin(env: Environment): CanonicalOrigin | null {
   const value = env.BETTER_AUTH_URL;
   if (env.PORTAL_ENVIRONMENT !== "production" || env.PORTAL_DEPLOYMENT !== "production" || typeof value !== "string") return null;
-  return CANONICAL_ORIGINS.find(origin => origin === value) ?? null;
+  const found = CANONICAL_ORIGINS.find(origin => origin === value);
+  if (found) return found;
+  const configured = configuredOrigin(env.CANONICAL_ORIGIN);
+  return configured !== null && configured === value ? configured : null;
 }
 export function canonicalNavigationEnabled(env: Environment) {
   return selectedCanonicalOrigin(env) !== null;
@@ -28,6 +32,8 @@ export function canonicalNavigation(request: Pick<Request, "url" | "headers" | "
   const origin = selectedCanonicalOrigin(env);
   if (origin === null) return null;
   const canonicalHost = new URL(origin).host;
+  // CRC's canonical origins keep CRC's alias list; a fork's canonical origin has only the aliases it configured.
+  const aliases: ReadonlySet<string> = (CANONICAL_ORIGINS as readonly string[]).includes(origin) ? crcAliases : new Set(configuredAliases(env.ORIGIN_ALIASES));
   // The wire Host identifies only a known navigation alias. Next may reconstruct
   // Request.url using an internal listening address; never promote Host to auth.
   // The selected canonical's own host is never an alias (it would redirect to itself).

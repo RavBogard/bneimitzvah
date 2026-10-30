@@ -5,7 +5,8 @@ import { PracticeDisclosure } from "../../components/portal/practice-visibility/
 import { studyEditions } from "../../components/portal/workspace/study/credits";
 import { PLAN } from "../../lib/offline/copy";
 import { REFERENCE_ATTRIBUTION } from "../../lib/reference-audio/contract";
-import { FALLBACK_PRODUCT_NAME, pageTitle } from "../../lib/site/product-name";
+import { pageTitle } from "../../lib/site/product-name";
+import { resolveIdentity } from "../../lib/site/identity";
 import { publicRobots } from "../../lib/site/indexing";
 import { publicMetadataBase } from "../../lib/site/origin";
 import { readPublicProductName } from "../../server/public-site/names";
@@ -28,14 +29,15 @@ const fonts = [
 
 export default function AboutPage() {
   const editions = [studyEditions.mam, studyEditions.jps2023];
+  const identity = resolveIdentity(), productName = identity.productName;
   return <div className={`portal-shell ${styles.shell}`}>
     <a className="skip-link" href="#about-main">Skip to main content</a>
     <SiteBar />
     <main id="about-main" className={styles.main}>
       <h1 className={styles.title}>About</h1>
       <section aria-labelledby="about-what">
-        <h2 id="about-what">What {FALLBACK_PRODUCT_NAME} is</h2>
-        <p>{FALLBACK_PRODUCT_NAME} is a home for anyone who wants to lein or learn the week's Torah and haftarah. It is made by Central Reform Congregation. It is also the place where CRC's Beit Mitzvah students, families and tutors prepare.</p>
+        <h2 id="about-what">What {productName} is</h2>
+        <p>{productName} is a home for anyone who wants to lein or learn the week's Torah and haftarah. It is made by {identity.name}. It is also the place where {identity.shortName}'s Beit Mitzvah students, families and tutors prepare.</p>
       </section>
       <section aria-labelledby="about-who">
         <h2 id="about-who">Who it is for</h2>
@@ -47,7 +49,7 @@ export default function AboutPage() {
       </section>
       <section aria-labelledby="about-texts">
         <h2 id="about-texts">Where the texts come from</h2>
-        <p>The CRC Torah mark is Siona Benjamin's floor at Central Reform Congregation, used with the congregation's permission.</p>
+        {identity.crc && <p>The CRC Torah mark is Siona Benjamin's floor at Central Reform Congregation, used with the congregation's permission.</p>}
         <p>Hebrew: Miqra according to the Masorah. English: JPS 2023. No other edition is substituted.</p>
         <p>Text is provided through Sefaria. These editions retain their own terms; the application’s code license does not replace them.</p>
         <ul className={styles.credits}>{editions.map(edition => <li key={edition.key}>
@@ -70,7 +72,7 @@ export default function AboutPage() {
       </section>
       <section aria-labelledby="about-install">
         <h2 id="about-install">Installing it on a phone</h2>
-        <p>{PLAN.installHint(FALLBACK_PRODUCT_NAME)}</p>
+        <p>{PLAN.installHint(productName)}</p>
         <ul className={styles.credits}>
           <li><strong>iPhone</strong><span>{PLAN.iphoneSteps}</span></li>
           <li><strong>iPad</strong><span>{PLAN.ipadSteps}</span></li>
@@ -78,8 +80,8 @@ export default function AboutPage() {
         </ul>
       </section>
       <section aria-labelledby="about-congregation">
-        <h2 id="about-congregation">Central Reform Congregation</h2>
-        <p><a href={CONGREGATION} {...external}>Central Reform Congregation</a></p>
+        <h2 id="about-congregation">{identity.name}</h2>
+        <p>{identity.crc ? <a href={CONGREGATION} {...external}>{identity.name}</a> : identity.name}</p>
       </section>
     </main>
   </div>;
