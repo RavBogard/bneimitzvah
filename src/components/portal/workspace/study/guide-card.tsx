@@ -9,9 +9,10 @@ import styles from "./guide.module.css";
 
 /** Exactly the label the spec fixes: what is Claude's and whether the rabbi has reviewed it. */
 export function guideLabelText(label: GuideLabel) {
-  if (label.reviewed) return `Reviewed by ${label.rabbiName}`;
+  const credit = label.importedFrom ? ` · From ${label.importedFrom}` : "";
+  if (label.reviewed) return `Reviewed by ${label.rabbiName}${credit}`;
   // Daniel, 2026-10-21: a draft the rabbi wrote himself is not labelled as Claude's.
-  return label.origin === "rabbi" ? `Written by ${label.rabbiName} · draft` : `Written by Claude for CRC · not yet reviewed by ${label.rabbiName}`;
+  return (label.origin === "rabbi" ? `Written by ${label.rabbiName} · draft` : `Written by Claude for CRC · not yet reviewed by ${label.rabbiName}`) + credit;
 }
 /** The review state as a stable word, for a test or a style, whatever the label says. */
 export const guideLabelState = (label: GuideLabel) => label.reviewed ? "reviewed" : label.origin === "rabbi" ? "rabbi-draft" : "claude-draft";

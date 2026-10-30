@@ -38,8 +38,9 @@ export type RabbiAuthority<Q extends PgQueryResultHKT> = {
 export type GuideChecker = (input: { kind: GuideKind; readingKey: string | null; studentId: string | null; verses: ReadonlySet<string>; body: GuideBody }) =>
   Promise<{ ok: true; body: GuideBody } | { ok: false; problems: string[] }>;
 
-export type GuideVersion = Readonly<{ version: number; origin: "claude" | "rabbi"; reviewed: boolean; hold: boolean; body: GuideBody; createdAt: string }>;
-export type GuideLabel = Readonly<{ origin: "claude" | "rabbi"; reviewed: boolean; rabbiName: string }>;
+/** `importedFrom` is the original author of a guide that arrived by import (migration 0055); absent for a guide written here. */
+export type GuideVersion = Readonly<{ version: number; origin: "claude" | "rabbi"; reviewed: boolean; hold: boolean; body: GuideBody; createdAt: string; importedFrom?: string }>;
+export type GuideLabel = Readonly<{ origin: "claude" | "rabbi"; reviewed: boolean; rabbiName: string; importedFrom?: string }>;
 export type StudentTheme = Readonly<{ id: string; title: string; intro: string; notes: readonly GuideNote[]; read: boolean; readVersion: number }>;
 export type StudentGuideView = Readonly<{
   kind: GuideKind; readingKey: string | null; tickable: boolean;
@@ -75,7 +76,8 @@ const bool = (value: unknown): boolean => { if (typeof value !== "boolean") thro
 export function guideVersion(row: data.GuideRow | data.StudentGuideRow): GuideVersion {
   const allowOverview = "readingKey" in row, checked = validateGuideBody(row.body, { allowOverview });
   if (!checked.ok || (row.origin !== "claude" && row.origin !== "rabbi")) throw new Error("Study guide unavailable");
-  return Object.freeze({ version: row.version, origin: row.origin, reviewed: row.reviewed, hold: "hold" in row ? row.hold : false, body: checked.value, createdAt: row.createdAt.toISOString() });
+  return Object.freeze({ version: row.version, origin: row.origin, reviewed: row.reviewed, hold: "hold" in row ? row.hold : false, body: checked.value, createdAt: row.createdAt.toISOString(),
+    ...("importCredit" in row && row.importCredit ? { importedFrom: row.importCredit } : {}) });
 }
 /** The service's own backstop: whatever a checker returns, no note may sit outside the allowed verses. */
 const versesOutside = (body: GuideBody, verses: ReadonlySet<string>) =>
@@ -97,6 +99,20 @@ export function themesFor(themes: readonly GuideTheme[], verses: ReadonlySet<str
   });
 }
 
+/**
+ * The verses a base guide for this reading may annotate. An assigned student's confirmed snapshot comes first, so a key students have
+ * keeps exactly the verses it had (a special Shabbat's maftir included). A key no student has falls back to the catalog's full kriyah;
+ * a key outside it stays empty. Shared with guide import, which places a note only on a verse of the reading.
+ */
+export async function guidePassageVerses<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, kind: GuideKind, readingKey: string): Promise<Set<string>> {
+  if (kind === "haftarah") {
+    const ref = haftarahRefForKey(readingKey, TANAKH_VERSE_COUNTS);
+    return new Set(ref ? expandReadingRanges(readingSegments(ref), "haftarah", TANAKH_VERSE_COUNTS) : []);
+  }
+  const assigned = await data.torahPassageVerses(tx, tenantId, readingKey, TANAKH_VERSE_COUNTS);
+  return assigned.size ? assigned : new Set(catalogTorahVerses(readingKey, TANAKH_VERSE_COUNTS));
+}
+
 export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
   access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>; check: GuideChecker;
 }) {
@@ -105,16 +121,7 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     return rabbiName(row?.customs, await currentSettings(tx, tenantId));
   }
   /** The verses a base guide for this reading may annotate. */
-  async function passage(tx: AccessTransaction<Q>, tenantId: string, kind: GuideKind, readingKey: string): Promise<Set<string>> {
-    if (kind === "haftarah") {
-      const ref = haftarahRefForKey(readingKey, TANAKH_VERSE_COUNTS);
-      return new Set(ref ? expandReadingRanges(readingSegments(ref), "haftarah", TANAKH_VERSE_COUNTS) : []);
-    }
-    // An assigned student's confirmed snapshot comes first, so a key students have keeps exactly the verses it had (a special
-    // Shabbat's maftir included). A key no student has falls back to the catalog's full kriyah; a key outside it stays empty.
-    const assigned = await data.torahPassageVerses(tx, tenantId, readingKey, TANAKH_VERSE_COUNTS);
-    return assigned.size ? assigned : new Set(catalogTorahVerses(readingKey, TANAKH_VERSE_COUNTS));
-  }
+  const passage = (tx: AccessTransaction<Q>, tenantId: string, kind: GuideKind, readingKey: string) => guidePassageVerses(tx, tenantId, kind, readingKey);
 
   // Voice ----------------------------------------------------------------------------------------
   async function getVoice(authority: RabbiAuthority<Q>) {
@@ -208,7 +215,8 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       const held = servable(heads.head);
       if (!held) return invalid(["The held version no longer meets the guide rules; save a corrected version instead."]);
       live();
-      const row = await data.appendGuide(tx, writer, { kind, readingKey, expected: version, origin: held.origin, reviewed: held.reviewed, hold: false, body: held.body, mutationId, digest: requestDigest, publish: true });
+      const row = await data.appendGuide(tx, writer, { kind, readingKey, expected: version, origin: held.origin, reviewed: held.reviewed, hold: false, body: held.body, mutationId, digest: requestDigest, publish: true,
+        importCredit: heads.head.importCredit, importKey: heads.head.importKey });
       live();
       if (row) return Object.freeze({ ok: true as const, replayed: false, version: row.version, held: false });
       const raced = await data.guideReceipt(tx, writer, mutationId); return raced ? replay(raced) : fail("conflict");
@@ -291,7 +299,7 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     const reads = new Map<string, { state: string; version: number }>();
     return Object.freeze({
       kind, readingKey: reading.readingKey, tickable: false,
-      base: base ? Object.freeze({ version: base.version, label: Object.freeze({ origin: base.origin, reviewed: base.reviewed, rabbiName: name }), overview: base.body.overview ?? "",
+      base: base ? Object.freeze({ version: base.version, label: Object.freeze({ origin: base.origin, reviewed: base.reviewed, rabbiName: name, ...(base.importedFrom ? { importedFrom: base.importedFrom } : {}) }), overview: base.body.overview ?? "",
         themes: Object.freeze([]), updatedAt: base.createdAt }) : null,
       additions: additions ? Object.freeze({ version: additions.version, label: Object.freeze({ origin: additions.origin, reviewed: additions.reviewed, rabbiName: name }),
         themes: Object.freeze(themesFor(additions.body.themes, verses, reads, ADDITION_PREFIX)), updatedAt: additions.createdAt }) : null,

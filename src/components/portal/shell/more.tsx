@@ -13,7 +13,7 @@ import styles from "./shell.module.css";
 // The destinations that have no tab of their own. The words are the ones these pages already use.
 const email = { href: "/workspace/email", title: "Email settings", meta: "choose which portal emails you get" };
 const claude = { href: "/workspace/claude", title: "Claude connections", meta: "see and end Claude’s access to the portal" };
-const adminRows = [{ href: "/workspace/admin/settings", title: "Settings" }, email, claude, { href: "/workspace/admin/reference-review", title: "Recording review" }];
+const adminRows = [{ href: "/workspace/admin/settings", title: "Settings" }, email, claude, { href: "/workspace/admin/guide-sharing", title: "Share guides" }, { href: "/workspace/admin/reference-review", title: "Recording review" }];
 
 /** More, for the admin: settings, email, Claude, recording review and the staff Sheet, all one tap from the tab bar. Anyone else is sent to /mine. */
 export function MoreWorkspace() {
