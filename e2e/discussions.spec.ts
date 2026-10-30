@@ -55,7 +55,8 @@ test("the marker is on the anchor verses only; opening it shows the sources with
   await expect(row(page, "Genesis 1:1")).not.toHaveAttribute("data-has-notes", "true");
   const button = await marker(page, "Genesis 1:2");
   await button.scrollIntoViewIfNeeded();
-  expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  // Study v6: the desk (900px and wider) sets its text actions to 32px for a pointer; narrower, the 44px touch target holds.
+  expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual((page.viewportSize()?.width ?? 0) >= 900 ? 32 : 44);
   const scrolled = await page.evaluate(() => scrollY);
   await button.click();
   await expect(page.getByRole("dialog", { name: "Sources on this verse · Genesis 1:2" }).getByRole("heading", { name: "Sources on this verse · Genesis 1:2" })).toBeFocused();
