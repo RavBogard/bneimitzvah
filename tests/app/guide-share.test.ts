@@ -265,7 +265,7 @@ test("credit holds through the importer's own save, review and publish: an expor
   expect(saved).toMatchObject({ ok: true, version: 2, held: true });
   expect(await guides.publishBaseGuide(authority, { kind: "torah", readingKey: "pekudei", version: 2, mutationId: randomUUID() })).toMatchObject({ ok: true, version: 3 });
   const rows = await f.guides("other");
-  expect(rows.map(r => [r.version, r.importCredit])).toEqual([[1, "Rabbi Daniel Bogard"], [2, "Rabbi Daniel Bogard"], [3, "Rabbi Daniel Bogard"]]);
+  expect(rows.map(r => [r.version, r.importCredit]).sort((a, b) => Number(a[0]) - Number(b[0]))).toEqual([[1, "Rabbi Daniel Bogard"], [2, "Rabbi Daniel Bogard"], [3, "Rabbi Daniel Bogard"]]);
   const exportedFile = await f.send(EXPORT, { who: "multi", origin: OTHER });
   expect(exportedFile.body.guides).toHaveLength(1);
   expect(exportedFile.body.guides[0]).toMatchObject({ readingKey: "pekudei", credit: "Rabbi Daniel Bogard" });
