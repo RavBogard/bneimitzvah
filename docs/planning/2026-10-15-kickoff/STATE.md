@@ -1,7 +1,9 @@
 # State — CRC B'nei Mitzvah portal
 
-**Return point, 2026-10-30 evening: another congregation can run its own copy; DEPLOYING.md rehearsal and Rabbi Kipnes's Cowork prompt remain.**
-- Plan and Daniel's 20 rulings: `docs/planning/2026-10-30-second-congregation-copy/PLAN.md`. Draft prompt (to be rewritten after DEPLOYING.md lands): `C:/Users/dsbog/bneimitzvah-review-output/kipnes-cowork-starter-prompt.md`. Daniel sends it himself.
+**Return point, 2026-11-01: another congregation can run its own copy. All pieces merged; Rabbi Kipnes's Cowork prompt is ready for Daniel to send.**
+- Plan and Daniel's 20 rulings: `docs/planning/2026-10-30-second-congregation-copy/PLAN.md`. Final prompt: `C:/Users/dsbog/bneimitzvah-review-output/kipnes-cowork-starter-prompt.md`. Daniel sends it himself.
+- GATE: #162 DEPLOYING.md (4e5effc0), rehearsed on a local throwaway copy; the Neon, Vercel, Google and Resend steps are marked unverified until a real fork runs them.
+- GATE: #163 fork identity polish (d60737f2): the signed-in shell and titles render per request from runtime identity off CRC; the personal footer credit shows off CRC only with CREDIT_UPSTREAM=true; `add-congregation-host.mjs` requires `--congregation-name` and replaces the stored CRC names. Merged after its one red browser shard went green on rerun.
 - GATE: published release `reference-kit-v1` (9 assets: timing catalog ee39c3e1…, manifest f60823cb…, 7,028 PocketTorah clips in 4 tars, CC BY-SA 3.0 notice) — proceeded because Daniel ruled the catalog be published openly as a Release file, and the clips are excerpts of the CC BY-SA 3.0 archive.org recordings that a fork cannot rebuild byte-identically. The never-in-repo guard is unchanged.
 - GATE: #159 reference-kit build/install scripts (4c8fefbd).
 - GATE: #161 Study v6 regression fix (2992bded): #157 merged with browser shards red; the reader's place reset to verse 1, and Sources/Compare lost focus; specs updated to the v6 sizes; the saved-ui star locator scoped to the Rashi comment.
