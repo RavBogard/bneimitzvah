@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 
+// The home leads with the Shabbat after it on a Saturday (congregation time, 1.9 N5), so the Lein link gains a ?date=. These specs assert the ordinary weekday link, so they pin the clock to a Wednesday instead of reading the runner's.
+const WEEKDAY = new Date("2026-10-28T18:00:00Z");
+
 test("built portal presents an honest unavailable state with accessible retry at each supported device size", async ({ page }) => {
+  await page.clock.setFixedTime(WEEKDAY);
   const response = await page.goto("/");
   expect(response?.status()).toBe(200);
   await expect(page).toHaveTitle("CRC Torah");
