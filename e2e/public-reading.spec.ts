@@ -2,7 +2,11 @@ import { expect, test } from "@playwright/test";
 
 // The built, unconfigured production server: the page and its headers are real; the
 // reading API has no database here, so the page must fail plainly and stay signed-out.
+// The home's Lein link gains a ?date= on a Saturday (congregation time), so the clock is pinned to a Wednesday rather than the runner's.
+const WEEKDAY = new Date("2026-10-28T18:00:00Z");
+
 test("the public reading is open to signed-out visitors, never asks for a session, is indexable at beta while the front door stays noindex", async ({ page, request }, testInfo) => {
+  await page.clock.setFixedTime(WEEKDAY);
   const api: string[] = [];
   page.on("request", item => { const url = new URL(item.url()); if (url.pathname.startsWith("/api/")) api.push(url.pathname); if (item.headers().cookie) api.push("cookie"); });
   // The page-view counter's beacon ("path and day only"): one POST of the page's own address, with no cookie and no referrer.
