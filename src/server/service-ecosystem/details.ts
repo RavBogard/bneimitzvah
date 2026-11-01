@@ -55,16 +55,18 @@ export function citation(verseRefs: readonly string[], counts: VerseCounts = TAN
 /**
  * The card's details from what the portal holds: active students' names, their confirmed readings and their
  * rehearsal dates. The slot is not sent: the portal knows only morning or Havdalah, which the music side
- * already holds and labels itself. Null when no active student has a name the receiver accepts.
+ * already holds and labels itself. Skipped when it has more than six active students or none with a name the receiver accepts.
  */
 export async function loadCeremonyDetails<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, ceremonyId: string)
-  : Promise<{ details: CeremonyDetails; omittedNames: number } | null> {
+  : Promise<{ details: CeremonyDetails; omittedNames: number } | { skipped: "tooManyStudents" | "noStudents" }> {
   const students = await tx.select({ id: s.student.id, firstName: s.student.firstName, lastName: s.student.lastName, rehearsal1: s.student.rehearsal1, rehearsal2: s.student.rehearsal2 })
     .from(s.studentCeremony).innerJoin(s.student, and(eq(s.student.tenantId, s.studentCeremony.tenantId), eq(s.student.id, s.studentCeremony.studentId)))
     .where(and(eq(s.studentCeremony.tenantId, tenantId), eq(s.studentCeremony.ceremonyId, ceremonyId), isNull(s.student.disabledAt)))
     .orderBy(asc(s.student.lastName), asc(s.student.firstName), asc(s.student.id)).limit(7);
+  // The receiver takes at most six students; more than that is a roster to fix, not a list to truncate.
+  if (students.length > 6) return { skipped: "tooManyStudents" };
   const names = students.map(row => studentName(row.firstName, row.lastName)).filter((name): name is string => name !== null);
-  if (!names.length || names.length > 6) return null;
+  if (!names.length) return { skipped: "noStudents" };
   const ids = students.map(row => row.id);
   const verses = await tx.select({ kind: s.assignment.kind, ref: s.assignmentVerse.verseRef }).from(s.assignment)
     .innerJoin(s.assignmentVerse, and(eq(s.assignmentVerse.tenantId, s.assignment.tenantId), eq(s.assignmentVerse.assignmentId, s.assignment.id), eq(s.assignmentVerse.studentId, s.assignment.studentId)))
