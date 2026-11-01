@@ -233,7 +233,7 @@ Set these in Vercel under Settings, then Environment Variables, for the **Produc
 
 Never set these, in Vercel or anywhere the app runs: `DATABASE_MIGRATION_URL` and `BOOTSTRAP_OWNER_EMAIL` (the app refuses to start if present), and the owner database URL under any name.
 
-Leave all of these unset in a fork: `PORTAL_RECORDINGS_ENABLED` (student recordings are parked), `CHANT_BLOB_TOKEN`, `BEIT_MITZVAH_MUSIC_URL`, `BEIT_MITZVAH_SERVICE_TOKEN` (CRC's own music service), `GOOGLE_SHEETS_SERVICE_ACCOUNT`, `GOOGLE_ROSTER_SHEET_ID` (CRC's roster sheet), `PORTAL_OFFLINE_ENABLED` (the offline pack is CRC-only), `FINKEL_REVIEW_*`, `CRC_COMPONENT_PAGE`, `BLOB_READ_WRITE_TOKEN` (used only on your own computer for section 9, never in Vercel Production).
+Leave all of these unset in a fork: `PORTAL_RECORDINGS_ENABLED` (student recordings are parked), `CHANT_BLOB_TOKEN`, `BEIT_MITZVAH_MUSIC_URL`, `BEIT_MITZVAH_SERVICE_TOKEN`, `PORTAL_MUSIC_DETAILS_ENABLED` (CRC's own music service), `GOOGLE_SHEETS_SERVICE_ACCOUNT`, `GOOGLE_ROSTER_SHEET_ID` (CRC's roster sheet), `PORTAL_OFFLINE_ENABLED` (the offline pack is CRC-only), `FINKEL_REVIEW_*`, `CRC_COMPONENT_PAGE`, `BLOB_READ_WRITE_TOKEN` (used only on your own computer for section 9, never in Vercel Production).
 
 The three entries in `vercel.json` `crons` call internal routes for music, roster sheet and notifications. With the related variables unset all three answer `503` and do nothing (verified locally), so Vercel's cron log shows a failed run each day. That is expected and harmless in a fork; tell the rabbi so it does not look like an outage.
 

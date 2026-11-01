@@ -13,7 +13,8 @@ const text = (value: unknown, max = 4000) => { if (typeof value !== "string" || 
 const number = (value: unknown) => { if (!Number.isSafeInteger(value) || Number(value) < 0 || Number(value) > 2_147_483_646) throw new HttpBoundaryError(); return Number(value); };
 export async function handleServiceEcosystemRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
   if(new URL(request.url).pathname==="/api/internal/service-ecosystem/drain"){
-    try{if(request.method!=="GET")throw new HttpBoundaryError(405);uniqueQuery(request.url,[]);return privateJson(await runtime.serviceScheduler.drain(request));}catch(error){return errorResponse(error);}
+    try{if(request.method!=="GET")throw new HttpBoundaryError(405);const query=uniqueQuery(request.url,["details"]);const details=query.get("details");if(details!==null && details!=="dry-run")throw new HttpBoundaryError();
+      return privateJson(await runtime.serviceScheduler.drain(request,{detailsDryRun:details==="dry-run"}));}catch(error){return errorResponse(error);}
   }
   const match = route(new URL(request.url).pathname); if (!match) return null;
   try {

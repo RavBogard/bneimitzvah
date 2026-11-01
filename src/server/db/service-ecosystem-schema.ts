@@ -21,6 +21,8 @@ export const serviceCeremony = pgTable("service_ceremony", {
   leaseToken: uuid("lease_token"), leaseUntil: timestamp("lease_until", { withTimezone: true }),
   requestedDate:date("requested_date").notNull(),requestedType:text("requested_type").$type<"morning"|"havdalah">().notNull(),
   scheduleRevision:integer("schedule_revision").default(1).notNull(),scheduleConflict:boolean("schedule_conflict").default(false).notNull(),
+  // The music card's details (contract BET-6): the fingerprint last accepted and its ordering fence. Names stay in the student rows.
+  detailsDigest:text("details_digest"),detailsSentAt:timestamp("details_sent_at",{withTimezone:true}),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, t => [unique("service_ceremony_tenant_key").on(t.tenantId, t.id),
   unique("service_ceremony_schedule_key").on(t.tenantId,t.scheduleKey),
@@ -30,6 +32,7 @@ export const serviceCeremony = pgTable("service_ceremony", {
   check("service_ceremony_projection_bound", sql`${t.projection} is null or octet_length(${t.projection}::text) <= 131072`),
   check("service_ceremony_candidate_bound", sql`cardinality(${t.candidates}) <= 100`),
   check("service_ceremony_job_shape", sql`${t.attempts} >= 0 and ((${t.leaseToken} is null) = (${t.leaseUntil} is null))`),
+  check("service_ceremony_details_shape",sql`(${t.detailsDigest} is null) = (${t.detailsSentAt} is null) and (${t.detailsDigest} is null or ${t.detailsDigest} ~ '^[0-9a-f]{64}$')`),
   check("service_ceremony_schedule_shape",sql`${t.scheduleRevision}>0 and ${t.requestedType} in ('morning','havdalah')`),
 ]);
 export const studentCeremony = pgTable("student_ceremony", {

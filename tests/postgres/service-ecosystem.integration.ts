@@ -24,7 +24,7 @@ test("independent PostgreSQL workers lease a ceremony once and an expired abando
   const f=await postgresAccessFixture();open.push(f);
   await f.a.withStudentCapability(mutation(f),{mode:"admin",studentId:f.student.id,capability:"set-service-plan"},async(tx,actor)=>{await scheduleCeremony(tx,actor.tenantId,{id:f.student.id,ceremonyDate:"2027-01-02",serviceSlot:"morning"});});
   const gate=deferred(),entered=deferred();const result:MusicResult={version:1,status:"review_required"};
-  const broker:MusicBroker={ensure:vi.fn(async()=>{entered.resolve();await gate.promise;return result;}),projection:async()=>result,resource:async()=>{throw new Error("Synthetic unused");}};
+  const broker:MusicBroker={ensure:vi.fn(async()=>{entered.resolve();await gate.promise;return result;}),projection:async()=>result,details:async()=>result,resource:async()=>{throw new Error("Synthetic unused");}};
   const first=createServiceScheduler({db:f.aDb,broker}).run({maxJobs:1});await entered.promise;
   expect(await createServiceScheduler({db:f.bDb,broker}).run({maxJobs:1})).toEqual({attempted:0,completed:0});gate.resolve();expect(await first).toEqual({attempted:1,completed:1});expect(broker.ensure).toHaveBeenCalledTimes(1);
 });

@@ -331,6 +331,11 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
     requireCookieMutation(request,actor.origin);return action(tx,actor,student);});
   const readings=createReadingWork<Q>(input);
   async function prepareReading(request:CookieMutationRequest,selection:Mode&ReadingSelection){return readings.prepareReadingAs(cookieReading(request,selection.mode),selection);}
-  async function confirmReading(request:CookieMutationRequest,selection:Mode&{studentId:string;binding:string}){return readings.confirmReadingAs(cookieReading(request,selection.mode),selection);}
+  async function confirmReading(request:CookieMutationRequest,selection:Mode&{studentId:string;binding:string}){
+    const result=await readings.confirmReadingAs(cookieReading(request,selection.mode),selection);
+    // A confirmed reading changes the music card's citation; the drain sends it (details are sent only when enabled).
+    if(result.ok && input.dispatchScheduled)try{await input.dispatchScheduled();}catch{/* The daily drain sends it. */}
+    return result;
+  }
   return {listRoster,create,edit,disable,previewImport,confirmImport,prepareReading,confirmReading};
 }
