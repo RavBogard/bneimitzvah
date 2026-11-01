@@ -12,6 +12,8 @@ export type RuntimeConfig = Readonly<{
   referenceReview?: Readonly<{ reviewer: ReviewerConfig; storeId: string }>;
   serviceMusic?: Readonly<{ url: string; token: string }>;
   serviceCronSecret?:string;
+  // The music card's ceremony details (contract BET-6) are sent only when PORTAL_MUSIC_DETAILS_ENABLED is exactly "true".
+  musicDetailsEnabled: boolean;
   // The portal MCP answers only when explicitly enabled (after its adversarial review).
   mcpEnabled: boolean;
   // Student recordings are parked (MISSION, 2026-10-17 revision): their routes do not exist unless explicitly enabled.
@@ -81,6 +83,7 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
     }
     if (env.PORTAL_MCP_ENABLED !== undefined && env.PORTAL_MCP_ENABLED !== "true" && env.PORTAL_MCP_ENABLED !== "false") throw 0;
     if (env.PORTAL_RECORDINGS_ENABLED !== undefined && env.PORTAL_RECORDINGS_ENABLED !== "true" && env.PORTAL_RECORDINGS_ENABLED !== "false") throw 0;
+    if (env.PORTAL_MUSIC_DETAILS_ENABLED !== undefined && env.PORTAL_MUSIC_DETAILS_ENABLED !== "true" && env.PORTAL_MUSIC_DETAILS_ENABLED !== "false") throw 0;
     let rosterSheet: RuntimeConfig["rosterSheet"];
     // Both or neither. Anything else switches only the Sheet off, never the portal: the key is
     // checked where it is parsed, and a partial or malformed setting simply leaves it unconfigured.
@@ -89,6 +92,7 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
     if(env.CRON_SECRET!==undefined && (!clean(env.CRON_SECRET) || env.CRON_SECRET.length<32 || env.CRON_SECRET.length>512 || env.CRON_SECRET===serviceMusic?.token || env.CRON_SECRET===env.BETTER_AUTH_SECRET))throw 0;
     return Object.freeze({ deployment: Object.freeze({ environment, deployment: env.PORTAL_DEPLOYMENT }), origin: origin.origin,
       databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google, referenceAudio, referenceReview, serviceMusic, serviceCronSecret:env.CRON_SECRET, mcpEnabled: env.PORTAL_MCP_ENABLED === "true", recordingsEnabled: env.PORTAL_RECORDINGS_ENABLED === "true", rosterSheet,
+      musicDetailsEnabled: env.PORTAL_MUSIC_DETAILS_ENABLED === "true",
       notificationsEnabled: env.PORTAL_NOTIFICATIONS_ENABLED === "true",
       mail: Object.freeze({ apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM }) });
   } catch { throw new RuntimeUnavailable(); }

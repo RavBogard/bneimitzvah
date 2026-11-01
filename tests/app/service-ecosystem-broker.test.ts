@@ -40,3 +40,9 @@ test("source monotonic fencing is distinguishable from retryable unavailability"
   const token=randomBytes(48).toString("base64url");
   await expect(createMusicBroker({url,token},async()=>Response.json({version:1,error:"stale_schedule_revision"},{status:409})).projection("synthetic")).rejects.toBeInstanceOf(MusicIntentSuperseded);
 });
+test("details sends the strict BET-6 body and treats a missing link as unavailable",async()=>{
+  const token=randomBytes(48).toString("base64url"),input={ceremonyId:"00000000-0000-4000-8000-000000000025",sentAt:"2026-11-01T12:00:00.000Z",students:["Synthetic Learner"],torahRef:"Genesis 1:31–2:1",rehearsals:["2026-12-30"]};
+  const fetcher=vi.fn<typeof fetch>(async(_url,options)=>{expect(JSON.parse(String(options?.body))).toEqual({version:1,orgId:"crc",operation:"details",...input});return Response.json(linked());});
+  expect((await createMusicBroker({url,token},fetcher).details(input)).status).toBe("linked");
+  await expect(createMusicBroker({url,token},async()=>Response.json({error:"not_found"},{status:404})).details(input)).rejects.toBeInstanceOf(AccessUnavailable);
+});

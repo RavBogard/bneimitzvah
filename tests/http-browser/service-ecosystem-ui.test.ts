@@ -24,7 +24,7 @@ const projection:MusicProjection={setlistId:"synthetic-service",sourceRevision:"
   {rowId:"synthetic-closing",order:1,title:"Synthetic closing part",resources:[]},
 ]};
 const response=async():Promise<MusicResult>=>revoked?{version:1,status:"review_required",setlistId:projection.setlistId,sourceRevision:projection.sourceRevision,projection:{...projection,rows:[]}}:{version:1,status:"linked",setlistId:projection.setlistId,sourceRevision:projection.sourceRevision,projection};
-const broker:MusicBroker={ensure:response,projection:response,resource:async()=>{throw new Error("Synthetic resource access not requested");}};
+const broker:MusicBroker={ensure:response,projection:response,details:response,resource:async()=>{throw new Error("Synthetic resource access not requested");}};
 beforeAll(async()=>{
   let stage="preflight";
   try{

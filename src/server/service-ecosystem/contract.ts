@@ -12,8 +12,14 @@ export type EnsureInput = { ceremonyId: string; localDate: string; ceremonyType:
 export type MusicResult = { version: 1; status: "linked"; setlistId: string; sourceRevision: string; projection: MusicProjection }
   | { version: 1; status: "ambiguous"; candidates: { setlistId: string }[] }
   | { version: 1; status: "review_required"; setlistId?: string; sourceRevision?: string; projection?: MusicProjection };
+/**
+ * What the music setlist's read-only Beit Mitzvah card shows (music contract BET-6, operation "details").
+ * Names and citations only, never verse text. sentAt is the receiver's ordering fence.
+ */
+export type DetailsInput = { ceremonyId: string; sentAt: string; students: string[]; slot?: string; torahRef?: string; haftarahRef?: string; rehearsals?: string[] };
 export interface MusicBroker {
   ensure(input: EnsureInput, signal?: AbortSignal): Promise<MusicResult>;
   projection(ceremonyId: string, signal?: AbortSignal): Promise<MusicResult>;
+  details(input: DetailsInput, signal?: AbortSignal): Promise<MusicResult>;
   resource(ceremonyId: string, rowId: string, resourceId: string): Promise<{ resourceId: string; kind: "score" | "audio"; url: string; expiresAt: string }>;
 }

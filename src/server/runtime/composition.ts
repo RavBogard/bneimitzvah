@@ -146,7 +146,7 @@ async function dispatchServiceJobs(config:RuntimeConfig,fetch:typeof globalThis.
   // after() runs after the request's pool is closed; own this background connection.
   const pool=new Pool({connectionString:config.databaseUrl,max:4,connectionTimeoutMillis:5000,idleTimeoutMillis:1000,statement_timeout:10000,query_timeout:12000});
   pool.on("error",()=>undefined);
-  try{const db=drizzle(pool,{schema,logger:false});await createServiceScheduler({db,broker:createMusicBroker(config.serviceMusic,fetch)}).run();}
+  try{const db=drizzle(pool,{schema,logger:false});await createServiceScheduler({db,broker:createMusicBroker(config.serviceMusic,fetch),...(config.musicDetailsEnabled?{details:"send" as const}:{})}).run();}
   finally{await pool.end().catch(()=>undefined);}
 }
 function notificationDelivery<Q extends PgQueryResultHKT>(config: RuntimeConfig, db: AccessDatabase<Q>, fetch: typeof globalThis.fetch) {
@@ -196,7 +196,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const practice = createPracticeService({ access });
   const dispatchScheduled=async()=>{const {after}=await import("next/server");after(async()=>{await dispatchServiceJobs(config,fetch);});};
   const serviceEcosystem = createServiceEcosystemService({ access,practice,broker: musicBroker, studentAudioRelease: config.referenceAudio?.studentRelease,dispatchScheduled });
-  const serviceScheduler = createServiceScheduler({ db, broker: musicBroker, cronSecret: config.serviceCronSecret });
+  const serviceScheduler = createServiceScheduler({ db, broker: musicBroker, cronSecret: config.serviceCronSecret, ...(config.musicDetailsEnabled ? { details: "send" as const } : {}) });
   const students = createStudentService({ access, loadReading, signingSecret: purposeSecret(config, "student-preparations"), verseCounts: TANAKH_VERSE_COUNTS, dispatchScheduled });
   const serviceLearning = createServiceLearningService({ access, practice, signingSecret: purposeSecret(config, "service-plan-preparations"), resolveCeremonyUnit: serviceEcosystem.materialMapping });
   const notifications = notificationDelivery(config, db, fetch);

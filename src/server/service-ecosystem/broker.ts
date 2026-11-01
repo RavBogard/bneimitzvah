@@ -71,6 +71,7 @@ export function createMusicBroker(config: { url: string; token: string } | undef
   return {
     ensure: (input,signal) => result({ operation: "ensure", ...input },signal),
     projection: (ceremonyId,signal) => result({ operation: "projection", ceremonyId },signal),
+    details: (input,signal) => result({ operation: "details", ...input },signal),
     resource: async (ceremonyId, rowId, resourceId) => {
       const { result, origin } = await post({ operation: "resource", ceremonyId, rowId, resourceId });
       const envelope = object(result), r = object(envelope.resource), expiresAt = string(r.expiresAt);
