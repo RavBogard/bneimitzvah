@@ -455,13 +455,14 @@ describe("people with access and Make tutor", () => {
     const [nobody] = await t.f.owner(() => t.f.db.insert(s.membership).values({ tenantId: "crc", userId: t.people.nobody.id }).returning());
     const list = await t.call("/api/accounts/people", "admin");
     expect(list.status).toBe(200);
-    expect(JSON.stringify(list.json)).not.toContain("@");
+    // The verified address is shown so same-named people can be told apart (adversarial review, 2026-11-03); never a user id.
+    expect(JSON.stringify(list.json)).not.toContain(t.people.plain.id);
     const rows = list.json.people as Row[];
     const byId = new Map(rows.map(row => [row.id, row]));
     expect(rows.map(row => row.id).sort()).toEqual(expect.arrayContaining([memberOnly, nobody.id, t.f.adminMember.id, t.f.multiMember.id, t.f.learnerMember.id]));
     expect(rows.map(row => row.id)).not.toContain((await t.f.owner(() => t.f.db.select().from(s.membership).where(eq(s.membership.userId, t.people.off.id))))[0].id);
     expect(byId.get(nobody.id)).toMatchObject({ memberId: null, roles: [] });
-    expect(byId.get(memberOnly)).toEqual({ id: memberOnly, memberId: expect.any(String), name: "Plain Member", roles: ["member"], since: expect.any(String) });
+    expect(byId.get(memberOnly)).toEqual({ id: memberOnly, memberId: expect.any(String), name: "Plain Member", email: "acct-plain@example.test", roles: ["member"], since: expect.any(String) });
     expect(byId.get(t.f.multiMember.id)).toMatchObject({ memberId: null, roles: ["tutor", "parent"] });
     expect(byId.get(t.f.adminMember.id)).toMatchObject({ memberId: null, roles: ["admin"] });
     expect(byId.get(t.f.learnerMember.id)).toMatchObject({ memberId: null, roles: ["student"] });
@@ -511,7 +512,19 @@ describe("people with access and Make tutor", () => {
     // Another congregation's membership, an unknown one and a disabled one: 404.
     const [other] = await t.f.owner(() => t.f.db.select().from(s.membership).where(eq(s.membership.tenantId, "other")));
     await t.person("off", "disabled");
-    for (const membershipId of [other.id, randomUUID(), t.people.off.membershipId!])
+    // An unverified address, and someone whose Member row an admin ended with no grant left: 404, and not listed.
+    await t.person("unverified");
+    const [unverified] = await t.f.owner(async () => {
+      await t.f.db.update(s.user).set({ emailVerified: false }).where(eq(s.user.id, t.people.unverified.id));
+      return t.f.db.insert(s.membership).values({ tenantId: "crc", userId: t.people.unverified.id }).returning();
+    });
+    const ended = await approved(t, "ended", "Ended Member");
+    const [endedRow] = await t.f.owner(() => t.f.db.select().from(s.tenantMember).where(eq(s.tenantMember.membershipId, ended)));
+    expect((await t.call("/api/accounts/members/end", "admin", { memberId: endedRow.id })).status).toBe(200);
+    const listed = (await people(t)).map(row => row.id);
+    expect(listed).not.toContain(ended);
+    expect((await people(t)).find(row => row.id === unverified.id)).toMatchObject({ email: null });
+    for (const membershipId of [other.id, randomUUID(), t.people.off.membershipId!, unverified.id, ended])
       expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId })).status, membershipId).toBe(404);
     expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: "nope" })).status).toBe(400);
     expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: target, extra: 1 })).status).toBe(400);

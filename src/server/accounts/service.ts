@@ -187,7 +187,7 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
         people: (await data.listPeople(tx, actor.tenantId, 500)).map(row => {
           const held = new Set(Array.isArray(row.roles) ? row.roles : typeof row.roles === "string" ? String(row.roles).replace(/^\{|\}$/g, "").split(",").filter(Boolean) : []);
           const roles = PEOPLE_ROLES.filter(role => role === "member" ? row.memberId !== null : held.has(role));
-          return { id: row.membershipId, memberId: row.memberId, name: validate.shownName(row.name), roles, since: new Date(row.since).toISOString() };
+          return { id: row.membershipId, memberId: row.memberId, name: validate.shownName(row.name), email: row.verified ? row.email : null, roles, since: new Date(row.since).toISOString() };
         }) }));
     },
     /** Make tutor: admin only, fresh session; the grant and its audit come from src/server/people/tutor.ts. No email. */

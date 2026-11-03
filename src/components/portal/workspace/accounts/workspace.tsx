@@ -196,16 +196,16 @@ export function PeopleWithAccessCard({ people, confirming, pending, onConfirming
     {people.length ? <ul className="people-list">{people.map(row => <li key={row.id} className="people-row" data-testid="person-row">
       <span className="people-avatar" aria-hidden="true">{initial(row.name)}</span>
       <div className="people-body"><h3><bdi dir="auto">{row.name}</bdi></h3>
-        <p className="people-status">{row.roles.length ? row.roles.map(role => <span key={role} className="roster-chip" data-role-chip={role}>{ROLE_CHIPS[role]}</span>) : <span className="roster-chip" data-role-chip="none">{SIGNED_IN_CHIP}</span>} Since <time dateTime={row.since}>{day(row.since)}</time></p></div>
+        <p className="people-status">{row.roles.length ? row.roles.map(role => <span key={role} className="roster-chip" data-role-chip={role}>{ROLE_CHIPS[role]}</span>) : <span className="roster-chip" data-role-chip="none">{SIGNED_IN_CHIP}</span>} {row.email && <><bdi dir="ltr" data-testid="person-email">{row.email}</bdi> · </>}Since <time dateTime={row.since}>{day(row.since)}</time></p></div>
       <div className="people-actions">
         {confirming === `tutor:${row.id}` ? <>
-          <button type="button" className="roster-action" aria-label={`Make tutor now: ${row.name}`} disabled={pending} onClick={() => onMakeTutor(row)}>Make tutor now</button>
+          <button type="button" className="roster-action" aria-label={`Make tutor now: ${row.name}`} disabled={pending} onClick={() => onMakeTutor(row)}>Make tutor now: {row.email}</button>
           <button type="button" className="roster-action" aria-label={`Keep as is: ${row.name}`} disabled={pending} onClick={() => onConfirming(null)}>Cancel</button>
         </> : confirming === `end:${row.id}` ? <>
           <button type="button" className="roster-action roster-danger" aria-label={`End membership now: ${row.name}`} disabled={pending} onClick={() => onEnd(row)}>End membership</button>
           <button type="button" className="roster-action" aria-label={`Keep membership: ${row.name}`} disabled={pending} onClick={() => onConfirming(null)}>Keep</button>
         </> : <>
-          {!row.roles.includes("tutor") && !row.roles.includes("student") && <button type="button" className="roster-action" aria-label={`Make tutor: ${row.name}`} disabled={pending || confirming !== null} onClick={() => onConfirming(`tutor:${row.id}`)}>Make tutor</button>}
+          {row.email && !row.roles.includes("tutor") && !row.roles.includes("student") && <button type="button" className="roster-action" aria-label={`Make tutor: ${row.name}`} disabled={pending || confirming !== null} onClick={() => onConfirming(`tutor:${row.id}`)}>Make tutor</button>}
           {row.memberId && <button type="button" className="roster-action people-danger" aria-label={`End membership: ${row.name}`} disabled={pending || confirming !== null} onClick={() => onConfirming(`end:${row.id}`)}>End membership</button>}
         </>}
       </div>

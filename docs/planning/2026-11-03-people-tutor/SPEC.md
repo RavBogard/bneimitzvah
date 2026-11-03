@@ -32,3 +32,9 @@ Daniel asked: "a way to see everyone who has signed in and has an account, and q
 
 - App (Vitest/PGlite): the list includes member-only, grant-only and both kinds, excludes disabled memberships and other tenants, and sets chips correctly. Make tutor: admin with a fresh session succeeds and writes a grant and an audit event. Refused for a stale session (403), a tutor-mode actor (403), a cross-tenant membershipId (404), a disabled membership (404), an already-tutor (409) and a student (409). Two concurrent calls leave one active grant (the partial unique index) and return a clean 409, not a 500.
 - UI: one deliberate wording test for the card, plus a behaviour test of the two-step confirm.
+
+## Adversarial review amendments (lead, 2026-11-03)
+
+- **BLOCK fixed (impersonation):** names alone let a stranger who signed in as "Sarah Cohen" be promoted by mistake. The list now returns each person's verified email to admins, as the request queue already does to approvers. Rows show it, and the confirm step reads `Make tutor now: <email>`. An account with no verified email is listed but never offered Make tutor, and the server refuses it with 404.
+- **Ended members:** someone whose Member row an admin ended, and who holds no grant, is hidden from the list and refused with 404.
+- **Gap (logged, not fixed):** student-invite acceptance and link approval can still add a student grant to someone who is already a tutor. The rule here only works in one direction.

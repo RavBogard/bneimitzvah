@@ -8,7 +8,7 @@ export type StudentOption = Readonly<{ id: string; firstName: string; lastName: 
 export type Member = Readonly<{ id: string; name: string; since: string }>;
 /** People with access (2026-11-03 spec): one row per membership, with its active roles in chip order. memberId is the Member row, if any. */
 export type PersonRole = "member" | "tutor" | "admin" | "parent" | "student";
-export type Person = Readonly<{ id: string; memberId: string | null; name: string; roles: readonly PersonRole[]; since: string }>;
+export type Person = Readonly<{ id: string; memberId: string | null; name: string; email: string | null; roles: readonly PersonRole[]; since: string }>;
 export type MakeTutorResult = Readonly<{ ok: true } | { ok: false; code: "already-tutor" | "student" }>;
 export type ApproversView = Readonly<{ admins: readonly string[]; designated: readonly Readonly<{ id: string; name: string }>[]; candidates: readonly Readonly<{ tutorGrantId: string; name: string }>[] }>;
 /**
@@ -80,9 +80,9 @@ export function parsePeople(value: unknown): readonly Person[] {
   const row = object(value, ["ok", "people"]);
   if (row.ok !== true || !Array.isArray(row.people) || row.people.length > 500) return bad();
   return row.people.map(raw => {
-    const item = object(raw, ["id", "memberId", "name", "roles", "since"]);
+    const item = object(raw, ["id", "memberId", "name", "email", "roles", "since"]);
     if (!Array.isArray(item.roles) || item.roles.some(role => !PERSON_ROLES.includes(role as PersonRole)) || new Set(item.roles).size !== item.roles.length) return bad();
-    return { id: id(item.id), memberId: item.memberId === null ? null : id(item.memberId), name: text(item.name, 80), roles: PERSON_ROLES.filter(role => (item.roles as unknown[]).includes(role)), since: instant(item.since) };
+    return { id: id(item.id), memberId: item.memberId === null ? null : id(item.memberId), name: text(item.name, 80), email: item.email === null ? null : text(item.email, 320), roles: PERSON_ROLES.filter(role => (item.roles as unknown[]).includes(role)), since: instant(item.since) };
   });
 }
 export function parseApprovers(value: unknown): ApproversView {

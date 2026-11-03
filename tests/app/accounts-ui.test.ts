@@ -89,11 +89,13 @@ describe("the approvers' client", () => {
 
 // People with access and Make tutor (docs/planning/2026-11-03-people-tutor/SPEC.md).
 describe("people with access", () => {
-  const ID2 = "00000000-0000-4000-8000-000000000002", ID3 = "00000000-0000-4000-8000-000000000003";
+  const ID2 = "00000000-0000-4000-8000-000000000002", ID3 = "00000000-0000-4000-8000-000000000003", ID4 = "00000000-0000-4000-8000-000000000004";
   const rows: Person[] = [
-    { id: ID, memberId: ID3, name: "Ruth", roles: ["member", "parent"], since: stamp },
-    { id: ID2, memberId: null, name: "Naomi", roles: ["tutor"], since: stamp },
-    { id: ID3, memberId: null, name: "Boaz", roles: ["student"], since: stamp },
+    { id: ID, memberId: ID3, name: "Ruth", email: "ruth@example.test", roles: ["member", "parent"], since: stamp },
+    { id: ID2, memberId: null, name: "Naomi", email: "naomi@example.test", roles: ["tutor"], since: stamp },
+    { id: ID3, memberId: null, name: "Boaz", email: null, roles: ["student"], since: stamp },
+    // No verified address: listed, never offered Make tutor (adversarial review, 2026-11-03).
+    { id: ID4, memberId: null, name: "Ruth", email: null, roles: [], since: stamp },
   ];
   type Props = Parameters<typeof PeopleWithAccessCard>[0];
   const props = (over: Partial<Props> = {}): Props => ({ people: rows, confirming: null, pending: false, onConfirming: () => {}, onMakeTutor: () => {}, onEnd: () => {}, ...over });
@@ -114,17 +116,17 @@ describe("people with access", () => {
     const html = card();
     expect(html).toContain("<h2 id=\"accounts-people\">People with access</h2>");
     expect(plain(html)).toContain("Everyone with an account here. Make someone a tutor to give them the tutor view, then assign their students on each student’s page.");
-    expect(plain(html)).toMatch(/Ruth Member Parent Since /);
+    expect(plain(html)).toMatch(/Ruth Member Parent ruth@example\.test · Since /);
+    expect(plain(html)).toMatch(/Ruth Signed in Since /);
     expect(html).toContain("aria-label=\"Make tutor: Ruth\"");
     expect(html).toContain(">Make tutor</button>");
     expect(html).toContain("aria-label=\"End membership: Ruth\"");
     expect(plain(card({ people: [] }))).toContain("No one has an account here yet.");
     const confirm = card({ confirming: `tutor:${ID}` });
     expect(confirm).toContain("aria-label=\"Make tutor now: Ruth\"");
-    expect(confirm).toContain(">Make tutor now</button>");
+    expect(plain(confirm)).toContain("Make tutor now: ruth@example.test");
     expect(confirm).toContain("aria-label=\"Keep as is: Ruth\"");
     expect(confirm).toContain(">Cancel</button>");
-    expect(html).not.toContain("@");
   });
 
   it("offers Make tutor only to someone neither tutor nor student, in two steps; End membership only on a Member row", () => {
@@ -149,10 +151,10 @@ describe("people with access", () => {
   });
 
   it("reads the people list strictly", () => {
-    expect(parsePeople({ ok: true, people: [{ id: ID, memberId: null, name: "Ruth", roles: ["parent", "tutor"], since: stamp }] })).toEqual([{ id: ID, memberId: null, name: "Ruth", roles: ["tutor", "parent"], since: stamp }]);
-    for (const bad of [{ ok: true, people: [{ id: ID, memberId: null, name: "Ruth", roles: ["owner"], since: stamp }] },
-      { ok: true, people: [{ id: ID, memberId: null, name: "Ruth", roles: ["tutor", "tutor"], since: stamp }] },
-      { ok: true, people: [{ id: ID, memberId: null, name: "Ruth", roles: [], since: stamp, email: "x@example.test" }] },
-      { ok: true, people: [{ id: ID, memberId: "nope", name: "Ruth", roles: [], since: stamp }] }]) expect(() => parsePeople(bad)).toThrow(PortalRequestError);
+    expect(parsePeople({ ok: true, people: [{ id: ID, memberId: null, name: "Ruth", email: "ruth@example.test", roles: ["parent", "tutor"], since: stamp }] })).toEqual([{ id: ID, memberId: null, name: "Ruth", email: "ruth@example.test", roles: ["tutor", "parent"], since: stamp }]);
+    for (const bad of [{ ok: true, people: [{ id: ID, memberId: null, name: "Ruth", email: null, roles: ["owner"], since: stamp }] },
+      { ok: true, people: [{ id: ID, memberId: null, name: "Ruth", email: null, roles: ["tutor", "tutor"], since: stamp }] },
+      { ok: true, people: [{ id: ID, memberId: null, name: "Ruth", email: null, roles: [], since: stamp, extra: 1 }] },
+      { ok: true, people: [{ id: ID, memberId: "nope", name: "Ruth", email: null, roles: [], since: stamp }] }]) expect(() => parsePeople(bad)).toThrow(PortalRequestError);
   });
 });
