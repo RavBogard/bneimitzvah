@@ -501,7 +501,7 @@ describe("people with access and Make tutor", () => {
     expect(await activeTutors(t, bare.id)).toHaveLength(1);
   });
 
-  it("refuses a stale session, a non-admin, another congregation, a disabled or unlisted membership, a tutor and a student", async () => {
+  it("refuses a stale session, a non-admin, another congregation, a disabled or unlisted membership, and a tutor", async () => {
     const t = await setup();
     const target = await approved(t, "maybe", "Maybe Tutor");
     const grantsBefore = await t.grants();
@@ -528,9 +528,8 @@ describe("people with access and Make tutor", () => {
       expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId })).status, membershipId).toBe(404);
     expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: "nope" })).status).toBe(400);
     expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: target, extra: 1 })).status).toBe(400);
-    // Already a tutor, and a student (adult learners included): 409 with the reason.
+    // Already a tutor: 409 with the reason.
     expect(await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: t.f.multiMember.id })).toEqual({ status: 409, json: { ok: false, code: "already-tutor" } });
-    expect(await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: t.f.learnerMember.id })).toEqual({ status: 409, json: { ok: false, code: "student" } });
     // A sign-in over 15 minutes old cannot grant authority.
     await t.f.owner(async () => { await t.f.db.update(s.session).set({ createdAt: new Date(Date.now() - 60 * 60_000) }).where(eq(s.session.id, t.f.identities.admin.sessionId)); });
     expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: target })).status).toBe(403);
@@ -549,5 +548,99 @@ describe("people with access and Make tutor", () => {
     // The insert itself: against an active grant of the role, the active key makes it nothing rather than a unique violation.
     expect(await t.f.owner(() => insertGrantUnlessActive(t.f.db as never, "crc", target, "tutor"))).toBeNull();
     expect(await activeTutors(t, target)).toHaveLength(1);
+  });
+
+  // SPEC-2.md answer 3: a person may be both tutor and student, in both directions.
+  it("makes a student a tutor, and links a tutor as a student; the role chooser offers both", async () => {
+    const t = await setup();
+    expect(await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: t.f.learnerMember.id })).toEqual({ status: 200, json: { ok: true } });
+    expect((await t.call("/api/session", "learner")).json.roles).toEqual(expect.arrayContaining(["student", "tutor"]));
+    expect((await people(t)).find(row => row.id === t.f.learnerMember.id)!.roles).toEqual(["tutor", "student"]);
+    // The other way: a tutor asks to be linked to a student record, and an approval with that target links them.
+    await t.person("both");
+    const [bare] = await t.f.owner(() => t.f.db.insert(s.membership).values({ tenantId: "crc", userId: t.people.both.id }).returning());
+    expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: bare.id })).status).toBe(200);
+    expect((await t.call("/api/account/request", "both", { name: "Both Roles", studentId: t.f.students[1].id })).json).toEqual({ ok: true, state: "pending" });
+    const row = (await requests(t)).json.requests.find((item: { name: string }) => item.name === "Both Roles");
+    expect((await t.call("/api/accounts/requests/approve", "admin", { mode: "admin", requestId: row.id, studentId: t.f.students[1].id })).json).toEqual({ ok: true, memberId: expect.any(String), linked: true });
+    expect((await t.call("/api/session", "both")).json.roles).toEqual(expect.arrayContaining(["student", "tutor"]));
+    expect((await t.call(`/api/students/${t.f.students[1].id}?mode=student`, "both")).status).toBe(200);
+  });
+});
+
+// Remove tutor (docs/planning/2026-11-03-people-tutor/SPEC-2.md).
+describe("Remove tutor", () => {
+  const rows = <T,>(t: Awaited<ReturnType<typeof setup>>, read: () => Promise<T>) => t.f.owner(read);
+
+  it("revokes the grant, every link and the designation in one go, never deleting; the former tutor loses their students; Make tutor works again", async () => {
+    const t = await setup();
+    const approverId = await t.designate();
+    const student = t.f.students[0].id, tutorRead = `/api/students/${student}?mode=tutor`;
+    // Before: the tutor reads their student and their link requests.
+    expect((await t.call(tutorRead, "multi")).status).toBe(200);
+    expect((await t.call("/api/accounts/summary?mode=tutor", "multi")).status).toBe(200);
+    const counts = async () => Promise.all([s.roleGrant, s.tutorStudent, s.accountApprover].map(table => rows(t, async () => (await t.f.db.select().from(table)).length)));
+    const before = await counts();
+    t.mail.length = 0;
+
+    expect(await t.call("/api/accounts/people/remove-tutor", "admin", { membershipId: t.f.multiMember.id })).toEqual({ status: 200, json: { ok: true } });
+
+    // Revoked, never deleted: the same rows, each with its end recorded.
+    expect(await counts()).toEqual(before);
+    const [grant] = await rows(t, () => t.f.db.select().from(s.roleGrant).where(eq(s.roleGrant.id, t.f.tutorGrant.id)));
+    expect(grant.revokedAt).toBeInstanceOf(Date);
+    const [link] = await rows(t, () => t.f.db.select().from(s.tutorStudent).where(eq(s.tutorStudent.id, t.f.tutorLink.id)));
+    expect(link.revokedAt).toBeInstanceOf(Date);
+    const [designation] = await rows(t, () => t.f.db.select().from(s.accountApprover).where(eq(s.accountApprover.id, approverId)));
+    expect(designation).toMatchObject({ revokedAt: expect.any(Date), revokedByMembershipId: t.f.adminMember.id });
+    // The parent grant on the same membership is untouched.
+    const [parent] = await rows(t, () => t.f.db.select().from(s.roleGrant).where(eq(s.roleGrant.id, t.f.parentGrant.id)));
+    expect(parent.revokedAt).toBeNull();
+    // The existing vocabulary: grant.revoke on the grant, tutor.revoke on the link, approver.revoke on the designation, each as the admin.
+    for (const [action, targetId] of [["grant.revoke", t.f.tutorGrant.id], ["tutor.revoke", t.f.tutorLink.id], ["approver.revoke", approverId]] as const)
+      expect((await t.audits(action)).map(audit => [audit.targetId, audit.mode, audit.actorMembershipId]), action).toEqual([[targetId, "admin", t.f.adminMember.id]]);
+    expect(t.mail).toEqual([]);
+
+    // After: no tutor role, no student, no link requests; the parent role remains.
+    const session = (await t.call("/api/session", "multi")).json;
+    expect(session.roles).not.toContain("tutor");
+    expect(session.roles).toContain("parent");
+    expect((await t.call(tutorRead, "multi")).status).toBeGreaterThanOrEqual(400);
+    expect((await t.call("/api/students?mode=tutor", "multi")).status).toBeGreaterThanOrEqual(400);
+    expect((await t.call("/api/accounts/summary?mode=tutor", "multi")).status).toBe(403);
+    // The student's own record is unchanged.
+    expect((await t.call(`/api/students/${student}?mode=admin`, "admin")).status).toBe(200);
+
+    // Again: not a tutor any more.
+    expect(await t.call("/api/accounts/people/remove-tutor", "admin", { membershipId: t.f.multiMember.id })).toEqual({ status: 409, json: { ok: false, code: "not-tutor" } });
+    // Make tutor works again, with a new grant that carries none of the old students.
+    expect(await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: t.f.multiMember.id })).toEqual({ status: 200, json: { ok: true } });
+    expect((await t.call("/api/session", "multi")).json.roles).toContain("tutor");
+    expect((await t.call(tutorRead, "multi")).status).toBeGreaterThanOrEqual(400);
+    expect((await t.call("/api/accounts/summary?mode=tutor", "multi")).status).toBe(403);
+  });
+
+  it("refuses a non-admin, a foreign origin, a stale session, another congregation, an unknown or disabled membership, a non-tutor and the admin's own tutor role, changing nothing", async () => {
+    const t = await setup();
+    // The admin is also a tutor here, so self is a real case.
+    await rows(t, () => t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: t.f.adminMember.id, role: "tutor" }));
+    const grantsBefore = await t.grants();
+    const remove = (who: string, membershipId: unknown, headers: Record<string, string> = {}) => t.call("/api/accounts/people/remove-tutor", who, { membershipId }, headers);
+    for (const who of ["multi", "learner", "anonymous"]) expect((await remove(who, t.f.multiMember.id)).status, who).not.toBe(200);
+    expect((await remove("multi", t.f.multiMember.id)).status).toBe(403);
+    expect((await remove("admin", t.f.multiMember.id, { origin: "https://evil.example.test" })).status).toBe(403);
+    const [other] = await rows(t, () => t.f.db.select().from(s.membership).where(eq(s.membership.tenantId, "other")));
+    await t.person("off", "disabled");
+    for (const membershipId of [other.id, randomUUID(), t.people.off.membershipId!]) expect((await remove("admin", membershipId)).status, membershipId).toBe(404);
+    expect((await remove("admin", "nope")).status).toBe(400);
+    expect((await t.call("/api/accounts/people/remove-tutor", "admin", { membershipId: t.f.multiMember.id, extra: 1 })).status).toBe(400);
+    expect(await remove("admin", t.f.learnerMember.id)).toEqual({ status: 409, json: { ok: false, code: "not-tutor" } });
+    expect(await remove("admin", t.f.adminMember.id)).toEqual({ status: 409, json: { ok: false, code: "self" } });
+    // A sign-in over 15 minutes old cannot change authority.
+    await t.f.owner(async () => { await t.f.db.update(s.session).set({ createdAt: new Date(Date.now() - 60 * 60_000) }).where(eq(s.session.id, t.f.identities.admin.sessionId)); });
+    expect((await remove("admin", t.f.multiMember.id)).status).toBe(403);
+    expect(await t.grants()).toEqual(grantsBefore);
+    expect(await t.audits("grant.revoke")).toHaveLength(0);
+    expect(await t.audits("tutor.revoke")).toHaveLength(0);
   });
 });

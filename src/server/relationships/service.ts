@@ -54,6 +54,23 @@ export async function writeTutorRevocation<Q extends PgQueryResultHKT>(tx: Acces
   return Object.freeze({ ok: true as const, id: link.id });
 }
 
+/**
+ * The one grant-revocation write: "Remove as a tutor" on the Tutors page and Remove tutor on People with access
+ * (src/server/people/tutor.ts, SPEC-2.md). The caller has locked the grant for writing and checked its state. The grant
+ * (compare-and-set on its revision), its practice contexts, grant.revoke, and every claim it holds; null when the revision moved.
+ */
+export async function writeGrantRevocation<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: Actor, grantId: string, expected: number, now: Date) {
+  const updated = await data.revokeGrant(tx, actor.tenantId, grantId, expected, now);
+  if (!updated) return null;
+  await data.revokeContexts(tx, actor.tenantId, { kind: "grant", id: grantId }, now);
+  await data.audit(tx, actor, "grant.revoke", grantId);
+  // Readings for everyone: a revoked tutor grant ends every claim it holds, as the admin's act, so the learner's line clears and another tutor may claim.
+  for (const claim of await liveClaimsOfGrant(tx, actor.tenantId, grantId)) {
+    if (await revokeClaim(tx, actor.tenantId, claim.id, "admin", actor.membershipId)) await auditClaim(tx, actor, "learner.unclaim", claim.id);
+  }
+  return updated;
+}
+
 export function createRelationshipService<Q extends PgQueryResultHKT>(input: { access: ReturnType<typeof createAccessService<Q>> }) {
   function write<T>(request: CookieMutationRequest, selection: AdminSelection, action: (tx: AccessTransaction<Q>, actor: Actor) => Promise<T>) {
     return input.access.withAdminCapability(request, { mode: selection.mode, capability: "manage-relationships" }, async (tx, actor) => {
@@ -147,14 +164,8 @@ export function createRelationshipService<Q extends PgQueryResultHKT>(input: { a
       const subject = await data.subjectGrant(tx, actor.tenantId, grantId, "authority-write");
       if (subject.grant.role === "admin") throw new AccessDenied(403);
       if (subject.grant.revokedAt || subject.grant.revision !== expected) return conflict();
-      const now = new Date(), updated = await data.revokeGrant(tx, actor.tenantId, grantId, expected, now);
+      const updated = await writeGrantRevocation(tx, actor, grantId, expected, new Date());
       if (!updated) return conflict();
-      await data.revokeContexts(tx, actor.tenantId, { kind: "grant", id: grantId }, now);
-      await data.audit(tx, actor, "grant.revoke", grantId);
-      // Readings for everyone: a revoked tutor grant ends every claim it holds, as the admin's act, so the learner's line clears and another tutor may claim.
-      for (const claim of await liveClaimsOfGrant(tx, actor.tenantId, grantId)) {
-        if (await revokeClaim(tx, actor.tenantId, claim.id, "admin", actor.membershipId)) await auditClaim(tx, actor, "learner.unclaim", claim.id);
-      }
       return Object.freeze({ ok: true as const, id: grantId, revision: updated.revision });
     });
   }

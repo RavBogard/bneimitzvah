@@ -9,7 +9,9 @@ export type Member = Readonly<{ id: string; name: string; since: string }>;
 /** People with access (2026-11-03 spec): one row per membership, with its active roles in chip order. memberId is the Member row, if any. */
 export type PersonRole = "member" | "tutor" | "admin" | "parent" | "student";
 export type Person = Readonly<{ id: string; memberId: string | null; name: string; email: string | null; roles: readonly PersonRole[]; since: string }>;
-export type MakeTutorResult = Readonly<{ ok: true } | { ok: false; code: "already-tutor" | "student" }>;
+export type MakeTutorResult = Readonly<{ ok: true } | { ok: false; code: "already-tutor" }>;
+/** Remove tutor (SPEC-2.md): "not-tutor" when the role had already ended, "self" for the admin's own tutor role. */
+export type RemoveTutorResult = Readonly<{ ok: true } | { ok: false; code: "not-tutor" | "self" }>;
 export type ApproversView = Readonly<{ admins: readonly string[]; designated: readonly Readonly<{ id: string; name: string }>[]; candidates: readonly Readonly<{ tutorGrantId: string; name: string }>[] }>;
 /**
  * "admin-only": an admin ended this person's membership, so only an admin approves them again. "own-request": the
@@ -114,7 +116,11 @@ export const accountsApi = {
   async people(signal?: AbortSignal) { return parsePeople((await request("/api/accounts/people", undefined, signal)).value); },
   async makeTutor(membershipId: string): Promise<MakeTutorResult> {
     const { status, value } = await request("/api/accounts/people/make-tutor", { membershipId });
-    return status === 409 ? refusal(value, ["already-tutor", "student"] as const) : done(value);
+    return status === 409 ? refusal(value, ["already-tutor"] as const) : done(value);
+  },
+  async removeTutor(membershipId: string): Promise<RemoveTutorResult> {
+    const { status, value } = await request("/api/accounts/people/remove-tutor", { membershipId });
+    return status === 409 ? refusal(value, ["not-tutor", "self"] as const) : done(value);
   },
   async endMember(memberId: string) { return done((await request("/api/accounts/members/end", { memberId })).value); },
   async approvers(signal?: AbortSignal) { return parseApprovers((await request("/api/accounts/approvers", undefined, signal)).value); },

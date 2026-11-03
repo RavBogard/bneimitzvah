@@ -87,18 +87,19 @@ describe("the approvers' client", () => {
   });
 });
 
-// People with access and Make tutor (docs/planning/2026-11-03-people-tutor/SPEC.md).
+// People with access, Make tutor and Remove tutor (docs/planning/2026-11-03-people-tutor/SPEC.md and SPEC-2.md).
 describe("people with access", () => {
   const ID2 = "00000000-0000-4000-8000-000000000002", ID3 = "00000000-0000-4000-8000-000000000003", ID4 = "00000000-0000-4000-8000-000000000004";
   const rows: Person[] = [
     { id: ID, memberId: ID3, name: "Ruth", email: "ruth@example.test", roles: ["member", "parent"], since: stamp },
     { id: ID2, memberId: null, name: "Naomi", email: "naomi@example.test", roles: ["tutor"], since: stamp },
-    { id: ID3, memberId: null, name: "Boaz", email: null, roles: ["student"], since: stamp },
+    // A student may also be made a tutor (SPEC-2.md answer 3).
+    { id: ID3, memberId: null, name: "Boaz", email: "boaz@example.test", roles: ["student"], since: stamp },
     // No verified address: listed, never offered Make tutor (adversarial review, 2026-11-03).
     { id: ID4, memberId: null, name: "Ruth", email: null, roles: [], since: stamp },
   ];
   type Props = Parameters<typeof PeopleWithAccessCard>[0];
-  const props = (over: Partial<Props> = {}): Props => ({ people: rows, confirming: null, pending: false, onConfirming: () => {}, onMakeTutor: () => {}, onEnd: () => {}, ...over });
+  const props = (over: Partial<Props> = {}): Props => ({ people: rows, confirming: null, pending: false, onConfirming: () => {}, onMakeTutor: () => {}, onRemoveTutor: () => {}, onEnd: () => {}, ...over });
   const card = (over: Partial<Props> = {}) => renderToStaticMarkup(createElement(PeopleWithAccessCard, props(over)));
   const plain = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
   /** The buttons of the rendered tree, by aria-label (the card is a plain function of its props). */
@@ -123,15 +124,22 @@ describe("people with access", () => {
     expect(html).toContain("aria-label=\"End membership: Ruth\"");
     expect(plain(card({ people: [] }))).toContain("No one has an account here yet.");
     const confirm = card({ confirming: `tutor:${ID}` });
-    expect(confirm).toContain("aria-label=\"Make tutor now: Ruth\"");
+    expect(confirm).toContain("aria-label=\"Make tutor now: Ruth, ruth@example.test\"");
     expect(plain(confirm)).toContain("Make tutor now: ruth@example.test");
     expect(confirm).toContain("aria-label=\"Keep as is: Ruth\"");
     expect(confirm).toContain(">Cancel</button>");
+    // Remove tutor (SPEC-2.md): the row button, then the confirmation naming the address, and Cancel.
+    expect(html).toContain("aria-label=\"Remove tutor: Naomi\"");
+    expect(html).toContain(">Remove tutor</button>");
+    const removing = card({ confirming: `untutor:${ID2}` });
+    expect(removing).toContain("aria-label=\"Remove tutor now: Naomi, naomi@example.test\"");
+    expect(plain(removing)).toContain("Remove tutor now: naomi@example.test");
+    expect(removing).toContain("aria-label=\"Keep as tutor: Naomi\"");
   });
 
-  it("offers Make tutor only to someone neither tutor nor student, in two steps; End membership only on a Member row", () => {
+  it("offers Make tutor to a verified non-tutor (students included) and Remove tutor on Tutor rows, each in two steps; End membership only on a Member row", () => {
     const first = buttons(PeopleWithAccessCard(props()));
-    expect([...first.keys()].sort()).toEqual(["End membership: Ruth", "Make tutor: Ruth"]);
+    expect([...first.keys()].sort()).toEqual(["End membership: Ruth", "Make tutor: Boaz", "Make tutor: Ruth", "Remove tutor: Naomi"]);
     const asked: (string | null)[] = [], made: string[] = [];
     first.get("Make tutor: Ruth")!.onClick();
     expect(asked).toEqual([]);
@@ -141,13 +149,27 @@ describe("people with access", () => {
     expect(made).toEqual([]);
     // The second step: Make tutor now acts, Cancel steps back, and nothing else on the card is open meanwhile.
     const second = buttons(PeopleWithAccessCard({ ...tracked, confirming: `tutor:${ID}` }));
-    expect([...second.keys()].sort()).toEqual(["Keep as is: Ruth", "Make tutor now: Ruth"]);
-    second.get("Make tutor now: Ruth")!.onClick();
+    expect([...second.keys()].sort()).toEqual(["Keep as is: Ruth", "Make tutor now: Ruth, ruth@example.test", "Make tutor: Boaz", "Remove tutor: Naomi"]);
+    expect(["Make tutor: Boaz", "Remove tutor: Naomi"].every(label => second.get(label)!.disabled)).toBe(true);
+    second.get("Make tutor now: Ruth, ruth@example.test")!.onClick();
     expect(made).toEqual([ID]);
     second.get("Keep as is: Ruth")!.onClick();
     expect(asked).toEqual([`tutor:${ID}`, null]);
     const busy = buttons(PeopleWithAccessCard({ ...tracked, confirming: `tutor:${ID}`, pending: true }));
-    expect(busy.get("Make tutor now: Ruth")!.disabled).toBe(true);
+    expect(busy.get("Make tutor now: Ruth, ruth@example.test")!.disabled).toBe(true);
+    // Remove tutor: the first step only asks; the second acts; Cancel steps back.
+    const removed: string[] = [], untracked = { ...tracked, onRemoveTutor: (row: Person) => removed.push(row.id) };
+    buttons(PeopleWithAccessCard(untracked)).get("Remove tutor: Naomi")!.onClick();
+    expect(asked.at(-1)).toBe(`untutor:${ID2}`);
+    expect(removed).toEqual([]);
+    const confirm = buttons(PeopleWithAccessCard({ ...untracked, confirming: `untutor:${ID2}` }));
+    expect([...confirm.keys()].sort()).toEqual(["End membership: Ruth", "Keep as tutor: Naomi", "Make tutor: Boaz", "Make tutor: Ruth", "Remove tutor now: Naomi, naomi@example.test"]);
+    expect(["End membership: Ruth", "Make tutor: Boaz", "Make tutor: Ruth"].every(label => confirm.get(label)!.disabled)).toBe(true);
+    confirm.get("Remove tutor now: Naomi, naomi@example.test")!.onClick();
+    expect(removed).toEqual([ID2]);
+    confirm.get("Keep as tutor: Naomi")!.onClick();
+    expect(asked.at(-1)).toBeNull();
+    expect(buttons(PeopleWithAccessCard({ ...untracked, confirming: `untutor:${ID2}`, pending: true })).get("Remove tutor now: Naomi, naomi@example.test")!.disabled).toBe(true);
   });
 
   it("reads the people list strictly", () => {
