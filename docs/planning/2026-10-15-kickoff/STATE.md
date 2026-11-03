@@ -846,3 +846,10 @@ Canonical-host candidate, 2026-10-16: stable auth64d7b35 is verified in all four
 - Admin Accounts page: "People with access" lists everyone who has signed in (first sign-in makes a membership), with role chips and verified email. "Make tutor" grants the tutor role directly (two steps, fresh admin session, no email). Spec: docs/planning/2026-11-03-people-tutor/SPEC.md.
 - GATE: showing verified emails to admins on this list. Proceeded because the adversarial review BLOCKED a same-name impersonation, and the request queue already shows approvers verified emails (precedent). Daniel was told and may reverse it (alternative: Make tutor only for approved Members).
 - Gaps: no Remove tutor; a tutor can later be linked as a student (the rule only works in one direction); the confirm aria-label lacks the email; the page heading still says "Members".
+
+## 2026-11-03: Remove tutor, tutor+student, "People" (#167, merged ae04746, live)
+
+- Daniel's popup answers (binding): keep verified emails; build Remove tutor; allow tutor+student both ways; rename the page "People". Spec: docs/planning/2026-11-03-people-tutor/SPEC-2.md. Adversarial review PASS; CI 22/22.
+- Remove tutor revokes the grant, its tutor_student links and its approver designation (history kept); self-removal refused. The Tutors page's "Remove as a tutor" now shares writeGrantRevocation.
+- Follow-up (LOW): the Tutors page's "Remove as a tutor" and the tutor hand-over leave account_approver live on the revoked grant, so after re-grant that person can't be designated an approver again. Fix: revoke designations through a shared data helper.
+- Builder's wording, unreviewed: "For your security, sign in again, then remove the tutor."
