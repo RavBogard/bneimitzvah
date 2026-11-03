@@ -840,3 +840,9 @@ Canonical-host candidate, 2026-10-16: stable auth64d7b35 is verified in all four
 
 - GATE: applied migration 0057 (service_ceremony.details_digest, details_sent_at; nullable) to production before merging PR #164. Proceeded because the repo rules allow the session to run migrations and the review required migrate-before-merge. Verified 57 migrations and both columns present; .env.operator deleted after.
 - GATE: merged PR #164 with the two 'browser' shards red. Proceeded because a rerun of main's own last CI run today fails the same specs (foundation.spec.ts 'honest unavailable state', public-reading.spec.ts), so they are pre-existing and date or environment dependent, not caused by #164. All other checks green. Follow-up: fix those specs.
+
+## 2026-11-03: People with access and Make tutor (#166, merged 3843d06, live)
+
+- Admin Accounts page: "People with access" lists everyone who has signed in (first sign-in makes a membership), with role chips and verified email. "Make tutor" grants the tutor role directly (two steps, fresh admin session, no email). Spec: docs/planning/2026-11-03-people-tutor/SPEC.md.
+- GATE: showing verified emails to admins on this list. Proceeded because the adversarial review BLOCKED a same-name impersonation, and the request queue already shows approvers verified emails (precedent). Daniel was told and may reverse it (alternative: Make tutor only for approved Members).
+- Gaps: no Remove tutor; a tutor can later be linked as a student (the rule only works in one direction); the confirm aria-label lacks the email; the page heading still says "Members".
