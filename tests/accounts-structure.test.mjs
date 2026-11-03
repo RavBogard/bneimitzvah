@@ -47,6 +47,15 @@ test("the accounts code never writes a role grant, never imports a grant writer,
   const tutorWrite = sources.find(file => file.path === "src/server/people/tutor.ts").text;
   assert.match(tutorWrite, /if \(actor\.mode !== "admin"\) throw new AccessDenied\(403\)/);
   assert.match(tutorWrite, /writeInvitationAudit\(tx, actor, "grant\.issue", grantId\)/);
+  // Remove tutor (docs/planning/2026-11-03-people-tutor/SPEC-2.md) deliberately revokes a tutor grant, its links, contexts and claims.
+  // It reuses the Tutors page's own writes, never a second copy: the one grant-revocation write (writeGrantRevocation, also behind
+  // "Remove as a tutor") and the one tutor-link revocation (writeTutorRevocation). Only people/tutor.ts reaches them from outside
+  // the relationships code, removeTutor is called by the accounts service alone, and the accounts code still writes no grant itself.
+  assert.equal((tutorWrite.match(/\bif \(actor\.mode !== "admin"\) throw new AccessDenied\(403\)/g) ?? []).length, 2, "both tutor writes are admin only");
+  assert.deepEqual(importsOf(tutorWrite).filter(spec => /relationships/.test(spec)), ["../relationships/service"]);
+  assert.deepEqual(sources.filter(file => !file.path.startsWith("src/server/relationships/") && /\bwriteGrantRevocation\b/.test(file.text)).map(file => file.path), ["src/server/people/tutor.ts"]);
+  assert.match(sources.find(file => file.path === "src/server/relationships/service.ts").text, /async function revokeRoleGrant[\s\S]{0,1000}writeGrantRevocation\(tx, actor, grantId, expected, new Date\(\)\)/);
+  assert.deepEqual(sources.filter(file => file.path !== "src/server/people/tutor.ts" && /\bremoveTutor\b/.test(file.text) && /from\s+["'][^"']*people\/tutor["']/.test(file.text)).map(file => file.path), ["src/server/accounts/service.ts"]);
   const reader = sources.find(file => file.path === "src/server/data/product-name.ts");
   assert.ok(reader && /export async function readProductName\b/.test(reader.text) && /export async function readTenantNames\b/.test(reader.text));
   // No server code but the reader selects the column itself: the notification emails take it from the reader too.

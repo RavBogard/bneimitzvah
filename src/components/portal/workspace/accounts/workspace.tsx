@@ -27,8 +27,12 @@ export const PEOPLE_EMPTY = "No one has an account here yet.";
 const ROLE_CHIPS: Record<PersonRole, string> = { member: "Member", tutor: "Tutor", admin: "Admin", parent: "Parent", student: "Student" };
 const madeTutorLine = (name: string) => `${name} is now a tutor. Assign their students on each student’s page.`;
 const alreadyTutorLine = (name: string) => `${name} is already a tutor. The list has been reloaded.`;
-const STUDENT_TUTOR_LINE = "A student account can’t also be a tutor. The list has been reloaded.";
 const MAKE_TUTOR_SIGN_IN = "For your security, sign in again, then make the tutor.";
+/** Remove tutor (SPEC-2.md, Daniel's wording). The sign-in line follows Make tutor's (lead, 2026-11-03). */
+const removedTutorLine = (name: string) => `${name} is no longer a tutor. Their students keep everything they’ve done.`;
+const notTutorLine = (name: string) => `${name} isn’t a tutor any more. The list has been reloaded.`;
+const SELF_TUTOR_LINE = "You can’t remove your own tutor role. Ask another admin.";
+const REMOVE_TUTOR_SIGN_IN = "For your security, sign in again, then remove the tutor.";
 const studentLabel = (student: Pick<StudentOption, "firstName" | "lastName">) => `${student.firstName} ${student.lastName}`;
 /** "Sat, Nov 14, 2026" for a calendar date (never the ISO form). */
 const longDay = (date: string) => { const [year, month, day] = date.split("-").map(Number); return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(Date.UTC(year, month - 1, day)); };
@@ -89,23 +93,31 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
   }, "approve the request");
   const decline = (row: AccountRequest) => act(async () => { await accountsApi.decline(mode, row.id); return { text: "Request declined. Nothing was sent.", tone: "status" }; }, "decline the request");
   const end = (row: Person) => act(async () => { if (!row.memberId) return null; await accountsApi.endMember(row.memberId); return { text: `${row.name}’s membership has ended.`, tone: "status" }; }, "end the membership");
-  async function makeTutor(row: Person) {
+  /** Make tutor and Remove tutor: both need a fresh sign-in, so a 403 asks for one. */
+  async function tutorAct(run: () => Promise<Message>, signIn: string, action: string) {
     if (gate.current) return;
     gate.current = true; setPending(true); setMessage(null);
     try {
-      const result = await accountsApi.makeTutor(row.id);
+      const next = await run();
       if (!alive.current) return;
-      setConfirming(null);
-      setMessage(result.ok ? { text: madeTutorLine(row.name), tone: "status" } : { text: result.code === "already-tutor" ? alreadyTutorLine(row.name) : STUDENT_TUTOR_LINE, tone: "alert" });
+      setConfirming(null); setMessage(next);
       await load();
     } catch (error) {
       if (!alive.current) return;
       const status = statusOf(error);
       setConfirming(null);
-      setMessage(status === 403 ? { text: MAKE_TUTOR_SIGN_IN, tone: "alert", signIn: true } : failure(status, "make the tutor"));
+      setMessage(status === 403 ? { text: signIn, tone: "alert", signIn: true } : failure(status, action));
       if (status === 404) await load();
     } finally { gate.current = false; if (alive.current) setPending(false); }
   }
+  const makeTutor = (row: Person) => tutorAct(async () => {
+    const result = await accountsApi.makeTutor(row.id);
+    return result.ok ? { text: madeTutorLine(row.name), tone: "status" } : { text: alreadyTutorLine(row.name), tone: "alert" };
+  }, MAKE_TUTOR_SIGN_IN, "make the tutor");
+  const removeTutor = (row: Person) => tutorAct(async () => {
+    const result = await accountsApi.removeTutor(row.id);
+    return result.ok ? { text: removedTutorLine(row.name), tone: "status" } : { text: result.code === "self" ? SELF_TUTOR_LINE : notTutorLine(row.name), tone: "alert" };
+  }, REMOVE_TUTOR_SIGN_IN, "remove the tutor");
   const remove = (id: string, name: string) => act(async () => { await accountsApi.removeApprover(id); return { text: `${name} no longer approves account requests.`, tone: "status" }; }, "remove the approver");
   async function add() {
     if (!candidate) return;
@@ -126,7 +138,7 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
   // The student chooser reads soonest ceremony first.
   const byDate = [...students].sort((a, b) => a.ceremonyDate.localeCompare(b.ceremonyDate) || studentLabel(a).localeCompare(studentLabel(b)) || a.id.localeCompare(b.id));
   return <section className="role-workspace admin-workspace accounts-workspace">{admin && <PeopleNav />}
-    <PageHeader title={admin ? "Members" : "Link requests"} />{!admin && <DocumentTitle heading="Link requests" />}
+    <PageHeader title={admin ? "People" : "Link requests"} />{!admin && <DocumentTitle heading="Link requests" />}
     {productName && <p className="people-note">An account keeps a person’s saved readings, place in Learn to lein, preferred commentaries and settings. Everything else on <bdi dir="auto">{productName}</bdi> is open without one.</p>}
     {message && <p className={message.tone === "alert" ? "request-error roster-message" : "workspace-notice roster-message"} role={message.tone}>{message.text}</p>}
     {message?.signIn && <p><WorkspaceLink href="/">Check account and sign in again</WorkspaceLink></p>}
@@ -163,7 +175,7 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
           </li>)}</ul> : <p className="people-empty">No link requests are waiting.</p>}
         </section>
         {admin && people && <PeopleWithAccessCard people={people} confirming={confirming} pending={pending} onConfirming={next => { setMessage(null); setConfirming(next); }}
-          onMakeTutor={row => void makeTutor(row)} onEnd={row => void end(row)} />}
+          onMakeTutor={row => void makeTutor(row)} onRemoveTutor={row => void removeTutor(row)} onEnd={row => void end(row)} />}
         {admin && approvers && <section className="people-card" aria-labelledby="accounts-approvers"><div className="people-card-head"><h2 id="accounts-approvers">Approvers</h2>
           <p>Admins approve requests. You can also choose tutors to approve them.</p></div>
           {approvers.designated.length ? <ul className="people-list">{approvers.designated.map(row => <li key={row.id} className="people-row">
@@ -185,12 +197,13 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
   </section>;
 }
 
-type PeopleCardProps = Readonly<{ people: readonly Person[]; confirming: string | null; pending: boolean; onConfirming: (next: string | null) => void; onMakeTutor: (row: Person) => void; onEnd: (row: Person) => void }>;
+type PeopleCardProps = Readonly<{ people: readonly Person[]; confirming: string | null; pending: boolean; onConfirming: (next: string | null) => void; onMakeTutor: (row: Person) => void; onRemoveTutor: (row: Person) => void; onEnd: (row: Person) => void }>;
 /**
  * People with access (2026-11-03 spec), admins only: everyone signed in here (a membership is made at first sign-in), their chips and since when. Make
- * tutor takes two steps, as End membership does, and is offered only to someone who is neither a tutor nor a student.
+ * tutor takes two steps, as End membership does, and is offered to anyone with a verified address who is not a tutor (a student may be
+ * one too, SPEC-2.md). Remove tutor takes the same two steps on every row with the Tutor chip.
  */
-export function PeopleWithAccessCard({ people, confirming, pending, onConfirming, onMakeTutor, onEnd }: PeopleCardProps) {
+export function PeopleWithAccessCard({ people, confirming, pending, onConfirming, onMakeTutor, onRemoveTutor, onEnd }: PeopleCardProps) {
   return <section className="people-card" aria-labelledby="accounts-people" data-testid="people-with-access"><div className="people-card-head"><h2 id="accounts-people">{PEOPLE_HEADING}</h2>
     <p>{PEOPLE_INTRO}</p></div>
     {people.length ? <ul className="people-list">{people.map(row => <li key={row.id} className="people-row" data-testid="person-row">
@@ -199,13 +212,17 @@ export function PeopleWithAccessCard({ people, confirming, pending, onConfirming
         <p className="people-status">{row.roles.length ? row.roles.map(role => <span key={role} className="roster-chip" data-role-chip={role}>{ROLE_CHIPS[role]}</span>) : <span className="roster-chip" data-role-chip="none">{SIGNED_IN_CHIP}</span>} {row.email && <><bdi dir="ltr" data-testid="person-email">{row.email}</bdi> · </>}Since <time dateTime={row.since}>{day(row.since)}</time></p></div>
       <div className="people-actions">
         {confirming === `tutor:${row.id}` ? <>
-          <button type="button" className="roster-action" aria-label={`Make tutor now: ${row.name}`} disabled={pending} onClick={() => onMakeTutor(row)}>Make tutor now: {row.email}</button>
+          <button type="button" className="roster-action" aria-label={`Make tutor now: ${row.name}, ${row.email}`} disabled={pending} onClick={() => onMakeTutor(row)}>Make tutor now: {row.email}</button>
           <button type="button" className="roster-action" aria-label={`Keep as is: ${row.name}`} disabled={pending} onClick={() => onConfirming(null)}>Cancel</button>
+        </> : confirming === `untutor:${row.id}` ? <>
+          <button type="button" className="roster-action roster-danger" aria-label={row.email ? `Remove tutor now: ${row.name}, ${row.email}` : `Remove tutor now: ${row.name}`} disabled={pending} onClick={() => onRemoveTutor(row)}>Remove tutor now: {row.email ?? row.name}</button>
+          <button type="button" className="roster-action" aria-label={`Keep as tutor: ${row.name}`} disabled={pending} onClick={() => onConfirming(null)}>Cancel</button>
         </> : confirming === `end:${row.id}` ? <>
           <button type="button" className="roster-action roster-danger" aria-label={`End membership now: ${row.name}`} disabled={pending} onClick={() => onEnd(row)}>End membership</button>
           <button type="button" className="roster-action" aria-label={`Keep membership: ${row.name}`} disabled={pending} onClick={() => onConfirming(null)}>Keep</button>
         </> : <>
-          {row.email && !row.roles.includes("tutor") && !row.roles.includes("student") && <button type="button" className="roster-action" aria-label={`Make tutor: ${row.name}`} disabled={pending || confirming !== null} onClick={() => onConfirming(`tutor:${row.id}`)}>Make tutor</button>}
+          {row.email && !row.roles.includes("tutor") && <button type="button" className="roster-action" aria-label={`Make tutor: ${row.name}`} disabled={pending || confirming !== null} onClick={() => onConfirming(`tutor:${row.id}`)}>Make tutor</button>}
+          {row.roles.includes("tutor") && <button type="button" className="roster-action people-danger" aria-label={`Remove tutor: ${row.name}`} disabled={pending || confirming !== null} onClick={() => onConfirming(`untutor:${row.id}`)}>Remove tutor</button>}
           {row.memberId && <button type="button" className="roster-action people-danger" aria-label={`End membership: ${row.name}`} disabled={pending || confirming !== null} onClick={() => onConfirming(`end:${row.id}`)}>End membership</button>}
         </>}
       </div>

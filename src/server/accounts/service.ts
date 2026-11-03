@@ -9,7 +9,7 @@ import { withTenantTransaction } from "../db/runtime";
 import { requireCookieMutation } from "../http/mutations";
 import type { AccountMailKind, AccountMailOutcome } from "../mail/transport";
 import { linkRequestedStudent } from "../learners/link";
-import { makeTutor } from "../people/tutor";
+import { makeTutor, removeTutor } from "../people/tutor";
 import * as s from "../db/index";
 import * as data from "./data";
 import * as validate from "./validation";
@@ -194,6 +194,20 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
     async makeTutor(request: Request, supplied: unknown) {
       const value = validate.makeTutor(supplied);
       return withAdmin(request, "manage-tutors", (tx, actor) => makeTutor(tx, actor, value.membershipId));
+    },
+    /**
+     * Remove tutor (SPEC-2.md): admin only, fresh session. people/tutor.ts revokes the grant, its links, contexts and claims; the
+     * live designation bound to that grant ends here, in the same transaction, audited approver.revoke as Remove approver does.
+     */
+    async removeTutor(request: Request, supplied: unknown) {
+      const value = validate.removeTutor(supplied);
+      return withAdmin(request, "manage-tutors", async (tx, actor) => {
+        const removed = await removeTutor(tx, actor, value.membershipId);
+        if (!removed.ok) return removed;
+        for (const row of await data.liveDesignationsOfGrant(tx, actor.tenantId, removed.grantId))
+          if (await data.revokeDesignation(tx, actor, row.id)) await data.audit(tx, actor, "approver.revoke", "account_approver", row.id, randomUUID());
+        return { ok: true as const };
+      });
     },
     async endMember(request: Request, supplied: unknown) {
       const value = validate.endMember(supplied);

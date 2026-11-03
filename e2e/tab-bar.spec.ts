@@ -105,12 +105,12 @@ test.describe("at 390px", () => {
     };
     await tab(page, "People").click();
     await expect(page.getByRole("navigation", { name: "People", exact: true })).toBeVisible();
-    for (const name of ["Invitations", "Tutors", "Members"]) await onScreen(name, page.getByRole("navigation", { name: "People", exact: true }).getByRole("link", { name, exact: true }));
+    for (const name of ["Invitations", "Tutors", "People"]) await onScreen(name, page.getByRole("navigation", { name: "People", exact: true }).getByRole("link", { name, exact: true }));
     await page.getByRole("navigation", { name: "People", exact: true }).getByRole("link", { name: "Tutors", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Tutors", exact: true })).toBeVisible();
     await expect(tab(page, "People")).toHaveAttribute("aria-current", "page");
-    await page.getByRole("navigation", { name: "People", exact: true }).getByRole("link", { name: "Members", exact: true }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Members", exact: true })).toBeVisible();
+    await page.getByRole("navigation", { name: "People", exact: true }).getByRole("link", { name: "People", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "People", exact: true })).toBeVisible();
     await expect(tab(page, "People")).toHaveAttribute("aria-current", "page");
     await tab(page, "More").click();
     await expect(page.getByRole("heading", { level: 1, name: "More", exact: true })).toBeVisible();

@@ -6,6 +6,7 @@ import * as s from "../../src/server/db/index";
 import { CALLBACK, ORIGIN, closeMcpFixtures, mcpFixture as fixture } from "./mcp-fixture";
 import { parseRelatedMetadata } from "../../src/server/study/sources/metadata";
 import { GUIDE_PAGE_MAX_BYTES, firstRun, fitGuidePage, validateInput } from "../../src/server/mcp/tools";
+import { createAccountsService } from "../../src/server/accounts/service";
 
 afterEach(async () => { vi.restoreAllMocks(); await closeMcpFixtures(); });
 
@@ -214,6 +215,20 @@ describe("portal MCP", () => {
     // Revoking the tutor grant ends the connection at once.
     await t.f.owner(async () => { await t.f.db.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, t.f.tutorGrant.id)); });
     expect((await t.rpc(tokens.access_token, "tools/list")).status).toBe(401);
+  });
+
+  // Remove tutor (docs/planning/2026-11-03-people-tutor/SPEC-2.md): a Claude connection bound to the removed grant stops at once,
+  // through the connection's existing live-grant check (src/server/mcp/service.ts), with no connection row touched.
+  it("ends a tutor's Claude connection when an admin removes the tutor on People with access", async () => {
+    const t = await fixture();
+    await t.google("multi");
+    const tokens = await t.connect("multi", { scope: "portal:read" });
+    expect((await t.call(tokens.access_token, "list_students")).json().students).toHaveLength(1);
+    const accounts = createAccountsService({ db: t.f.db, access: t.f.service, throttleSecret: "s".repeat(48), send: async () => "sent" });
+    const request = new Request(`${ORIGIN}/api/accounts/people/remove-tutor`, { method: "POST", headers: { cookie: t.f.identities.admin.cookie, origin: ORIGIN, "content-type": "application/json" } });
+    expect(await accounts.removeTutor(request, { membershipId: t.f.multiMember.id })).toEqual({ ok: true });
+    expect((await t.rpc(tokens.access_token, "tools/list")).status).toBe(401);
+    expect((await connections(t)).every(row => row.revokedAt === null)).toBe(true);
   });
 
   it("hides from a tutor a student whose link the tutor's own claim made on someone who is now staff (A1), keeping the rabbi's assignment", async () => {

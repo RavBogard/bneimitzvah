@@ -200,6 +200,11 @@ export async function insertDesignation<Q extends PgQueryResultHKT>(tx: Tx<Q>, a
     .onConflictDoNothing().returning({ id: s.accountApprover.id });
   return row ?? null;
 }
+/** Remove tutor (SPEC-2.md): the live designations bound to this very tutor grant, locked for the revocation that follows. */
+export async function liveDesignationsOfGrant<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, tutorGrantId: string) {
+  return tx.select({ id: s.accountApprover.id }).from(s.accountApprover)
+    .where(and(eq(s.accountApprover.tenantId, tenantId), eq(s.accountApprover.tutorGrantId, tutorGrantId), isNull(s.accountApprover.revokedAt))).orderBy(asc(s.accountApprover.id)).for("update");
+}
 export async function revokeDesignation<Q extends PgQueryResultHKT>(tx: Tx<Q>, actor: Actor, id: string) {
   const [row] = await tx.update(s.accountApprover).set({ revokedAt: new Date(), revokedByMembershipId: actor.membershipId })
     .where(and(eq(s.accountApprover.tenantId, actor.tenantId), eq(s.accountApprover.id, id), isNull(s.accountApprover.revokedAt))).returning({ id: s.accountApprover.id });

@@ -68,7 +68,7 @@ it("a person asks, an admin sees the count and approves, and the new member save
     const line = admin.getByRole("link", { name: "1 link request waiting · Review", exact: true });
     await ui(line).toBeVisible();
     await line.click();
-    await ui(admin.getByRole("heading", { level: 1, name: "Members", exact: true })).toBeVisible();
+    await ui(admin.getByRole("heading", { level: 1, name: "People", exact: true })).toBeVisible();
     const queue = admin.getByRole("region", { name: "Link requests" });
     await ui(queue.getByRole("heading", { name: "Synthetic Asker", exact: true })).toBeVisible();
     await ui(queue.getByText("ui-asker@example.test")).toBeVisible();
