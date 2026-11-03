@@ -9,6 +9,7 @@ import { withTenantTransaction } from "../db/runtime";
 import { requireCookieMutation } from "../http/mutations";
 import type { AccountMailKind, AccountMailOutcome } from "../mail/transport";
 import { linkRequestedStudent } from "../learners/link";
+import { makeTutor } from "../people/tutor";
 import * as s from "../db/index";
 import * as data from "./data";
 import * as validate from "./validation";
@@ -24,6 +25,8 @@ type Request = AccessRequest & { method?: string };
 type Mode = validate.ApproverMode;
 // Readings for everyone (plan D6, decision 4): approving with a target links the account to a student record through the
 // invitation layer's writes in src/server/learners/link.ts, the one grant an approval ever causes (the structural test names it).
+/** The role chips, in the order the list shows them. */
+const PEOPLE_ROLES = ["member", "tutor", "admin", "parent", "student"] as const;
 const failed = <C extends string>(code: C) => ({ ok: false as const, code });
 /** A stable UUID from a string, for the provider's idempotency key. */
 const derivedKey = (value: string) => {
@@ -46,7 +49,7 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
       return action(tx, actor);
     });
   }
-  function withAdmin<T>(request: Request, capability: "read-accounts" | "manage-accounts" | "manage-approvers", action: (tx: AccessTransaction<Q>, actor: Actor) => Promise<T>) {
+  function withAdmin<T>(request: Request, capability: "read-accounts" | "manage-accounts" | "manage-approvers" | "manage-tutors", action: (tx: AccessTransaction<Q>, actor: Actor) => Promise<T>) {
     return input.access.withAccountsCapability(request, { mode: "admin", capability }, async (tx, actor) => {
       if (actor.mode !== "admin") throw new AccessDenied(403);
       if (capability !== "read-accounts") requireCookieMutation(request, actor.origin);
@@ -173,6 +176,24 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
     async members(request: Request) {
       return withAdmin(request, "read-accounts", async (tx, actor) => ({ ok: true as const,
         members: (await data.listMembers(tx, actor.tenantId, 500)).map(row => ({ id: row.id, name: row.name, since: row.since.toISOString() })) }));
+    },
+    /**
+     * People with access (2026-11-03 spec), for admins: every enabled membership with an active Member row or an active
+     * grant, by name, with its active roles and since when. Names only, never an email. memberId is the Member row End
+     * membership takes, or null.
+     */
+    async people(request: Request) {
+      return withAdmin(request, "read-accounts", async (tx, actor) => ({ ok: true as const,
+        people: (await data.listPeople(tx, actor.tenantId, 500)).map(row => {
+          const held = new Set(Array.isArray(row.roles) ? row.roles : typeof row.roles === "string" ? String(row.roles).replace(/^\{|\}$/g, "").split(",").filter(Boolean) : []);
+          const roles = PEOPLE_ROLES.filter(role => role === "member" ? row.memberId !== null : held.has(role));
+          return { id: row.membershipId, memberId: row.memberId, name: validate.shownName(row.name), email: row.verified ? row.email : null, roles, since: new Date(row.since).toISOString() };
+        }) }));
+    },
+    /** Make tutor: admin only, fresh session; the grant and its audit come from src/server/people/tutor.ts. No email. */
+    async makeTutor(request: Request, supplied: unknown) {
+      const value = validate.makeTutor(supplied);
+      return withAdmin(request, "manage-tutors", (tx, actor) => makeTutor(tx, actor, value.membershipId));
     },
     async endMember(request: Request, supplied: unknown) {
       const value = validate.endMember(supplied);

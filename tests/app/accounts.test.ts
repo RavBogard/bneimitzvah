@@ -7,6 +7,7 @@ import { portalRoutesFixture } from "./portal-routes-fixture";
 import { createHttpDispatcher } from "../../src/server/http/dispatch";
 import { createAccountsService, type AccountMailSender } from "../../src/server/accounts/service";
 import { ACCOUNT_LIMITS } from "../../src/server/accounts/data";
+import { insertGrantUnlessActive } from "../../src/server/data/invitations";
 
 // Release 1.4 accounts end to end through the dispatcher: request, approve, decline, members and approvers.
 // Synthetic @example.test people only; the mail sender is a recorder, and nothing reaches a provider.
@@ -422,5 +423,131 @@ describe("members and approvers", () => {
     for (const who of ["anonymous", "learner", "admin"]) { for (const path of gets) await t.call(path, who); for (const path of posts) await t.call(path, who, { bad: true }); }
     expect((await t.call("/api/accounts/members?mode=admin", "admin")).status).toBe(400);
     expect((await t.dispatch(new Request(`${ORIGIN}/api/accounts/members/end`, { headers: { cookie: t.f.identities.admin.cookie } }))).status).toBe(405);
+  });
+});
+
+// People with access and Make tutor (docs/planning/2026-11-03-people-tutor/SPEC.md).
+describe("people with access and Make tutor", () => {
+  type T = Awaited<ReturnType<typeof setup>>;
+  type Row = { id: string; memberId: string | null; name: string; roles: string[]; since: string };
+  const membershipOf = async (t: T, userId: string) =>
+    (await t.f.owner(() => t.f.db.select().from(s.membership).where(and(eq(s.membership.tenantId, "crc"), eq(s.membership.userId, userId)))))[0].id;
+  async function approved(t: T, key: string, name: string) {
+    await t.person(key);
+    await t.call("/api/account/request", key, { name });
+    const row = (await requests(t)).json.requests.find((item: { name: string }) => item.name === name);
+    expect((await t.call("/api/accounts/requests/approve", "admin", { mode: "admin", requestId: row.id })).status).toBe(200);
+    return membershipOf(t, t.people[key].id);
+  }
+  const activeTutors = (t: T, membershipId: string) => t.f.owner(async () =>
+    (await t.f.db.select().from(s.roleGrant).where(and(eq(s.roleGrant.membershipId, membershipId), eq(s.roleGrant.role, "tutor")))).filter(row => !row.revokedAt));
+  const people = async (t: T) => (await t.call("/api/accounts/people", "admin")).json.people as Row[];
+
+  it("lists member-only, grant-only and both, and anyone who has only signed in; never disabled memberships or other congregations; names only", async () => {
+    const t = await setup();
+    const memberOnly = await approved(t, "plain", "Plain Member");
+    await t.person("off");
+    await t.f.owner(async () => {
+      const [off] = await t.f.db.insert(s.membership).values({ tenantId: "crc", userId: t.people.off.id, disabledAt: new Date() }).returning();
+      await t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: off.id, role: "tutor" });
+    });
+    await t.person("nobody");
+    const [nobody] = await t.f.owner(() => t.f.db.insert(s.membership).values({ tenantId: "crc", userId: t.people.nobody.id }).returning());
+    const list = await t.call("/api/accounts/people", "admin");
+    expect(list.status).toBe(200);
+    // The verified address is shown so same-named people can be told apart (adversarial review, 2026-11-03); never a user id.
+    expect(JSON.stringify(list.json)).not.toContain(t.people.plain.id);
+    const rows = list.json.people as Row[];
+    const byId = new Map(rows.map(row => [row.id, row]));
+    expect(rows.map(row => row.id).sort()).toEqual(expect.arrayContaining([memberOnly, nobody.id, t.f.adminMember.id, t.f.multiMember.id, t.f.learnerMember.id]));
+    expect(rows.map(row => row.id)).not.toContain((await t.f.owner(() => t.f.db.select().from(s.membership).where(eq(s.membership.userId, t.people.off.id))))[0].id);
+    expect(byId.get(nobody.id)).toMatchObject({ memberId: null, roles: [] });
+    expect(byId.get(memberOnly)).toEqual({ id: memberOnly, memberId: expect.any(String), name: "Plain Member", email: "acct-plain@example.test", roles: ["member"], since: expect.any(String) });
+    expect(byId.get(t.f.multiMember.id)).toMatchObject({ memberId: null, roles: ["tutor", "parent"] });
+    expect(byId.get(t.f.adminMember.id)).toMatchObject({ memberId: null, roles: ["admin"] });
+    expect(byId.get(t.f.learnerMember.id)).toMatchObject({ memberId: null, roles: ["student"] });
+    for (const row of rows) expect(Number.isFinite(Date.parse(row.since))).toBe(true);
+    // Both kinds: a member made tutor shows both chips, and "since" stays the earlier of the two.
+    expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: memberOnly })).json).toEqual({ ok: true });
+    const both = (await people(t)).find(row => row.id === memberOnly)!;
+    expect(both.roles).toEqual(["member", "tutor"]);
+    expect(both.since).toBe(byId.get(memberOnly)!.since);
+    // Admins only (the helper checks private, no-store on every answer), and no query keys.
+    for (const who of ["multi", "learner", "plain", "anonymous"]) expect((await t.call("/api/accounts/people", who)).status, who).not.toBe(200);
+    expect((await t.call("/api/accounts/people?mode=admin", "admin")).status).toBe(400);
+  });
+
+  it("makes a listed person a tutor with a fresh admin session: one grant, one grant.issue audit, no email", async () => {
+    const t = await setup();
+    const target = await approved(t, "teach", "Teacher To Be");
+    t.mail.length = 0;
+    // A tutor grant revoked earlier does not block an explicit admin act.
+    await t.f.owner(() => t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: target, role: "tutor", revokedAt: new Date() }));
+    const made = await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: target });
+    expect(made).toEqual({ status: 200, json: { ok: true } });
+    const [grant] = await activeTutors(t, target);
+    expect(grant).toBeTruthy();
+    expect((await t.audits("grant.issue")).map(audit => [audit.targetType, audit.targetId, audit.mode, audit.roleGrantId, audit.actorMembershipId]))
+      .toEqual([["role_grant", grant.id, "admin", t.f.adminGrant.id, t.f.adminMember.id]]);
+    expect(t.mail).toEqual([]);
+    expect((await t.call("/api/session", "teach")).json.roles).toContain("tutor");
+    // Again: already a tutor, and nothing more is written.
+    expect(await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: target })).toEqual({ status: 409, json: { ok: false, code: "already-tutor" } });
+    expect(await activeTutors(t, target)).toHaveLength(1);
+    // Someone who has only signed in (a bare membership, as first sign-in makes) can be made a tutor too.
+    await t.person("fresh");
+    const [bare] = await t.f.owner(() => t.f.db.insert(s.membership).values({ tenantId: "crc", userId: t.people.fresh.id }).returning());
+    expect(await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: bare.id })).toEqual({ status: 200, json: { ok: true } });
+    expect(await activeTutors(t, bare.id)).toHaveLength(1);
+  });
+
+  it("refuses a stale session, a non-admin, another congregation, a disabled or unlisted membership, a tutor and a student", async () => {
+    const t = await setup();
+    const target = await approved(t, "maybe", "Maybe Tutor");
+    const grantsBefore = await t.grants();
+    // Not an admin (a tutor and parent, a student, a member): 403.
+    for (const who of ["multi", "learner", "maybe"]) expect((await t.call("/api/accounts/people/make-tutor", who, { membershipId: target })).status, who).toBe(403);
+    // A foreign origin is refused.
+    expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: target }, { origin: "https://evil.example.test" })).status).toBe(403);
+    // Another congregation's membership, an unknown one and a disabled one: 404.
+    const [other] = await t.f.owner(() => t.f.db.select().from(s.membership).where(eq(s.membership.tenantId, "other")));
+    await t.person("off", "disabled");
+    // An unverified address, and someone whose Member row an admin ended with no grant left: 404, and not listed.
+    await t.person("unverified");
+    const [unverified] = await t.f.owner(async () => {
+      await t.f.db.update(s.user).set({ emailVerified: false }).where(eq(s.user.id, t.people.unverified.id));
+      return t.f.db.insert(s.membership).values({ tenantId: "crc", userId: t.people.unverified.id }).returning();
+    });
+    const ended = await approved(t, "ended", "Ended Member");
+    const [endedRow] = await t.f.owner(() => t.f.db.select().from(s.tenantMember).where(eq(s.tenantMember.membershipId, ended)));
+    expect((await t.call("/api/accounts/members/end", "admin", { memberId: endedRow.id })).status).toBe(200);
+    const listed = (await people(t)).map(row => row.id);
+    expect(listed).not.toContain(ended);
+    expect((await people(t)).find(row => row.id === unverified.id)).toMatchObject({ email: null });
+    for (const membershipId of [other.id, randomUUID(), t.people.off.membershipId!, unverified.id, ended])
+      expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId })).status, membershipId).toBe(404);
+    expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: "nope" })).status).toBe(400);
+    expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: target, extra: 1 })).status).toBe(400);
+    // Already a tutor, and a student (adult learners included): 409 with the reason.
+    expect(await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: t.f.multiMember.id })).toEqual({ status: 409, json: { ok: false, code: "already-tutor" } });
+    expect(await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: t.f.learnerMember.id })).toEqual({ status: 409, json: { ok: false, code: "student" } });
+    // A sign-in over 15 minutes old cannot grant authority.
+    await t.f.owner(async () => { await t.f.db.update(s.session).set({ createdAt: new Date(Date.now() - 60 * 60_000) }).where(eq(s.session.id, t.f.identities.admin.sessionId)); });
+    expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: target })).status).toBe(403);
+    expect(await t.grants()).toEqual(grantsBefore);
+    expect(await t.audits("grant.issue")).toHaveLength(0);
+  });
+
+  it("two calls at once leave one active tutor grant and answer 409, never an error; a grant made first by another write is already-tutor", async () => {
+    const t = await setup();
+    const target = await approved(t, "race", "Race Tutor");
+    const answers = await Promise.all([0, 1].map(() => t.call("/api/accounts/people/make-tutor", "admin", { membershipId: target })));
+    expect(answers.map(answer => answer.status).sort()).toEqual([200, 409]);
+    expect(answers.find(answer => answer.status === 409)!.json).toEqual({ ok: false, code: "already-tutor" });
+    expect(await activeTutors(t, target)).toHaveLength(1);
+    expect(await t.audits("grant.issue")).toHaveLength(1);
+    // The insert itself: against an active grant of the role, the active key makes it nothing rather than a unique violation.
+    expect(await t.f.owner(() => insertGrantUnlessActive(t.f.db as never, "crc", target, "tutor"))).toBeNull();
+    expect(await activeTutors(t, target)).toHaveLength(1);
   });
 });
