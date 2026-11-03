@@ -20,6 +20,8 @@ export const IDENTITY_TAKEN_LINE = "That student record is already linked to ano
 export const ALREADY_LINKED_LINE = "This account is already linked to a student record. The request is kept.";
 /** People with access (2026-11-03 spec, lead's wording): the card, its chips and the Make tutor lines. */
 export const PEOPLE_HEADING = "People with access";
+/** A person who has signed in and holds no role or Member row yet (lead, 2026-11-03). */
+export const SIGNED_IN_CHIP = "Signed in";
 export const PEOPLE_INTRO = "Everyone with an account here. Make someone a tutor to give them the tutor view, then assign their students on each student’s page.";
 export const PEOPLE_EMPTY = "No one has an account here yet.";
 const ROLE_CHIPS: Record<PersonRole, string> = { member: "Member", tutor: "Tutor", admin: "Admin", parent: "Parent", student: "Student" };
@@ -185,7 +187,7 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
 
 type PeopleCardProps = Readonly<{ people: readonly Person[]; confirming: string | null; pending: boolean; onConfirming: (next: string | null) => void; onMakeTutor: (row: Person) => void; onEnd: (row: Person) => void }>;
 /**
- * People with access (2026-11-03 spec), admins only: everyone with a Member row or a role, their chips and since when. Make
+ * People with access (2026-11-03 spec), admins only: everyone signed in here (a membership is made at first sign-in), their chips and since when. Make
  * tutor takes two steps, as End membership does, and is offered only to someone who is neither a tutor nor a student.
  */
 export function PeopleWithAccessCard({ people, confirming, pending, onConfirming, onMakeTutor, onEnd }: PeopleCardProps) {
@@ -194,7 +196,7 @@ export function PeopleWithAccessCard({ people, confirming, pending, onConfirming
     {people.length ? <ul className="people-list">{people.map(row => <li key={row.id} className="people-row" data-testid="person-row">
       <span className="people-avatar" aria-hidden="true">{initial(row.name)}</span>
       <div className="people-body"><h3><bdi dir="auto">{row.name}</bdi></h3>
-        <p className="people-status">{row.roles.map(role => <span key={role} className="roster-chip" data-role-chip={role}>{ROLE_CHIPS[role]}</span>)} Since <time dateTime={row.since}>{day(row.since)}</time></p></div>
+        <p className="people-status">{row.roles.length ? row.roles.map(role => <span key={role} className="roster-chip" data-role-chip={role}>{ROLE_CHIPS[role]}</span>) : <span className="roster-chip" data-role-chip="none">{SIGNED_IN_CHIP}</span>} Since <time dateTime={row.since}>{day(row.since)}</time></p></div>
       <div className="people-actions">
         {confirming === `tutor:${row.id}` ? <>
           <button type="button" className="roster-action" aria-label={`Make tutor now: ${row.name}`} disabled={pending} onClick={() => onMakeTutor(row)}>Make tutor now</button>

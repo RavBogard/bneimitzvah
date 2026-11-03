@@ -443,7 +443,7 @@ describe("people with access and Make tutor", () => {
     (await t.f.db.select().from(s.roleGrant).where(and(eq(s.roleGrant.membershipId, membershipId), eq(s.roleGrant.role, "tutor")))).filter(row => !row.revokedAt));
   const people = async (t: T) => (await t.call("/api/accounts/people", "admin")).json.people as Row[];
 
-  it("lists member-only, grant-only and both, never disabled memberships, other congregations or anyone without a role; names only", async () => {
+  it("lists member-only, grant-only and both, and anyone who has only signed in; never disabled memberships or other congregations; names only", async () => {
     const t = await setup();
     const memberOnly = await approved(t, "plain", "Plain Member");
     await t.person("off");
@@ -452,13 +452,15 @@ describe("people with access and Make tutor", () => {
       await t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: off.id, role: "tutor" });
     });
     await t.person("nobody");
-    await t.f.owner(() => t.f.db.insert(s.membership).values({ tenantId: "crc", userId: t.people.nobody.id }));
+    const [nobody] = await t.f.owner(() => t.f.db.insert(s.membership).values({ tenantId: "crc", userId: t.people.nobody.id }).returning());
     const list = await t.call("/api/accounts/people", "admin");
     expect(list.status).toBe(200);
     expect(JSON.stringify(list.json)).not.toContain("@");
     const rows = list.json.people as Row[];
     const byId = new Map(rows.map(row => [row.id, row]));
-    expect(rows.map(row => row.id).sort()).toEqual([memberOnly, t.f.adminMember.id, t.f.multiMember.id, t.f.learnerMember.id].sort());
+    expect(rows.map(row => row.id).sort()).toEqual(expect.arrayContaining([memberOnly, nobody.id, t.f.adminMember.id, t.f.multiMember.id, t.f.learnerMember.id]));
+    expect(rows.map(row => row.id)).not.toContain((await t.f.owner(() => t.f.db.select().from(s.membership).where(eq(s.membership.userId, t.people.off.id))))[0].id);
+    expect(byId.get(nobody.id)).toMatchObject({ memberId: null, roles: [] });
     expect(byId.get(memberOnly)).toEqual({ id: memberOnly, memberId: expect.any(String), name: "Plain Member", roles: ["member"], since: expect.any(String) });
     expect(byId.get(t.f.multiMember.id)).toMatchObject({ memberId: null, roles: ["tutor", "parent"] });
     expect(byId.get(t.f.adminMember.id)).toMatchObject({ memberId: null, roles: ["admin"] });
@@ -491,6 +493,11 @@ describe("people with access and Make tutor", () => {
     // Again: already a tutor, and nothing more is written.
     expect(await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: target })).toEqual({ status: 409, json: { ok: false, code: "already-tutor" } });
     expect(await activeTutors(t, target)).toHaveLength(1);
+    // Someone who has only signed in (a bare membership, as first sign-in makes) can be made a tutor too.
+    await t.person("fresh");
+    const [bare] = await t.f.owner(() => t.f.db.insert(s.membership).values({ tenantId: "crc", userId: t.people.fresh.id }).returning());
+    expect(await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: bare.id })).toEqual({ status: 200, json: { ok: true } });
+    expect(await activeTutors(t, bare.id)).toHaveLength(1);
   });
 
   it("refuses a stale session, a non-admin, another congregation, a disabled or unlisted membership, a tutor and a student", async () => {
@@ -501,11 +508,10 @@ describe("people with access and Make tutor", () => {
     for (const who of ["multi", "learner", "maybe"]) expect((await t.call("/api/accounts/people/make-tutor", who, { membershipId: target })).status, who).toBe(403);
     // A foreign origin is refused.
     expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: target }, { origin: "https://evil.example.test" })).status).toBe(403);
-    // Another congregation's membership, an unknown one, a disabled one and one with no role: 404.
+    // Another congregation's membership, an unknown one and a disabled one: 404.
     const [other] = await t.f.owner(() => t.f.db.select().from(s.membership).where(eq(s.membership.tenantId, "other")));
-    await t.person("off", "disabled"); await t.person("nobody");
-    const nobody = (await t.f.owner(() => t.f.db.insert(s.membership).values({ tenantId: "crc", userId: t.people.nobody.id }).returning()))[0].id;
-    for (const membershipId of [other.id, randomUUID(), t.people.off.membershipId!, nobody])
+    await t.person("off", "disabled");
+    for (const membershipId of [other.id, randomUUID(), t.people.off.membershipId!])
       expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId })).status, membershipId).toBe(404);
     expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: "nope" })).status).toBe(400);
     expect((await t.call("/api/accounts/people/make-tutor", "admin", { membershipId: target, extra: 1 })).status).toBe(400);
