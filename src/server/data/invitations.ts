@@ -113,6 +113,15 @@ export async function insertGrant<Q extends PgQueryResultHKT>(tx: AccessTransact
   const [row] = await tx.insert(s.roleGrant).values({ tenantId, membershipId, role }).returning({ id: s.roleGrant.id });
   return row.id;
 }
+/**
+ * The same grant, for an admin's Make tutor (src/server/people/tutor.ts, 2026-11-03 spec): when another write made an active
+ * grant of this role first, the active key (role_grant_active_key) turns the insert into nothing and this returns null, so a
+ * race is a refusal, never an error.
+ */
+export async function insertGrantUnlessActive<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, membershipId: string, role: InvitedRole) {
+  const [row] = await tx.insert(s.roleGrant).values({ tenantId, membershipId, role }).onConflictDoNothing().returning({ id: s.roleGrant.id });
+  return row?.id ?? null;
+}
 
 // The same read-only eligibility check serves preview and locked acceptance.
 // A missing future grant must still check occupied/revoked student history.

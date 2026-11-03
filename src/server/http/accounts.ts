@@ -15,6 +15,7 @@ const routes = {
   "/api/account/request": ["GET", "POST"],
   "/api/accounts/summary": ["GET"], "/api/accounts/requests": ["GET"], "/api/accounts/requests/approve": ["POST"], "/api/accounts/requests/decline": ["POST"],
   "/api/accounts/members": ["GET"], "/api/accounts/members/end": ["POST"],
+  "/api/accounts/people": ["GET"], "/api/accounts/people/make-tutor": ["POST"],
   "/api/accounts/approvers": ["GET"], "/api/accounts/approvers/add": ["POST"], "/api/accounts/approvers/remove": ["POST"],
 } as const;
 type Path = keyof typeof routes;
@@ -36,7 +37,8 @@ export async function handleAccountsRequest(request: Request, runtime: HttpRunti
         result = path === "/api/accounts/summary" ? await accounts.summary(request, mode) : await accounts.requests(request, mode);
       } else {
         uniqueQuery(request.url, []);
-        result = path === "/api/account/request" ? await accounts.requestState(request) : path === "/api/accounts/members" ? await accounts.members(request) : await accounts.approvers(request);
+        result = path === "/api/account/request" ? await accounts.requestState(request) : path === "/api/accounts/members" ? await accounts.members(request)
+          : path === "/api/accounts/people" ? await accounts.people(request) : await accounts.approvers(request);
       }
     } else {
       uniqueQuery(request.url, []);
@@ -46,6 +48,7 @@ export async function handleAccountsRequest(request: Request, runtime: HttpRunti
         : path === "/api/accounts/requests/approve" ? await accounts.approve(request, body)
         : path === "/api/accounts/requests/decline" ? await accounts.decline(request, body)
         : path === "/api/accounts/members/end" ? await accounts.endMember(request, body)
+        : path === "/api/accounts/people/make-tutor" ? await accounts.makeTutor(request, body)
         : path === "/api/accounts/approvers/add" ? await accounts.addApprover(request, body)
         : await accounts.removeApprover(request, body);
     }

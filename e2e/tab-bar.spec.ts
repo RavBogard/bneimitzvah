@@ -14,7 +14,7 @@ async function session(page: Page, roles: string[], approver = false) {
   const ok = (path: string, body: object) => page.route(path, route => route.fulfill({ contentType: "application/json", body: JSON.stringify(body) }));
   await ok("**/api/accounts/summary*", { ok: true, requests: 0 });
   await ok("**/api/accounts/requests?*", { ok: true, requests: [], productName: "Synthetic" });
-  await ok("**/api/accounts/members", { ok: true, members: [] });
+  await ok("**/api/accounts/people", { ok: true, people: [] });
   await ok("**/api/accounts/approvers", { ok: true, admins: [], designated: [], candidates: [] });
   await page.route("**/api/admin/students", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({ students: [] }) }));
   await page.route("**/api/students?*", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({ students: [{ id: ID_A, firstName: "Noa", lastName: "Synthetic", ceremonyDate: "2027-03-06", revision: 1 }] }) }));

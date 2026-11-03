@@ -41,6 +41,7 @@ export function decision(value: unknown) {
   return Object.freeze({ mode: mode(row.mode), requestId: uuid(row.requestId), studentId: target(row.studentId) });
 }
 export const endMember = (value: unknown) => Object.freeze({ memberId: uuid(closedObject(value, ["memberId"]).memberId) });
+export const makeTutor = (value: unknown) => Object.freeze({ membershipId: uuid(closedObject(value, ["membershipId"]).membershipId) });
 export const addApprover = (value: unknown) => Object.freeze({ tutorGrantId: uuid(closedObject(value, ["tutorGrantId"]).tutorGrantId) });
 export const removeApprover = (value: unknown) => Object.freeze({ approverId: uuid(closedObject(value, ["approverId"]).approverId) });
 /** A display name from an account, as staff see it: never an email address, never control or override characters. */

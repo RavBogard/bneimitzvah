@@ -85,7 +85,7 @@ it("a person asks, an admin sees the count and approves, and the new member save
       await ui(queue.getByRole("button", { name: "Approve and link: Synthetic Asker", exact: true })).toBeDisabled();
       await queue.getByRole("button", { name: "Approve without linking: Synthetic Asker", exact: true }).click();
       await ui(admin.getByRole("status").filter({ hasText: "Synthetic Asker now has an account." })).toBeVisible();
-      await ui(admin.getByRole("region", { name: "Members" }).getByRole("heading", { name: "Synthetic Asker", exact: true })).toBeVisible();
+      await ui(admin.getByRole("region", { name: "People with access" }).getByRole("heading", { name: "Synthetic Asker", exact: true })).toBeVisible();
       await ui(queue.getByText("No link requests are waiting.", { exact: true })).toBeVisible();
     }
   }
@@ -140,7 +140,7 @@ it("an admin designates a tutor, who then sees and approves requests from the tu
   await tutor.goto("/workspace/tutor", { waitUntil: "domcontentloaded" });
   await tutor.getByRole("link", { name: "1 link request waiting · Review", exact: true }).click();
   await ui(tutor.getByRole("heading", { level: 1, name: "Link requests", exact: true })).toBeVisible();
-  await ui(tutor.getByRole("region", { name: "Members" })).toHaveCount(0);
+  await ui(tutor.getByRole("region", { name: "People with access" })).toHaveCount(0);
   await ui(tutor.getByRole("region", { name: "Approvers" })).toHaveCount(0);
   // The tutor may link only their own student (the select lists that one) or approve without linking; this is a staff account.
   await ui(tutor.getByRole("combobox", { name: "Student for: Asks a Tutor", exact: true })).toBeVisible();

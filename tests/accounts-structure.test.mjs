@@ -29,12 +29,24 @@ test("the accounts code never writes a role grant, never imports a grant writer,
     // does grant the student role, through the invitation layer's own writes in src/server/learners/link.ts; the service imports that
     // one module and nothing else of the learners code, and the link write is reached by the accounts service alone.
     assert.deepEqual(importsOf(file.text).filter(spec => /learners/.test(spec)), file.path === "src/server/accounts/service.ts" ? ["../learners/link"] : [], `${file.path} imports the learners code`);
+    // People with access (docs/planning/2026-11-03-people-tutor/SPEC.md): an admin's Make tutor grants the tutor role, deliberately,
+    // through src/server/people/tutor.ts, which uses the invitation layer's own grant write and grant.issue audit. The service imports
+    // that one module; nothing else of the accounts code reaches it.
+    assert.deepEqual(importsOf(file.text).filter(spec => /(^|\/)people\//.test(spec)), file.path === "src/server/accounts/service.ts" ? ["../people/tutor"] : [], `${file.path} imports the people code`);
     assert.doesNotMatch(file.text, /\b(savedReading|savedVerseWork|savedVerseMark|starredComment)\b/, `${file.path} names a saved table`);
     // The product name comes from the one shared reader (Daniel, E1), never a second query or a fixed "CRC Torah".
     assert.doesNotMatch(file.text, /\bs\.tenant\b|product_name|CRC Torah/, `${file.path} reads or fixes the product name itself`);
   }
   const linkers = sources.filter(file => file.path !== "src/server/learners/link.ts" && /\blinkRequestedStudent\b/.test(file.text)).map(file => file.path);
   assert.deepEqual(linkers, ["src/server/accounts/service.ts"]);
+  // The places that may insert a role grant (2026-11-03 spec): the invitation layer's writers, used by invitation acceptance, the link
+  // write above and Make tutor. Make tutor's conflict-safe writer is used by people/tutor.ts alone, which is called by the accounts service alone.
+  assert.deepEqual(sources.filter(file => /insert\(s\.roleGrant\)/.test(file.text)).map(file => file.path), ["src/server/data/invitations.ts"]);
+  assert.deepEqual(sources.filter(file => file.path !== "src/server/data/invitations.ts" && /\binsertGrantUnlessActive\b/.test(file.text)).map(file => file.path), ["src/server/people/tutor.ts"]);
+  assert.deepEqual(sources.filter(file => file.path !== "src/server/people/tutor.ts" && /\bmakeTutor\b/.test(file.text) && /from\s+["'][^"']*people\/tutor["']/.test(file.text)).map(file => file.path), ["src/server/accounts/service.ts"]);
+  const tutorWrite = sources.find(file => file.path === "src/server/people/tutor.ts").text;
+  assert.match(tutorWrite, /if \(actor\.mode !== "admin"\) throw new AccessDenied\(403\)/);
+  assert.match(tutorWrite, /writeInvitationAudit\(tx, actor, "grant\.issue", grantId\)/);
   const reader = sources.find(file => file.path === "src/server/data/product-name.ts");
   assert.ok(reader && /export async function readProductName\b/.test(reader.text) && /export async function readTenantNames\b/.test(reader.text));
   // No server code but the reader selects the column itself: the notification emails take it from the reader too.

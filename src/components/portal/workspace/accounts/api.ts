@@ -6,6 +6,10 @@ export type ApproverMode = "admin" | "tutor";
 export type AccountRequest = Readonly<{ id: string; name: string; purpose: string | null; email: string | null; requestedAt: string; student: Readonly<{ id: string; firstName: string; lastName: string }> | null }>;
 export type StudentOption = Readonly<{ id: string; firstName: string; lastName: string; ceremonyDate: string }>;
 export type Member = Readonly<{ id: string; name: string; since: string }>;
+/** People with access (2026-11-03 spec): one row per membership, with its active roles in chip order. memberId is the Member row, if any. */
+export type PersonRole = "member" | "tutor" | "admin" | "parent" | "student";
+export type Person = Readonly<{ id: string; memberId: string | null; name: string; roles: readonly PersonRole[]; since: string }>;
+export type MakeTutorResult = Readonly<{ ok: true } | { ok: false; code: "already-tutor" | "student" }>;
 export type ApproversView = Readonly<{ admins: readonly string[]; designated: readonly Readonly<{ id: string; name: string }>[]; candidates: readonly Readonly<{ tutorGrantId: string; name: string }>[] }>;
 /**
  * "admin-only": an admin ended this person's membership, so only an admin approves them again. "own-request": the
@@ -71,6 +75,16 @@ export function parseMembers(value: unknown): readonly Member[] {
   if (row.ok !== true || !Array.isArray(row.members) || row.members.length > 500) return bad();
   return row.members.map(raw => { const item = object(raw, ["id", "name", "since"]); return { id: id(item.id), name: text(item.name, 80), since: instant(item.since) }; });
 }
+const PERSON_ROLES: readonly PersonRole[] = ["member", "tutor", "admin", "parent", "student"];
+export function parsePeople(value: unknown): readonly Person[] {
+  const row = object(value, ["ok", "people"]);
+  if (row.ok !== true || !Array.isArray(row.people) || row.people.length > 500) return bad();
+  return row.people.map(raw => {
+    const item = object(raw, ["id", "memberId", "name", "roles", "since"]);
+    if (!Array.isArray(item.roles) || item.roles.some(role => !PERSON_ROLES.includes(role as PersonRole)) || new Set(item.roles).size !== item.roles.length) return bad();
+    return { id: id(item.id), memberId: item.memberId === null ? null : id(item.memberId), name: text(item.name, 80), roles: PERSON_ROLES.filter(role => (item.roles as unknown[]).includes(role)), since: instant(item.since) };
+  });
+}
 export function parseApprovers(value: unknown): ApproversView {
   const row = object(value, ["ok", "admins", "designated", "candidates"]);
   if (row.ok !== true || !Array.isArray(row.admins) || !Array.isArray(row.designated) || !Array.isArray(row.candidates) || row.admins.length > 100 || row.designated.length > 100 || row.candidates.length > 200) return bad();
@@ -97,6 +111,11 @@ export const accountsApi = {
   async students(mode: ApproverMode, signal?: AbortSignal) { return parseStudentOptions((await request(`/api/students?mode=${mode}&limit=100`, undefined, signal)).value); },
   async decline(mode: ApproverMode, requestId: string): Promise<DecisionResult> { return done((await request("/api/accounts/requests/decline", { mode, requestId })).value); },
   async members(signal?: AbortSignal) { return parseMembers((await request("/api/accounts/members", undefined, signal)).value); },
+  async people(signal?: AbortSignal) { return parsePeople((await request("/api/accounts/people", undefined, signal)).value); },
+  async makeTutor(membershipId: string): Promise<MakeTutorResult> {
+    const { status, value } = await request("/api/accounts/people/make-tutor", { membershipId });
+    return status === 409 ? refusal(value, ["already-tutor", "student"] as const) : done(value);
+  },
   async endMember(memberId: string) { return done((await request("/api/accounts/members/end", { memberId })).value); },
   async approvers(signal?: AbortSignal) { return parseApprovers((await request("/api/accounts/approvers", undefined, signal)).value); },
   async addApprover(tutorGrantId: string): Promise<DesignationResult> {

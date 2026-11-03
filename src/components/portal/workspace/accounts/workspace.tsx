@@ -4,7 +4,7 @@ import { statusOf, useWorkspace, WorkspaceLink } from "../provider";
 import { PeopleNav } from "../../shell/people-nav";
 import { Button, PageHeader } from "../../../ui";
 import { DocumentTitle } from "../document-title";
-import { accountsApi, type AccountRequest, type ApproverMode, type ApproversView, type Member, type StudentOption } from "./api";
+import { accountsApi, type AccountRequest, type ApproverMode, type ApproversView, type Person, type PersonRole, type StudentOption } from "./api";
 import { linkRequestLine } from "../staff/model";
 
 /** Daniel's approved approver help line (F1, wording approved 2026-10-23). */
@@ -18,6 +18,15 @@ export const OWN_REQUEST_LINE = "This is your own request, so another approver n
 /** Lead's wording (plan D6), listed as gaps: the two link refusals, and the lines after linking. */
 export const IDENTITY_TAKEN_LINE = "That student record is already linked to another account. The request is kept.";
 export const ALREADY_LINKED_LINE = "This account is already linked to a student record. The request is kept.";
+/** People with access (2026-11-03 spec, lead's wording): the card, its chips and the Make tutor lines. */
+export const PEOPLE_HEADING = "People with access";
+export const PEOPLE_INTRO = "Everyone with an account here. Make someone a tutor to give them the tutor view, then assign their students on each student’s page.";
+export const PEOPLE_EMPTY = "No one has an account here yet.";
+const ROLE_CHIPS: Record<PersonRole, string> = { member: "Member", tutor: "Tutor", admin: "Admin", parent: "Parent", student: "Student" };
+const madeTutorLine = (name: string) => `${name} is now a tutor. Assign their students on each student’s page.`;
+const alreadyTutorLine = (name: string) => `${name} is already a tutor. The list has been reloaded.`;
+const STUDENT_TUTOR_LINE = "A student account can’t also be a tutor. The list has been reloaded.";
+const MAKE_TUTOR_SIGN_IN = "For your security, sign in again, then make the tutor.";
 const studentLabel = (student: Pick<StudentOption, "firstName" | "lastName">) => `${student.firstName} ${student.lastName}`;
 /** "Sat, Nov 14, 2026" for a calendar date (never the ISO form). */
 const longDay = (date: string) => { const [year, month, day] = date.split("-").map(Number); return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(Date.UTC(year, month - 1, day)); };
@@ -40,7 +49,7 @@ export function AccountsWorkspace() {
 function AccountsPage({ mode }: { mode: ApproverMode }) {
   const { registerReload } = useWorkspace();
   const admin = mode === "admin";
-  const [requests, setRequests] = useState<readonly AccountRequest[] | null>(null), [productName, setProductName] = useState<string | null>(null), [members, setMembers] = useState<readonly Member[] | null>(null), [approvers, setApprovers] = useState<ApproversView | null>(null);
+  const [requests, setRequests] = useState<readonly AccountRequest[] | null>(null), [productName, setProductName] = useState<string | null>(null), [people, setPeople] = useState<readonly Person[] | null>(null), [approvers, setApprovers] = useState<ApproversView | null>(null);
   // The students an approver may link to, and the one chosen per request (the request's own named student first).
   const [students, setStudents] = useState<readonly StudentOption[]>([]), [chosen, setChosen] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true), [broken, setBroken] = useState(false), [pending, setPending] = useState(false), [message, setMessage] = useState<Message>(null);
@@ -50,10 +59,10 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
     request.current?.abort(); const controller = new AbortController(); request.current = controller;
     setLoading(true); setBroken(false);
     try {
-      const [queue, people, chooser, options] = await Promise.all([accountsApi.requests(mode, controller.signal), admin ? accountsApi.members(controller.signal) : null, admin ? accountsApi.approvers(controller.signal) : null,
+      const [queue, everyone, chooser, options] = await Promise.all([accountsApi.requests(mode, controller.signal), admin ? accountsApi.people(controller.signal) : null, admin ? accountsApi.approvers(controller.signal) : null,
         accountsApi.students(mode, controller.signal).catch((): readonly StudentOption[] => [])]);
       if (controller.signal.aborted) return;
-      setRequests(queue.requests); setProductName(queue.productName); setMembers(people); setApprovers(chooser); setStudents(options);
+      setRequests(queue.requests); setProductName(queue.productName); setPeople(everyone); setApprovers(chooser); setStudents(options);
       setChosen(current => Object.fromEntries(queue.requests.map(row => [row.id, options.some(option => option.id === current[row.id]) ? current[row.id] : options.some(option => option.id === row.student?.id) ? row.student!.id : ""])));
       setCandidate(current => chooser?.candidates.some(row => row.tutorGrantId === current) ? current : chooser?.candidates[0]?.tutorGrantId ?? "");
     } catch { if (!controller.signal.aborted) { setRequests(null); setBroken(true); } }
@@ -77,7 +86,24 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
         : "That person’s account is turned off here, so it can’t be approved. The request is kept.", tone: "alert" };
   }, "approve the request");
   const decline = (row: AccountRequest) => act(async () => { await accountsApi.decline(mode, row.id); return { text: "Request declined. Nothing was sent.", tone: "status" }; }, "decline the request");
-  const end = (row: Member) => act(async () => { await accountsApi.endMember(row.id); return { text: `${row.name}’s membership has ended.`, tone: "status" }; }, "end the membership");
+  const end = (row: Person) => act(async () => { if (!row.memberId) return null; await accountsApi.endMember(row.memberId); return { text: `${row.name}’s membership has ended.`, tone: "status" }; }, "end the membership");
+  async function makeTutor(row: Person) {
+    if (gate.current) return;
+    gate.current = true; setPending(true); setMessage(null);
+    try {
+      const result = await accountsApi.makeTutor(row.id);
+      if (!alive.current) return;
+      setConfirming(null);
+      setMessage(result.ok ? { text: madeTutorLine(row.name), tone: "status" } : { text: result.code === "already-tutor" ? alreadyTutorLine(row.name) : STUDENT_TUTOR_LINE, tone: "alert" });
+      await load();
+    } catch (error) {
+      if (!alive.current) return;
+      const status = statusOf(error);
+      setConfirming(null);
+      setMessage(status === 403 ? { text: MAKE_TUTOR_SIGN_IN, tone: "alert", signIn: true } : failure(status, "make the tutor"));
+      if (status === 404) await load();
+    } finally { gate.current = false; if (alive.current) setPending(false); }
+  }
   const remove = (id: string, name: string) => act(async () => { await accountsApi.removeApprover(id); return { text: `${name} no longer approves account requests.`, tone: "status" }; }, "remove the approver");
   async function add() {
     if (!candidate) return;
@@ -134,19 +160,8 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
             </div>
           </li>)}</ul> : <p className="people-empty">No link requests are waiting.</p>}
         </section>
-        {admin && members && <section className="people-card" aria-labelledby="accounts-members"><div className="people-card-head"><h2 id="accounts-members">Members</h2>
-          <p>Approved accounts. Ending one stops that person’s saved readings here; what they saved is kept.</p></div>
-          {members.length ? <ul className="people-list">{members.map(row => <li key={row.id} className="people-row">
-            <span className="people-avatar" aria-hidden="true">{initial(row.name)}</span>
-            <div className="people-body"><h3><bdi dir="auto">{row.name}</bdi></h3><p className="people-status">Member since <time dateTime={row.since}>{day(row.since)}</time></p></div>
-            <div className="people-actions">
-              {confirming === `end:${row.id}` ? <>
-                <button type="button" className="roster-action roster-danger" aria-label={`End membership now: ${row.name}`} disabled={pending} onClick={() => void end(row)}>End membership</button>
-                <button type="button" className="roster-action" aria-label={`Keep membership: ${row.name}`} disabled={pending} onClick={() => setConfirming(null)}>Keep</button>
-              </> : <button type="button" className="roster-action people-danger" aria-label={`End membership: ${row.name}`} disabled={pending || confirming !== null} onClick={() => { setMessage(null); setConfirming(`end:${row.id}`); }}>End membership</button>}
-            </div>
-          </li>)}</ul> : <p className="people-empty">No one has been linked through a link request yet.</p>}
-        </section>}
+        {admin && people && <PeopleWithAccessCard people={people} confirming={confirming} pending={pending} onConfirming={next => { setMessage(null); setConfirming(next); }}
+          onMakeTutor={row => void makeTutor(row)} onEnd={row => void end(row)} />}
         {admin && approvers && <section className="people-card" aria-labelledby="accounts-approvers"><div className="people-card-head"><h2 id="accounts-approvers">Approvers</h2>
           <p>Admins approve requests. You can also choose tutors to approve them.</p></div>
           {approvers.designated.length ? <ul className="people-list">{approvers.designated.map(row => <li key={row.id} className="people-row">
@@ -165,6 +180,34 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
           </form>}
         </section>}
       </>}
+  </section>;
+}
+
+type PeopleCardProps = Readonly<{ people: readonly Person[]; confirming: string | null; pending: boolean; onConfirming: (next: string | null) => void; onMakeTutor: (row: Person) => void; onEnd: (row: Person) => void }>;
+/**
+ * People with access (2026-11-03 spec), admins only: everyone with a Member row or a role, their chips and since when. Make
+ * tutor takes two steps, as End membership does, and is offered only to someone who is neither a tutor nor a student.
+ */
+export function PeopleWithAccessCard({ people, confirming, pending, onConfirming, onMakeTutor, onEnd }: PeopleCardProps) {
+  return <section className="people-card" aria-labelledby="accounts-people" data-testid="people-with-access"><div className="people-card-head"><h2 id="accounts-people">{PEOPLE_HEADING}</h2>
+    <p>{PEOPLE_INTRO}</p></div>
+    {people.length ? <ul className="people-list">{people.map(row => <li key={row.id} className="people-row" data-testid="person-row">
+      <span className="people-avatar" aria-hidden="true">{initial(row.name)}</span>
+      <div className="people-body"><h3><bdi dir="auto">{row.name}</bdi></h3>
+        <p className="people-status">{row.roles.map(role => <span key={role} className="roster-chip" data-role-chip={role}>{ROLE_CHIPS[role]}</span>)} Since <time dateTime={row.since}>{day(row.since)}</time></p></div>
+      <div className="people-actions">
+        {confirming === `tutor:${row.id}` ? <>
+          <button type="button" className="roster-action" aria-label={`Make tutor now: ${row.name}`} disabled={pending} onClick={() => onMakeTutor(row)}>Make tutor now</button>
+          <button type="button" className="roster-action" aria-label={`Keep as is: ${row.name}`} disabled={pending} onClick={() => onConfirming(null)}>Cancel</button>
+        </> : confirming === `end:${row.id}` ? <>
+          <button type="button" className="roster-action roster-danger" aria-label={`End membership now: ${row.name}`} disabled={pending} onClick={() => onEnd(row)}>End membership</button>
+          <button type="button" className="roster-action" aria-label={`Keep membership: ${row.name}`} disabled={pending} onClick={() => onConfirming(null)}>Keep</button>
+        </> : <>
+          {!row.roles.includes("tutor") && !row.roles.includes("student") && <button type="button" className="roster-action" aria-label={`Make tutor: ${row.name}`} disabled={pending || confirming !== null} onClick={() => onConfirming(`tutor:${row.id}`)}>Make tutor</button>}
+          {row.memberId && <button type="button" className="roster-action people-danger" aria-label={`End membership: ${row.name}`} disabled={pending || confirming !== null} onClick={() => onConfirming(`end:${row.id}`)}>End membership</button>}
+        </>}
+      </div>
+    </li>)}</ul> : <p className="people-empty">{PEOPLE_EMPTY}</p>}
   </section>;
 }
 

@@ -31,11 +31,14 @@ const adminRules: Record<AdminCapability, { fresh: boolean; intent: LockIntent }
  * service checks under its own share lock on top of this tutor actor. Only an admin manages approvers, with a fresh
  * session. None of these is a new mode: an approver is a tutor, a member is no mode at all.
  */
-type AccountsCapability = "read-accounts" | "manage-accounts" | "manage-approvers";
+type AccountsCapability = "read-accounts" | "manage-accounts" | "manage-approvers" | "manage-tutors";
 const accountsRules: Record<AccountsCapability, { fresh: boolean; intent: LockIntent; modes: readonly ("admin" | "tutor")[] }> = {
   "read-accounts": { fresh: false, intent: "read", modes: ["admin", "tutor"] },
   "manage-accounts": { fresh: false, intent: "authority-write", modes: ["admin", "tutor"] },
   "manage-approvers": { fresh: true, intent: "authority-write", modes: ["admin"] },
+  // People with access (2026-11-03 spec): Make tutor grants authority without the person accepting, so it needs the
+  // same fresh session as manage-invites.
+  "manage-tutors": { fresh: true, intent: "authority-write", modes: ["admin"] },
 };
 
 const studentView = (row: StudentView): StudentView => Object.freeze({

@@ -134,6 +134,23 @@ export async function listMembers<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantI
   return tx.select({ id: s.tenantMember.id, name: s.tenantMember.displayName, since: s.tenantMember.createdAt }).from(s.tenantMember)
     .where(and(eq(s.tenantMember.tenantId, tenantId), isNull(s.tenantMember.revokedAt))).orderBy(asc(s.tenantMember.displayName), asc(s.tenantMember.id)).limit(limit);
 }
+/**
+ * People with access (2026-11-03 spec): every enabled membership of the tenant with an active Member row or at least one
+ * active role grant, one row each. The name is the Member row's display name, else the account's name; "since" is the
+ * earliest creation of that Member row and those grants. Never an email. Reads role_grant; writes nothing.
+ */
+export async function listPeople<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, limit: number) {
+  const name = sql<string>`coalesce(${s.tenantMember.displayName}, ${s.user.name})`;
+  const grantRoles = sql<string[] | null>`array_agg(distinct ${s.roleGrant.role}::text) filter (where ${s.roleGrant.id} is not null)`;
+  const since = sql<Date | string>`least(${s.tenantMember.createdAt}, min(${s.roleGrant.createdAt}))`;
+  return tx.select({ membershipId: s.membership.id, memberId: s.tenantMember.id, name, roles: grantRoles, since }).from(s.membership)
+    .innerJoin(s.user, eq(s.user.id, s.membership.userId))
+    .leftJoin(s.tenantMember, and(eq(s.tenantMember.tenantId, s.membership.tenantId), eq(s.tenantMember.membershipId, s.membership.id), isNull(s.tenantMember.revokedAt)))
+    .leftJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.membership.tenantId), eq(s.roleGrant.membershipId, s.membership.id), isNull(s.roleGrant.revokedAt)))
+    .where(and(eq(s.membership.tenantId, tenantId), isNull(s.membership.disabledAt), sql`(${s.tenantMember.id} is not null or ${s.roleGrant.id} is not null)`))
+    .groupBy(s.membership.id, s.user.name, s.tenantMember.id, s.tenantMember.displayName, s.tenantMember.createdAt)
+    .orderBy(asc(name), asc(s.membership.id)).limit(limit);
+}
 export async function endMember<Q extends PgQueryResultHKT>(tx: Tx<Q>, actor: Actor, id: string) {
   const [row] = await tx.update(s.tenantMember).set({ revokedAt: new Date(), revokedByMembershipId: actor.membershipId })
     .where(and(eq(s.tenantMember.tenantId, actor.tenantId), eq(s.tenantMember.id, id), isNull(s.tenantMember.revokedAt))).returning({ id: s.tenantMember.id });
