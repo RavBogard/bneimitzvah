@@ -62,7 +62,6 @@ import { createCongregationSettingsService } from "../settings/service";
 import { createClaudeConnectionsService } from "../connections/service";
 import { createMavenLinkService } from "../students/maven-links";
 import { createPracticeCalendarService } from "../practice-calendar/service";
-import { createStudentRecordingService } from "../recordings/service";
 import { createPublicStudyCoalescer, type PublicStudyCoalescer } from "../study/coalescing";
 import { resolveTenantHost } from "../tenancy/resolve";
 import { createHebcalReader } from "../../lib/readings/proposals";
@@ -215,8 +214,6 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const claudeConnections = createClaudeConnectionsService({ access });
   const mavenLinks = createMavenLinkService({ access });
   const practiceCalendar = createPracticeCalendarService({ access, practice });
-  // Parked (MISSION): null unless PORTAL_RECORDINGS_ENABLED=true; while null, every recordings route is a 404.
-  const recordings = config.recordingsEnabled ? createStudentRecordingService({ access, practice }) : null;
   const loadText = createSefariaStudyReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS, cache: createPersistentStudyCache(db), coalescer: studyTasks });
   const study = createStudyService({ access, practice, load: loadText });
   const readingExploration = createReadingExplorationService({ access, practice, loadReading, loadText, signingSecret: purposeSecret(config, "reading-exploration") });
@@ -276,7 +273,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, guideShare, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, signInCodeCap, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved, learners, offline, courseProgress, verseReview, serviceCourseProgress, serviceCoursePath, servicePartFinished, practiceVisibility, staff, ceremonyDone, accounts });
+  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, guideShare, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, signInCodeCap, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved, learners, offline, courseProgress, verseReview, serviceCourseProgress, serviceCoursePath, servicePartFinished, practiceVisibility, staff, ceremonyDone, accounts });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;

@@ -39,7 +39,7 @@ function failure(actual,phase,check){
   assert.ok(!JSON.stringify(actual.records).includes("synthetic-sensitive"));
 }
 
-test("default prebuild is silent and has no SDK loading, even with ambient provider configuration",async()=>{
+test("default run is silent and has no SDK loading, even with ambient provider configuration",async()=>{
   let loads=0;
   assert.equal(await probe({BLOB_READ_WRITE_TOKEN:"unused",VERCEL_BLOB_API_URL:"https://invalid.example"},
     {loadSdk:async()=>{loads++;throw 0;}}),null);
@@ -58,7 +58,7 @@ test("default prebuild is silent and has no SDK loading, even with ambient provi
     assert.deepEqual(JSON.parse(invalid.stdout),{ok:false,mode:"invalid",environmentMatch:false,expectation:"none",outcome:"failed"});
     const pkg=JSON.parse(await readFile(new URL("../package.json",import.meta.url),"utf8"));
     assert.equal(pkg.dependencies["@vercel/blob"],"2.8.2");
-    assert.equal(pkg.scripts.prebuild,"node scripts/private-media-oidc-probe.mjs && node scripts/private-media-object-probe.mjs");
+    assert.equal(pkg.scripts.prebuild,undefined);
     assert.equal(pkg.scripts.build,"next build");
   }finally{await isolated.cleanup();}
 });

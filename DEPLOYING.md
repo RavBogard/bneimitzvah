@@ -33,7 +33,7 @@ Also needed on the machine that runs commands: Node 24 LTS, npm, Git, and the Gi
 3. Add the upstream remote so you can update later (section 11): `git remote add upstream https://github.com/RavBogard/bneimitzvah.git`.
 4. In Vercel, choose Add New, then Project, and import your fork. Framework preset: Next.js (it is detected). Leave the build command and output directory at their defaults. In Settings, then General, set Node.js Version to 24.x.
 5. Do not connect Vercel's Neon integration. Create the Neon project yourself in section 3, so that the database owner's password never enters Vercel. (If the integration is already connected, delete every database variable it injected, such as `DATABASE_URL`, `POSTGRES_*`, `PG*`, `NEON_*`, before continuing; the portal refuses an owner login and refuses to start with `DATABASE_MIGRATION_URL` set.)
-6. The first build can run with no environment variables (verified: `npm run build` completes with none set). `npm run build` runs two small `prebuild` probes (`scripts/private-media-oidc-probe.mjs` and `scripts/private-media-object-probe.mjs`). Without their special flags they print nothing and exit 0, so they need no setup (verified). They contain CRC's fixed Vercel identifiers, which are harmless and unused in a fork.
+6. The first build can run with no environment variables (verified: `npm run build` completes with none set).
 7. Add your domain under Settings, then Domains, and add the DNS record Vercel shows. Wait until Vercel shows the domain as valid with a certificate. Decide the one canonical address now (for example `https://torah.example.org`); it is used in several places below and must match exactly everywhere: `https://`, no trailing slash, no path, no port.
 
 The portal will not work until sections 3 to 7 are done. A failed first request is expected.
@@ -234,7 +234,7 @@ Set these in Vercel under Settings, then Environment Variables, for the **Produc
 
 Never set these, in Vercel or anywhere the app runs: `DATABASE_MIGRATION_URL` and `BOOTSTRAP_OWNER_EMAIL` (the app refuses to start if present), and the owner database URL under any name.
 
-Leave all of these unset in a fork: `PORTAL_RECORDINGS_ENABLED` (student recordings are parked), `CHANT_BLOB_TOKEN`, `BEIT_MITZVAH_MUSIC_URL`, `BEIT_MITZVAH_SERVICE_TOKEN`, `PORTAL_MUSIC_DETAILS_ENABLED` (CRC's own music service), `GOOGLE_SHEETS_SERVICE_ACCOUNT`, `GOOGLE_ROSTER_SHEET_ID` (CRC's roster sheet), `PORTAL_OFFLINE_ENABLED` (the offline pack is CRC-only), `FINKEL_REVIEW_*`, `CRC_COMPONENT_PAGE`, `BLOB_READ_WRITE_TOKEN` (used only on your own computer for section 9, never in Vercel Production).
+Leave all of these unset in a fork: `CHANT_BLOB_TOKEN`, `BEIT_MITZVAH_MUSIC_URL`, `BEIT_MITZVAH_SERVICE_TOKEN`, `PORTAL_MUSIC_DETAILS_ENABLED` (CRC's own music service), `GOOGLE_SHEETS_SERVICE_ACCOUNT`, `GOOGLE_ROSTER_SHEET_ID` (CRC's roster sheet), `PORTAL_OFFLINE_ENABLED` (the offline pack is CRC-only), `FINKEL_REVIEW_*`, `CRC_COMPONENT_PAGE`, `BLOB_READ_WRITE_TOKEN` (used only on your own computer for section 9, never in Vercel Production).
 
 The three entries in `vercel.json` `crons` call internal routes for music, roster sheet and notifications. With the related variables unset all three answer `503` and do nothing (verified locally), so Vercel's cron log shows a failed run each day. That is expected and harmless in a fork; tell the rabbi so it does not look like an outage.
 
@@ -301,7 +301,6 @@ To update, in this order:
 - **No licensed text in the repository, ever.** That includes the JPS translation, the Beit Mitzvah siddur, any copied translation or commentary, student or family data, recordings, rendered audio, model weights, and any credential or `.env` file. Text comes from Sefaria at runtime. Test data stays synthetic (`@example.test`).
 - **Never use the CRC floor artwork.** The Siona Benjamin floor image under `public/brand/` is licensed to Central Reform Congregation only. The portal serves it only on CRC's own addresses. Leave that folder alone (a test checks it) and never copy, rename or reference it from your logo or settings. Use your own logo through `CONGREGATION_LOGO`.
 - **Generated chant stays off.** No student hears generated or synthetic chant. There is no setting that turns it on, and you must not add one. The reference recordings of section 9 are recorded human audio, a different thing.
-- **Student recordings stay off.** Leave `PORTAL_RECORDINGS_ENABLED` unset.
 - **Never put the owner database URL in Vercel**, never add a role other than `portal_runtime` to the runtime login, never run the app as an owner, and never turn row-level security off.
 - **Binder/Avery chant tables** may be used by your congregation for non-commercial use only, as the repository's `trope/cells/README.md` records. Do not use the portal commercially.
 - Keep the portal's credits (Sefaria, Hebcal, STEPBible and the rest listed in `README.md`) and keep the licence notices. The reference-audio credit (section 9) is required if you install the kit.

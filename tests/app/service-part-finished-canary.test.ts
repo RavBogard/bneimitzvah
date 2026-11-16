@@ -34,7 +34,7 @@ describe("the per-part finished mark: no other reader", () => {
     for (const mode of ["admin", "tutor", "parent", "student"]) {
       paths.push(`/api/students?mode=${mode}`, `/api/admin/students?mode=${mode}`);
       for (const id of ids) for (const tail of ["", "/reading", "/progress", "/lesson-log", "/practice-calendar", "/practice-events", "/honors", "/study-guide", "/source-assignments",
-        "/service-plan", "/my-service", "/recordings", "/honoree-links/status", "/study-text", "/study-sources", "/work"]) paths.push(`/api/students/${id}${tail}?mode=${mode}`);
+        "/service-plan", "/my-service", "/honoree-links/status", "/study-text", "/study-sources", "/work"]) paths.push(`/api/students/${id}${tail}?mode=${mode}`);
     }
     for (const id of ids) paths.push(`/api/admin/students/${id}/relationships`);
     let ok = 0;
