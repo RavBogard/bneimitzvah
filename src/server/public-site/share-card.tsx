@@ -11,7 +11,6 @@ import { resolveIdentity } from "../../lib/site/identity";
  * that varies by visitor; the public congregation is fixed, so one card per path is safe to cache. Hebrew falls back to Noto Serif Hebrew.
  */
 export const SHARE_CARD_SIZE = Object.freeze({ width: 1200, height: 630 });
-export const SHARE_CARD_TYPE = "image/png";
 const LAKE = "#1d5ba6", MARIGOLD = "#f7b500", WHITE = "#ffffff";
 /** The mural disc at its native size: vertically centred (630 - 512) / 2 = 59 from the top, 96px of it cropped off the right edge. */
 const MURAL = Object.freeze({ size: 512, top: 59, right: -96 });

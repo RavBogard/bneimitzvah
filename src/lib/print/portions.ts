@@ -73,8 +73,6 @@ const leyningOf = (portions: WeekPortions): Leyning => ({ parashah: portions.par
 const pickOf = (pick: PortionPick): Pick => pick === "full" || pick === "triennial" ? { kind: pick } : pick === "maftir" ? { kind: "aliyah", from: "M", to: "M" }
   : { kind: "aliyah", from: Number(pick.slice(7)), to: Number(pick.slice(7)) };
 
-/** Whether the calendar gives this pick for the week. */
-export function portionAvailable(portions: WeekPortions, pick: PortionPick): boolean { return portionRef(portions, pick) !== null; }
 /** The canonical Torah ref a pick names for the week, or null when the calendar does not give it. */
 export function portionRef(portions: WeekPortions, pick: PortionPick): string | null {
   if (!portions.full.length) return null;

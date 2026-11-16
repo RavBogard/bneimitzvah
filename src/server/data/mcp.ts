@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction, LockIntent } from "../access/types";
 import { lockStrength } from "../access/types";
@@ -47,13 +47,6 @@ export async function connectionClient<Q extends PgQueryResultHKT>(tx: AccessTra
 }
 export async function revokeConnection<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, connectionId: string, at: Date) {
   await tx.update(s.mcpConnection).set({ revokedAt: at }).where(and(eq(s.mcpConnection.tenantId, tenantId), eq(s.mcpConnection.id, connectionId), isNull(s.mcpConnection.revokedAt)));
-}
-/** A membership's live connections for its own account page: names and dates only. */
-export async function memberConnections<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, membershipId: string, now: Date) {
-  return tx.select({ id: s.mcpConnection.id, clientName: s.mcpConnection.clientName, role: s.mcpConnection.role, scope: s.mcpConnection.scope,
-    unattended: s.mcpConnection.unattended, createdAt: s.mcpConnection.createdAt, expiresAt: s.mcpConnection.expiresAt })
-    .from(s.mcpConnection).where(and(eq(s.mcpConnection.tenantId, tenantId), eq(s.mcpConnection.membershipId, membershipId), isNull(s.mcpConnection.revokedAt), gt(s.mcpConnection.expiresAt, now)))
-    .orderBy(sql`${s.mcpConnection.createdAt} desc`).limit(20);
 }
 export async function sessionGoogleMarker<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, sessionId: string, userId: string) {
   const [row] = await tx.select({ at: s.session.googleAuthenticatedAt }).from(s.session).where(and(eq(s.session.id, sessionId), eq(s.session.userId, userId))).for("share");

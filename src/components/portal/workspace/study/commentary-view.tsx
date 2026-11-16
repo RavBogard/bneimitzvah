@@ -12,7 +12,6 @@ import { DEFAULT_WORKS } from "../study-lens";
 import type { StudyVerse } from "./api";
 import { useOfflineWording } from "../../offline/status";
 import { PLAN as OFFLINE } from "../../../../lib/offline/copy";
-import { StarButton, useOwnLayer } from "./own-layer";
 import { Chip } from "../../../ui";
 import styles from "./commentary.module.css";
 
@@ -113,32 +112,8 @@ export function CommentaryEntry({ comment, words, verseRef, onLink, pinned, lang
 }
 
 export type WorkState = Readonly<{ work: string; state: CommentaryVerseState }>;
-/** A verse's inline commentary, set off by a hairline in its margin: each work with something to say, in Works order. */
 /** A busy verse shows this many comments per work inline; the rest open in place from one row. */
 export const INLINE_COMMENTS = 3;
-function WorkComments({ verse, work, comments, words, link }: { verse: StudyVerse; work: string; comments: readonly CommentaryComment[]; words: readonly string[]; link?: CommentLink }) {
-  const id = useId(), [all, setAll] = useState(false), hidden = comments.length - INLINE_COMMENTS, stars = useOwnLayer()?.stars ?? null;
-  const entry = (comment: CommentaryComment, index: number) => <CommentaryEntry key={index} comment={comment} words={words} verseRef={verse.ref}
-    onLink={link ? link.point(`${verse.ref}|${work}:${index}`) : undefined} pinned={link?.pinned === `${verse.ref}|${work}:${index}`}
-    star={stars && <StarButton stars={stars} work={work} verseRef={verse.ref} index={index} />} />;
-  return <section className={styles.work} aria-label={`${workLabel(work)} on ${verse.ref}`} data-work={work}>
-    <h5 className={styles.workName}>{workLabel(work)}</h5>
-    {comments.slice(0, INLINE_COMMENTS).map(entry)}
-    {hidden > 0 && <>
-      {all && <div id={`${id}-rest`}>{comments.slice(INLINE_COMMENTS).map((comment, index) => entry(comment, index + INLINE_COMMENTS))}</div>}
-      <button type="button" className={styles.moreComments} aria-expanded={all} aria-controls={`${id}-rest`} onClick={() => setAll(value => !value)}>
-        {all ? `${workLabel(work)}: fewer` : `${workLabel(work)}: ${hidden} more`}</button>
-    </>}
-  </section>;
-}
-export function VerseCommentary({ verse, works, link }: { verse: StudyVerse; works: readonly WorkState[]; link?: CommentLink }) {
-  const words = useMemo(() => verseWords(verse), [verse]);
-  const shown = works.filter(row => commentaryCount(row.state) > 0);
-  if (!shown.length) return null;
-  return <div className={styles.inline} data-commentary-ref={verse.ref}>
-    {shown.map(({ work, state }) => state.status === "ready" && <WorkComments key={work} verse={verse} work={work} comments={state.comments} words={words} link={link} />)}
-  </div>;
-}
 
 /** The editions a work's shown chapters used, each credited once (edition, licence, "via Sefaria", linked). */
 export function editionsShown(lookup: CommentaryLookup, refs: readonly string[]): readonly CommentaryEdition[] {

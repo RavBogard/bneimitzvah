@@ -5,7 +5,7 @@ import type { AccessTransaction } from "../access/types";
 import * as s from "../db/index";
 import { parseBoundedServiceJson, parseServiceFeed, SERVICE_FEED_LIMITS, type ServiceBlock, type ServiceSpan } from "../service-learning/feed";
 import { EVENING_TEXT_UNITS, eveningTextTenant, TENANTS } from "../../lib/service-course/course";
-import { EVENING_TEXT_BUILD, EVENING_TEXT_LIMITS, EVENING_UNIT, REFUSED_UNIT, SERVICE_TEXT_LIMITS, hebrewWords, translitWords, type ServiceText, type TextLine } from "../../lib/service-course/text";
+import { EVENING_TEXT_LIMITS, EVENING_UNIT, REFUSED_UNIT, SERVICE_TEXT_LIMITS, hebrewWords, translitWords, type ServiceText, type TextLine } from "../../lib/service-course/text";
 import { CourseTextUnavailable } from "./text";
 
 /**
@@ -160,5 +160,3 @@ export async function readEveningText<Q extends PgQueryResultHKT>(tx: AccessTran
   parsed.set(pin.identity, book);
   return { book, volume: tenant.siddurBook };
 }
-/** The build key every evening text URL carries: the first twelve hex of the pinned identity (`EVENING_TEXT_BUILD`, tested equal). */
-export const EVENING_PIN_BUILD = EVENING_TEXT_PIN.identity.slice(0, EVENING_TEXT_BUILD.length);

@@ -55,7 +55,6 @@ export function issueReview(draft: InviteDraft, students: RosterStudent[]) {
   const selection: IssueSelection = { role: draft.role, email, ...(student ? { studentId: student.id } : {}) };
   return { selection, student, fingerprint: JSON.stringify([selection, student ? [student.id, student.revision, student.firstName, student.lastName, student.ceremonyDate, student.parentEmail, student.disabledAt] : null]) };
 }
-export const invitationFingerprint = (row: Invitation) => JSON.stringify(row);
 export function invitationTargetFingerprint(row: Invitation, students: RosterStudent[]): string {
   const student = row.student ? students.find(student => student.id === row.student!.id) : null;
   return JSON.stringify([row, student ? [student.id, student.revision, student.firstName, student.lastName, student.ceremonyDate, student.parentEmail, student.disabledAt] : null]);

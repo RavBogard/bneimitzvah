@@ -50,7 +50,6 @@ export function validateStudyCacheBinding(value: unknown): StudyCacheBinding {
   return Object.freeze({ ...STUDY_CACHE_NAMESPACE, book: row.book, chapter: row.chapter as number });
 }
 export const studyCacheChapterRef = (binding: StudyCacheBinding) => `${binding.book} ${binding.chapter}`;
-export const studyCacheChapterUrl = (binding: StudyCacheBinding) => `https://www.sefaria.org/${encodeURIComponent(binding.book)}.${binding.chapter}`;
 function hebrewVerse(value: unknown): HebrewVerse {
   const row = exact(value, ["text", "readingText", "segments", "paragraphAfter"]);
   if (!Array.isArray(row.segments) || row.segments.length < 1 || row.segments.length > 4096) return invalid();

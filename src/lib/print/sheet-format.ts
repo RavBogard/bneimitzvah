@@ -57,7 +57,6 @@ const FIELDS = Object.freeze([
 ] as const);
 /** The two-valued fields kept as booleans: on or off in the address, true or false in the record. */
 const FLAGS: readonly EnumField[] = ["numbers", "discussions"];
-export const FORMAT_KEYS: readonly string[] = Object.freeze([...FIELDS.map(field => field[1]), COMMENTARY_PARAM]);
 /** The values each enumerated field takes (commentary is a list of works: COMMENTARY_CHOICES). */
 export const FORMAT_VALUES: Readonly<Record<EnumField, readonly string[]>> = Object.freeze(Object.fromEntries(FIELDS.map(([field, , values]) => [field, values])) as unknown as Record<EnumField, readonly string[]>);
 

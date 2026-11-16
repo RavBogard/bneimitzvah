@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
-import type { ProgressActor } from "./progress";
 import type { GuideBody } from "../study-guides/validation";
 import * as s from "../db/index";
 import { readingKeyFor } from "../../lib/readings/reading-key";
@@ -107,13 +106,6 @@ export async function reviewedVisibleGuides<Q extends PgQueryResultHKT>(tx: Acce
     .from(t).where(and(eq(t.tenantId, tenantId), eq(t.hold, false))).orderBy(t.kind, t.readingKey, desc(t.version)).limit(limit);
 }
 
-/** Every (kind, readingKey) stream's head, for the "what needs a guide" list. */
-export async function guideStreams<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string) {
-  const t = s.studyGuide;
-  return tx.selectDistinctOn([t.kind, t.readingKey], { kind: t.kind, readingKey: t.readingKey, version: t.version, reviewed: t.reviewed, hold: t.hold, createdAt: t.createdAt })
-    .from(t).where(eq(t.tenantId, tenantId)).orderBy(t.kind, t.readingKey, desc(t.version)).limit(1000);
-}
-
 /**
  * The Torah passage behind a reading key, taken from the signed Hebcal snapshots of this tenant's
  * confirmed assignments that carry it (every aliyah including maftir). Empty when no current
@@ -160,30 +152,5 @@ export async function appendStudentGuide<Q extends PgQueryResultHKT>(tx: AccessT
     assignmentRevision: write.assignmentRevision, kind: write.kind, ...versions(write.expected), origin: write.origin, reviewed: write.reviewed, body: write.body,
     ...actorValues(writer, write.mutationId, write.digest) }).onConflictDoNothing().returning();
   if (row) await audit(tx, writer, "study-guide-student.set", "study_guide_student", row.id, write.studentId);
-  return row ?? null;
-}
-
-// Theme ticks ------------------------------------------------------------------------------------
-export async function themeReads<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, studentId: string, kind: GuideKind, readingKey: string) {
-  const t = s.studyThemeRead;
-  return tx.select({ themeId: t.themeId, state: t.state, version: t.version }).from(t)
-    .where(and(eq(t.tenantId, tenantId), eq(t.studentId, studentId), eq(t.kind, kind), eq(t.readingKey, readingKey))).limit(200);
-}
-export async function lockThemeRead<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: ProgressActor, kind: GuideKind, readingKey: string, themeId: string) {
-  const t = s.studyThemeRead;
-  const [row] = await tx.select({ id: t.id, state: t.state, version: t.version }).from(t).where(and(eq(t.tenantId, actor.tenantId), eq(t.studentId, actor.studentId),
-    eq(t.kind, kind), eq(t.readingKey, readingKey), eq(t.themeId, themeId))).for("update");
-  return row ?? null;
-}
-export async function changeThemeRead<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: ProgressActor, write: { kind: GuideKind; readingKey: string; themeId: string; state: "read" | "unread"; expected: number }, exists: boolean) {
-  const t = s.studyThemeRead, values = { state: write.state, version: write.expected + 1, updatedAt: new Date() };
-  const key = and(eq(t.tenantId, actor.tenantId), eq(t.studentId, actor.studentId), eq(t.kind, write.kind), eq(t.readingKey, write.readingKey), eq(t.themeId, write.themeId));
-  const [row] = exists
-    ? await tx.update(t).set(values).where(and(key, eq(t.version, write.expected))).returning({ id: t.id, state: t.state, version: t.version })
-    : await tx.insert(t).values({ tenantId: actor.tenantId, studentId: actor.studentId, kind: write.kind, readingKey: write.readingKey, themeId: write.themeId, ...values })
-      .onConflictDoNothing().returning({ id: t.id, state: t.state, version: t.version });
-  if (row) await tx.insert(s.auditEvent).values({ tenantId: actor.tenantId, actorUserId: actor.userId, actorMembershipId: actor.membershipId, roleGrantId: actor.roleGrantId,
-    mode: actor.mode, actingStudentId: actor.studentId, guardianId: actor.mode === "child-practice" ? actor.relationshipId : null,
-    action: "study-theme.read", targetType: "study_theme_read", targetId: row.id, requestId: randomUUID() });
   return row ?? null;
 }

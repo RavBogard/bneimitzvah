@@ -115,7 +115,6 @@ export function VerseNotesBody({ verse, entries, phone, yours }: { verse: StudyV
   </div>;
 }
 
-export const KIND_ORDER: readonly NoteKind[] = ["classic", "modern", "rabbi"];
 export function Dots({ kinds }: { kinds: readonly NoteKind[] }) {
   return kinds.length ? <span className={styles.dots} aria-hidden="true" data-note-dots={kinds.join(" ")}>{kinds.map(kind => <i key={kind} className={styles.dot} data-kind={kind} />)}</span> : null;
 }

@@ -1,16 +1,7 @@
-import { Pool } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
 import { sql } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT, PgTransaction } from "drizzle-orm/pg-core";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import * as schema from "./index";
-
-export function createRuntimeDatabase(connectionString: string) {
-  // Construct only after private deployment config is validated. This factory
-  // neither connects on module import nor reads/logs environment variables.
-  const pool = new Pool({ connectionString, max: 4 });
-  return { db: drizzle(pool, { schema, logger: false }), close: () => pool.end() };
-}
 
 type TenantTransaction<Q extends PgQueryResultHKT> = PgTransaction<Q, typeof schema, ExtractTablesWithRelations<typeof schema>>;
 

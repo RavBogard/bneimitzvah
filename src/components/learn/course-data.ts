@@ -79,4 +79,3 @@ export function useCourseVerses(lessons: readonly Lesson[], retry = 0, extra: re
   }, [key, retry, loader, audio]); // eslint-disable-line react-hooks/exhaustive-deps
   return state;
 }
-export const findVerse = (data: Extract<CourseVerses, { status: "ready" }>, kind: Melody, ref: string) => data.verses.get(verseKey(kind, ref)) ?? null;

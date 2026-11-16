@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { DEFAULT_CONGREGATION, settingsApi, type Congregation, type Links } from "./api";
+import { DEFAULT_CONGREGATION, settingsApi, type Congregation } from "./api";
 
 // One read serves every part of the page (header, service parts, honors, parent summary). The
 // settings are congregation-wide and not private, so a short shared reuse is safe; a failed read is
@@ -31,4 +31,3 @@ export function useCongregation(enabled: boolean): Congregation & { ready: boole
   }, [enabled]);
   return value;
 }
-export function useCongregationLinks(enabled: boolean): Links { return useCongregation(enabled).links; }

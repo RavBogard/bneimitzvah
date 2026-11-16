@@ -17,7 +17,6 @@ export const TRIENNIAL_ALIYAH_PICKS = Object.freeze([1, 2, 3, 4, 5, 6, 7].map(n 
 /** The words the MCP's `pick` takes: the reader's own (full, triennial, aliyah-1 to aliyah-7, maftir), one triennial aliyah, or the haftarah. */
 export const MCP_PICKS = Object.freeze([...PORTION_PICKS, ...TRIENNIAL_ALIYAH_PICKS, "haftarah"] as const);
 export type McpPick = typeof MCP_PICKS[number];
-export const isMcpPick = (value: unknown): value is McpPick => typeof value === "string" && (MCP_PICKS as readonly string[]).includes(value);
 
 type LoadReading = (date: string, calendar: Calendar) => Promise<{ snapshot: Snapshot; fetchedAt: number }>;
 const display = (ref: string) => ref.replace(/(\d)-(\d)/g, "$1–$2");
