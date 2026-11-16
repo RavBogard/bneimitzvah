@@ -29,7 +29,6 @@ import { congregationSettingsRouteMethods, handleCongregationSettingsRequest } f
 import { claudeConnectionsRouteMethods, handleClaudeConnectionsRequest } from "./claude-connections";
 import { handleLessonLogRequest, lessonLogRouteMethods } from "./lesson-log";
 import { handlePracticeCalendarRequest, practiceCalendarRouteMethods } from "./practice-calendar";
-import { finishReferenceReviewResponse, handleReferenceReviewRequest, referenceReviewRouteMethods } from "./reference-review";
 import { errorResponse, HttpBoundaryError } from "./responses";
 import { finishHonoreeGuestResponse, finishHonoreeManagementResponse, handleHonoreeRequest, honoreeManagementRouteMethods } from "./honoree";
 import { handlePublicReadingRequest, isPublicReadingPath, type PublicRuntimeScope } from "./public-reading";
@@ -80,7 +79,7 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
         } catch { return denied(); }
       }
       const managementMethods = honoreeManagementRouteMethods(url.pathname);
-      const methods = managementMethods ?? referenceReviewRouteMethods(url.pathname) ?? bookletRouteMethods(url.pathname) ?? serviceEcosystemRouteMethods(url.pathname) ?? honorsRouteMethods(url.pathname) ?? sourceContentRouteMethods(url.pathname) ?? sourceAssignmentsRouteMethods(url.pathname) ?? authRouteMethods(url.pathname) ?? portalRouteMethods(url.pathname) ?? studentWorkRouteMethods(url.pathname) ?? serviceLearningRouteMethods(url.pathname) ?? progressRouteMethods(url.pathname) ?? studyGuidesRouteMethods(url.pathname) ?? guideShareRouteMethods(url.pathname) ?? congregationSettingsRouteMethods(url.pathname) ?? claudeConnectionsRouteMethods(url.pathname) ?? rosterSheetRouteMethods(url.pathname) ?? notificationsRouteMethods(url.pathname) ?? savedRouteMethods(url.pathname) ?? learnersRouteMethods(url.pathname) ?? offlineRouteMethods(url.pathname) ?? accountsRouteMethods(url.pathname) ?? courseProgressRouteMethods(url.pathname) ?? serviceCourseRouteMethods(url.pathname) ?? servicePartFinishedRouteMethods(url.pathname) ?? practiceVisibilityRouteMethods(url.pathname) ?? staffRouteMethods(url.pathname) ?? verseReviewRouteMethods(url.pathname) ?? mcpRouteMethods(url.pathname) ?? lessonLogRouteMethods(url.pathname) ?? practiceCalendarRouteMethods(url.pathname);
+      const methods = managementMethods ?? bookletRouteMethods(url.pathname) ?? serviceEcosystemRouteMethods(url.pathname) ?? honorsRouteMethods(url.pathname) ?? sourceContentRouteMethods(url.pathname) ?? sourceAssignmentsRouteMethods(url.pathname) ?? authRouteMethods(url.pathname) ?? portalRouteMethods(url.pathname) ?? studentWorkRouteMethods(url.pathname) ?? serviceLearningRouteMethods(url.pathname) ?? progressRouteMethods(url.pathname) ?? studyGuidesRouteMethods(url.pathname) ?? guideShareRouteMethods(url.pathname) ?? congregationSettingsRouteMethods(url.pathname) ?? claudeConnectionsRouteMethods(url.pathname) ?? rosterSheetRouteMethods(url.pathname) ?? notificationsRouteMethods(url.pathname) ?? savedRouteMethods(url.pathname) ?? learnersRouteMethods(url.pathname) ?? offlineRouteMethods(url.pathname) ?? accountsRouteMethods(url.pathname) ?? courseProgressRouteMethods(url.pathname) ?? serviceCourseRouteMethods(url.pathname) ?? servicePartFinishedRouteMethods(url.pathname) ?? practiceVisibilityRouteMethods(url.pathname) ?? staffRouteMethods(url.pathname) ?? verseReviewRouteMethods(url.pathname) ?? mcpRouteMethods(url.pathname) ?? lessonLogRouteMethods(url.pathname) ?? practiceCalendarRouteMethods(url.pathname);
       // No provider configuration or connection required to refuse unowned
       // endpoints (including private SDK session/profile/password APIs).
       if (!methods) throw new HttpBoundaryError(404);
@@ -105,8 +104,6 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
       const response = await withRuntime(async (runtime) => {
         try {
           await runtime.resolveHost(request);
-          const referenceReviewResponse = await handleReferenceReviewRequest(request, runtime.referenceReview);
-          if (referenceReviewResponse) return referenceReviewResponse;
           return await handleBookletRequest(request, runtime) ?? await handleServiceEcosystemRequest(request, runtime) ?? await handleHonorsRequest(request, runtime) ?? await handleSourceContentRequest(request, runtime) ?? await handleSourceAssignmentsRequest(request, runtime) ?? await handleAuthRequest(request, runtime) ?? await handleStudentWorkRequest(request, runtime) ?? await handleServiceLearningRequest(request, runtime) ?? await handleProgressRequest(request, runtime) ?? await handleStudyGuidesRequest(request, runtime) ?? await handleGuideShareRequest(request, runtime) ?? await handleCongregationSettingsRequest(request, runtime) ?? await handleClaudeConnectionsRequest(request, runtime) ?? await handleRosterSheetRequest(request, runtime) ?? await handleNotificationsRequest(request, runtime) ?? await handleSavedRequest(request, runtime) ?? await handleLearnersRequest(request, runtime) ?? await handleOfflineRequest(request, runtime) ?? await handleAccountsRequest(request, runtime) ?? await handleCourseProgressRequest(request, runtime) ?? await handleServiceCourseRequest(request, runtime) ?? await handleServicePartFinishedRequest(request, runtime) ?? await handlePracticeVisibilityRequest(request, runtime) ?? await handleStaffRequest(request, runtime) ?? await handleVerseReviewRequest(request, runtime) ?? await handleMcpRequest(request, runtime) ?? await handleLessonLogRequest(request, runtime) ?? await handlePracticeCalendarRequest(request, runtime) ?? await handlePortalRequest(request, runtime) ?? errorResponse(new HttpBoundaryError(404));
         } catch (error) {
           // Expected HTTP400/413/etc stay inside the scoped runtime callback;
@@ -115,7 +112,7 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
         }
       });
       if (googleReturn && !(response.status >= 300 && response.status < 400)) return googleCallbackFailure(request);
-      return finishReferenceReviewResponse(request, response);
+      return response;
     } catch (error) { return googleReturn ? googleCallbackFailure(request) : errorResponse(error); }
   };
 }

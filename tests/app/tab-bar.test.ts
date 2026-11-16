@@ -29,7 +29,7 @@ describe("which tab is current", () => {
     expect(current("admin", "/workspace/admin/students", "students")).toEqual(["Students"]);
     expect(current("admin", "/workspace/admin/students/import")).toEqual(["Students"]);
     for (const path of ["/workspace/admin/invitations", "/workspace/admin/tutors", "/workspace/accounts"]) expect(current("admin", path)).toEqual(["People"]);
-    for (const path of ["/workspace/more", "/workspace/admin/settings", "/workspace/admin/reference-review", "/workspace/email", "/workspace/claude"]) expect(current("admin", path)).toEqual(["More"]);
+    for (const path of ["/workspace/more", "/workspace/admin/settings", "/workspace/email", "/workspace/claude"]) expect(current("admin", path)).toEqual(["More"]);
   });
 });
 

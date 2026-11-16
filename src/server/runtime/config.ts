@@ -2,14 +2,12 @@ import "server-only";
 import type { DeploymentScope } from "../access/types";
 import { RuntimeUnavailable } from "./errors";
 import { CRC_ORIGINS, isProductionOrigin } from "../../lib/site/identity";
-import { parseReferenceReviewerConfig, type ReviewerConfig } from "../reference-review/batch-contract";
 
 export type RuntimeConfig = Readonly<{
   deployment: DeploymentScope; origin: string; databaseUrl: string; authSecret: string;
   google?: Readonly<{ clientId: string; clientSecret: string }>;
   mail: Readonly<{ apiKey: string; from: string }>;
   referenceAudio?: Readonly<{ catalogSha256: string; storeId: string; studentRelease: boolean }>;
-  referenceReview?: Readonly<{ reviewer: ReviewerConfig; storeId: string }>;
   serviceMusic?: Readonly<{ url: string; token: string }>;
   serviceCronSecret?:string;
   // The music card's ceremony details (contract BET-6) are sent only when PORTAL_MUSIC_DETAILS_ENABLED is exactly "true".
@@ -65,13 +63,6 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
       if (!/^[a-f0-9]{64}$/.test(catalogSha256) || typeof env.BLOB_STORE_ID !== "string" || !/^store_[A-Za-z0-9]{8,64}$/.test(env.BLOB_STORE_ID)) throw 0;
       referenceAudio = Object.freeze({ catalogSha256, storeId: env.BLOB_STORE_ID, studentRelease: release === "true" });
     } else if (release === "true") throw 0;
-    let referenceReview: RuntimeConfig["referenceReview"];
-    const reviewer = parseReferenceReviewerConfig(env);
-    if (reviewer) {
-      if (typeof env.BLOB_STORE_ID !== "string" || !/^store_[A-Za-z0-9]{8,64}$/.test(env.BLOB_STORE_ID)
-        || env.VERCEL_BLOB_API_URL !== undefined || env.NEXT_PUBLIC_VERCEL_BLOB_API_URL !== undefined) throw 0;
-      referenceReview = Object.freeze({ reviewer, storeId: env.BLOB_STORE_ID });
-    }
     let serviceMusic: RuntimeConfig["serviceMusic"];
     if(env.BEIT_MITZVAH_MUSIC_URL || env.BEIT_MITZVAH_SERVICE_TOKEN){
       if(!clean(env.BEIT_MITZVAH_SERVICE_TOKEN) || env.BEIT_MITZVAH_SERVICE_TOKEN.length<32 || env.BEIT_MITZVAH_SERVICE_TOKEN.length>512 || !clean(env.BEIT_MITZVAH_MUSIC_URL))throw 0;
@@ -88,7 +79,7 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
       rosterSheet = Object.freeze({ serviceAccount: env.GOOGLE_SHEETS_SERVICE_ACCOUNT, sheetId: env.GOOGLE_ROSTER_SHEET_ID });
     if(env.CRON_SECRET!==undefined && (!clean(env.CRON_SECRET) || env.CRON_SECRET.length<32 || env.CRON_SECRET.length>512 || env.CRON_SECRET===serviceMusic?.token || env.CRON_SECRET===env.BETTER_AUTH_SECRET))throw 0;
     return Object.freeze({ deployment: Object.freeze({ environment, deployment: env.PORTAL_DEPLOYMENT }), origin: origin.origin,
-      databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google, referenceAudio, referenceReview, serviceMusic, serviceCronSecret:env.CRON_SECRET, mcpEnabled: env.PORTAL_MCP_ENABLED === "true", rosterSheet,
+      databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google, referenceAudio, serviceMusic, serviceCronSecret:env.CRON_SECRET, mcpEnabled: env.PORTAL_MCP_ENABLED === "true", rosterSheet,
       musicDetailsEnabled: env.PORTAL_MUSIC_DETAILS_ENABLED === "true",
       notificationsEnabled: env.PORTAL_NOTIFICATIONS_ENABLED === "true",
       mail: Object.freeze({ apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM }) });

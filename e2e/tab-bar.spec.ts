@@ -115,18 +115,16 @@ test.describe("at 390px", () => {
     await tab(page, "More").click();
     await expect(page.getByRole("heading", { level: 1, name: "More", exact: true })).toBeVisible();
     const main = page.locator("#workspace-main");
-    for (const name of ["Settings", "Email settings", "Claude connections", "Recording review"]) {
+    for (const name of ["Settings", "Email settings", "Claude connections"]) {
       await expect(main.getByRole("link", { name: new RegExp(`^${name}`) })).toBeVisible();
       await onScreen(name, main.getByRole("link", { name: new RegExp(`^${name}`) }));
     }
     await expect(main.getByRole("button", { name: "Update the staff roster Sheet", exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     // Each area opens from More, keeps More as the current tab, and Students no longer carries the staff Sheet button.
-    for (const [name, heading] of [["Settings", "Congregation settings"], ["Email settings", "Email settings"], ["Claude connections", "Claude connections"], ["Recording review", "Recording review"]] as const) {
+    for (const [name, heading] of [["Settings", "Congregation settings"], ["Email settings", "Email settings"], ["Claude connections", "Claude connections"]] as const) {
       await page.goto("/workspace/more");
       await main.getByRole("link", { name: new RegExp(`^${name}`) }).click();
-      // Recording review needs its own review service to answer; its link is checked by address.
-      if (name === "Recording review") { await expect(page).toHaveURL(/\/workspace\/admin\/reference-review$/); continue; }
       await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
       await expect(tab(page, "More")).toHaveAttribute("aria-current", "page");
     }

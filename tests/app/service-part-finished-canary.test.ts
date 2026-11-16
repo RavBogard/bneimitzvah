@@ -29,7 +29,7 @@ describe("the per-part finished mark: no other reader", () => {
       }
     });
     const paths = ["/api/session", "/api/admin/students", "/api/admin/tutors", "/api/admin/invitations", "/api/admin/congregation-settings", "/api/admin/study-voice", "/api/admin/maven-link",
-      "/api/staff/claude-connections", "/api/notifications/preferences", "/api/congregation/links", "/api/invitations/pending", "/api/reference-review/batches", "/api/saved/readings",
+      "/api/staff/claude-connections", "/api/notifications/preferences", "/api/congregation/links", "/api/invitations/pending", "/api/saved/readings",
       "/api/learn/progress", "/api/learn/service/progress", "/api/learn/service/path", "/api/learn/verses"];
     for (const mode of ["admin", "tutor", "parent", "student"]) {
       paths.push(`/api/students?mode=${mode}`, `/api/admin/students?mode=${mode}`);

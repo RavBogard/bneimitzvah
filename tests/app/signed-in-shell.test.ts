@@ -60,7 +60,6 @@ test("a page whose h1 is fixed is titled with that h1", () => {
     ["components/portal/workspace/connections/workspace.tsx", "app/(portal)/workspace/claude/page.tsx"],
     ["components/portal/workspace/email/workspace.tsx", "app/(portal)/workspace/email/page.tsx"],
     ["components/portal/workspace/invitations/workspace.tsx", "app/(portal)/workspace/admin/invitations/page.tsx"],
-    ["components/portal/workspace/reference-review/workspace.tsx", "app/(portal)/workspace/admin/reference-review/page.tsx"],
     ["components/portal/workspace/settings/workspace.tsx", "app/(portal)/workspace/admin/settings/page.tsx"],
     ["components/portal/workspace/csv-import/workspace.tsx", "app/(portal)/workspace/admin/students/import/page.tsx"],
     ["components/portal/workspace/roster.tsx", "app/(portal)/workspace/admin/students/page.tsx"],

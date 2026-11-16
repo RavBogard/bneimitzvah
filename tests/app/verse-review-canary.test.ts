@@ -27,7 +27,7 @@ describe("verse cards: staff blindness canary", () => {
     expect(await f.owner(async () => (await f.db.select().from(s.auditEvent)).length)).toBe(audits);
     const ids = f.students.slice(0, 3).map(student => student.id);
     const paths = ["/api/session", "/api/admin/students", "/api/admin/tutors", "/api/admin/invitations", "/api/admin/congregation-settings", "/api/admin/study-voice", "/api/admin/maven-link",
-      "/api/staff/claude-connections", "/api/notifications/preferences", "/api/congregation/links", "/api/invitations/pending", "/api/reference-review/batches", "/api/saved/readings",
+      "/api/staff/claude-connections", "/api/notifications/preferences", "/api/congregation/links", "/api/invitations/pending", "/api/saved/readings",
       "/api/learn/progress", "/api/learn/verses"];
     for (const mode of ["admin", "tutor", "parent"]) {
       paths.push(`/api/students?mode=${mode}`, `/api/admin/students?mode=${mode}`);

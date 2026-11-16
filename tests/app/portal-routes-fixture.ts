@@ -55,8 +55,6 @@ import { createStudyWordDetailsService } from "../../src/server/study/word-detai
 import { createServiceLearningService } from "../../src/server/service-learning/service";
 import { createStudentWorkService } from "../../src/server/student-work/service";
 import { StudyUnavailable } from "../../src/server/study/types";
-import { createReferenceReviewService } from "../../src/server/reference-review/service";
-import { ReviewUnavailable } from "../../src/server/reference-review/batch-contract";
 
 export async function portalRoutesFixture() {
   // Guide sharing resolves citations through this; a test swaps it with setRelated (default: no related sources for any verse).
@@ -96,7 +94,6 @@ export async function portalRoutesFixture() {
     study: createStudyService({ access: f.service, practice, load: async () => { throw new StudyUnavailable("upstream"); } }), progress: createProgressService({ access: f.service, practice }), haftarahSheets: createHaftarahSheets({ fetch: async () => { throw new Error("No haftarah library in tests"); } }), guideShare: createGuideShareService({ access: f.service, related: (ref, signal) => relatedImpl(ref, signal) }), studyGuides: studyGuideWebSurface(createStudyGuideService({ access: f.service, practice, check: async ({ body }) => ({ ok: true as const, body }) })), lessonLog: createLessonLogService({ access: f.service, practice }), practiceCalendar: createPracticeCalendarService({ access: f.service, practice }),
     portal, relationships: createRelationshipService({ access: f.service }), pendingInvitations,
     serviceLearning, serviceCoursePath: createServiceCoursePath({ access: f.service, serviceLearning }), servicePartFinished: createServicePartFinished({ access: f.service }), practiceVisibility: createPracticeVisibilityService({ access: f.service }), ceremonyDone: createCeremonyDoneService({ access: f.service }), staff: createStaffService({ access: f.service }),
-    referenceReview: createReferenceReviewService({ access: f.service, reviewer: undefined, get: async () => { throw new ReviewUnavailable(); } }),
     serviceEcosystem: createServiceEcosystemService({ access:f.service,practice,broker:createMusicBroker(undefined) }),
     serviceScheduler: createServiceScheduler({ db:f.db, broker:createMusicBroker(undefined) }),
     googleChallenges: createGoogleChallenges({ db: f.db, origin: "http://localhost:3000", secret: randomBytes(48).toString("base64url") }),

@@ -86,9 +86,6 @@ import type { HostFrame } from "../logging/logger";
 import { loadRuntimeConfig, type RuntimeConfig } from "./config";
 import { RuntimeUnavailable } from "./errors";
 import { AccessDenied } from "../access/errors";
-import { createReferenceReviewService } from "../reference-review/service";
-import { createPrivateReviewGet } from "../reference-review/private-blob";
-import { ReviewUnavailable } from "../reference-review/batch-contract";
 
 const purposeSecret = (config: RuntimeConfig, purpose: string) => createHmac("sha256", config.authSecret)
   .update(`crc-portal:v1:${config.deployment.environment}:${config.deployment.deployment}:${config.origin}:${purpose}`).digest("base64url");
@@ -181,8 +178,6 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const signInCodeCap = createSignInCodeCap({ db, secret: purposeSecret(config, "sign-in-code-cap"), capped: event => createLogger().signInCodeCapped(event) });
   const signInCodes = createSignInCodeBindings({ origin: config.origin, secret: purposeSecret(config, "sign-in-code-binding") });
   const access = createAccessService({ db, auth, deployment: config.deployment });
-  const referenceReview = createReferenceReviewService({ access, reviewer: config.referenceReview?.reviewer,
-    get: config.referenceReview ? createPrivateReviewGet({ storeId: config.referenceReview.storeId }) : async () => { throw new ReviewUnavailable(); } });
   const invitationTransport: InvitationTransport = async ({ email, url, tenantId, role, expiresAt }) => {
     // The congregation and product names come from the one shared reader; the email is given no student (decision 12).
     const names = await withTenantTransaction(db, { tenantId }, tx => readTenantNames(tx, tenantId));
@@ -273,7 +268,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, guideShare, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, signInCodeCap, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved, learners, offline, courseProgress, verseReview, serviceCourseProgress, serviceCoursePath, servicePartFinished, practiceVisibility, staff, ceremonyDone, accounts });
+  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, guideShare, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, signInCodeCap, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved, learners, offline, courseProgress, verseReview, serviceCourseProgress, serviceCoursePath, servicePartFinished, practiceVisibility, staff, ceremonyDone, accounts });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;

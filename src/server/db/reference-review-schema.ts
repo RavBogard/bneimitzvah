@@ -1,7 +1,9 @@
 import { sql } from "drizzle-orm";
 import { check, foreignKey, integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import { membership, tenant } from "./tenant-schema";
-import type { ReviewChecks } from "../reference-review/batch-contract";
+
+// The table outlives the removed Finkel listening-review code (Daniel 2026-11-16); its five checklist values stay typed here.
+type ReviewChecks = Readonly<Record<"privacy" | "listening" | "exactText" | "musicalAccuracy" | "rights", "pass" | "hold">>;
 
 export const referenceReviewBatch = pgTable("reference_review_batch", {
   tenantId: text("tenant_id").notNull().references(() => tenant.id), id: uuid("id").notNull(),
