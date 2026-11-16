@@ -43,15 +43,6 @@ families and HTML hashes. It stores no verse text or English translations.
   files. Their source metadata identifies MAM. The original files contain English
   and editorial metadata and were deliberately not imported. Their Hebrew and
   modifications retain the same CC BY-SA 4.0 terms as the other MAM fixtures.
-- `soulx-phone-set.json` is a subset of SoulX-Singer's phone set at
-  `81aeb3ae772c70093c3de74dc23c92d983801ae4`, path recorded in the fixture README.
-  All 244 retained tokens were compared against the pinned source's 2,820 tokens.
-  The pinned upstream [LICENSE](https://github.com/Soul-AILab/SoulX-Singer/blob/81aeb3ae772c70093c3de74dc23c92d983801ae4/LICENSE)
-  is Apache-2.0 and is retained as `tests/fixtures/trope/SoulX-Singer.LICENSE`
-  (SHA-256 `c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4`).
-  Its recursive source tree contains no NOTICE file. The subset modification is
-  explicitly described in the fixture's `about` field and README. The upstream
-  phone-set SHA-256 is `1f28c4fdf8e9b68af42ef706b92b7fa86eb857555610ba271d84148776d5c3b8`.
 - Imported plans are historical evidence. They include an old source-repo push
   workflow and contact identity, and do not authorize pushes, GPU/cloud jobs,
   model downloads, paid services, voice cloning or any student-facing release.

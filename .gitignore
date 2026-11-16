@@ -36,7 +36,6 @@ shirei-*.pdf
 *.ogg
 *.flac
 renders/
-trope/env/**/venv/
 *.ckpt
 *.pt
 *.safetensors

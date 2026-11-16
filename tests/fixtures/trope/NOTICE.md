@@ -15,8 +15,7 @@ The versioned 4.0 license link comes from the maintainer's statement.
 
 This attribution covers Hebrew in `calibration-haftarah.json`,
 `calibration-torah.json`, `edge-cases.json`, `i-samuel-20-18.units.json`,
-`idelsohn-272-joshua-1-14.json`, `week-min-hebrew.json`, `week-notes-hebrew.json`,
-and `trope/env/ab/ref-text-i-samuel-20-18-42.json`. Sefaria text was fetched on
+`idelsohn-272-joshua-1-14.json`, `week-min-hebrew.json` and `week-notes-hebrew.json`. Sefaria text was fetched on
 2026-10-15 as recorded in the original fixture documentation.
 
 Changes from the source: selected verses were extracted; some fixtures preserve
@@ -42,10 +41,6 @@ the source repository did not change their response content. Test annotations
 and selections are described in the fixture README. No endorsement is implied.
 
 ## Other fixture material
-
-`soulx-phone-set.json`: modified subset of Soul-AILab's SoulX-Singer phone set;
-Apache-2.0, retained in `SoulX-Singer.LICENSE`, exact source and changes in the
-fixture README and `trope/PROVENANCE.md`.
 
 Idelsohn notation in `idelsohn-272-joshua-1-14.json`: original 1928 edition,
 nos. 271-272, with attribution and US public-domain basis in

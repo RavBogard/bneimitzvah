@@ -72,20 +72,6 @@ Fetched 2026-10-22, for the portal's multi-range haftarah tests (`tests/app/read
 2:15-27) and `mishpatim` (2025-02-22, a haftarah whose second range comes before the first: Jeremiah 34:8-22;
 33:25-26).
 
-## SoulX phone set: `soulx-phone-set.json`
-
-The subset of SoulX-Singer's `soulxsinger/utils/phoneme/phone_set.json` (commit
-`81aeb3ae772c70093c3de74dc23c92d983801ae4`, 2,820 tokens) that `trope/soulx.mjs` can emit: the 10 special tokens,
-all 70 `en_` CMU ARPAbet tokens and the `zh_` pinyin syllables with initial h or z (the `chet: "zh"` variant).
-`tests/trope-soulx.test.mjs` checks every emitted token against it, so the test needs no Python. Regenerate from
-the clone in `C:\Users\dsbog\haftarah-audio\soulx-env\SoulX-Singer` if the emitter starts using other tokens.
-
-The subset is a modification of the upstream phone-set data, retaining 244 of
-2,820 tokens at that exact commit. All subset tokens were verified against the
-pinned source during migration. The upstream Apache-2.0 license is retained as
-`SoulX-Singer.LICENSE`; no NOTICE file exists in that commit's recursive tree.
-See `trope/PROVENANCE.md` for the pinned source URL and SHA-256 hashes.
-
 ## Moroccan: `idelsohn-272-joshua-1-14.json`
 
 Idelsohn, *Thesaurus* vol. 5 (1928/29, public domain), no. 272: Joshua 1:14 chanted in the Moroccan (Fez)
