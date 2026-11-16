@@ -24,8 +24,6 @@ jobs:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0 # Release tests verify the pinned historical migration ancestor.
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
@@ -44,8 +42,6 @@ jobs:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0 # Release tests verify the pinned historical migration ancestor.
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
@@ -104,8 +100,6 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0 # Release tests verify the pinned historical migration ancestor.
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
@@ -146,8 +140,6 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0 # Release tests verify the pinned historical migration ancestor.
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc

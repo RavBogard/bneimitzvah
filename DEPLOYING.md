@@ -295,8 +295,6 @@ To update, in this order:
 6. Merge the branch into `main`; Vercel deploys it. Then repeat section 8, steps 2 to 4.
 7. If a deployment misbehaves, use Vercel's Instant Rollback to the previous deployment. Do not write a down migration; additive schema changes can stay.
 
-CRC's own repository also has release scripts named `scripts/release-migrate*.mjs`. They are CRC's guarded production operators with CRC-specific checks. A fork uses `scripts/db-migrate.mjs` and does not need them.
-
 ## 12. What a fork must never do
 
 - **Never weaken the never-in-repo guard.** `tests/never-in-repo.test.mjs` must stay green. Never edit it or its policy (`scripts/repo-policy.mjs`) to make something pass.

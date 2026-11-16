@@ -227,11 +227,6 @@ test("exact-path byte attributes preserve real font and OFL through autocrlf che
     ...FONT_ASSETS.filter(asset => asset.family === "brand-mural").map(asset => `/${asset.path} -text`),
     "/src/server/db/migrations/** text eol=lf",
     "/scripts/db-migrate.mjs text eol=lf",
-    "/scripts/release-migrate*.mjs text eol=lf",
-    "/tests/fixtures/portal/release-*-reference.json text eol=lf",
-    "/tests/release-*.test.mjs text eol=lf",
-    "/tests/helpers/release-*-fixture.mjs text eol=lf",
-    "/tests/postgres/release-*.acceptance.mjs text eol=lf",
   ]);
   await fixture(async ({ root, env, git, put }) => {
     git("config", "core.autocrlf", "true"); await put(".gitattributes", attributes);

@@ -26,7 +26,7 @@ npx playwright install chromium # one-time browser download for local checks
 npm run test:e2e                # Playwright
 ```
 
-`npm test` runs engine, policy/isolation and application tests against offline fixtures and PGlite. CI also checks Windows/Linux builds, native PostgreSQL authority and actual HTTP/browser behavior. Use the existing isolated test harnesses for subprocesses; they do not inherit application credentials. Production schema changes use reviewed release operators and their recorded fingerprints, rather than replaying development migration commands.
+`npm test` runs engine, policy/isolation and application tests against offline fixtures and PGlite. CI also checks Windows/Linux builds, native PostgreSQL authority and actual HTTP/browser behavior. Use the existing isolated test harnesses for subprocesses; they do not inherit application credentials. Production schema changes are applied with `scripts/db-migrate.mjs` as DEPLOYING.md describes.
 
 ## Never in this repo
 
