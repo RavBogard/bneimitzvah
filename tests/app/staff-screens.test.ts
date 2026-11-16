@@ -46,6 +46,8 @@ describe("Needs you (N14)", () => {
   it("lists a ceremony six weeks out with no tutor as one row with one verb, from facts only an admin reads", async () => {
     const t = await setup();
     await t.f.owner(() => t.f.db.update(s.student).set({ ceremonyDate: isoIn(42) }).where(eq(s.student.id, t.unrelated.id)));
+    // The fixture's own student has a fixed ceremony date; keep it a year out whenever this runs.
+    await t.f.owner(() => t.f.db.update(s.student).set({ ceremonyDate: isoIn(400) }).where(eq(s.student.id, t.own.id)));
     const response = await t.call("/api/admin/student-status", "admin");
     expect(response.status).toBe(200);
     expect(response.text).not.toMatch(/@/);

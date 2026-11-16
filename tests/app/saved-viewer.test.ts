@@ -13,6 +13,8 @@ import type { AccessRequest } from "../../src/server/access/types";
 // linked to the learner's student, reads the learner's readings, marks and work, and nothing else; everyone else is 404; nothing on
 // the path can write. Synthetic people only.
 const ORIGIN = "http://localhost:3000";
+// A saved reading's date must still be ahead when the test runs, or the directory reports no nearest date.
+const FUTURE_DATE = `${new Date().getFullYear() + 1}-11-07`;
 const opened: { client: { close(): Promise<void> } }[] = [];
 afterEach(async () => { await Promise.all(opened.splice(0).map(f => f.client.close())); });
 async function denied(action: () => Promise<unknown>, status: number) {
@@ -40,7 +42,7 @@ async function setup() {
   // The learner keeps a reading with a note and a mark, through the owner's own path.
   const seed = async (who: "learner" | "multi" | "recipient") => {
     const cookie = who in extra ? extra[who as "learner"].cookie : f.identities[who as "multi"].cookie;
-    const made = await f.runtime.saved.create({ url: `${ORIGIN}/read`, method: "POST", headers: new Headers({ cookie, origin: ORIGIN }) }, { name: `${who} reading`, date: "2026-11-07", kind: "torah", ranges: "Genesis 1:1-3" });
+    const made = await f.runtime.saved.create({ url: `${ORIGIN}/read`, method: "POST", headers: new Headers({ cookie, origin: ORIGIN }) }, { name: `${who} reading`, date: FUTURE_DATE, kind: "torah", ranges: "Genesis 1:1-3" });
     if (!made.ok) throw new Error("Synthetic reading failed");
     const write = { url: `${ORIGIN}/read`, method: "POST", headers: new Headers({ cookie, origin: ORIGIN }) };
     await f.runtime.saved.work(write, { readingId: made.reading.id, verseRef: "Genesis 1:1", stream: "note", text: "private note", expectedVersion: 0 });
@@ -178,7 +180,7 @@ describe("the staff read path to a learner's shelf", () => {
     for (const who of ["admin", "multi", "other"] as const) {
       const value = await t.saved.directory(t.request(who));
       const rows = value.rows.filter(row => row.membershipId === t.extra.learner.membershipId);
-      expect(rows, who).toEqual([{ membershipId: t.extra.learner.membershipId, readings: 2, nearest: { name: reading.name, date: "2026-11-07" } }]);
+      expect(rows, who).toEqual([{ membershipId: t.extra.learner.membershipId, readings: 2, nearest: { name: reading.name, date: FUTURE_DATE } }]);
       expect(value.rows.map(row => row.membershipId).sort()).toEqual([t.extra.learner.membershipId, t.f.multiMember.id].sort());
       expect(JSON.stringify(value.rows)).not.toMatch(/private note|@|working/);
       expect(value.actor.grant.role).toBe(who === "admin" ? "admin" : "tutor");
