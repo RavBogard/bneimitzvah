@@ -117,10 +117,12 @@ it("actual guardian revocation during a held body clears old child text and cann
 
 it("a staged endpoint503 clears nothing, and a real session expiry is seen on the next session read", async () => {
   const tab = await page("student"); await open(tab); await readCitation(tab);
-  await tab.route("**/source-text?**", async route => { const proof = await api(tab, "/api/session"); expect(proof.status).toBe(200); const identity = fixture.student.id; const [link] = await fixture.ownerDb.select().from(s.studentIdentity).where(eq(s.studentIdentity.studentId, identity)); const [grant] = await fixture.ownerDb.select().from(s.roleGrant).where(eq(s.roleGrant.id, link.roleGrantId)); const [membership] = await fixture.ownerDb.select().from(s.membership).where(eq(s.membership.id, grant.membershipId)); await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(0) }).where(eq(s.session.userId, membership.userId)); await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ ok: false, error: "unavailable" }) }); });
+  // The 503 is staged once; the handler is awaited before it is removed, so no request is answered twice.
+  let staged = false, markStaged!: () => void; const stagedDone = new Promise<void>(resolve => { markStaged = resolve; });
+  await tab.route("**/source-text?**", async route => { if (staged) { await route.fallback(); return; } staged = true; const proof = await api(tab, "/api/session"); expect(proof.status).toBe(200); const identity = fixture.student.id; const [link] = await fixture.ownerDb.select().from(s.studentIdentity).where(eq(s.studentIdentity.studentId, identity)); const [grant] = await fixture.ownerDb.select().from(s.roleGrant).where(eq(s.roleGrant.id, link.roleGrantId)); const [membership] = await fixture.ownerDb.select().from(s.membership).where(eq(s.membership.id, grant.membershipId)); await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(0) }).where(eq(s.session.userId, membership.userId)); await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ ok: false, error: "unavailable" }) }); markStaged(); });
   // The staged 503 is only "unavailable" and clears nothing; no read is followed by a session probe any more. The expiry is seen
   // on the next session read (coming back to the tab), which is a 401 and clears the reader and the text at once.
-  await reader(tab).getByRole("listitem").filter({ hasText: "Invented edition 001" }).getByRole("button").click(); await tab.unroute("**/source-text?**");
+  await reader(tab).getByRole("listitem").filter({ hasText: "Invented edition 001" }).getByRole("button").click(); await stagedDone; await tab.unroute("**/source-text?**");
   await comeBack(tab); await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible(); await ui(tab.locator(".study-verses")).toHaveCount(0); await ui(reader(tab)).toHaveCount(0);
 });
 

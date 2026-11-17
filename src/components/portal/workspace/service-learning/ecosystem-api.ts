@@ -1,3 +1,4 @@
+import { gatedFetch } from "../session-gate";
 import type { createServiceEcosystemService } from "../../../../server/service-ecosystem/service";
 import type { ServiceUnitMaterial } from "../../../../lib/service-learning/types";
 import { PortalRequestError } from "../../api";
@@ -14,7 +15,7 @@ export async function serviceRequest(mode: ReadingMode, studentId: string, actio
   if (signal?.aborted) abort(); signal?.addEventListener("abort", abort, { once: true });
   const timer = setTimeout(abort, 20_000);
   try {
-    const response = await fetch(path, { method: action === "view" ? "GET" : "POST", body: action === "view" ? undefined : JSON.stringify({ mode, ...body }),
+    const response = await gatedFetch(path, { method: action === "view" ? "GET" : "POST", body: action === "view" ? undefined : JSON.stringify({ mode, ...body }),
       headers: { accept: "application/json", ...(action === "view" ? {} : { "content-type": "application/json" }),...(mode==="child-practice"?{"X-Practice-Context":selection!.handle}:{}) }, credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer", signal: controller.signal });
     if (!response.ok) throw new PortalRequestError(response.status);
     if (!response.headers.get("content-type")?.startsWith("application/json") || !response.body) throw new PortalRequestError(503);

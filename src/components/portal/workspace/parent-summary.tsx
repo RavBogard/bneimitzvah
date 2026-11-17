@@ -72,8 +72,10 @@ const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frida
  * parent's own progress read (the same authorized path the card and this page already use; nothing new is asked of the server).
  */
 type ProgressRead = Parameters<typeof readMarks>[0];
-function useGot(baseline: Assigned | null, live: boolean, readProgress: ProgressRead | undefined) {
+const noop = () => undefined;
+function useGot(baseline: Assigned | null, live: boolean, readProgress: ProgressRead | undefined, refused: () => void) {
   const read = useRef(readProgress); read.current = readProgress;
+  const recheck = useRef(refused); recheck.current = refused;
   const [got, setGot] = useState<{ baseline: Assigned; value: { got: number; total: number } } | null>(null);
   useEffect(() => {
     if (!live || !baseline || !baseline.readings.length || !read.current) return;
@@ -83,7 +85,10 @@ function useGot(baseline: Assigned | null, live: boolean, readProgress: Progress
       for (const reading of baseline.readings) { const progress = read.current; if (!progress) return; marks.set(reading.kind, await readMarks(progress, baseline, reading.kind, controller.signal)); }
       const value = gotCount(baseline.readings, { status: "ready", value: marks });
       if (!controller.signal.aborted && value) setGot({ baseline, value });
-    })().catch(() => undefined);
+    })().catch(error => {
+      // A refused count does not reach the central handler (it is the progress read's "view" refusal): re-read the session instead.
+      if (!controller.signal.aborted && error instanceof PortalRequestError && [401, 403, 404].includes(error.status)) recheck.current();
+    });
     return () => controller.abort();
   }, [baseline, live]);
   return got?.baseline === baseline ? got.value : null;
@@ -107,10 +112,11 @@ function WeekDots({ serverDay, dates, name }: { serverDay: string; dates: readon
  * Everything on it is read through reads the parent already has (the child's dates, the practice calendar, the lesson notes, the marks).
  * notice: the congregation's consent notice from its settings (what is stored, who hears it, when it is deleted); nothing when unset.
  */
-export function ParentStudySummary({ store, baseline, scope, notice = null, action, readProgress }: { store: ParentSummaryStore; baseline: Assigned | null; scope: string; notice?: string | null; action?: ReactNode;
-  /** The parent's own progress read (the provider's), for what the child has got; without it the line is left out. */ readProgress?: ProgressRead }) {
+export function ParentStudySummary({ store, baseline, scope, notice = null, action, readProgress, refused }: { store: ParentSummaryStore; baseline: Assigned | null; scope: string; notice?: string | null; action?: ReactNode;
+  /** The parent's own progress read (the provider's), for what the child has got; without it the line is left out. */ readProgress?: ProgressRead;
+  /** A refused read of the count: the workspace re-reads the session (provider `refresh`). */ refused?: () => void }) {
   const state = useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);
-  const live = Boolean(baseline && baseline.mode === "parent" && store.matches(baseline, scope)), got = useGot(baseline, live, readProgress);
+  const live = Boolean(baseline && baseline.mode === "parent" && store.matches(baseline, scope)), got = useGot(baseline, live, readProgress, refused ?? noop);
   if (!baseline || !live) return null;
   const lesson = state.lesson, dates = state.dates, next = nextDateLine(baseline.student, deviceDate()), first = baseline.student.firstName;
   return <section className="parent-study-summary" aria-label="Preparation summary" data-testid="parent-this-week">

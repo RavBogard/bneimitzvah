@@ -162,8 +162,10 @@ it("shows all proposed pages, retains unchanged text/scroll on quiet return, and
     const element = await portion(tab).getByTestId("study-verses").elementHandle();
     await safe(() => portion(tab).evaluate(node => node.scrollIntoView({ block: "start" })));
     const scroll = await tab.evaluate(() => scrollY), count = preparations;
-    const checked = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading") && response.status() === 200);
-    await comeBack(tab); await checked;
+    // Coming back reads the session once and re-reads neither the reading nor its text.
+    let readingReads = 0; const countReading = (response: import("playwright").Response) => { if (new URL(response.url()).pathname.endsWith("/reading")) readingReads++; }; tab.on("response", countReading);
+    const checked = tab.waitForResponse(response => new URL(response.url()).pathname === "/api/session" && response.status() === 200);
+    await comeBack(tab); await checked; tab.off("response", countReading); expect(readingReads).toBe(0);
     await tab.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     expect(await element!.evaluate(node => node.isConnected)).toBe(true); expect(preparations).toBe(count); expect(Math.abs(await tab.evaluate(() => scrollY) - scroll)).toBeLessThan(3);
     await position(tab, 101, 146, 146);
@@ -443,7 +445,8 @@ it("cancels held proposed audio on page navigation and quiet return never starts
   await expect.poll(async () => (await audioState(tab)).clean).toBe(true); expect((await audioState(tab)).active).toBe(0);
   await tab.unroute("**/reference-audio/short-v1/*.mp3");
   const beforeSources = sourceRequests, beforeMetadata = metadataRequests;
-  const response = tab.waitForResponse(r => new URL(r.url()).pathname.endsWith("/reading") && r.status() === 200);
+  // Coming back reads the session once; nothing else is read, and no audio starts or is fetched again.
+  const response = tab.waitForResponse(r => new URL(r.url()).pathname === "/api/session" && r.status() === 200);
   await comeBack(tab); await response;
   await tab.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
   expect(sourceRequests).toBe(beforeSources); expect(metadataRequests).toBe(beforeMetadata); expect((await audioState(tab)).active).toBe(0);

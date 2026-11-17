@@ -1,3 +1,4 @@
+import { gatedFetch } from "../session-gate";
 import { PortalRequestError } from "../../api";
 import { own, uuid } from "./draft";
 
@@ -15,7 +16,7 @@ export function captureLinkIntent(input: unknown): LinkIntent {
   if (v.operation === "issue" ? v.linkId !== null : v.linkId === null) return fail();
   return Object.freeze({ operation: v.operation as LinkIntent["operation"], mutationId: uuid(v.mutationId), expectedVersion: Number(v.expectedVersion), contextHash: v.contextHash, startVerse: start(v.startVerse), linkId: v.linkId === null ? null : linkId(v.linkId) });
 }
-export function createHonoreeClient(input: { studentId: string; mode: "parent" | "admin" | "student"; origin: string; verify?(signal: AbortSignal): Promise<void>; denied(status: number): void }) {
+export function createHonoreeClient(input: { studentId: string; mode: "parent" | "admin" | "student"; origin: string; verify?(signal: AbortSignal): Promise<void>; denied(status: number): void; refresh?(): void }) {
   const studentId = uuid(input.studentId), endpoint = `/api/students/${studentId}/honoree-links`, mode = input.mode, origin = input.origin;
   if (!["parent", "admin", "student"].includes(mode) || new URL(origin).origin !== origin) throw new HonoreeClientError(403);
   async function request<T>(suffix: string, body: unknown, signal: AbortSignal, parse: (value: unknown) => T): Promise<T> {
@@ -30,7 +31,7 @@ export function createHonoreeClient(input: { studentId: string; mode: "parent" |
     });
     try {
       live(); if (input.verify) await wait(input.verify(controller.signal)); live();
-      const response = await wait(fetch(endpoint + suffix, { method: "POST", credentials: "same-origin", redirect: "error", cache: "no-store", referrerPolicy: "no-referrer", signal: controller.signal,
+      const response = await wait(gatedFetch(endpoint + suffix, { method: "POST", credentials: "same-origin", redirect: "error", cache: "no-store", referrerPolicy: "no-referrer", signal: controller.signal,
         headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ mode, ...body as object }) }));
       live(); if ([401, 403, 404].includes(response.status)) throw new HonoreeClientError(response.status);
       if (!/^application\/json$/i.test(response.headers.get("content-type")?.split(";")[0].trim() ?? "") || !response.body) return fail();
@@ -45,7 +46,11 @@ export function createHonoreeClient(input: { studentId: string; mode: "parent" |
       if (response.status === 409) { const v = own(value, ["ok", "code"]); if (v.ok !== false || v.code !== "conflict") return fail(); if (input.verify) await wait(input.verify(controller.signal)); live(); throw new HonoreeClientError(409, true); }
       if (response.status !== 200) return fail();
       const result = parse(value); if (input.verify) await wait(input.verify(controller.signal)); live(); return result;
-    } catch (error) { if (error instanceof PortalRequestError) { if ([401, 403].includes(error.status)) input.denied(error.status); throw error; } return fail(); }
+    } catch (error) {
+      // A 404 is ambiguous here (a link record, or the student): the session is re-read rather than the page cleared.
+      if (error instanceof PortalRequestError) { if ([401, 403].includes(error.status)) input.denied(error.status); if ([401, 403, 404].includes(error.status)) input.refresh?.(); throw error; }
+      return fail();
+    }
     finally { clearTimeout(timeout); clearTimeout(idle); signal.removeEventListener("abort", abort); controller.abort(); try { void reader?.cancel().catch(() => {}); } catch {} try { reader?.releaseLock(); } catch {} }
   }
   function result(input: unknown, intent: LinkIntent, receipt: boolean): LinkResult {

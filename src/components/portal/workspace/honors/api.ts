@@ -1,3 +1,4 @@
+import { gatedFetch } from "../session-gate";
 import { PortalRequestError } from "../../api";
 import type { HonorsCommit, HonorsContext, HonorsContextView, HonorsIntent, HonorsRead, HonorsVersion } from "../../../../lib/honors/types";
 import { aliyahStarts } from "../../../../lib/readings/aliyah-starts";
@@ -80,7 +81,7 @@ export function createHonorsClient(input: { studentId: string; mode: "parent" | 
     });
     try {
       live(); if (input.verify) await wait(input.verify(controller.signal)); live();
-      const response = await wait(fetch(path, { method: body ? "POST" : "GET", credentials: "same-origin", redirect: "error", cache: "no-store", referrerPolicy: "no-referrer", signal: controller.signal,
+      const response = await wait(gatedFetch(path, { method: body ? "POST" : "GET", credentials: "same-origin", redirect: "error", cache: "no-store", referrerPolicy: "no-referrer", signal: controller.signal,
         headers: body ? { "Content-Type": "application/json", Accept: "application/json" } : { Accept: "application/json" }, ...(body ? { body: JSON.stringify(body) } : {}) }));
       live(); if ([401, 403, 404].includes(response.status)) throw new HonorsClientError(response.status);
       if (!response.headers.get("content-type")?.split(";")[0].trim().match(/^application\/json$/i) || !response.body) return fail();

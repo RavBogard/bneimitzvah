@@ -21,7 +21,7 @@ import type { ServiceSettings } from "./settings/api";
  * reading panel drops the editor, its draft and the reading at once, exactly as for a refused read.
  */
 export function ReadingEditor({ mode, baseline, reload, onBusy, active: open, denied }: { mode: StaffMode; baseline: Assigned | null; reload(): Promise<Assigned>; onBusy?(busy: boolean): void; active: boolean; denied?(status: number): void }) {
-  const { guardDeparture, summary, epoch } = useWorkspace(), active = open;
+  const { guardDeparture, summary, epoch, refresh } = useWorkspace(), active = open;
   const congregation = useCongregation(active);
   const [kind, setKind] = useState<ReadingKind>("torah"), [drafts,setDrafts]=useState<Record<ReadingKind,ReadingDraft>>(()=>({torah:emptyReadingDraft(),haftarah:emptyReadingDraft()}));
   const draft=drafts[kind],{method,custom}=draft,currentAssignment=baseline?.readings.find(row=>row.kind===kind);
@@ -46,8 +46,11 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open, de
     void workspaceApi.prepareReading(mode, baseline, kind, {}).then(proposal => {
       if (cancelled || turn !== suggestionGeneration.current || !visible.current || keyRef.current !== key) return;
       setCalendar({ key, proposal: proposal.status === "needs-selection" ? proposal : null, loading: false, failed: proposal.status !== "needs-selection" });
-    }).catch(() => {
-      if (!cancelled && turn === suggestionGeneration.current && visible.current && keyRef.current === key) setCalendar({ key, proposal: null, loading: false, failed: true });
+    }).catch(error => {
+      if (cancelled || turn !== suggestionGeneration.current || !visible.current || keyRef.current !== key) return;
+      // As for prepare: a 401 or 404 is the person's access to this student, and the panel clears.
+      if ([401, 404].includes(statusOf(error)) && denied) { denied(statusOf(error)); return; }
+      setCalendar({ key, proposal: null, loading: false, failed: true });
     });
     return () => { cancelled = true; };
   }, [active, key, mode, calendarRetry]);
@@ -108,6 +111,8 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open, de
         else setMessage([400, 403].includes(statusOf(error))
           ? "This passage could not be reviewed. Check the verses and aliyah divisions, then try again. Nothing was saved."
           : "The review could not be prepared right now. Nothing was saved. Try again, or choose the verses yourself.");
+        // A 403 may also be a role the person no longer holds: re-read the session (a changed grant clears the page) without clearing here.
+        if (statusOf(error) === 403) refresh();
       }
     } finally { gate.current = false; if (alive.current) setPending(null); }
   }

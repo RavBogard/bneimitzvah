@@ -163,7 +163,7 @@ const LISTENING_OFF_PARENT = "Listening isn’t available yet. You can read and 
  * firstName: the child's first name from the parent's list, for the parent's words before the reading has loaded (or when it fails to).
  */
 export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, firstName }: { mode: ReadingMode; studentId: string; onStudentReload?(student: Student): void; afterSummary?: ReactNode; firstName?: string }) {
-  const { read, readWork, readProgress, readGuide, readPracticeCalendar, summary, epoch, busy, selectChild, registerReload, registerWork, registerDeparture, guardDeparture, serviceAuthorityFailed } = useWorkspace();
+  const { read, readWork, readProgress, readGuide, readPracticeCalendar, summary, epoch, busy, selectChild, registerReload, registerWork, registerDeparture, guardDeparture, serviceAuthorityFailed, refresh: refreshSession } = useWorkspace();
   const identity = useIdentity();
   const key = `${mode}:${studentId}:${epoch}`;
   const parentScope = JSON.stringify([summary.sessionBinding, epoch, mode, studentId]);
@@ -470,7 +470,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
       {!wide && card}
       {/* The parent's page is a This week page (the whole-screen rethink): the card with Practice with the child, then Lesson notes and Service parts as
           rows that open in place, then Family honors, and last the text behind "See Noa's reading". */}
-      {mode === "parent" && <ParentStudySummary store={parentSummary} baseline={authorizedReading ?? null} scope={parentScope} notice={congregation.consentNotice} action={practiceWith} readProgress={readProgress} />}
+      {mode === "parent" && <ParentStudySummary store={parentSummary} baseline={authorizedReading ?? null} scope={parentScope} notice={congregation.consentNotice} action={practiceWith} readProgress={readProgress} refused={refreshSession} />}
       {!learner && readings.length > 0 && <AssignmentContext row={selectedReading} current staff={staff} />}
       </> : <>
       <h2 id="reading-heading"><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>

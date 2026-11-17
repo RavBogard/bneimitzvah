@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Chip, List, ListRow } from "../../ui";
 import { workspaceApi, type Student } from "../workspace/api";
 import { fetchLessons } from "../workspace/lessons/api";
+import { statusOf, useWorkspace } from "../workspace/provider";
 import { ceremonyCountdown, nextDate } from "../workspace/reading";
 import { TutorCardLine } from "../workspace/staff/practice";
 import { fetchLearners, type Learner } from "./api";
@@ -59,21 +60,23 @@ export function YourStudentsView({ state, onRetry }: { state: State; onRetry: ()
 
 /** The live section: the tutor's own students (the portal's list), the claimed learners from the directory, and each student's latest lesson note. */
 export function YourStudents({ round = 0 }: { round?: number }) {
-  const [state, setState] = useState<State>({ status: "loading" }), [retry, setRetry] = useState(0);
+  const [state, setState] = useState<State>({ status: "loading" }), [retry, setRetry] = useState(0), { refresh } = useWorkspace();
   useEffect(() => {
     const controller = new AbortController();
     // A claim or a removal in Find a learner (round) refreshes the rows in place; only the first load says it is loading.
     setState(current => current.status === "ready" ? current : { status: "loading" });
     (async () => {
       const [students, learners] = await Promise.all([workspaceApi.students("tutor", undefined, controller.signal), fetchLearners("", controller.signal).catch((): readonly Learner[] => [])]);
-      const notes = new Map<string, string | null>();
+      const notes = new Map<string, string | null>(); let refused = false;
       await Promise.all(students.map(async student => {
         try { const page = await fetchLessons("tutor", student.id, { type: "page" }, controller.signal); notes.set(student.id, "entries" in page ? firstLine(page.entries[0]?.summary) : null); }
-        catch { notes.set(student.id, null); }
+        catch (error) { notes.set(student.id, null); if ([401, 403, 404].includes(statusOf(error))) refused = true; }
       }));
+      // A refused note read does not reach the central handler: the session is re-read once (a changed role or sign-out clears the page).
+      if (refused && !controller.signal.aborted) refresh();
       if (!controller.signal.aborted) setState({ status: "ready", rows: studentRows(students, learners, notes) });
     })().catch(() => { if (!controller.signal.aborted) setState({ status: "failed" }); });
     return () => controller.abort();
-  }, [retry, round]);
+  }, [retry, round, refresh]);
   return <YourStudentsView state={state} onRetry={() => setRetry(value => value + 1)} />;
 }

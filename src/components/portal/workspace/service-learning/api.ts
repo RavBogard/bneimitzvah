@@ -1,3 +1,4 @@
+import { gatedFetch } from "../session-gate";
 import { PortalRequestError } from "../../api";
 import { identifier, type ReadingMode, type Selection } from "../api";
 import type { ServiceBlock, ServiceSpan, ServiceUnitMaterial, ServiceSectionHeading } from "../../../../lib/service-learning/types";
@@ -130,7 +131,7 @@ async function request(mode: ReadingMode, studentId: string, action: "metadata" 
   if (mode === "child-practice") headers.set("X-Practice-Context", selection!.handle);
   try {
     const path = action === "finished" ? `/api/students/${id}/service-finished?mode=${mode}` : `/api/students/${id}/service-plan${action === "metadata" ? `?mode=${mode}` : `/${action}`}`;
-    const response = await fetch(path, { method: read ? "GET" : "POST", body: read ? undefined : JSON.stringify({ mode, ...body }), headers, credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer", signal: controller.signal });
+    const response = await gatedFetch(path, { method: read ? "GET" : "POST", body: read ? undefined : JSON.stringify({ mode, ...body }), headers, credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer", signal: controller.signal });
     if (!response.ok) throw new PortalRequestError(response.status);
     if (!response.headers.get("content-type")?.toLowerCase().startsWith("application/json")) return bad();
     const reader = response.body?.getReader(); if (!reader) return bad(); const chunks: Uint8Array[] = []; let size = 0;

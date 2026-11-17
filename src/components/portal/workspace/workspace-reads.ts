@@ -1,4 +1,5 @@
 import { PortalRequestError } from "../api";
+import { requireConfirmedSession, sessionConfirmed } from "./session-gate";
 import { workspaceApi, type Assigned, type ReadingMode, type Selection } from "./api";
 import type { PracticeCoordinator } from "./practice";
 import { fetchStudyPage, type StudyKind, type StudyVerse } from "./study/api";
@@ -58,9 +59,11 @@ export function createWorkspaceReads(env: ReadEnvironment) {
   }
   /**
    * The one way a workspace read goes out: one request, no session check around it. The practice handle travels only
-   * with a child-practice read of the very child its sitting was opened for; any other read never carries it.
+   * with a child-practice read of the very child its sitting was opened for; any other read never carries it. While the held
+   * session is unconfirmed (session-gate.ts) nothing goes out: a local 409, and the session is read again.
    */
   async function guarded<T>(mode: ReadingMode, id: string, signal: AbortSignal, action: (selection: Selection | undefined) => Promise<T>, refusal: Refusal): Promise<T> {
+    requireConfirmedSession();
     const started = env.version(), selection = practice.selection;
     if (mode === "child-practice" && (!selection || selection.context.studentId !== id)) throw new PortalRequestError(404);
     try {
@@ -81,7 +84,7 @@ export function createWorkspaceReads(env: ReadEnvironment) {
   /** An owner made now stays live while this view does: same version, same session, same sitting. */
   function liveFrom(base: Assigned) {
     const version = env.version(), binding = env.sessionBinding(), handle = base.mode === "child-practice" ? practice.selection?.handle : undefined;
-    return () => Boolean(binding) && env.version() === version && env.sessionBinding() === binding && !practice.pending && (base.mode !== "child-practice" || practice.selection?.handle === handle);
+    return () => Boolean(binding) && sessionConfirmed() && env.version() === version && env.sessionBinding() === binding && !practice.pending && (base.mode !== "child-practice" || practice.selection?.handle === handle);
   }
   const sameHandle = (actual: Selection | undefined, captured: Selection | undefined) => actual?.handle === captured?.handle && actual?.context.id === captured?.context.id;
 
@@ -152,6 +155,7 @@ export function createWorkspaceReads(env: ReadEnvironment) {
         env.clearWork(); refused(statusOf(error), base.mode, base.student.id, "central");
       };
       async function run<T>(signal: AbortSignal, action: () => Promise<T>, mutation: boolean): Promise<T> {
+        try { requireConfirmedSession(); } catch { throw new SourceClientError(409, "stale-revision"); }
         check(signal);
         try { const value = await action(); check(signal); return value; }
         catch (error) {
@@ -175,6 +179,7 @@ export function createWorkspaceReads(env: ReadEnvironment) {
         env.clearWork(); refused(statusOf(error), base.mode, base.student.id, "central");
       };
       async function run<T>(signal: AbortSignal, action: (signal: AbortSignal) => Promise<T>): Promise<T> {
+        try { requireConfirmedSession(); } catch { throw new SourceContentError(409, "stale-revision"); }
         const budget = createSourceContentBudget(signal);
         try { check(signal); const value = await budget.run(30000, action); check(signal); budget.check(); return value; }
         catch (error) { authorityFailure(error, signal); throw error; }

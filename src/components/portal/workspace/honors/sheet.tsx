@@ -75,7 +75,7 @@ export function HonorsEntry({ studentId, name, mode = "parent", focusOnShow = fa
     {open && <HonorsSheet studentId={studentId} name={name} mode={mode} onClose={() => { setOpen(false); setReadTurn(value => value + 1); origin.current?.focus(); }} />}</>;
 }
 export function HonorsSheet({ studentId, name, mode, onClose }: { studentId: string; name: string; mode: "parent" | "admin" | "student"; onClose(): void }) {
-  const { summary, context, serviceAuthorityFailed, registerDeparture, registerWork, registerReload } = useWorkspace();
+  const { summary, context, serviceAuthorityFailed, registerDeparture, registerWork, registerReload, refresh } = useWorkspace();
   const congregation = useCongregation(true), congregationRef = useRef(congregation); congregationRef.current = congregation;
   const dialog = useRef<HTMLDialogElement>(null), heading = useRef<HTMLHeadingElement>(null), lastFocus = useRef<HTMLElement | null>(null), settled = useRef(false), id = useId();
   const [state, setState] = useState<HonorsState | null>(null), [departure, setDeparture] = useState(false), [discardReview, setDiscardReview] = useState(false), [printing, setPrinting] = useState(false), [printError, setPrintError] = useState("");
@@ -94,7 +94,7 @@ export function HonorsSheet({ studentId, name, mode, onClose }: { studentId: str
     if (context) { onClose(); return; }
     const api = createHonorsClient({ studentId, mode, denied: status => { if (active && lifetime.current?.active) serviceAuthorityFailed(status); } });
     const owner = createHonorsOwner(api, value => { if (active) setState(value); });
-    const linkApi = createHonoreeClient({ studentId, mode, origin: window.location.origin, denied: status => { if (active && lifetime.current?.active) serviceAuthorityFailed(status); } });
+    const linkApi = createHonoreeClient({ studentId, mode, origin: window.location.origin, denied: status => { if (active && lifetime.current?.active) serviceAuthorityFailed(status); }, refresh: () => { if (active && lifetime.current?.active) refresh(); } });
     const clearSecretDOM = () => { dialog.current?.querySelectorAll<HTMLInputElement>("input[data-honoree-secret]").forEach(field => { field.value = ""; field.defaultValue = ""; field.removeAttribute("value"); }); };
     const links = createHonoreeOwner(linkApi, { honors: () => owner.state, blocked: () => printingRef.current || !!pendingDeparture.current, changed: value => { if (active) { if (!value.secret) clearSecretDOM(); setLinkState(value); } } });
     const life = { owner, links, api, active: true }; lifetime.current = life; setState(owner.state); setLinkState(links.state);
@@ -108,7 +108,7 @@ export function HonorsSheet({ studentId, name, mode, onClose }: { studentId: str
     void owner.load();
     return () => { active = false; life.active = false; clearSecretDOM(); cleanupPrint(); links.clear(); owner.clear(); finishDeparture(false); removeWork(); removeDeparture(); removeReload(); document.removeEventListener("visibilitychange", concealed); window.removeEventListener("pagehide", pauseLinks); window.removeEventListener("pageshow", restored); if (lifetime.current === life) lifetime.current = null; };
     // Session binding and selected student define this private owner. Practice never supplies authority.
-  }, [studentId, mode, summary.sessionBinding, context?.id, serviceAuthorityFailed, registerDeparture, registerWork, registerReload, guard, finishDeparture]);
+  }, [studentId, mode, summary.sessionBinding, context?.id, serviceAuthorityFailed, registerDeparture, registerWork, registerReload, refresh, guard, finishDeparture]);
   const shown = useWorkspaceModal(dialog, true), shownRef = useRef(shown); shownRef.current = shown;
   useLayoutEffect(() => { settled.current = false; if (!shown) return; const field = lastFocus.current; (field?.isConnected && dialog.current?.contains(field) ? field : heading.current)?.focus(); settled.current = true; }, [shown]);
   useEffect(() => { if (departure) departureHeading.current?.focus(); }, [departure]);

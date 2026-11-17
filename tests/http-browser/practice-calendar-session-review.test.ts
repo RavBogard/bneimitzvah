@@ -99,21 +99,22 @@ beforeAll(async () => {
 }, 120_000);
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await isolation?.cleanup(); }, 120_000);
 
-it("conceals the whole own-student workspace when the calendar visit pre-probe finds actual session expiry", async () => {
-  // Observe calendar pre-probe denial without starting the separate audio
-  // resolver/session probe that main-reading Start intentionally invokes.
+it("conceals the whole own-student workspace when the calendar visit finds actual session expiry", async () => {
+  // No session probe precedes the visit (the server decides it): the visit itself is refused with 401, which reaches the central
+  // handler, and its one session read confirms the sign-out.
   const tab = await page(), seen = traffic(tab); await expired(); await upCloseFromDock(tab); await globallyGone(tab);
-  expect(seen.sessions).toEqual([401, 401]); expect(seen.events).toEqual([]); await tab.context().close();
+  expect(seen.sessions).toEqual([401]); expect(seen.events).toEqual(["POST"]); await tab.context().close();
 });
 
-it("suppresses a committed calendar acknowledgement when the post-probe finds actual session expiry", async () => {
+it("keeps a committed calendar acknowledgement, and a session that expired after it is seen on the next session read", async () => {
   const tab = await page(), seen = traffic(tab); let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   const hold = async (route: Route) => { const response = await route.fetch(); expect(response.status()).toBe(200); await expired(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); };
   await tab.route(eventPath(tab), hold);
-  // Isolate the calendar's exact pre/post session probes from the separate
-  // reference-audio resolver used by main-text Start.
+  // The visit committed under the live session, so its answer stands; no probe follows it. The expiry is seen on the next
+  // session read (coming back to the tab), which is a 401 and clears the whole workspace.
   try { await upCloseFromDock(tab); await ui.poll(() => held).toBe(true); } finally { release(); }
-  await globallyGone(tab); expect(seen.events).toEqual(["POST"]); expect(seen.sessions).toEqual([200, 401, 401]);
+  await pageFetchesSettled(tab); expect(seen.sessions).toEqual([]); expect(await tab.locator(signedOutState).count()).toBe(0);
+  await comeBack(tab); await globallyGone(tab); expect(seen.events).toEqual(["POST"]); expect(seen.sessions).toEqual([401]);
   expect(await fixture.ownerDb.select().from(s.practiceEvent).where(eq(s.practiceEvent.studentId, fixture.student.id))).toHaveLength(1); await tab.context().close();
 });
 
@@ -123,12 +124,12 @@ it("keeps calendar 403 and 404 local but makes a direct POST 401 globally termin
     await tab.route(eventPath(tab), route => route.fulfill({ status, contentType: "application/json", body: "{}" }));
     await upCloseFromDock(tab); await ui(week(tab)).toHaveCount(0); await ui(tab.locator(studyVerses)).toBeVisible();
     expect(await tab.locator(signedOutState).count()).toBe(0);
-    await click(tab, "Close practice view"); await pageFetchesSettled(tab); expect(seen.sessions).toEqual([200]);
+    await click(tab, "Close practice view"); await pageFetchesSettled(tab); expect(seen.sessions).toEqual([]); // local: no session read
     await tab.unroute(eventPath(tab));const expectedServiceReads=selectedReads(tab).length+1;
     await refreshReading(tab); await ready(tab,expectedServiceReads); await pageFetchesSettled(tab); seen.sessions.length = 0;
   }
   await tab.route(eventPath(tab), async route => { await expired(); await route.fulfill({ status: 401, contentType: "application/json", body: "{}" }); });
-  await upCloseFromDock(tab); await globallyGone(tab); expect(seen.sessions).toEqual([200, 401]); expect(seen.events).toEqual(["POST", "POST", "POST"]); await tab.context().close();
+  await upCloseFromDock(tab); await globallyGone(tab); expect(seen.sessions).toEqual([401]); expect(seen.events).toEqual(["POST", "POST", "POST"]); await tab.context().close();
 });
 
 it("ignores a held old calendar 401 after a real role and child-context replacement", async () => {
@@ -144,11 +145,13 @@ it("ignores a held old calendar 401 after a real role and child-context replacem
   await completed; await pageFetchesSettled(tab); await ready(tab,1,sibling.id,"child-practice");
   await ui(tab.getByTestId("practice-bar-title")).toBeVisible(); await ui(tab.locator(`${studyVerses} [data-verse-ref="Genesis 2:1"]`)).toBeVisible();
   expect(await tab.locator(signedOutState).count()).toBe(0); expect(seen.events).toEqual(["POST"]);
-  // A stale refusal cannot clear this rightful selection, but a real revoked
-  // relationship still fails the existing authoritative focus/session check.
+  // A stale refusal cannot clear this rightful selection, but a real revoked relationship still ends it. Coming back re-reads only
+  // the session (unchanged), so the sitting stays until the parent's next request: marking a verse is refused and ends it at once.
   await fixture.ownerDb.update(s.guardian).set({ revokedAt: new Date(), revision: 2 }).where(eq(s.guardian.studentId, sibling.id));
-  const denied = tab.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${sibling.id}/reading`);
-  await comeBack(tab); expect([403, 404]).toContain((await denied).status());
+  await comeBack(tab); await ui(tab.getByTestId("practice-bar-title")).toBeVisible();
+  const denied = tab.waitForResponse(response => new URL(response.url()).pathname.startsWith(`/api/students/${sibling.id}/progress`) && response.request().method() === "POST");
+  await upCloseFromDock(tab); await safe(() => tab.locator("dialog.lift").getByRole("group", { name: /^How / }).getByRole("button", { name: "Got it", exact: true }).click());
+  expect([403, 404]).toContain((await denied).status());
   await ui(tab.getByTestId("mine-children")).toBeVisible(); expect(await tab.locator(`[data-testid="practice-bar-title"], ${studyVerses}, [data-word-index]`).count()).toBe(0);
-  expect(seen.events).toEqual(["POST"]); await tab.context().close();
+  expect(seen.events.every(method => method === "POST")).toBe(true); await tab.context().close();
 });

@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchSession, PortalRequestError, requestPortal, type SessionSummary } from "../api";
+import { setSessionGate } from "./session-gate";
 
 /**
  * - checking: no session is held yet (first load, or after a refusal or Check access again): nothing private is mounted.
@@ -28,12 +29,20 @@ export function useHeldSession(clearPrivate: () => void) {
   const clear = useRef(clearPrivate); clear.current = clearPrivate;
   const show = useCallback((summary: SessionSummary | null, next: SessionPhase) => { phase.current = next; setHeld({ summary, phase: next }); }, []);
 
+  /**
+   * Unconfirmed: a read on coming back failed without a refusal (offline, 503), so the cookie may now be another person's. The
+   * view stays (it was this person's), but session-gate.ts refuses every write and live owner until a read confirms the binding.
+   */
+  const unconfirmed = useRef(false);
+  const confirm = useCallback((value: boolean) => { unconfirmed.current = value; setSessionGate(value); }, []);
   /** Resolves true when the same session is held and ready afterwards. */
   const read = useCallback((cause: Cause) => {
     request.current?.abort(); const controller = new AbortController(); request.current = controller;
     // A sign-in with no membership yet gets one here (plan D1): the workspace never shows a person without a shelf.
     return fetchSession(requestPortal, controller.signal).then(next => {
       if (controller.signal.aborted) return false;
+      if (request.current === controller) request.current = null;
+      confirm(false);
       const otherPerson = binding.current !== null && binding.current !== next.sessionBinding;
       // Another person's session in this browser (a sign-out and sign-in in another tab): drop everything of the first one.
       if (otherPerson) clear.current();
@@ -44,10 +53,11 @@ export function useHeldSession(clearPrivate: () => void) {
       return cause !== "denied" && !otherPerson;
     }, (error: unknown) => {
       if (controller.signal.aborted) return false;
+      if (request.current === controller) request.current = null;
       const status = error instanceof PortalRequestError ? error.status : 503;
-      // A check on coming back that merely fails (offline, 503) keeps what was already shown; only a refusal clears it.
-      if ((cause === "return" || cause === "refresh") && ![401, 403, 404].includes(status)) return phase.current === "ready";
-      clear.current(); binding.current = null;
+      // A check on coming back that merely fails (offline, 503) keeps what was already shown, unconfirmed; only a refusal clears it.
+      if ((cause === "return" || cause === "refresh") && ![401, 403, 404].includes(status)) { if (phase.current === "ready") confirm(true); return false; }
+      confirm(false); clear.current(); binding.current = null;
       show(null, phaseOf(status));
       return false;
     });
@@ -68,24 +78,30 @@ export function useHeldSession(clearPrivate: () => void) {
   /** A page asking to re-check (its own refusal, or Refresh): the view stays while the session is read. */
   const refresh = useCallback(() => phase.current === "ready" ? read("refresh") : (retry(), Promise.resolve(false)), [read, retry]);
 
+  /** While unconfirmed, any reason to look again (a write that was refused locally, coming online, coming back) reads the session once. */
+  const recheck = useCallback(() => { if (unconfirmed.current && phase.current === "ready" && !request.current) void read("return"); }, [read]);
+
   useEffect(() => {
+    setSessionGate(false, recheck);
     void read("mount");
     let awayAt: number | null = null;
     const away = () => { awayAt ??= Date.now(); };
     const back = () => {
       const since = awayAt; awayAt = null;
+      if (unconfirmed.current) { recheck(); return; }
       if (since !== null && Date.now() - since >= RETURN_RECHECK_MS && phase.current === "ready") void read("return");
     };
+    const online = () => recheck();
     const visibility = () => { if (document.visibilityState === "visible") back(); else away(); };
     // bfcache: a page restored from the back-forward cache may belong to a session that ended while it was away (signed out
     // in this or another tab). Always re-read; a 401 unmounts the private subtree at once.
     const restored = (event: PageTransitionEvent) => { if (event.persisted && phase.current === "ready") void read("return"); };
-    window.addEventListener("blur", away); window.addEventListener("focus", back); window.addEventListener("pageshow", restored); document.addEventListener("visibilitychange", visibility);
+    window.addEventListener("blur", away); window.addEventListener("focus", back); window.addEventListener("pageshow", restored); window.addEventListener("online", online); document.addEventListener("visibilitychange", visibility);
     return () => {
-      request.current?.abort();
-      window.removeEventListener("blur", away); window.removeEventListener("focus", back); window.removeEventListener("pageshow", restored); document.removeEventListener("visibilitychange", visibility);
+      request.current?.abort(); request.current = null; unconfirmed.current = false; setSessionGate(false);
+      window.removeEventListener("blur", away); window.removeEventListener("focus", back); window.removeEventListener("pageshow", restored); window.removeEventListener("online", online); document.removeEventListener("visibilitychange", visibility);
     };
-  }, [read]);
+  }, [read, recheck]);
 
   return { summary: held.summary, phase: held.phase, binding: () => binding.current, denied, retry, refresh };
 }

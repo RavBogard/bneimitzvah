@@ -237,3 +237,32 @@ test("signing out (the shell unmounting) closes an open sitting", async () => {
   host.cleanups.splice(0).forEach(cleanup => cleanup()); await flush();
   expect(host.exit).toHaveBeenCalledWith("h".repeat(43));
 });
+
+// Review fix 3 (2026-11-17): a session read on coming back that merely fails (offline, 503) leaves the held session unconfirmed.
+// The cookie may by then be another person's (signed in in another tab), so nothing is sent until a read confirms who it is.
+async function unconfirmedReturn() {
+  vi.useFakeTimers({ toFake: ["Date"] }); const held = await ready(); host.portal.mockRejectedValueOnce(new PortalRequestError(503));
+  dispatch("blur"); vi.setSystemTime(Date.now() + RETURN_RECHECK_MS + 1); dispatch("focus"); await flush();
+  expect(sessionReads()).toBe(2); expect(render()).toBeDefined(); expect(held.life.clear).not.toHaveBeenCalled(); // the view stays, unconfirmed
+  return held;
+}
+
+test("an unconfirmed session refuses a write locally, and a read showing another person clears the view", async () => {
+  const { workspace, life } = await unconfirmedReturn(); host.portal.mockResolvedValueOnce(session(other));
+  await expect(workspace.readPracticeCalendar("student", studentId, operation, new AbortController().signal)).rejects.toMatchObject({ status: 409 });
+  expect(host.calendar).not.toHaveBeenCalled(); // nothing went out under a cookie that may be someone else's
+  await flush(); expect(sessionReads()).toBe(3); expect(life.clear).toHaveBeenCalled(); render(); expect(providerKey()).toBe(other);
+});
+
+test("an unconfirmed session confirmed as the same person lets the refused write go through when tried again", async () => {
+  const { workspace, life } = await unconfirmedReturn();
+  await expect(workspace.readPracticeCalendar("student", studentId, operation, new AbortController().signal)).rejects.toMatchObject({ status: 409 });
+  expect(host.calendar).not.toHaveBeenCalled(); await flush(); expect(sessionReads()).toBe(3); expect(life.clear).not.toHaveBeenCalled();
+  await render()!.readPracticeCalendar("student", studentId, operation, new AbortController().signal);
+  expect(host.calendar).toHaveBeenCalledTimes(1); expect(sessionReads()).toBe(3);
+});
+
+test("while unconfirmed, coming online reads the session again", async () => {
+  await unconfirmedReturn(); dispatch("online"); await flush(); expect(sessionReads()).toBe(3);
+  dispatch("online"); await flush(); expect(sessionReads()).toBe(3); // confirmed now: nothing more
+});

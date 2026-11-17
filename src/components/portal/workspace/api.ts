@@ -1,3 +1,4 @@
+import { gatedFetch } from "./session-gate";
 import { PortalRequestError } from "../api";
 import { parseReadingProposal, readingBaseline, type ReadingKind, type StaffMode } from "./reading-proposal";
 import { aliyahStarts } from "../../../lib/readings/aliyah-starts";
@@ -134,7 +135,7 @@ export async function call(path: string, body?: object, handle?: string, signal?
     const headers = new Headers({ accept: "application/json" });
     if (body !== undefined) headers.set("content-type", "application/json");
     if (handle !== undefined) headers.set("X-Practice-Context", handle);
-    const response = await fetch(path, { method: body === undefined ? "GET" : "POST", body: body === undefined ? undefined : JSON.stringify(body), headers,
+    const response = await gatedFetch(path, { method: body === undefined ? "GET" : "POST", body: body === undefined ? undefined : JSON.stringify(body), headers,
       cache: "no-store", credentials: "same-origin", referrerPolicy: "no-referrer", redirect: "error", signal: controller.signal });
     if (!response.ok) throw new PortalRequestError([400, 401, 403, 404, 409, 413, 429, 503].includes(response.status) ? response.status : 503);
     if (!response.headers.get("content-type")?.toLowerCase().startsWith("application/json")) return bad();

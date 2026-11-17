@@ -30,7 +30,7 @@ const searchable = (value: string) => value.normalize("NFKD").replace(/\p{M}/gu,
 const PAGE = 25;
 export function AdminWorkspace() { return <RequireRole role="admin"><Roster /></RequireRole>; }
 function Roster() {
-  const { registerReload, registerDeparture } = useWorkspace();
+  const { registerReload, registerDeparture, refresh } = useWorkspace();
   const [rows, setRows] = useState<RosterStudent[]>([]), [loading, setLoading] = useState(true), [unavailable, setUnavailable] = useState(false);
   const [current, setCurrent] = useState<RosterStudent | null>(null), [form, setForm] = useState<StudentInput>(empty), [editing, setEditing] = useState(false);
   const [pending, setPending] = useState(false), [message, setMessageText] = useState(""), [messageKind, setMessageKind] = useState(""), [conflict, setConflict] = useState(false), [confirmDisable, setConfirmDisable] = useState(false), [page, setPage] = useState(0);
@@ -139,6 +139,8 @@ function Roster() {
         : status === 401 || status === 403 || status === 404 ? "This change isn’t allowed any more. Reload the roster to check current access."
         : "We couldn’t confirm whether this saved. Reload the roster to check before trying again.");
       setConflict(true);
+      // A refusal here does not reach the central handler: the session is re-read (a changed role or sign-out clears the page).
+      if ([401, 403, 404].includes(status)) refresh();
     } finally { gate.current = false; setPending(false); }
   }
   async function mutate(disable: boolean) {
@@ -162,6 +164,8 @@ function Roster() {
       else setMessage(status === 401 || status === 403 || status === 404 ? "This change isn’t allowed any more. Reload the roster to check current access."
         : "We couldn’t confirm whether this saved. Reload the roster to check before trying again.");
       setConflict(true);
+      // A refusal here does not reach the central handler: the session is re-read (a changed role or sign-out clears the page).
+      if ([401, 403, 404].includes(status)) refresh();
     } finally { gate.current = false; setPending(false); }
   }
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void mutate(false); }
