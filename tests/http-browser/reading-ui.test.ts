@@ -12,6 +12,7 @@ import { installLoopbackFetchGuard } from "./egress";
 import * as s from "../../src/server/db/index";
 import { installReadingRouteGuard, readingRouteCleanupError, routePageStep } from "./reading-route-guard";
 import { openVerseEditor, goChild, openPlan } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -121,19 +122,20 @@ it("retains a tutor draft during visible access revalidation, invalidates edited
   const tab = await page("tutor", true); await navigate(tab, "/workspace/tutor");
   await safe(() => tab.locator(`a[href="/workspace/tutor/${fixture.student.id}"]`).click()); await openEditor(tab); await custom(tab, "Genesis 1:1-3");
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
-  let metadataSeen = false, finalSessions = 0;
+  // Coming back reads the session once and re-reads nothing else (session.ts); the draft stays as typed.
+  let finalSessions = 0, readingReads = 0;
   const observed = (response: import("playwright").Response) => { const path = new URL(response.url()).pathname;
-    if (path === `/api/students/${fixture.student.id}/reading` && response.status() === 200) metadataSeen = true;
-    if (metadataSeen && path === "/api/session" && response.status() === 200) finalSessions++;
+    if (path === `/api/students/${fixture.student.id}/reading`) readingReads++;
+    if (path === "/api/session" && response.status() === 200) finalSessions++;
   }; tab.on("response", observed);
   const sessions = await routePageStep(tab, "**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }); });
   try {
-    await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
+    await safe(() => comeBack(tab)); await ui.poll(() => held).toBe(true);
     await ui(main(tab).getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeHidden();
     await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toBeVisible();
     await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-3");
   } finally { release(); }
-  await ui.poll(() => finalSessions).toBeGreaterThanOrEqual(2); tab.off("response", observed);
+  await ui.poll(() => finalSessions).toBe(1); expect(readingReads).toBe(0); tab.off("response", observed);
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toBeVisible(); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-3");
   await sessions.remove();
   const [beforePrepare] = await fixture.ownerDb.select().from(s.student).where(eq(s.student.id, fixture.student.id));
@@ -169,7 +171,7 @@ it("retains a tutor draft during visible access revalidation, invalidates edited
   let mutations = 0;
   await routePageStep(tab, "**/reading/confirm", async route => { mutations++; const response = await route.fetch(); await response.dispose(); await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' }); });
   await click(tab, "Save assignment"); await ui(main(tab).getByRole("alert")).toContainText("may have saved");
-  await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
+  await safe(() => comeBack(tab));
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toBeVisible(); expect(mutations).toBe(1);
   await ui(tab.getByRole("button", { name: "Review assignment", exact: true })).toBeDisabled();
   await click(tab, "Check what saved"); await ui(tab.locator(".confirmed-reading").getByText("Genesis 1:6-7", { exact: true })).toBeVisible(); expect(mutations).toBe(1);

@@ -10,6 +10,7 @@ import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from 
 import { installLoopbackFetchGuard } from "./egress";
 import { openAuthMail } from "./auth-navigation";
 import * as s from "../../src/server/db/index";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -108,7 +109,7 @@ it("lets a tutor add, edit and delete lessons, keeps an unsaved note, shows a ch
   await safe(() => tutor.keyboard.press("Escape")); await ui(prompt).toBeHidden();
   await ui(sheet(tutor).getByLabel("What you worked on", { exact: true })).toHaveValue("Synthetic unsaved note.");
   // A routine access check (window focus) keeps the note.
-  await safe(() => tutor.evaluate(() => window.dispatchEvent(new Event("focus"))));
+  await safe(() => comeBack(tutor));
   await ui(lessons(tutor).locator(".lesson-entry")).toHaveCount(1);
   await ui(sheet(tutor).getByLabel("What you worked on", { exact: true })).toHaveValue("Synthetic unsaved note.");
   await ui(sheet(tutor).getByLabel("What you worked on", { exact: true })).toBeEnabled();

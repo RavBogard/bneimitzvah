@@ -13,12 +13,14 @@ import { countPageFetches, pageFetchesSettled } from "./fetch-settle";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
 import { goChild } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
 let isolated: Awaited<ReturnType<typeof isolatedEnv>> | undefined;
 const contexts: BrowserContext[] = [], cached = new Map<string, Awaited<ReturnType<BrowserContext["cookies"]>>>();
 const shortRequests = new WeakMap<Page, ReturnType<typeof observeInitialShortPage>>();
-const focus = (tab: Page) => tab.evaluate(() => { window.dispatchEvent(new Event("focus")); window.dispatchEvent(new Event("pageshow")); document.dispatchEvent(new Event("visibilitychange")); });
+// Coming back to the tab: what re-reads the session now (come-back.ts).
+const focus = (tab: Page) => comeBack(tab);
 const readPath = () => `/api/students/${fixture.student.id}/reading?mode=parent`;
 const heldMetadata = new WeakMap<Page, { count: number }>();
 function observeHeldMetadata(tab: Page) {
@@ -74,15 +76,13 @@ it("coalesces tab-return checks while preserving actual reading DOM, scroll and 
   tab.on("request", request => { const path = new URL(request.url()).pathname; if (path.endsWith("/study-text")) text++; if (path.endsWith("/reading")) metadata++; });
   await tab.route("**/api/session", async route => { sessions++; const response = await privateRouteFetch(route, tab); if (!response) return; if (!entered) { entered = true; await gate; } await route.fulfill({ response }).catch(() => undefined); });
   try {
-    // A real hidden→visible lifecycle clears metadata/media but return alone
-    // must not prepare another private page; the quiet check stays coalesced.
-    await tab.evaluate(() => { Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" }); document.dispatchEvent(new Event("visibilitychange")); });
-    await tab.evaluate(() => { Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" }); });
-    await focus(tab); await ui.poll(() => entered).toBe(true); await focus(tab);
+    // Coming back reads the session once (session.ts) and re-reads neither the reading nor its text: the DOM, scroll and
+    // unsent note stay as they were while that one check is held.
+    await focus(tab); await ui.poll(() => entered).toBe(true);
     expect(sessions).toBe(1); await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden();
     await ui(field).toHaveValue("Synthetic quiet unsent draft"); expect(await node!.evaluate(value => value === document.querySelector(".study-verses"))).toBe(true); expect(await tab.evaluate(() => window.scrollY)).toBe(scroll);
   } finally { release(); }
-  await ui.poll(() => metadata).toBe(1); await ui.poll(() => sessions).toBe(4); expect(shortRequests.get(tab)!.counts().seen).toBe(initialPageCount); expect(text).toBe(0); expect(await node!.evaluate(value => value === document.querySelector(".study-verses"))).toBe(true);
+  await tab.waitForTimeout(500); expect(metadata).toBe(0); expect(sessions).toBe(1); expect(shortRequests.get(tab)!.counts().seen).toBe(initialPageCount); expect(text).toBe(0); expect(await node!.evaluate(value => value === document.querySelector(".study-verses"))).toBe(true);
   await ui(field).toHaveValue("Synthetic quiet unsent draft"); await ui(tools.getByTestId("work-status")).toHaveAttribute("data-work-state", "unsubmitted"); await heldReading(tab); await tab.context().close();
 });
 
@@ -98,7 +98,8 @@ it("a committed note acknowledgement remains authoritative while an independent 
   try {
     await field.fill("Synthetic focus committed draft"); await tools.getByRole("button", { name: "Add student-visible note", exact: true }).click(); await ui.poll(() => responded).toBe(true);
     expect({ status, code, expectedVersion }).toMatchObject({ status: 200, code: null });
-    const checked = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading") && response.status() === 200);
+    // The check on coming back is one session read; it does not re-read the reading.
+    const checked = tab.waitForResponse(response => new URL(response.url()).pathname === "/api/session" && response.status() === 200);
     await focus(tab); await checked; await ui(tab.locator(".study-verses")).toBeVisible();
   } finally { release(); }
   // An acknowledged note joins the notes and leaves the editor empty for the next one.
@@ -115,7 +116,12 @@ it("transient session503 retains reading but real ordinary-parent guardian revoc
   await tab.unroute("**/api/session");
   await fixture.ownerDb.update(s.guardian).set({ revokedAt: new Date(), revision: sql`${s.guardian.revision}+1` }).where(eq(s.guardian.studentId, fixture.student.id));
   const after = await tab.evaluate(async () => (await (await fetch("/api/session")).json()).sessionBinding as string); expect(after === before).toBe(true);
-  await focus(tab); await ui(tab.locator(".study-verses")).toHaveCount(0);
+  // Coming back re-reads only the session, whose binding is unchanged: the text stays until the parent's next request. A parent's
+  // page has no Refresh control, so the parent reloads it, and nothing private renders.
+  await focus(tab); await ui(tab.locator(".study-verses")).toBeVisible();
+  // The reloaded page's own reads (the parent's child list, then the reading) no longer include this child.
+  await tab.reload({ waitUntil: "domcontentloaded" }); await ui(tab.locator(".study-verses")).toHaveCount(0);
+  await ui(tab.getByRole("heading", { name: /^(Student not found|Access has changed)$/ }).or(tab.getByTestId("mine-children")).or(tab.getByText("No student is currently linked to this role. Ask the congregation for help with your assignment.", { exact: true })).or(tab.getByText("This reading is no longer available in the selected role. Choose another available student.", { exact: true }))).toBeVisible(); await ui(tab.locator(".study-verses")).toHaveCount(0);
   expect(await tab.evaluate(async path => (await fetch(path)).status, readPath())).toBe(404); await heldReading(tab); await tab.context().close();
 });
 

@@ -17,6 +17,7 @@ import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import * as s from "../../src/server/db/index";
 import { refreshReading as refreshPage, goChild } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 // A verse's notes from a tutor or the rabbi: staff write them, the student and the student's parents read them. A student's own translation
@@ -262,7 +263,7 @@ it("guards controlled leave and quiet retained reading, discards on request, and
   phase = "quiet-session-retention";
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; }); await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
   const existingReading = await tab.locator(".study-verses").elementHandle();
-  try { await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true); await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); await ui(tab.locator(".study-hebrew").first()).toBeVisible(); expect(await existingReading!.evaluate(node => node === document.querySelector(".study-verses"))).toBe(true); await ui(staged.getByRole("textbox")).toHaveValue("Synthetic queued behind metadata barrier"); }
+  try { await safe(() => comeBack(tab)); await ui.poll(() => held).toBe(true); await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); await ui(tab.locator(".study-hebrew").first()).toBeVisible(); expect(await existingReading!.evaluate(node => node === document.querySelector(".study-verses"))).toBe(true); await ui(staged.getByRole("textbox")).toHaveValue("Synthetic queued behind metadata barrier"); }
   finally { release(); await tab.unroute("**/api/session"); await existingReading?.dispose(); }
   await loaded(tab);
   phase = "discard-departure";
@@ -277,7 +278,7 @@ it("guards controlled leave and quiet retained reading, discards on request, and
   phase = "account-session-check";
   const student = await page("student"); await learner(student); await navigate(student, "/mine"); await accountReady(student);
   const refreshed = student.waitForResponse(response => new URL(response.url()).pathname === "/api/session");
-  await safe(() => student.evaluate(() => window.dispatchEvent(new Event("focus")))); expect((await refreshed).status()).toBe(200); await accountReady(student); await captureAccount(student);
+  await safe(() => comeBack(student)); expect((await refreshed).status()).toBe(200); await accountReady(student); await captureAccount(student);
   phase = "staff-save-departure";
   const admin = await page("admin"); await staff(admin); const notePanel = await tools(admin, "Genesis 1:7");
   await safe(() => notePanel.getByRole("textbox").fill("Synthetic explicitly saved on departure")); await closeVerseTools(admin); await safe(() => admin.getByRole("link", { name: "All students", exact: true }).click()); await ui(admin.getByRole("dialog")).toBeVisible(); await click(admin, "Save and continue"); await ui.poll(() => new URL(admin.url()).pathname).toBe("/workspace/admin/students");
@@ -310,10 +311,12 @@ async function reviseSameVerses(admin: Page) {
   expect((await api(admin, `/api/students/${fixture.student.id}/reading/confirm`, { mode: "admin", binding: prepare.data.binding }, "revision confirm")).status, "revision confirmation HTTP status").toBe(200);
 }
 async function focusRefresh(tab: Page) {
-  // These callers changed the actual assignment revision. Observe the resulting
-  // authorized text reload rather than accepting the still-mounted old heading.
+  // These callers changed the actual assignment revision. Coming back re-reads only the session, so the change is read when the
+  // staff member refreshes the reading; observe the resulting text reload rather than accepting the still-mounted old heading.
+  await safe(() => comeBack(tab));
+  if (await tab.getByRole("dialog", { name: /^Verse tools · / }).count()) await closeVerseTools(tab);
   const freshText = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/study-text") && response.status() === 200);
-  await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await freshText; await loaded(tab);
+  await safe(() => refreshPage(tab)); await freshText; await loaded(tab);
 }
 
 it("retains an unsent note after an assignment-only revision for explicit review", async () => {
@@ -358,6 +361,6 @@ it("blocks an uncertain old save through recovery outages until explicit authori
 it("an expired SDK session clears an unsent note without any departure choice", async () => {
   const writer = await page("admin"); await staff(writer); const own = await tools(writer, "Genesis 1:6"); await safe(() => own.getByRole("textbox").fill("Synthetic discarded on expiry"));
   await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(Date.now() - 60_000) }).where(eq(s.session.userId, fixture.admin.id));
-  await safe(() => writer.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui(writer.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible(); expect(await writer.locator(".verse-work textarea").count()).toBe(0);
+  await safe(() => comeBack(writer)); await ui(writer.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible(); expect(await writer.locator(".verse-work textarea").count()).toBe(0);
   expect(await fixture.ownerDb.select().from(s.tutorNote).where(eq(s.tutorNote.text, "Synthetic discarded on expiry"))).toHaveLength(0);
 });

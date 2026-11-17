@@ -187,7 +187,13 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   const lessons = useRef<LessonReload | null>(null);
   const registerLessons = useCallback((value: LessonReload) => { lessons.current = value; return () => { if (lessons.current === value) lessons.current = null; }; }, []);
   const registerStudy = useCallback((value: StudyReload) => { study.current = value; return () => { if (study.current === value) study.current = null; }; }, []);
-  const studyDenied = useCallback((status: number) => { audio.stopAll(); setResult({ key, error: status }); }, [audio, key]);
+  /**
+   * A refusal (401/403/404) of any read or write of this student's reading ends the whole student view, not just the text: the
+   * service parts, lessons and honors on this page are the same student's, so the central handler unmounts them all at once.
+   * A child-practice refusal instead ends the sitting (workspace-reads.ts `practiceRefused`).
+   */
+  const viewRefused = useCallback((status: number) => { if ([401, 403, 404].includes(status) && mode !== "child-practice") serviceAuthorityFailed(status); }, [mode, serviceAuthorityFailed]);
+  const studyDenied = useCallback((status: number) => { audio.stopAll(); setResult({ key, error: status }); viewRefused(status); }, [audio, key, viewRefused]);
   const environment = useRef({ read, readWork, readProgress, readGuide, readPracticeCalendar, mode, studentId, studyDenied, reload: () => undefined as unknown }); environment.current = { read, readWork, readProgress, readGuide, readPracticeCalendar, mode, studentId, studyDenied, reload: () => load().catch(() => undefined) };
   const workRef = useRef<WorkCoordinator | null>(null);
   if (!workRef.current) workRef.current = new WorkCoordinator((...args) => environment.current.readWork(...args), signal => environment.current.read(environment.current.mode, environment.current.studentId, signal), status => environment.current.studyDenied(status));
@@ -240,8 +246,8 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
       setResult({ key, value });
       return value;
     }
-    catch (error) { if (!request.signal.aborted && turn === sequence.current) { if ([401, 403, 404].includes(statusOf(error))) { work.clear(); progress.configure(null); guide.configure(null); calendar.configure(null); parentSummary.clear(); } setResult({ key, error: statusOf(error) }); } throw error; }
-  }, [read, mode, studentId, key, onStudentReload, work, progress, guide, calendar, audio, parentSummary, parentScope]);
+    catch (error) { if (!request.signal.aborted && turn === sequence.current) { if ([401, 403, 404].includes(statusOf(error))) { work.clear(); progress.configure(null); guide.configure(null); calendar.configure(null); parentSummary.clear(); } setResult({ key, error: statusOf(error) }); viewRefused(statusOf(error)); } throw error; }
+  }, [read, mode, studentId, key, onStudentReload, work, progress, guide, calendar, audio, parentSummary, parentScope, viewRefused]);
   const selectedKindRef = useRef(selectedKind); selectedKindRef.current = selectedKind;
   useEffect(() => registerReload(async () => { await load(); }), [registerReload, load]);
   const authorizedReading = result.key === key && !result.loading ? result.value : undefined;
@@ -296,7 +302,11 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   const proposedHear = useRef<((index: number) => void) | null>(null);
   // Staff change verses in a sheet over the reading instead of a form below it.
   const [sheetOpen, setSheetOpen] = useState(false), [serviceDepartureActive, setServiceDepartureActive] = useState(false), sheet = useRef<HTMLDialogElement>(null), sheetOrigin = useRef<HTMLElement | null>(null);
-  const editor = mode === "admin" || mode === "tutor" ? <ReadingEditor key={`${mode}:${studentId}`} mode={mode} baseline={current?.loading ? null : current?.value ?? null} reload={load} onBusy={setEditorBusy} active={sheetOpen && !work.departure && !serviceDepartureActive} /> : null;
+  // A refused reading (401/403/404 from any of its reads or writes) unmounts the verse editor with its draft: no private sheet stays open.
+  const refusedView = current?.error !== undefined && [401, 403, 404].includes(current.error);
+  useEffect(() => { if (refusedView) setSheetOpen(false); }, [refusedView]);
+  const editorDenied = (status: number) => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); };
+  const editor = (mode === "admin" || mode === "tutor") && !refusedView ? <ReadingEditor key={`${mode}:${studentId}`} mode={mode} baseline={current?.loading ? null : current?.value ?? null} reload={load} onBusy={setEditorBusy} active={sheetOpen && !work.departure && !serviceDepartureActive} denied={editorDenied} /> : null;
   // Keep the editor draft mounted, but give departure review the sole modal
   // layer. This also makes access-check resume independent of effect ordering.
   useWorkspaceModal(sheet, sheetOpen && !work.departure && !serviceDepartureActive);

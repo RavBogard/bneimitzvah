@@ -10,6 +10,7 @@ import { openAuthMail } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { AccessDenied } from "../../src/server/access/errors";
 import * as s from "../../src/server/db/index";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 // AD-01 (2026-10-24 review): a student with no assigned reading shows the proposed Torah portion.
@@ -82,6 +83,11 @@ it("still clears the view when the tutor's access to the student is actually rev
   await ui.poll(() => refusals, { timeout: 30_000 }).toBeGreaterThan(0);
   // Revocation is permanent (the schema refuses to restore it), so this test runs last.
   await fixture.ownerDb.update(s.tutorStudent).set({ revokedAt: new Date() }).where(eq(s.tutorStudent.studentId, fixture.student.id));
-  await tab.evaluate(() => { window.dispatchEvent(new Event("focus")); window.dispatchEvent(new Event("pageshow")); });
-  await ui(portion(tab).getByLabel("Hebrew reading", { exact: true })).toHaveCount(0);
+  // Coming back re-reads only the session, which is still this tutor's: the page stays until the next request. The tutor's
+  // next page of text is refused and that refusal clears the view at once.
+  await comeBack(tab); await ui(portion(tab).getByLabel("Hebrew reading", { exact: true })).toBeVisible();
+  const refused = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading/explore/page") && [403, 404].includes(response.status()));
+  await portion(tab).getByRole("button", { name: "Next text page", exact: true }).click(); await refused;
+  await ui(portion(tab).getByLabel("Hebrew reading", { exact: true })).toHaveCount(0); await ui(portion(tab)).toHaveCount(0);
+  await ui(tab.getByRole("heading", { name: "Access has changed", exact: true })).toBeVisible();
 });

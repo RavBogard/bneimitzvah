@@ -15,6 +15,7 @@ import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { parseRelatedMetadata, SourceMetadataUnavailable } from "../../src/server/study/sources/metadata";
 import * as s from "../../src/server/db/index";
 import { goChild } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -68,7 +69,7 @@ async function save(tab: Page, ref = "Genesis 1:1") {
   const value = await observeSourceResponse(tab, "source-assignments", () => panel(tab, ref).getByRole("button", { name: "Save sources", exact: true }).click());
   await ui(panel(tab, ref).getByText("Sources saved.", { exact: true })).toBeVisible(); return value;
 }
-async function quiet(tab: Page) { let sessions = 0; const response = (value: import("playwright").Response) => { if (new URL(value.url()).pathname === "/api/session" && value.status() === 200) sessions++; }; tab.on("response", response); try { await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await ui.poll(() => sessions).toBeGreaterThanOrEqual(4); } finally { tab.off("response", response); } }
+async function quiet(tab: Page) { let sessions = 0; const response = (value: import("playwright").Response) => { if (new URL(value.url()).pathname === "/api/session" && value.status() === 200) sessions++; }; tab.on("response", response); try { await comeBack(tab); await ui.poll(() => sessions).toBe(1); } finally { tab.off("response", response); } }
 async function noAudio(tab: Page) { await expectSilentAudio(tab); }
 
 beforeAll(async () => {
@@ -188,11 +189,12 @@ it("holds changed catalog proof until explicit review, retains assignments on me
   await assignedList.getByRole("checkbox").nth(0).uncheck(); await assignedList.getByRole("checkbox").nth(1).uncheck(); const cleared = await save(tab, ref); expect(cleared.committed.citations).toEqual([]); expect(relatedCalls).toBe(before); expect(writes).toBe(2); await noAudio(tab);
 });
 
-it("keeps a genuinely committed save unknown when the final session probe fails, then reconciles the original separately from a newer head", async () => {
+it("keeps a genuinely committed save unknown when its answer is lost, then reconciles the original separately from a newer head", async () => {
   const ref = "Genesis 1:3", tab = await page("admin"); await inStudy(tab); await open(tab, ref); await browse(tab, ref); await panel(tab, ref).getByRole("list", { name: "Related sources", exact: true }).getByRole("checkbox").nth(0).check();
-  let failFinalProbe = false, captured: Record<string, unknown> | undefined;
-  await tab.route("**/api/session", async route => { if (failFinalProbe) { failFinalProbe = false; await route.fulfill({ status: 503, contentType: "application/json", body: '{"ok":false}' }); } else await route.continue(); });
-  const committedThenUnverified = async (route: Route) => { if (route.request().method() !== "POST") return route.continue(); captured = route.request().postDataJSON(); const response = await privateRouteFetch(route, tab); if (!response) return; expect(response.status()).toBe(200); failFinalProbe = true; await route.fulfill({ response }); };
+  // No read or write is followed by a session probe any more, so the outcome is made unknown the way it happens for real: the
+  // server commits the save and its answer is lost on the way back.
+  let captured: Record<string, unknown> | undefined;
+  const committedThenUnverified = async (route: Route) => { if (route.request().method() !== "POST") return route.continue(); captured = route.request().postDataJSON(); const response = await privateRouteFetch(route, tab); if (!response) return; expect(response.status()).toBe(200); await response.dispose(); await route.abort("connectionreset"); };
   await tab.route("**/source-assignments", committedThenUnverified); await panel(tab, ref).getByRole("button", { name: "Save sources", exact: true }).click();
   await ui(panel(tab, ref).getByRole("button", { name: "Check what saved", exact: true })).toBeEnabled(); await ui(panel(tab, ref)).toContainText("Save not confirmed. It may have saved."); expect(captured).toBeDefined();
   const stored = await fixture.ownerDb.select().from(s.verseSourceAssignment).where(and(eq(s.verseSourceAssignment.studentId, fixture.student.id), eq(s.verseSourceAssignment.verseRef, ref))); expect(stored).toHaveLength(1);
@@ -224,7 +226,7 @@ it("retains a dirty draft on quiet return and Keep working; explicit discard rel
   await openVerseTools(tab, ref); await ui(panel(tab, ref).getByRole("button", { name: /^Sources( \(\d+\))?$/ })).toHaveAttribute("aria-expanded", "false"); expect(posts).toBe(0);
   await open(tab, ref); await browse(tab, ref); await panel(tab, ref).getByRole("list", { name: "Related sources", exact: true }).getByRole("checkbox").nth(5).check();
   await tab.keyboard.press("Escape"); await ui(dialog).toBeVisible();
-  const denied = tab.waitForResponse(value => new URL(value.url()).pathname === "/api/session" && value.status() === 401); await tab.context().clearCookies(); await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await denied;
+  const denied = tab.waitForResponse(value => new URL(value.url()).pathname === "/api/session" && value.status() === 401); await tab.context().clearCookies(); await comeBack(tab); await denied;
   await ui(dialog).toHaveCount(0); await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible(); await ui(tab.locator(".study-verses")).toHaveCount(0); await ui(panel(tab, ref)).toHaveCount(0); expect(posts).toBe(0); await noAudio(tab);
 });
 
@@ -241,6 +243,6 @@ it("offers an honest unknown-save departure without automatic retry, then clears
   await closeVerseTools(tab); await tab.getByRole("button", { name: "Switch to Synthetic Sibling", exact: true }).click(); await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible(); await openVerseTools(tab, "Genesis 1:1");
   // The sibling's scope starts clean: a child in practice has no sources on this verse, so there is no Sources control (1.9 N4, G2), and nothing of the other child's is shown.
   await ui(detail(tab)).toBeVisible(); await ui(tab.getByRole("button", { name: /^Sources/ })).toHaveCount(0); await ui(assigned(tab)).toHaveCount(0);
-  await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(0) }).where(eq(s.session.userId, fixture.tutor.id)); const expired = tab.waitForResponse(value => new URL(value.url()).pathname === "/api/session" && value.status() === 401); await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await expired;
+  await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(0) }).where(eq(s.session.userId, fixture.tutor.id)); const expired = tab.waitForResponse(value => new URL(value.url()).pathname === "/api/session" && value.status() === 401); await comeBack(tab); await expired;
   await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible(); await ui(tab.locator(".study-verses")).toHaveCount(0); await ui(panel(tab)).toHaveCount(0); await noAudio(tab);
 });

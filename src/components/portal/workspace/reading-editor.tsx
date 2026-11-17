@@ -16,7 +16,11 @@ import { serviceSlotName, serviceSlotTime } from "./service-slot";
 import { useCongregation } from "./settings/links";
 import type { ServiceSettings } from "./settings/api";
 
-export function ReadingEditor({ mode, baseline, reload, onBusy, active: open }: { mode: StaffMode; baseline: Assigned | null; reload(): Promise<Assigned>; onBusy?(busy: boolean): void; active: boolean }) {
+/**
+ * `denied`: a refusal of the editor's own prepare or confirm (signed out, or this student is no longer the person's to edit). The
+ * reading panel drops the editor, its draft and the reading at once, exactly as for a refused read.
+ */
+export function ReadingEditor({ mode, baseline, reload, onBusy, active: open, denied }: { mode: StaffMode; baseline: Assigned | null; reload(): Promise<Assigned>; onBusy?(busy: boolean): void; active: boolean; denied?(status: number): void }) {
   const { guardDeparture, summary, epoch } = useWorkspace(), active = open;
   const congregation = useCongregation(active);
   const [kind, setKind] = useState<ReadingKind>("torah"), [drafts,setDrafts]=useState<Record<ReadingKind,ReadingDraft>>(()=>({torah:emptyReadingDraft(),haftarah:emptyReadingDraft()}));
@@ -97,6 +101,8 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open }: 
       setReview({ proposal, baseline: selectedKey, expiresAt: startedAt + 5 * 60_000 });
       queueMicrotask(() => heading.current?.focus());
     } catch (error) {
+      // A 401 or 404 is the person's access to this student, not the passage: the panel clears (a 400/403 here is the passage).
+      if (alive.current && turn === generation.current && [401, 404].includes(statusOf(error)) && denied) { denied(statusOf(error)); return; }
       if (alive.current && turn === generation.current) {
         if (statusOf(error) === 409) { setBlocked(true); setMessage("The student or reading changed while this review was being prepared. Check what is saved now before reviewing again."); }
         else setMessage([400, 403].includes(statusOf(error))
@@ -124,6 +130,8 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open }: 
       } else {setDrafts(previous=>({...previous,[prepared.kind]:currentReadingDraft(assignment)}));setMessage("Saved. The current reading above shows what the student will see.");}
     } catch (error) {
       if (!alive.current) return;
+      // A definite refusal saved nothing: the panel clears at once (signed out, or this student is no longer the person's to edit).
+      if ([401, 403, 404].includes(statusOf(error)) && denied) { denied(statusOf(error)); return; }
       setBlocked(true);
       setMessage(statusOf(error) === 409 ? "The student or reading changed after this review, so it was not saved. Check what is saved now, then review again."
         : [400, 401, 403, 404].includes(statusOf(error)) ? "This review can no longer be saved. Check what is saved now and your access, then review again."

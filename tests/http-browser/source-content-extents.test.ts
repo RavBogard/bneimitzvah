@@ -16,6 +16,7 @@ import { installLoopbackFetchGuard } from "./egress";
 import { openVerseTools, toolsSheet } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 const work = "Invented Browser Extents", refs = [`${work} 4:9`, `${work} 4:9:7-9`, `${work} 4:10`, `${work} 4:10:2-4`, `${work} 4:11:3-5`];
@@ -89,7 +90,7 @@ it("phone reader observes zero-parent and all-missing range, retaining snapshot 
   const items = reader(tab, 3).getByRole("list", { name: "Source segments", exact: true }).getByRole("listitem"); await ui(items).toHaveCount(3); for (let n = 0; n < 3; n++) await ui(items.nth(n)).toContainText(`${work} 4:10:${n + 2}`);
   await reader(tab, 3).evaluate(node => { (window as unknown as { extentNode: Element }).extentNode = node; window.scrollTo(0, 250); });
   const before = [relatedCalls, editionCalls, bodyCalls], scroll = await tab.evaluate(() => scrollY); let sessions = 0; tab.on("response", response => { if (new URL(response.url()).pathname === "/api/session" && response.status() === 200) sessions++; });
-  await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await ui.poll(() => sessions).toBeGreaterThanOrEqual(4);
+  await comeBack(tab); await ui.poll(() => sessions).toBe(1);
   expect([relatedCalls, editionCalls, bodyCalls]).toEqual(before); expect(await reader(tab, 3).evaluate(node => node === (window as unknown as { extentNode: Element }).extentNode)).toBe(true); expect(await tab.evaluate(() => scrollY)).toBe(scroll); expect(posts()).toBe(0); await noAudio(tab);
 });
 

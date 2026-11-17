@@ -12,6 +12,8 @@ import { installLoopbackFetchGuard } from "./egress";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
 import { refreshReading, goChild } from "./reading-nav";
+import { comeBack } from "./come-back";
+import { RETURN_RECHECK_MS } from "../../src/components/portal/workspace/session";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -58,7 +60,7 @@ async function capture(tab: Page, name: string) {
   const directory = join(process.cwd(), ".impeccable", "review"); await mkdir(directory, { recursive: true });
   await safe(() => tab.screenshot({ path: join(directory, `${name}-${(tab.viewportSize()?.width ?? 0) < 640 ? "mobile" : "desktop"}.png`), fullPage: true }));
 }
-async function focus(tab: Page) { await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); }
+async function focus(tab: Page) { await safe(() => comeBack(tab)); }
 async function checkedRefresh(tab: Page, trigger: () => Promise<unknown>) {
   let release!: () => void, seen = false;
   const gate = new Promise<void>(resolve => { release = resolve; });
@@ -104,6 +106,8 @@ it("retains a draft through same-session Zoom focus and visible return, then dis
   await ui(tab.getByLabel("First name", { exact: true })).toBeVisible(); await ui(tab.getByLabel("First name", { exact: true })).toHaveValue("Unsaved synthetic draft");
   await safe(() => tab.evaluate(() => { Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" }); document.dispatchEvent(new Event("visibilitychange")); }));
   await ui(tab.getByLabel("First name", { exact: true })).toBeVisible();
+  // Coming back re-reads the session only after the tab was away for RETURN_RECHECK_MS (session.ts).
+  await tab.waitForTimeout(RETURN_RECHECK_MS + 100);
   await quietCheck(() => safe(() => tab.evaluate(() => { Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" }); document.dispatchEvent(new Event("visibilitychange")); })));
   await ui(tab.getByLabel("First name", { exact: true })).toBeVisible(); await ui(tab.getByLabel("First name", { exact: true })).toHaveValue("Unsaved synthetic draft");
   await capture(tab, "workspace-admin-draft");
@@ -210,10 +214,11 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await safe(() => goChild(copied, sibling.id)); await safe(() => copied.getByRole("button", { name: "Practice with Synthetic", exact: true }).click());
   await ui(copied.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
+  // Hold one real old-child response while switching; its private payload must not replace the later child view when released.
+  // Coming back no longer re-reads the reading, so the held read is the one that opening Synthetic Learner's sitting makes.
+  await safe(() => tab.getByRole("button", { name: "Switch to Synthetic Sibling", exact: true }).click()); await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   await tab.route(`**/api/students/${fixture.student.id}/reading?mode=child-practice`, async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
-  // Hold one real old-child response while switching; its private payload must
-  // not replace the later child view when released.
-  await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
+  await safe(() => tab.getByRole("button", { name: "Switch to Synthetic Learner", exact: true }).click()); await ui.poll(() => held).toBe(true);
   try {
     await safe(() => tab.getByRole("button", { name: "Switch to Synthetic Sibling", exact: true }).click());
     await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();

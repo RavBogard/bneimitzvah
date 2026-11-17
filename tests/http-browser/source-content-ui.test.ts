@@ -17,6 +17,7 @@ import { closeVerseTools, openVerseTools, toolsSheet } from "./verse-tools";
 import { openAuthMail, switchRole } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { goChild } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -49,7 +50,7 @@ async function open(tab: Page) { await openVerseTools(tab, "Genesis 1:1"); await
 async function browse(tab: Page) { await panel(tab).getByRole("button", { name: "Browse related sources", exact: true }).click(); await ui(sourceList(tab, "Related")).toBeVisible(); }
 async function readCitation(tab: Page, n = 0, lane: "Assigned" | "Related" = "Assigned") { await sourceList(tab, lane).getByRole("button", { name: `Read source: ${sourceRef(n)}`, exact: true }).click(); await ui(reader(tab, n).getByRole("list", { name: "Source editions", exact: true })).toBeVisible(); }
 async function readEdition(tab: Page, n = 0, language: "en" | "he" = "he") { const row = reader(tab, n).getByRole("listitem").filter({ hasText: `Invented edition ${language === "en" ? "000" : "001"}` }); await row.getByRole("button", { name: `Read ${language === "he" ? "Hebrew" : "English"} edition`, exact: true }).click(); const scalar = reader(tab, n).locator(`[lang="${language}"]`); await ui(scalar).toHaveText(bodyText(sourceRef(n), language)); expect(await scalar.textContent()).toBe(bodyText(sourceRef(n), language)); }
-async function quiet(tab: Page) { let sessions = 0; const response = (value: import("playwright").Response) => { if (new URL(value.url()).pathname === "/api/session" && value.status() === 200) sessions++; }; tab.on("response", response); try { await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await ui.poll(() => sessions).toBeGreaterThanOrEqual(4); } finally { tab.off("response", response); } }
+async function quiet(tab: Page) { let sessions = 0; const response = (value: import("playwright").Response) => { if (new URL(value.url()).pathname === "/api/session" && value.status() === 200) sessions++; }; tab.on("response", response); try { await comeBack(tab); await ui.poll(() => sessions).toBe(1); } finally { tab.off("response", response); } }
 async function noAudio(tab: Page) { await expectSilentAudio(tab); }
 
 beforeAll(async () => {
@@ -114,10 +115,13 @@ it("actual guardian revocation during a held body clears old child text and cann
   await ui(tab.getByText("Practice access changed. Choose an available child again.", { exact: true })).toBeVisible(); await ui(reader(tab)).toHaveCount(0); await ui(tab.locator(".study-verses")).toHaveCount(0);
 });
 
-it("a staged endpoint503 cannot outrank a real original-session expiry detected by the final probe", async () => {
+it("a staged endpoint503 clears nothing, and a real session expiry is seen on the next session read", async () => {
   const tab = await page("student"); await open(tab); await readCitation(tab);
   await tab.route("**/source-text?**", async route => { const proof = await api(tab, "/api/session"); expect(proof.status).toBe(200); const identity = fixture.student.id; const [link] = await fixture.ownerDb.select().from(s.studentIdentity).where(eq(s.studentIdentity.studentId, identity)); const [grant] = await fixture.ownerDb.select().from(s.roleGrant).where(eq(s.roleGrant.id, link.roleGrantId)); const [membership] = await fixture.ownerDb.select().from(s.membership).where(eq(s.membership.id, grant.membershipId)); await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(0) }).where(eq(s.session.userId, membership.userId)); await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ ok: false, error: "unavailable" }) }); });
-  await reader(tab).getByRole("listitem").filter({ hasText: "Invented edition 001" }).getByRole("button").click(); await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible(); await ui(tab.locator(".study-verses")).toHaveCount(0); await ui(reader(tab)).toHaveCount(0);
+  // The staged 503 is only "unavailable" and clears nothing; no read is followed by a session probe any more. The expiry is seen
+  // on the next session read (coming back to the tab), which is a 401 and clears the reader and the text at once.
+  await reader(tab).getByRole("listitem").filter({ hasText: "Invented edition 001" }).getByRole("button").click(); await tab.unroute("**/source-text?**");
+  await comeBack(tab); await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible(); await ui(tab.locator(".study-verses")).toHaveCount(0); await ui(reader(tab)).toHaveCount(0);
 });
 
 it.runIf(process.env.INLINE_SOURCE_CAPTURE === "1" || process.env.INLINE_SOURCE_RECAPTURE === "1")("captures the approved twelve source-reader states without rerunning the functional pack", async () => {

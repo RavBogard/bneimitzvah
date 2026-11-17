@@ -12,6 +12,7 @@ import { openAuthMail } from "./auth-navigation";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import * as s from "../../src/server/db/index";
 import { goChild } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined, isolated: Awaited<ReturnType<typeof isolatedEnv>> | undefined;
 let failed = false;
@@ -32,7 +33,6 @@ async function closeContext(context: BrowserContext) {
   if (cleanupFailed || owned?.failed) throw Error("Owned honors route cleanup failed");
 }
 const cookies: Partial<Record<"parent" | "admin" | "student", Awaited<ReturnType<BrowserContext["cookies"]>>>> = {};
-type QuietWitness = { complete: boolean; failed: boolean; started: boolean; eof: number; inflight: number; expected: number; dispose(): void };
 const sheet = (page: Page) => page.getByRole("dialog", { name: "Family honors", exact: true });
 const group = (page: Page, name: string) => sheet(page).getByRole("region", { name, exact: true });
 async function api(page: Page, path: string, body?: unknown) { return page.evaluate(async ({ path, body }) => { const response = await fetch(path, { method: body === undefined ? "GET" : "POST", cache: "no-store", headers: body === undefined ? {} : { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) }); return { status: response.status, data: await response.json() }; }, { path, body }); }
@@ -78,69 +78,32 @@ async function observe(tab: Page, id: string, receipt: boolean, action: () => Pr
   const remove = registerPost(tab, matches, handler); try { const [value] = await Promise.all([captured, action()]); return value; } finally { remove(); }
 }
 async function save(tab: Page, id: string) { const result = await observe(tab, id, false, () => sheet(tab).getByRole("button", { name: "Save honors", exact: true }).click()); await ui(sheet(tab).getByRole("status").filter({ hasText: "Honors saved." })).toBeVisible(); return result; }
+/**
+ * The person leaves the tab and comes back (session.ts): the shell reads the session exactly once and re-reads neither the
+ * reading nor the honors form, so a dirty field, its focus and the sheet's scroll stay as they were.
+ */
 async function focus(tab: Page) {
   const admin = new URL(tab.url()).pathname === "/workspace/admin/students";
-  // These fixtures have an assigned authorized reading. Wait until its loading
-  // render ends and its layout-effect quiet registration has committed. The
-  // honors sheet still opens independently; this is only the quiet-test setup.
   if (!admin) await ui(tab.locator(".reading-workspace:not([hidden]) .reading-hero")).toBeVisible();
-  // Provider2 + authorized reading2 + honors2; admin roster has no reading scope.
-  // The final provider proof begins only after every registered scope settles.
-  // Other workspace loads (lesson summary, practice dates, service panels) also
-  // bracket their reads with /api/session, so their EOFs can reach this count
-  // while the provider's own check is still in flight; a later focus would then
-  // be coalesced into that pre-revocation check. The proof is therefore also
-  // gated on the focus actually starting a check in its own task, and on every
-  // session, reading and honors read and hash this check chains through having
-  // finished: the check hands off between them without yielding a task, so no
-  // poll can see it idle while it is still pending.
-  const expected = admin ? 4 : 6;
-  await tab.evaluate(async expected => {
-    const browser = window as Window & { honorsQuietWitness?: QuietWitness }, original = window.fetch, subtle = crypto.subtle, digest = subtle.digest, channel = new MessageChannel();
-    let eof = 0, inflight = 0, sessions = 0;
-    const witness: QuietWitness = { complete: false, failed: false, started: false, get eof() { return eof; }, get inflight() { return inflight; }, expected, dispose() {
-      if (window.fetch === wrapped) window.fetch = original; if (Object.hasOwn(subtle, "digest") && subtle.digest === hashed) delete (subtle as { digest?: unknown }).digest;
-      channel.port1.close(); channel.port2.close(); if (browser.honorsQuietWitness === witness) delete browser.honorsQuietWitness; } };
-    channel.port1.onmessage = () => { witness.complete = true; };
-    const hashed = function (...args: Parameters<SubtleCrypto["digest"]>) {
-      inflight++; let settled = false; const done = () => { if (!settled) { settled = true; inflight--; } };
-      try { const result = Reflect.apply(digest, subtle, args) as Promise<ArrayBuffer>; result.then(done, done); return result; } catch (error) { done(); throw error; }
-    };
-    Object.defineProperty(subtle, "digest", { configurable: true, writable: true, value: hashed });
-    const wrapped: typeof window.fetch = async (...args) => {
-      const input = args[0], url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, location.href);
-      const session = url.origin === location.origin && url.pathname === "/api/session", scope = url.origin === location.origin && /^\/api\/students\/[^/]+\/(?:reading|honors)$/.test(url.pathname);
-      if (!session && !scope) return original(...args);
-      if (session) sessions++;
-      inflight++; let ended = false; const end = () => { if (!ended) { ended = true; inflight--; } };
-      let response: Response;
-      try { response = await original(...args); } catch (error) { end(); throw error; }
-      if (session && response.status !== 200) witness.failed = true;
-      const body = response.body;
-      if (response.status !== 200 || !body) { end(); return response; }
-      const getReader = body.getReader;
-      Object.defineProperty(body, "getReader", { configurable: true, value: (...readerArgs: unknown[]) => {
-        const reader = Reflect.apply(getReader, body, readerArgs), read = reader.read, cancel = reader.cancel;
-        reader.read = (...readArgs: unknown[]) => (Reflect.apply(read, reader, readArgs) as Promise<{ done: boolean }>).then(part => {
-          // Observe only actual parser EOF; preserve original result objects,
-          // bytes, rejection, cancellation and release semantics unchanged.
-          if (part.done && !ended) { end(); if (session && ++eof === expected) channel.port2.postMessage(null); } return part;
-        }, (error: unknown) => { end(); if (session) witness.failed = true; throw error; });
-        reader.cancel = (...cancelArgs: unknown[]) => { end(); return Reflect.apply(cancel, reader, cancelArgs) as Promise<void>; };
-        return reader;
-      } });
-      return response;
-    };
-    browser.honorsQuietWitness = witness; window.fetch = wrapped; window.dispatchEvent(new Event("focus"));
-    // Still inside this task: the provider's queued check issues its first
-    // session read within a few microtasks, and nothing else can interleave.
-    for (let hop = 0; hop < 32; hop++) await Promise.resolve();
-    witness.started = sessions > 0;
-  }, expected);
-  try {
-    await ui.poll(() => tab.evaluate(() => { const witness = (window as Window & { honorsQuietWitness?: QuietWitness }).honorsQuietWitness;
-      return { started: witness?.started ?? false, complete: witness?.complete ?? false, idle: witness?.inflight === 0, failed: witness?.failed ?? false }; })).toEqual({ started: true, complete: true, idle: true, failed: false });
-  } finally { await tab.evaluate(() => (window as Window & { honorsQuietWitness?: QuietWitness }).honorsQuietWitness?.dispose()); }
+  let sessions = 0, reads = 0;
+  const count = (response: import("playwright").Response) => { const url = new URL(response.url()); if (url.origin !== BROWSER_ORIGIN) return;
+    if (url.pathname === "/api/session" && response.status() === 200) sessions++;
+    if (/^\/api\/students\/[^/]+\/(?:reading|honors)$/.test(url.pathname)) reads++; };
+  tab.on("response", count);
+  try { await comeBack(tab); await ui.poll(() => sessions).toBe(1); expect(reads).toBe(0); }
+  finally { tab.off("response", count); }
+}
+/** The person's next look at the form after the ceremony changed: a save the server refuses as stale, then Check current form. */
+async function saveThenCheck(tab: Page) {
+  await sheet(tab).getByRole("button", { name: "Save honors", exact: true }).click();
+  await sheet(tab).getByRole("button", { name: "Check current form", exact: true }).click();
+}
+/** The person closes the form and opens it again: the sheet reads the saved form and current ceremony afresh. */
+async function reopen(tab: Page, name?: string) {
+  await sheet(tab).getByRole("button", { name: "Close family honors", exact: true }).click(); await ui(sheet(tab)).toHaveCount(0);
+  const entry = tab.getByRole("region", { name: "Family honors", exact: true }).getByRole("button", { name: /^(Open the honors form|Edit)$/ });
+  if (await entry.count()) await entry.click(); else await tab.getByRole("button", { name: `Honors for ${name}`, exact: true }).click();
+  await ui(sheet(tab).getByRole("heading", { name: "Opening the ark", exact: true })).toBeVisible();
 }
 async function rows(id: string) { return fixture.ownerDb.select().from(s.honorsVersion).where(eq(s.honorsVersion.studentId, id)); }
 async function audits(id: string) { return fixture.ownerDb.select().from(s.auditEvent).where(and(eq(s.auditEvent.actingStudentId, id), eq(s.auditEvent.action, "honors.set"))); }
@@ -182,9 +145,9 @@ it("base guardian saves flexible ordered groups, actual aliyot, Hebrew names and
 it("quiet return preserves a dirty field/focus/scroll; date-only review and changed actual-span mapping remain explicit", async () => {
   const tab = await page("parent", true), child = children[1]; await open(tab, child, "parent"); const title = "Aliyah 2 · Genesis 1:2 – Genesis 1:3"; await add(tab, title, "Synthetic Kept Group"); await save(tab, child.id);
   const name = group(tab, title).getByLabel("English name", { exact: true }); await name.fill("Synthetic Unsaved Group"); await name.focus(); const scroll = await sheet(tab).evaluate(node => node.scrollTop); await focus(tab); await ui(name).toHaveValue("Synthetic Unsaved Group"); await ui(name).toBeFocused(); expect(await sheet(tab).evaluate(node => node.scrollTop)).toBe(scroll);
-  await fixture.ownerDb.update(s.student).set({ ceremonyDate: "2027-02-06" }).where(eq(s.student.id, child.id)); await focus(tab); await ui(sheet(tab).getByRole("region", { name: "Review changed ceremony", exact: true })).toBeVisible(); await ui(sheet(tab).getByRole("button", { name: "Save honors", exact: true })).toBeDisabled();
+  await fixture.ownerDb.update(s.student).set({ ceremonyDate: "2027-02-06" }).where(eq(s.student.id, child.id)); await focus(tab); await saveThenCheck(tab); await ui(sheet(tab).getByRole("region", { name: "Review changed ceremony", exact: true })).toBeVisible(); await ui(sheet(tab).getByRole("button", { name: "Save honors", exact: true })).toBeDisabled();
   expect(await sheet(tab).getByRole("combobox").count()).toBe(0); await sheet(tab).getByRole("button", { name: "I reviewed the current ceremony", exact: true }).click(); await ui(name).toHaveValue("Synthetic Unsaved Group"); await save(tab, child.id);
-  await fixture.ownerDb.update(s.assignment).set({ aliyahStarts: ["Genesis 1:3"], revision: 2 }).where(eq(s.assignment.id, child.assignmentId)); await focus(tab); const choice = sheet(tab).getByRole("combobox", { name: "Current span for Genesis 1:2", exact: true }); await ui(choice).toBeVisible(); await ui(group(tab, title).getByLabel("English name", { exact: true })).toHaveValue("Synthetic Unsaved Group");
+  await fixture.ownerDb.update(s.assignment).set({ aliyahStarts: ["Genesis 1:3"], revision: 2 }).where(eq(s.assignment.id, child.assignmentId)); await focus(tab); await reopen(tab); const choice = sheet(tab).getByRole("combobox", { name: "Current span for Genesis 1:2", exact: true }); await ui(choice).toBeVisible(); await ui(group(tab, title).getByLabel("English name", { exact: true })).toHaveValue("Synthetic Unsaved Group");
   await sheet(tab).getByRole("button", { name: "I reviewed the current ceremony", exact: true }).click(); await ui(choice).toBeVisible(); await choice.selectOption("Genesis 1:3"); await sheet(tab).getByRole("button", { name: "I reviewed the current ceremony", exact: true }).click();
   await ui(group(tab, "Aliyah 2 · Genesis 1:3").getByLabel("English name", { exact: true })).toHaveValue("Synthetic Unsaved Group"); const saved = await save(tab, child.id); expect(saved.committed.form.aliyot[0].startVerse).toBe("Genesis 1:3"); expect(await rows(child.id)).toHaveLength(3); expect(await audits(child.id)).toHaveLength(3);
 });
@@ -224,14 +187,17 @@ it("admin printing verifies only the saved copy; real guardian denial clears pri
   await tab.evaluate(() => { const append = Element.prototype.append; Element.prototype.append = function (...nodes: (Node | string)[]) { append.apply(this, nodes); for (const node of nodes) if (node instanceof HTMLIFrameElement && node.title === "Saved family honors print copy") node.contentWindow!.print = () => { (window as unknown as { honorsPrinted: string }).honorsPrinted = node.contentDocument!.body.textContent ?? ""; }; }; });
   await sheet(tab).getByRole("button", { name: /^Print saved version \d+$/ }).click(); await ui.poll(() => tab.evaluate(() => (window as unknown as { honorsPrinted?: string }).honorsPrinted ?? "")).toContain("Synthetic Saved Print"); expect(await tab.evaluate(() => (window as unknown as { honorsPrinted: string }).honorsPrinted)).not.toContain("Synthetic Unsaved Never Print");
   const parent = await page("parent"); await open(parent, child, "parent"); await ui(group(parent, "Opening the ark").getByLabel("English name", { exact: true })).toHaveValue("Synthetic Saved Print");
-  // Complete the actual authorized cycle before changing its authority. A raw
-  // focus event during an earlier cycle is intentionally coalesced by provider.
   await focus(parent); await ui(group(parent, "Opening the ark").getByLabel("English name", { exact: true })).toHaveValue("Synthetic Saved Print");
   await fixture.ownerDb.update(s.guardian).set({ revokedAt: new Date() }).where(eq(s.guardian.studentId, child.id));
   let denied = false;
-  const refusal = (response: import("playwright").Response) => { const url = new URL(response.url()); if (url.origin === BROWSER_ORIGIN && response.request().method() === "GET" && url.searchParams.get("mode") === "parent" && [`/api/students/${child.id}/honors`, `/api/students/${child.id}/reading`].includes(url.pathname) && response.status() === 404) denied = true; };
+  const refusal = (response: import("playwright").Response) => { const url = new URL(response.url()); if (url.origin === BROWSER_ORIGIN && url.pathname === `/api/students/${child.id}/honors` && response.status() === 404) denied = true; };
   parent.on("response", refusal);
-  try { await parent.evaluate(() => window.dispatchEvent(new Event("focus"))); await ui.poll(() => denied).toBe(true); await ui(parent.locator('input[value="Synthetic Saved Print"]')).toHaveCount(0); }
+  // Coming back re-reads only the session, which is still this parent's: the form stays until the next request (the trade-off of
+  // not re-proving access in the browser). The parent's next save is refused and clears every private field at once.
+  try { await focus(parent); await ui(group(parent, "Opening the ark").getByLabel("English name", { exact: true })).toHaveValue("Synthetic Saved Print");
+    await add(parent, "Opening the ark", "Synthetic Parent After Revocation"); await sheet(parent).getByRole("button", { name: "Save honors", exact: true }).click();
+    await ui.poll(() => denied).toBe(true); await ui(sheet(parent)).toHaveCount(0); await ui(parent.locator('input[value="Synthetic Saved Print"]')).toHaveCount(0);
+    await ui(parent.getByRole("textbox", { name: "English name", exact: true })).toHaveCount(0); }
   finally { parent.off("response", refusal); }
   expect(await rows(child.id)).toHaveLength(1);
 });
@@ -252,7 +218,8 @@ it("own adult uses the existing honors sheet and link controls while child pract
   await fixture.ownerDb.update(s.student).set({ studentKind: "child" }).where(eq(s.student.id, fixture.student.id));
   try {
     const denied = student.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${fixture.student.id}/honors` && response.status() === 403);
-    await student.evaluate(() => window.dispatchEvent(new Event("focus"))); await denied;
+    // The adult's next save after the kind change is refused, and the refusal clears the sheet at once.
+    await add(student, "Opening the ark", "Synthetic Adult After Change"); await sheet(student).getByRole("button", { name: "Save honors", exact: true }).click(); await denied;
     await ui(sheet(student)).toHaveCount(0); await ui(student.getByRole("button", { name: "Open the honors form", exact: true })).toHaveCount(0);
     await ui(student.locator('input[value="Synthetic Adult Honoree"]')).toHaveCount(0); expect((await api(student, `/api/students/${fixture.student.id}/honors?mode=student`)).status).toBe(403);
     expect((await api(student, `/api/students/${fixture.student.id}/honoree-links/status`, { mode: "student", startVerse: "Genesis 1:2" })).status).toBe(403);
@@ -286,7 +253,7 @@ async function capturePacket() {
   for (const mobile of [false, true]) for (const theme of ["light", "dark"] as const) {
     await fixture.ownerDb.update(s.student).set({ ceremonyDate: "2027-01-02" }).where(eq(s.student.id, children[0].id));
     const tab = await page("admin", mobile, theme); await open(tab, children[0], "admin");
-    if (theme === "dark") { await fixture.ownerDb.update(s.student).set({ ceremonyDate: "2027-03-06" }).where(eq(s.student.id, children[0].id)); await focus(tab); await ui(sheet(tab).getByRole("region", { name: "Review changed ceremony", exact: true })).toBeVisible(); }
+    if (theme === "dark") { await fixture.ownerDb.update(s.student).set({ ceremonyDate: "2027-03-06" }).where(eq(s.student.id, children[0].id)); await focus(tab); await reopen(tab, children[0].name); await ui(sheet(tab).getByRole("region", { name: "Review changed ceremony", exact: true })).toBeVisible(); }
     if (mobile && theme === "light") await group(tab, "Aliyah 2 · Genesis 1:2 – Genesis 1:3").getByLabel("Hebrew name (if known)", { exact: true }).first().focus(); else await sheet(tab).getByRole("heading", { name: "Family honors", exact: true }).focus();
     await tab.evaluate(async () => { await document.fonts.ready; await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); }); expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const name = `${mobile ? "phone" : "desktop"}-${theme}`, bytes = await tab.screenshot({ style: "nextjs-portal { display:none !important; }" }); await writeFile(join(directory, `${name}.png`), bytes, { flag: "wx" }); images.push({ name, width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20), sha256: createHash("sha256").update(bytes).digest("hex") });

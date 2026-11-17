@@ -11,6 +11,7 @@ import { installLoopbackFetchGuard } from "./egress";
 import * as s from "../../src/server/db/index";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import { goChild } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined, sibling: { id: string };
@@ -55,9 +56,9 @@ async function capture(tab: Page, name: string) {
   const dir = join(process.cwd(), ".impeccable", "review"); await mkdir(dir, { recursive: true }); await safe(() => tab.screenshot({ path: join(dir, `${name}.png`), fullPage: true }));
 }
 async function focus(tab: Page) {
-  let delivered = 0; const expected = new URL(tab.url()).pathname.startsWith("/workspace/practice/") ? 4 : 2;
+  let delivered = 0; const expected = 1; // Coming back reads the session once (session.ts), on every page.
   const count = (response: import("playwright").Response) => { if (new URL(response.url()).pathname === "/api/session") delivered++; }; tab.on("response", count);
-  try { await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => delivered).toBeGreaterThanOrEqual(expected); }
+  try { await safe(() => comeBack(tab)); await ui.poll(() => delivered).toBe(expected); }
   finally { tab.off("response", count); }
   await ui(tab.locator('[data-workspace-state="checking"]')).toBeHidden();
 }
@@ -136,10 +137,11 @@ it("revokes only the selected parent practice context, removes exact parent/stud
   const admin = await page(), parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => goChild(parent, fixture.student.id)); await click(parent, "Practice with Synthetic"); await ui(parent.getByTestId("practice-bar-title")).toBeVisible();
   const other = await parent.context().newPage(); await navigate(other, "/workspace/parent"); await safe(() => goChild(other, sibling.id)); await click(other, "Practice with Synthetic"); await ui(other.getByTestId("practice-bar-title")).toBeVisible();
   await navigate(admin, `/workspace/admin/students/${fixture.student.id}/access`); await accessLoaded(admin); await safe(() => action(admin, "Parents", "Stop child practice").click()); await confirm(admin);
-  const denied = parent.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${fixture.student.id}/reading` && response.status() === 404);
-  // A real denial short-circuits the normal successful quiet probe sequence.
-  // Bind this case to the actual rejection and terminal recovery instead.
-  await safe(() => parent.evaluate(() => window.dispatchEvent(new Event("focus")))); expect((await denied).status()).toBe(404); await ui.poll(() => new URL(parent.url()).pathname).toBe("/mine"); await ui(parent.getByTestId("workspace-notice")).toHaveAttribute("data-notice-kind", "practice-access-changed"); await ui(parent.getByTestId("mine-children")).toBeVisible();
+  // Coming back re-reads only the session, which is still this parent's: the sitting stays until the parent's next request. The
+  // parent's next request (Try again on the portion, which has no service time yet) is refused, which ends the sitting and clears it at once.
+  await safe(() => comeBack(parent)); await ui(parent.getByTestId("practice-bar-title")).toBeVisible();
+  const denied = parent.waitForResponse(response => new URL(response.url()).pathname.startsWith(`/api/students/${fixture.student.id}/`) && [403, 404].includes(response.status()));
+  await click(parent, "Try again"); expect([403, 404]).toContain((await denied).status()); await ui.poll(() => new URL(parent.url()).pathname).toBe("/mine"); await ui(parent.getByTestId("workspace-notice")).toHaveAttribute("data-notice-kind", "practice-access-changed"); await ui(parent.getByTestId("mine-children")).toBeVisible();
   expect(await parent.getByTestId("reading-workspace").count()).toBe(0);
   await ui(parent.locator("[data-testid='study-verses'], [data-testid='study-hebrew'], [data-testid='verse-work'], dialog:modal")).toHaveCount(0);
   await focus(other); await ui(other.getByTestId("practice-bar-title")).toBeVisible();

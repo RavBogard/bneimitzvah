@@ -18,6 +18,7 @@ import { projectStudyVerse } from "../../src/lib/hebrew/study-tokens";
 import { StudyUnavailable } from "../../src/server/study/types";
 import * as s from "../../src/server/db/index";
 import { openVerseEditor, refreshReading, goChild } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -334,7 +335,7 @@ it("retains optional close-up during a quiet unchanged access check without requ
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route("**/api/session", async route => { const response = await privateRouteFetch(route, tab); if (!response) return; held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
   try {
-    await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
+    await safe(() => comeBack(tab)); await ui.poll(() => held).toBe(true);
     await ui(tab.locator('[data-workspace-state="checking"]')).toBeHidden(); await ui(dialog).toBeVisible();
   } finally { release(); await tab.unroute("**/api/session"); }
   await loaded(tab, "Genesis 1:1"); await ui(dialog).toBeVisible(); await safe(() => tab.keyboard.press("Escape")); await ui(dialog).toHaveCount(0);
@@ -386,9 +387,14 @@ it("discards held old-child text after a switch, keeps another tab independent, 
   const relationships = await api(adminTab, `/api/admin/students/${sibling.id}/relationships`);
   const guardian = relationships.data.guardians[0]; expect(Boolean(guardian)).toBe(true);
   expect((await api(adminTab, `/api/admin/students/${sibling.id}/relationships/guardians/${guardian.id}/revoke`, { expectedState: "active" })).status === 200).toBe(true);
-  await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui(tab.getByTestId("mine-children")).toBeVisible(); expect(await tab.getByTestId("study-verses").count()).toBe(0);
+  // Coming back re-reads only the session, which is still this parent's: the sitting's text stays until the next request. The
+  // parent's next look (the verse's tools, which read its notes) is refused for the revoked child, which ends the sitting and clears the text at once.
+  await safe(() => comeBack(tab)); await loaded(tab, "Genesis 2:1");
+  const refused = tab.waitForResponse(response => new URL(response.url()).pathname.startsWith(`/api/students/${sibling.id}/`) && [403, 404].includes(response.status()));
+  await safe(() => openVerseTools(tab, "Genesis 2:1")).catch(() => undefined); await refused;
+  await ui(tab.getByTestId("mine-children")).toBeVisible(); expect(await tab.getByTestId("study-verses").count()).toBe(0);
   expect(await tab.locator("[data-family], [data-word-index]").count()).toBe(0);
-  await safe(() => other.evaluate(() => window.dispatchEvent(new Event("focus")))); await loaded(other, "Genesis 1:1");
+  await safe(() => comeBack(other)); await loaded(other, "Genesis 1:1");
   expect(modes.size === 5 && [...modes].every(mode => ["student", "parent", "tutor", "admin", "child-practice"].includes(mode))).toBe(true);
 });
 
@@ -411,22 +417,21 @@ it("preserves staff drafts, paging and quiet same-session reading while rejectin
   await ui(tab.getByRole("navigation", { name: "Reading tools", exact: true })).toHaveCount(1);
   expect(await tab.getByTestId("study-verses").locator("details[open]").count()).toBe(0);
   await ui(tab.locator("[data-testid='study-verses'] [data-family]").first()).toBeVisible();
-  let release!: () => void, held = false, metadataReleased = false, verifiedSessions = 0; const gate = new Promise<void>(resolve => { release = resolve; });
+  let release!: () => void, held = false, verifiedSessions = 0, readingReads = 0; const gate = new Promise<void>(resolve => { release = resolve; });
   const existingText = await tab.getByTestId("study-verses").elementHandle();
   let textReloads = 0; const countText = (request: import("playwright").Request) => { if (new URL(request.url()).pathname.endsWith("/study-text")) textReloads++; }; tab.on("request", countText);
   const scroll = await tab.evaluate(() => { window.scrollTo(0, 240); return window.scrollY; });
-  const countVerifiedSession = (response: import("playwright").Response) => { if (metadataReleased && new URL(response.url()).pathname === "/api/session" && response.status() === 200) verifiedSessions++; }; tab.on("response", countVerifiedSession);
-  await tab.route("**/reading?**", async route => { const response = await privateRouteFetch(route, tab); if (!response) return; held = true; await gate; metadataReleased = true; await route.fulfill({ response }).catch(() => undefined); });
+  // Coming back reads the session once and re-reads neither the reading nor its text (session.ts).
+  const countVerifiedSession = (response: import("playwright").Response) => { const path = new URL(response.url()).pathname; if (path === "/api/session" && response.status() === 200) verifiedSessions++; if (path === `/api/students/${fixture.student.id}/reading`) readingReads++; }; tab.on("response", countVerifiedSession);
+  await tab.route("**/api/session", async route => { const response = await privateRouteFetch(route, tab); if (!response) return; held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
   try {
-    await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
+    await safe(() => comeBack(tab)); await ui.poll(() => held).toBe(true);
     await ui(tab.locator('[data-workspace-state="checking"]')).toBeHidden(); await ui(tab.getByTestId("study-verses")).toBeVisible();
     expect(await existingText!.evaluate(node => node === document.querySelector("[data-testid='study-verses']"))).toBe(true); expect(await tab.evaluate(() => window.scrollY)).toBe(scroll); expect(textReloads).toBe(0);
     await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:4-5");
   } finally { release(); }
-  // Observe readVerified's trailing session and the provider's final session;
-  // unrelated long-lived browser requests are not a quiet-authority barrier.
-  await ui.poll(() => verifiedSessions).toBeGreaterThanOrEqual(2); tab.off("response", countVerifiedSession);
-  await ui(tab.getByTestId("study-verses")).toBeVisible(); await ui(tab.locator("[data-testid='study-verses'] [data-verse-ref]")).toHaveCount(4); await tab.unroute("**/reading?**");
+  await ui.poll(() => verifiedSessions).toBe(1); expect(readingReads).toBe(0); expect(textReloads).toBe(0); tab.off("response", countVerifiedSession);
+  await ui(tab.getByTestId("study-verses")).toBeVisible(); await ui(tab.locator("[data-testid='study-verses'] [data-verse-ref]")).toHaveCount(4); await tab.unroute("**/api/session");
   expect(await existingText!.evaluate(node => node === document.querySelector("[data-testid='study-verses']"))).toBe(true); expect(textReloads).toBe(0); tab.off("request", countText); await existingText?.dispose();
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:4-5");
   const replacement = await api(tab, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "admin", ranges: ["Genesis 2:1-2"] });
@@ -444,5 +449,5 @@ it("preserves staff drafts, paging and quiet same-session reading while rejectin
   expect(await tab.getByRole("navigation", { name: "Text pages", exact: true }).count()).toBe(0); // A single page shows no paging controls.
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:4-5");
   await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(s.session.userId, fixture.admin.id));
-  await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui(tab.locator('[data-testid="workspace-state"][data-workspace-state="signed-out"]')).toBeVisible(); expect(await tab.getByTestId("study-hebrew").count()).toBe(0);
+  await safe(() => comeBack(tab)); await ui(tab.locator('[data-testid="workspace-state"][data-workspace-state="signed-out"]')).toBeVisible(); expect(await tab.getByTestId("study-hebrew").count()).toBe(0);
 });

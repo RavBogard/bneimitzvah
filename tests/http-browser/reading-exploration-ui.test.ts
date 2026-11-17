@@ -27,6 +27,7 @@ import { installReadingRouteGuard, readingRouteCleanupError } from "./reading-ro
 import { assertBrowserStartupAllowed, BROWSER_ORIGIN, startBrowserServer } from "./server";
 import * as s from "../../src/server/db/index";
 import { refreshReading, goChild } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 declare global { interface Window { explorationAudios: HTMLAudioElement[]; explorationOverlap: number } }
 
@@ -162,7 +163,7 @@ it("shows all proposed pages, retains unchanged text/scroll on quiet return, and
     await safe(() => portion(tab).evaluate(node => node.scrollIntoView({ block: "start" })));
     const scroll = await tab.evaluate(() => scrollY), count = preparations;
     const checked = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading") && response.status() === 200);
-    await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await checked;
+    await comeBack(tab); await checked;
     await tab.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     expect(await element!.evaluate(node => node.isConnected)).toBe(true); expect(preparations).toBe(count); expect(Math.abs(await tab.evaluate(() => scrollY) - scroll)).toBeLessThan(3);
     await position(tab, 101, 146, 146);
@@ -443,7 +444,7 @@ it("cancels held proposed audio on page navigation and quiet return never starts
   await tab.unroute("**/reference-audio/short-v1/*.mp3");
   const beforeSources = sourceRequests, beforeMetadata = metadataRequests;
   const response = tab.waitForResponse(r => new URL(r.url()).pathname.endsWith("/reading") && r.status() === 200);
-  await tab.evaluate(() => { window.dispatchEvent(new Event("focus")); window.dispatchEvent(new Event("pageshow")); }); await response;
+  await comeBack(tab); await response;
   await tab.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
   expect(sourceRequests).toBe(beforeSources); expect(metadataRequests).toBe(beforeMetadata); expect((await audioState(tab)).active).toBe(0);
 });

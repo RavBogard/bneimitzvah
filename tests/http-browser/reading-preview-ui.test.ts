@@ -13,6 +13,7 @@ import { closeVerseTools, openVerseTools } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import * as s from "../../src/server/db/index";
 import { openVerseEditor, refreshReading, goChild, manage } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -162,12 +163,12 @@ it("retains a bound preview through unchanged quiet verification, fences explici
   await tab.route("**/reading/preview/page", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); delivered = true; });
   try {
     await click(tab, "Preview custom references"); await ui.poll(() => held).toBe(true);
-    let metadataSeen = false, finalSessions = 0;
+    let finalSessions = 0, readingReads = 0; // Coming back reads the session once and re-reads nothing else.
     const observed = (response: import("playwright").Response) => { const path = new URL(response.url()).pathname;
-      if (path === `/api/students/${fixture.student.id}/reading` && response.status() === 200) metadataSeen = true;
-      if (metadataSeen && path === "/api/session" && response.status() === 200) finalSessions++;
+      if (path === `/api/students/${fixture.student.id}/reading`) readingReads++;
+      if (path === "/api/session" && response.status() === 200) finalSessions++;
     }; tab.on("response", observed);
-    await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => finalSessions).toBeGreaterThanOrEqual(2); tab.off("response", observed);
+    await safe(() => comeBack(tab)); await ui.poll(() => finalSessions).toBe(1); expect(readingReads).toBe(0); tab.off("response", observed);
     await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden();
     await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toBeVisible();
     await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
@@ -313,7 +314,8 @@ it("requires an explicit current-assignment reseed after a cut-only revision and
   const prepared = await api(tab, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "admin", kind: "torah", preparationMode: "current-assignment", expectedAssignmentRevision: revision, aliyahStarts: ["Genesis 1:2"] });
   expect(prepared.status).toBe(200);
   expect((await api(tab, `/api/students/${fixture.student.id}/reading/confirm`, { mode: "admin", binding: prepared.data.binding })).status).toBe(200);
-  await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
+  // Coming back re-reads only the session; the changed revision is read when the admin refreshes the reading.
+  await safe(() => comeBack(tab)); if (await tab.getByRole("dialog", { name: /^Verse tools · / }).count()) await closeVerseTools(tab); await safe(() => refreshReading(tab));
   await openSheet(tab);
   await ui(tab.getByText(/The saved reading changed after you started\./)).toBeVisible();
   await ui(tab.getByRole("button", { name: "Review assignment", exact: true })).toBeDisabled();

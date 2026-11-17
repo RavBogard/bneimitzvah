@@ -12,6 +12,7 @@ import { openAuthMail, switchRole } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
 import { refreshReading, goChild } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -110,8 +111,16 @@ it("does not substitute another reading for foreign or unknown routes and reject
   const followOn = ["progress", "study-guide"].map(name => tab.waitForResponse(response => response.request().method() === "GET" && new URL(response.url()).pathname === `/api/students/${fixture.student.id}/${name}`, { timeout: 30_000 }));
   await navigate(tab, `/workspace/tutor/${fixture.student.id}`); await loaded(tab, "Genesis 1:1"); await safe(() => Promise.all(followOn));
   await fixture.ownerDb.update(s.tutorStudent).set({ revokedAt: new Date() }).where(eq(s.tutorStudent.id, fixture.link.id));
-  await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
-  await ui(tab.getByRole("heading", { name: "Student not found", exact: true })).toBeVisible(); expect(await tab.locator(".study-verses, .verse-work").count()).toBe(0);
+  // Coming back re-reads the session. If the tutor's view is still shown, it stays only until the tutor's next request: the
+  // tutor's next read of the reading is refused, and the refusal clears the text and work at once.
+  const gone = tab.getByText("This reading is no longer available in the selected role. Choose another available student.", { exact: true })
+    .or(tab.getByRole("heading", { name: /^(Student not found|Access has changed)$/ }));
+  await safe(() => comeBack(tab)); await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true }).or(gone)).toBeVisible();
+  if (!await gone.count()) {
+    const refused = tab.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${fixture.student.id}/reading` && [403, 404].includes(response.status()));
+    await safe(() => refreshReading(tab)); await refused;
+  }
+  await ui(gone).toBeVisible(); await ui(tab.locator(".study-verses, .verse-work")).toHaveCount(0);
   await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click(); })());
   await safe(() => goChild(tab, fixture.student.id)); await loaded(tab, "Genesis 1:1");
   // A parent's reading has no Manage sheet: the staff actions are not theirs.

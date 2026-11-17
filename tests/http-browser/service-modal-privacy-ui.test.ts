@@ -13,6 +13,7 @@ import { closeVerseTools, openVerseTools, workPanel } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import * as s from "../../src/server/db/index";
 import { manage, toSection } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser;
@@ -61,7 +62,7 @@ async function pendingService(tab: Page) {
 async function holdSession(tab: Page) {
   let release!: () => void, held = false, delivered = 0; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); delivered++; });
-  return { release, ready: () => ui.poll(() => held).toBe(true), completed: () => ui.poll(() => delivered).toBeGreaterThanOrEqual(4), remove: () => tab.unroute("**/api/session") };
+  return { release, ready: () => ui.poll(() => held).toBe(true), completed: () => ui.poll(() => delivered).toBe(1), remove: () => tab.unroute("**/api/session") };
 }
 function countWrites(tab: Page) {
   const counts = { confirm: 0, note: 0 };
@@ -93,7 +94,7 @@ it("retains only the rightful service decision during a quiet check, preserving 
   await choose(other, 2); await safe(() => toSection(other, "service"));
   await pendingService(tab); const hold = await holdSession(tab);
   try {
-    await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await hold.ready();
+    await safe(() => comeBack(tab)); await hold.ready();
     await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden();
     expect(await modalCount(tab)).toBe(1); await ui(serviceGuard(tab)).toBeVisible(); await ui(sheet(tab)).toBeHidden(); expect(writes).toEqual({ confirm: 0, note: 0 });
     expect(await modalCount(other)).toBe(0); await ui(panel(other).getByRole("checkbox", { name: /Synthetic part 2/ })).toBeChecked();
@@ -155,19 +156,26 @@ it("clears pending service and reading modals after real session expiry or relat
   for (const failure of ["session", "relationship"] as const) {
     const tab = await page(true), writes = countWrites(tab); await pendingService(tab); const hold = await holdSession(tab);
     try {
-      await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await hold.ready(); expect(await modalCount(tab)).toBe(1); await ui(serviceGuard(tab)).toBeVisible();
+      await safe(() => comeBack(tab)); await hold.ready(); expect(await modalCount(tab)).toBe(1); await ui(serviceGuard(tab)).toBeVisible();
       if (failure === "session") await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(s.session.userId, fixture.tutor.id));
       else await fixture.ownerDb.update(s.tutorStudent).set({ revokedAt: new Date() }).where(eq(s.tutorStudent.id, fixture.link.id));
     } finally { hold.release(); }
-    if (failure === "session") await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible();
-    // Revoking the only tutor link follows StudentSelection's empty-roster
-    // branch, not its nonempty-roster/foreign-focused-student heading.
-    else await ui(tab.getByText("No student is currently linked to this role. Ask the congregation for help with your assignment.", { exact: true })).toBeVisible();
+    // The held check had already read the session, so it cannot see a change made while it was held; nothing re-checks by itself.
+    await hold.remove(); await ui(serviceGuard(tab)).toBeVisible();
+    if (failure === "session") { await safe(() => comeBack(tab)); await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible(); }
+    else {
+      // The tutor's next request after the revocation is refused, and that refusal clears both modals and the reading at once.
+          const refused = tab.waitForResponse(response => new URL(response.url()).pathname.startsWith(`/api/students/${fixture.student.id}/`) && [403, 404].includes(response.status()));
+      await click(tab, "Discard service draft and continue"); await refused;
+      // A revoked tutor link answers 404: the reading's own "no longer available" state (or the shell's "Access has changed") replaces the view.
+      await ui(tab.getByText(/^(This reading is no longer available in the selected role\. Choose another available student\.|The requested access is not available\. Your previous student view has been cleared\.)$/)).toBeVisible(); await ui.poll(() => modalCount(tab)).toBe(0);
+    }
     const deniedStatus = await safe(() => tab.evaluate(async id => (await fetch(`/api/students/${id}/reading?mode=tutor`, { cache: "no-store" })).status, fixture.student.id));
     expect(deniedStatus).toBe(failure === "session" ? 401 : 404);
     expect(await modalCount(tab)).toBe(0); expect(await tab.locator("dialog.editor-sheet, .service-plan-editor, .study-hebrew").count()).toBe(0);
     expect(await tab.evaluate(() => !document.body.textContent?.includes("Keep this service draft?") && !document.body.textContent?.includes("Synthetic part 1") && !JSON.stringify({ local: { ...localStorage }, tab: { ...sessionStorage } }).includes("Genesis 1:1-2"))).toBe(true);
-    expect(writes).toEqual({ confirm: 0, note: 0 }); await hold.remove();
+    // The relationship case's one confirm is the tutor's own Save assignment, sent after the revocation and refused.
+    expect(writes).toEqual({ confirm: failure === "session" ? 0 : 1, note: 0 });
     if (failure === "session") { await safe(() => tab.getByRole("link", { name: "Sign in", exact: true }).click()); await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/sign-in`); }
     else { await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click(); })()); await ui(tab.getByTestId("mine-children")).toBeVisible(); expect(await modalCount(tab)).toBe(0); }
     await safe(() => tab.context().close());

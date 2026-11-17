@@ -16,6 +16,7 @@ import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { dayOrdinal, parsePracticeDates } from "../../src/components/portal/workspace/practice-calendar/api";
 import * as s from "../../src/server/db/index";
 import { goChild, toSection } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 // Quiet dates: the student's calendar, a selected parent's summary, and explicitly selected child practice.
@@ -76,8 +77,15 @@ function traffic(tab: Page) {
   return { posts, reads, acks };
 }
 async function serverDay(tab: Page, action: () => Promise<unknown>) {
-  const response = tab.waitForResponse(response => isCalendar(response.request()) && response.status() === 200);
-  await action(); return (await safe(async () => (await (await response).json()).serverDay)) as string;
+  // A navigation can discard the body of a calendar read the previous page had in flight (the signed-in landing page reads one
+  // too), so the day is taken from the first calendar answer whose body is still readable.
+  const seen: import("playwright").Response[] = [], listener = (response: import("playwright").Response) => { if (isCalendar(response.request()) && response.status() === 200) seen.push(response); };
+  tab.on("response", listener);
+  try {
+    await action(); let day: string | undefined;
+    await ui.poll(async () => { for (const response of seen.splice(0)) { const value = await response.json().catch(() => null); if (typeof value?.serverDay === "string") day = value.serverDay; } return day; }, { timeout: 30_000 }).toBeTruthy();
+    return day as string;
+  } finally { tab.off("response", listener); }
 }
 async function capture(tab: Page, name: string) {
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -139,17 +147,17 @@ it("shows the student's week on the pinned card, reports explicit inline verse v
     let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
     const hold = async (route: Route) => { held = true; await gate; await route.fallback().catch(() => undefined); };
     await safe(() => tab.route("**/api/session", hold));
-    const readsBefore = seen.reads.length; let metadataSeen = false, finalSessions = 0;
+    const readsBefore = seen.reads.length; let finalSessions = 0, readingReads = 0; // Coming back reads the session once and re-reads nothing else.
     const observed = (response: import("playwright").Response) => { const path = new URL(response.url()).pathname;
-      if (path === `/api/students/${fixture.student.id}/reading` && response.status() === 200) metadataSeen = true;
-      if (metadataSeen && path === "/api/session" && response.status() === 200) finalSessions++;
+      if (path === `/api/students/${fixture.student.id}/reading`) readingReads++;
+      if (path === "/api/session" && response.status() === 200) finalSessions++;
     }; tab.on("response", observed);
     try {
-      await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
+      await safe(() => comeBack(tab)); await ui.poll(() => held).toBe(true);
       await ui(checking(tab)).toBeHidden(); await ui(week(tab).getByRole("listitem")).toHaveCount(7); await todayMarked(tab, true); expect(seen.posts).toHaveLength(2);
     } finally { release(); }
     await ui(checking(tab)).toBeHidden(); await ui(week(tab).getByRole("listitem")).toHaveCount(7); await todayMarked(tab, true);
-    await ui.poll(() => finalSessions).toBeGreaterThanOrEqual(2); tab.off("response", observed);
+    await ui.poll(() => finalSessions).toBe(1); expect(readingReads).toBe(0); tab.off("response", observed);
     expect(seen.reads.length).toBe(readsBefore); expect(seen.posts).toHaveLength(2);
     await safe(() => tab.unroute("**/api/session", hold));
     // The month view is a plain disclosure: keyboard opens it and steps between months.

@@ -11,6 +11,7 @@ import { installLoopbackFetchGuard } from "./egress";
 import { openAuthMail } from "./auth-navigation";
 import * as s from "../../src/server/db/index";
 import { openVerseEditor } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser;
@@ -200,7 +201,7 @@ it("erases private suggestions when the actual SDK session expires while a sugge
   try {
     await open(tab); await ui.poll(() => entered).toBe(true);
     await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(0) }).where(eq(s.session.userId, fixture.tutor.id));
-    await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
+    await safe(() => comeBack(tab));
     await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible();
     release(); await ui.poll(() => settled).toBe(true);
     expect(await tab.locator("dialog:modal").count()).toBe(0);

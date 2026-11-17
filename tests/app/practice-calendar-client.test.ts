@@ -264,19 +264,20 @@ test("parent lesson receivers reject old saved pages and clears across pause, id
   f.live("new-session"); expect(f.store.matches(f.value, f.scope)).toBe(false); current({ baseline: f.value, scope: f.scope, generation: 7, lesson: { status: "unavailable" } }); expect(f.store.snapshot().lesson).toEqual(savedLesson);
   f.store.clear(); current({ baseline: f.value, scope: f.scope, generation: 8, lesson: savedLesson }); expect(f.store.matches(f.value, f.scope)).toBe(false);
 });
-test("parent summary renders honest states, closed escaped saved note, and conceals synchronously without percentages or inferred roles", async () => {
+test("parent summary renders honest states and a closed escaped saved note without percentages or inferred roles, and nothing for another child or epoch", async () => {
   const f = parentProjection(); f.store.configure(f.value, f.scope);
-  const render = (concealed = false, scope = f.scope) => renderToStaticMarkup(createElement(ParentStudySummary, { store: f.store, baseline: f.value, scope, concealed }));
+  // The concealed prop is gone: the provider unmounts the whole private subtree when access fails, so nothing hides inside it.
+  const render = (scope = f.scope) => renderToStaticMarkup(createElement(ParentStudySummary, { store: f.store, baseline: f.value, scope }));
   expect(render()).toContain("Loading the latest lesson"); expect(render()).toContain("Loading practice dates");
   f.store.receiver()({ baseline: f.value, scope: f.scope, generation: 1, lesson: { status: "ready", latest: null } }); await f.store.loadDates(); expect(render()).toContain("No saved lesson yet."); expect(render()).toContain("No practice dates recorded");
   f.store.receiver()({ baseline: f.value, scope: f.scope, generation: 2, lesson: savedLesson });
-  const markup = render(); expect(markup).toContain("· from "); expect(markup).toContain("&lt;img src=x&gt;"); expect(markup).not.toMatch(/<details[^>]*open|<img|assigned tutor|%/); expect(render(true)).toBe(""); expect(render(false, "different-child-or-epoch")).toBe("");
+  const markup = render(); expect(markup).toContain("· from "); expect(markup).toContain("&lt;img src=x&gt;"); expect(markup).not.toMatch(/<details[^>]*open|<img|assigned tutor|%/); expect(render("different-child-or-epoch")).toBe("");
   f.read.mockRejectedValueOnce(new PortalRequestError(503)); await f.store.loadDates(); expect(render()).toContain("Practice dates couldn’t be loaded."); expect(render()).toContain("Synthetic author"); expect(f.denied).not.toHaveBeenCalled();
   f.store.receiver()({ baseline: f.value, scope: f.scope, generation: 3, lesson: { status: "unavailable" } }); expect(render()).toContain("The latest lesson couldn’t be loaded.");
 });
 test("N12: the parent who reads the latest note sees its Before next time line, escaped, under the field's own name, and nothing when there is none", () => {
   const f = parentProjection(); f.store.configure(f.value, f.scope);
-  const render = () => renderToStaticMarkup(createElement(ParentStudySummary, { store: f.store, baseline: f.value, scope: f.scope, concealed: false }));
+  const render = () => renderToStaticMarkup(createElement(ParentStudySummary, { store: f.store, baseline: f.value, scope: f.scope }));
   f.store.receiver()({ baseline: f.value, scope: f.scope, generation: 1, lesson: savedLesson });
   expect(render()).not.toContain("Before next time");
   f.store.receiver()({ baseline: f.value, scope: f.scope, generation: 2, lesson: { ...savedLesson, latest: { ...savedLesson.latest, beforeNext: "When I sit down after dinner, I will chant <b>verse 3</b> twice." } } });

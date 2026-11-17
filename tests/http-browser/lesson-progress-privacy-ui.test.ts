@@ -16,6 +16,7 @@ import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
 import { refreshReading, goChild, toSection } from "./reading-nav";
 import { upClose } from "./verse-tools";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -131,22 +132,22 @@ it("keeps selected-parent saved notes and server-day dates read-only, quiet, and
     await ui(summary.locator(".parent-summary-note")).toHaveText("Synthetic parent saved note <b>plain text</b>"); expect(await summary.locator(".parent-summary-note b").count()).toBe(0);
     const node = await summary.elementHandle(), before = { ...requests }; let release!: () => void, ready = false, used = false, readingChecked = false, afterReadingSessions = 0;
     const gate = new Promise<void>(resolve => { release = resolve; });
-    const observed = (response: import("playwright").Response) => { const path = new URL(response.url()).pathname; if (path === `/api/students/${fixture.student.id}/reading` && response.status() === 200) readingChecked = true; if (readingChecked && path === "/api/session" && response.status() === 200) afterReadingSessions++; };
+    const observed = (response: import("playwright").Response) => { const path = new URL(response.url()).pathname; if (path === `/api/students/${fixture.student.id}/reading`) readingChecked = true; if (path === "/api/session" && response.status() === 200) afterReadingSessions++; };
     tab.on("response", observed);
     const hold = async (route: Route) => { const response = await privateRouteFetch(route, tab); if (!response) return; if (!used) { used = true; ready = true; await gate; } try { await route.fulfill({ response }); } catch { if (!tab.isClosed()) throw new Error("Controlled quiet response could not be delivered"); } finally { await response.dispose(); } };
     await tab.route("**/api/session", hold);
     try {
-      await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => ready).toBe(true);
+      await safe(() => comeBack(tab)); await ui.poll(() => ready).toBe(true);
       await ui(disclosure).toBeVisible(); await ui(summary.getByText("Loading the latest lesson…", { exact: true })).toHaveCount(0);
       expect(await node!.evaluate(value => value === document.querySelector(".parent-study-summary"))).toBe(true); expect(requests).toEqual(before);
     } finally { release(); }
-    await ui.poll(() => afterReadingSessions).toBeGreaterThanOrEqual(2); await tab.unroute("**/api/session", hold); tab.off("response", observed);
+    await ui.poll(() => afterReadingSessions).toBe(1); expect(readingChecked).toBe(false); /* One session read on coming back; the reading is not re-read. */ await tab.unroute("**/api/session", hold); tab.off("response", observed);
     await ui(disclosure).toBeVisible(); expect(await node!.evaluate(value => value === document.querySelector(".parent-study-summary"))).toBe(true); expect(requests).toEqual(before);
-    // A changed authorized parent reading takes the real blocking provider refresh path.
+    // A changed authorized parent reading is read when the parent asks for it again (coming back re-reads only the session).
     const blocking = await held(tab, "**/lesson-log?*");
     try {
       await fixture.ownerDb.update(s.student).set({ revision: sql`${s.student.revision}+1` }).where(eq(s.student.id, fixture.student.id));
-      await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await blocking.ready();
+      await safe(() => refreshReading(tab)); await blocking.ready();
       await ui(parentSummary(tab)).toHaveCount(0); expect(requests).toEqual({ lessons: 3, dates: 2, writes: 0, raw: 0 });
     } finally { blocking.release(); }
     await blocking.remove(); await ui(parentSummary(tab).getByText(/· from /)).toBeVisible();
@@ -228,7 +229,7 @@ it("retains the rightful lesson prompt during quiet checks and clears it on real
   const text = "Synthetic private rightful lesson draft"; let writes = 0; tab.on("request", r => { if (r.method() === "POST" && /\/lesson-log(?:\/|$)/.test(new URL(r.url()).pathname)) writes++; });
   await addDraft(tab, text); await click(tab, "Close lesson note"); await ui(prompt(tab)).toBeVisible(); expect(await modals(tab)).toBe(1);
   const session = await held(tab, "**/api/session");
-  try { await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await session.ready(); await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); await ui(prompt(tab)).toBeVisible(); expect(await modals(tab)).toBe(1); expect(writes).toBe(0); } finally { session.release(); }
+  try { await safe(() => comeBack(tab)); await session.ready(); await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); await ui(prompt(tab)).toBeVisible(); expect(await modals(tab)).toBe(1); expect(writes).toBe(0); } finally { session.release(); }
   await session.remove(); await ui(prompt(tab)).toBeVisible(); expect(await modals(tab)).toBe(1); await click(tab, "Keep writing"); await ui(field(tab)).toHaveValue(text); await ui(field(tab)).toBeFocused();
   await click(tab, "Close lesson note"); await click(tab, "Discard note"); await ui(sheet(tab)).toBeHidden(); expect(await modals(tab)).toBe(0); await ui(lessons(tab).getByRole("button", { name: "Add lesson note", exact: true })).toBeFocused(); expect(writes).toBe(0);
   await addDraft(tab, "Synthetic bounded pending lesson"); const write = await held(tab, "**/lesson-log", r => r.request().method() === "POST");
@@ -236,10 +237,14 @@ it("retains the rightful lesson prompt during quiet checks and clears it on real
   await write.remove(); await ui(sheet(tab)).toBeHidden(); await ui(lessons(tab).locator(".lesson-log-notice")).toHaveText("Lesson added."); expect(writes).toBe(1);
   await addDraft(tab, text); await click(tab, "Close lesson note"); await ui(prompt(tab)).toBeVisible();
   await fixture.ownerDb.update(s.tutorStudent).set({ revokedAt: new Date() }).where(eq(s.tutorStudent.id, fixture.link.id));
-  await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden();
+  // Coming back re-reads only the session, which is still this tutor's: the prompt stays and nothing is sent by itself.
+  await safe(() => comeBack(tab)); await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); await ui(prompt(tab)).toBeVisible(); expect(writes).toBe(1);
+  // The tutor's own next save is the first request after the revocation: it is refused, and the refusal clears everything private at once.
+  const refused = tab.waitForResponse(r => r.request().method() === "POST" && /\/lesson-log(?:\/|$)/.test(new URL(r.url()).pathname) && [403, 404].includes(r.status()));
+  await click(tab, "Keep writing"); await click(tab, "Save lesson"); await refused;
   await ui(tab.getByLabel("Student", { exact: true })).toBeHidden(); expect(await modals(tab)).toBe(0); expect(await tab.locator(".lesson-sheet textarea, .lesson-entry").count()).toBe(0);
-  expect(await tab.evaluate(value => !document.body.textContent?.includes(value), text)).toBe(true); expect((await api(tab, `/api/students/${fixture.student.id}/lesson-log?mode=tutor`)).status).toBe(404); expect(writes).toBe(1);
-  await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click(); })()); await ui(tab.getByTestId("mine-children")).toBeVisible(); expect(await modals(tab)).toBe(0); expect(writes).toBe(1);
+  expect(await tab.evaluate(value => !document.body.textContent?.includes(value), text)).toBe(true); expect((await api(tab, `/api/students/${fixture.student.id}/lesson-log?mode=tutor`)).status).toBe(404); expect(writes).toBe(2);
+  await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click(); })()); await ui(tab.getByTestId("mine-children")).toBeVisible(); expect(await modals(tab)).toBe(0); expect(writes).toBe(2);
 });
 
 it("gives admin full lesson authority and child read-only paging while rejecting wrong-student private answers", async () => {
@@ -258,6 +263,6 @@ it("gives admin full lesson authority and child read-only paging while rejecting
 it("actual session expiry on quiet return removes the selected-parent summary and saved history", async () => {
   const tab = await page("tutor"); await workspace(tab, "parent"); await ui(parentSummary(tab)).toBeVisible();
   await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(0) }).where(eq(s.session.userId, fixture.tutor.id));
-  await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible();
+  await safe(() => comeBack(tab)); await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible();
   await ui(parentSummary(tab)).toHaveCount(0); await ui(tab.locator(".lesson-entry")).toHaveCount(0);
 });

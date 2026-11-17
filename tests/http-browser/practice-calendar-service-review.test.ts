@@ -12,6 +12,7 @@ import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { syntheticServiceCatalog } from "../helpers/service-learning";
 import * as s from "../../src/server/db/index";
 import { goChild, toSection } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser;
@@ -78,18 +79,18 @@ it("reports only explicit service choices with exact bindings and never manufact
   await click(tab, "Synthetic part 0"); await ui(tab.locator(".service-unit")).toContainText("Synthetic translation 0"); expect(seen.posts).toHaveLength(1);
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   const hold = async (route: Route) => { held = true; await gate; await route.fallback().catch(() => undefined); };
-  let metadataSeen = false, finalSessions = 0;
+  let finalSessions = 0, readingReads = 0; // Coming back reads the session once and re-reads nothing else.
   const observed = (response: import("playwright").Response) => { const path = new URL(response.url()).pathname;
-    if (path === `/api/students/${fixture.student.id}/reading` && response.status() === 200) metadataSeen = true;
-    if (metadataSeen && path === "/api/session" && response.status() === 200) finalSessions++;
+    if (path === `/api/students/${fixture.student.id}/reading`) readingReads++;
+    if (path === "/api/session" && response.status() === 200) finalSessions++;
   }; tab.on("response", observed);
   await tab.route("**/api/session", hold);
   try {
-    await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await ui.poll(() => held).toBe(true);
+    await comeBack(tab); await ui.poll(() => held).toBe(true);
     await ui(tab.locator("#workspace-main").getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); await readyStudent(tab);
     await ui(tab.locator(".service-unit")).toContainText("Synthetic translation 0"); expect(seen.posts).toHaveLength(1);
   } finally { release(); }
-  await ui.poll(() => finalSessions).toBeGreaterThanOrEqual(2); tab.off("response", observed);
+  await ui.poll(() => finalSessions).toBe(1); expect(readingReads).toBe(0); tab.off("response", observed);
   await readyStudent(tab); await ui(tab.locator(".service-unit")).toContainText("Synthetic translation 0"); expect(seen.posts).toHaveLength(1);
   await tab.unroute("**/api/session", hold);
   const secondAck = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/practice-events") && response.request().method() === "POST");

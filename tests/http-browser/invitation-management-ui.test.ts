@@ -9,6 +9,7 @@ import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
 import * as s from "../../src/server/db/index";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined, failDelivery = false;
@@ -52,9 +53,9 @@ async function focusChecked(tab: Page) {
   let release!: () => void, held = false, delivered = 0; const gate = new Promise<void>(resolve => { release = resolve; });
   const email = tab.getByLabel("Recipient email", { exact: true }), draft = await email.inputValue();
   await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }); delivered++; });
-  try { await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true); await ui(main(tab).getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeHidden(); await ui(email).toHaveValue(draft); }
+  try { await safe(() => comeBack(tab)); await ui.poll(() => held).toBe(true); await ui(main(tab).getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeHidden(); await ui(email).toHaveValue(draft); }
   finally { release(); }
-  await ui.poll(() => delivered).toBeGreaterThanOrEqual(2); await tab.unroute("**/api/session");
+  await ui.poll(() => delivered).toBe(1); await tab.unroute("**/api/session");
 }
 beforeAll(async () => {
   try { assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard(); fixture = await browserFixture({ failInvitationDelivery: () => failDelivery }); stop = await startBrowserServer(fixture.withRuntime); browser = await chromium.launch({ headless: true }); }

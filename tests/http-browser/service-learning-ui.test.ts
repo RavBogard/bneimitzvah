@@ -16,6 +16,7 @@ import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { StudyUnavailable } from "../../src/server/study/types";
 import * as s from "../../src/server/db/index";
 import { manage, refreshReading, toSection } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -177,7 +178,7 @@ it("retains staff choices and an unchanged review through quiet validation, then
   await ui(panel(tab).getByRole("button", { name: "Save service parts", exact: true })).toBeEnabled();
   const before = (await api(tab, fixture.student.id, "?mode=admin")).data;
   let verified = 0; const count = (response: import("playwright").Response) => { if (new URL(response.url()).pathname === "/api/session" && response.status() === 200) verified++; }; tab.on("response", count);
-  try { await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => verified).toBeGreaterThanOrEqual(4); } finally { tab.off("response", count); }
+  try { await safe(() => comeBack(tab)); await ui.poll(() => verified).toBe(1); } finally { tab.off("response", count); }
   await ui(panel(tab).getByRole("button", { name: "Review service parts", exact: true })).toBeEnabled();
   await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked();
   await ui(panel(tab).getByRole("button", { name: "Save service parts", exact: true })).toBeEnabled();
@@ -285,10 +286,10 @@ it("suspends the reading sheet for a service decision and retains only that righ
   let release!: () => void, held = false, delivered = 0; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); delivered++; });
   try {
-    await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
+    await safe(() => comeBack(tab)); await ui.poll(() => held).toBe(true);
     await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); await ui(prompt).toBeVisible(); expect(writes).toBe(0); phases.push(await snapshot());
   } finally { release(); }
-  await ui.poll(() => delivered).toBeGreaterThanOrEqual(4); await ui(prompt).toBeVisible(); await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); phases.push(await snapshot());
+  await ui.poll(() => delivered).toBe(1); await ui(prompt).toBeVisible(); await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); phases.push(await snapshot());
   expect(phases).toEqual([{ modals: 1, service: true, sheet: false }, { modals: 1, service: true, sheet: false }, { modals: 1, service: true, sheet: false }]);
   await ui(tab.getByRole("button", { name: "Keep editing service parts", exact: true })).toBeFocused();
   await safe(() => tab.keyboard.press("Escape")); await ui(prompt).toBeHidden(); await ui(sheet).toBeVisible();
@@ -337,8 +338,11 @@ it("clears a denied tutor draft and material immediately when the actual relatio
   expect(revoked).toHaveLength(1);
   try {
     await click(tab, "Review service parts");
-    // The fresh roster removes this student. Its unmounted reading request must
-    // not fail the remaining, still-authorized tutor workspace.
+    // The refused prepare reaches the central handler: the private view is cleared at once and the shell says access changed.
+    await ui(tab.getByRole("heading", { name: "Access has changed", exact: true })).toBeVisible();
+    expect(await tab.locator(".service-unit, .service-plan-review, .service-catalog-choices").count()).toBe(0);
+    // Checking again reads a fresh roster without this student; the still-authorized tutor workspace works.
+    await click(tab, "Check access again");
     await ui(tab.getByText("No student is currently linked to this role. Ask the congregation for help with your assignment.", { exact: true })).toBeVisible();
     expect(await tab.locator(".service-unit, .service-plan-review, .service-catalog-choices").count()).toBe(0);
   } catch (error) {

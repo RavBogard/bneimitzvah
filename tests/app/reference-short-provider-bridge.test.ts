@@ -49,7 +49,7 @@ test("selection cancellation cannot abort shared metadata needed by a newer sele
 test("quiet registration is a per-fetch fence, not permanent identity: changed in-flight work refuses, next explicit request can succeed", async () => {
   const f = fixture(), pending = gate<void>(); let quietRevision = 0;
   // This is the trusted read-callback fence, not mocked session verification.
-  // Production provider supplies actual serviceRead and its real session calls.
+  // The production provider supplies its guarded read (workspace-reads.ts), one request with the view version.
   const read = vi.fn(async () => { const captured = quietRevision; if (read.mock.calls.length === 1) await pending.promise; if (captured !== quietRevision) throw new PortalRequestError(409); return f.page; });
   const bridge = createShortReferenceBridge({ binding: f.binding, live: () => true, viewLive: () => true, read });
   const first = bridge.prepare(), refused = expect(first).rejects.toMatchObject({ status: 409 }); await Promise.resolve(); quietRevision++; pending.resolve(); await refused;

@@ -8,6 +8,7 @@ import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { entryTask, openAuthMail } from "./auth-navigation";
 import { rateLimit } from "../../src/server/db/auth-schema";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined;
@@ -335,7 +336,7 @@ it("revalidates an uninvited real session after logout in another tab", async ()
   await ui(tab.locator('[data-request-state="requestable"]')).toBeVisible();
   const other = await tab.context().newPage(); await navigate(other, "/");
   expect((await api(other, "/api/auth/sign-out", {})).status).toBe(200);
-  await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
+  await safe(() => comeBack(tab));
   await ui(tab.locator('[data-door="beit-mitzvah"]').getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
   await clean(tab, ["ui-uninvited@example.test"]);
 });

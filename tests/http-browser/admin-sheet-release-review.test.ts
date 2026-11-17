@@ -8,6 +8,7 @@ import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from 
 import { installLoopbackFetchGuard } from "./egress";
 import { openAuthMail } from "./auth-navigation";
 import * as s from "../../src/server/db/index";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser;
@@ -37,7 +38,7 @@ async function page(kind: Kind) {
 async function holdSession(tab: Page) {
   let release!: () => void, held = false, status = 0, delivered = 0; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route("**/api/session", async route => { const response = await route.fetch(); status = response.status(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); delivered++; });
-  return { release, status: () => status, ready: () => ui.poll(() => held).toBe(true), completed: () => ui.poll(() => delivered).toBeGreaterThanOrEqual(2), remove: () => tab.unroute("**/api/session") };
+  return { release, status: () => status, ready: () => ui.poll(() => held).toBe(true), completed: () => ui.poll(() => delivered).toBe(1), remove: () => tab.unroute("**/api/session") };
 }
 async function open(tab: Page, kind: Kind, after = false) {
   if (kind === "roster") {
@@ -75,7 +76,7 @@ for (const kind of ["roster", "access", "invitation"] as const) it(`admin ${kind
   await open(tab, kind);
   const session = await holdSession(tab);
   try {
-    await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await session.ready(); expect(session.status()).toBe(200);
+    await safe(() => comeBack(tab)); await session.ready(); expect(session.status()).toBe(200);
     await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); expect(await modalCount(tab)).toBe(1); await ui(dialog(tab)).toBeVisible(); await verifyRetained(tab, kind); expect(observedPosts).toBe(0);
   } finally { session.release(); }
   await session.completed(); await ui(dialog(tab)).toBeVisible(); expect(await modalCount(tab)).toBe(1); await verifyRetained(tab, kind); await session.remove();
@@ -121,7 +122,7 @@ for (const kind of ["roster", "access", "invitation"] as const) it(`admin ${kind
   await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(s.session.id, proof!.session.id));
   const denied = await holdSession(tab);
   try {
-    await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await denied.ready(); expect(denied.status()).toBe(401);
+    await safe(() => comeBack(tab)); await denied.ready(); expect(denied.status()).toBe(401);
     // The held401 is not yet known to the client; actual delivery below clears it.
     expect(await modalCount(tab)).toBe(1); await ui(dialog(tab)).toBeVisible();
   } finally { denied.release(); }

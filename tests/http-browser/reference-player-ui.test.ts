@@ -25,6 +25,7 @@ import { createShortReferenceAudioService } from "../../src/server/reference-aud
 
 import * as s from "../../src/server/db/index";
 import { goChild, toSection } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 // A cold CI runner compiles routes on first use and runs several browsers at once. Every wait below is for the real
 // condition; these budgets only bound a genuine hang. Vitest polls for 1 s by default and Playwright for 5 s.
@@ -397,7 +398,7 @@ it("backgrounding pauses/cancels without erasing text or resuming on return; rol
 });
 it("clears playback on real session denial while quiet unchanged checks retain the passage", async () => {
   const { tab } = await page(false, "admin", contexts[0]); await word(tab, 1, 0).click(); await playing(tab);
-  await tab.context().clearCookies(); await tab.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await tab.context().clearCookies(); await comeBack(tab);
   await expect.poll(async () => (await native(tab)).revoked, POLL_OPTIONS).toBe(1); expect(await native(tab)).toMatchObject({ paused: true, src: null, allClean: true }); await ui(player(tab)).toHaveCount(0);
 });
 it("Hear plays the main verse and never requires or reopens the optional close-up", async () => {

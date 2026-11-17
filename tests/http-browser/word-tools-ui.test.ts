@@ -23,6 +23,7 @@ import { parseTahot, parseTbesh } from "../../src/server/study/lexical/step";
 import { REFERENCE_ATTRIBUTION } from "../../src/lib/reference-audio/contract";
 import * as s from "../../src/server/db/index";
 import { goChild } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 declare global { interface Window { toolsAudios: HTMLAudioElement[]; toolsRevoked: string[]; toolsBlobKinds: Record<string, "prime" | "word" | "verse"> } }
@@ -169,10 +170,10 @@ it("fences out-of-order held responses and dismissal; quiet unchanged return ret
   let requests = 0; tab.on("request", request => { if (/\/study-word-(aids|details)$/.test(new URL(request.url()).pathname)) requests++; });
   await ui(tools(tab).locator('[data-stress="tonic"]')).toHaveCount(1);
   let sessions = 0; tab.on("response", response => { if (new URL(response.url()).pathname === "/api/session" && response.status() === 200) sessions++; });
-  await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await expect.poll(() => sessions).toBe(4);
+  await comeBack(tab); await expect.poll(() => sessions).toBe(1); // Coming back reads the session once and nothing else.
   await ui(tools(tab)).toContainText("Word 2 of 2"); expect(requests).toBe(0);
   await tools(tab).getByRole("button", { name: "Word tools", exact: true }).click(); await ui(tools(tab).getByText("Synthetic occurrence second", { exact: true })).toHaveCount(0);
-  await tab.context().clearCookies(); await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible(); await ui(tools(tab)).toHaveCount(0);
+  await tab.context().clearCookies(); await comeBack(tab); await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible(); await ui(tools(tab)).toHaveCount(0);
 });
 it("clears selected private tools on actual assignment and child-context changes", async () => {
   const { tab } = await page(false, "tutor"); await openTools(tab);
@@ -184,6 +185,11 @@ it("clears selected private tools on actual assignment and child-context changes
   await openTools(tab);
   const [assignment] = await fixture.ownerDb.select().from(s.assignment).where(eq(s.assignment.studentId, siblingId));
   await fixture.ownerDb.update(s.assignment).set({ revision: assignment.revision + 1 }).where(eq(s.assignment.id, assignment.id));
-  const reload = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/study-text") && response.status() === 200); await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await reload;
+  // Coming back re-reads only the session. A practice page has no Refresh control: the changed assignment is read when the parent
+  // opens that child's sitting again (here, switching to the other child and back), which starts with no word selected.
+  await comeBack(tab); await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible(); await tab.keyboard.press("Escape");
+  const back = tab.locator(".practice-switches").getByRole("button"); await back.click(); await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toHaveCount(0);
+  const reload = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/study-text") && response.status() === 200);
+  await tab.getByRole("button", { name: "Switch to Synthetic Sibling", exact: true }).click(); await reload; await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   await ui(tools(tab).getByRole("button", { name: "Word tools", exact: true })).toHaveAttribute("aria-expanded", "false"); await ui(tools(tab).getByText("Synthetic dictionary sense", { exact: true })).toHaveCount(0);
 });

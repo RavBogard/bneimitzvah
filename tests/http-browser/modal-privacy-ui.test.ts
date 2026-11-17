@@ -11,6 +11,7 @@ import { openAuthMail } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
 import { manage } from "./reading-nav";
+import { comeBack } from "./come-back";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -62,12 +63,12 @@ it("retains the sole rightful departure modal during a quiet check without confi
   let release!: () => void, held = false, delivered = 0; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); delivered++; });
   try {
-    await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
+    await safe(() => comeBack(tab)); await ui.poll(() => held).toBe(true);
     await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden();
     expect(await tab.evaluate(() => document.querySelectorAll("dialog:modal").length)).toBe(1);
     await ui(departure(tab)).toBeVisible(); await ui(editor(tab)).toBeHidden(); expect(writes).toBe(0);
   } finally { release(); }
-  await ui.poll(() => delivered).toBeGreaterThanOrEqual(4); await ui(departure(tab)).toBeVisible(); await ui(editor(tab)).toBeHidden();
+  await ui.poll(() => delivered).toBe(1); await ui(departure(tab)).toBeVisible(); await ui(editor(tab)).toBeHidden();
   expect(await tab.evaluate(() => document.querySelectorAll("dialog:modal").length)).toBe(1);
   await ui(tab.getByRole("button", { name: "Keep working", exact: true })).toBeFocused();
   // A real click proves the pending decision remains above the retained sheet.
@@ -91,8 +92,18 @@ it("clears nested private dialogs on real session expiry and tutor revocation, l
     await pendingDeparture(tab, draft);
     if (failure === "session") await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(s.session.userId, fixture.tutor.id));
     else await fixture.ownerDb.update(s.tutorStudent).set({ revokedAt: new Date() }).where(eq(s.tutorStudent.id, fixture.link.id));
-    await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
-    await ui(tab.getByRole("heading", { name: failure === "session" ? "Sign in to continue" : "Student not found", exact: true })).toBeVisible();
+    await safe(() => comeBack(tab));
+    if (failure === "relationship") {
+      // Coming back re-reads only the session, which is still this tutor's: the review stays until the tutor's next request,
+      // which is refused, and that refusal clears every private dialog at once.
+      await ui(departure(tab)).toBeVisible();
+      const refused = tab.waitForResponse(response => new URL(response.url()).pathname.startsWith(`/api/students/${fixture.student.id}/`) && [403, 404].includes(response.status()));
+      await click(tab, "Save and continue"); await refused;
+    }
+    // A revoked tutor link answers 404: the reading's own "no longer available" state (or the shell's "Access has changed") replaces the view.
+    if (failure === "session") await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible();
+    else await ui(tab.getByText(/^(This reading is no longer available in the selected role\. Choose another available student\.|The requested access is not available\. Your previous student view has been cleared\.)$/)).toBeVisible();
+    await ui.poll(() => tab.evaluate(() => document.querySelectorAll("dialog:modal, .editor-sheet, .verse-work, .study-hebrew").length)).toBe(0);
     expect(await tab.evaluate(value => document.querySelectorAll("dialog:modal, .editor-sheet, .verse-work, .study-hebrew").length === 0 && !document.body.textContent?.includes(value) && !JSON.stringify({ local: { ...localStorage }, tab: { ...sessionStorage } }).includes(value), draft)).toBe(true);
     expect(confirmations).toBe(0);
     if (failure === "session") {
