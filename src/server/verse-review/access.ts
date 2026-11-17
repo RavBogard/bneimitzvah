@@ -26,7 +26,7 @@ export const verseReviewOwnerName = (owner: Pick<VerseReviewOwner, "tenantId" | 
  * 3. a live student grant, under a share lock;
  * 4. the transaction-local owner setting, which the forced owner_only policy reads;
  * 5. the action, with the session's expiry checked before and after it.
- * Tutors, parents, admins, Daniel, MCP, cron, the roster Sheet and notifications never come through here and see no rows.
+ * Tutors, parents, admins, Daniel, MCP, cron and notifications never come through here and see no rows.
  */
 export function createVerseReviewAccess<Q extends PgQueryResultHKT>(input: { access: Pick<ReturnType<typeof createAccessService<Q>>, "withVerifiedIdentity"> }) {
   return async function withVerseReviewOwner<T>(request: AccessRequest & { method?: string }, intent: VerseReviewIntent, action: (tx: AccessTransaction<Q>, owner: VerseReviewOwner) => Promise<T>): Promise<T> {

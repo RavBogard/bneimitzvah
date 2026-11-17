@@ -3,8 +3,8 @@ import { boolean, check, foreignKey, integer, pgTable, primaryKey, text, timesta
 import { membership, role, roleGrant, student, tenant } from "./tenant-schema";
 
 /**
- * Release 1.1 email notifications (Daniel, 2026-10-21): tutor draft notices, weekly digests and
- * opt-in practice reminders. A row here records one member's own choice for one kind; no row means
+ * Release 1.1 email notifications (Daniel, 2026-10-21): weekly digests and
+ * opt-in practice reminders. The tutor-draft kind (a tutor notice about a student translation draft) is retained in the schema for old rows and is no longer sent. A row here records one member's own choice for one kind; no row means
  * the kind's default (tutor notices and parents' digests on, adult self-digests and reminders off).
  */
 export const notificationPreference = pgTable("notification_preference", {

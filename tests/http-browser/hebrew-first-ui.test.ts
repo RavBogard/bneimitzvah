@@ -1,4 +1,4 @@
-// Hebrew first (student phone walk, 2026-10-28): a student practising alone on a phone opens the reading to the Hebrew, a tapped word opens a sheet
+// Hebrew first (student phone walk, 2026-10-28): a student practicing alone on a phone opens the reading to the Hebrew, a tapped word opens a sheet
 // without moving the page, Up close opens at the first verse not yet Got it, and Listen is present but disabled, asking for no audio, while it is not released (G3).
 // Synthetic people and invented words only; no corpus, real media or external requests.
 import { beforeAll, afterAll, it, expect, vi } from "vitest";

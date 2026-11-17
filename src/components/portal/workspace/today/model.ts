@@ -87,7 +87,7 @@ export function upCloseTarget(hash: string): { kind: Reading["kind"]; ref: strin
 }
 /** The Run-through of the student's own reading (1.9 N19): the Torah when there is one, else the haftarah. */
 export const runThroughHref = (readings: readonly Pick<Reading, "kind">[]) => readings.some(row => row.kind === "torah") || !readings.length ? "/learn/run-through" : "/learn/run-through?kind=haftarah";
-export const NEXT_STEP = Object.freeze({ upClose: "Practise up close", runThrough: "Run-through", open: "Open my reading", practise: (where: string) => `Practise ${where}` });
+export const NEXT_STEP = Object.freeze({ upClose: "Practice up close", runThrough: "Run-through", open: "Open my reading", practise: (where: string) => `Practice ${where}` });
 
 /** A student session whose own reading is not linked yet (student gaps A8: was "No student is currently linked to this role."). */
 export const UNLINKED_LINE = "Your reading is not linked to this account yet. Ask your tutor or rabbi for help.";

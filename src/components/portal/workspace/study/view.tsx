@@ -76,7 +76,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   /** Where the "Service parts" chip goes, the last chip of the section row (1.9 N3); absent, the row has none. */
   onService?(): void;
   audio?: ReturnType<typeof createReadingAudioCoordinator>; stopAudio?(): void;
-  /** The student practising on a phone (student and child practice): a tapped word or verse number opens a sheet over the text and the page never scrolls on
+  /** The student practicing on a phone (student and child practice): a tapped word or verse number opens a sheet over the text and the page never scrolls on
    *  its own; the selected verse's actions live in its sheet, not in a bar after the passage; after the text only About and the practice sheet remain here. */
   practising?: boolean;
   /** True when the student has marked this verse Got it (the check beside its number). */

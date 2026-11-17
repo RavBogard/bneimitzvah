@@ -35,13 +35,13 @@ const chapterVerse = (ref: string) => { const match = /(\d+):(\d+)$/.exec(ref); 
 const byVerse = (a: string, b: string) => chapterVerse(a) - chapterVerse(b);
 const addDays = (day: string, days: number) => new Date(Date.parse(`${day}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
 
-/** Days practised after the lesson date, through today. Dates only: from the practice calendar staff already read. */
+/** Days practiced after the lesson date, through today. Dates only: from the practice calendar staff already read. */
 export function practisedSince(dates: Iterable<string>, lessonDate: string, today: string): number {
   let count = 0; for (const date of dates) if (date > lessonDate && date <= today) count++;
   return count;
 }
-/** "Practised on 4 days since then", "Practised on 1 day since then", or "No practice since then". */
-export const practisedSinceLine = (days: number) => days > 0 ? `Practised on ${days} ${days === 1 ? "day" : "days"} since then` : "No practice since then";
+/** "Practiced on 4 days since then", "Practiced on 1 day since then", or "No practice since then". */
+export const practisedSinceLine = (days: number) => days > 0 ? `Practiced on ${days} ${days === 1 ? "day" : "days"} since then` : "No practice since then";
 /** The block's heading: the assigned tutor's lesson is theirs; an admin reads it as the student's. */
 export const sinceHeading = (tutor: boolean) => tutor ? "Since your last lesson" : "Since the last lesson";
 /** "Last lesson Tue Nov 10". */

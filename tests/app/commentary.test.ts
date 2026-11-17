@@ -420,7 +420,7 @@ test("the nine new works: their corpus only, pinned editions in preference order
     const candidates = commentaryCandidates(chapter(key, own));
     expect(candidates.he.length, key).toBeGreaterThan(0); expect(candidates.en.length, key).toBeGreaterThan(0);
     for (const candidate of [...candidates.he, ...candidates.en]) {
-      expect(candidate.credit, key).toMatch(/, via Sefaria \((?:public domain|CC0|CC BY|CC BY-NC|CC BY-SA|licence not stated)\)\. Markup and footnotes removed; spacing normalized\.$/);
+      expect(candidate.credit, key).toMatch(/, via Sefaria \((?:public domain|CC0|CC BY|CC BY-NC|CC BY-SA|license not stated)\)\. Markup and footnotes removed; spacing normalized\.$/);
       // A generic edition title is credited with the work's name.
       if (["Vocalized Edition", "On Your Way", "Sefaria Community Translation", "daat"].includes(candidate.title)) expect(candidate.credit.startsWith(`${COMMENTARY_WORKS[key].title} (`), key).toBe(true);
     }
@@ -431,7 +431,7 @@ test("the nine new works: their corpus only, pinned editions in preference order
   // Licences Sefaria states as unknown read plainly, never guessed.
   expect(commentaryCandidates(chapter("ramban", "Exodus 1")).he.map(row => [row.title, row.license])).toEqual([["Sefaria Vocalized Edition", "unknown"]]);
   expect(commentaryCandidates(chapter("ramban", "Genesis 1")).he.map(row => [row.title, row.license])).toEqual([["Vocalized Edition", "CC0"]]);
-  expect(commentaryCandidates(chapter("radak", "Isaiah 1")).he[0].credit).toContain("(licence not stated)");
+  expect(commentaryCandidates(chapter("radak", "Isaiah 1")).he[0].credit).toContain("(license not stated)");
   // An edition scoped to some books is asked for, and credited, only in those books: each Rashbam book has its own
   // Hebrew title, and Sefaria states one Metzudat David translation's licence in some books and not in others.
   expect(commentaryRequestUrl(chapter("rashbam", "Leviticus 1")).searchParams.getAll("version")).toEqual(["hebrew|Rashbam on Leviticus - Daat", "english|Eliyahu Munk, HaChut Hameshulash"]);

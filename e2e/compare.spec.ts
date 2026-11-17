@@ -67,7 +67,7 @@ test("Compare opens one sheet for the verse: every other translation credited as
   await expect(panel(page).getByRole("link", { name: "Synthetic Edition Two, via Sefaria (Copyright: Synthetic Press)" })).toHaveAttribute("href", sefariaEditionUrl("Genesis 1:2", "en", "Synthetic Edition Two"));
   await expect(panel(page).getByRole("heading", { name: "Onkelos" })).toBeVisible();
   await expect(panel(page).locator('[lang="arc"][dir="rtl"]')).toHaveText("אָבָג דֵּה");
-  await expect(panel(page).getByRole("link", { name: "Synthetic Targum English, via Sefaria (licence not stated)" })).toBeVisible();
+  await expect(panel(page).getByRole("link", { name: "Synthetic Targum English, via Sefaria (license not stated)" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.keyboard.press("Escape");
   await expect(compareSheets(page)).toHaveCount(0);

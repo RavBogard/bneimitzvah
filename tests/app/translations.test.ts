@@ -29,7 +29,7 @@ test("licences read as Sefaria states them: codes by name, Copyright verbatim, n
   for (const empty of ["", "unknown", "Unknown", "   ", null, undefined, 5, "‮"]) expect(licenseLabel(empty), String(empty)).toBe(NOT_STATED);
   expect(licenseLabel(`Copyright: ${"x".repeat(200)}`)).toBe(NOT_STATED);
   expect(licenseLabel("Copyright: Synthetic‮ Press <b>")).toBe("Copyright: Synthetic Press b");
-  expect(creditLine("Synthetic Edition", "")).toBe("Synthetic Edition, via Sefaria (licence not stated)");
+  expect(creditLine("Synthetic Edition", "")).toBe("Synthetic Edition, via Sefaria (license not stated)");
   expect(plainCredit("a\u0000b\nc", 10)).toBe("ab c");
 });
 

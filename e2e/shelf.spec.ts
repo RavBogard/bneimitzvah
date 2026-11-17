@@ -77,7 +77,7 @@ test("More on this verse: kinds of texts as wrapping pills, curated works, a cit
   await expect(ramban).toHaveAttribute("aria-expanded", "true");
   await expect(panel(page).getByText("Synthetic comment one of Ramban on Genesis 1:2.")).toBeVisible();
   await expect(panel(page).getByRole("link", { name: "Synthetic Hebrew Edition, via Sefaria (public domain)" })).toBeVisible();
-  await expect(panel(page).getByRole("link", { name: "Synthetic English Edition, via Sefaria (licence not stated)" })).toBeVisible();
+  await expect(panel(page).getByRole("link", { name: "Synthetic English Edition, via Sefaria (license not stated)" })).toBeVisible();
   await expect(panel(page).getByRole("link", { name: "Ramban on Genesis 1:2 on Sefaria" })).toHaveAttribute("href", sourceSefariaUrl("Ramban on Genesis 1:2"));
   // Hebrew in place; a segment with Hebrew only leads in Hebrew.
   await panel(page).getByRole("button", { name: "Hebrew", exact: true }).first().click();

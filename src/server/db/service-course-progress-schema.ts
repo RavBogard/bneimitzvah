@@ -6,7 +6,7 @@ import { membership, tenant } from "./tenant-schema";
  * Release 2.0 SC4: a member's own progress in the service course (Learn the service), one `service-course-progress/v1`
  * document per member, a copy of Learn to lein's progress table (0037) with its own owner setting (A4 6.2, migration A).
  * Only the owner reads it: one forced `owner_only` policy keyed on its own transaction-local owner setting, which only
- * src/server/service-course/progress-access.ts sets. Staff, Daniel, MCP, cron, the roster Sheet and notifications never
+ * src/server/service-course/progress-access.ts sets. Staff, Daniel, MCP, cron and notifications never
  * set it and see no rows. No audit rows.
  */
 export const serviceCourseProgressTable = pgTable("service_course_progress", {

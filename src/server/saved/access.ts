@@ -37,7 +37,7 @@ async function bindOwner<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, o
  * 2. a membership in the host's tenant, not disabled;
  * 3. bindOwner: live eligibility under a share lock, then the transaction-local owner setting;
  * 4. the action, with the session's expiry checked before and after it.
- * Staff, cron, the roster Sheet and notifications never come through here and see no saved rows. The MCP comes
+ * Staff, cron and notifications never come through here and see no saved rows. The MCP comes
  * through withConnectionOwner below, and only for the connection's own person.
  */
 export function createSavedAccess<Q extends PgQueryResultHKT>(input: { access: Pick<ReturnType<typeof createAccessService<Q>>, "withVerifiedIdentity"> }) {

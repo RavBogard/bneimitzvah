@@ -31,7 +31,7 @@ The full list is `CLAUDE.md` "Rules". The ones a builder trips most:
 - **Secrets:** never print a token, cookie, connection string or full email address. Tests that spawn processes use `tests/helpers/isolatedEnv.mjs`.
 - **G3:** no generated chant reaches a student.
 - **Wording:** use approved strings word for word. A string with no precedent is a gap: ship the behaviour without it and list it.
-- **Tone:** no emoji, exclamation points, pep talk, streaks, scores or tallies ("Part n of m" positions are fine). Use straight apostrophes and "practise" as the verb (see `RULINGS.md`, "Unclear", item 2). Use the child's name, never pronouns.
+- **Tone:** no emoji, exclamation points, pep talk, streaks, scores or tallies ("Part n of m" positions are fine). Use straight apostrophes and American spelling, "practice" for both verb and noun (see `RULINGS.md`, "Unclear", item 2). Use the child's name, never pronouns.
 - **New tests:** assert roles, labels and test IDs, not exact wording or layout, except in one deliberate wording test per screen. When you touch a brittle test anyway, convert it.
 - **Tools:** don't use the Playwright MCP or Chrome DevTools MCP. Never trigger `window.print()`.
 - **Commits:** write the message to a file and commit with `git commit -F` (shell quoting of apostrophes is fragile). Subjects are long, single, descriptive sentences. End each message with the `Co-Authored-By` and `Claude-Session` lines the prompt gives.

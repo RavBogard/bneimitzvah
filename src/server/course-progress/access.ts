@@ -33,7 +33,7 @@ export class CourseRefused extends AccessDenied {
  * 3. a live grant under a share lock;
  * 4. the transaction-local owner setting, which the forced owner_only policy reads;
  * 5. the action, with the session's expiry checked before and after it.
- * Staff, Daniel, MCP, cron, the roster Sheet and notifications never come through here and see no rows.
+ * Staff, Daniel, MCP, cron and notifications never come through here and see no rows.
  */
 export function createCourseProgressAccess<Q extends PgQueryResultHKT>(input: { access: Pick<ReturnType<typeof createAccessService<Q>>, "withVerifiedIdentity"> }) {
   return async function withCourseOwner<T>(request: AccessRequest & { method?: string }, intent: CourseIntent, action: (tx: AccessTransaction<Q>, owner: CourseOwner) => Promise<T>): Promise<T> {

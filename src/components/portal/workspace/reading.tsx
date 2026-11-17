@@ -96,7 +96,7 @@ function NextDateLine({ student }: { student: Pick<Student, "ceremonyDate" | "re
  * of the rail beside the text (or under the title on a narrower screen): the next date, Needs work, the last "Before next time" and Add
  * lesson note. On the wide rail the Lessons list follows right under it, with its own Add lesson note, so the card has none there.
  */
-// Project review 2026-11-16: "Since your last lesson" (the last note's date, days practised since, the tutor's own newly marked verses and the
+// Project review 2026-11-16: "Since your last lesson" (the last note's date, days practiced since, the tutor's own newly marked verses and the
 // note's "Before next time") replaces "Last time" at the top, and the Aliyot block follows Needs work.
 function LessonCard({ baseline, latest, ready, addButton, onAdd, calendar, onMarked }: { baseline: Assigned; latest: { lessonDate: string; beforeNext: string | null } | null; ready: boolean; addButton: boolean;
   onAdd(origin: HTMLElement): void; calendar: PracticeCalendar; onMarked(): void }) {
@@ -295,7 +295,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   const selectedReading = readings.find(row => row.kind === selectedKind) ?? readings[0];
   const otherReadings = readings.filter(row => row.id !== selectedReading?.id);
   const learner = mode === "student" || mode === "child-practice" || mode === "parent";
-  // The student practising alone on a phone (and a parent's sitting with a child): Hebrew first (2026-10-28 walk). The title is one line, the dock is the practice
+  // The student practicing alone on a phone (and a parent's sitting with a child): Hebrew first (2026-10-28 walk). The title is one line, the dock is the practice
   // bar, and the plan (rehearsals, service, service parts, lesson notes) waits in "Your plan" at the foot. A portion still being explored keeps its own page.
   const practisingMode = mode === "student" || mode === "child-practice", practising = practisingMode && Boolean(student) && readings.length > 0 && !exploring;
   // Tutors and admins teach from the same Song session reading, and keep the staff assignment details.
@@ -348,7 +348,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   const hashed = useRef(false);
   // A student's plan folds into one disclosure at the foot; the parts stay mounted inside it either way, so reloads and unsent work behave the same.
   // It wraps for the whole life of a student page (never only once the reading loads), so nothing inside remounts; it starts folded only once there is a
-  // reading to practise (a student with only service parts, or a portion still being explored, sees them open).
+  // reading to practice (a student with only service parts, or a portion still being explored, sees them open).
   const plan = (children: ReactNode) => practisingMode ? <details className="reading-plan" data-reading-plan="" data-testid="reading-plan" open={!practising || undefined}><summary>Your plan</summary>{children}</details> : children;
   // These two links are CRC's own resources: off CRC's origins they are hidden, never relabelled.
   const guideLink = !identity.crc ? null : <p className="field-help"><a href="https://www.centralreform.org/beit-mitzvah/" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">CRC preparation guide</a></p>;

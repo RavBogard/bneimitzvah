@@ -6,7 +6,7 @@ import { membership, tenant } from "./tenant-schema";
  * Learn to lein, slice 3: a member's own course progress, one `learn-progress/v1` document per member.
  * Only the owner reads it: the table carries one forced `owner_only` policy keyed on a transaction-local
  * owner setting that only src/server/course-progress/access.ts sets, on the saved layer's model (0036).
- * Staff, Daniel, MCP, cron, the roster Sheet and notifications never set it and see no rows. No audit rows.
+ * Staff, Daniel, MCP, cron and notifications never set it and see no rows. No audit rows.
  */
 export const courseProgressTable = pgTable("course_progress", {
   tenantId: text("tenant_id").notNull().references(() => tenant.id), membershipId: uuid("membership_id").notNull(), userId: text("user_id").notNull(),

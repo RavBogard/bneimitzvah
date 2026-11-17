@@ -30,8 +30,8 @@ describe("the next step on a student's own reading", () => {
     expect(runThroughHref([{ kind: "torah" }, { kind: "haftarah" }])).toBe("/learn/run-through");
   });
   it("is one deliberate wording test: the verse, with its aliyah, as the button says it", () => {
-    expect(nextStep([torah], marks({ torah: ["Genesis 37:1", "Genesis 37:2"] }))?.label).toBe("Practise Aliyah 2 · Genesis 37:3");
-    expect(nextStep([haftarah], marks({}))?.label).toBe("Practise Amos 2:6");
+    expect(nextStep([torah], marks({ torah: ["Genesis 37:1", "Genesis 37:2"] }))?.label).toBe("Practice Aliyah 2 · Genesis 37:3");
+    expect(nextStep([haftarah], marks({}))?.label).toBe("Practice Amos 2:6");
     expect(nextStep([haftarah], marks({ haftarah: ["Amos 2:6", "Amos 2:7"] }))?.label).toBe("Run-through");
   });
 });

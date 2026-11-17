@@ -17,7 +17,7 @@ import type { ParentPractice, PracticeDay, PracticeDayReading, PracticeKind, Pra
  * - `tutor`: the student's ASSIGNED tutor only. withStudentCapability checks the live tutor grant, the live tutor_student row and
  *   that the student is not ceremony-done (N21), and only then is app.practice_reader named, for 0052's views and course-progress
  *   reader policy, which check all of that again in the database. Admins (rabbis), parents, students, child practice, other tutors, MCP,
- *   cron, the roster Sheet, exports and notifications never come through here. The answer: per day for the last 14 days (never
+ *   cron, exports and notifications never come through here. The answer: per day for the last 14 days (never
  *   before the release date), which verses were opened and which marks were made; each verse's current mark and whether a parent
  *   was there; the days practiced of the last 7 and the last lesson date; Learn's "Can hear" counts and the pair most often
  *   mixed up. Dates only: no time of day, duration, action, play count or score is read or returned.

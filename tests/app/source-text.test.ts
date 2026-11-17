@@ -17,7 +17,7 @@ test("a string is one segment and an array a range; segments pair by index; each
   expect(one.segments).toEqual([{ hebrew: [{ text: "אָב", bold: true }, { text: " גַּד" }], english: [{ text: "One " }, { text: "two", italic: true }] }]);
   expect(one.editions).toEqual([
     { language: "he", title: "Synthetic Hebrew", license: "CC-BY", licenseLabel: "CC BY", credit: "Synthetic Hebrew, via Sefaria (CC BY)", url: sourceSefariaUrl("Synthetic 1:1", { language: "he", title: "Synthetic Hebrew" }) },
-    { language: "en", title: "Synthetic English", license: "", licenseLabel: "licence not stated", credit: "Synthetic English, via Sefaria (licence not stated)", url: sourceSefariaUrl("Synthetic 1:1", { language: "en", title: "Synthetic English" }) }]);
+    { language: "en", title: "Synthetic English", license: "", licenseLabel: "license not stated", credit: "Synthetic English, via Sefaria (license not stated)", url: sourceSefariaUrl("Synthetic 1:1", { language: "en", title: "Synthetic English" }) }]);
   expect(one.sefariaUrl).toBe("https://www.sefaria.org/Synthetic%201%3A1");
   const range = projectSourceText(sourceAnswer(ref, [sourceVersion("he", "Synthetic Hebrew", ["א", "ב", "ג"]), sourceVersion("en", "Synthetic English", ["One", "", "Three"])]), ref);
   expect(range.segments.map(segment => [segment.hebrew?.[0].text ?? null, segment.english?.[0].text ?? null])).toEqual([["א", "One"], ["ב", null], ["ג", "Three"]]);

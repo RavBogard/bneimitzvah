@@ -6,7 +6,7 @@ import { membership, tenant } from "./tenant-schema";
  * Release 1.4 saved layer (accounts plan §1a): a member's own readings, translation, notes,
  * marks and starred comments. Only the owner reads them: every table carries one forced
  * `owner_only` policy keyed on a transaction-local owner setting that only src/server/saved/access.ts sets.
- * Staff, MCP, cron, the roster Sheet and notifications never set it and see no rows.
+ * Staff, MCP, cron and notifications never set it and see no rows.
  * No audit rows are written for these tables: audit is staff-readable.
  */
 const tenantId = () => text("tenant_id").notNull().references(() => tenant.id);

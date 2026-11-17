@@ -24,7 +24,7 @@ test("the browser parser accepts exactly the server's answer, credits recomputed
   const verse = parseCompareVerse("Isaiah 40:1")!, body = await served();
   const parsed = parseCompareAnswer(structuredClone(body), verse);
   expect(parsed).toEqual(body);
-  expect(parsed.targum).toMatchObject({ work: "Targum Jonathan", english: { licenseLabel: "licence not stated", credit: "Synthetic Targum English, via Sefaria (licence not stated)" } });
+  expect(parsed.targum).toMatchObject({ work: "Targum Jonathan", english: { licenseLabel: "license not stated", credit: "Synthetic Targum English, via Sefaria (license not stated)" } });
   expect(parsed.translations![1]).toMatchObject({ licenseLabel: "Copyright: Synthetic Press", runs: [{ text: "Italic", italic: true }, { text: " words" }] });
   expect(comparePath("I Samuel 20:18")).toBe("/api/public/translations?verse=I+Samuel+20%3A18");
   const mutations: [string, (v: Record<string, any>) => void][] = [

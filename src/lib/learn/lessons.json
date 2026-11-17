@@ -259,7 +259,7 @@
             "text": "אֵלָ֜יו",
             "mark": "azla"
           },
-          "why": "Two strokes leaning opposite ways on neighbouring words."
+          "why": "Two strokes leaning opposite ways on neighboring words."
         },
         {
           "a": {
@@ -274,7 +274,7 @@
             "text": "שָׁ֜ם",
             "mark": "azla"
           },
-          "why": "Two strokes leaning opposite ways on neighbouring words."
+          "why": "Two strokes leaning opposite ways on neighboring words."
         },
         {
           "a": {
@@ -289,7 +289,7 @@
             "text": "לָכֶ֜ם",
             "mark": "azla"
           },
-          "why": "Two strokes leaning opposite ways on neighbouring words."
+          "why": "Two strokes leaning opposite ways on neighboring words."
         },
         {
           "a": {
@@ -304,7 +304,7 @@
             "text": "יִֽירְשׁ֜וּ",
             "mark": "azla"
           },
-          "why": "Two strokes leaning opposite ways on neighbouring words, in the haftarah tune."
+          "why": "Two strokes leaning opposite ways on neighboring words, in the haftarah tune."
         },
         {
           "a": {
@@ -319,7 +319,7 @@
             "text": "אָנֹכִ֜י",
             "mark": "azla"
           },
-          "why": "Two strokes leaning opposite ways on neighbouring words, in the haftarah tune."
+          "why": "Two strokes leaning opposite ways on neighboring words, in the haftarah tune."
         }
       ]
     },
@@ -530,7 +530,7 @@
       "goal": "After this you can hear that a verse is made of short phrases, each with its own small tune.",
       "body": [
         "Torah is chanted, not read. Every word carries a small mark, above or below a letter, and the marks tell the reader which tune to sing. You do not need to read music. You need to hear about ten short tunes and know which mark each one belongs to.",
-        "The marks come in phrases. A phrase is two or three words that run together and end on a mark with a tune of its own. The colour on this site belongs to the whole phrase, not to one word.",
+        "The marks come in phrases. A phrase is two or three words that run together and end on a mark with a tune of its own. The color on this site belongs to the whole phrase, not to one word.",
         "Every verse has two halves. The first half rests on a mark called etnachta. The second half ends on sof pasuk. Listen for the rest, then the ending."
       ],
       "listenFor": "Two places where the tune settles: a rest in the middle of the verse, and a lower, final landing at the end.",
@@ -1147,7 +1147,7 @@
       "body": [
         "Revia is a single dot above the word, like a small diamond. It marks a pause a little weaker than zakef, often on the first word of a verse or right before a new thought.",
         "The tune walks down: four steps, one after another, landing well below where it started. Nothing leaps. If a munach comes before it, the munach rises first, so the phrase goes up, then slowly down.",
-        "Zakef peaks and drops; revia only descends. Munach followed by a short vertical bar, called legarmeh, takes the same place as revia and sings a small tune of its own; the site colours it as revia."
+        "Zakef peaks and drops; revia only descends. Munach followed by a short vertical bar, called legarmeh, takes the same place as revia and sings a small tune of its own; the site colors it as revia."
       ],
       "listenFor": "Four even steps downward, like coming down a short staircase, with no leap.",
       "examples": [
@@ -1489,7 +1489,7 @@
       "body": [
         "Kadma v'azla is a pair: kadma, a small hook above the word, then azla, a single slanted stroke above the next. Together they lead into a longer phrase, often one that ends on revia or zakef.",
         "The tune climbs. Kadma starts low. Azla goes up, wobbles at the top, and holds. It sounds like a question being set up.",
-        "The same slanted stroke on its own is called geresh, and a double stroke is gershayim. They sing close relatives of the azla tune, and this site colours all three the same. Kadma looks like pashta but sits on the stressed syllable, not at the end of the word."
+        "The same slanted stroke on its own is called geresh, and a double stroke is gershayim. They sing close relatives of the azla tune, and this site colors all three the same. Kadma looks like pashta but sits on the stressed syllable, not at the end of the word."
       ],
       "listenFor": "A climb that reaches high, wavers once at the top, and holds there.",
       "examples": [
@@ -1669,7 +1669,7 @@
       "body": [
         "Segol is three dots above the end of a word, the shape of the segol vowel turned over. It comes with zarka, a curved stroke above the end of the word before it. The pair comes less often than the phrases you already know, and it usually sits near the start of a long verse.",
         "Zarka is the longest tune so far: it winds down and down, step by step. Segol then answers with a short turn and settles.",
-        "A munach often opens the phrase. A very rare mark, shalshelet, a zigzag above the word, is a long chain of the same tune; it appears only four times in the Torah, and this site colours it with segol."
+        "A munach often opens the phrase. A very rare mark, shalshelet, a zigzag above the word, is a long chain of the same tune; it appears only four times in the Torah, and this site colors it with segol."
       ],
       "listenFor": "A long winding descent on zarka, then a short turn that settles on segol.",
       "examples": [
@@ -1841,7 +1841,7 @@
       "goal": "After this you can hear telisha ketana's small turn and know it leads into the phrase after it.",
       "body": [
         "Telisha ketana is a small circle with a tail, above the end of the word. It has one of the smallest tunes in the system: a quick turn, down a step and back, that settles on the note it came from.",
-        "It is a joining mark, not a pause, and it almost always leads into kadma v'azla or into a longer phrase. This site gives it its own colour because it is easy to hear once you know it.",
+        "It is a joining mark, not a pause, and it almost always leads into kadma v'azla or into a longer phrase. This site gives it its own color because it is easy to hear once you know it.",
         "Its bigger cousin, telisha gedola, sits at the start of the word and sings a long climb; it lives in the pazer lesson."
       ],
       "listenFor": "A quick small turn on one word, down and back, that leads straight into the next phrase.",
@@ -3277,7 +3277,7 @@
       "goal": "After this you can hear the haftarah azla, with its leap to the top of the range.",
       "body": [
         "Kadma v'azla in the haftarah starts with a plain kadma, then azla climbs, leaps up to the octave, and drops back. It is the widest phrase in the haftarah tune.",
-        "Geresh on its own winds up and down more gently. Gershayim rises and holds high. All three share a colour here, as in the Torah."
+        "Geresh on its own winds up and down more gently. Gershayim rises and holds high. All three share a color here, as in the Torah."
       ],
       "listenFor": "A climb, a leap to the very top, and a drop back; gershayim rises and holds instead.",
       "examples": [
@@ -4046,7 +4046,7 @@
       "goal": "After this you can hear the special ending that closes the whole haftarah.",
       "body": [
         "The last verse of a haftarah ends with its own tune. The marks are the ordinary ones, mercha, tipcha, sof pasuk, but the melody is bigger. Tipcha walks down from high. Then the last word rises to the octave and settles on the sixth, held long, so the room knows the reading is over.",
-        "This is an ending context, not a separate mark. The site colours the last phrase of a haftarah in its own colour so you can see it coming.",
+        "This is an ending context, not a separate mark. The site colors the last phrase of a haftarah in its own color so you can see it coming.",
         "This is the last of the families. After it you can hear everything in a haftarah."
       ],
       "listenFor": "On the last word of the haftarah, a rise to the top and a long held settle, instead of the usual quiet close.",

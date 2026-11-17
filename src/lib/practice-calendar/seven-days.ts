@@ -1,5 +1,5 @@
 /**
- * The one window every "days practised" surface uses (project review 2026-11-16, "practice dots disagree"): the seven days ending
+ * The one window every "days practiced" surface uses (project review 2026-11-16, "practice dots disagree"): the seven days ending
  * today, oldest first. The student's card, the parent's This week, the tutor's and admin's student page, child practice and the
  * tutor's "Practiced n of last 7 days" all count and draw these same seven days. Dates only (YYYY-MM-DD); no count is shown to a student.
  */
@@ -14,7 +14,7 @@ export function sevenDayWindow(today: string): { from: string; through: string }
 }
 
 export type SevenDay = Readonly<{ date: string; practised: boolean; today: boolean; weekday: number }>;
-/** The seven days ending on `today`, oldest first, each with whether the student practised; weekday is 0 for Sunday. */
+/** The seven days ending on `today`, oldest first, each with whether the student practiced; weekday is 0 for Sunday. */
 export function lastSevenDays(today: string, dates: ReadonlySet<string> | readonly string[]): readonly SevenDay[] {
   const end = ordinalOf(today), practised = dates instanceof Set ? dates as ReadonlySet<string> : new Set(dates as readonly string[]);
   return Array.from({ length: SEVEN_DAYS }, (_, index) => {

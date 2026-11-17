@@ -200,7 +200,7 @@ describe("wording", () => {
     expect(words(door(["tutor", "student"]))).toEqual(["Your readings", "Open My Readings"]);
     expect(words(door(["tutor"], 3))).toEqual(["Your readings", "3 saved readings", "Open My Readings"]);
     rememberRole("student");
-    expect(words(door(["student"], null, { name: "Noa", ceremony: "2027-05-01", done: 3, total: 12 }))).toEqual(["Your readings", "Noa · Beit Mitzvah, Sat, May 1, 2027 · 3 of 12 verses", "Practise up close", "Open My Readings"]);
+    expect(words(door(["student"], null, { name: "Noa", ceremony: "2027-05-01", done: 3, total: 12 }))).toEqual(["Your readings", "Noa · Beit Mitzvah, Sat, May 1, 2027 · 3 of 12 verses", "Practice up close", "Open My Readings"]);
     expect(words(door(["parent"]))).toEqual(["Your readings", "Open My Readings"]);
     rememberRole("admin");
     expect(words(door(["admin"]))).toEqual(["This week", "Needs you, ceremonies and rehearsals.", "See this week"]);

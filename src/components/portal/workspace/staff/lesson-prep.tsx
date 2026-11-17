@@ -83,7 +83,7 @@ export function AliyotBlock({ baseline, onMarked }: { baseline: Assigned; onMark
 
 /**
  * T4/T7: "Since your last lesson" at the top of the lesson card, on every width. The last lesson's date and its "Before next time" come
- * from the lesson notes staff already read; days practised since then from the practice calendar staff already read (dates only). The
+ * from the lesson notes staff already read; days practiced since then from the practice calendar staff already read (dates only). The
  * verses newly marked since then come only from the assigned tutor's own practice-visibility read (decision 7): `practice` is null for
  * an admin, and this never shows per-day detail to anyone but the assigned tutor. With no lesson note yet, there is no block.
  */

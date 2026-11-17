@@ -34,7 +34,7 @@ export type CommentaryWork = Readonly<{
 }>;
 
 const LICENSE_TEXT: Readonly<Record<CommentaryLicense, string>> = Object.freeze({ "Public Domain": "public domain", "CC0": "CC0", "CC-BY": "CC BY", "CC-BY-NC": "CC BY-NC",
-  "CC-BY-SA": "CC BY-SA", "unknown": "licence not stated" });
+  "CC-BY-SA": "CC BY-SA", "unknown": "license not stated" });
 /** The credit names the edition (and the work, when the edition title alone does not), the licence and Sefaria. */
 const edition = (language: "he" | "en", title: string, license: CommentaryLicense, work?: string, books?: readonly string[]): CommentaryEditionCandidate =>
   Object.freeze({ language, title, license,
