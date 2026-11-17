@@ -147,7 +147,7 @@ test("/mine for a student does not jump while the pinned card arrives (CLS at mo
   await watchShifts(page);
   // A returning student: this browser remembers being signed in, so the site bar is already the signed-in one (a first visit's bar changing is the bar's, not the shelf's).
   await page.addInitScript(() => { try { window.localStorage.setItem("crc-torah:signed-in/v1", "1"); } catch { /* Storage blocked. */ } });
-  await studentMock(page, { practised: ["2026-10-14"], got: [0, 1, 2] });
+  await studentMock(page, { practiced: ["2026-10-14"], got: [0, 1, 2] });
   await page.goto("/mine");
   await expect(page.getByTestId("pinned-reading")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("pinned-progress")).toContainText(" of ", { timeout: 30_000 });
@@ -167,7 +167,7 @@ test("/mine for a student does not jump while the pinned card arrives (CLS at mo
 
 for (const [name, address, signedIn] of [["/", "/", false], ["/read", "/read", false], ["/readings", "/readings", false], ["/mine", "/mine", true]] as const) {
   test(`${name} has one h1, no skipped heading level, named controls, no repeated id and one main (what axe checks)`, async ({ page }) => {
-    if (signedIn) await studentMock(page, { practised: ["2026-10-14"], got: [0] });
+    if (signedIn) await studentMock(page, { practiced: ["2026-10-14"], got: [0] });
     else await page.route("**/api/session", route => json(route, 401, { error: "unauthenticated" }));
     await page.goto(address);
     await expect(page.getByRole("main")).toBeVisible();

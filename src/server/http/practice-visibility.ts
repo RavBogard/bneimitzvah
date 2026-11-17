@@ -39,7 +39,7 @@ export async function handlePracticeVisibilityRequest(request: Request, runtime:
       days: view.days.map((day): JsonValue => ({ day: day.day, readings: day.readings.map((reading): JsonValue => ({ kind: reading.kind,
         opened: [...reading.opened], marked: reading.marked.map((mark): JsonValue => ({ verseRef: mark.verseRef, state: mark.state })) })) })),
       marks: view.marks.map((mark): JsonValue => ({ kind: mark.kind, verseRef: mark.verseRef, state: mark.state, withParent: mark.withParent })),
-      practisedDays: view.practisedDays, lastLesson: view.lastLesson, stillWorking: view.stillWorking,
+      practicedDays: view.practicedDays, lastLesson: view.lastLesson, stillWorking: view.stillWorking,
       learn: view.learn ? { torah: { heard: view.learn.torah.heard, of: view.learn.torah.of }, haftarah: { heard: view.learn.haftarah.heard, of: view.learn.haftarah.of },
         mixedUp: view.learn.mixedUp ? [view.learn.mixedUp[0], view.learn.mixedUp[1]] : null } : null,
     };

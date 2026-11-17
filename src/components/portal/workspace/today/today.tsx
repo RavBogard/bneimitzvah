@@ -177,10 +177,10 @@ function PinnedReady({ slices, assigned, headingId }: { slices: TodaySlices; ass
     {readings.length > 0 && dates.status === "loading" && <div className={styles.holdDots} aria-hidden="true" />}
     {readings.length > 0 && dates.status === "ready" && <div className={styles.dots}>
       <ol className="practice-week" data-testid="practice-week" aria-label="Practice this week" aria-describedby={caption}>{lastSevenDays(dates.serverDay, dates.dates).map(day =>
-        <li key={day.date} data-testid="practice-day" className={`practice-day${day.practised ? " practice-day-done" : ""}${day.today ? " practice-day-today" : ""}`}>
+        <li key={day.date} data-testid="practice-day" className={`practice-day${day.practiced ? " practice-day-done" : ""}${day.today ? " practice-day-today" : ""}`}>
           <span aria-hidden="true" className="practice-day-letter">{weekdayLetters[day.weekday]}</span>
           <span className="practice-day-dot" aria-hidden="true" />
-          <span className="sr-only">{weekdayNames[day.weekday]}{day.today ? ", today" : ""}: {day.practised ? "practiced" : "not practiced"}</span>
+          <span className="sr-only">{weekdayNames[day.weekday]}{day.today ? ", today" : ""}: {day.practiced ? "practiced" : "not practiced"}</span>
         </li>)}</ol>
       <p id={caption} className={styles.caption}>Days you practiced · a day fills when you open your reading up close</p>
     </div>}

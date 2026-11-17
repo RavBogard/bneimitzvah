@@ -6,7 +6,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("../../src/components/portal/workspace/provider", async original => ({ ...await original<Record<string, unknown>>(),
   WorkspaceLink: ({ href, children, ...rest }: { href: string; children: ReactNode }) => createElement("a", { ...rest, href }, children) }));
 import { AliyotList, SinceLastLesson, StaffNextSteps } from "../../src/components/portal/workspace/staff/lesson-prep";
-import { aliyahRows, marksSince, practisedSince } from "../../src/components/portal/workspace/staff/lesson-prep-model";
+import { aliyahRows, marksSince, practicedSince } from "../../src/components/portal/workspace/staff/lesson-prep-model";
 import { lastSevenDays, sevenDayWindow } from "../../src/lib/practice-calendar/seven-days";
 import { lastSevenDays as cardDays } from "../../src/components/portal/workspace/today/model";
 import type { Reading } from "../../src/components/portal/workspace/api";
@@ -66,7 +66,7 @@ describe("the seven-day window every practice surface uses", () => {
   it("is the seven days ending today, oldest first, across a month end", () => {
     const days = lastSevenDays("2026-11-03", new Set(["2026-10-28", "2026-11-03", "2026-10-27"]));
     expect(days.map(day => day.date)).toEqual(["2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01", "2026-11-02", "2026-11-03"]);
-    expect(days.map(day => day.practised)).toEqual([true, false, false, false, false, false, true]);
+    expect(days.map(day => day.practiced)).toEqual([true, false, false, false, false, false, true]);
     expect(days.filter(day => day.today).map(day => day.date)).toEqual(["2026-11-03"]);
     expect(days[0].weekday).toBe(3); // Wednesday
     expect(sevenDayWindow("2026-11-03")).toEqual({ from: "2026-10-28", through: "2026-11-03" });
@@ -76,30 +76,30 @@ describe("the seven-day window every practice surface uses", () => {
 });
 
 describe("Since your last lesson (T4/T7)", () => {
-  const practice: TutorPractice = { from: "2026-10-01", today: "2026-11-17", practisedDays: 3, lastLesson: "2026-11-10", stillWorking: 1, learn: null, marks: [],
+  const practice: TutorPractice = { from: "2026-10-01", today: "2026-11-17", practicedDays: 3, lastLesson: "2026-11-10", stillWorking: 1, learn: null, marks: [],
     days: [{ day: "2026-11-12", readings: [{ kind: "torah", opened: ["Genesis 37:1", "Genesis 37:2"], marked: [{ verseRef: "Genesis 37:2", state: "got-it" }, { verseRef: "Genesis 37:1", state: "got-it" }] }] },
       { day: "2026-11-14", readings: [{ kind: "torah", opened: ["Genesis 37:4"], marked: [{ verseRef: "Genesis 37:4", state: "working" }] }] },
       { day: "2026-11-09", readings: [{ kind: "torah", opened: ["Genesis 37:6"], marked: [{ verseRef: "Genesis 37:6", state: "got-it" }] }] }] };
   const lesson = { lessonDate: "2026-11-10", beforeNext: "When I sit down after dinner, I will chant aliyah 2 twice." };
-  const practised = { today: "2026-11-17", dates: ["2026-11-09", "2026-11-10", "2026-11-12", "2026-11-14"] };
+  const practiced = { today: "2026-11-17", dates: ["2026-11-09", "2026-11-10", "2026-11-12", "2026-11-14"] };
   it("counts only what came after the lesson, as counts and ranges", () => {
-    expect(practisedSince(practised.dates, lesson.lessonDate, practised.today)).toBe(2);
+    expect(practicedSince(practiced.dates, lesson.lessonDate, practiced.today)).toBe(2);
     expect(marksSince(practice, lesson.lessonDate)).toEqual({ lines: ["Marked Got it: 2 verses (Torah 37:1–37:2)", "Marked Still working: 1 verse (Torah 37:4)"], from: null });
     // A lesson older than the 14-day read says where the marks begin.
     expect(marksSince(practice, "2026-10-20").from).toBe("2026-11-04");
   });
   it("shows the assigned tutor the newly marked verses, and never shows that per-day detail to an admin", () => {
-    const tutor = html(createElement(SinceLastLesson, { mode: "tutor", lesson, practised, practice }));
+    const tutor = html(createElement(SinceLastLesson, { mode: "tutor", lesson, practiced, practice }));
     expect(byTestId(tutor, "since-marks")).toHaveLength(1);
     // An admin who is handed the same read (which the page never does) still gets no per-day lines: dates, the count and the note only.
-    const admin = html(createElement(SinceLastLesson, { mode: "admin", lesson, practised, practice }));
+    const admin = html(createElement(SinceLastLesson, { mode: "admin", lesson, practiced, practice }));
     expect(byTestId(admin, "lesson-since")).toHaveLength(1);
     expect(byTestId(admin, "since-marks")).toHaveLength(0);
-    expect(renderToStaticMarkup(createElement(SinceLastLesson, { mode: "admin", lesson, practised, practice }))).not.toMatch(/37:4|Got it|Still working/);
-    expect(byTestId(admin, "since-practised")).toHaveLength(1);
+    expect(renderToStaticMarkup(createElement(SinceLastLesson, { mode: "admin", lesson, practiced, practice }))).not.toMatch(/37:4|Got it|Still working/);
+    expect(byTestId(admin, "since-practiced")).toHaveLength(1);
   });
   it("is not drawn at all before the first lesson note", () => {
-    expect(renderToStaticMarkup(createElement(SinceLastLesson, { mode: "tutor", lesson: null, practised, practice }))).toBe("");
+    expect(renderToStaticMarkup(createElement(SinceLastLesson, { mode: "tutor", lesson: null, practiced, practice }))).toBe("");
   });
 });
 

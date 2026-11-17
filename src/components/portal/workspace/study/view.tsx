@@ -44,7 +44,7 @@ function aliyahSections(kind: StudyKind, assignment: Assigned["readings"][number
   return verses.flatMap((verse, index) => { const position = aliyahPosition(kind, assignment.aliyahStarts, assignment.verses, verse.ref);
     return position && (position.startsHere || index === 0) ? [{ index, label: `Aliyah ${position.number}${position.startsHere ? " starts here" : " · continued from the previous text page"}` }] : []; });
 }
-export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderGuide, guide, renderIntro, renderWork, renderActiveWork, onPage, onPrint, printSheetHref, learner = false, liftHandle, practiceHandle, upCloseHandle, textStartHandle, verseLookupHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, onPracticeReady, onService, active = true, audio, stopAudio, practising = false, gotIt }: {
+export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderGuide, guide, renderIntro, renderWork, renderActiveWork, onPage, onPrint, printSheetHref, learner = false, liftHandle, practiceHandle, upCloseHandle, textStartHandle, verseLookupHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, onPracticeReady, onService, active = true, audio, stopAudio, practicing = false, gotIt }: {
   baseline: Assigned | null; register(value: StudyReload): () => void; reloadMetadata(): Promise<Assigned>; authorityFailed(status: number): void; onKindChange(kind: StudyKind): void;
   guardDeparture?(): Promise<boolean>; serviceHref?: string; renderGuide?(kind: StudyKind, verseRef: string): ReactNode;
   /** The study guide, so Study's rail can mark the verses it has notes on and open on the first of them. */
@@ -78,7 +78,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   audio?: ReturnType<typeof createReadingAudioCoordinator>; stopAudio?(): void;
   /** The student practicing on a phone (student and child practice): a tapped word or verse number opens a sheet over the text and the page never scrolls on
    *  its own; the selected verse's actions live in its sheet, not in a bar after the passage; after the text only About and the practice sheet remain here. */
-  practising?: boolean;
+  practicing?: boolean;
   /** True when the student has marked this verse Got it (the check beside its number). */
   gotIt?(kind: StudyKind, verseRef: string): boolean;
 }) {
@@ -349,7 +349,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
           onPick={ref => { setPicked(ref); onVisit?.(kind, ref); }} />
       </> : <FlowingStudyText verses={livePage.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord} listening={listeningEnabled} showEnglish={songSession && prefs.translation} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
         sections={aliyahSections(kind, assignment!, livePage.verses)} linked={linkedVerse(leinLink, livePage.verses)}
-        onNumber={practising ? (index, opener) => { openTools(livePage!.verses[index].ref, opener); onVisit?.(kind, livePage!.verses[index].ref); } : undefined} gotIt={gotIt ? ref => gotIt(kind, ref) : undefined}
+        onNumber={practicing ? (index, opener) => { openTools(livePage!.verses[index].ref, opener); onVisit?.(kind, livePage!.verses[index].ref); } : undefined} gotIt={gotIt ? ref => gotIt(kind, ref) : undefined}
         onVerse={listeningEnabled ? index => hear(livePage!, index) : undefined} onWord={(index, word) => { setPicked(livePage!.verses[index].ref); if (listeningEnabled) playMainVerseForWord(playback.current, tools.current, index, word); else { tools.current?.select(index, word); tools.current?.reveal(); } onVisit?.(kind, livePage!.verses[index].ref); }} />}
       {/* The end of the section (N3): the next one's first verse, faint, and the way on. The verse comes from the page already loaded, when it is on it. */}
       {sectionNow >= 0 && sectionNow + 1 < sections.length && livePage.nextOffset === null
@@ -364,7 +364,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
           if (signal.aborted || turn !== generation.current || metadata.current !== value) throw new PortalRequestError(409);
           return result;
         }} />}
-      {!concealed && active && <WordTools sheet={practising} key={`word-tools:${JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])}`}
+      {!concealed && active && <WordTools sheet={practicing} key={`word-tools:${JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])}`}
         scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])} verses={livePage.verses} register={registerTools}
         readAids={async (index, signal) => {
           const value = baseline, page = livePage!, turn = generation.current;
@@ -389,7 +389,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
         takePlace={() => { const place = pendingPlace.current, page = livePage!; pendingPlace.current = null;
           return place && place.kind === kind && place.offset === page.offset && place.turn === generation.current ? { ref: place.ref, wordIndex: place.wordIndex } : null; }} />}
       {/* The selected verse (1.9 N4): its tools are one Sheet, its mark and Up close beside it. Only this verse's tools are ever on the page, however long the section. */}
-      {!practising && (() => { const index = Math.max(0, livePage.verses.findIndex(row => row.ref === picked)), verse = livePage.verses[index];
+      {!practicing && (() => { const index = Math.max(0, livePage.verses.findIndex(row => row.ref === picked)), verse = livePage.verses[index];
         return <div className="study-verse-bar" data-testid="study-verse-bar" data-selected-verse={verse.ref}>
           <button type="button" className="button-secondary" aria-haspopup="dialog" onClick={event => openTools(verse.ref, event.currentTarget)}>Verse tools · <bdi dir="ltr">{verse.ref}</bdi></button>
           {!study && <button type="button" className="button-text" onClick={() => open(livePage!, index)}>View {verse.ref} up close</button>}
@@ -398,7 +398,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       {toolsVerse && <Sheet open onClose={() => void closeTools()} title={`Verse tools · ${toolsVerse.ref}`} closeLabel="Close" returnFocusTo={() => toolsOpener.current}>
         <div className="study-verse-detail" data-testid="study-verse-detail" data-verse-ref={toolsVerse.ref}>
           {renderMark && <div className="verse-card-head">{renderMark(kind, toolsVerse.ref)}</div>}
-          {practising && <div className="study-verse-actions" data-testid="study-verse-actions">
+          {practicing && <div className="study-verse-actions" data-testid="study-verse-actions">
             <button type="button" className="button-secondary" onClick={() => { const index = livePage!.verses.indexOf(toolsVerse); void closeTools().then(closed => closed && requestAnimationFrame(() => requestAnimationFrame(() => open(livePage!, index)))); }}>View {toolsVerse.ref} up close</button>
             {listeningEnabled && <button type="button" className="button-secondary" onClick={() => hear(livePage!, livePage!.verses.indexOf(toolsVerse))}>Hear verse</button>}
           </div>}
@@ -416,7 +416,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       {!learner && <p className="field-help">Hebrew: Miqra according to the Masorah. English reference: JPS2023. No alternate edition is substituted.</p>}
       {!single && <nav className="study-pages" aria-label="Text pages"><button className="button-secondary" disabled={previous === undefined} onClick={() => previous !== undefined && void explicitLoad(kind, previous)}>Previous text page</button><button className="button-secondary" disabled={livePage.nextOffset === null} onClick={() => livePage?.nextOffset !== null && void explicitLoad(kind, livePage!.nextOffset!)}>Next text page</button></nav>}
       {study && <CommentaryCredits works={works} refs={commentaryRefs} />}
-      <div className="study-more"><StudyCredits chapters={livePage.chapters} summary={learner ? "About this text" : undefined} />{learner && !practising && <WorkspaceLink href="/trope-chart">Trope chart</WorkspaceLink>}{learner && onPrint && <button type="button" className="button-text study-print-action" onClick={onPrint}>Print practice sheet</button>}{learner && !practising && printSheetHref && <WorkspaceLink className="study-print-sheet" href={printSheetHref}>Print the whole reading</WorkspaceLink>}{learner && <div className="reading-lens-foot"><LensSwitch /></div>}</div>
+      <div className="study-more"><StudyCredits chapters={livePage.chapters} summary={learner ? "About this text" : undefined} />{learner && !practicing && <WorkspaceLink href="/trope-chart">Trope chart</WorkspaceLink>}{learner && onPrint && <button type="button" className="button-text study-print-action" onClick={onPrint}>Print practice sheet</button>}{learner && !practicing && printSheetHref && <WorkspaceLink className="study-print-sheet" href={printSheetHref}>Print the whole reading</WorkspaceLink>}{learner && <div className="reading-lens-foot"><LensSwitch /></div>}</div>
       {lift && textReady && lift.page === livePage && <LiftedLine learner={learner} verses={livePage.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} index={lift.index} total={livePage.totalVerses} offset={livePage.offset}
         reference={audio && listeningEnabled ? { audio, active: active && !concealed, expiresAt: baseline.context ? Date.parse(baseline.context.expiresAt) : undefined,
           navigation: lift.navigation, scopeKey: JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current, lift.opening]),

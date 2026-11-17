@@ -92,7 +92,7 @@ function useGot(baseline: Assigned | null, live: boolean, readProgress: Progress
 /** The week's dots as the student's card draws them, for the seven days the read covers (ending today); a practiced day carries its date. Dates only. */
 function WeekDots({ serverDay, dates, name }: { serverDay: string; dates: readonly string[]; name: string }) {
   return <ol className="parent-summary-dates parent-week" aria-label={`Days ${name} practiced this week`} data-testid="parent-week">{lastSevenDays(serverDay, dates).map(day => {
-    const done = day.practised;
+    const done = day.practiced;
     return <li key={day.date} className={`parent-day${done ? " parent-day-done" : ""}${day.today ? " parent-day-today" : ""}`}>
       <span aria-hidden="true" className="parent-day-letter">{weekdays[day.weekday][0]}</span>
       <span className="parent-day-dot" aria-hidden="true" />
@@ -122,7 +122,7 @@ export function ParentStudySummary({ store, baseline, scope, concealed, notice =
         {lesson.latest.beforeNext ? <BeforeNext text={lesson.latest.beforeNext} own={false} /> : <p className="parent-summary-note" dir="auto">{lesson.latest.summary}</p>}
       </>}
     </div>
-    <div className="parent-summary-practised">
+    <div className="parent-summary-practiced">
       {dates.status === "loading" ? <p role="status">Loading practice dates…</p> : dates.status === "unavailable" ? <p>Practice dates couldn’t be loaded.</p>
         : dates.dates.length ? <WeekDots serverDay={dates.serverDay} dates={dates.dates} name={first} /> : <p>No practice dates recorded in these seven days.</p>}
     </div>

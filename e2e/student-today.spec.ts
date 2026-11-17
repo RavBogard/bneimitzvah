@@ -8,7 +8,7 @@ test.describe("at 390x844", () => {
   test.beforeEach(async ({ page }) => { await page.setViewportSize({ width: 390, height: 844 }); });
 
   test("the pinned card is first on /mine: the chip with the date, the name, the countdown and the ranges", async ({ page }) => {
-    await mock(page, { practised: ["2026-10-12", "2026-10-14", "2026-10-16"] });
+    await mock(page, { practiced: ["2026-10-12", "2026-10-14", "2026-10-16"] });
     await page.goto("/mine");
     await expect(page.getByRole("heading", { level: 1, name: "My Readings", exact: true })).toBeVisible();
     await expect(card(page).getByText("Beit Mitzvah · Sat, Dec 12, 2026", { exact: true })).toBeVisible();
@@ -53,7 +53,7 @@ test.describe("at 390x844", () => {
 
   test("no button or link in the card clips its text at 320px", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 700 });
-    await mock(page, { practised: ["2026-10-14"], got: [0, 1, 2] });
+    await mock(page, { practiced: ["2026-10-14"], got: [0, 1, 2] });
     await page.goto("/mine");
     await expect(card(page).getByTestId("pinned-next")).toBeVisible();
     // The next step sits in the first viewport, whole, and is the card's full-width primary action.
@@ -67,7 +67,7 @@ test.describe("at 390x844", () => {
   });
 
   test("seven quiet dots show the last seven days with no number, tally or streak wording", async ({ page }) => {
-    await mock(page, { practised: ["2026-10-12", "2026-10-14", "2026-10-16"] });
+    await mock(page, { practiced: ["2026-10-12", "2026-10-14", "2026-10-16"] });
     await page.goto("/mine");
     const dots = card(page).locator(".practice-week");
     await expect(dots.locator("li")).toHaveCount(7);
@@ -98,7 +98,7 @@ test.describe("at 390x844", () => {
   });
 
   test("the calendar marks the rehearsals and the ceremony, and goes forward to the ceremony month", async ({ page }) => {
-    await mock(page, { practised: ["2026-10-14"] });
+    await mock(page, { practiced: ["2026-10-14"] });
     await page.goto("/mine");
     await card(page).getByText("Practice calendar", { exact: true }).click();
     await expect(card(page).getByText("October 2026", { exact: true })).toBeVisible();
@@ -115,7 +115,7 @@ test.describe("at 390x844", () => {
 for (const width of [375, 390, 412]) {
   test(`no reference or date breaks across lines at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
-    await mock(page, { practised: ["2026-10-14"], solid: 23 });
+    await mock(page, { practiced: ["2026-10-14"], solid: 23 });
     await page.goto("/mine");
     await expect(card(page).getByRole("heading", { level: 2, name: "Noa Synthetic" })).toBeVisible();
     const broken = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>("[data-pinned-card] [data-nobreak]")].flatMap(node => {

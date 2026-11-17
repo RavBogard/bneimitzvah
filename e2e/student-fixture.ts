@@ -15,7 +15,7 @@ const STARTS = ["Genesis 37:23", "Genesis 38:1", "Genesis 38:15", "Genesis 39:1"
 const SOURCE = { status: "available", fetchedAt: 0, date: "2026-12-12", calendar: "diaspora", attribution: { name: "Hebcal", url: "https://www.hebcal.com/" } };
 const json = (body: unknown, status = 200) => ({ status, contentType: "application/json", body: JSON.stringify(body) });
 
-export type Fixture = { today?: string; rehearsal1?: string | null; rehearsal2?: string | null; ceremony?: string; practised?: string[]; solid?: number; working?: number[]; got?: number[]; note?: boolean; noAliyot?: boolean; beforeNext?: string | null };
+export type Fixture = { today?: string; rehearsal1?: string | null; rehearsal2?: string | null; ceremony?: string; practiced?: string[]; solid?: number; working?: number[]; got?: number[]; note?: boolean; noAliyot?: boolean; beforeNext?: string | null };
 export async function mock(page: Page, f: Fixture = {}) {
   const today = f.today ?? "2026-10-17", ceremony = f.ceremony ?? "2026-12-12";
   await page.clock.setFixedTime(new Date(`${today}T15:00:00-05:00`));
@@ -40,7 +40,7 @@ export async function mock(page: Page, f: Fixture = {}) {
   });
   await page.route("**/api/students/*/practice-calendar?*", route => {
     const q = new URL(route.request().url()).searchParams;
-    route.fulfill(json({ ok: true, studentId: ID, mode: "student", serverDay: today, dates: (f.practised ?? []).filter(date => date >= q.get("fromDate")! && date <= q.get("throughDate")!) }));
+    route.fulfill(json({ ok: true, studentId: ID, mode: "student", serverDay: today, dates: (f.practiced ?? []).filter(date => date >= q.get("fromDate")! && date <= q.get("throughDate")!) }));
   });
   await page.route("**/api/students/*/lesson-log?*", route => route.fulfill(json({ ok: true, studentId: ID, mode: "student", nextCursor: null,
     entries: f.note === false ? [] : [{ entryId: "55555555-5555-4555-8555-555555555555", lessonDate: "2026-10-14", summary: "Chanted the first aliyah twice. Slow down at the etnachta.",

@@ -24,7 +24,7 @@ const family = (value: unknown) => typeof value === "string" && /^[A-Za-z' -]{1,
 const heard = (value: unknown): LearnHeard => { const row = object(value, ["heard", "of"]), of = count(row.of, 100), n = count(row.heard, 100); return n <= of ? { heard: n, of } : bad(); };
 
 export function parseTutorPractice(value: unknown): TutorPractice {
-  const row = object(value, ["from", "today", "days", "marks", "practisedDays", "lastLesson", "stillWorking", "learn"]);
+  const row = object(value, ["from", "today", "days", "marks", "practicedDays", "lastLesson", "stillWorking", "learn"]);
   const from = day(row.from), today = day(row.today);
   const days: PracticeDay[] = list(row.days, 14).map(item => {
     const entry = object(item, ["day", "readings"]), date = day(entry.day);
@@ -48,7 +48,7 @@ export function parseTutorPractice(value: unknown): TutorPractice {
     const mixedUp = l.mixedUp === null ? null : (() => { const pair = list(l.mixedUp, 2).map(family); return pair.length === 2 ? [pair[0], pair[1]] as const : bad(); })();
     learn = { torah: heard(l.torah), haftarah: heard(l.haftarah), mixedUp };
   }
-  return { from, today, days, marks, practisedDays: count(row.practisedDays, 7), lastLesson: row.lastLesson === null ? null : day(row.lastLesson), stillWorking: count(row.stillWorking, 4000), learn };
+  return { from, today, days, marks, practicedDays: count(row.practicedDays, 7), lastLesson: row.lastLesson === null ? null : day(row.lastLesson), stillWorking: count(row.stillWorking, 4000), learn };
 }
 export function parseParentPractice(value: unknown): ParentPractice {
   const row = object(value, ["gotIt", "working"]);

@@ -13,12 +13,12 @@ export function sevenDayWindow(today: string): { from: string; through: string }
   return { from: dayOf(ordinalOf(today) - (SEVEN_DAYS - 1)), through: today };
 }
 
-export type SevenDay = Readonly<{ date: string; practised: boolean; today: boolean; weekday: number }>;
+export type SevenDay = Readonly<{ date: string; practiced: boolean; today: boolean; weekday: number }>;
 /** The seven days ending on `today`, oldest first, each with whether the student practiced; weekday is 0 for Sunday. */
 export function lastSevenDays(today: string, dates: ReadonlySet<string> | readonly string[]): readonly SevenDay[] {
-  const end = ordinalOf(today), practised = dates instanceof Set ? dates as ReadonlySet<string> : new Set(dates as readonly string[]);
+  const end = ordinalOf(today), practiced = dates instanceof Set ? dates as ReadonlySet<string> : new Set(dates as readonly string[]);
   return Array.from({ length: SEVEN_DAYS }, (_, index) => {
     const ordinal = end - (SEVEN_DAYS - 1) + index, date = dayOf(ordinal);
-    return Object.freeze({ date, practised: practised.has(date), today: ordinal === end, weekday: ((ordinal + 4) % 7 + 7) % 7 });
+    return Object.freeze({ date, practiced: practiced.has(date), today: ordinal === end, weekday: ((ordinal + 4) % 7 + 7) % 7 });
   });
 }

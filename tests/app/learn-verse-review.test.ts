@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { addDays, BOX_DAYS, effectiveDue } from "../../src/lib/learn/progress";
 import { addVerseCards, answerVerseRun, compareVerseIds, currentVerse, dueVerses, emptyVerseReview, joinWith, JOIN_OFFER_ENABLED, mergeVerseReview, parseVerseCardId,
-  parseVerseReview, practiseAgain, recordVerse, serializeVerseReview, startVerseRun, stumbledRefs, suggestedHelp, verseCardId, verseRunDone, VERSE_REVIEW_LIMITS,
+  parseVerseReview, practiceAgain, recordVerse, serializeVerseReview, startVerseRun, stumbledRefs, suggestedHelp, verseCardId, verseRunDone, VERSE_REVIEW_LIMITS,
   VERSE_REVIEW_SCHEMA, type VerseCardId } from "../../src/lib/learn/verse-review";
 
 // 1.9 N19: the student's own verse cards. Pure; every date is passed in. Synthetic dates and Noa's synthetic assignment only.
@@ -103,17 +103,17 @@ describe("the Run-through", () => {
     for (const id of ids) { expect(currentVerse(run)).toBe(id); run = answerVerseRun(run, id.endsWith(":3") || id.endsWith(":8") ? "stumbled" : "clean"); }
     expect(verseRunDone(run)).toBe(true);
     expect(stumbledRefs(run)).toEqual(["Genesis 23:3", "Genesis 23:8"]);
-    const line = practiseAgain(stumbledRefs(run));
+    const line = practiceAgain(stumbledRefs(run));
     expect(line).toBe("Practice verses 3 and 8 again.");
     expect(line).not.toMatch(/Clean|of 9|\b7\b|\b9\b/);
   });
   it("words the summary for one verse, several, across chapters and across books, and says nothing when nothing stumbled", () => {
-    expect(practiseAgain(["Genesis 23:3"])).toBe("Practice verse 3 again.");
-    expect(practiseAgain(["Genesis 23:10", "Genesis 23:3", "Genesis 23:8"])).toBe("Practice verses 3, 8 and 10 again.");
-    expect(practiseAgain(["Genesis 24:2", "Genesis 23:20"])).toBe("Practice verses 23:20 and 24:2 again.");
-    expect(practiseAgain(["Isaiah 61:10", "Isaiah 62:1"])).toBe("Practice verses 61:10 and 62:1 again.");
-    expect(practiseAgain(["Isaiah 54:1", "I Kings 2:1"])).toBe("Practice verses I Kings 2:1 and Isaiah 54:1 again.");
-    expect(practiseAgain([])).toBeNull();
+    expect(practiceAgain(["Genesis 23:3"])).toBe("Practice verse 3 again.");
+    expect(practiceAgain(["Genesis 23:10", "Genesis 23:3", "Genesis 23:8"])).toBe("Practice verses 3, 8 and 10 again.");
+    expect(practiceAgain(["Genesis 24:2", "Genesis 23:20"])).toBe("Practice verses 23:20 and 24:2 again.");
+    expect(practiceAgain(["Isaiah 61:10", "Isaiah 62:1"])).toBe("Practice verses 61:10 and 62:1 again.");
+    expect(practiceAgain(["Isaiah 54:1", "I Kings 2:1"])).toBe("Practice verses I Kings 2:1 and Isaiah 54:1 again.");
+    expect(practiceAgain([])).toBeNull();
   });
   it("suggests the fade and never locks it: a Run-through starts with the colours off, settled verses suggest the tikkun", () => {
     expect(suggestedHelp(undefined, "run-through")).toBe("marks");

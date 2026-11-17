@@ -66,7 +66,7 @@ test("no duration, time of day, action or play count is selectable through the r
   // Comments may say what is left out; the code may not select it.
   const data = text(DATA).replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   assert.doesNotMatch(data, /received_?at|receivedAt|\baction\b|'play'|marked_at|markedAt|count\(\*\)/i);
-  // practisedDays counts practice_day rows (dates staff already see under ruling 45); nothing else is counted.
+  // practicedDays counts practice_day rows (dates staff already see under ruling 45); nothing else is counted.
   assert.equal(data.match(/count\(\)/g)?.length, 1);
   const migration = text(MIGRATION);
   const views = migration.split("--> statement-breakpoint").filter(part => /CREATE VIEW practice_visibility_/.test(part));

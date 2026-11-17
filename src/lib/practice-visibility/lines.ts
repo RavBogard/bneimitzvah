@@ -68,8 +68,8 @@ export const markLine = (state: PracticeMarkState, withParent: boolean | null) =
 export const NO_PRACTICE_LINE = "No practice in the last 7 days";
 
 /** TP-11: "Practiced 3 of last 7 days · Last lesson Oct 17 · 2 verses still working". No lesson, or nothing still working, leaves its part out. */
-export function rosterLine(input: { practisedDays: number; lastLesson: string | null; stillWorking: number }): string {
-  const parts = [input.practisedDays > 0 ? `Practiced ${input.practisedDays} of last 7 days` : NO_PRACTICE_LINE];
+export function rosterLine(input: { practicedDays: number; lastLesson: string | null; stillWorking: number }): string {
+  const parts = [input.practicedDays > 0 ? `Practiced ${input.practicedDays} of last 7 days` : NO_PRACTICE_LINE];
   if (input.lastLesson) parts.push(`Last lesson ${shortDate(input.lastLesson)}`);
   if (input.stillWorking > 0) parts.push(`${input.stillWorking} ${input.stillWorking === 1 ? "verse" : "verses"} still working`);
   return parts.join(" · ");

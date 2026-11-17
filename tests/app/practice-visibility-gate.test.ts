@@ -81,11 +81,11 @@ test("for every value the gate can take, a reachable tutor or parent line implie
 
 test("the tutor read is refused whole for a day outside the release window, an extra field, or a malformed mark", () => {
   const good = { from: "2026-10-27", today: "2026-10-29", days: [{ day: "2026-10-28", readings: [{ kind: "torah", opened: ["Exodus 23:1"], marked: [{ verseRef: "Exodus 23:1", state: "got-it" }] }] }],
-    marks: [{ kind: "torah", verseRef: "Exodus 23:1", state: "got-it", withParent: true }], practisedDays: 1, lastLesson: null, stillWorking: 0,
+    marks: [{ kind: "torah", verseRef: "Exodus 23:1", state: "got-it", withParent: true }], practicedDays: 1, lastLesson: null, stillWorking: 0,
     learn: { torah: { heard: 2, of: 10 }, haftarah: { heard: 0, of: 11 }, mixedUp: ["tevir", "etnachta"] } };
   expect(parseTutorPractice(good).marks[0].withParent).toBe(true);
   for (const bad of [{ ...good, days: [{ ...good.days[0], day: "2026-10-26" }] }, { ...good, days: [{ ...good.days[0], day: "2026-10-30" }] }, { ...good, minutes: 4 },
-    { ...good, marks: [{ ...good.marks[0], at: "10:15" }] }, { ...good, marks: [{ ...good.marks[0], withParent: "yes" }] }, { ...good, practisedDays: 8 }])
+    { ...good, marks: [{ ...good.marks[0], at: "10:15" }] }, { ...good, marks: [{ ...good.marks[0], withParent: "yes" }] }, { ...good, practicedDays: 8 }])
     expect(() => parseTutorPractice(bad)).toThrow();
   expect(parseParentPractice({ gotIt: 12, working: 3 })).toEqual({ gotIt: 12, working: 3 });
   expect(() => parseParentPractice({ gotIt: 12, working: 3, days: [] })).toThrow();

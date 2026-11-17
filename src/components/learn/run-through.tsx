@@ -2,7 +2,7 @@
 import { useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import type { Melody } from "../../lib/learn/course";
 import { localDay } from "../../lib/learn/progress";
-import { practiseAgain, recordVerse, stumbledRefs, verseCardId, type VerseRun } from "../../lib/learn/verse-review";
+import { practiceAgain, recordVerse, stumbledRefs, verseCardId, type VerseRun } from "../../lib/learn/verse-review";
 import { useOwnReading } from "./own-reading";
 import { useVerseReview } from "./own-verses";
 import { useVerseTexts, VerseRunView } from "./verse-run";
@@ -45,7 +45,7 @@ function RunThroughReading({ verses, kind, frame, back, nav, verseCards }: { ver
   if (texts.status === "loading") return frame(<p role="status" className={styles.state}>Loading the reading…</p>);
   if (texts.status === "error") return frame(<div className={styles.state}><button type="button" className="button-secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></div>, back);
   if (done) {
-    const line = practiseAgain(stumbledRefs(done));
+    const line = practiceAgain(stumbledRefs(done));
     return frame(<>{line && <p className={styles.doneLine} data-run-summary>{line}</p>}{nav}</>, back);
   }
   if (!texts.verses.length) return frame(<><div className={styles.state} data-run-empty><p>{RUN_THROUGH_EMPTY.text}</p><button type="button" className="button-secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></div>{nav}</>, back);

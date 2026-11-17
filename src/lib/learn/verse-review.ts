@@ -140,7 +140,7 @@ export const stumbledRefs = (run: VerseRun): string[] => run.order.filter(id => 
  * stumbled verses alone, with no count of clean ones. Verses are named by number within one chapter, by chapter:verse
  * across chapters, and in full across books. Null when nothing stumbled.
  */
-export function practiseAgain(refs: readonly string[]): string | null {
+export function practiceAgain(refs: readonly string[]): string | null {
   const positions = [...new Set(refs)].map(versePosition).filter((p): p is Position => p !== null)
     .sort((a, b) => BOOKS.indexOf(a.book) - BOOKS.indexOf(b.book) || a.chapter - b.chapter || a.verse - b.verse);
   if (!positions.length) return null;

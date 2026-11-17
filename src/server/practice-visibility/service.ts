@@ -51,7 +51,7 @@ export function createPracticeVisibilityService<Q extends PgQueryResultHKT>(inpu
         const learnRow = await data.learn(tx, actor.tenantId, student.id);
         await data.clearReader(tx);
         // "Practiced n of last 7 days" counts the same seven days every practice surface draws (lib/practice-calendar/seven-days).
-        const week = sevenDayWindow(today), practised = await data.practisedDays(tx, actor.tenantId, student.id, week.from, week.through);
+        const week = sevenDayWindow(today), practiced = await data.practicedDays(tx, actor.tenantId, student.id, week.from, week.through);
         const lastLesson = await data.lastLesson(tx, actor.tenantId, student.id, today);
         if (actor.authSessionExpiresAt <= Date.now()) throw new AccessDenied(401);
 
@@ -81,7 +81,7 @@ export function createPracticeVisibilityService<Q extends PgQueryResultHKT>(inpu
         }
         const learn = learnRow ? learnSummary(Array.isArray(learnRow.lessons) ? learnRow.lessons.filter(id => typeof id === "string") : [],
           learnRow.boxes && typeof learnRow.boxes === "object" && !Array.isArray(learnRow.boxes) ? learnRow.boxes : {}) : null;
-        return Object.freeze({ from, today, days: Object.freeze(days), marks: Object.freeze(marks), practisedDays: practised, lastLesson,
+        return Object.freeze({ from, today, days: Object.freeze(days), marks: Object.freeze(marks), practicedDays: practiced, lastLesson,
           stillWorking: marks.filter(mark => mark.state === "working").length, learn });
       });
     },

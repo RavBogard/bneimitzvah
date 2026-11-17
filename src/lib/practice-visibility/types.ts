@@ -15,7 +15,7 @@ export type PracticeLearn = Readonly<{ torah: LearnHeard; haftarah: LearnHeard; 
 /** The assigned tutor's view of one student. */
 export type TutorPractice = Readonly<{
   from: string; today: string; days: readonly PracticeDay[]; marks: readonly PracticeMark[];
-  practisedDays: number; lastLesson: string | null; stillWorking: number; learn: PracticeLearn | null;
+  practicedDays: number; lastLesson: string | null; stillWorking: number; learn: PracticeLearn | null;
 }>;
 /** A parent's view: how many verses are marked, and nothing per day. */
 export type ParentPractice = Readonly<{ gotIt: number; working: number }>;

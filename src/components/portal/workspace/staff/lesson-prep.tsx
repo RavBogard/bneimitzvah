@@ -9,7 +9,7 @@ import type { PracticeCalendar } from "../practice-calendar/store";
 import { BeforeNext } from "../lessons/panel";
 import { Chip } from "../../../ui";
 import { useTutorPractice } from "./practice";
-import { ALIYOT_HEADING, aliyahRows, lastLessonLine, markSolidLabel, marksFromLine, marksSince, practisedSince, practisedSinceLine, READINGS_HEADING, sinceHeading, type AliyahRow } from "./lesson-prep-model";
+import { ALIYOT_HEADING, aliyahRows, lastLessonLine, markSolidLabel, marksFromLine, marksSince, practicedSince, practicedSinceLine, READINGS_HEADING, sinceHeading, type AliyahRow } from "./lesson-prep-model";
 
 /**
  * Project review 2026-11-16, T1 and T10: the Aliyot block on the staff lesson card. One row per aliyah (or per reading with no aliyot) with
@@ -87,16 +87,16 @@ export function AliyotBlock({ baseline, onMarked }: { baseline: Assigned; onMark
  * verses newly marked since then come only from the assigned tutor's own practice-visibility read (decision 7): `practice` is null for
  * an admin, and this never shows per-day detail to anyone but the assigned tutor. With no lesson note yet, there is no block.
  */
-export function SinceLastLesson({ mode, lesson, practised, practice }: { mode: "tutor" | "admin"; lesson: { lessonDate: string; beforeNext: string | null } | null;
-  practised: { today: string; dates: Iterable<string> } | null; practice: TutorPractice | null }) {
+export function SinceLastLesson({ mode, lesson, practiced, practice }: { mode: "tutor" | "admin"; lesson: { lessonDate: string; beforeNext: string | null } | null;
+  practiced: { today: string; dates: Iterable<string> } | null; practice: TutorPractice | null }) {
   const heading = useId();
   if (!lesson) return null;
-  const tutor = mode === "tutor", days = practised ? practisedSince(practised.dates, lesson.lessonDate, practised.today) : null;
+  const tutor = mode === "tutor", days = practiced ? practicedSince(practiced.dates, lesson.lessonDate, practiced.today) : null;
   const marks = tutor && practice ? marksSince(practice, lesson.lessonDate) : null;
   return <section className="lesson-since" data-testid="lesson-since" aria-labelledby={heading}>
     <h3 id={heading}>{sinceHeading(tutor)}</h3>
     <p data-testid="since-lesson-date"><time dateTime={lesson.lessonDate}>{lastLessonLine(lesson.lessonDate)}</time></p>
-    {days !== null && <p data-testid="since-practised">{practisedSinceLine(days)}</p>}
+    {days !== null && <p data-testid="since-practiced">{practicedSinceLine(days)}</p>}
     {marks && <ul className="lesson-since-marks" data-testid="since-marks">{marks.lines.map(line => <li key={line}>{line}</li>)}</ul>}
     {marks?.from && <p className="field-help">{marksFromLine(marks.from)}</p>}
     {lesson.beforeNext && <BeforeNext text={lesson.beforeNext} own={false} />}
@@ -105,7 +105,7 @@ export function SinceLastLesson({ mode, lesson, practised, practice }: { mode: "
 /** The live block: the calendar's dates and, for the assigned tutor, the tutor's own read. */
 export function LessonSince({ mode, lesson, calendar }: { mode: "tutor" | "admin"; lesson: { lessonDate: string; beforeNext: string | null } | null; calendar: PracticeCalendar }) {
   const state = useSyncExternalStore(calendar.subscribe, calendar.snapshot, calendar.snapshot), practice = useTutorPractice();
-  return <SinceLastLesson mode={mode} lesson={lesson} practised={state.status === "ready" ? { today: state.serverDay, dates: state.dates } : null} practice={mode === "tutor" ? practice : null} />;
+  return <SinceLastLesson mode={mode} lesson={lesson} practiced={state.status === "ready" ? { today: state.serverDay, dates: state.dates } : null} practice={mode === "tutor" ? practice : null} />;
 }
 
 /**

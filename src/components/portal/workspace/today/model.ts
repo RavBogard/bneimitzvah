@@ -87,7 +87,7 @@ export function upCloseTarget(hash: string): { kind: Reading["kind"]; ref: strin
 }
 /** The Run-through of the student's own reading (1.9 N19): the Torah when there is one, else the haftarah. */
 export const runThroughHref = (readings: readonly Pick<Reading, "kind">[]) => readings.some(row => row.kind === "torah") || !readings.length ? "/learn/run-through" : "/learn/run-through?kind=haftarah";
-export const NEXT_STEP = Object.freeze({ upClose: "Practice up close", runThrough: "Run-through", open: "Open my reading", practise: (where: string) => `Practice ${where}` });
+export const NEXT_STEP = Object.freeze({ upClose: "Practice up close", runThrough: "Run-through", open: "Open my reading", practice: (where: string) => `Practice ${where}` });
 
 /** A student session whose own reading is not linked yet (student gaps A8: was "No student is currently linked to this role."). */
 export const UNLINKED_LINE = "Your reading is not linked to this account yet. Ask your tutor or rabbi for help.";
@@ -104,7 +104,7 @@ export function nextStep(readings: readonly Reading[], marks: ReadonlyMap<Readin
     const got = new Set((marks.get(reading.kind) ?? []).filter(verse => verse.selfCheck.state === "got-it").map(verse => verse.verseRef));
     const index = reading.verses.findIndex(ref => !got.has(ref)); if (index < 0) continue;
     const ref = reading.verses[index], row = rows.find(item => item.kind === reading.kind && item.key !== reading.kind && index >= item.start && index < item.end);
-    return { kind: "verse", reading: reading.kind, ref, label: NEXT_STEP.practise(`${row ? `${row.label} · ` : ""}${displayRef(ref)}`), href: upCloseHref(reading.kind, ref) };
+    return { kind: "verse", reading: reading.kind, ref, label: NEXT_STEP.practice(`${row ? `${row.label} · ` : ""}${displayRef(ref)}`), href: upCloseHref(reading.kind, ref) };
   }
   return { kind: "run-through", label: NEXT_STEP.runThrough, href: runThroughHref(readings) };
 }

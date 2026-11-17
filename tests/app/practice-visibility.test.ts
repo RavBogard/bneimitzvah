@@ -101,7 +101,7 @@ describe("the assigned tutor's view", () => {
       days: [{ day: t.today, readings: [{ kind: "torah", opened: ["Exodus 23:1", "Exodus 23:2", "Exodus 23:3", "Exodus 23:4", "Exodus 23:6"],
         marked: [{ verseRef: "Exodus 23:4", state: "got-it" }, { verseRef: "Exodus 23:6", state: "working" }] }] }],
       marks: [{ kind: "torah", verseRef: "Exodus 23:4", state: "got-it", withParent: false }, { kind: "torah", verseRef: "Exodus 23:6", state: "working", withParent: true }],
-      practisedDays: 1, lastLesson: addDays(t.today, -2), stillWorking: 1,
+      practicedDays: 1, lastLesson: addDays(t.today, -2), stillWorking: 1,
       learn: { torah: { heard: 2, of: answer.json.learn.torah.of }, haftarah: { heard: 0, of: answer.json.learn.haftarah.of }, mixedUp: ["tevir", "etnachta"] },
     });
     // Dates only: no time of day, action, play, duration, raw source field or instant anywhere in the answer.

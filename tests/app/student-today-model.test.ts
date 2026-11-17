@@ -66,7 +66,7 @@ it("calls a stretch solid only when the tutor has assessed every verse solid, an
 it("gives the last seven days oldest first, with no count in it", () => {
   const days = lastSevenDays("2026-10-17", new Set(["2026-10-11", "2026-10-15", "2026-10-17", "2026-09-01"]));
   expect(days.map(day => day.date)).toEqual(["2026-10-11", "2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-17"]);
-  expect(days.map(day => day.practised)).toEqual([true, false, false, false, true, false, true]);
+  expect(days.map(day => day.practiced)).toEqual([true, false, false, false, true, false, true]);
   expect(days.filter(day => day.today).map(day => day.date)).toEqual(["2026-10-17"]);
   // 2026-10-17 is a Saturday (6), 2026-10-11 a Sunday (0).
   expect(days[0].weekday).toBe(0); expect(days[6].weekday).toBe(6);
