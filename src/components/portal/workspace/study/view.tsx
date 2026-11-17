@@ -355,7 +355,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       {sectionNow >= 0 && sectionNow + 1 < sections.length && livePage.nextOffset === null
         && <NextSection onNext={() => goSection(sectionNow + 1)} preview={rawPage?.verses[sections[sectionNow + 1].start - rawPage.offset]} />}
       {!concealed && listeningEnabled && !study && <ReadingPlayer key={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])}
-        scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])} verses={livePage.verses} active={active && !lift} enabled={!concealed && !lift} expiresAt={baseline?.context ? Date.parse(baseline.context.expiresAt) : undefined} audio={audio ? { coordinator: audio, slot: "assigned" } : undefined}
+        scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])} idleLabel={learner ? undefined : "Listen to the reading"} verses={livePage.verses} active={active && !lift} enabled={!concealed && !lift} expiresAt={baseline?.context ? Date.parse(baseline.context.expiresAt) : undefined} audio={audio ? { coordinator: audio, slot: "assigned" } : undefined}
         register={registerPlayback} onActiveWord={setPlayingWord} load={async (index, signal) => {
           const value = baseline, page = livePage!, turn = generation.current;
           if (signal.aborted || metadata.current !== value || page !== livePage || !page.verses[index]) throw new PortalRequestError(409);

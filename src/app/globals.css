@@ -1325,6 +1325,17 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .lesson-prep .needs-work h3, .lesson-last h3 { margin: 0 0 0.25rem; font-size: 1rem; font-weight: 700; }
 .lesson-last p { margin: 0; overflow-wrap: break-word; }
 .lesson-prep-add { justify-self: start; border-radius: 999px; }
+/* Project review 2026-11-16: "Since your last lesson" and the Aliyot block on the lesson card. Rows wrap at 360px; the button keeps a 44px target. */
+.lesson-since h3, .aliyot h3 { margin: 0 0 0.25rem; font-size: 1rem; font-weight: 700; }
+.lesson-since p { margin: 0; overflow-wrap: break-word; }
+.lesson-since > * + * { margin-block-start: 0.25rem; }
+.lesson-since-marks { margin: 0; padding-inline-start: 1.25rem; display: grid; gap: 0.25rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.aliyot-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.aliyot-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; padding-block: 0.25rem; border-block-end: 1px solid var(--color-rule); }
+.aliyot-row:last-child { border-block-end: 0; }
+.aliyot-row-name { flex: 1 1 10rem; min-inline-size: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.aliyot-mark { min-block-size: 44px; flex: 0 0 auto; }
+.aliyot-note { flex-basis: 100%; margin: 0; }
 .lesson-sheet .lesson-last { margin-block: 0.5rem 1rem; padding: 0.75rem 1rem; border-radius: var(--radius-control); background: var(--color-surface); }
 /* The note's Save stays in reach under a long summary (finding 5). */
 .lesson-sheet .lesson-form-actions { position: sticky; bottom: 0; z-index: 1; padding-block: 0.75rem; background: var(--color-canvas); }

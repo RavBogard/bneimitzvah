@@ -35,7 +35,7 @@ export function GuideStatusLine({ kind, readingKey }: { kind: StudyKind; reading
     readStatus(kind, readingKey, controller.signal).then(status => setState({ key, status }), () => { if (!controller.signal.aborted) setState({ key, failed: true }); });
     return () => controller.abort();
   }, [kind, readingKey, key]);
-  if (!readingKey) return <p className={styles.status}>Study guide: this reading has no calendar key, so only per-student additions can apply.</p>;
+  if (!readingKey) return <p className={styles.status}>Study guide: these are custom verses, not a calendar portion, so only notes written for this student apply.</p>;
   if (state.key !== key) return null;
   if (state.failed || !state.status) return <p className={styles.status}>Study guide status is unavailable right now.</p>;
   const { visible, held } = state.status;

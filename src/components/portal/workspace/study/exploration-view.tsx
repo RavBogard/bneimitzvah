@@ -18,8 +18,10 @@ import { PortalRequestError } from "../../api";
 import { readingAudioDeadline, watchReadingAudioDeadline } from "./reading-player-intent";
 
 /** Proposed audio never grants assigned word/work/calendar authority. */
-export function ExplorationContent({ state, group, retry, page, refresh, audio }: {
+export function ExplorationContent({ state, group, retry, page, refresh, audio, staff = false }: {
   state: ExplorationState; group: string; retry(): void; page(offset: number): void; refresh(): void;
+  /** A tutor or admin: the line under the heading speaks to staff, not to the student (project review 2026-11-16). */
+  staff?: boolean;
   audio?: { activeWord: { verse: number; index: number } | null; onWord(verse: number, word: number): void; onVerse(verse: number): void; player: ReactNode };
 }) {
   const prefs = useReadingPrefs(), prepared = state.result?.status === "prepared" ? state.result : undefined;
@@ -33,7 +35,7 @@ export function ExplorationContent({ state, group, retry, page, refresh, audio }
   const previous = prepared?.pages[offsetIndex - 1]?.offset;
   return <section className="assigned-study" data-testid="proposed-portion" aria-label="Proposed Torah portion" data-size={prefs.size} aria-busy={state.pending}>
     <header><h3>{prepared?.portion ?? "Explore the Torah portion"}</h3>
-      <p className="field-help">Read the full portion while you and your tutor choose your verses. This is not an assigned reading yet.</p>
+      <p className="field-help">{staff ? "The whole portion, to choose verses from. No Torah verses are assigned yet." : "Read the full portion while you and your tutor choose your verses. This is not an assigned reading yet."}</p>
       {prepared && <p className="reading-reference">{prepared.ranges.join("; ").replace(/(\d)-(\d)/g, "$1–$2")}</p>}
       {lens.available && <div className="reading-lens-row" data-learner=""><LensSwitch onChange={() => leinLink.clear()} /></div>}</header>
     {state.error ? <div role="status" data-testid="exploration-state" data-exploration-state={state.error === 409 ? "changed" : [401, 403, 404].includes(state.error) ? "role-unavailable" : "failed"}><p>{state.error === 409 ? "The reading changed. Refresh it to continue." : [401, 403, 404].includes(state.error) ? "This reading is no longer available in the selected role." : "The Torah portion couldn’t be loaded. Try again in a moment."}</p>
@@ -152,5 +154,5 @@ export function ProposedTorahText({ baseline, reloadMetadata, authorityFailed, a
         return result;
       }} />{expired && <p role="status">This proposed reading expired. <button type="button" className="button-text" onClick={() => reloadPage()}>Refresh the Torah portion</button></p>}</>,
   } : undefined;
-  return <ExplorationContent audio={hearing} state={state} group={group} retry={() => reloadPage()} page={offset => reloadPage(offset)} refresh={() => { playback.current?.suspend(); shortMetadata.current?.suspend(); void reloadMetadata().catch(() => undefined); }} />;
+  return <ExplorationContent audio={hearing} state={state} group={group} staff={baseline?.mode === "tutor" || baseline?.mode === "admin"} retry={() => reloadPage()} page={offset => reloadPage(offset)} refresh={() => { playback.current?.suspend(); shortMetadata.current?.suspend(); void reloadMetadata().catch(() => undefined); }} />;
 }

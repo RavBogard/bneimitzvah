@@ -16,8 +16,10 @@ export function playMainVerseForWord(player: Pick<ReadingPlayerHandle, "select">
   if (!Number.isSafeInteger(verse) || verse < 0 || !Number.isSafeInteger(word) || word < 0) return;
   player?.select(verse, "verse"); tools?.select(verse, word);
 }
-export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expiresAt, audio, wordTools = true, target, load, register, onActiveWord }: {
+export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expiresAt, audio, wordTools = true, target, load, register, onActiveWord, idleLabel = "Listen to your reading" }: {
   scopeKey: string; verses: readonly StudyVerse[]; active: boolean; enabled?: boolean; expiresAt?: number; wordTools?: boolean;
+  /** What the player says before anything is chosen; staff pages say "Listen to the reading" (project review 2026-11-16). */
+  idleLabel?: string;
   /** Missing composition renders inert controls; it never creates a local fallback. */
   /** Controlled modal target; changes are inert until explicit selection. */
   target?: { index: number; generation: number };
@@ -71,7 +73,7 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
           : state?.suspended ? "Playback paused. Tap the reading or press Play when you’re ready." : `Tapping the reading plays a whole verse. ${wordTools ? "Practice and Word tools offer" : "Practice offers"} word drills. Repeat keeps the current selection.`;
   // The transport (what is chosen, Play or Pause, Repeat) stays in reach while the reader scrolls the passage; the rest of the player keeps its place after the text.
   return <section className={styles.player} aria-label="Reading playback">
-    <div className={styles.top} data-player-transport=""><p className={styles.selection} data-testid="player-selection" data-selected-ref={selected?.ref} data-selected-part={selected ? String(preview.selection) : undefined}>{selected ? <><bdi>{selected.ref}</bdi> · {preview.selection === "verse" ? "Whole verse" : `Word ${(preview.selection as number) + 1}`}</> : "Listen to your reading"}</p>
+    <div className={styles.top} data-player-transport=""><p className={styles.selection} data-testid="player-selection" data-selected-ref={selected?.ref} data-selected-part={selected ? String(preview.selection) : undefined}>{selected ? <><bdi>{selected.ref}</bdi> · {preview.selection === "verse" ? "Whole verse" : `Word ${(preview.selection as number) + 1}`}</> : idleLabel}</p>
       <div className={styles.controls}><button type="button" disabled={!audio || !actionable || !selected || loading || held} onClick={() => playback?.status === "playing" ? intent.current?.pause() : play()}>{playback?.status === "playing" ? "Pause" : playback?.status === "error" ? "Try again" : "Play"}</button>
         <button type="button" disabled={!audio || !actionable || !ready || held} aria-pressed={playback?.repeat ?? false} onClick={() => intent.current?.setRepeat(!playback?.repeat)}>Repeat</button></div></div>
     <div className={styles.panel}><div className={styles.options}><div className={styles.field}><label htmlFor={`${id}-selection`}>Practice</label><select id={`${id}-selection`} disabled={!audio || !actionable || !selected} value={String(preview.selection)} onChange={event => { if (preview.index !== null) choose(preview.index, event.target.value === "verse" ? "verse" : Number(event.target.value)); }}>

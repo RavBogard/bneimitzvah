@@ -52,6 +52,8 @@ export class ProgressStore {
     const index = this.baseline?.readings.find(row => row.kind === kind)?.verses.indexOf(ref) ?? -1;
     if (index >= 0) void this.load(kind, Math.floor(index / 100) * 100);
   }
+  /** Re-reads every page already shown (a read, never a POST): after marks were written elsewhere on the page, such as the lesson card's "Mark … solid". */
+  refresh() { for (const [kind, state] of this.kinds) if (state.to > state.from && !state.pending.size) void this.load(kind, state.from); }
   /** A message about the last mark on this verse, if any. */
   notice(kind: StudyKind, ref: string) { return this.kinds.get(kind)?.notices.get(ref) ?? ""; }
   /** Loads the marks covering a shown text page unless they are already current. */

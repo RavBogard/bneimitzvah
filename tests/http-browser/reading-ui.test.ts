@@ -80,7 +80,8 @@ it("lets an admin review actual calendar choices, confirm once and replace only 
   await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("aliyah:1"));
   expect(await tab.getByRole("button", { name: "Save assignment", exact: true }).count()).toBe(0);
   await click(tab, "Review assignment");
-  await ui(tab.getByRole("heading", { name: "Explore the full Torah portion", level: 2, exact: true })).toBeVisible();
+  // Staff see an unassigned student's next steps, not the student's "Explore the full Torah portion" (project review 2026-11-16).
+  await ui(tab.getByTestId("staff-next-steps").getByRole("heading", { level: 2 })).toBeVisible();
   await capture(tab, "reading-admin-prepared-desktop");
   let confirmations = 0;
   const counted = await routePageStep(tab, "**/reading/confirm", async route => { confirmations++; const response = await route.fetch(); await route.fulfill({ response }); });

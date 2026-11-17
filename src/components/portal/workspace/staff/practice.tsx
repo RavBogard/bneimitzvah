@@ -41,6 +41,9 @@ export function TutorPracticeScope({ mode, studentId, concealed, children }: { m
   return <TutorPracticeContext.Provider value={concealed ? null : value}>{children}</TutorPracticeContext.Provider>;
 }
 
+/** The assigned tutor's read for the lesson card's "Since your last lesson" (null for anyone else, while the gate is closed, or on failure). */
+export const useTutorPractice = (): TutorPractice | null => useContext(TutorPracticeContext)?.view ?? null;
+
 /** TP-20 on a verse card: "Student (with parent): got it" when the tutor's read says a parent was there; "Student: got it" otherwise. */
 export function useStudentMarkLine(kind: PracticeKind, verseRef: string, state: PracticeMarkState): string {
   const practice = useContext(TutorPracticeContext);
