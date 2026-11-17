@@ -94,7 +94,7 @@ describe("Save on /read (Add to My Readings)", () => {
   });
   it("wording (the one deliberate wording test for the sheet)", () => {
     const form = view("form");
-    for (const text of ["Add to My Readings", "Date you’re reading it (optional)", "Verses", "Whole portion", "Choose verses", "Torah · Genesis 6:9–11:32", "Marks, notes and your translation stay with this reading. Your tutor and the rabbi can see them."]) expect(form, text).toContain(text);
+    for (const text of ["Add to My Readings", "Date you’re reading it (optional)", "Verses", "Whole portion", "Choose verses", "Torah · Genesis 6:9–11:32", "Marks and notes stay with this reading. Your tutor and the rabbi can see them."]) expect(form, text).toContain(text);
   });
   it("names the reading after its parashah and kind, within 80 characters", () => {
     expect(suggestedName({ title: "Noach", label: null, kind: "torah", ranges: ["Genesis 6:9-11:32"], date: "2026-10-24" })).toBe("Noach · Torah");

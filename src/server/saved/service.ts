@@ -58,18 +58,17 @@ export function createSavedService<Q extends PgQueryResultHKT>(input: { access: 
     return row;
   };
   const requireVerse = (row: data.SavedReadingRow, verseRef: string) => { if (!versesOf(row).includes(verseRef)) throw new AccessDenied(404); };
-  /** The reading plus up to ten verses from `offset`, each with the scope's translation, note and mark: the owner's own page, or a bound viewer's read of a learner's. */
+  /** The reading plus up to ten verses from `offset`, each with the scope's note and mark: the owner's own page, or a bound viewer's read of a learner's. */
   const pageOf = async (tx: AccessTransaction<Q>, scope: SavedScope, id: string, offset: number) => {
     const row = await ownReading(tx, scope, id), verses = versesOf(row);
     // Inside the access callback a boundary error would read as 503; a past-the-end page is a closed 400 result instead.
     if (offset >= verses.length) return { ok: false as const, code: "invalid-request" as const };
     const page = verses.slice(offset, offset + PAGE_VERSES);
     const work = await data.workForVerses(tx, scope, row.id, page), marks = await data.marksForVerses(tx, scope, row.id, page);
-    const rows: { ref: string; translation: ReturnType<typeof workView> | null; note: ReturnType<typeof workView> | null; mark: ReturnType<typeof markView> | null }[] = [];
+    const rows: { ref: string; note: ReturnType<typeof workView> | null; mark: ReturnType<typeof markView> | null }[] = [];
     for (const ref of page) {
-      const find = (stream: validate.WorkStream) => work.find(item => item.verseRef === ref && item.stream === stream);
-      const translation = find("translation"), note = find("note"), mark = marks.find(item => item.verseRef === ref);
-      const entry = { ref, translation: translation ? workView(translation) : null, note: note ? workView(note) : null, mark: mark ? markView(mark) : null };
+      const note = work.find(item => item.verseRef === ref && item.stream === "note"), mark = marks.find(item => item.verseRef === ref);
+      const entry = { ref, note: note ? workView(note) : null, mark: mark ? markView(mark) : null };
       // Keep a page inside the transport bound by stopping at a verse boundary.
       if (rows.length && Buffer.byteLength(JSON.stringify([...rows, entry])) > PAGE_BYTES) break;
       rows.push(entry);
@@ -117,7 +116,7 @@ export function createSavedService<Q extends PgQueryResultHKT>(input: { access: 
         return { ok: true as const, removed: value.id };
       });
     },
-    /** The reading plus up to ten verses from `offset`, each with the member's translation, note and mark. */
+    /** The reading plus up to ten verses from `offset`, each with the member's note and mark. */
     async reading(request: Request, suppliedId: unknown, suppliedOffset: unknown) {
       const id = validate.uuid(suppliedId), offset = validate.integer(suppliedOffset, 0, 999);
       return withSavedOwner(request, "read", (tx, owner) => pageOf(tx, owner, id, offset));

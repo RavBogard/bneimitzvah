@@ -126,7 +126,7 @@ async function openRef(page: Page) {
 }
 const savedRow = { ...row(1), name: "Synthetic reading 1", date: "2026-10-24", kind: "torah", ranges: "Genesis 1:1-3", verseCount: 3 };
 const pageOf = (reading: typeof savedRow, marks: Record<string, { state: string; version: number }> = {}) => ({ ok: true, reading, offset: 0, totalVerses: 3, nextOffset: null,
-  verses: RANGES.map(ref => ({ ref, translation: null, note: null, mark: marks[ref] ? { ...marks[ref], updatedAt: "2026-10-22T00:00:00.000Z" } : null })) });
+  verses: RANGES.map(ref => ({ ref, note: null, mark: marks[ref] ? { ...marks[ref], updatedAt: "2026-10-22T00:00:00.000Z" } : null })) });
 const firstWord = (page: Page, ref: string) => page.locator(`.study-verses [data-verse-ref="${ref}"] [data-word-index="0"]`).first();
 
 test("a saved reading opens with its name and date, keeps Still working and Got it per verse, renames and removes, at 360px and on desktop", async ({ page }) => {
@@ -182,7 +182,7 @@ test("a saved reading opens with its name and date, keeps Still working and Got 
     expect(posts.update.at(-1)).toEqual({ id: savedRow.id, revision: 1, name: "Creation, first week", date: "2026-10-24" });
     await page.getByRole("button", { name: "Edit", exact: true }).click();
     await page.getByRole("button", { name: "Remove reading", exact: true }).click();
-    await expect(page.getByText("Removes this reading with its marks, notes and translation. This can’t be undone.", { exact: true })).toBeVisible();
+    await expect(page.getByText("Removes this reading with its marks and notes. This can’t be undone.", { exact: true })).toBeVisible();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await page.getByRole("button", { name: "Keep it", exact: true }).click();
     await page.getByRole("button", { name: "Remove reading", exact: true }).click();

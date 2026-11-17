@@ -247,9 +247,10 @@ it("on their own saved reading a member sees stored translation and note text re
   const first = tab.locator('[data-yours-ref="Genesis 1:1"]');
   await ui(first.getByTestId("yours-toggle")).toHaveAttribute("aria-expanded", "false");
   await first.getByTestId("yours-toggle").click();
-  await ui(first.getByText("Synthetic own words for the first verse.", { exact: true })).toBeVisible();
+  // A translation row stored before its removal (2026-11-17) is shown nowhere.
+  await ui(first.getByText("Synthetic own words for the first verse.", { exact: true })).toHaveCount(0);
   await ui(first.getByText("Synthetic private note.", { exact: true })).toBeVisible();
-  await ui(first.locator('[data-yours-stream="translation"]')).toBeVisible(); await ui(first.locator('[data-yours-stream="note"]')).toBeVisible();
+  await ui(first.locator('[data-yours-stream="translation"]')).toHaveCount(0); await ui(first.locator('[data-yours-stream="note"]')).toBeVisible();
   await ui(first.locator("textarea, form")).toHaveCount(0);
   await ui(first.getByRole("button", { name: "Save to My Readings", exact: true })).toHaveCount(0);
   // A star on the inline Rashi comment: pressed in place, and listed in Yours.

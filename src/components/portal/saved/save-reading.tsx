@@ -36,7 +36,7 @@ export const SAVE_STRINGS = Object.freeze({
   wholePortion: "Whole portion",
   chooseVerses: "Choose verses",
   add: "Add",
-  keeps: "Marks, notes and your translation stay with this reading. Your tutor and the rabbi can see them.",
+  keeps: "Marks and notes stay with this reading. Your tutor and the rabbi can see them.",
   open: "Open",
 });
 const rangeText = (ranges: readonly string[]) => ranges.join("; ").replace(/(\d)-(\d)/g, "$1–$2");

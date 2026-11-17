@@ -8,41 +8,40 @@ import { fetchSavedStars, setSavedStar, type SavedStar, type SavedWork } from ".
 import styles from "./saved.module.css";
 
 /**
- * The Yours row's words. "Yours" is the spec's (§3.2 item 5); "My translation" and "My notes" are the plan's labels for
- * texts the member stored earlier. Release 1.7 removed the editors: the row only shows what is already kept, read-only.
+ * The Yours row's words. "Yours" is the spec's (§3.2 item 5); "My notes" is the plan's label for
+ * a text the member stored earlier. Release 1.7 removed the editors: the row only shows what is already kept, read-only.
+ * The "My translation" row was removed 2026-11-17 (Daniel).
  * The rest is proposed wording, not yet approved by Daniel, kept here so each swaps in one place.
  */
 export const YOURS_STRINGS = Object.freeze({
   row: "Yours",
-  translation: "My translation",
   notes: "My notes",
   privacy: "Your tutor and the rabbi can see what you keep here.",
   starred: "Starred comments",
 });
 
-/** A verse's two own texts, once its page of ten has loaded. Stored text is shown to its owner and never written from here. */
-export type VerseWork = Readonly<{ translation: SavedWork | null; note: SavedWork | null }>;
+/** A verse's own note, once its page of ten has loaded. Stored text is shown to its owner and never written from here. */
+export type VerseWork = Readonly<{ note: SavedWork | null }>;
 
-/** One stored own text, read-only; shown only when there is some. */
-function Stored({ label, stream, text }: { label: string; stream: "translation" | "note"; text: string | undefined }) {
+/** The stored note, read-only; shown only when there is some. */
+function Stored({ label, text }: { label: string; text: string | undefined }) {
   if (!text?.trim()) return null;
-  return <div className={styles.yoursField} data-yours-stored={label} data-yours-stream={stream}>
+  return <div className={styles.yoursField} data-yours-stored={label} data-yours-stream="note">
     <p className={styles.yoursWork}>{label}</p>
     <p className={styles.yoursText} dir="auto">{text}</p>
   </div>;
 }
 
-/** The closed Yours row under a Study verse: stored My translation and My notes, read-only, and the comments starred on it. Never a dialog. */
-export function YoursRowView({ verseRef, open, onToggle, translation, note, starred }: {
-  verseRef: string; open: boolean; onToggle(): void; translation: string | undefined; note: string | undefined; starred: ReactNode;
+/** The closed Yours row under a Study verse: stored My notes, read-only, and the comments starred on it. Never a dialog. */
+export function YoursRowView({ verseRef, open, onToggle, note, starred }: {
+  verseRef: string; open: boolean; onToggle(): void; note: string | undefined; starred: ReactNode;
 }) {
   const id = useId();
   return <section className={styles.yours} aria-label={`${YOURS_STRINGS.row} on ${verseRef}`} data-yours-ref={verseRef}>
     <button type="button" className={styles.yoursToggle} data-testid="yours-toggle" aria-expanded={open} aria-controls={open ? `${id}-panel` : undefined} onClick={onToggle}>{YOURS_STRINGS.row}</button>
     {open && <div id={`${id}-panel`} className={styles.yoursPanel}>
       <p className={styles.yoursPrivacy}>{YOURS_STRINGS.privacy}</p>
-      <Stored label={YOURS_STRINGS.translation} stream="translation" text={translation} />
-      <Stored label={YOURS_STRINGS.notes} stream="note" text={note} />
+      <Stored label={YOURS_STRINGS.notes} text={note} />
       {starred}
     </div>}
   </section>;
@@ -122,7 +121,7 @@ export function useSavedOwnLayer({ readingId, active, work, ensure, refused }: {
     setOpen(current => { const next = new Set(current); if (next.has(ref)) next.delete(ref); else next.add(ref); return next; });
   };
   const yours = (verse: StudyVerse, works: readonly WorkState[]) => <YoursRowView key={verse.ref} verseRef={verse.ref} open={open.has(verse.ref)} onToggle={() => toggle(verse.ref)}
-    translation={work.get(verse.ref)?.translation?.text} note={work.get(verse.ref)?.note?.text}
+    note={work.get(verse.ref)?.note?.text}
     starred={ownStars && stars.status === "ready" && <StarredComments verse={verse} works={works} stars={ownStars} list={stars.list} />} />;
   return { stars: ownStars, yours };
 }

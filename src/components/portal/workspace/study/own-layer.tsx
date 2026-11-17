@@ -6,7 +6,7 @@ import styles from "./commentary.module.css";
 
 /**
  * A member's own layer over a reading (accounts plan §5, Study, PR 3): the Yours row under each Study verse (stored
- * notes and translations, read-only since 1.7) and a star on each inline comment. It is provided only on the
+ * notes, read-only since 1.7) and a star on each inline comment. It is provided only on the
  * member's own saved reading, after the account has answered for itself, so public readings and the student workspace
  * never ask about an account and never show any of it. Nothing here is read by staff: the rows are owner-only (RLS).
  */

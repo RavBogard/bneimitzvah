@@ -22,7 +22,7 @@ import { fetchLearner, fetchLearnerPage } from "../mine/api";
 import { NAMELESS_LEARNER } from "../../../lib/learner-name";
 
 const kindName = (kind: SavedReading["kind"]) => kind === "torah" ? "Torah" : "Haftarah";
-const workOf = (row: Extract<SavedPage, { state: "ready" }>["verses"][number]): VerseWork => ({ translation: row.translation, note: row.note });
+const workOf = (row: Extract<SavedPage, { state: "ready" }>["verses"][number]): VerseWork => ({ note: row.note });
 const PAGE = 10;
 type Header = Readonly<{ status: "loading" } | { status: "ready"; reading: SavedReading } | { status: "signed-out" | "not-eligible" | "missing" | "failed" }>;
 type Text = Readonly<{ key: string; sources?: readonly LabelledSource[]; error?: boolean }>;
@@ -61,7 +61,7 @@ export function SavedReadingEdit({ step, panelId, name, date, notice, onName, on
     </form>
     <div className={styles.remove}>
       {step === "confirm" || step === "removing" ? <>
-        <p className={styles.confirmLine}>Removes this reading with its marks, notes and translation. This can’t be undone.</p>
+        <p className={styles.confirmLine}>Removes this reading with its marks and notes. This can’t be undone.</p>
         <div className={styles.actions}>
           <button type="button" className={`button-secondary ${styles.danger}`} disabled={step === "removing"} onClick={onRemove}>Remove</button>
           <button type="button" className="button-secondary" disabled={step === "removing"} onClick={onKeep}>Keep it</button>
@@ -97,7 +97,7 @@ export function SavedVerseMarkReadOnly({ verseRef, mark }: { verseRef: string; m
  * /read?saved=<id>: a member's own saved reading. The passage comes from the account (never the address), so the
  * same text, recordings and tools open on it; above it the reading's name and date with Edit, and in Lein each
  * selected verse carries its Still working / Got it mark. In Study each verse has its closed Yours row and each inline comment its
- * star (PR 3), and stored notes and translations show read-only under Yours. A tab coming back revalidates quietly and stays mounted.
+ * star (PR 3), and stored notes show read-only under Yours. A tab coming back revalidates quietly and stays mounted.
  * With `learner` (plan D7, `&learner=<membershipId>`): the same page as the tutor who claims that learner, or the rabbi, reads it,
  * through the read-only staff routes: no Edit, no Change verses, the marks and the Yours row shown and nothing writable.
  */
@@ -196,7 +196,7 @@ export function SavedReadingPage({ id, verse, learner = null }: { id: string; ve
   const [openYours, setOpenYours] = useState<ReadonlySet<string>>(new Set());
   const viewerLayer = useMemo<OwnLayer>(() => ({ stars: null, yours: verse => <YoursRowView key={verse.ref} verseRef={verse.ref} open={openYours.has(verse.ref)}
     onToggle={() => { ensureMarks(verse.ref); setOpenYours(current => { const next = new Set(current); if (next.has(verse.ref)) next.delete(verse.ref); else next.add(verse.ref); return next; }); }}
-    translation={work.get(verse.ref)?.translation?.text} note={work.get(verse.ref)?.note?.text} starred={null} /> }), [openYours, work, ensureMarks]);
+    note={work.get(verse.ref)?.note?.text} starred={null} /> }), [openYours, work, ensureMarks]);
   const own = viewing ? viewerLayer : ownLayer;
   const verseExtra = (ref: string): ReactNode => viewing
     ? <SavedVerseMarkReadOnly key={ref} verseRef={ref} mark={marks.has(ref) ? marks.get(ref) : undefined} />

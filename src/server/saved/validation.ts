@@ -15,7 +15,8 @@ import { parsePreferences, type Preferences } from "../../lib/account-preference
 export const SAVED_RANGE_LIMITS = READING_REF_LIMITS;
 export type SavedKind = "torah" | "haftarah";
 export type MarkState = "unmarked" | "working" | "got-it";
-export type WorkStream = "translation" | "note";
+/** Only notes are written; a translation stream was removed 2026-11-17 and its stored rows are read by nothing. */
+export type WorkStream = "note";
 
 const invalid = (): never => { throw new HttpBoundaryError(); };
 // The same code points the 0036 CHECKs refuse (SAVED_TEXT_CONTROLS, SAVED_NAME_CONTROLS), plus NUL, which Postgres text cannot hold:
@@ -63,7 +64,7 @@ export function text(value: unknown): string {
   return normalized;
 }
 export function stream(value: unknown): WorkStream {
-  return value === "translation" || value === "note" ? value : invalid();
+  return value === "note" ? value : invalid();
 }
 export function markState(value: unknown): MarkState {
   return value === "unmarked" || value === "working" || value === "got-it" ? value : invalid();

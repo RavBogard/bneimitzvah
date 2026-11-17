@@ -24,7 +24,7 @@ describe("staff blindness canary", () => {
     for (const who of ["admin", "multi"] as const) {
       const made = await (await post(who, "/api/saved/readings/create", { name: `Mine ${CANARY}`, date: "2026-10-17", kind: "torah", ranges: "Genesis 1:1-5" })).json();
       expect(made.ok).toBe(true);
-      for (const stream of ["translation", "note"]) expect((await post(who, "/api/saved/work", { readingId: made.reading.id, verseRef: "Genesis 1:1", stream, expectedVersion: 0, text: `${stream} ${CANARY}` })).status).toBe(200);
+      expect((await post(who, "/api/saved/work", { readingId: made.reading.id, verseRef: "Genesis 1:1", stream: "note", expectedVersion: 0, text: `note ${CANARY}` })).status).toBe(200);
       expect((await post(who, "/api/saved/mark", { readingId: made.reading.id, verseRef: "Genesis 1:1", expectedVersion: 0, state: "working" })).status).toBe(200);
       expect((await post(who, "/api/saved/star", { work: "rashi", verseRef: "Genesis 1:1", comment: 1, starred: true })).status).toBe(200);
     }

@@ -104,17 +104,16 @@ describe("stars and the Yours row", () => {
     // Error lines keep the product’s "Try again"; the drill alone bans it. No line cheers.
     for (const value of Object.values(STAR_STRINGS)) expect(value).not.toMatch(/!|nice|great/i);
   });
-  it("is a closed row that opens in place to stored My translation and My notes as plain read-only text, never an editor or a dialog", () => {
-    const closed = renderToStaticMarkup(createElement(YoursRowView, { verseRef: "Genesis 1:2", open: false, onToggle: () => {}, translation: "Mine", note: "Kept", starred: null }));
-    expect(closed).toMatch(/aria-expanded="false"[^>]*>Yours<\/button>/); expect(closed).not.toContain("Mine"); expect(closed).not.toContain("Kept");
-    const open = renderToStaticMarkup(createElement(YoursRowView, { verseRef: "Genesis 1:2", open: true, onToggle: () => {}, translation: "Synthetic stored translation.", note: "Synthetic stored note.", starred: null }));
+  it("is a closed row that opens in place to stored My notes as plain read-only text, never an editor or a dialog", () => {
+    const closed = renderToStaticMarkup(createElement(YoursRowView, { verseRef: "Genesis 1:2", open: false, onToggle: () => {}, note: "Kept", starred: null }));
+    expect(closed).toMatch(/aria-expanded="false"[^>]*>Yours<\/button>/); expect(closed).not.toContain("Kept");
+    const open = renderToStaticMarkup(createElement(YoursRowView, { verseRef: "Genesis 1:2", open: true, onToggle: () => {}, note: "Synthetic stored note.", starred: null }));
     expect(open).toContain('aria-label="Yours on Genesis 1:2"');
-    expect(open).toContain("Synthetic stored translation."); expect(open).toContain("Synthetic stored note.");
-    expect(open).toContain("My translation"); expect(open).toContain("My notes");
+    expect(open).toContain("Synthetic stored note."); expect(open).toContain("My notes"); expect(open).not.toContain("My translation");
     expect(open).toContain(YOURS_STRINGS.privacy);
     expect(open).not.toMatch(/<textarea|<input|<form|<label|>Save<|dialog|aria-modal/);
     // A stream with nothing stored shows neither its label nor an empty field.
-    const half = renderToStaticMarkup(createElement(YoursRowView, { verseRef: "Genesis 1:2", open: true, onToggle: () => {}, translation: undefined, note: "  ", starred: null }));
+    const half = renderToStaticMarkup(createElement(YoursRowView, { verseRef: "Genesis 1:2", open: true, onToggle: () => {}, note: "  ", starred: null }));
     expect(half).not.toMatch(/My translation|My notes|<textarea/);
     for (const value of Object.values(YOURS_STRINGS)) expect(value).not.toMatch(/!|nice|great/i);
   });
@@ -142,12 +141,12 @@ describe("stars and the Yours row", () => {
     expect(savedText("a\u0000b")).toBeNull(); expect(savedText("a\u2028b")).toBeNull(); expect(savedText("\ud800")).toBeNull();
   });
   it("saves a verse's text and a star with exactly their fields, reading every answer strictly", async () => {
-    let answer: { status: number; body: unknown } = { status: 200, body: { ok: true, verseRef: "Genesis 1:2", stream: "translation", work: { text: "Mine", version: 1, updatedAt: stamp } } };
+    let answer: { status: number; body: unknown } = { status: 200, body: { ok: true, verseRef: "Genesis 1:2", stream: "note", work: { text: "Mine", version: 1, updatedAt: stamp } } };
     const calls: { url: string; body: unknown }[] = [];
     vi.stubGlobal("fetch", async (url: string, init: RequestInit) => { calls.push({ url, body: init.body ? JSON.parse(init.body as string) : null });
       return new Response(JSON.stringify(answer.body), { status: answer.status, headers: { "content-type": "application/json" } }); });
-    expect(await saveSavedWork({ readingId: ID, verseRef: "Genesis 1:2", stream: "translation", expectedVersion: 0, text: "Mine" })).toEqual({ ok: true, value: { text: "Mine", version: 1 } });
-    expect(calls.at(-1)).toEqual({ url: "/api/saved/work", body: { readingId: ID, verseRef: "Genesis 1:2", stream: "translation", expectedVersion: 0, text: "Mine" } });
+    expect(await saveSavedWork({ readingId: ID, verseRef: "Genesis 1:2", stream: "note", expectedVersion: 0, text: "Mine" })).toEqual({ ok: true, value: { text: "Mine", version: 1 } });
+    expect(calls.at(-1)).toEqual({ url: "/api/saved/work", body: { readingId: ID, verseRef: "Genesis 1:2", stream: "note", expectedVersion: 0, text: "Mine" } });
     answer = { status: 409, body: { ok: false, code: "conflict", current: { text: "Theirs", version: 2, updatedAt: stamp } } };
     const conflict = await saveSavedWork({ readingId: ID, verseRef: "Genesis 1:2", stream: "note", expectedVersion: 0, text: "Mine" });
     expect(conflict.ok === false && conflict.code === "conflict" && conflictWork(conflict.current)).toEqual({ text: "Theirs", version: 2 });

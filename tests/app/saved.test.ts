@@ -128,7 +128,7 @@ describe("the saved layer: readings, work, marks and stars", () => {
     const page = await t.call(`/api/saved/reading?id=${id}`, "multi");
     expect(page.json).toMatchObject({ ok: true, offset: 0, totalVerses: 34, nextOffset: 10 });
     expect(page.json.verses.map((v: { ref: string }) => v.ref)).toEqual(Array.from({ length: 10 }, (_, i) => `Genesis 1:${i + 1}`));
-    expect(page.json.verses[0]).toEqual({ ref: "Genesis 1:1", translation: null, note: null, mark: null });
+    expect(page.json.verses[0]).toEqual({ ref: "Genesis 1:1", note: null, mark: null });
     const last = await t.call(`/api/saved/reading?id=${id}&offset=30`, "multi");
     expect(last.json).toMatchObject({ offset: 30, nextOffset: null });
     expect(last.json.verses.map((v: { ref: string }) => v.ref)).toEqual(["Genesis 1:31", "Genesis 2:1", "Genesis 2:2", "Genesis 2:3"]);
@@ -140,7 +140,7 @@ describe("the saved layer: readings, work, marks and stars", () => {
     const stale = await t.call("/api/saved/readings/update", "multi", { id, revision: 1, name: "Again", date: null });
     expect(stale.status).toBe(409); expect(stale.json).toMatchObject({ ok: false, code: "conflict", current: { name: "Creation", revision: 2 } });
     expect((await t.call("/api/saved/readings/remove", "multi", { id, revision: 1 })).status).toBe(409);
-    // Remove is a hard delete that takes the reading's translation, notes and marks with it.
+    // Remove is a hard delete that takes the reading's notes and marks with it.
     await t.call("/api/saved/work", "multi", { readingId: id, verseRef: "Genesis 1:1", stream: "note", expectedVersion: 0, text: "A note." });
     await t.call("/api/saved/mark", "multi", { readingId: id, verseRef: "Genesis 1:1", expectedVersion: 0, state: "working" });
     expect((await t.call("/api/saved/readings/remove", "multi", { id, revision: 2 })).json).toEqual({ ok: true, removed: id });
@@ -155,7 +155,6 @@ describe("the saved layer: readings, work, marks and stars", () => {
     const update = (body: Record<string, unknown>, who: Who = "multi") => t.call("/api/saved/readings/update", who, { id, name: "Mine", date: null, ...body });
     const stored = () => t.f.owner(async () => (await t.f.db.select().from(s.savedReading).where(eq(s.savedReading.id, id)))[0]);
     const refs = async () => (await t.call(`/api/saved/reading?id=${id}`, "multi")).json.verses.map((v: { ref: string }) => v.ref);
-    await t.call("/api/saved/work", "multi", { readingId: id, verseRef: "Genesis 1:5", stream: "translation", expectedVersion: 0, text: "Day one." });
     await t.call("/api/saved/work", "multi", { readingId: id, verseRef: "Genesis 1:5", stream: "note", expectedVersion: 0, text: "Evening first." });
     await t.call("/api/saved/mark", "multi", { readingId: id, verseRef: "Genesis 1:5", expectedVersion: 0, state: "got-it" });
     await t.call("/api/saved/work", "multi", { readingId: id, verseRef: "Genesis 1:2", stream: "note", expectedVersion: 0, text: "Kept." });
@@ -167,10 +166,10 @@ describe("the saved layer: readings, work, marks and stars", () => {
     expect(await stored()).toMatchObject({ ranges: "Genesis 1:1-3; Genesis 2:1-3", verseCount: 6, revision: 2, kind: "torah" });
     expect(await refs()).toEqual(["Genesis 1:1", "Genesis 1:2", "Genesis 1:3", "Genesis 2:1", "Genesis 2:2", "Genesis 2:3"]);
     expect((await t.call(`/api/saved/reading?id=${id}`, "multi")).json.verses[1].note).toMatchObject({ text: "Kept.", version: 1 });
-    // The dropped verse's translation, note and mark stay stored but out of reach; its star belongs to the member and stays listed.
+    // The dropped verse's note and mark stay stored but out of reach; its star belongs to the member and stays listed.
     const kept = await t.f.owner(async () => ({ work: (await t.f.db.select().from(s.savedVerseWork).where(eq(s.savedVerseWork.savedReadingId, id))).length,
       marks: (await t.f.db.select().from(s.savedVerseMark).where(eq(s.savedVerseMark.savedReadingId, id))).length }));
-    expect(kept).toEqual({ work: 3, marks: 1 });
+    expect(kept).toEqual({ work: 2, marks: 1 });
     expect((await t.call("/api/saved/work", "multi", { readingId: id, verseRef: "Genesis 1:5", stream: "note", expectedVersion: 1, text: "Hidden." })).status).toBe(404);
     expect((await t.call("/api/saved/mark", "multi", { readingId: id, verseRef: "Genesis 1:5", expectedVersion: 1, state: "working" })).status).toBe(404);
     expect((await t.call("/api/saved/stars", "multi")).json.stars).toEqual([{ work: "rashi", verseRef: "Genesis 1:5", comment: 1 }]);
@@ -187,7 +186,7 @@ describe("the saved layer: readings, work, marks and stars", () => {
     // The verse returns, and with it everything written on it, versions intact.
     expect((await update({ revision: 2, ranges: "Genesis 1:1-5" })).json).toMatchObject({ ok: true, reading: { ranges: "Genesis 1:1-5", verseCount: 5, revision: 3 } });
     const back = (await t.call(`/api/saved/reading?id=${id}`, "multi")).json.verses[4];
-    expect(back).toMatchObject({ ref: "Genesis 1:5", translation: { text: "Day one.", version: 1 }, note: { text: "Evening first.", version: 1 }, mark: { state: "got-it", version: 1 } });
+    expect(back).toMatchObject({ ref: "Genesis 1:5", note: { text: "Evening first.", version: 1 }, mark: { state: "got-it", version: 1 } });
     // A rename without ranges keeps the verses.
     expect((await update({ revision: 3, name: "Renamed" })).json).toMatchObject({ ok: true, reading: { name: "Renamed", ranges: "Genesis 1:1-5", verseCount: 5, revision: 4 } });
   });
@@ -213,18 +212,18 @@ describe("the saved layer: readings, work, marks and stars", () => {
     expect((await update(exactly32)).json).toMatchObject({ ok: true, reading: { ranges: exactly32, verseCount: 32, revision: 2 } });
   });
 
-  it("keeps translation, notes and marks under optimistic versions, inside the reading only", async () => {
+  it("keeps notes and marks under optimistic versions, inside the reading only", async () => {
     const t = await setup();
     const id = (await t.create("multi", "Genesis 1:1-5")).json.reading.id as string;
-    const work = (body: Record<string, unknown>) => t.call("/api/saved/work", "multi", { readingId: id, verseRef: "Genesis 1:2", stream: "translation", expectedVersion: 0, text: "Mine.", ...body });
-    expect((await work({})).json).toMatchObject({ ok: true, verseRef: "Genesis 1:2", stream: "translation", work: { text: "Mine.", version: 1 } });
+    const work = (body: Record<string, unknown>) => t.call("/api/saved/work", "multi", { readingId: id, verseRef: "Genesis 1:2", stream: "note", expectedVersion: 0, text: "Mine.", ...body });
+    expect((await work({})).json).toMatchObject({ ok: true, verseRef: "Genesis 1:2", stream: "note", work: { text: "Mine.", version: 1 } });
     const conflict = await work({ text: "Lost." });
     expect(conflict.status).toBe(409); expect(conflict.json).toMatchObject({ ok: false, code: "conflict", current: { text: "Mine.", version: 1 } });
     expect((await work({ expectedVersion: 1, text: "Mine,\r\nrevised." })).json.work).toMatchObject({ text: "Mine,\nrevised.", version: 2 });
     expect((await work({ expectedVersion: 5 })).status).toBe(409);
-    // The note is its own stream on the same verse; a note may be cleared to empty.
-    expect((await work({ stream: "note", text: "A note." })).json.work.version).toBe(1);
-    expect((await work({ stream: "note", expectedVersion: 1, text: "" })).json.work).toMatchObject({ text: "", version: 2 });
+    // A note may be cleared to empty; the removed translation stream is refused as any unknown stream is.
+    expect((await work({ expectedVersion: 2, text: "" })).json.work).toMatchObject({ text: "", version: 3 });
+    expect((await work({ stream: "translation" })).status).toBe(400);
     // A verse outside the reading, or a reading that is not the member's, is 404.
     expect((await work({ verseRef: "Genesis 1:6" })).status).toBe(404);
     expect((await work({ verseRef: "Exodus 1:1" })).status).toBe(404);
@@ -238,8 +237,8 @@ describe("the saved layer: readings, work, marks and stars", () => {
     expect((await mark({ state: "done" })).status).toBe(400);
     expect((await mark({ verseRef: "Genesis 2:1" })).status).toBe(404);
     const page = (await t.call(`/api/saved/reading?id=${id}`, "multi")).json.verses;
-    expect(page[1]).toMatchObject({ ref: "Genesis 1:2", translation: { text: "Mine,\nrevised.", version: 2 }, note: { text: "", version: 2 }, mark: null });
-    expect(page[2]).toMatchObject({ ref: "Genesis 1:3", translation: null, note: null, mark: { state: "got-it", version: 2 } });
+    expect(page[1]).toMatchObject({ ref: "Genesis 1:2", note: { text: "", version: 3 }, mark: null });
+    expect(page[2]).toMatchObject({ ref: "Genesis 1:3", note: null, mark: { state: "got-it", version: 2 } });
   });
 
   it("never lets one member see, change or remove another member's reading by its id", async () => {

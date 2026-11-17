@@ -93,10 +93,10 @@ export async function createSavedReading(input: { name: string; date: string | n
   return parseSaveResult(status, value);
 }
 
-/** One verse of a saved reading as the member keeps it. Translation and note are read here; PR 3's Yours row writes them. */
+/** One verse of a saved reading as the member keeps it. The note is read here. */
 export type SavedMark = Readonly<{ state: "unmarked" | "working" | "got-it"; version: number }>;
 export type SavedWork = Readonly<{ text: string; version: number }>;
-export type SavedVerse = Readonly<{ ref: string; translation: SavedWork | null; note: SavedWork | null; mark: SavedMark | null }>;
+export type SavedVerse = Readonly<{ ref: string; note: SavedWork | null; mark: SavedMark | null }>;
 export type SavedPage = Readonly<{ state: "ready"; reading: SavedReading; offset: number; totalVerses: number; nextOffset: number | null; verses: readonly SavedVerse[] }>
   | Readonly<{ state: "signed-out" } | { state: "not-eligible" } | { state: "missing" }>;
 const VERSE = /^[A-Za-z0-9 ]+ [1-9][0-9]*:[1-9][0-9]*$/;
@@ -118,9 +118,9 @@ export function parseSavedPage(status: number, value: unknown, offset: number): 
   if (!row || !reading || row.offset !== offset || row.totalVerses !== reading.verseCount || !Array.isArray(row.verses) || row.verses.length < 1 || row.verses.length > 10
     || (row.nextOffset !== null && row.nextOffset !== offset + row.verses.length)) throw new SavedRequestError(503);
   const verses = row.verses.map(item => {
-    const verse = record(item, ["ref", "translation", "note", "mark"]);
+    const verse = record(item, ["ref", "note", "mark"]);
     if (!verse || typeof verse.ref !== "string" || !VERSE.test(verse.ref)) throw new SavedRequestError(503);
-    return Object.freeze({ ref: verse.ref, translation: verse.translation === null ? null : parseWork(verse.translation), note: verse.note === null ? null : parseWork(verse.note),
+    return Object.freeze({ ref: verse.ref, note: verse.note === null ? null : parseWork(verse.note),
       mark: verse.mark === null ? null : parseMark(verse.mark) });
   });
   return Object.freeze({ state: "ready" as const, reading, offset, totalVerses: reading.verseCount, nextOffset: row.nextOffset as number | null, verses: Object.freeze(verses) });
@@ -162,7 +162,7 @@ export function conflictMark(current: unknown): SavedMark | null | undefined {
   try { return parseMark(current); } catch { return undefined; }
 }
 
-/** The bound the server keeps on a translation or note: 4,096 bytes of UTF-8, carriage returns read as newlines. */
+/** The bound the server keeps on a note: 4,096 bytes of UTF-8, carriage returns read as newlines. */
 export const SAVED_TEXT_BYTES = 4096;
 const TEXT_CONTROLS = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\u2028\u2029]/;
 /** The text as the server would keep it, or null when it is too long or holds a character the server refuses. */
@@ -170,8 +170,8 @@ export function savedText(value: string): string | null {
   const normalized = value.replace(/\r\n?/g, "\n");
   return normalized.isWellFormed() && new TextEncoder().encode(normalized).byteLength <= SAVED_TEXT_BYTES && !TEXT_CONTROLS.test(normalized) ? normalized : null;
 }
-export type WorkStream = "translation" | "note";
-/** Save My translation or My notes for one verse of a saved reading (the Yours row, PR 3). Empty clears it. */
+export type WorkStream = "note";
+/** Save My notes for one verse of a saved reading (the Yours row, PR 3). Empty clears it. */
 export async function saveSavedWork(input: { readingId: string; verseRef: string; stream: WorkStream; expectedVersion: number; text: string }, signal?: AbortSignal): Promise<ChangeResult<SavedWork>> {
   const { status, value } = await request("/api/saved/work", { readingId: input.readingId, verseRef: input.verseRef, stream: input.stream, expectedVersion: input.expectedVersion, text: input.text }, signal);
   return change(status, value, "work", item => parseWork(item));

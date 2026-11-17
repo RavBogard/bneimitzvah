@@ -10,8 +10,8 @@ const ID = "00000000-0000-4000-8000-000000000001";
 const reading = { id: ID, name: "Synthetic reading", date: "2026-10-24", kind: "torah", ranges: "Genesis 1:1-3", verseCount: 3, revision: 1, createdAt: "2026-10-22T00:00:00.000Z", updatedAt: "2026-10-22T00:00:00.000Z" };
 const stamp = "2026-10-22T00:00:00.000Z";
 const page = (extra: Record<string, unknown> = {}) => ({ ok: true, reading, offset: 0, totalVerses: 3, nextOffset: null,
-  verses: [{ ref: "Genesis 1:1", translation: null, note: null, mark: null }, { ref: "Genesis 1:2", translation: { text: "Mine", version: 2, updatedAt: stamp }, note: null, mark: { state: "working", version: 1, updatedAt: stamp } },
-    { ref: "Genesis 1:3", translation: null, note: null, mark: { state: "got-it", version: 3, updatedAt: stamp } }], ...extra });
+  verses: [{ ref: "Genesis 1:1", note: null, mark: null }, { ref: "Genesis 1:2", note: { text: "Mine", version: 2, updatedAt: stamp }, mark: { state: "working", version: 1, updatedAt: stamp } },
+    { ref: "Genesis 1:3", note: null, mark: { state: "got-it", version: 3, updatedAt: stamp } }], ...extra });
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe("the saved reading's address", () => {
@@ -37,13 +37,13 @@ describe("the saved reading client", () => {
   it("reads a page of verses with their marks, and the account's refusals as states", () => {
     const value = parseSavedPage(200, page(), 0);
     expect(value.state === "ready" && value.verses.map(row => row.mark?.state ?? null)).toEqual([null, "working", "got-it"]);
-    expect(value.state === "ready" && value.verses[1].translation).toEqual({ text: "Mine", version: 2 });
+    expect(value.state === "ready" && value.verses[1].note).toEqual({ text: "Mine", version: 2 });
     expect(parseSavedPage(401, {}, 0)).toEqual({ state: "signed-out" });
     expect(parseSavedPage(403, {}, 0)).toEqual({ state: "not-eligible" });
     expect(parseSavedPage(404, {}, 0)).toEqual({ state: "missing" });
     for (const [bad, offset] of [[page({ offset: 10 }), 0], [page({ totalVerses: 4 }), 0], [page({ verses: [] }), 0], [page({ nextOffset: 7 }), 0], [page({ extra: 1 }), 0],
-      [page({ verses: [{ ref: "Genesis 1:1", translation: null, note: null, mark: { state: "done", version: 1, updatedAt: stamp } }] }), 0],
-      [page({ verses: [{ ref: "<b>", translation: null, note: null, mark: null }] }), 0], [page(), 10]] as const)
+      [page({ verses: [{ ref: "Genesis 1:1", note: null, mark: { state: "done", version: 1, updatedAt: stamp } }] }), 0],
+      [page({ verses: [{ ref: "<b>", note: null, mark: null }] }), 0], [page(), 10]] as const)
       expect(() => parseSavedPage(200, bad, offset)).toThrow(SavedRequestError);
     expect(() => parseSavedPage(503, null, 0)).toThrow(SavedRequestError);
   });
@@ -96,7 +96,7 @@ describe("the saved reading page's parts", () => {
     expect(open).toContain(">Remove reading</button>");
     expect(open).not.toContain("can’t be undone");
     const confirm = edit("confirm");
-    expect(confirm).toContain("Removes this reading with its marks, notes and translation. This can’t be undone.");
+    expect(confirm).toContain("Removes this reading with its marks and notes. This can’t be undone.");
     expect(confirm).toContain(">Remove</button>");
     expect(confirm).toContain(">Keep it</button>");
     expect(confirm).not.toContain(">Remove reading</button>");
