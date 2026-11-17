@@ -79,8 +79,6 @@ const summary = (value: Summary) => ({ ...pick(value, ["id", "name", "caption"])
 export async function handleServiceLearningRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
   const found = route(new URL(request.url).pathname); if (!found) return null;
   try {
-    const methods = serviceLearningRouteMethods(new URL(request.url).pathname)!;
-    if (!methods.includes(request.method)) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", methods.join(", ")); return response; }
     const query = uniqueQuery(request.url, found.operation === "metadata" ? ["mode"] : []);
     const studentId = uuid(found.studentId), staff = ["catalog", "prepare", "confirm"].includes(found.operation);
     if (staff && request.headers.has("X-Practice-Context")) throw new HttpBoundaryError();

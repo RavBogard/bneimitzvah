@@ -3,7 +3,7 @@ import type { HttpRuntime } from "../runtime/composition";
 import { readJsonBody } from "./body";
 import { requireCookieMutation } from "./mutations";
 import { uniqueQuery } from "./query";
-import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
+import { errorResponse, privateJson, type JsonValue } from "./responses";
 
 /**
  * A student's own verse review cards (1.9 N19). Never under /api/public/ (that runtime has no auth) and never cacheable:
@@ -18,7 +18,6 @@ export async function handleVerseReviewRequest(request: Request, runtime: HttpRu
   const pathname = new URL(request.url).pathname, methods = verseReviewRouteMethods(pathname);
   if (!methods) return null;
   try {
-    if (!methods.includes(request.method)) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", methods.join(", ")); return response; }
     uniqueQuery(request.url, []);
     const service = runtime.verseReview;
     let result: { ok: boolean };

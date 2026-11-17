@@ -14,7 +14,6 @@ export function notificationsRouteMethods(pathname: string): readonly string[] |
 export async function handleNotificationsRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
   const pathname = new URL(request.url).pathname, methods = notificationsRouteMethods(pathname); if (!methods) return null;
   try {
-    if (!methods.includes(request.method)) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", methods.join(", ")); return response; }
     if (pathname === "/api/internal/notifications/run") {
       uniqueQuery(request.url, []);
       const resolved = await runtime.resolveHost(request);

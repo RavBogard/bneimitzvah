@@ -27,8 +27,6 @@ function mode(value: unknown): (typeof MODES)[number] {
 export async function handleStudyGuidesRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
   const pathname = new URL(request.url).pathname, found = route(pathname); if (!found) return null;
   try {
-    const methods = studyGuidesRouteMethods(pathname)!;
-    if (!methods.includes(request.method)) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", methods.join(", ")); return response; }
     let result: unknown;
     if (found.route === "student") {
       const query = uniqueQuery(request.url, ["mode", "kind"]), selection = { mode: mode(query.get("mode")), studentId: found.studentId, kind: query.get("kind") };

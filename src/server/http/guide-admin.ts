@@ -27,7 +27,6 @@ const VERSION = /^[1-9]\d{0,9}$/;
 export async function handleGuideAdminRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
   const pathname = new URL(request.url).pathname, methods = guideAdminRouteMethods(pathname); if (!methods) return null;
   try {
-    if (!methods.includes(request.method)) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", methods.join(", ")); return response; }
     let result: unknown;
     if (pathname === "/api/admin/guides") {
       uniqueQuery(request.url, []);

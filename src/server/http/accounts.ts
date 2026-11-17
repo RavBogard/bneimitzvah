@@ -3,7 +3,7 @@ import type { HttpRuntime } from "../runtime/composition";
 import { readJsonBody } from "./body";
 import { requireCookieMutation } from "./mutations";
 import { uniqueQuery } from "./query";
-import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
+import { errorResponse, privateJson, type JsonValue } from "./responses";
 import { mode as approverMode } from "../accounts/validation";
 
 /**
@@ -28,7 +28,6 @@ export async function handleAccountsRequest(request: Request, runtime: HttpRunti
   const pathname = new URL(request.url).pathname, methods = accountsRouteMethods(pathname);
   if (!methods) return null;
   try {
-    if (!methods.includes(request.method)) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", methods.join(", ")); return response; }
     const path = pathname as Path, accounts = runtime.accounts;
     let result: { ok: boolean; code?: string };
     if (request.method === "GET") {

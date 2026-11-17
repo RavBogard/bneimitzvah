@@ -37,6 +37,55 @@ import { createPageViewScope, createPublicRuntimeScope } from "../runtime/public
 import { handlePageViewRequest, isPageViewPath, type PageViewScope } from "./page-views";
 
 export type HttpRuntimeScope = (action: (runtime: HttpRuntime) => Promise<Response>) => Promise<Response>;
+/**
+ * One route module: the methods it accepts for a path it owns (null for any other path) and its handler. The dispatcher
+ * answers 404 and 405 (with Allow) from `methods`, so a handler only ever sees its own paths with a declared method.
+ * `site` names the failure line for an unexpected error; `finish` is a module's final synchronous fence.
+ */
+type RouteModule = Readonly<{
+  methods: (pathname: string) => readonly string[] | null;
+  handle: (request: Request, runtime: HttpRuntime) => Promise<Response | null>;
+  site?: string;
+  finish?: (request: Request, response: Response) => Response;
+}>;
+/**
+ * Every authenticated route module, in match order: a path belongs to the first module whose `methods` answers.
+ * No two modules own the same path (tests/app/dispatch-characterization.test.ts records every one); the honoree guest
+ * read, signed-out reading and the page-view beacon are cookie-blind branches ahead of this table.
+ */
+const routes: readonly RouteModule[] = [
+  // Honoree management: its own failure site, and the captured session fence after runtime cleanup.
+  { methods: honoreeManagementRouteMethods, handle: handleHonoreeRequest, site: "dispatch/honoree-management", finish: finishHonoreeManagementResponse },
+  { methods: bookletRouteMethods, handle: handleBookletRequest },
+  { methods: serviceEcosystemRouteMethods, handle: handleServiceEcosystemRequest },
+  { methods: honorsRouteMethods, handle: handleHonorsRequest },
+  { methods: sourceContentRouteMethods, handle: handleSourceContentRequest },
+  { methods: sourceAssignmentsRouteMethods, handle: handleSourceAssignmentsRequest },
+  { methods: authRouteMethods, handle: handleAuthRequest },
+  { methods: portalRouteMethods, handle: handlePortalRequest },
+  { methods: studentWorkRouteMethods, handle: handleStudentWorkRequest },
+  { methods: serviceLearningRouteMethods, handle: handleServiceLearningRequest },
+  { methods: progressRouteMethods, handle: handleProgressRequest },
+  { methods: studyGuidesRouteMethods, handle: handleStudyGuidesRequest },
+  { methods: guideShareRouteMethods, handle: handleGuideShareRequest },
+  { methods: guideAdminRouteMethods, handle: handleGuideAdminRequest },
+  { methods: congregationSettingsRouteMethods, handle: handleCongregationSettingsRequest },
+  { methods: claudeConnectionsRouteMethods, handle: handleClaudeConnectionsRequest },
+  { methods: notificationsRouteMethods, handle: handleNotificationsRequest },
+  { methods: savedRouteMethods, handle: handleSavedRequest },
+  { methods: learnersRouteMethods, handle: handleLearnersRequest },
+  { methods: offlineRouteMethods, handle: handleOfflineRequest },
+  { methods: accountsRouteMethods, handle: handleAccountsRequest },
+  { methods: courseProgressRouteMethods, handle: handleCourseProgressRequest },
+  { methods: serviceCourseRouteMethods, handle: handleServiceCourseRequest },
+  { methods: servicePartFinishedRouteMethods, handle: handleServicePartFinishedRequest },
+  { methods: practiceVisibilityRouteMethods, handle: handlePracticeVisibilityRequest },
+  { methods: staffRouteMethods, handle: handleStaffRequest },
+  { methods: verseReviewRouteMethods, handle: handleVerseReviewRequest },
+  { methods: mcpRouteMethods, handle: handleMcpRequest },
+  { methods: lessonLogRouteMethods, handle: handleLessonLogRequest },
+  { methods: practiceCalendarRouteMethods, handle: handlePracticeCalendarRequest },
+];
 function cookieBoundary(request: Request) {
   const cookie = request.headers.get("cookie");
   if (cookie === null) return;
@@ -80,11 +129,12 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
           return finishHonoreeGuestResponse(request, response, started);
         } catch (error) { recordIfUnexpected(error, "dispatch/honoree-guest"); return denied(); }
       }
-      const managementMethods = honoreeManagementRouteMethods(url.pathname);
-      const methods = managementMethods ?? bookletRouteMethods(url.pathname) ?? serviceEcosystemRouteMethods(url.pathname) ?? honorsRouteMethods(url.pathname) ?? sourceContentRouteMethods(url.pathname) ?? sourceAssignmentsRouteMethods(url.pathname) ?? authRouteMethods(url.pathname) ?? portalRouteMethods(url.pathname) ?? studentWorkRouteMethods(url.pathname) ?? serviceLearningRouteMethods(url.pathname) ?? progressRouteMethods(url.pathname) ?? studyGuidesRouteMethods(url.pathname) ?? guideShareRouteMethods(url.pathname) ?? guideAdminRouteMethods(url.pathname) ?? congregationSettingsRouteMethods(url.pathname) ?? claudeConnectionsRouteMethods(url.pathname) ?? notificationsRouteMethods(url.pathname) ?? savedRouteMethods(url.pathname) ?? learnersRouteMethods(url.pathname) ?? offlineRouteMethods(url.pathname) ?? accountsRouteMethods(url.pathname) ?? courseProgressRouteMethods(url.pathname) ?? serviceCourseRouteMethods(url.pathname) ?? servicePartFinishedRouteMethods(url.pathname) ?? practiceVisibilityRouteMethods(url.pathname) ?? staffRouteMethods(url.pathname) ?? verseReviewRouteMethods(url.pathname) ?? mcpRouteMethods(url.pathname) ?? lessonLogRouteMethods(url.pathname) ?? practiceCalendarRouteMethods(url.pathname);
+      // One match: the first module in the table that owns the path gives both its methods and its handler.
+      let route: RouteModule | undefined, methods: readonly string[] | null = null;
+      for (const candidate of routes) if ((methods = candidate.methods(url.pathname))) { route = candidate; break; }
       // No provider configuration or connection required to refuse unowned
       // endpoints (including private SDK session/profile/password APIs).
-      if (!methods) throw new HttpBoundaryError(404);
+      if (!route || !methods) throw new HttpBoundaryError(404);
       if (!methods.includes(request.method)) {
         const response = errorResponse(new HttpBoundaryError(405));
         response.headers.set("allow", methods.join(", "));
@@ -94,26 +144,19 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
       // handler from consuming the state: for that one route the handler applies the cookie checks itself.
       if (request.url.length > (googleReturn ? 8192 : 2048)) throw new HttpBoundaryError();
       if (!googleReturn) cookieBoundary(request);
-      if (managementMethods) {
-        const response = await withRuntime(async runtime => {
-          try {
-            await runtime.resolveHost(request);
-            return await handleHonoreeRequest(request, runtime) ?? errorResponse(new HttpBoundaryError(404));
-          } catch (error) { recordIfUnexpected(error, "dispatch/honoree-management"); return errorResponse(error); }
-        });
-        return finishHonoreeManagementResponse(request, response);
-      }
+      const owner = route;
       const response = await withRuntime(async (runtime) => {
         try {
           await runtime.resolveHost(request);
-          return await handleBookletRequest(request, runtime) ?? await handleServiceEcosystemRequest(request, runtime) ?? await handleHonorsRequest(request, runtime) ?? await handleSourceContentRequest(request, runtime) ?? await handleSourceAssignmentsRequest(request, runtime) ?? await handleAuthRequest(request, runtime) ?? await handleStudentWorkRequest(request, runtime) ?? await handleServiceLearningRequest(request, runtime) ?? await handleProgressRequest(request, runtime) ?? await handleStudyGuidesRequest(request, runtime) ?? await handleGuideShareRequest(request, runtime) ?? await handleGuideAdminRequest(request, runtime) ?? await handleCongregationSettingsRequest(request, runtime) ?? await handleClaudeConnectionsRequest(request, runtime) ?? await handleNotificationsRequest(request, runtime) ?? await handleSavedRequest(request, runtime) ?? await handleLearnersRequest(request, runtime) ?? await handleOfflineRequest(request, runtime) ?? await handleAccountsRequest(request, runtime) ?? await handleCourseProgressRequest(request, runtime) ?? await handleServiceCourseRequest(request, runtime) ?? await handleServicePartFinishedRequest(request, runtime) ?? await handlePracticeVisibilityRequest(request, runtime) ?? await handleStaffRequest(request, runtime) ?? await handleVerseReviewRequest(request, runtime) ?? await handleMcpRequest(request, runtime) ?? await handleLessonLogRequest(request, runtime) ?? await handlePracticeCalendarRequest(request, runtime) ?? await handlePortalRequest(request, runtime) ?? errorResponse(new HttpBoundaryError(404));
+          return await owner.handle(request, runtime) ?? errorResponse(new HttpBoundaryError(404));
         } catch (error) {
           // Expected HTTP400/413/etc stay inside the scoped runtime callback;
           // otherwise its generic application-error boundary would make503.
-          recordIfUnexpected(error, "dispatch/handler");
+          recordIfUnexpected(error, owner.site ?? "dispatch/handler");
           return errorResponse(error);
         }
       });
+      if (owner.finish) return owner.finish(request, response);
       if (googleReturn && !(response.status >= 300 && response.status < 400)) return googleCallbackFailure(request);
       return response;
     } catch (error) {

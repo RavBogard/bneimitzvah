@@ -3,7 +3,7 @@ import type { HttpRuntime } from "../runtime/composition";
 import { readJsonBody } from "./body";
 import { requireCookieMutation } from "./mutations";
 import { uniqueQuery } from "./query";
-import { errorResponse, HttpBoundaryError, privateHeaders, privateJson, type JsonValue } from "./responses";
+import { errorResponse, privateHeaders, privateJson, type JsonValue } from "./responses";
 import { ServiceCourseRefused } from "../service-course/progress-access";
 import type { Path } from "../../lib/service-course/path";
 
@@ -27,7 +27,6 @@ export async function handleServiceCourseRequest(request: Request, runtime: Http
   const pathname = new URL(request.url).pathname, methods = serviceCourseRouteMethods(pathname);
   if (!methods) return null;
   try {
-    if (!methods.includes(request.method)) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", methods.join(", ")); return response; }
     uniqueQuery(request.url, []);
     if (pathname === "/api/learn/service/path") {
       const { tenantId } = await runtime.resolveHost(request);

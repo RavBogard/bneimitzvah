@@ -67,8 +67,11 @@ test("verse-review writes record no audit rows, and its routes are never public 
   assert.deepEqual([...new Set([...routes.matchAll(/"(\/api\/[^"]+)"/g)].map(m => m[1]))], ["/api/learn/verses", "/api/learn/verses/put"]);
   assert.doesNotMatch(routes, /cache-control|s-maxage|public,/i, "responses keep privateJson's private, no-store headers");
   const dispatch = source("src/server/http/dispatch.ts");
-  assert.equal(dispatch.match(/verseReviewRouteMethods\(url\.pathname\)/g)?.length, 1);
-  assert.equal(dispatch.match(/handleVerseReviewRequest\(request, runtime\)/g)?.length, 1);
+  // The dispatcher's route table (2026-11-17) wires the module exactly once: one entry naming both its methods and its handler,
+  // so the route is matched once and answered only by this module (was: one call in each of two `??` chains).
+  assert.equal(dispatch.match(/\bverseReviewRouteMethods\b/g)?.length, 2, "imported once and used once");
+  assert.equal(dispatch.match(/\bhandleVerseReviewRequest\b/g)?.length, 2, "imported once and used once");
+  assert.match(dispatch, /\{ methods: verseReviewRouteMethods, handle: handleVerseReviewRequest \}/);
   assert.doesNotMatch(source(MIGRATION), /GRANT[^;]*(DELETE|TRUNCATE|ALL)[^;]*ON verse_review|GRANT[^;(]*UPDATE ON/i);
 });
 

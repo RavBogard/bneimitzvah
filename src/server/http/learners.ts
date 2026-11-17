@@ -3,7 +3,7 @@ import type { HttpRuntime } from "../runtime/composition";
 import { readJsonBody } from "./body";
 import { requireCookieMutation } from "./mutations";
 import { closedObject, uniqueQuery } from "./query";
-import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
+import { errorResponse, privateJson, type JsonValue } from "./responses";
 
 /**
  * Readings for everyone (plan D5): the learner directory and claims for tutors and admins, and the learner's own tutor line.
@@ -21,7 +21,6 @@ export async function handleLearnersRequest(request: Request, runtime: HttpRunti
   const pathname = new URL(request.url).pathname, methods = learnersRouteMethods(pathname);
   if (!methods) return null;
   try {
-    if (!methods.includes(request.method)) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", methods.join(", ")); return response; }
     const path = pathname as Path, learners = runtime.learners;
     let result: { ok: boolean; code?: string };
     if (request.method === "GET") {

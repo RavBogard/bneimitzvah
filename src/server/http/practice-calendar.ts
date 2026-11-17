@@ -16,8 +16,6 @@ export function practiceCalendarRouteMethods(pathname: string): readonly string[
 export async function handlePracticeCalendarRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
   const found = route(new URL(request.url).pathname); if (!found) return null;
   try {
-    const methods = practiceCalendarRouteMethods(new URL(request.url).pathname)!;
-    if (!methods.includes(request.method)) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", methods.join(", ")); return response; }
     const mutation = request.method === "POST", query = uniqueQuery(request.url, mutation ? [] : found.calendar ? ["mode", "fromDate", "throughDate"] : ["mode", "beforeReceivedAt", "beforeId"]);
     let result;
     if (mutation) {

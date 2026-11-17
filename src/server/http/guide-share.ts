@@ -2,7 +2,7 @@ import "server-only";
 import type { HttpRuntime } from "../runtime/composition";
 import { readJsonBody } from "./body";
 import { closedObject, uniqueQuery } from "./query";
-import { errorResponse, HttpBoundaryError, privateHeaders, privateJson, type JsonValue } from "./responses";
+import { errorResponse, privateHeaders, privateJson, type JsonValue } from "./responses";
 
 // The admin's guide sharing page: one GET downloads the reviewed guides as a file; two POSTs take a file back, one to preview and one to import.
 // Admin mode only (the service's capability check), cookie session, same-origin posts; the file is parsed strictly before anything else runs.
@@ -13,7 +13,6 @@ export function guideShareRouteMethods(pathname: string): readonly string[] | nu
 export async function handleGuideShareRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
   const pathname = new URL(request.url).pathname, methods = guideShareRouteMethods(pathname); if (!methods) return null;
   try {
-    if (!methods.includes(request.method)) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", methods.join(", ")); return response; }
     uniqueQuery(request.url, []);
     if (request.method === "GET") {
       const file = await runtime.guideShare.exportFile(request as never);

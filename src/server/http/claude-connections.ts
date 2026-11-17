@@ -3,7 +3,7 @@ import type { HttpRuntime } from "../runtime/composition";
 import { readJsonBody } from "./body";
 import { closedObject, uniqueQuery } from "./query";
 import { requireCookieMutation } from "./mutations";
-import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
+import { errorResponse, privateJson, type JsonValue } from "./responses";
 
 // Release 1.1: a staff member's Claude connections page lists and ends connections; an admin's lists every staff
 // member's. The Maven link panel in the admin roster reads and undoes one student's link.
@@ -17,7 +17,6 @@ export function claudeConnectionsRouteMethods(pathname: string): readonly string
 export async function handleClaudeConnectionsRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
   const pathname = new URL(request.url).pathname, methods = claudeConnectionsRouteMethods(pathname); if (!methods) return null;
   try {
-    if (!methods.includes(request.method)) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", methods.join(", ")); return response; }
     let result: JsonValue, status: 200 | 409 = 200;
     if (pathname === "/api/staff/claude-connections") {
       uniqueQuery(request.url, []);

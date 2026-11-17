@@ -10,8 +10,6 @@ export function honorsRouteMethods(path: string): readonly string[] | null { con
 export async function handleHonorsRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
   const found = route(new URL(request.url).pathname); if (!found) return null;
   try {
-    const methods = honorsRouteMethods(new URL(request.url).pathname)!;
-    if (!methods.includes(request.method)) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", methods.join(", ")); return response; }
     let result;
     if (request.method === "GET") {
       if (request.body !== null || request.headers.has("transfer-encoding") || request.headers.has("content-length") && request.headers.get("content-length") !== "0") throw new HttpBoundaryError();

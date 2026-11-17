@@ -58,8 +58,11 @@ test("course-progress writes record no audit rows, and its routes are never publ
   assert.deepEqual([...new Set(paths)], ["/api/learn/progress", "/api/learn/progress/put", "/api/learn/progress/merge"]);
   assert.doesNotMatch(routes, /cache-control|s-maxage|public,/i, "responses keep privateJson's private, no-store headers");
   const dispatch = sources.find(file => file.path === "src/server/http/dispatch.ts").text;
-  assert.equal(dispatch.match(/courseProgressRouteMethods\(url\.pathname\)/g)?.length, 1);
-  assert.equal(dispatch.match(/handleCourseProgressRequest\(request, runtime\)/g)?.length, 1);
+  // The dispatcher's route table (2026-11-17) wires the module exactly once: one entry naming both its methods and its handler,
+  // so the route is matched once and answered only by this module (was: one call in each of two `??` chains).
+  assert.equal(dispatch.match(/\bcourseProgressRouteMethods\b/g)?.length, 2, "imported once and used once");
+  assert.equal(dispatch.match(/\bhandleCourseProgressRequest\b/g)?.length, 2, "imported once and used once");
+  assert.match(dispatch, /\{ methods: courseProgressRouteMethods, handle: handleCourseProgressRequest \}/);
   const migration = sources.find(file => file.path === MIGRATION).text;
   assert.doesNotMatch(migration, /GRANT[^;]*(DELETE|TRUNCATE|ALL)[^;]*ON course_progress|GRANT[^;(]*UPDATE ON/i);
 });

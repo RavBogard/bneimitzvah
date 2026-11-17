@@ -139,6 +139,9 @@ test("saved-layer writes record no audit rows, and its routes are never public o
   for (const path of paths) { assert.match(path, /^\/api\/saved\//); assert.doesNotMatch(path, /^\/api\/public\//); }
   assert.doesNotMatch(routes, /cache-control|s-maxage|public,/i, "saved responses keep privateJson's private, no-store headers");
   const dispatch = sources.find(file => file.path === "src/server/http/dispatch.ts").text;
-  assert.equal(dispatch.match(/savedRouteMethods\(url\.pathname\)/g)?.length, 1);
-  assert.equal(dispatch.match(/handleSavedRequest\(request, runtime\)/g)?.length, 1);
+  // The dispatcher's route table (2026-11-17) wires the module exactly once: one entry naming both its methods and its handler,
+  // so the route is matched once and answered only by this module (was: one call in each of two `??` chains).
+  assert.equal(dispatch.match(/\bsavedRouteMethods\b/g)?.length, 2, "imported once and used once");
+  assert.equal(dispatch.match(/\bhandleSavedRequest\b/g)?.length, 2, "imported once and used once");
+  assert.match(dispatch, /\{ methods: savedRouteMethods, handle: handleSavedRequest \}/);
 });

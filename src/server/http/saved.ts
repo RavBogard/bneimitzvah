@@ -31,7 +31,6 @@ export async function handleSavedRequest(request: Request, runtime: HttpRuntime)
   const pathname = new URL(request.url).pathname, methods = savedRouteMethods(pathname);
   if (!methods) return null;
   try {
-    if (!methods.includes(request.method)) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", methods.join(", ")); return response; }
     const path = pathname as Path, saved = runtime.saved;
     let result: { ok: boolean; code?: string };
     if (request.method === "GET") {

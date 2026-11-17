@@ -16,8 +16,6 @@ export function lessonLogRouteMethods(pathname: string): readonly string[] | nul
 export async function handleLessonLogRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
   const found = route(new URL(request.url).pathname); if (!found) return null;
   try {
-    const methods = lessonLogRouteMethods(new URL(request.url).pathname)!;
-    if (!methods.includes(request.method)) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", methods.join(", ")); return response; }
     const read = request.method === "GET", query = uniqueQuery(request.url, read ? ["mode", "beforeDate", "beforeId"] : []);
     let result;
     if (read) {

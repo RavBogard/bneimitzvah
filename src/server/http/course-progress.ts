@@ -3,7 +3,7 @@ import type { HttpRuntime } from "../runtime/composition";
 import { readJsonBody } from "./body";
 import { requireCookieMutation } from "./mutations";
 import { uniqueQuery } from "./query";
-import { errorResponse, HttpBoundaryError, privateHeaders, privateJson, type JsonValue } from "./responses";
+import { errorResponse, privateHeaders, privateJson, type JsonValue } from "./responses";
 import { CourseRefused } from "../course-progress/access";
 
 /**
@@ -20,7 +20,6 @@ export async function handleCourseProgressRequest(request: Request, runtime: Htt
   const pathname = new URL(request.url).pathname, methods = courseProgressRouteMethods(pathname);
   if (!methods) return null;
   try {
-    if (!methods.includes(request.method)) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", methods.join(", ")); return response; }
     uniqueQuery(request.url, []);
     const service = runtime.courseProgress;
     let result: { ok: boolean; code?: string };

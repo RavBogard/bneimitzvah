@@ -20,8 +20,6 @@ function number(value: unknown) {
 export async function handleProgressRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
   const found = route(new URL(request.url).pathname); if (!found) return null;
   try {
-    const methods = progressRouteMethods(new URL(request.url).pathname)!;
-    if (!methods.includes(request.method)) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", methods.join(", ")); return response; }
     const query = uniqueQuery(request.url, found.stream ? [] : [...validate.bindingKeys, "offset"]);
     let value: Record<string, unknown>;
     if (found.stream) {
