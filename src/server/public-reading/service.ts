@@ -18,6 +18,7 @@ import { StudyUnavailable, type StudyPage, type StudyRequest } from "../study/ty
 import { ReferenceUnavailable, resolveReference, type ReferenceCatalog } from "../reference-audio/catalog";
 import { findShortSource, readShortSourceEntry, type ShortSourceManifest } from "../reference-audio/short-source-manifest";
 import { portionsOf, type WeekPortions } from "../../lib/print/portions";
+import { causedBy } from "../logging/failure";
 
 /**
  * Signed-out reading (Daniel, 2026-10-22: show the text, trope, translation,
@@ -87,7 +88,7 @@ export function createPublicReadingService(input: {
   async function snapshot(value: string, signal?: AbortSignal) {
     const date = shabbat(value); connected(signal);
     let loaded: { snapshot: Snapshot; fetchedAt: number };
-    try { loaded = await input.loadReading(date, PUBLIC_CALENDAR); } catch { throw new PublicReadingUnavailable("upstream"); }
+    try { loaded = await input.loadReading(date, PUBLIC_CALENDAR); } catch (error) { throw causedBy(new PublicReadingUnavailable("upstream"), error); }
     connected(signal);
     if (loaded.snapshot.date !== date || loaded.snapshot.calendar !== PUBLIC_CALENDAR) throw new PublicReadingUnavailable("upstream");
     return { date, ...loaded };
@@ -107,7 +108,7 @@ export function createPublicReadingService(input: {
     connected(signal);
     let page: StudyPage;
     try { page = await input.loadText(Object.freeze({ kind: value.kind, ranges: value.ranges, verses: value.verses, offset, translation: "jps2023", signal })); }
-    catch (error) { if (error instanceof StudyUnavailable && error.code === "invalid-request") invalid(); throw new PublicReadingUnavailable("upstream"); }
+    catch (error) { if (error instanceof StudyUnavailable && error.code === "invalid-request") invalid(); throw causedBy(new PublicReadingUnavailable("upstream"), error); }
     connected(signal);
     const expected = planStudyPage({ kind: value.kind, ranges: value.ranges, verses: value.verses, translation: "jps2023", offset }, counts);
     if (page.offset !== offset || page.totalVerses !== value.verses.length || page.nextOffset !== expected.nextOffset
@@ -134,7 +135,7 @@ export function createPublicReadingService(input: {
       load: async (offset: number, inner: AbortSignal) => (await text(value, offset, inner)).verses });
     let details: StudyWordDetails | null;
     try { details = await createSelectedWordDetails(target, word, input.stepSource, signal, reading); }
-    catch (error) { if (error instanceof StudyUnavailable && error.code === "invalid-request") invalid(); if (error instanceof PublicReadingUnavailable) throw error; throw new PublicReadingUnavailable("upstream"); }
+    catch (error) { if (error instanceof StudyUnavailable && error.code === "invalid-request") invalid(); if (error instanceof PublicReadingUnavailable) throw error; throw causedBy(new PublicReadingUnavailable("upstream"), error); }
     connected(signal);
     if (!details) return notFound();
     // A momentary miss (lexical source busy or over budget, or "elsewhere" out of time) is a 503,
@@ -158,7 +159,7 @@ export function createPublicReadingService(input: {
         const parsed = parseReferenceShortResolution({ schema: REFERENCE_SHORT_RESOLUTION_SCHEMA, verse: resolved.verse, source: entry ? readShortSourceEntry(entry).source : null });
         if (!parsed) throw new ReferenceUnavailable(); return parsed;
       });
-    } catch { throw new PublicReadingUnavailable("upstream"); }
+    } catch (error) { throw causedBy(new PublicReadingUnavailable("upstream"), error); }
     const result = Object.freeze({ offset: page.offset, nextOffset: page.nextOffset, totalVerses: page.totalVerses, references: Object.freeze(references) });
     if (Buffer.byteLength(JSON.stringify(result)) > 1024 * 1024) throw new PublicReadingUnavailable("upstream");
     return result;

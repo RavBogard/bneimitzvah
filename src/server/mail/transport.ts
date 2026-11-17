@@ -1,20 +1,21 @@
 import "server-only";
 import { mailbox } from "../runtime/config";
 import { RuntimeUnavailable } from "../runtime/errors";
+import { causedBy, Unavailable } from "../logging/failure";
 
 type Kind = "invitation" | "magic-link";
 const paths = { invitation: "/invitations/open", "magic-link": "/auth/email" } as const;
 const redirects = new Set(["/", "/mine", "/sign-in", "/invitations/accept"]);
 
 function canonicalLink(value: string, origin: string, kind: Kind) {
-  if (typeof value !== "string" || value.length > 2048 || /[\s\\\x00-\x1f\x7f]/.test(value)) throw 0;
+  if (typeof value !== "string" || value.length > 2048 || /[\s\\\x00-\x1f\x7f]/.test(value)) throw new Unavailable("mail/link-shape");
   const url = new URL(value);
-  if (url.href !== value || url.origin !== origin || url.username || url.password || url.search || url.pathname !== paths[kind]) throw 0;
+  if (url.href !== value || url.origin !== origin || url.username || url.password || url.search || url.pathname !== paths[kind]) throw new Unavailable("mail/link-origin-or-path");
   const fragment = new URLSearchParams(url.hash.slice(1));
-  if (fragment.size !== 1 || fragment.getAll("token").length !== 1) throw 0;
+  if (fragment.size !== 1 || fragment.getAll("token").length !== 1) throw new Unavailable("mail/link-fragment");
   const token = fragment.get("token") ?? "";
-  if (!(kind === "invitation" ? /^[A-Za-z0-9_-]{43}$/ : /^[A-Za-z]{32}$/).test(token)) throw 0;
-  if (url.hash !== `#token=${token}` || (kind === "invitation" && Buffer.from(token, "base64url").toString("base64url") !== token)) throw 0;
+  if (!(kind === "invitation" ? /^[A-Za-z0-9_-]{43}$/ : /^[A-Za-z]{32}$/).test(token)) throw new Unavailable("mail/link-token-shape");
+  if (url.hash !== `#token=${token}` || (kind === "invitation" && Buffer.from(token, "base64url").toString("base64url") !== token)) throw new Unavailable("mail/link-token-encoding");
   return url.href;
 }
 
@@ -26,10 +27,10 @@ export function projectMagicLink(urlValue: string, token: string, origin: string
     const keys = ["token", "callbackURL", "newUserCallbackURL", "errorCallbackURL"];
     if (url.href !== urlValue || url.origin !== origin || url.username || url.password || url.hash || url.pathname !== "/api/auth/magic-link/verify"
       || !/^[A-Za-z]{32}$/.test(token) || url.searchParams.get("token") !== token
-      || [...url.searchParams.keys()].some(key => !keys.includes(key) || url.searchParams.getAll(key).length !== 1)) throw 0;
-    for (const key of keys.slice(1)) if (url.searchParams.has(key) && !redirects.has(url.searchParams.get(key)!)) throw 0;
+      || [...url.searchParams.keys()].some(key => !keys.includes(key) || url.searchParams.getAll(key).length !== 1)) throw new Unavailable("mail/magic-link-query");
+    for (const key of keys.slice(1)) if (url.searchParams.has(key) && !redirects.has(url.searchParams.get(key)!)) throw new Unavailable("mail/magic-link-redirect");
     return `${origin}/auth/email#token=${token}`;
-  } catch { throw new RuntimeUnavailable(); }
+  } catch (error) { throw causedBy(new RuntimeUnavailable(), error); }
 }
 
 /**
@@ -53,7 +54,7 @@ const INVITATION_ROLES: readonly string[] = ["parent", "student", "tutor"];
  * congregation's time zone (America/Chicago, as everywhere else), so the link works all through the day the email names.
  */
 export function invitationExpiryText(expiresAt: Date): string {
-  if (!(expiresAt instanceof Date) || !Number.isFinite(expiresAt.getTime())) throw 0;
+  if (!(expiresAt instanceof Date) || !Number.isFinite(expiresAt.getTime())) throw new Unavailable("mail/invitation-expiry");
   // The last full day the link works (Daniel, N22): the calendar day before the expiry's own date in Central time.
   const [year, month, day] = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).format(expiresAt).split("-").map(Number);
   return new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "long", month: "long", day: "numeric" }).format(new Date(Date.UTC(year, month - 1, day - 1)))
@@ -71,7 +72,7 @@ export function invitationMailText(input: Readonly<{ congregation: string; produ
     : `${input.congregation} invited you as a ${input.role} on ${input.productName}. The link works through ${until}.`;
   const subject = `${input.congregation} invited you to ${input.productName}`;
   // No number in a subject: a lock screen or Gmail card must never offer one as a code.
-  if (/\p{N}/u.test(subject)) throw 0;
+  if (/\p{N}/u.test(subject)) throw new Unavailable("mail/invitation-subject-number");
   return { subject, text: `${line}\n\nOpen this link to review your invitation:\n\n${input.link}\n\n${IGNORE}` };
 }
 const IGNORE = "If you did not request this message, you can ignore it.";
@@ -88,13 +89,13 @@ function bodyOf(link: string, code: string | null | undefined, product: string):
   // Fail closed rather than send an email a phone could misread: no number but ASCII digits, and the code is the
   // only run of 6 or more of them (none at all when link-only; the sign-in token is letters only).
   const runs = body.match(/\p{N}{6,}/gu) ?? [];
-  if (/(?![0-9])\p{N}/u.test(body) || (code === null ? runs.length !== 0 : runs.length !== 1 || runs[0] !== code)) throw 0;
+  if (/(?![0-9])\p{N}/u.test(body) || (code === null ? runs.length !== 0 : runs.length !== 1 || runs[0] !== code)) throw new Unavailable("mail/sign-in-body-numbers");
   return body;
 }
 function subjectOf(product: string): string {
   const subject = `Sign in to ${product}`;
   // No number in a subject: a lock screen or Gmail card must never offer one as the code.
-  if (/\p{N}/u.test(subject)) throw 0;
+  if (/\p{N}/u.test(subject)) throw new Unavailable("mail/sign-in-subject-number");
   return subject;
 }
 
@@ -106,20 +107,20 @@ export function createMailTransport(input: { origin: string; apiKey: string; fro
     const origin = new URL(input.origin);
     if (origin.origin !== input.origin || origin.username || origin.password || !["http:", "https:"].includes(origin.protocol)
       || !mailbox(input.from) || !/^re_[A-Za-z0-9_-]{8,256}$/.test(input.apiKey)
-      || !Number.isInteger(timeout) || timeout < 1 || timeout > 10000) throw 0;
-  } catch { throw new RuntimeUnavailable(); }
+      || !Number.isInteger(timeout) || timeout < 1 || timeout > 10000) throw new Unavailable("mail/transport-config");
+  } catch (error) { throw causedBy(new RuntimeUnavailable(), error); }
   return async (kind: Kind, message: Readonly<{ email: string; url: string; productName: string; code?: string | null;
     congregation?: string; role?: InvitationMailRole; expiresAt?: Date }>): Promise<void> => {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      if (!mailbox(input.from) || !mailbox(message.email) || !mailProductName(message.productName)) throw 0;
+      if (!mailbox(input.from) || !mailbox(message.email) || !mailProductName(message.productName)) throw new Unavailable("mail/address-or-product");
       // A sign-in email carries its code, or an explicit null when the address is capped (link only); an invitation
       // never carries one.
-      if (kind === "magic-link" ? message.code !== null && (typeof message.code !== "string" || !CODE.test(message.code)) : message.code !== undefined) throw 0;
+      if (kind === "magic-link" ? message.code !== null && (typeof message.code !== "string" || !CODE.test(message.code)) : message.code !== undefined) throw new Unavailable("mail/sign-in-code-shape");
       // An invitation names its congregation (a plain name with no number), its role and its expiry; a sign-in email none of them.
       if (kind === "invitation" ? !mailProductName(message.congregation) || !INVITATION_ROLES.includes(message.role as string) || !(message.expiresAt instanceof Date)
-        : message.congregation !== undefined || message.role !== undefined || message.expiresAt !== undefined) throw 0;
+        : message.congregation !== undefined || message.role !== undefined || message.expiresAt !== undefined) throw new Unavailable("mail/message-fields");
       const link = canonicalLink(message.url, input.origin, kind);
       const mail = kind === "invitation"
         ? invitationMailText({ congregation: message.congregation!, productName: message.productName, role: message.role!, expiresAt: message.expiresAt!, link })
@@ -133,12 +134,12 @@ export function createMailTransport(input: { origin: string; apiKey: string; fro
           });
           // No provider body/header/ID escapes, even on errors; do not buffer it.
           try {
-            if (!response.ok || response.redirected || (response.url && response.url !== "https://api.resend.com/emails")) throw 0;
+            if (!response.ok || response.redirected || (response.url && response.url !== "https://api.resend.com/emails")) throw new Unavailable("mail/provider-refused");
           } finally { await response.body?.cancel().catch(() => {}); }
         })(),
         new Promise<never>((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new RuntimeUnavailable()); }, timeout); }),
       ]);
-    } catch { throw new RuntimeUnavailable(); }
+    } catch (error) { throw causedBy(new RuntimeUnavailable(), error); }
     finally { if (timer) clearTimeout(timer); controller.abort(); }
   };
 }
@@ -161,8 +162,8 @@ export function createNotificationTransport(input: { origin: string; apiKey: str
     const origin = new URL(input.origin);
     if (origin.origin !== input.origin || origin.username || origin.password || !["http:", "https:"].includes(origin.protocol)
       || !mailbox(input.from) || !/^re_[A-Za-z0-9_-]{8,256}$/.test(input.apiKey)
-      || !Number.isInteger(timeout) || timeout < 1 || timeout > 10000) throw 0;
-  } catch { throw new RuntimeUnavailable(); }
+      || !Number.isInteger(timeout) || timeout < 1 || timeout > 10000) throw new Unavailable("mail/notification-transport-config");
+  } catch (error) { throw causedBy(new RuntimeUnavailable(), error); }
   const unsubscribePrefix = `${input.origin}/api/notifications/unsubscribe?t=`;
   return async (message: NotificationMessage): Promise<NotificationOutcome> => {
     try {
@@ -225,8 +226,8 @@ export function createAccountMailTransport(input: { origin: string; apiKey: stri
   try {
     const origin = new URL(input.origin);
     if (origin.origin !== input.origin || origin.username || origin.password || !["http:", "https:"].includes(origin.protocol) || typeof input.enabled !== "boolean"
-      || !mailbox(input.from) || !/^re_[A-Za-z0-9_-]{8,256}$/.test(input.apiKey) || !Number.isInteger(timeout) || timeout < 1 || timeout > 10000) throw 0;
-  } catch { throw new RuntimeUnavailable(); }
+      || !mailbox(input.from) || !/^re_[A-Za-z0-9_-]{8,256}$/.test(input.apiKey) || !Number.isInteger(timeout) || timeout < 1 || timeout > 10000) throw new Unavailable("mail/account-transport-config");
+  } catch (error) { throw causedBy(new RuntimeUnavailable(), error); }
   return async (kind: AccountMailKind, to: string, tenant: Readonly<{ name: string; productName: string }>, idempotencyKey: string): Promise<AccountMailOutcome> => {
     try {
       if (!Object.hasOwn(ACCOUNT_LINKS, kind) || !mailbox(to) || !plainName(tenant?.name) || !plainName(tenant?.productName) || typeof idempotencyKey !== "string" || !UUID.test(idempotencyKey)) return "rejected";

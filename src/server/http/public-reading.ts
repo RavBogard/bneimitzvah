@@ -3,6 +3,7 @@ import { AccessDenied } from "../access/errors";
 import { PublicReadingUnavailable, type PublicKind, type PublicPassage, type PublicReadingService } from "../public-reading/service";
 import { canonicalReadingRef, READING_REF_LIMITS } from "../../lib/readings/reading-ref";
 import { HttpBoundaryError, type JsonValue } from "./responses";
+import { recordFailure } from "../logging/failure";
 import { publicShabbat } from "../../lib/readings/public-shabbat";
 import { studyPageView, wordAidsView, wordDetailsView } from "./portal";
 import { parseCommentaryChapter } from "../../lib/readings/commentary";
@@ -325,7 +326,13 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
             return json(text as unknown as JsonValue, 2592000, KEPT);
           }
         }
-      } catch (error) { return failure(statusOf(error)); }
+      } catch (error) { return failure(failureStatus(error, "public-reading/handler")); }
     });
-  } catch (error) { return failure(statusOf(error)); }
+  } catch (error) { return failure(failureStatus(error, "public-reading/boundary")); }
+}
+/** statusOf, writing the failure line (server-side only) when the answer is the unexpected 503. */
+function failureStatus(error: unknown, site: string): keyof typeof messages {
+  const status = statusOf(error);
+  if (status === 503) recordFailure(error, site, 503);
+  return status;
 }

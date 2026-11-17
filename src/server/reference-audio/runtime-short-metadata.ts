@@ -5,6 +5,7 @@ import { isProductionOrigin } from "../../lib/site/identity";
 import { parseReferenceCatalog, REFERENCE_CATALOG_LIMITS, ReferenceUnavailable, type ReferenceCatalog } from "./catalog";
 import { createShortSourceManifestLoader, type ShortSourceManifest } from "./short-source-manifest";
 import type { ReferenceCatalogGet } from "./storage";
+import { causedBy, Unavailable } from "../logging/failure";
 
 type Environment = Readonly<Record<string, string | undefined>>;
 type Runtime = Pick<RuntimeConfig, "referenceAudio" | "origin" | "deployment">;
@@ -67,17 +68,17 @@ export function createRuntimeShortMetadata(config: Runtime, env: Environment) {
   const get: ReferenceCatalogGet = async (path, { signal }) => {
     let stream: ReadableStream<Uint8Array> | undefined;
     try {
-      if (!selected || !current() || signal.aborted || ![`reference-audio/pockettorah/catalog/${selected.parent}.json`, `reference-audio/short-v1/manifests/${selected.manifest}.json`].includes(path)) throw 0;
-      const { getContext } = await import("@vercel/oidc"); if (!current() || signal.aborted) throw 0;
+      if (!selected || !current() || signal.aborted || ![`reference-audio/pockettorah/catalog/${selected.parent}.json`, `reference-audio/short-v1/manifests/${selected.manifest}.json`].includes(path)) throw new Unavailable("reference-metadata/path-or-state");
+      const { getContext } = await import("@vercel/oidc"); if (!current() || signal.aborted) throw new Unavailable("reference-metadata/stale-before-token");
       const token = getContext().headers?.["x-vercel-oidc-token"];
-      if (typeof token !== "string" || !token.length || token.length > 16384 || token.trim() !== token || /[\s\x00-\x1f\x7f]/.test(token)) throw 0;
+      if (typeof token !== "string" || !token.length || token.length > 16384 || token.trim() !== token || /[\s\x00-\x1f\x7f]/.test(token)) throw new Unavailable("reference-metadata/oidc-token-shape");
       const { get: blobGet } = await import("@vercel/blob");
-      if (!current() || signal.aborted || getContext().headers?.["x-vercel-oidc-token"] !== token) throw 0;
+      if (!current() || signal.aborted || getContext().headers?.["x-vercel-oidc-token"] !== token) throw new Unavailable("reference-metadata/oidc-token-changed");
       const result = await blobGet(path, { access: "private", storeId: selected.storeId, oidcToken: token, abortSignal: signal, useCache: false });
       stream = result?.stream ?? undefined;
-      if (!current() || signal.aborted || getContext().headers?.["x-vercel-oidc-token"] !== token || result?.statusCode !== 200 || !(stream instanceof ReadableStream)) throw 0;
+      if (!current() || signal.aborted || getContext().headers?.["x-vercel-oidc-token"] !== token || result?.statusCode !== 200 || !(stream instanceof ReadableStream)) throw new Unavailable("reference-metadata/blob-response");
       return stream;
-    } catch { try { if (stream) void stream.cancel().catch(() => {}); } catch {} throw new ReferenceUnavailable(); }
+    } catch (error) { try { if (stream) void stream.cancel().catch(() => {}); } catch {} throw causedBy(new ReferenceUnavailable(), error); }
   };
   const load = async (signal?: AbortSignal): Promise<Metadata> => {
     const controller = new AbortController(), start = performance.now(), abort = () => controller.abort();
@@ -86,10 +87,10 @@ export function createRuntimeShortMetadata(config: Runtime, env: Environment) {
     signal?.addEventListener("abort", abort, { once: true }); const timer = setTimeout(abort, 30000);
     try {
       live(); const raw = await parentBytes(get, `reference-audio/pockettorah/catalog/${selected!.parent}.json`, selected!.parent, controller.signal, live); live();
-      const catalog = parseReferenceCatalog(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(raw))); if (!catalog) throw 0;
+      const catalog = parseReferenceCatalog(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(raw))); if (!catalog) throw new Unavailable("reference-metadata/catalog-parse");
       const manifest = await createShortSourceManifestLoader({ sha256: selected!.manifest, parentCatalogSHA256: selected!.parent, parentCatalogBytes: raw, get })(controller.signal); live();
       const metadata = Object.freeze({ catalog, manifest }); success = Object.freeze({ key, metadata }); return metadata;
-    } catch { throw new ReferenceUnavailable(); }
+    } catch (error) { throw causedBy(new ReferenceUnavailable(), error); }
     finally { controller.abort(); clearTimeout(timer); signal?.removeEventListener("abort", abort); }
   };
   const check = (signal?: AbortSignal) => { if (!current() || signal?.aborted) throw new ReferenceUnavailable(); };

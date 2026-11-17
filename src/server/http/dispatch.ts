@@ -30,7 +30,8 @@ import { congregationSettingsRouteMethods, handleCongregationSettingsRequest } f
 import { claudeConnectionsRouteMethods, handleClaudeConnectionsRequest } from "./claude-connections";
 import { handleLessonLogRequest, lessonLogRouteMethods } from "./lesson-log";
 import { handlePracticeCalendarRequest, practiceCalendarRouteMethods } from "./practice-calendar";
-import { errorResponse, HttpBoundaryError } from "./responses";
+import { errorResponse, HttpBoundaryError, recordIfUnexpected } from "./responses";
+import { failureRecorded, recordUnexplainedStatus, runWithRequestContext } from "../logging/failure";
 import { finishHonoreeGuestResponse, finishHonoreeManagementResponse, handleHonoreeRequest, honoreeManagementRouteMethods } from "./honoree";
 import { handlePublicReadingRequest, isPublicReadingPath, type PublicRuntimeScope } from "./public-reading";
 import { createPageViewScope, createPublicRuntimeScope } from "../runtime/public-composition";
@@ -50,7 +51,7 @@ function cookieBoundary(request: Request) {
   }
 }
 export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRuntimeScope(), withPublic: PublicRuntimeScope = createPublicRuntimeScope(), withViews: PageViewScope = createPageViewScope()) {
-  return async (request: Request): Promise<Response> => {
+  const dispatch = async (request: Request): Promise<Response> => {
     // Google's redirect-mode return is a browser navigation: any failure, including an unavailable
     // runtime, lands on a page with a plain error rather than a JSON body.
     let googleReturn = false;
@@ -72,12 +73,13 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
           const started = performance.now();
           const response = await withRuntime(async runtime => {
             try { return await handleHonoreeRequest(request, runtime) ?? denied(); }
-            catch { return denied(); }
+            // The guest refusal stays uniform; an unexpected failure is only written server-side.
+            catch (error) { recordIfUnexpected(error, "dispatch/honoree-guest"); return denied(); }
           });
           // Runtime cleanup can await after the service barrier. Subtract the
           // entire scope duration conservatively before the final sync return.
           return finishHonoreeGuestResponse(request, response, started);
-        } catch { return denied(); }
+        } catch (error) { recordIfUnexpected(error, "dispatch/honoree-guest"); return denied(); }
       }
       const managementMethods = honoreeManagementRouteMethods(url.pathname);
       const methods = managementMethods ?? bookletRouteMethods(url.pathname) ?? serviceEcosystemRouteMethods(url.pathname) ?? honorsRouteMethods(url.pathname) ?? sourceContentRouteMethods(url.pathname) ?? sourceAssignmentsRouteMethods(url.pathname) ?? authRouteMethods(url.pathname) ?? portalRouteMethods(url.pathname) ?? studentWorkRouteMethods(url.pathname) ?? serviceLearningRouteMethods(url.pathname) ?? progressRouteMethods(url.pathname) ?? studyGuidesRouteMethods(url.pathname) ?? guideShareRouteMethods(url.pathname) ?? guideAdminRouteMethods(url.pathname) ?? congregationSettingsRouteMethods(url.pathname) ?? claudeConnectionsRouteMethods(url.pathname) ?? rosterSheetRouteMethods(url.pathname) ?? notificationsRouteMethods(url.pathname) ?? savedRouteMethods(url.pathname) ?? learnersRouteMethods(url.pathname) ?? offlineRouteMethods(url.pathname) ?? accountsRouteMethods(url.pathname) ?? courseProgressRouteMethods(url.pathname) ?? serviceCourseRouteMethods(url.pathname) ?? servicePartFinishedRouteMethods(url.pathname) ?? practiceVisibilityRouteMethods(url.pathname) ?? staffRouteMethods(url.pathname) ?? verseReviewRouteMethods(url.pathname) ?? mcpRouteMethods(url.pathname) ?? lessonLogRouteMethods(url.pathname) ?? practiceCalendarRouteMethods(url.pathname);
@@ -98,7 +100,7 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
           try {
             await runtime.resolveHost(request);
             return await handleHonoreeRequest(request, runtime) ?? errorResponse(new HttpBoundaryError(404));
-          } catch (error) { return errorResponse(error); }
+          } catch (error) { recordIfUnexpected(error, "dispatch/honoree-management"); return errorResponse(error); }
         });
         return finishHonoreeManagementResponse(request, response);
       }
@@ -109,12 +111,25 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
         } catch (error) {
           // Expected HTTP400/413/etc stay inside the scoped runtime callback;
           // otherwise its generic application-error boundary would make503.
+          recordIfUnexpected(error, "dispatch/handler");
           return errorResponse(error);
         }
       });
       if (googleReturn && !(response.status >= 300 && response.status < 400)) return googleCallbackFailure(request);
       return response;
-    } catch (error) { return googleReturn ? googleCallbackFailure(request) : errorResponse(error); }
+    } catch (error) {
+      recordIfUnexpected(error, "dispatch/boundary");
+      return googleReturn ? googleCallbackFailure(request) : errorResponse(error);
+    }
   };
+  // Every request runs with a generated id, its method and its redacted route (logging/redact.ts), so any failure
+  // line written below names where it happened. A 5xx that no catch recorded still gets one line with the route.
+  // Logging only reads the response's status; the response itself is returned unchanged.
+  return (request: Request): Promise<Response> => runWithRequestContext(request, async () => {
+    const response = await dispatch(request);
+    try { if (response.status >= 500 && !failureRecorded()) recordUnexplainedStatus("dispatch/unrecorded-5xx", response.status); }
+    catch { /* Logging cannot change the operation outcome. */ }
+    return response;
+  });
 }
 export const dispatchRequest = createHttpDispatcher();

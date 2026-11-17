@@ -50,7 +50,7 @@ test("runtime preserves denial status without retaining callback-added private d
         throw error;
       });
     } catch (error) { malformed = error; }
-    expect(malformed instanceof RuntimeUnavailable && malformed.message === "Service temporarily unavailable" && !("cause" in malformed)).toBe(true);
+    expect(malformed instanceof RuntimeUnavailable && malformed.message === "Service temporarily unavailable" && !Object.keys(malformed).includes("cause")).toBe(true);
     expect(logs.length > 0 && logs.every((line) => !line.includes(privateMarker))).toBe(true);
   } finally { spy.mockRestore(); }
 });

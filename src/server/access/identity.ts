@@ -6,6 +6,7 @@ import { resolveTenantHost } from "../tenancy/resolve";
 import { lockIdentityRecords } from "../data/authority";
 import { requireCookieMutation } from "../http/mutations";
 import { AccessDenied, AccessUnavailable } from "./errors";
+import { causedBy } from "../logging/failure";
 import type { AccessDatabase, AccessRequest, AccessTransaction, DeploymentScope, LockIntent, VerifiedIdentity } from "./types";
 
 export function createVerifiedIdentityAccess<Q extends PgQueryResultHKT>(input: {
@@ -39,7 +40,9 @@ export function createVerifiedIdentityAccess<Q extends PgQueryResultHKT>(input: 
       });
     } catch (error) {
       if (error instanceof AccessDenied) throw error;
-      throw new AccessUnavailable();
+      // Same fixed error and the same 503 for the client; the original rides along as a non-enumerable cause, so the
+      // dispatcher's failure line (logging/redact.ts decides every field) names the real failure.
+      throw causedBy(new AccessUnavailable(), error);
     }
   };
 }

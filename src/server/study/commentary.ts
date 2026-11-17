@@ -5,6 +5,7 @@ import type { VerseCounts } from "../../lib/readings/ranges";
 import { commentaryCandidates, commentaryComplex, commentaryEditionUrl, parseCommentaryChapter, COMMENTARY_LIMITS, type CommentaryChapter, type CommentaryChapterRef,
   type CommentaryComment, type CommentaryEdition, type CommentaryEditionCandidate, type CommentaryRun } from "../../lib/readings/commentary";
 import { sefariaRuns } from "./sefaria-runs";
+import { causedBy } from "../logging/failure";
 
 /**
  * One commentary chapter from Sefaria's v3 texts API, for any registered work.
@@ -121,7 +122,7 @@ export function createSefariaCommentaryReader(input: { fetch: typeof globalThis.
           const url = commentaryRequestUrl(chapter);
           let response: Response;
           try { response = await input.fetch(url, { method: "GET", headers: SEFARIA_REQUEST_HEADERS, credentials: "omit", redirect: "error", cache: "no-store", signal: local.signal }); }
-          catch { throw new CommentaryUnavailable("upstream"); }
+          catch (error) { throw causedBy(new CommentaryUnavailable("upstream"), error); }
           if (local.signal.aborted) { void response.body?.cancel().catch(() => {}); throw new CommentaryUnavailable("upstream"); }
           if (response.status !== 200 && response.status !== 404 || response.redirected || response.url && response.url !== url.href
             || !/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(response.headers.get("content-type") ?? "")) {

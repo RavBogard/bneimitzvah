@@ -5,6 +5,7 @@ import type { AccessDatabase } from "../access/types";
 import { sefariaTextCache } from "../db/study-cache-schema";
 import { StudyCacheUnavailable, validateStudyCacheBinding, validateStudyCacheEntry,
   type StudyCacheBinding, type StudyChapterCache } from "../study/cache";
+import { causedBy, recordFailure, Unavailable } from "../logging/failure";
 
 const identityColumns = [sefariaTextCache.provider, sefariaTextCache.apiVersion, sefariaTextCache.parserVersion,
   sefariaTextCache.policyVersion, sefariaTextCache.book, sefariaTextCache.chapter, sefariaTextCache.hebrewEdition,
@@ -23,7 +24,7 @@ export function createPersistentStudyCache<Q extends PgQueryResultHKT>(db: Acces
         const binding = validateStudyCacheBinding(key);
         const [row] = await db.select().from(sefariaTextCache).where(where(binding));
         const time = now();
-        if (!Number.isSafeInteger(time) || time < 0) throw 0;
+        if (!Number.isSafeInteger(time) || time < 0) throw new Unavailable("study-cache/get-clock");
         if (!row) return null;
         const { payload, contentHash, fetchedAt, expiresAt, ...storedBinding } = row;
         const entry = validateStudyCacheEntry(binding, { binding: storedBinding, payload, hash: contentHash,
@@ -31,19 +32,26 @@ export function createPersistentStudyCache<Q extends PgQueryResultHKT>(db: Acces
         // Validate even expired envelopes, then treat expiry as a miss. No stale
         // fallback and no runtime DELETE privilege or privileged cleanup helper.
         return entry.expiresAt <= time ? null : entry;
-      } catch { throw new StudyCacheUnavailable(); }
+      } catch (error) {
+        // The reader may fall back to Sefaria and drop this error, so it is written here (once) before rethrowing.
+        recordFailure(error, "study-cache/get");
+        throw causedBy(new StudyCacheUnavailable(), error);
+      }
     },
     async set(key, candidate) {
       try {
         const binding = validateStudyCacheBinding(key), time = now();
-        if (!Number.isSafeInteger(time) || time < 0) throw 0;
+        if (!Number.isSafeInteger(time) || time < 0) throw new Unavailable("study-cache/set-clock");
         const entry = validateStudyCacheEntry(binding, candidate, time);
-        if (entry.expiresAt <= time) throw 0;
+        if (entry.expiresAt <= time) throw new Unavailable("study-cache/set-expired");
         const content = { payload: entry.payload, contentHash: entry.hash,
           fetchedAt: new Date(entry.fetchedAt), expiresAt: new Date(entry.expiresAt) };
         await db.insert(sefariaTextCache).values({ ...binding, ...content })
           .onConflictDoUpdate({ target: identityColumns, set: content });
-      } catch { throw new StudyCacheUnavailable(); }
+      } catch (error) {
+        recordFailure(error, "study-cache/set");
+        throw causedBy(new StudyCacheUnavailable(), error);
+      }
     },
   };
 }

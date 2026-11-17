@@ -55,7 +55,7 @@ async function denied(operation: () => unknown | PromiseLike<unknown>, code: str
 }
 async function cacheDenied(operation: () => Promise<unknown>) {
   try { await operation(); return false; }
-  catch (error) { return error instanceof StudyCacheUnavailable && !("cause" in error); }
+  catch (error) { return error instanceof StudyCacheUnavailable && !Object.keys(error).includes("cause"); }
 }
 
 test("restricted real PostgreSQL login can read/upsert public chapters with no delete or key-update authority", async () => {

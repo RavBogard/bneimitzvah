@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { parseReferenceCatalog, ReferenceUnavailable, REFERENCE_CATALOG_LIMITS, type ReferenceCatalog } from "./catalog";
+import { causedBy } from "../logging/failure";
 
 export type ReferenceCatalogGet = (path: string, options: Readonly<{ signal: AbortSignal }>) => Promise<ReadableStream<Uint8Array>>;
 /** Construction performs no I/O. No URL/token/store or environment fallback. */
@@ -48,7 +49,7 @@ export function createReferenceCatalogLoader(input: { sha256: string; get: Refer
       if (!bytes || hash.digest("hex") !== digest) throw new ReferenceUnavailable();
       const text = new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks, bytes)); live();
       const catalog = parseReferenceCatalog(JSON.parse(text)); live(); if (!catalog) throw new ReferenceUnavailable(); return catalog;
-    } catch { controller.abort(); throw new ReferenceUnavailable(); }
+    } catch (error) { controller.abort(); throw causedBy(new ReferenceUnavailable(), error); }
     finally {
       signal?.removeEventListener("abort", abort); clearTimeout(timer);
       if (!reader && incoming) { try { void incoming.cancel().catch(() => {}); } catch {} }

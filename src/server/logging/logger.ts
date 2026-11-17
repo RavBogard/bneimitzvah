@@ -1,5 +1,8 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import { currentRequestId } from "./failure";
+// Fixed-shape operational lines (request.complete, host denials, the MCP request line). Unexpected failures are
+// written by failure.ts, whose every field passes the rules in redact.ts.
 
 const hostFrames = ["configured", "incoming", "service"] as const;
 const hostStages = ["scope", "url", "url-authority", "scheme", "host", "forwarded", "forwarded-host", "forwarded-proto", "forwarded-port", "directory-query", "directory-missing"] as const;
@@ -46,7 +49,7 @@ export function mcpRequestLine(input: McpRequestInput) {
     protocolVersion: version === null ? "absent" : MCP_VERSION_SHAPE.test(version) ? version : "malformed", method });
 }
 
-// Never serialize an input object, Error, request, provider response or cause.
+// Never serialize an input object, Error, request, provider response or cause (failure.ts describes errors).
 export function createLogger(sink: (line: string) => void = (line) => console.info(line)) {
   return Object.freeze({
     /** The /api/mcp request line: only mcpRequestLine's closed fields are ever written. */
@@ -59,7 +62,8 @@ export function createLogger(sink: (line: string) => void = (line) => console.in
       try { sink(JSON.stringify({ event: "sign-in.code-capped", cap })); } catch { /* Logging cannot change the operation outcome. */ }
     },
     request() {
-      const requestId = randomUUID();
+      // The dispatcher's request id when there is one, so these lines and a failure line can be joined.
+      const requestId = currentRequestId() ?? randomUUID();
       return Object.freeze({
         requestId,
         emit(event: LogEvent, status: number) {

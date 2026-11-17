@@ -226,7 +226,7 @@ describe("roster sheet writer", () => {
       expect((await dispatch(cron({ authorization: `Bearer ${cronSecret}` }, "/api/internal/roster-sheet/sync", "POST"))).status).toBe(405);
       // A refused nightly write is a failed cron run, not a quiet 200.
       const error = vi.spyOn(console, "error").mockImplementation(() => {});
-      try { expect((await dispatchWith(googleStub("write").fetcher)(cron({ authorization: `Bearer ${cronSecret}` }))).status).toBe(503); expect(String(error.mock.calls[0]?.[0])).toBe("roster sheet sync failed: google"); }
+      try { expect((await dispatchWith(googleStub("write").fetcher)(cron({ authorization: `Bearer ${cronSecret}` }))).status).toBe(503); expect(error.mock.calls.map(call => String(call[0]))).toContain("roster sheet sync failed: google"); }
       finally { error.mockRestore(); }
       const admin = await dispatch(f.request("/api/admin/roster-sheet/sync", { who: "admin", method: "POST", body: {} }));
       expect(admin.status).toBe(200); expect(await admin.json()).toMatchObject({ ok: true, students: 3 });

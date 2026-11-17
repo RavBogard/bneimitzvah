@@ -5,6 +5,7 @@ import { parseSourceRef, sourceSefariaUrl } from "../../lib/readings/shelf";
 import { sefariaRuns } from "./sefaria-runs";
 import { fetchSefariaJson, SEFARIA_ORIGIN } from "./sefaria-json";
 import { isNoTextAnswer } from "./commentary";
+import { causedBy } from "../logging/failure";
 
 /**
  * One shelf item's text (`/api/public/source?ref=`): a bounded proxy of a public Sefaria text in Sefaria's
@@ -87,7 +88,7 @@ export function createSefariaSourceReader(input: { fetch: typeof globalThis.fetc
     url.searchParams.set("fill_in_missing_segments", "0"); url.searchParams.set("return_format", "default");
     let row: Readonly<{ status: number; json: unknown }>;
     try { row = await fetchSefariaJson(input.fetch, url, { deadlineMs: SOURCE_TEXT_LIMITS.requestMs, maxBytes: SOURCE_TEXT_LIMITS.upstreamBytes }, signal); }
-    catch { throw new SourceTextUnavailable("upstream"); }
+    catch (error) { throw causedBy(new SourceTextUnavailable("upstream"), error); }
     if (row.status === 404 && isNoTextAnswer(row.json)) throw new SourceTextUnavailable("unsupported");
     if (row.status === 404 || row.status === 400) throw new SourceTextUnavailable("not-found");
     if (row.status !== 200) throw new SourceTextUnavailable("upstream");
@@ -114,7 +115,7 @@ export function createSefariaPinnedSourceReader(input: { fetch: typeof globalThi
     url.searchParams.set("fill_in_missing_segments", "0"); url.searchParams.set("return_format", "default");
     let row: Readonly<{ status: number; json: unknown }>;
     try { row = await fetchSefariaJson(input.fetch, url, { deadlineMs: SOURCE_TEXT_LIMITS.requestMs, maxBytes: SOURCE_TEXT_LIMITS.upstreamBytes }, signal); }
-    catch { throw new SourceTextUnavailable("upstream"); }
+    catch (error) { throw causedBy(new SourceTextUnavailable("upstream"), error); }
     if (row.status === 404 && isNoTextAnswer(row.json)) throw new SourceTextUnavailable("unsupported");
     if (row.status === 404 || row.status === 400) throw new SourceTextUnavailable("not-found");
     if (row.status !== 200) throw new SourceTextUnavailable("upstream");

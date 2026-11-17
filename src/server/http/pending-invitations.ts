@@ -4,6 +4,7 @@ import { HttpBoundaryError, privateJson } from "./responses";
 import { requireCookieMutation } from "./mutations";
 import { closedObject, uniqueQuery } from "./query";
 import { isProductionOrigin } from "../../lib/site/identity";
+import { causedBy } from "../logging/failure";
 
 const LIFETIME = 10 * 60_000;
 const localName = "portal_pending_invitation";
@@ -28,7 +29,7 @@ export function createPendingInvitations(input: { secret: string; origin: string
     if (input.environment === "preview" && isProductionOrigin(input.origin)) throw 0;
     secure = !local; name = secure ? secureName : localName;
     key = createHmac("sha256", input.secret).update(`crc-portal:v1:pending-invitations:${input.environment}:${input.origin}`).digest();
-  } catch { throw new Error("Pending invitation configuration unavailable"); }
+  } catch (error) { throw causedBy(new Error("Pending invitation configuration unavailable"), error); }
   const now = input.now ?? Date.now;
   const time = () => { const value = now(); if (!Number.isSafeInteger(value) || value < 0 || value > Number.MAX_SAFE_INTEGER - LIFETIME) throw 0; return value; };
   const cookie = (value: string, maxAge: number) => `${name}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure ? "; Secure" : ""}`;

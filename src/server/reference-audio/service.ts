@@ -7,6 +7,7 @@ import { createStudyService, type StudySelection } from "../study/service";
 import { StudyUnavailable, type StudyPage, type StudyRequest } from "../study/types";
 import { ReferenceUnavailable, resolveReference, unavailableReference, type ReferenceCatalog } from "./catalog";
 import type { ReferenceResolution } from "../../lib/reference-audio/source";
+import { causedBy } from "../logging/failure";
 
 export function createReferenceAudioService<Q extends PgQueryResultHKT>(input: {
   access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>;
@@ -26,7 +27,7 @@ export function createReferenceAudioService<Q extends PgQueryResultHKT>(input: {
         if (!target || target.ref !== supplied.verses[supplied.offset]) throw new ReferenceUnavailable();
         if (supplied.signal?.aborted) throw new StudyUnavailable("upstream");
         try { const catalog = await input.loadCatalog(supplied.signal); return { ...page, reference: resolveReference(catalog, target, asset, supplied.verses) }; }
-        catch { throw new ReferenceUnavailable(); }
+        catch (error) { throw causedBy(new ReferenceUnavailable(), error); }
       } });
     const result = await study.read(request, selection);
     if (!result.ok) return result;

@@ -14,6 +14,7 @@ import { defaultServiceUnitIds, parseServiceFeed, serviceUnitsForSlot, SERVICE_F
 import type { ServiceUnit, ServiceUnitMaterial, ServiceSectionHeading } from "../../lib/service-learning/types";
 import * as stored from "./data";
 import type { PracticeTarget } from "../../lib/practice-calendar/types";
+import { causedBy } from "../logging/failure";
 
 type Mode = ActiveMode | "child-practice";
 type ReadSelection = { mode: Mode; studentId: string };
@@ -74,7 +75,7 @@ async function readStoredFeed<Q extends PgQueryResultHKT>(data: typeof stored, t
     const parsed = parseServiceFeed(row.feedBytes, row.provenanceBytes, row.pins);
     if (parsed.identity !== row.identity) throw new AccessUnavailable();
     return parsed;
-  } catch { throw new AccessUnavailable(); }
+  } catch (error) { throw causedBy(new AccessUnavailable(), error); }
 }
 async function readStoredPlan<Q extends PgQueryResultHKT>(data: typeof stored, tx: AccessTransaction<Q>, actor: StudentActor | PracticeActor, student: StudentView, check: () => void) {
   const baseline = await data.currentPlan(tx, actor.tenantId, student.id); check(); if (!baseline) return null;

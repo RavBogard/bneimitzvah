@@ -18,6 +18,7 @@ import { aliyahStarts } from "../../lib/readings/aliyah-starts";
 import { readingView } from "../portal/service";
 import { markForReview as markServicePlanForReview } from "../service-learning/data";
 import { scheduleCeremony } from "../service-ecosystem/scheduling";
+import { causedBy } from "../logging/failure";
 
 type Mode={mode:ActiveMode};
 type Kind="torah"|"haftarah";
@@ -160,7 +161,7 @@ export function createReadingWork<Q extends PgQueryResultHKT>(input:{signingSecr
     else try{loaded={...await input.loadReading(baseline.readingDate,baseline.customs.calendar),sourceStatus:"available"};}
     catch(error){
       if(error instanceof ReadingUnavailable)loaded={snapshot:emptySnapshot,fetchedAt:null,sourceStatus:"unavailable"};
-      else throw new AccessUnavailable();
+      else throw causedBy(new AccessUnavailable(), error);
     }
     if(loaded.sourceStatus==="available" && (typeof loaded.fetchedAt!=="number" || !Number.isFinite(loaded.fetchedAt) || loaded.fetchedAt>now() || now()-loaded.fetchedAt>86400000))throw new AccessDenied(403);
     const snapshot=validatedSnapshot(loaded.snapshot,baseline.readingDate??baseline.date,baseline.customs.calendar,counts);

@@ -7,6 +7,7 @@ import { parseBoundedServiceJson, parseServiceFeed, SERVICE_FEED_LIMITS, type Se
 import { EVENING_TEXT_UNITS, eveningTextTenant, TENANTS } from "../../lib/service-course/course";
 import { EVENING_TEXT_LIMITS, EVENING_UNIT, REFUSED_UNIT, SERVICE_TEXT_LIMITS, hebrewWords, translitWords, type ServiceText, type TextLine } from "../../lib/service-course/text";
 import { CourseTextUnavailable } from "./text";
+import { causedBy } from "../logging/failure";
 
 /**
  * The evening and Havdalah lessons' text (2.0 SC7). Daniel, 2026-10-25 (MISSION, amended): the evening lessons use the CRC Beit
@@ -155,7 +156,7 @@ export async function readEveningText<Q extends PgQueryResultHKT>(tx: AccessTran
   if (!row || row.identity !== pin.identity) throw new CourseTextUnavailable("unavailable");
   let book: EveningBook;
   try { book = parseEveningBook(new Uint8Array(row.feedBytes), new Uint8Array(row.provenanceBytes), row.pins, pin); }
-  catch { throw new CourseTextUnavailable("unavailable"); }
+  catch (error) { throw causedBy(new CourseTextUnavailable("unavailable"), error); }
   if (parsed.size > 4) parsed.clear();
   parsed.set(pin.identity, book);
   return { book, volume: tenant.siddurBook };

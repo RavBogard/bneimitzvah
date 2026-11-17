@@ -3,6 +3,7 @@ import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessRequest, AccessTransaction } from "../access/types";
 import { AccessDenied } from "../access/errors";
 import { HttpBoundaryError } from "../http/responses";
+import { causedBy, Unavailable } from "../logging/failure";
 import type { createAccessService } from "../access/service";
 import type { createPracticeService } from "../practice/service";
 import { confirmedReadings } from "../data/portal";
@@ -18,9 +19,9 @@ const defaultState = (stream: ProgressStream) => stream === "self-check" ? "unma
 function head(state: string | null, version: number | null, stream: ProgressStream) {
   if (state === null && version === null) return { state: defaultState(stream), version: 0 };
   try {
-    if (!Number.isInteger(version) || version! < 1 || version! > 2147483647) throw 0;
+    if (!Number.isInteger(version) || version! < 1 || version! > 2147483647) throw new Unavailable("progress/stored-version");
     return { state: validate.state(state, stream), version: version! };
-  } catch { throw new Error("Progress unavailable"); }
+  } catch (error) { throw causedBy(new Error("Progress unavailable"), error); }
 }
 export function createProgressService<Q extends PgQueryResultHKT>(input: { access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>> }) {
   async function authorized<T>(request: Request, selection: ProgressSelection, operation: "read" | ProgressStream,

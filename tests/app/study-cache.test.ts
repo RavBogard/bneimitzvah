@@ -22,7 +22,7 @@ function synthetic(english = true) {
 const clone = () => structuredClone(synthetic());
 async function denied(operation: () => unknown | Promise<unknown>) {
   try { await operation(); return false; }
-  catch (error) { return error instanceof StudyCacheUnavailable && error.message === "Study text unavailable" && !("cause" in error); }
+  catch (error) { return error instanceof StudyCacheUnavailable && error.message === "Study text unavailable" && !Object.keys(error).includes("cause"); }
 }
 
 test("complete normalized chapters preserve exact edition provenance and adapter hash semantics", () => {

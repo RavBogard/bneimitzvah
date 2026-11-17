@@ -9,6 +9,7 @@ import { StudyUnavailable, type EditionProvenance, type StudyPage, type StudyReq
 import { createStudyCacheEntry, studyCacheBinding, validateStudyCacheEntry, STUDY_CACHE_TTL_MS,
   type StudyChapterCache } from "./cache";
 import type { PublicStudyCoalescer, PublicStudyTask } from "./coalescing";
+import { causedBy } from "../logging/failure";
 
 // Application operating bounds, not claims about the provider's limits.
 export const STUDY_LIMITS = Object.freeze({ verses: 100, chapters: 8, concurrency: 2, requestMs: 5000, pageMs: 8000,
@@ -93,7 +94,7 @@ function publicChapterTasks(fetch: typeof globalThis.fetch, now: () => number, r
           let response: Response;
           try { response = await fetch(url, { method: "GET", headers: SEFARIA_REQUEST_HEADERS,
             credentials: "omit", redirect: "error", cache: "no-store", signal: local.signal }); }
-          catch { throw new StudyUnavailable("upstream"); }
+          catch (error) { throw causedBy(new StudyUnavailable("upstream"), error); }
           if (local.signal.aborted) { void response.body?.cancel().catch(() => {}); throw new StudyUnavailable("upstream"); }
           if (response.status !== 200 || response.redirected || response.url && response.url !== url.href
             || !/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(response.headers.get("content-type") ?? "")) {
@@ -199,7 +200,7 @@ export function createSefariaStudyReader(input: { fetch: typeof globalThis.fetch
         chapters: Object.freeze(plan.chapters.map(selection => { const result = results.get(selection.ref)!;
           return Object.freeze({ ref: selection.ref, sefariaUrl: `https://www.sefaria.org/${encodeURIComponent(selection.book)}.${selection.number}`,
             fetchedAt: result.fetchedAt, hash: result.hash, editions: Object.freeze(result.editions) }); })) });
-    } catch (error) { throw new StudyUnavailable(error instanceof StudyUnavailable ? error.code : "invalid-response"); }
+    } catch (error) { throw causedBy(new StudyUnavailable(error instanceof StudyUnavailable ? error.code : "invalid-response"), error); }
     finally {
       if (pageTimer) clearTimeout(pageTimer); controller.abort(); request.signal?.removeEventListener("abort", abort);
     }

@@ -24,10 +24,10 @@ const env = () => {
 const clients: Awaited<ReturnType<typeof authFixture>>[] = [];
 afterEach(async () => { await Promise.all(clients.splice(0).map((f) => f.client.close())); });
 async function safeUnavailable(action: () => unknown | Promise<unknown>) {
-  try { await action(); return false; } catch (error) { return error instanceof RuntimeUnavailable && error.message === "Service temporarily unavailable" && !("cause" in error); }
+  try { await action(); return false; } catch (error) { return error instanceof RuntimeUnavailable && error.message === "Service temporarily unavailable" && !Object.keys(error).includes("cause"); }
 }
 async function cacheDenied(action: () => Promise<unknown>) {
-  try { await action(); return false; } catch (error) { return error instanceof ReadingUnavailable && error.code === "cache" && !("cause" in error); }
+  try { await action(); return false; } catch (error) { return error instanceof ReadingUnavailable && error.code === "cache" && !Object.keys(error).includes("cause"); }
 }
 
 test("private configuration rejects aliases, environment contradictions, operator credentials and incomplete secrets without leaking inputs", async () => {

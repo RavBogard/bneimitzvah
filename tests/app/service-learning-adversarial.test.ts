@@ -118,7 +118,7 @@ test.each(["query", "artifact"])("unknown %s read failures expose only the fixed
   } catch (error) {
     expect(error).toBeInstanceOf(AccessUnavailable);
     expect(String(error)).toBe("AccessUnavailable: Access service unavailable");
-    expect(error).not.toHaveProperty("cause"); expect(JSON.stringify(error)).not.toContain(marker);
+    expect(Object.keys(error as object)).not.toContain("cause"); expect(JSON.stringify(error)).not.toContain(marker);
   }
 });
 

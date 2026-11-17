@@ -1,5 +1,6 @@
 import "server-only";
 import { createPrivateKey, createSign } from "node:crypto";
+import { causedBy, Unavailable } from "../logging/failure";
 
 // The owned roster Sheet (PLAN-REVIEW ruling 43; Daniel 2026-10-21: a free service account). The
 // key lives only in the encrypted GOOGLE_SHEETS_SERVICE_ACCOUNT variable Daniel set himself; it is
@@ -14,14 +15,15 @@ export const SHEET_ID = /^[A-Za-z0-9_-]{25,100}$/;
 
 export function parseServiceAccount(raw: unknown): ServiceAccount {
   try {
-    if (typeof raw !== "string" || raw.length > 8192) throw 0;
+    if (typeof raw !== "string" || raw.length > 8192) throw new Unavailable("roster-sheet/key-size");
     const value: unknown = JSON.parse(raw);
-    if (!value || typeof value !== "object") throw 0;
+    if (!value || typeof value !== "object") throw new Unavailable("roster-sheet/key-shape");
     const { type, client_email: email, private_key: key } = value as Record<string, unknown>;
-    if (type !== "service_account" || typeof email !== "string" || !/^[a-z0-9-]+@[a-z0-9-]+\.iam\.gserviceaccount\.com$/.test(email) || typeof key !== "string") throw 0;
+    if (type !== "service_account" || typeof email !== "string" || !/^[a-z0-9-]+@[a-z0-9-]+\.iam\.gserviceaccount\.com$/.test(email) || typeof key !== "string") throw new Unavailable("roster-sheet/key-fields");
     createPrivateKey(key); // Refuse a malformed key at startup, not at the first sync.
     return Object.freeze({ clientEmail: email, privateKey: key });
-  } catch { throw new SheetUnavailable("config"); }
+    // A JSON SyntaxError's message can quote key material: the failure log never writes a SyntaxError's message.
+  } catch (error) { throw causedBy(new SheetUnavailable("config"), error); }
 }
 
 const b64 = (value: string | Buffer) => Buffer.from(value).toString("base64url");
@@ -29,10 +31,13 @@ async function bounded(fetcher: typeof fetch, url: string, init: RequestInit, co
   let response: Response, text: string;
   // A network failure or timeout is reported like a refusal: Google was not reached.
   try { response = await fetcher(url, { ...init, redirect: "error", signal: AbortSignal.timeout(15_000) }); text = await response.text(); }
-  catch { throw new SheetUnavailable(code); }
-  if (!response.ok || text.length > 1_000_000) throw new SheetUnavailable(code);
+  catch (error) { throw causedBy(new SheetUnavailable(code), error); }
+  if (!response.ok || text.length > 1_000_000) {
+    const reason = response.ok ? new Unavailable("roster-sheet/google-answer-size") : response.status >= 500 ? new Unavailable("roster-sheet/google-5xx") : new Unavailable("roster-sheet/google-refused");
+    throw causedBy(new SheetUnavailable(code), reason);
+  }
   try { const value: unknown = text ? JSON.parse(text) : {}; return value && typeof value === "object" ? value as Record<string, unknown> : {}; }
-  catch { throw new SheetUnavailable(code); }
+  catch (error) { throw causedBy(new SheetUnavailable(code), error); }
 }
 
 /** A one-hour access token for the Sheets scope (RFC 7523 JWT bearer grant). */

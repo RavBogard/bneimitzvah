@@ -182,7 +182,7 @@ test("manual ranges can be confirmed with truthful unavailable provenance; autom
   f.loadReading.mockRejectedValue(new Error("Synthetic opaque provider diagnostic"));
   let sanitized=false;
   try{await f.studentsService.prepareReading(f.mutation(),{mode:"admin",studentId:id,ranges:["Genesis 1:1-3"]});}
-  catch(error){sanitized=error instanceof AccessUnavailable && error.message==="Access service unavailable" && !("cause" in error);}
+  catch(error){sanitized=error instanceof AccessUnavailable && error.message==="Access service unavailable" && !Object.keys(error).includes("cause");}
   expect(sanitized).toBe(true);
 });
 

@@ -8,6 +8,7 @@ import { discoverRelatedPage, sourcePageSelection, type SourcePageSelection } fr
 import { createStudyService, type StudySelection } from "./service";
 import { currentSettings } from "../data/tenant-settings";
 import { StudyUnavailable, type StudyPage, type StudyRequest } from "./types";
+import { recordFailure } from "../logging/failure";
 
 export function createStudySourceDiscoveryService<Q extends PgQueryResultHKT>(input: {
   access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>;
@@ -27,7 +28,7 @@ export function createStudySourceDiscoveryService<Q extends PgQueryResultHKT>(in
         if (!target || target.ref !== targetRef || publicRequest.signal?.aborted) throw new StudyUnavailable("upstream");
         let sourceOutcome: Outcome;
         try { sourceOutcome = discoverRelatedPage(await input.related(targetRef, publicRequest.signal ?? new AbortController().signal), targetRef, paging, preferred); }
-        catch { sourceOutcome = Object.freeze({ status: "unavailable" }); }
+        catch (error) { recordFailure(error, "study-sources/related"); sourceOutcome = Object.freeze({ status: "unavailable" }); }
         // Enum-only staged outcomes must pass the original final authorization.
         return { ...page, sourceOutcome };
       } });

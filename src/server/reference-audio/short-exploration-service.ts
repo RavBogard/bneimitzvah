@@ -7,6 +7,7 @@ import type { StudyPage } from "../study/types";
 import { ReferenceUnavailable, resolveReference, unavailableReference, type ReferenceCatalog } from "./catalog";
 import { findShortSource, readShortSourceEntry, type ShortSourceManifest } from "./short-source-manifest";
 import { parseReferenceShortResolution, REFERENCE_SHORT_RESOLUTION_SCHEMA, type ReferenceShortResolution } from "../../lib/reference-audio/short-resolution";
+import { causedBy } from "../logging/failure";
 
 type ShortPage = StudyPage & { references: readonly ReferenceShortResolution[] };
 /** Same existing exploration purpose and signed scope, never an assignment.
@@ -34,7 +35,7 @@ export function createShortExplorationService<Q extends PgQueryResultHKT>(input:
       });
       if (Buffer.byteLength(JSON.stringify(references)) > 1024 * 1024) throw new ReferenceUnavailable();
       live(); return { ...page, references: Object.freeze(references) };
-    } catch { throw new ReferenceUnavailable(); }
+    } catch (error) { throw causedBy(new ReferenceUnavailable(), error); }
   } });
   return Object.freeze({ async page(request: Parameters<typeof exploration.page>[0], selection: Parameters<typeof exploration.page>[1]) {
     const result = await exploration.page(request, selection); if (!result.ok) return result;

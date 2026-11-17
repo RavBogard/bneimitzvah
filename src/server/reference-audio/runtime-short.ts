@@ -5,6 +5,7 @@ import { createPublicShortHandler, type PublicShortHandler } from "./public-shor
 import type { ReferenceCatalogGet } from "./storage";
 import { createRuntimeShortMetadata } from "./runtime-short-metadata";
 import { reportShortDiagnostic } from "./short-diagnostic";
+import { causedBy, Unavailable } from "../logging/failure";
 
 type Environment = Readonly<Record<string, string | undefined>>;
 type Config = Readonly<{ origin: string; parentCatalogSHA256: string; manifestSHA256: string; storeId: string }>;
@@ -38,20 +39,20 @@ export function createRuntimePublicShort(env: Environment): PublicShortHandler {
   const get: ReferenceCatalogGet = async (path, { signal }) => {
     let stream: ReadableStream<Uint8Array> | undefined;
     try {
-      if (!current() || signal.aborted || !/^reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$/.test(path)) throw 0;
+      if (!current() || signal.aborted || !/^reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$/.test(path)) throw new Unavailable("reference-short/path-or-state");
       const { getContext } = await import("@vercel/oidc");
-      if (!current() || signal.aborted) throw 0;
+      if (!current() || signal.aborted) throw new Unavailable("reference-short/stale-before-token");
       const token = getContext().headers?.["x-vercel-oidc-token"];
-      if (typeof token !== "string" || token.length < 1 || token.length > 16384 || token.trim() !== token || /[\s\x00-\x1f\x7f]/.test(token)) throw 0;
+      if (typeof token !== "string" || token.length < 1 || token.length > 16384 || token.trim() !== token || /[\s\x00-\x1f\x7f]/.test(token)) throw new Unavailable("reference-short/oidc-token-shape");
       const { get: blobGet } = await import("@vercel/blob");
-      if (!current() || signal.aborted || getContext().headers?.["x-vercel-oidc-token"] !== token) throw 0;
+      if (!current() || signal.aborted || getContext().headers?.["x-vercel-oidc-token"] !== token) throw new Unavailable("reference-short/oidc-token-changed");
       const result = await blobGet(path, { access: "private", storeId: config.storeId, oidcToken: token, abortSignal: signal, useCache: false });
       stream = result?.stream ?? undefined;
-      if (!current() || signal.aborted || getContext().headers?.["x-vercel-oidc-token"] !== token || result?.statusCode !== 200 || !(stream instanceof ReadableStream)) throw 0;
+      if (!current() || signal.aborted || getContext().headers?.["x-vercel-oidc-token"] !== token || result?.statusCode !== 200 || !(stream instanceof ReadableStream)) throw new Unavailable("reference-short/blob-response");
       return stream;
-    } catch {
+    } catch (error) {
       try { if (stream) void stream.cancel().catch(() => {}); } catch {}
-      throw new ReferenceUnavailable();
+      throw causedBy(new ReferenceUnavailable(), error);
     }
   };
   return createPublicShortHandler({ ...config, get, live: current, loadManifest: metadata.loadManifest });

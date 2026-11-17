@@ -10,6 +10,7 @@ import { StudyUnavailable, type StudyPage, type StudyRequest } from "../study/ty
 import { ReferenceUnavailable, resolveReference, unavailableReference, type ReferenceCatalog } from "./catalog";
 import { findShortSource, readShortSourceEntry, type ShortSourceManifest } from "./short-source-manifest";
 import { parseReferenceShortResolution, REFERENCE_SHORT_RESOLUTION_SCHEMA, type ReferenceShortResolution } from "../../lib/reference-audio/short-resolution";
+import { causedBy } from "../logging/failure";
 
 export const SHORT_REFERENCE_PAGE_LIMITS = Object.freeze({ verses: 100, bytes: 1024 * 1024 });
 
@@ -47,7 +48,7 @@ export function createShortReferenceAudioService<Q extends PgQueryResultHKT>(inp
           });
           if (new TextEncoder().encode(JSON.stringify(references)).byteLength > SHORT_REFERENCE_PAGE_LIMITS.bytes) throw new ReferenceUnavailable();
           live(); return { ...page, references: Object.freeze(references) };
-        } catch { throw new ReferenceUnavailable(); }
+        } catch (error) { throw causedBy(new ReferenceUnavailable(), error); }
       } });
     const result = await study.read(request, selection);
     if (!result.ok) return result;

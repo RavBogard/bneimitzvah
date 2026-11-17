@@ -97,7 +97,7 @@ test("pending primitives reject bad configured origins and keep their captured c
     { origin: "https://bneimitzvah.centralreform.org", environment: "preview" }, { secret: "short" }, { origin: origin + "/" }]) {
     let safe = false;
     try { createPendingInvitations({ ...f.input, ...change } as typeof f.input); }
-    catch (error) { safe = error instanceof Error && error.message === "Pending invitation configuration unavailable" && !("cause" in error); }
+    catch (error) { safe = error instanceof Error && error.message === "Pending invitation configuration unavailable" && !Object.keys(error).includes("cause"); }
     expect(safe).toBe(true);
   }
   f.input.origin = "http://localhost:3100";

@@ -17,7 +17,7 @@ function link(kind: "invitation" | "magic-link") {
 }
 async function safeFailure(action: () => Promise<unknown>) {
   try { await action(); return false; }
-  catch (error) { return error instanceof RuntimeUnavailable && error.message === "Service temporarily unavailable" && !("cause" in error); }
+  catch (error) { return error instanceof RuntimeUnavailable && error.message === "Service temporarily unavailable" && !Object.keys(error).includes("cause"); }
 }
 
 test("both mail kinds use the fixed Resend endpoint and plain text with no tracking payload or returned token", async () => {

@@ -112,7 +112,7 @@ test("SDK adapter preserves separate session/state/deletion cookies including Ex
     const target = new Headers(); const invalid = new Headers(); invalid.append("set-cookie", source.getSetCookie()[0]); invalid.append("set-cookie", bad);
     let safe = false;
     try { appendSdkCookies(target, invalid, "https://synthetic.example.test"); }
-    catch (error) { safe = error instanceof Error && error.message === "Authentication response unavailable" && !("cause" in error); }
+    catch (error) { safe = error instanceof Error && error.message === "Authentication response unavailable" && !Object.keys(error).includes("cause"); }
     expect(safe).toBe(true);
     expect(target.getSetCookie().length).toBe(0);
   }

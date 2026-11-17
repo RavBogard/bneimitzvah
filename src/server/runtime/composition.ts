@@ -84,6 +84,7 @@ import { createServicePartFinished } from "../service-course/finished";
 import { createPracticeVisibilityService } from "../practice-visibility/service";
 import { createCeremonyDoneService } from "../students/ceremony-done";
 import { createLogger } from "../logging/logger";
+import { causedBy, recordFailure, Unavailable } from "../logging/failure";
 import type { HostFrame } from "../logging/logger";
 import { loadRuntimeConfig, type RuntimeConfig } from "./config";
 import { RuntimeUnavailable } from "./errors";
@@ -114,19 +115,19 @@ export function createRuntimeReferenceLoader(config: RuntimeConfig["referenceAud
     let result: Awaited<ReturnType<typeof import("@vercel/blob")["get"]>>;
     try {
       // These are the pinned SDK's endpoint override names, never request input.
-      if (process.env.VERCEL_BLOB_API_URL !== undefined || process.env.NEXT_PUBLIC_VERCEL_BLOB_API_URL !== undefined) throw 0;
+      if (process.env.VERCEL_BLOB_API_URL !== undefined || process.env.NEXT_PUBLIC_VERCEL_BLOB_API_URL !== undefined) throw new Unavailable("reference-catalog/blob-endpoint-override");
       const { getContext } = await import("@vercel/oidc");
-      if (signal.aborted) throw 0;
+      if (signal.aborted) throw new Unavailable("reference-catalog/aborted");
       const token = getContext().headers?.["x-vercel-oidc-token"];
-      if (typeof token !== "string" || token.length < 1 || token.length > 16384 || token.trim() !== token || /[\s\x00-\x1f\x7f]/.test(token)) throw 0;
+      if (typeof token !== "string" || token.length < 1 || token.length > 16384 || token.trim() !== token || /[\s\x00-\x1f\x7f]/.test(token)) throw new Unavailable("reference-catalog/oidc-token-shape");
       const { get } = await import("@vercel/blob");
-      if (signal.aborted || getContext().headers?.["x-vercel-oidc-token"] !== token) throw 0;
+      if (signal.aborted || getContext().headers?.["x-vercel-oidc-token"] !== token) throw new Unavailable("reference-catalog/oidc-token-changed");
       result = await get(path, { access: "private", storeId, oidcToken: token, abortSignal: signal, useCache: false });
-      if (signal.aborted || getContext().headers?.["x-vercel-oidc-token"] !== token || !result || result.statusCode !== 200 || !(result.stream instanceof ReadableStream)) throw 0;
+      if (signal.aborted || getContext().headers?.["x-vercel-oidc-token"] !== token || !result || result.statusCode !== 200 || !(result.stream instanceof ReadableStream)) throw new Unavailable("reference-catalog/blob-response");
       return result.stream;
-    } catch {
+    } catch (error) {
       try { if (result!?.stream) void result!.stream.cancel().catch(() => {}); } catch {}
-      throw new ReferenceUnavailable();
+      throw causedBy(new ReferenceUnavailable(), error);
     }
   } });
   const key = `${storeId}:${catalogSha256}`;
@@ -156,7 +157,7 @@ async function dispatchNotificationJobs(config: RuntimeConfig, fetch: typeof glo
   const pool = new Pool({ connectionString: config.databaseUrl, max: 2, connectionTimeoutMillis: 5000, idleTimeoutMillis: 1000, statement_timeout: 10000, query_timeout: 12000 });
   pool.on("error", () => undefined);
   try { await notificationDelivery(config, drizzle(pool, { schema, logger: false }), fetch).deliverPending(tenantId); }
-  catch { /* The morning run sends anything still pending. */ }
+  catch (error) { recordFailure(error, "notifications/background-delivery"); /* The morning run sends anything still pending. */ }
   finally { await pool.end().catch(() => undefined); }
 }
 export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig, db: AccessDatabase<Q>, fetch: typeof globalThis.fetch,
@@ -167,6 +168,12 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   // One email carries the link and a typed code (1.5). If the code cannot be created, nothing is sent.
   const auth = createAuthStack(db, schema, { origin: config.origin, secret: config.authSecret, google: config.google, codeSecret: purposeSecret(config, "sign-in-code"),
     sendMagicLink: async ({ email, url, token }) => {
+      // The SDK turns a throw here into its own 500 and drops the error, so it is written here (server-side only,
+      // never the address: redact.ts scrubs emails from every message) and rethrown unchanged.
+      try { await sendSignIn(email, url, token); }
+      catch (error) { recordFailure(error, "auth/send-magic-link"); throw error; }
+    } });
+  const sendSignIn = async (email: string, url: string, token: string) => {
       const link = projectMagicLink(url, token, config.origin);
       // The congregation this deployment's origin serves names the product (E1). Read before a code exists, so a
       // failure leaves no code behind and sends nothing.
@@ -176,7 +183,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
       // Past 3 codes for this address in the hour, the email carries the link only (review §2.8 finding 1).
       const code = await signInCodeCap.claimCode(email) ? await auth.api.createVerificationOTP({ body: { email, type: "sign-in" } }) : null;
       await send("magic-link", { email, url: link, productName, code });
-    } });
+  };
   const signInCodeCap = createSignInCodeCap({ db, secret: purposeSecret(config, "sign-in-code-cap"), capped: event => createLogger().signInCodeCapped(event) });
   const signInCodes = createSignInCodeBindings({ origin: config.origin, secret: purposeSecret(config, "sign-in-code-binding") });
   const access = createAccessService({ db, auth, deployment: config.deployment });
@@ -286,7 +293,7 @@ export function createRuntimeScope(env: () => Readonly<Record<string, string | u
       if (typeof globalThis.WebSocket !== "function") throw new RuntimeUnavailable();
       pool = new Pool({ connectionString: config.databaseUrl, max: 4, connectionTimeoutMillis: 5000, idleTimeoutMillis: 1000,
         statement_timeout: 10000, query_timeout: 12000 });
-      pool.on("error", () => log.emit("runtime.unavailable", 503));
+      pool.on("error", (error: unknown) => recordFailure(error, "runtime/pool-error"));
       const db = drizzle(pool, { schema, logger: false });
       // Before ANY auth/global-cache use, reject elevated login/owner/member
       // identities with the same live-role check used by capability services.
@@ -295,17 +302,18 @@ export function createRuntimeScope(env: () => Readonly<Record<string, string | u
       await runtime.resolveHost({ url: config.origin, headers: new Headers() }, "configured");
       return await action(runtime);
     } catch (error) {
-      // Callback errors are mutable and may carry private diagnostics even when
-      // they began as a service denial. Copy only a closed validated status,
-      // never their message/name/stack/properties/cause or object identity.
+      // A denial is rethrown as a fresh AccessDenied carrying only a closed validated status. Anything else is an
+      // unexpected failure: written once through the redacting failure log (logging/redact.ts decides every field),
+      // then rethrown as the same fixed RuntimeUnavailable, with the original kept as its non-enumerable cause.
+      // The client still receives only the fixed 503 (errorResponse reads no message, name, stack or cause).
       let denialStatus: unknown;
       try { if (error instanceof AccessDenied) denialStatus = error.status; } catch { /* Untrusted diagnostic accessor. */ }
       if (denialStatus === 401 || denialStatus === 403 || denialStatus === 404) {
         log.emit("request.complete", denialStatus);
         throw new AccessDenied(denialStatus);
       }
-      log.emit("runtime.unavailable", 503);
-      throw new RuntimeUnavailable();
-    } finally { if (pool) await pool.end().catch(() => log.emit("runtime.unavailable", 503)); }
+      recordFailure(error, "runtime/scope", 503);
+      throw causedBy(new RuntimeUnavailable(), error);
+    } finally { if (pool) await pool.end().catch(error => recordFailure(error, "runtime/pool-close")); }
   };
 }

@@ -30,6 +30,7 @@ import { expandReadingRanges } from "../../lib/readings/ranges";
 import { SCOPES } from "./oauth";
 import { GOOGLE_CONSENT_WINDOW_MS, type McpActor } from "./service";
 import type { Tool, ToolContext } from "./tools";
+import { recordFailure } from "../logging/failure";
 
 // Student setup through the portal MCP (Daniel, 2026-10-21: "Add setup + sources"): the rabbi's Claude
 // sets a student's reading, tutors, service slot, rehearsals and verse sources. Since 2026-10-26 ("It should be
@@ -248,7 +249,7 @@ export function createSetupTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>
         if ("ok" in head) return { ok: false, code: head.code, hint: SOURCE_HINTS[head.code] };
         let catalog;
         try { catalog = projectRelatedCatalog(await ctx.related(verse, ctx.signal), verse); }
-        catch { return { ok: false, code: "sources-unavailable", hint: "Sefaria's source list for this verse could not be read just now; try again." }; }
+        catch (error) { recordFailure(error, "mcp/setup-related-sources"); return { ok: false, code: "sources-unavailable", hint: "Sefaria's source list for this verse could not be read just now; try again." }; }
         const words = typeof input.query === "string" ? input.query.toLowerCase().split(/\s+/).filter(Boolean) : [];
         const all = preferredFirst(catalog.entries, head.preferred), matched = all.filter(e => words.every(w => [e.labels.en, e.labels.he, e.indexTitle, e.ref, e.category].some(x => x?.toLowerCase().includes(w))));
         const offset = (input.offset as number | undefined) ?? 0, limit = (input.limit as number | undefined) ?? 25, page = matched.slice(offset, offset + limit);

@@ -13,6 +13,7 @@ import { writeTutorAssignment } from "../relationships/service";
 import { isCeremonyDone } from "../data/ceremony-done";
 import type { InvitedRole } from "../data/invitations";
 import { createInvitationSecret, hashInvitationToken, invitationLifetimeMs, normalizedInvitationEmail } from "./tokens";
+import { causedBy } from "../logging/failure";
 
 // The transport is given the role and the expiry so the email can name them; it is never given a student, so no
 // child's name can reach a subject or a body (decision 12).
@@ -35,7 +36,7 @@ function invitationListRow(row: Awaited<ReturnType<typeof data.listInvitations>>
     return value;
   };
   let email: string;
-  try { email = normalizedInvitationEmail(row.recipientEmail); } catch { throw new AccessUnavailable(); }
+  try { email = normalizedInvitationEmail(row.recipientEmail); } catch (error) { throw causedBy(new AccessUnavailable(), error); }
   if (email !== row.recipientEmail || !uuid.test(row.id) || !["parent", "student", "tutor"].includes(row.role)) throw new AccessUnavailable();
   const created = timestamp(row.createdAt), expires = timestamp(row.expiresAt);
   const accepted = row.acceptedAt === null ? null : timestamp(row.acceptedAt), revoked = row.revokedAt === null ? null : timestamp(row.revokedAt);

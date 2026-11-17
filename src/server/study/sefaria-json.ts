@@ -1,4 +1,5 @@
 import "server-only";
+import { causedBy } from "../logging/failure";
 
 /**
  * One bounded GET to Sefaria's public API: a deadline, a byte cap, JSON only, no redirects, no
@@ -22,7 +23,7 @@ export async function fetchSefariaJson(fetch: typeof globalThis.fetch, url: URL,
     return await Promise.race([ended, (async () => {
       let response: Response;
       try { response = await fetch(url, { method: "GET", headers: SEFARIA_REQUEST_HEADERS, credentials: "omit", redirect: "error", cache: "no-store", signal: local.signal }); }
-      catch { throw new SefariaJsonUnavailable(); }
+      catch (error) { throw causedBy(new SefariaJsonUnavailable(), error); }
       const length = response.headers.get("content-length");
       if (response.redirected || response.url && response.url !== url.href || !/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(response.headers.get("content-type") ?? "")
         || length !== null && (!/^\d+$/.test(length) || Number(length) > limits.maxBytes) || !response.body) {
@@ -40,10 +41,10 @@ export async function fetchSefariaJson(fetch: typeof globalThis.fetch, url: URL,
         text += decoder.decode(part.value, { stream: true });
       }
       let json: unknown;
-      try { json = JSON.parse(text + decoder.decode()); } catch { throw new SefariaJsonUnavailable(); }
+      try { json = JSON.parse(text + decoder.decode()); } catch (error) { throw causedBy(new SefariaJsonUnavailable(), error); }
       return Object.freeze({ status: response.status, json });
     })()]);
-  } catch { throw new SefariaJsonUnavailable(); }
+  } catch (error) { throw causedBy(new SefariaJsonUnavailable(), error); }
   finally {
     clearTimeout(timer); local.abort(); signal?.removeEventListener("abort", stop);
     void reader?.cancel().catch(() => {});

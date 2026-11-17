@@ -27,7 +27,7 @@ import { budgetedStepSource, createPublicReadingService, PUBLIC_TENANT } from ".
 import { createStepSource } from "../study/lexical/source";
 import type { PublicRuntime, PublicRuntimeScope } from "../http/public-reading";
 import type { PageViewRuntime, PageViewScope } from "../http/page-views";
-import { createLogger } from "../logging/logger";
+import { causedBy, recordFailure } from "../logging/failure";
 import { loadRuntimeConfig, type RuntimeConfig } from "./config";
 import { RuntimeUnavailable } from "./errors";
 import { sharedStudyTasks } from "./composition";
@@ -110,20 +110,20 @@ export function createPageViewScope(env: () => Environment = () => process.env):
 /** One short-lived pool per request for a signed-out runtime, after the restricted-role preflight; failures are one closed 503. */
 function publicScope<R>(env: () => Environment, compose: (config: RuntimeConfig, db: NeonDatabase<typeof schema>, values: Environment) => R): (action: (runtime: R) => Promise<Response>) => Promise<Response> {
   return async action => {
-    const log = createLogger().request();
     let pool: Pool | undefined;
     try {
       const values = env(), config = loadRuntimeConfig(values);
       if (typeof globalThis.WebSocket !== "function") throw new RuntimeUnavailable();
       pool = new Pool({ connectionString: config.databaseUrl, max: 2, connectionTimeoutMillis: 5000, idleTimeoutMillis: 1000, statement_timeout: 10000, query_timeout: 12000 });
-      pool.on("error", () => log.emit("runtime.unavailable", 503));
+      pool.on("error", (error: unknown) => recordFailure(error, "public-runtime/pool-error"));
       const db = drizzle(pool, { schema, logger: false });
       // Same restricted, non-owner role check the signed-in runtime runs first.
       await withTenantTransaction(db, { tenantId: PUBLIC_TENANT }, async () => undefined);
       return await action(compose(config, db, values));
-    } catch {
-      log.emit("runtime.unavailable", 503);
-      throw new RuntimeUnavailable();
-    } finally { if (pool) await pool.end().catch(() => log.emit("runtime.unavailable", 503)); }
+    } catch (error) {
+      // Written once through the redacting failure log; the caller still answers the same fixed 503.
+      recordFailure(error, "public-runtime/scope", 503);
+      throw causedBy(new RuntimeUnavailable(), error);
+    } finally { if (pool) await pool.end().catch(error => recordFailure(error, "public-runtime/pool-close")); }
   };
 }

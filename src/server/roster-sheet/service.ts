@@ -7,6 +7,7 @@ import type { AccessDatabase, AccessRequest } from "../access/types";
 import { withTenantTransaction } from "../db/runtime";
 import { accessToken, replaceSheet, SheetUnavailable, type ServiceAccount } from "./google";
 import { rosterRows } from "./rows";
+import { recordFailure } from "../logging/failure";
 
 export type RosterSheetConfig = Readonly<{ account: ServiceAccount; sheetId: string }>;
 export type RosterSyncResult = Readonly<{ ok: true; students: number; at: string }> | Readonly<{ ok: false; reason: "not-configured" | "google" }>;
@@ -26,7 +27,10 @@ export function createRosterSheetService<Q extends PgQueryResultHKT>(input: {
     try {
       const token = await accessToken(input.config.account, input.fetch);
       await replaceSheet(input.config.sheetId, rows, token, input.fetch);
-    } catch (error) { if (error instanceof SheetUnavailable) return Object.freeze({ ok: false, reason: "google" }); throw error; }
+    } catch (error) {
+      if (error instanceof SheetUnavailable) { recordFailure(error, "roster-sheet/sync"); return Object.freeze({ ok: false, reason: "google" }); }
+      throw error;
+    }
     return Object.freeze({ ok: true, students: rows.length - 1, at: new Date().toISOString() });
   }
   return Object.freeze({

@@ -1,6 +1,7 @@
 import "server-only";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { AccessDenied } from "../access/errors";
+import { recordIfUnexpected } from "../http/responses";
 import { errorResult, textResult, validateInput, type Tool, type ToolContext, type ToolResult } from "./tools";
 
 // The MCP Streamable HTTP transport, stateless and JSON-only, as in the haftarah connector: every
@@ -91,5 +92,5 @@ export async function answerRpc<Q extends PgQueryResultHKT>(body: unknown, input
       }
       default: return rpcError(id, -32601, "Method not found");
     }
-  } catch { return rpcError(id, -32603, "Internal error"); }
+  } catch (error) { recordIfUnexpected(error, "mcp/rpc"); return rpcError(id, -32603, "Internal error"); }
 }

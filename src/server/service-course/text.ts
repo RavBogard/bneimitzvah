@@ -7,6 +7,7 @@ import * as s from "../db/index";
 import { CourseTextInvalid, courseTextAnswer, parsePublicCourseFeed, type PublicCourseFeed } from "./public-feed";
 import { PUBLIC_COURSE_TEXT, type CourseTextPins } from "./pin";
 import type { ServiceText } from "../../lib/service-course/text";
+import { causedBy } from "../logging/failure";
 
 /**
  * The congregation's active public build of one volume, read inside its tenant transaction (forced row security), checked
@@ -47,7 +48,7 @@ export async function readCourseText<Q extends PgQueryResultHKT>(tx: AccessTrans
     if (parsed.size > 4) parsed.clear();
     parsed.set(row.identity, feed);
     return feed;
-  } catch { throw new CourseTextUnavailable("unavailable"); }
+  } catch (error) { throw causedBy(new CourseTextUnavailable("unavailable"), error); }
 }
 
 /** One unit's answer, or not-found for a unit the build does not carry (the route already refused any unit the course does not name). */

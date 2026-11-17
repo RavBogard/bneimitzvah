@@ -72,7 +72,7 @@ test("actual access callbacks enforce mode/tenant boundaries, column grants and 
   }
   const requestId=newRequestId();
   let sanitized=false;
-  try{await write(f,requestId,{fail:true});}catch(error){sanitized=error instanceof AccessUnavailable && error.message==="Access service unavailable" && !("cause" in error);}
+  try{await write(f,requestId,{fail:true});}catch(error){sanitized=error instanceof AccessUnavailable && error.message==="Access service unavailable" && !Object.keys(error).includes("cause");}
   expect(sanitized).toBe(true);
   expect((await f.ownerDb.select({id:s.assignment.id}).from(s.assignment)).length).toBe(0);
   expect((await f.ownerDb.select({id:s.auditEvent.id}).from(s.auditEvent).where(eq(s.auditEvent.requestId,requestId))).length).toBe(0);

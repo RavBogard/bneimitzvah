@@ -205,7 +205,7 @@ it("caller cancellation reaches a stalled response reader and rejects without re
   catch (error) {
     expect(error).toBeInstanceOf(StudyUnavailable); expect(error === providerError).toBe(false);
     expect(error).toMatchObject({ message: "Study text unavailable", code: "upstream" });
-    expect((error as Error).cause).toBeUndefined();
+    expect(Object.keys(error as object)).not.toContain("cause");
   }
 });
 
