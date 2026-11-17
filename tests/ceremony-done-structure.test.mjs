@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 // Release 1.9 N21, "Ceremony done": structural guards. Row security (0049) is the enforcement; these keep the code shaped so that
 // only the ceremony-done service names the writer and calls the writes, the one route is admin-only, and every active list
-// (admin and tutor lists, tutor relationships, the staff Sheet) filters on the state.
+// (admin and tutor lists, tutor relationships) filters on the state.
 const root = fileURLToPath(new URL("../", import.meta.url));
 async function files(dir) {
   const out = [];
@@ -46,6 +46,5 @@ test("the service is admin-only, inside withAdminCapability, on a same-origin PO
 test("every active list and the tutor relationship filter on the state", () => {
   assert.match(text("src/server/data/students.ts"), /actor\.mode === "admin" \|\| actor\.mode === "tutor" \? notCeremonyDone\(s\.student\.tenantId, s\.student\.id\)/);
   assert.match(text("src/server/data/authority.ts"), /isNull\(s\.tutorStudent\.revokedAt\),[\s\S]{0,400}notCeremonyDone\(s\.tutorStudent\.tenantId, s\.tutorStudent\.studentId\)/);
-  assert.match(text("src/server/roster-sheet/rows.ts"), /isNull\(s\.student\.disabledAt\), notCeremonyDone\(s\.student\.tenantId, s\.student\.id\)/);
   assert.match(text("src/server/relationships/service.ts"), /if \(await isCeremonyDone\(tx, actor\.tenantId, studentId\)\) return conflict\(\);\s*if \(await data\.activeTutorLink/);
 });

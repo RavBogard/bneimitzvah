@@ -47,7 +47,7 @@ test("the views are named only by the migration and the data module; the data mo
 });
 
 test("no MCP, cron, Sheet, export, notification, public or other staff module reaches practice visibility", () => {
-  for (const file of sources.filter(file => /^src\/server\/(mcp|notifications|roster-sheet|relationships|students|study-guides|connections|settings|invitations|saved|course-progress|service-learning|service-course|portal|offline|accounts|practice-calendar|lesson-log|verse-review|public-site|public-reading|staff)\//.test(file.path) || /^scripts\//.test(file.path))) {
+  for (const file of sources.filter(file => /^src\/server\/(mcp|notifications|relationships|students|study-guides|connections|settings|invitations|saved|course-progress|service-learning|service-course|portal|offline|accounts|practice-calendar|lesson-log|verse-review|public-site|public-reading|staff)\//.test(file.path) || /^scripts\//.test(file.path))) {
     for (const spec of importsOf(file.text)) assert.doesNotMatch(spec, /practice-visibility/, `${file.path} imports ${spec}`);
     assert.doesNotMatch(file.text, /practiceVisibility|practice_visibility|practice-visibility/, file.path);
   }

@@ -14,7 +14,7 @@ Amended 2026-10-16: Astra owns product direction, architecture, ambiguous decisi
 
 ## Users
 
-CRC child and adult Beit Mitzvah students, including children under 13, practice their assigned reading and service parts. The rabbi sets child/adult status; parent contact is required for children and optional for adults. Clergy, staff, song leaders, independent tutors and parent volunteers all use the tutor role for assigned students; there is no pay tracking. The rabbi/admin sets assignments and congregation defaults. Parents follow linked children through a dashboard that is read-only except for honors. Office staff read the owned roster Sheet; no new staff role is implied.
+CRC child and adult Beit Mitzvah students, including children under 13, practice their assigned reading and service parts. The rabbi sets child/adult status; parent contact is required for children and optional for adults. Clergy, staff, song leaders, independent tutors and parent volunteers all use the tutor role for assigned students; there is no pay tracking. The rabbi/admin sets assignments and congregation defaults. Parents follow linked children through a dashboard that is read-only except for honors. No new staff role is implied.
 
 Daniel confirmed on 2026-10-15 that all three settings matter: independent practice on a phone, independent practice on a laptop or tablet, and tutor-led lessons. Much tutoring happens on Zoom.
 

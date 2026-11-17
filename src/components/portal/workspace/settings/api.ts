@@ -2,8 +2,8 @@ import { PortalRequestError } from "../../api";
 import { DEFAULT_SIDDUR_URL, SETTINGS_LIMITS, settingsParagraph, settingsUrl, validateSettings, type CongregationSettings, type ServiceSetting, type ServiceSlot } from "../../../../server/settings/validation";
 
 export type SettingsView = { version: number; settings: CongregationSettings; updatedAt: string | null; defaults: { rabbiDisplayName: string; siddurUrl: string };
-  /** G21: the operator's email switch, and whether this congregation sets its own roster sheet here. Absent from an older server: email unknown, field shown. */
-  portal: { email: boolean | null; rosterSheetId: boolean } };
+  /** G21: the operator's email switch. Absent from an older server: email unknown. */
+  portal: { email: boolean | null } };
 export type SaveOutcome = { ok: true; version: number } | { ok: false; code: "conflict" | "no-change" | "invalid"; problems: string[] };
 export type Links = { siddurUrl: string; musicUrl: string | null };
 export type ServiceSettings = Partial<Record<ServiceSlot, ServiceSetting>>;
@@ -33,8 +33,8 @@ async function request(path: string, body?: object, signal?: AbortSignal): Promi
 
 export function parseSettingsView(value: unknown): SettingsView {
   const view = object(object(value, ["ok", "view"]).view, ["version", "settings", "updatedAt", "defaults"], ["portal"]);
-  const portal = view.portal === undefined ? null : object(view.portal, ["email", "rosterSheetId"]);
-  if (portal && (typeof portal.email !== "boolean" || typeof portal.rosterSheetId !== "boolean")) return bad();
+  const portal = view.portal === undefined ? null : object(view.portal, ["email"]);
+  if (portal && typeof portal.email !== "boolean") return bad();
   if (!Number.isSafeInteger(view.version) || Number(view.version) < 0) return bad();
   const checked = validateSettings(view.settings); if (!checked.ok) return bad();
   const defaults = object(view.defaults, ["rabbiDisplayName", "siddurUrl"]);
@@ -42,7 +42,7 @@ export function parseSettingsView(value: unknown): SettingsView {
   if (!settingsUrl(defaults.siddurUrl)) return bad();
   return { version: Number(view.version), settings: checked.value, updatedAt: view.updatedAt as string | null,
     defaults: { rabbiDisplayName: line(defaults.rabbiDisplayName, 80), siddurUrl: defaults.siddurUrl },
-    portal: portal ? { email: portal.email as boolean, rosterSheetId: portal.rosterSheetId as boolean } : { email: null, rosterSheetId: true } };
+    portal: portal ? { email: portal.email as boolean } : { email: null } };
 }
 export function parseSaveOutcome(status: number, value: unknown): SaveOutcome {
   if (status === 200) {

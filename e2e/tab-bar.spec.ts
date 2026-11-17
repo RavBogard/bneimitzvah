@@ -119,17 +119,14 @@ test.describe("at 390px", () => {
       await expect(main.getByRole("link", { name: new RegExp(`^${name}`) })).toBeVisible();
       await onScreen(name, main.getByRole("link", { name: new RegExp(`^${name}`) }));
     }
-    await expect(main.getByRole("button", { name: "Update the staff roster Sheet", exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    // Each area opens from More, keeps More as the current tab, and Students no longer carries the staff Sheet button.
+    // Each area opens from More and keeps More as the current tab. The staff Sheet button went with the Sheet (2026-11-17).
     for (const [name, heading] of [["Settings", "Congregation settings"], ["Email settings", "Email settings"], ["Claude connections", "Claude connections"], ["Guides", "Guides"]] as const) {
       await page.goto("/workspace/more");
       await main.getByRole("link", { name: new RegExp(`^${name}`) }).click();
       await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
       await expect(tab(page, "More")).toHaveAttribute("aria-current", "page");
     }
-    await page.goto("/workspace/admin/students");
-    await expect(main.getByRole("button", { name: "Update staff Sheet" })).toHaveCount(0);
   });
 
   test("a keyboard user reaches the tab bar with one skip link", async ({ page }) => {

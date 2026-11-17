@@ -46,7 +46,6 @@
 
 /* More: the one action that is not a link. */
 .moreNote { margin: 1rem 0 0; color: var(--color-muted); font-size: 0.9375rem; }
-.moreAction { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin: 1.5rem 0 0; }
 
 @media (prefers-reduced-motion: reduce) { .tab { transition: none; } }
 @media print { .bar { display: none; } :global(body):has(:global(.portal-shell) > .bar) { padding-bottom: 0; } :global(.portal-shell):has(> .bar) { padding-bottom: 0; padding-inline-start: 0; } :global(.portal-shell):has(> .bar) > :global(.site-bar) { position: static; margin-inline: 0; padding-inline: 0; } }

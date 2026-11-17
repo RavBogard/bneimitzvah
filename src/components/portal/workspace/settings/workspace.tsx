@@ -7,6 +7,7 @@ import { resetCongregationRead } from "./links";
 import { Button, Chip, PageHeader } from "../../../ui";
 
 type Draft = { rabbiDisplayName: string; preferredSources: string; morningLabel: string; morningStart: string; havdalahLabel: string; havdalahStart: string;
+  // rosterSheetId has no field since the roster Sheet was removed (Daniel, 2026-11-17); a value saved before then is kept as it is.
   siddurUrl: string; musicUrl: string; rosterSheetId: string; consentNotice: string; digestWeekday: string };
 type Field = keyof Draft;
 type Switches = Required<Pick<NotificationSettings, "weeklyDigest" | "studentReminder">>;
@@ -14,7 +15,7 @@ type Switch = keyof Switches;
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
 const fieldFor: Record<string, Field[]> = {
   rabbiDisplayName: ["rabbiDisplayName"], preferredSources: ["preferredSources"], "services.morning": ["morningLabel", "morningStart"], "services.havdalah": ["havdalahLabel", "havdalahStart"],
-  siddurUrl: ["siddurUrl"], musicUrl: ["musicUrl"], rosterSheetId: ["rosterSheetId"], consentNotice: ["consentNotice"], notifications: ["digestWeekday"],
+  siddurUrl: ["siddurUrl"], musicUrl: ["musicUrl"], consentNotice: ["consentNotice"], notifications: ["digestWeekday"],
 };
 const messages: Record<string, string> = {
   rabbiDisplayName: `Use one line of up to ${SETTINGS_LIMITS.rabbiDisplayName} characters, without < or >.`,
@@ -23,7 +24,6 @@ const messages: Record<string, string> = {
   "services.havdalah": "Use a name of up to 40 characters and a start time such as 16:00.",
   siddurUrl: "Use a full https:// link on centralreform.org or centralreform.live.",
   musicUrl: "Use a full https:// link on centralreform.org or centralreform.live.",
-  rosterSheetId: "Paste the code from the sheet’s address, between /d/ and /edit.",
   consentNotice: `Keep the notice to ${SETTINGS_LIMITS.consentNotice} characters, without < or >.`,
   notifications: "Choose a day of the week for weekly updates.",
 };
@@ -147,8 +147,7 @@ function CongregationSettingsPage() {
           {field("siddurUrl", "Siddur link", textInput("siddurUrl", { type: "url", inputMode: "url", placeholder: view.defaults.siddurUrl }), <>Left blank, the link stays {view.defaults.siddurUrl}</>)}
           {field("musicUrl", "Music link", textInput("musicUrl", { type: "url", inputMode: "url" }), "Left blank, no music link is shown.")}
         </section>
-        <section className="people-card" aria-labelledby="settings-records"><div className="people-card-head"><h2 id="settings-records">Roster and families</h2></div>
-          {view.portal.rosterSheetId && field("rosterSheetId", "Roster sheet ID", textInput("rosterSheetId", { maxLength: 100 }), "Kept for a future congregation’s roster sheet. The CRC roster sheet is set by the portal’s operator, not here.")}
+        <section className="people-card" aria-labelledby="settings-records"><div className="people-card-head"><h2 id="settings-records">Families</h2></div>
           {field("consentNotice", "Consent notice", textArea("consentNotice", 4, SETTINGS_LIMITS.consentNotice),
             "Parents see it in their child’s preparation summary. Say what is stored, who hears it and when it is deleted. Left blank, no notice is shown.")}
         </section>

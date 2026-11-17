@@ -56,7 +56,7 @@ test("no code outside the layer names the table, and no MCP, export, Sheet, noti
   // The runtime carries the service under one name, used only by the composition and the route.
   const runtimeUsers = sources.filter(file => /(?<!\bs)\.servicePartFinished\b/.test(file.text)).map(file => file.path);
   assert.deepEqual(runtimeUsers, [HTTP]);
-  for (const file of sources.filter(file => /^src\/server\/(mcp|notifications|roster-sheet|relationships|students|study-guides|connections|settings|invitations|saved|course-progress|service-learning|portal|offline|accounts|practice-calendar|lesson-log|verse-review|public-site|public-reading)\//.test(file.path))) {
+  for (const file of sources.filter(file => /^src\/server\/(mcp|notifications|relationships|students|study-guides|connections|settings|invitations|saved|course-progress|service-learning|portal|offline|accounts|practice-calendar|lesson-log|verse-review|public-site|public-reading)\//.test(file.path))) {
     for (const spec of importsOf(file.text)) assert.doesNotMatch(spec, /service-course\/finished|service-part-finished/, `${file.path} imports ${spec}`);
   }
 });

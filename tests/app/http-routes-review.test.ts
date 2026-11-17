@@ -23,6 +23,8 @@ test("review: opaque reading review cannot cross a genuinely authorized role or 
     expect((await dispatch(f.request(`${path}/confirm`, { headers: { cookie: newCookie }, body: { mode: "tutor", binding: prepared.binding } }))).status).toBe(403);
     // The CSV import's confirm route is gone (Daniel, 2026-11-17): it answers as any unknown route does.
     expect((await dispatch(f.request("/api/admin/students/import/confirm", { body: { binding: prepared.binding } }))).status).toBe(404);
+    // So does the roster Sheet's "update now" (removed with the Sheet, 2026-11-17).
+    expect((await dispatch(f.request("/api/admin/roster-sheet/sync", { body: {} }))).status).toBe(404);
     expect((await dispatch(f.request(`${path}/confirm`, { body: { mode: "tutor", binding: prepared.binding } }))).status).toBe(200);
     expect((await dispatch(f.request(`${path}/confirm`, { body: { mode: "tutor", binding: prepared.binding } }))).status).toBe(409);
   } finally { await f.client.close(); }

@@ -48,8 +48,6 @@ import { createServiceScheduler } from "../service-ecosystem/scheduler";
 import { createStudentWorkService } from "../student-work/service";
 import { createProgressService } from "../progress/service";
 import { createStudyGuideService, studyGuideWebSurface } from "../study-guides/service";
-import { createRosterSheetService } from "../roster-sheet/service";
-import { parseServiceAccount, type ServiceAccount } from "../roster-sheet/google";
 import { createMcpEndpoint, type McpEndpoint } from "../mcp/endpoint";
 import { createSefariaPinnedSourceReader } from "../study/source-text";
 import { createGuideChecker } from "../study-guides/citations";
@@ -218,10 +216,6 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const sourceContent = createSourceContentService({ access, practice, related: sourceMetadata.related, editions: sourceMetadata.editions, content: createSefariaContentReader({ fetch }).text });
   const sourceAssignments = createSourceAssignmentsService({ access, practice, related: createSefariaMetadataReader({ fetch }).related });
   const honors = createHonorsService({ access });
-  let sheetAccount: ServiceAccount | null = null;
-  try { sheetAccount = config.rosterSheet ? parseServiceAccount(config.rosterSheet.serviceAccount) : null; } catch { sheetAccount = null; }
-  const rosterSheet = createRosterSheetService({ db, access, fetch, cronSecret: config.serviceCronSecret,
-    config: sheetAccount && config.rosterSheet ? { account: sheetAccount, sheetId: config.rosterSheet.sheetId } : null });
   // Portal MCP: the full study service (writes too) behind live, grant-bound connection authority.
   // Null until enabled by configuration; then its routes exist at all.
   const mcp: McpEndpoint | null = config.mcpEnabled ? createMcpEndpoint({ db, access, practice, secret: purposeSecret(config, "portal-mcp"), loadText, related: sourceMetadata.related, loadReading, pinnedSource: createSefariaPinnedSourceReader({ fetch }), invitations: { transport: invitationTransport, throttleSecret: invitationThrottle } }) : null;
@@ -269,7 +263,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, guideShare, guideAdmin, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, signInCodeCap, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved, learners, offline, courseProgress, verseReview, serviceCourseProgress, serviceCoursePath, servicePartFinished, practiceVisibility, staff, ceremonyDone, accounts });
+  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, guideShare, guideAdmin, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, signInCodeCap, resolveHost, mcp, notifications, notificationPreferences, saved, learners, offline, courseProgress, verseReview, serviceCourseProgress, serviceCoursePath, servicePartFinished, practiceVisibility, staff, ceremonyDone, accounts });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;

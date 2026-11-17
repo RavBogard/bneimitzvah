@@ -47,7 +47,7 @@ test("no code outside the layer names the table, and no staff-facing service rea
     if (allowed.has(file.path) || /^src\/server\/db\/migrations\/meta\/\d{4}_snapshot\.json$/.test(file.path)) continue;
     assert.doesNotMatch(file.text, /\bserviceCourseProgressTable\b|\bservice_course_progress\b/, `${file.path} names the service-course progress table`);
   }
-  for (const file of sources.filter(file => /^src\/server\/(mcp|notifications|roster-sheet|relationships|students|study-guides|connections|settings|invitations|saved|course-progress|service-learning|portal|offline|accounts)\//.test(file.path))) {
+  for (const file of sources.filter(file => /^src\/server\/(mcp|notifications|relationships|students|study-guides|connections|settings|invitations|saved|course-progress|service-learning|portal|offline|accounts)\//.test(file.path))) {
     for (const spec of importsOf(file.text)) assert.doesNotMatch(spec, /service-course\/(progress|path)|service-course-progress/, `${file.path} imports ${spec}`);
     assert.doesNotMatch(file.text, /\.serviceCourseProgress\b|\.serviceCoursePath\b/, `${file.path} reaches the service-course progress or path`);
   }

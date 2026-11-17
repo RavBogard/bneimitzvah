@@ -4,8 +4,6 @@ import { and, eq, isNull } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
 import { portalRoutesFixture } from "./portal-routes-fixture";
 import { createHttpDispatcher } from "../../src/server/http/dispatch";
-import { withTenantTransaction } from "../../src/server/db/runtime";
-import { rosterRows } from "../../src/server/roster-sheet/rows";
 import { createCeremonyDoneService } from "../../src/server/students/ceremony-done";
 import { ORIGIN as MCP_ORIGIN, closeMcpFixtures, mcpFixture } from "./mcp-fixture";
 
@@ -37,8 +35,7 @@ async function setup() {
     .filter(row => row.action.startsWith("ceremony-done.") || row.action === "tutor.revoke"));
   const names = (rows: { id: string }[]) => rows.map(row => row.id === own.id ? "own" : row.id === sibling.id ? "sibling" : row.id === unrelated.id ? "unrelated" : "else").sort();
   const list = async (who: Who, mode: string) => { const r = await call(`/api/students?mode=${mode}`, who); return r.status === 200 ? names(r.json.students) : r.status; };
-  const sheet = () => withTenantTransaction(f.db, { tenantId: "crc" }, tx => rosterRows(tx, "crc")).then(rows => rows.slice(1).map(row => row[0]).sort());
-  return { f, call, setDone, reverse, liveTutorRows, audits, list, sheet, revisionOf, own, sibling, unrelated, other };
+  return { f, call, setDone, reverse, liveTutorRows, audits, list, revisionOf, own, sibling, unrelated, other };
 }
 
 // What each person reaches of Sibling A, by status (and for lists, by who is listed).
@@ -59,7 +56,6 @@ describe("Ceremony done narrows access, never widens it", () => {
     const t = await setup();
     const before = await reach(t);
     expect(before.tutor).toMatchObject({ list: ["own"], student: 200, reading: 200 });
-    expect(await t.sheet()).toEqual(["Synthetic Sibling A", "Synthetic Sibling B", "Synthetic Unrelated"]);
     expect(await t.list("admin", "admin")).toEqual(["own", "sibling", "unrelated"]);
 
     const done = await t.setDone("admin", t.own.id);
@@ -75,9 +71,8 @@ describe("Ceremony done narrows access, never widens it", () => {
     expect(after.parent).toEqual(before.parent);
     // The old tutor reads nothing: no list entry, the same 404 as a student who does not exist.
     expect(after.tutor).toEqual({ list: [], student: 404, reading: 404, finished: 404 });
-    // In no active list: the admin's list, the staff Sheet; the admin roster names it apart.
+    // In no active list: the admin's list; the admin roster names it apart.
     expect(await t.list("admin", "admin")).toEqual(["sibling", "unrelated"]);
-    expect(await t.sheet()).toEqual(["Synthetic Sibling B", "Synthetic Unrelated"]);
     const roster = await t.call("/api/admin/students", "admin");
     const row = roster.json.students.find((x: { id: string }) => x.id === t.own.id);
     expect(typeof row.ceremonyDoneAt).toBe("string");
@@ -122,7 +117,6 @@ describe("Ceremony done narrows access, never widens it", () => {
     expect((await reach(t)).tutor).toEqual({ list: [], student: 404, reading: 404, finished: 404 });
     // Back in the active lists, without a tutor.
     expect(await t.list("admin", "admin")).toEqual(["own", "sibling", "unrelated"]);
-    expect(await t.sheet()).toContain("Synthetic Sibling A");
     expect((await t.audits()).filter(a => a.action.startsWith("ceremony-done.")).map(a => a.action)).toEqual(["ceremony-done.set", "ceremony-done.reverse"]);
     // Assigned again by hand, the tutor reads the student again.
     expect((await assign()).status).toBe(201);

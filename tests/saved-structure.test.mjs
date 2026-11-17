@@ -126,7 +126,7 @@ test("no code outside the saved layer names the saved tables, and the MCP import
     assert.doesNotMatch(file.text, /\.saved\b|runtime\.saved|\bsaved\s*:/, `${file.path} reaches the saved service`);
   }
   // Staff-facing services that run without a member's own request never reach the saved service either.
-  for (const file of sources.filter(file => /^src\/server\/(mcp|notifications|roster-sheet|relationships|students|study-guides|connections|settings|invitations)\//.test(file.path)))
+  for (const file of sources.filter(file => /^src\/server\/(mcp|notifications|relationships|students|study-guides|connections|settings|invitations)\//.test(file.path)))
     for (const spec of importsOf(file.text)) if (!(allowedImports.get(file.path) ?? []).includes(spec)) assert.doesNotMatch(spec, /(^|\/)saved(\/|$)/, `${file.path} imports ${spec}`);
 });
 

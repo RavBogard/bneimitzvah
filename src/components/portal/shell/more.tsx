@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import { List, ListRow, PageHeader } from "../../ui";
-import { UpdateStaffSheet } from "../workspace/roster-sheet/update-button";
 import { useWorkspace } from "../workspace/provider";
 import { rememberedRole } from "./role-memory";
 import { RedirectTo } from "./redirect-to";
@@ -15,7 +14,7 @@ const email = { href: "/workspace/email", title: "Email settings", meta: "choose
 const claude = { href: "/workspace/claude", title: "Claude connections", meta: "see and end Claude’s access to the portal" };
 const adminRows = [{ href: "/workspace/admin/settings", title: "Settings" }, email, claude, { href: "/workspace/admin/guides", title: "Guides", meta: "see, approve and withdraw study content" }, { href: "/workspace/admin/guide-sharing", title: "Share guides" }];
 
-/** More, for the admin: settings, email, Claude, guide sharing and the staff Sheet, all one tap from the tab bar. Anyone else is sent to /mine. */
+/** More, for the admin: settings, email, Claude and guide sharing, all one tap from the tab bar. Anyone else is sent to /mine. */
 export function MoreWorkspace() {
   const { summary } = useWorkspace(), pathname = usePathname();
   const role = shellRole(pathname, summary.roles, rememberedRole());
@@ -26,6 +25,5 @@ export function MoreWorkspace() {
     <List label="More">{rows.map(row => <ListRow key={row.href} href={row.href} title={row.title} meta={"meta" in row ? row.meta : undefined} />)}</List>
     {/* Discussions, guides and portion summaries are written through Claude; the Guides page lists them and can withdraw or approve. */}
     <p className={styles.moreNote} data-testid="more-curation-note">Discussions and insights are curated through Claude connections.</p>
-    <p className={styles.moreAction}><UpdateStaffSheet /></p>
   </section>;
 }

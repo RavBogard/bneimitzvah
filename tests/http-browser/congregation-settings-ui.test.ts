@@ -64,7 +64,7 @@ it("an admin opens Congregation settings from More, fixes a refused link, saves,
   await ui(main(tab).getByRole("alert")).toHaveText("Some settings need a change before they can be saved.");
   await ui(tab.getByText("Use a full https:// link on centralreform.org or centralreform.live.", { exact: true })).toBeVisible();
   await ui(tab.getByLabel("Siddur link", { exact: true })).toHaveAttribute("aria-invalid", "true");
-  // G21: focus moves to the first field that needs a change; CRC's roster sheet is the operator's, so its field is not offered.
+  // G21: focus moves to the first field that needs a change. The roster Sheet was removed (2026-11-17), so no sheet field is offered.
   await ui(tab.getByLabel("Siddur link", { exact: true })).toBeFocused();
   await ui(tab.getByLabel("Roster sheet ID", { exact: true })).toHaveCount(0);
   await ui(tab.getByTestId("settings-email-status")).toBeVisible();

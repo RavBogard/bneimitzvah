@@ -15,8 +15,6 @@ export type RuntimeConfig = Readonly<{
   musicDetailsEnabled: boolean;
   // The portal MCP answers only when explicitly enabled (after its adversarial review).
   mcpEnabled: boolean;
-  // The owned roster Sheet: the service-account key Daniel set himself and the Sheet it writes.
-  rosterSheet?: Readonly<{ serviceAccount: string; sheetId: string }>;
   // Release 1.1 email notifications send only when this is exactly "true" AND the congregation's
   // switch for that kind is on. Unset, "false" or anything else is off, and never takes the portal down.
   notificationsEnabled: boolean;
@@ -73,14 +71,9 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
     }
     if (env.PORTAL_MCP_ENABLED !== undefined && env.PORTAL_MCP_ENABLED !== "true" && env.PORTAL_MCP_ENABLED !== "false") throw new Unavailable("config/mcp-flag");
     if (env.PORTAL_MUSIC_DETAILS_ENABLED !== undefined && env.PORTAL_MUSIC_DETAILS_ENABLED !== "true" && env.PORTAL_MUSIC_DETAILS_ENABLED !== "false") throw new Unavailable("config/music-details-flag");
-    let rosterSheet: RuntimeConfig["rosterSheet"];
-    // Both or neither. Anything else switches only the Sheet off, never the portal: the key is
-    // checked where it is parsed, and a partial or malformed setting simply leaves it unconfigured.
-    if (typeof env.GOOGLE_SHEETS_SERVICE_ACCOUNT === "string" && env.GOOGLE_SHEETS_SERVICE_ACCOUNT.length <= 8192 && clean(env.GOOGLE_ROSTER_SHEET_ID) && /^[A-Za-z0-9_-]{25,100}$/.test(env.GOOGLE_ROSTER_SHEET_ID))
-      rosterSheet = Object.freeze({ serviceAccount: env.GOOGLE_SHEETS_SERVICE_ACCOUNT, sheetId: env.GOOGLE_ROSTER_SHEET_ID });
     if(env.CRON_SECRET!==undefined && (!clean(env.CRON_SECRET) || env.CRON_SECRET.length<32 || env.CRON_SECRET.length>512 || env.CRON_SECRET===serviceMusic?.token || env.CRON_SECRET===env.BETTER_AUTH_SECRET))throw new Unavailable("config/cron-secret");
     return Object.freeze({ deployment: Object.freeze({ environment, deployment: env.PORTAL_DEPLOYMENT }), origin: origin.origin,
-      databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google, referenceAudio, serviceMusic, serviceCronSecret:env.CRON_SECRET, mcpEnabled: env.PORTAL_MCP_ENABLED === "true", rosterSheet,
+      databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google, referenceAudio, serviceMusic, serviceCronSecret:env.CRON_SECRET, mcpEnabled: env.PORTAL_MCP_ENABLED === "true",
       musicDetailsEnabled: env.PORTAL_MUSIC_DETAILS_ENABLED === "true",
       notificationsEnabled: env.PORTAL_NOTIFICATIONS_ENABLED === "true",
       mail: Object.freeze({ apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM }) });
