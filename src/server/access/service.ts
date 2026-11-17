@@ -22,9 +22,9 @@ const adminRules: Record<AdminCapability, { fresh: boolean; intent: LockIntent }
   "read-relationships": { fresh: false, intent: "read" },
   "read-invites": { fresh: false, intent: "read" },
   "manage-students": { fresh: false, intent: "authority-write" },
-  // Invite: a new invitation, which the person must accept from their own verified mailbox (A2).
+  // Invite and Send again: an invitation emailed to the person, who must accept from their own verified mailbox (A2).
   "issue-invites": { fresh: false, intent: "authority-write" },
-  // Revoke, Send again and Copy link (which hands the admin a live link).
+  // Revoke and Copy link (which hands the admin a live link).
   "manage-invites": { fresh: true, intent: "authority-write" },
   // Assign an existing, live, verified tutor of this congregation to a student (A2).
   "assign-tutor": { fresh: false, intent: "authority-write" },

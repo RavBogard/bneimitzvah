@@ -12,7 +12,7 @@ const open: Awaited<ReturnType<typeof portalRoutesFixture>>[] = [];
 async function fixture() { const f = await portalRoutesFixture(); open.push(f); return f; }
 type Fixture = Awaited<ReturnType<typeof fixture>>;
 type Who = "admin" | "multi" | "learner" | "recipient";
-afterEach(async () => { await Promise.all(open.splice(0).map(f => f.client.close())); });
+afterEach(async () => { vi.useRealTimers(); await Promise.all(open.splice(0).map(f => f.client.close())); });
 
 const OLD = 2 * 60 * 60_000;
 const age = (f: Fixture, who: Who) => f.owner(() => f.db.update(s.session).set({ createdAt: new Date(Date.now() - OLD) }).where(eq(s.session.id, f.identities[who].sessionId)));
@@ -62,7 +62,6 @@ describe("fresh sign-in after A2", () => {
       ["Remove as a tutor", `/api/admin/grants/${f.tutorGrant.id}/revoke`, { expectedRevision: 1, expectedState: "active" }],
       ["mark a tutor as cantor", `/api/admin/tutors/${f.tutorGrant.id}/cantor`, { expectedRevision: 1, isCantor: true }],
       ["revoke an invitation", `/api/admin/invitations/${inviteId}/revoke`, {}],
-      ["Send again", `/api/admin/invitations/${inviteId}/reissue`, {}],
       ["Copy link", `/api/admin/invitations/${inviteId}/copy`, {}],
     ];
     for (const [label, path, body] of routes) expect((await f.call(path, { who: "admin", body })).status, label).toBe(403);
@@ -79,12 +78,46 @@ describe("fresh sign-in after A2", () => {
     expect(await state(f)).toBe(before);
   });
 
+  it("lets the same old session Send again within the send budget and recipient checks, while Copy link and Revoke stay fresh-only", async () => {
+    const HOUR = 60 * 60_000;
+    // Mid-hour, so the hourly send budget's bucket cannot roll over during the test.
+    vi.setSystemTime(new Date(Math.floor(Date.now() / HOUR) * HOUR + 20 * 60_000));
+    const f = await fixture(); await age(f, "admin");
+    const email = "synthetic-a2-again@example.test";
+    const live = async () => (await f.owner(() => f.db.select().from(s.invite).where(eq(s.invite.email, email)))).filter(row => !row.revokedAt);
+    await f.owner(() => f.db.insert(s.invite).values({ id: randomUUID(), tenantId: "crc", role: "tutor", email, inviterMembershipId: f.adminMember.id,
+      tokenHash: randomBytes(32).toString("hex"), createdAt: new Date(Date.now() - 1000), expiresAt: new Date(Date.now() + 72 * 60 * 60_000) }));
+    // The recipient's budget is five sends an hour: five Send agains go out, each revoking the previous link.
+    for (let n = 1; n <= 5; n++) {
+      const [current] = await live();
+      expect((await f.call(`/api/admin/invitations/${current.id}/reissue`, { who: "admin", body: {} })).status, `send ${n}`).toBe(200);
+      const [next] = await live(); expect(next.id).not.toBe(current.id);
+    }
+    expect(f.deliveries).toHaveLength(5);
+    const [current] = await live(), before = await state(f);
+    expect((await f.call(`/api/admin/invitations/${current.id}/reissue`, { who: "admin", body: {} })).status).toBe(403);
+    for (const action of ["copy", "revoke"]) expect((await f.call(`/api/admin/invitations/${current.id}/${action}`, { who: "admin", body: {} })).status, action).toBe(403);
+    expect(await state(f)).toBe(before);
+    // A student invitation addressed to the student's parent contact is still refused on Send again.
+    const parentContact = randomUUID();
+    await f.owner(() => f.db.insert(s.invite).values({ id: parentContact, tenantId: "crc", role: "student", studentId: f.students[2].id, email: "unrelated@example.test", inviterMembershipId: f.adminMember.id,
+      tokenHash: randomBytes(32).toString("hex"), createdAt: new Date(Date.now() - 1000), expiresAt: new Date(Date.now() + 72 * 60 * 60_000) }));
+    const seeded = await state(f);
+    expect((await f.call(`/api/admin/invitations/${parentContact}/reissue`, { who: "admin", body: {} })).status).toBe(403);
+    expect(await state(f)).toBe(seeded);
+    expect(f.deliveries).toHaveLength(5);
+  });
+
   it("refuses a tutor, a parent, a student, a signed-out caller and another congregation's admin, with an old or a fresh session", async () => {
     const f = await fixture();
     await f.owner(async () => {
       const [member] = await f.db.select().from(s.membership).where(and(eq(s.membership.tenantId, "other"), eq(s.membership.userId, f.identities.multi.id)));
       await f.db.insert(s.roleGrant).values({ tenantId: "other", membershipId: member.id, role: "admin" });
     });
+    const inviteId = randomUUID();
+    await f.owner(() => f.db.insert(s.invite).values({ id: inviteId, tenantId: "crc", role: "parent", studentId: f.students[1].id, email: "synthetic-a2-denied@example.test", inviterMembershipId: f.adminMember.id,
+      tokenHash: randomBytes(32).toString("hex"), createdAt: new Date(Date.now() - 1000), expiresAt: new Date(Date.now() + 72 * 60 * 60_000) }));
+    const again = (options: Parameters<Fixture["call"]>[1]) => f.call(`/api/admin/invitations/${inviteId}/reissue`, { ...options, body: {} });
     const before = await state(f), other = { origin: "http://localhost:3101", headers: { origin: "http://localhost:3101" } };
     for (const old of [false, true]) {
       if (old) for (const who of ["multi", "learner", "recipient"] as const) await age(f, who);
@@ -93,9 +126,12 @@ describe("fresh sign-in after A2", () => {
         expect((await assign(f, f.students[1].id, { who })).status, `${who} assign`).toBe(403);
         expect((await invite(f, { role: "tutor", email: "synthetic-a2-denied@example.test" }, { who })).status, `${who} invite`).toBe(403);
         expect((await invite(f, { role: "parent", studentId: f.students[1].id, email: "synthetic-a2-denied@example.test" }, { who })).status, `${who} family invite`).toBe(403);
+        expect((await again({ who })).status, `${who} send again`).toBe(403);
       }
       expect((await assign(f, f.students[1].id, { who: "anonymous" })).status).toBe(401);
       expect((await invite(f, { role: "tutor", email: "synthetic-a2-denied@example.test" }, { who: "anonymous" })).status).toBe(401);
+      expect((await again({ who: "anonymous" })).status).toBe(401);
+      expect((await again({ who: "multi", ...other })).status).toBeGreaterThanOrEqual(400);
       // The other congregation's admin reaches neither this congregation's students nor its tutors.
       expect((await assign(f, f.students[1].id, { who: "multi", ...other })).status).toBeGreaterThanOrEqual(400);
       expect((await invite(f, { role: "parent", studentId: f.students[1].id, email: "synthetic-a2-denied@example.test" }, { who: "multi", ...other })).status).toBeGreaterThanOrEqual(400);

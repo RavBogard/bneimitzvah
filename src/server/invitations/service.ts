@@ -245,7 +245,8 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
 
   async function reissue(request: CookieMutationRequest, selection: { mode: ActiveMode; inviteId: string }) {
     const secret = createInvitationSecret();
-    const pending = await input.access.withAdminCapability(request, { mode: selection.mode, capability: "manage-invites" }, async (tx, actor) => {
+    // Send again is sending an invitation (A2, lead 2026-11-17): issue-invites, a live admin session. Copy link stays fresh.
+    const pending = await input.access.withAdminCapability(request, { mode: selection.mode, capability: "issue-invites" }, async (tx, actor) => {
       requireCookieMutation(request, actor.origin);
       const invitation = await rotate(tx, actor, selection.inviteId, secret.tokenHash, false);
       return { invitation, actor, token: secret.token };

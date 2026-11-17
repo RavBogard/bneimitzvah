@@ -13,8 +13,6 @@ import { MCP_PATH, SCOPES, TTL, hashOpaque, pkceChallenge, randomToken, redirect
 export type McpActor = Readonly<{
   tenantId: string; origin: string; connectionId: string; userId: string; membershipId: string; roleGrantId: string;
   role: "admin" | "tutor"; roleGrantRevision: number; authorityRevision: number; scopes: ReadonlySet<string>; unattended: boolean; expiresAt: number;
-  /** When the staff member approved this connection (the stored row's created_at), which needed a Google sign-in within GOOGLE_CONSENT_WINDOW_MS. */
-  approvedAt: number;
 }>;
 export type OAuthAnswer = Readonly<{ status: number; body: Record<string, unknown> }> | Readonly<{ redirect: string }>;
 export type ConsentView = Readonly<{
@@ -98,7 +96,7 @@ export function createMcpAuthService<Q extends PgQueryResultHKT>(input: {
       role: connection.role, roleGrantRevision: grant.revision, authorityRevision: member.authorityRevision, // Roster is an admin's attended consent only: dropped for any other connection, so no token issued, refreshed
       // or used carries it there (the database check refuses such a row as well).
       scopes: new Set(connection.scope.split(" ").filter(scope => scope !== SCOPES.roster || (connection.role === "admin" && !connection.unattended))),
-      unattended: connection.unattended, expiresAt: Math.min(connection.expiresAt.getTime(), tokenExpiresAt ?? Infinity), approvedAt: connection.createdAt.getTime(),
+      unattended: connection.unattended, expiresAt: Math.min(connection.expiresAt.getTime(), tokenExpiresAt ?? Infinity),
     });
   }
   /** Issue an access token and a rotated refresh token, neither outliving the connection. */
