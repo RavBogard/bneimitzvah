@@ -1,5 +1,6 @@
 // 1.9 N10: which tabs a signed-in role has, where each goes, and which one is current. Pure, so it is unit-tested without a browser.
 // Area A: only the admin has a tab bar (four tabs, on admin pages). Students, parents and tutors live on /mine.
+// The shell role below is still read by the tab bar, More, and the front door and account page (homeRole); it stays until those stop asking.
 import type { Role } from "../api";
 
 export type ShellRole = Role;

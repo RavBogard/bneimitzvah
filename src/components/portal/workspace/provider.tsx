@@ -634,5 +634,5 @@ export function WorkspaceLink({ href, children, ...rest }: { href: string; child
 
 export function RequireRole({ role, children }: { role: keyof typeof rolePaths; children: ReactNode }) {
   const { summary } = useWorkspace();
-  return summary.roles.includes(role) ? children : <section className="workspace-state" data-testid="role-unavailable"><h1>Role unavailable</h1><p>This account doesn’t have that access. Choose one of your available roles.</p><a href="/workspace">Choose a role</a></section>;
+  return summary.roles.includes(role) ? children : <section className="workspace-state" data-testid="role-unavailable"><h1>Role unavailable</h1><p>This account doesn’t have that access.</p><a href="/workspace">Go to your home page</a></section>;
 }

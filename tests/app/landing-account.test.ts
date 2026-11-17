@@ -34,11 +34,10 @@ describe("the landing role rule: the remembered role, else the highest of admin,
     expect(homeRole([], "admin")).toBeNull();
   });
   test("/workspace leads to My Readings, and an admin to This week", () => {
-    expect(workspaceDestination(["student", "tutor"], null)).toBe("/mine");
-    expect(workspaceDestination(["student", "tutor"], "student")).toBe("/mine");
-    expect(workspaceDestination(["admin"], null)).toBe("/workspace/admin/students");
-    expect(workspaceDestination([], "parent")).toBe("/mine");
-    expect(workspaceDestination(["admin", "tutor"], "tutor")).toBe("/workspace/admin/students");
+    expect(workspaceDestination(["student", "tutor"])).toBe("/mine");
+    expect(workspaceDestination(["admin"])).toBe("/workspace/admin/students");
+    expect(workspaceDestination([])).toBe("/mine");
+    expect(workspaceDestination(["admin", "tutor"])).toBe("/workspace/admin/students");
   });
   test("the page memory is per page load: nothing is written to the device", () => {
     rememberRole("tutor");

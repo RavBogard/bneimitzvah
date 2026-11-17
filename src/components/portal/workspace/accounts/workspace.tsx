@@ -48,7 +48,7 @@ const failure = (status: number, action: string): Message => status === 401 ? { 
 export function AccountsWorkspace() {
   const { summary } = useWorkspace();
   const admin = summary.roles.includes("admin");
-  if (!summary.approver) return <section className="workspace-state" data-testid="role-unavailable"><h1>Role unavailable</h1><p>Link requests are for administrators and the tutors they choose to approve them.</p><a href="/workspace">Choose a role</a></section>;
+  if (!summary.approver) return <section className="workspace-state" data-testid="role-unavailable"><h1>Role unavailable</h1><p>Link requests are for administrators and the tutors they choose to approve them.</p><a href="/workspace">Go to your home page</a></section>;
   return <AccountsPage mode={admin ? "admin" : "tutor"} />;
 }
 

@@ -15,6 +15,6 @@ export function homeRole(roles: readonly Role[], remembered: Role | null): Role 
 }
 
 /** Where /workspace sends a person: the admin's This week when they are an admin, else My Readings (an account with no role too). */
-export function workspaceDestination(roles: readonly Role[], _remembered: Role | null): string {
+export function workspaceDestination(roles: readonly Role[]): string {
   return roles.includes("admin") ? rolePaths.admin : MINE_HREF;
 }
