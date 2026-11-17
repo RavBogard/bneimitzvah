@@ -8,7 +8,6 @@ import { eq } from "drizzle-orm";
 import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
-import { CSV_HEADER } from "../../src/components/portal/workspace/csv-import/api";
 import * as s from "../../src/server/db/index";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import { goChild } from "./reading-nav";
@@ -42,7 +41,6 @@ async function editDetails(tab: Page, name: string) { await safe(() => tab.getBy
 const cards = { Tutors: "people-tutors", Parents: "people-parents", "Student sign-in": "people-students", "Congregation-wide removal": "people-congregation" } as const;
 function action(tab: Page, card: keyof typeof cards, verb: string) { return tab.getByTestId(cards[card]).getByRole("button", { name: new RegExp(`^${verb} `) }); }
 async function accessLoaded(tab: Page) { await ui(tab.getByTestId("access-loading")).toBeHidden(); await ui(tab.getByRole("button", { name: "Reload access", exact: true })).toBeEnabled(); }
-async function importLoaded(tab: Page) { await ui(tab.getByTestId("csv-roster-loading")).toBeHidden(); await ui(tab.getByRole("button", { name: "Reload roster for import", exact: true })).toBeEnabled(); }
 async function confirm(tab: Page) { await click(tab, "Confirm access change"); await ui(tab.getByTestId("access-message")).toHaveAttribute("data-message-kind", "saved"); await accessLoaded(tab); }
 async function create(tab: Page, suffix: string, firstName = "Synthetic") { const result = await api(tab, "/api/admin/students", { student: { firstName, lastName: suffix, ceremonyDate: "2027-01-02", parentEmail: "synthetic-access@example.test" } }); expect(result.status === 201).toBe(true); return result.data.id as string; }
 async function capture(tab: Page, name: string) {
@@ -164,45 +162,6 @@ it("rejects changed reviewed identities before POST, isolates uncertain access o
   await tab.unroute(`**/api/admin/tutors/${fixture.tutorGrant.id}/cantor`); await fixture.ownerDb.update(s.user).set({ name: "Synthetic Tutor" }).where(eq(s.user.id, fixture.tutor.id));
 });
 
-// Deliberate wording test for the CSV import: approved copy, change only with the copy.
-it("reviews valid/invalid and duplicate CSV rows, invalidates changed drafts and checks stale roster plus focus lifecycle", async () => {
-  const tab = await page(); await navigate(tab, "/workspace/admin/students/import"); await importLoaded(tab);
-  const draft = `${CSV_HEADER}\nSynthetic,CsvReviewed,2027-01-02,parent@example.test,`;
-  await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(`${CSV_HEADER}\nSynthetic,Invalid,not-a-date,parent@example.test,`)); await click(tab, "Preview import");
-  await ui(tab.getByTestId("csv-issues").getByRole("rowheader", { name: "2", exact: true })).toBeVisible(); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
-  // G21: the ready rows import on their own; the row to fix stays in the draft, and a later row with the same name and date is flagged.
-  await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(`${CSV_HEADER}\nSynthetic,Invalid,not-a-date,parent@example.test,\nSynthetic,CsvReady,2027-01-09,parent@example.test,`)); await click(tab, "Preview import");
-  await safe(() => tab.getByTestId("csv-import-ready").click()); await ui(tab.getByTestId("csv-receipt")).toHaveText("1 student record created. No invitations were sent."); await importLoaded(tab);
-  expect((await fixture.ownerDb.select().from(s.student).where(eq(s.student.lastName, "CsvReady")))).toHaveLength(1);
-  expect((await tab.getByLabel("CSV draft to review", { exact: true }).inputValue()).split(/\r?\n/).filter(Boolean)).toEqual([CSV_HEADER, "Synthetic,Invalid,not-a-date,parent@example.test,"]);
-  await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(`${CSV_HEADER}\nSynthetic,CsvReady,2027-01-09,other@example.test,`)); await click(tab, "Preview import"); await ui(tab.getByTestId("csv-same-name")).toBeVisible();
-  await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(draft)); await click(tab, "Preview import"); await ui(tab.getByRole("button", { name: "Import reviewed students", exact: true })).toBeEnabled(); await capture(tab, "csv-review-desktop");
-  await focus(tab); await ui(tab.getByLabel("CSV draft to review", { exact: true })).toHaveValue(draft); await ui(tab.getByRole("button", { name: "Import reviewed students", exact: true })).toBeEnabled();
-  await click(tab, "Preview import"); await create(tab, "CsvRosterChanged"); await click(tab, "Import reviewed students"); await ui(tab.getByTestId("csv-message")).toHaveAttribute("data-message-kind", "changed");
-  expect((await fixture.ownerDb.select().from(s.student).where(eq(s.student.lastName, "CsvReviewed")))).toHaveLength(0);
-  await click(tab, "Reload roster for import"); await importLoaded(tab); await click(tab, "Preview import"); await click(tab, "Import reviewed students"); await ui(tab.getByTestId("csv-receipt")).toHaveAttribute("data-created", "1"); await importLoaded(tab);
-  await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(draft)); await click(tab, "Preview import"); await ui(tab.getByTestId("csv-duplicates")).toHaveAttribute("data-rows", "2"); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
-  await safe(() => tab.getByLabel("Allow additional records for exact duplicates", { exact: true }).check()); await click(tab, "Preview import"); await ui(tab.getByRole("button", { name: "Import reviewed students", exact: true })).toBeEnabled();
-  await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(draft + "\n")); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
-});
-
-it("requires explicit roster inspection after an unknown import, never retries automatically, and expires client reviews", async () => {
-  const tab = await page("admin", true); await navigate(tab, "/workspace/admin/students/import"); await importLoaded(tab);
-  const draft = `${CSV_HEADER}\n${Array.from({ length: 24 }, (_, index) => `Synthetic,CsvUnknown${index || ""},2027-01-02,parent@example.test,`).join("\n")}`; await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(draft)); await click(tab, "Preview import"); await ui(tab.getByRole("button", { name: "Import reviewed students", exact: true })).toBeEnabled(); await capture(tab, "csv-review-mobile");
-  let posts = 0; await tab.route("**/api/admin/students/import/confirm", async route => { posts++; const response = await route.fetch(); await response.dispose(); await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' }); });
-  await click(tab, "Import reviewed students"); await ui(tab.getByTestId("csv-message")).toHaveAttribute("data-message-kind", "unknown"); await ui(tab.getByTestId("csv-message")).toHaveAttribute("role", "alert"); await capture(tab, "csv-unknown-mobile"); await focus(tab); expect(posts).toBe(1); await ui(tab.getByRole("button", { name: "Preview import", exact: true })).toBeDisabled();
-  const retained = tab.getByLabel("CSV draft to review", { exact: true });
-  await ui(retained).toHaveValue(draft); await ui(retained).toHaveJSProperty("readOnly", true); await ui(retained).toBeEnabled();
-  await safe(() => retained.focus()); await ui(retained).toBeFocused(); await safe(() => retained.press("Control+End")); await ui.poll(() => retained.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
-  await safe(() => retained.press("Control+Home")); await ui.poll(() => retained.evaluate(element => element.scrollTop)).toBe(0); await ui(retained).toHaveValue(draft);
-  await ui(tab.getByLabel("Choose a CSV file", { exact: true })).toBeDisabled();
-  await click(tab, "Reload roster for import"); await importLoaded(tab); await ui(tab.getByTestId("csv-recovery")).toBeVisible(); await ui(tab.getByRole("link", { name: "Synthetic CsvUnknown", exact: true })).toBeVisible(); await ui(tab.getByRole("button", { name: "Preview import", exact: true })).toBeDisabled();
-  await click(tab, "I checked the roster; allow a new preview"); await ui(tab.getByLabel("Allow additional records for exact duplicates", { exact: true })).not.toBeChecked(); await click(tab, "Preview import"); await ui(tab.getByTestId("csv-duplicates")).toHaveAttribute("data-rows", /^2,/); expect(posts).toBe(1);
-  await tab.unroute("**/api/admin/students/import/confirm");
-  await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(`${CSV_HEADER}\nSynthetic,CsvExpiry,2027-01-02,parent@example.test,`)); await tab.clock.install(); await click(tab, "Preview import"); await ui(tab.getByRole("button", { name: "Import reviewed students", exact: true })).toBeEnabled(); await tab.clock.fastForward(5 * 60_000 + 1); await ui(tab.getByTestId("csv-message")).toHaveAttribute("data-message-kind", "expired"); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
-});
-
-// The admin walk, 2026-10-28: a hand-over starts from the tutor's row and cannot be confirmed without a tutor to take over; the admin's own reading route leads to This week; the roster says who teaches.
 it("starts a hand-over from the tutor row, sends the admin from My Readings' reading to This week, and shows the roster facts", async () => {
   const admin = await page(); await navigate(admin, "/workspace/admin/tutors"); await accessLoaded(admin);
   await safe(() => action(admin, "Tutors", "Hand over students").click());

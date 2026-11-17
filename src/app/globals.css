@@ -336,31 +336,21 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
   .study-verses-with-work > li { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
   .verse-work { border-inline-start: 0; border-top: 1px solid var(--color-rule); padding-inline-start: 0; }
 }
-.access-section, .access-review, .csv-review, .csv-recovery { border-top: 1px solid var(--color-rule); margin-top: 2rem; padding-top: 1.5rem; }
-.access-review, .csv-review { border-color: var(--color-ink); max-width: 44rem; }
-.access-review h2, .csv-review h2, .access-section h2, .csv-recovery h2 { margin-bottom: 1rem; }
+.access-section, .access-review { border-top: 1px solid var(--color-rule); margin-top: 2rem; padding-top: 1.5rem; }
+.access-review { border-color: var(--color-ink); max-width: 44rem; }
+.access-review h2, .access-section h2 { margin-bottom: 1rem; }
 .access-student { margin-top: 2rem; }
 .access-student h2, .access-records h2, .access-records h3 { overflow-wrap: anywhere; }
 .access-records { list-style: none; padding: 0; margin-block: 1rem; }
 .access-records > li { padding-block: 1.25rem; border-bottom: 1px solid var(--color-rule); overflow-wrap: anywhere; }
-.access-records p, .access-review > p, .csv-format p, .csv-review > p, .csv-recovery > p { margin-block: 0.75rem; }
+.access-records p, .access-review > p { margin-block: 0.75rem; }
 .access-actions, .access-pages { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; margin-top: 1rem; }
 .access-actions .button-text { margin: 0; text-align: start; }
 .access-details { margin-block: 1rem; }
 .access-details > div { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 0.5rem 1rem; margin-block: 0.75rem; }
-.access-details dd, .csv-format code { overflow-wrap: anywhere; }
+.access-details dd { overflow-wrap: anywhere; }
 .access-assign { margin-block: 1.5rem; max-width: 44rem; }
 .access-assign > button { margin-top: 1rem; }
-.csv-format { max-width: 65ch; margin-block: 1.5rem; }
-.csv-draft { max-width: 44rem; }
-.csv-draft > input { margin-bottom: 1.5rem; }
-.csv-draft > p { margin: 0.5rem 0 0; max-width: 65ch; }
-.csv-template { display: inline-flex; margin: 1rem 0 1.5rem; }
-.csv-check { margin-bottom: 1.5rem; }
-.csv-nowrap { white-space: nowrap; }
-.csv-draft textarea { width: 100%; min-height: 14rem; resize: vertical; padding: 0.75rem; border: 1px solid var(--color-muted); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-ink); caret-color: var(--color-action); font: inherit; }
-.csv-duplicate-choice { display: flex; align-items: start; gap: 0.75rem; padding-block: 0.75rem; margin-block: 0.5rem; font-weight: 400; }
-.csv-duplicate-choice input { flex: 0 0 auto; width: 1.25rem; height: 1.25rem; min-height: 0; margin: 0.2rem 0 0; accent-color: var(--color-action); }
 .roster-pages, .form-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }
 .roster-editor { border-top: 1px solid var(--color-ink); padding-top: 1.5rem; margin-top: 2.5rem; }
 .roster-editor h2 { margin-bottom: 1.5rem; }
@@ -1126,11 +1116,6 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .access-sheet .invitation-action-review { margin-top: 0; padding-top: 0; border-top: 0; }
 @media (max-width: 640px) { .invitation-row-actions { margin-inline-start: -0.875rem; } }
 
-/* Import: the two steps as cards. */
-.csv-workspace .csv-draft, .csv-workspace .csv-review { max-width: 48rem; margin-top: 0; border-top: 0; padding-top: 1.25rem; }
-.csv-workspace .csv-format { margin-block: 0 1.25rem; }
-.csv-step { display: flex; align-items: center; gap: 0.625rem; margin: 0 0 1rem; font-size: 1.25rem; font-weight: 750; letter-spacing: -0.01em; }
-.csv-step:focus { outline: none; }
 /* 1.9 N16 re-measure: a loading reading holds a screen of room (see reading.tsx), so the content after it does not shift. */
 .reading-loading-space { min-height: 100svh; }
 /* 1.9 N23: the assigned tutor's practice lines in Lessons. Dates and verses only. */
@@ -1139,18 +1124,6 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .tutor-practice-learn { margin-top: 1rem; }
 .tutor-practice-learn p { margin: 0.25rem 0 0; }
 .settings-email-status { margin-top: 0.75rem; }
-/* G21: the rows to fix as a table, and the same-name-and-date warning (a word, never colour alone). */
-.csv-issues { width: 100%; margin: 0.5rem 0 1rem; border-collapse: collapse; font-size: var(--text-callout); }
-.csv-issues th, .csv-issues td { padding: 0.5rem 0.75rem; text-align: start; vertical-align: top; border-top: 1px solid var(--color-rule); overflow-wrap: anywhere; }
-.csv-issues thead th { border-top: 0; color: var(--color-muted); font-weight: var(--weight-semibold); }
-.csv-issues tbody th { width: 4rem; font-variant-numeric: tabular-nums; font-weight: var(--weight-semibold); }
-.csv-same-name { margin-block: 0.75rem; padding: 0.75rem 1rem; border-radius: var(--radius-control); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--attention-fill), inset 4px 0 0 var(--attention-fill); }
-.csv-step > span { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 999px; background: var(--lake); color: #fff; font-size: 0.9375rem; font-weight: 750; }
-.csv-workspace .csv-draft label { font-weight: 650; }
-.csv-workspace .csv-draft textarea { border: 0; box-shadow: inset 0 0 0 1px var(--color-control-rule); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.875rem; }
-.csv-workspace .csv-draft textarea:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--lake); }
-.csv-workspace .csv-duplicate-choice { display: flex; align-items: center; gap: 0.625rem; min-height: 44px; margin: 0.75rem 0; font-weight: 500; }
-.csv-workspace .csv-duplicate-choice input { width: 20px; min-height: 0; height: 20px; }
 .roster-discard { margin-block: 0 1.5rem; padding: 1rem 1.125rem; border-radius: var(--radius-control); background: color-mix(in srgb, var(--marigold) 14%, var(--color-surface)); }
 .roster-discard p { margin: 0 0 0.75rem; }
 

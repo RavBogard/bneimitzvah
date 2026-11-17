@@ -4,7 +4,6 @@ import { randomBytes } from "node:crypto";
 import { eq,sql } from "drizzle-orm";
 import { accessFixture } from "./access-fixture";
 import { createStudentService } from "../../src/server/students/service";
-import { parseStudentCsv } from "../../src/server/students/validation";
 import { AccessDenied,AccessUnavailable } from "../../src/server/access/errors";
 import { parseCeremonyDate } from "../../src/lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
@@ -28,7 +27,6 @@ async function fixture(){
 }
 async function denied(action:()=>Promise<unknown>,status=403){try{await action();return false;}catch(error){return error instanceof AccessDenied && error.status===status;}}
 async function databaseCode(action:()=>PromiseLike<unknown>,code:string){try{await action();return false;}catch(error){const e=error as {code?:string;cause?:{code?:string}};return (e.cause?.code??e.code)===code;}}
-const csv=(last="Imported")=>`firstName,lastName,ceremonyDate,parentEmail,ownEmail\nSynthetic,${last},2027-01-02,shared@example.test,`;
 
 test("admin roster creation treats parent contact only as contact, refuses role/origin escalation and stale edits",async()=>{
   const f=await fixture();
@@ -79,18 +77,6 @@ test("adult create and kind edits remain tenant-scoped CAS contact changes with 
   expect((await f.studentsService.edit(f.mutation(),{mode:"admin",studentId:f.students[0].id,expectedRevision:2,student})).ok).toBe(true);
   expect(await authority()).toEqual(before);
   expect(f.loadReading).not.toHaveBeenCalled();
-});
-
-test("extended adult CSV confirms exact nullable contacts without inviting or inferring account authority",async()=>{
-  const f=await fixture(),csv="studentKind,firstName,lastName,ceremonyDate,parentEmail,ownEmail\nadult,Synthetic,Adult,2027-01-02,,learner@example.test";
-  const preview=await f.studentsService.previewImport(f.mutation(),{mode:"admin",csv,allowDuplicates:false});
-  expect(preview.canConfirm).toBe(true);
-  expect(await denied(()=>f.studentsService.confirmImport(f.mutation(),{mode:"admin",csv:csv.replace("adult,Synthetic","child,Synthetic"),allowDuplicates:false,binding:preview.binding!}))).toBe(true);
-  const result=await f.studentsService.confirmImport(f.mutation(),{mode:"admin",csv,allowDuplicates:false,binding:preview.binding!});
-  if(!result.ok)throw new Error("Synthetic adult import failed");
-  expect((await f.studentsService.listRoster(f.mutation(),{mode:"admin"})).find(row=>row.id===result.ids[0])).toMatchObject({studentKind:"adult",parentEmail:null,ownEmail:"learner@example.test"});
-  expect(await denied(()=>f.service.readStudent(f.mutation("learner"),{mode:"student",studentId:result.ids[0]}),404)).toBe(true);
-  expect((await f.studentsService.previewImport(f.mutation(),{mode:"admin",csv,allowDuplicates:false})).duplicateRows).toEqual([2]);
 });
 
 test("signed preparation is separate from confirmation; assigned tutor persists exact cross-chapter verses and maftir",async()=>{
@@ -186,32 +172,7 @@ test("manual ranges can be confirmed with truthful unavailable provenance; autom
   expect(sanitized).toBe(true);
 });
 
-test("CSV preview is admin-only and binds input, duplicate decision, actor and current roster against alteration/replay",async()=>{
-  const f=await fixture();
-  expect(await denied(()=>f.studentsService.previewImport(f.mutation("multi"),{mode:"tutor",csv:csv(),allowDuplicates:false}))).toBe(true);
-  const preview=await f.studentsService.previewImport(f.mutation(),{mode:"admin",csv:csv(),allowDuplicates:false});
-  expect(preview.canConfirm && preview.validRows===1).toBe(true);if(!preview.binding)throw new Error("Expected synthetic import binding");
-  const anotherSession=await f.signIn("admin@example.test");
-  const otherRequest={...f.mutation(),headers:new Headers({origin:"http://localhost:3000",cookie:anotherSession.cookie})};
-  expect(await denied(()=>f.studentsService.confirmImport(otherRequest,{mode:"admin",csv:csv(),allowDuplicates:false,binding:preview.binding!}))).toBe(true);
-  expect(await denied(()=>f.studentsService.confirmImport(f.mutation(),{mode:"admin",csv:csv("Altered"),allowDuplicates:false,binding:preview.binding!}))).toBe(true);
-  expect(await denied(()=>f.studentsService.confirmImport(f.mutation(),{mode:"admin",csv:csv(),allowDuplicates:true,binding:preview.binding!}))).toBe(true);
-  expect((await f.studentsService.confirmImport(f.mutation(),{mode:"admin",csv:csv(),allowDuplicates:false,binding:preview.binding})).ok).toBe(true);
-  expect(await f.studentsService.confirmImport(f.mutation(),{mode:"admin",csv:csv(),allowDuplicates:false,binding:preview.binding})).toEqual({ok:false,code:"stale-revision"});
-  const duplicates=await f.studentsService.previewImport(f.mutation(),{mode:"admin",csv:csv(),allowDuplicates:false});expect(duplicates.canConfirm).toBe(false);expect(duplicates.binding).toBeNull();
-  const explicit=await f.studentsService.previewImport(f.mutation(),{mode:"admin",csv:csv(),allowDuplicates:true});if(!explicit.binding)throw new Error("Expected confirmed duplicate choice");
-  expect((await f.studentsService.confirmImport(f.mutation(),{mode:"admin",csv:csv(),allowDuplicates:true,binding:explicit.binding})).ok).toBe(true);
-  const mixed=csv().split("\n")[0]+"\nSynthetic,Invalid,not-a-date,shared@example.test,\n"+csv().split("\n")[1]+"\n"+csv().split("\n")[1];
-  const mixedPreview=await f.studentsService.previewImport(f.mutation(),{mode:"admin",csv:mixed,allowDuplicates:true});
-  expect(mixedPreview.issues).toEqual([{row:2,code:"invalid-row"}]);expect(mixedPreview.duplicateRows).toEqual([3,4]);expect(mixedPreview.binding).toBeNull();
-  await f.owner(async()=>{expect((await f.db.select().from(s.student)).length).toBe(6);expect((await f.db.select().from(s.invite)).length).toBe(0);});
-  expect(f.loadReading).not.toHaveBeenCalled();
-});
-
-test("CSV parser handles quoted fields and enforces row/byte/date/contact bounds; numeric catalog is structurally complete",()=>{
-  expect(parseStudentCsv(csv('"Imported, learner"')).rows[0].lastName).toBe("Imported, learner");
-  expect(parseStudentCsv(csv().replace("2027-01-02","2027-02-29")).issues.length).toBe(1);
-  for(const invalid of ["x".repeat(1024*1024+1),csv()+"\n"+Array(500).fill("Synthetic,Extra,2027-01-02,fixture@example.test,").join("\n"),csv('"unclosed')])expect(()=>parseStudentCsv(invalid)).toThrow();
+test("numeric catalog is structurally complete",()=>{
   expect(Object.keys(TANAKH_VERSE_COUNTS).length).toBe(39);expect(TANAKH_VERSE_COUNTS.Genesis.length).toBe(50);expect(TANAKH_VERSE_COUNTS.Genesis[0]).toBe(31);expect(TANAKH_VERSE_COUNTS.Deuteronomy.at(-1)).toBe(12);
 });
 
@@ -265,16 +226,6 @@ test("slot changes preserve both assignments and verses, mark review, and invali
   const current=await f.studentsService.prepareReading(f.mutation(),{mode:"admin",studentId:id,pick:"full"});if(current.status!=="prepared")throw new Error("Expected review");
   await f.owner(async()=>{await f.db.update(s.student).set({serviceSlot:"morning"}).where(eq(s.student.id,id));});
   expect(await f.studentsService.confirmReading(f.mutation(),{mode:"admin",studentId:id,binding:current.binding})).toEqual({ok:false,code:"stale-revision"});
-});
-
-
-test("CSV duplicate warning survives a previously configured service slot",async()=>{
- const f=await fixture();
- await f.studentsService.create(f.mutation(),{mode:"admin",student:{...student,lastName:"Imported",parentEmail:"shared@example.test"}});
- const preview=await f.studentsService.previewImport(f.mutation(),{mode:"admin",csv:csv(),allowDuplicates:false});
- expect(preview).toMatchObject({canConfirm:false,binding:null,duplicateRows:[2],requiresDuplicateConfirmation:true});
- const explicit=await f.studentsService.previewImport(f.mutation(),{mode:"admin",csv:csv(),allowDuplicates:true});
- expect(explicit.canConfirm).toBe(true);
 });
 
 

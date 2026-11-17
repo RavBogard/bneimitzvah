@@ -18,7 +18,7 @@ describe("the admin's four tabs", () => {
     expect(tabsFor({ role: "admin", pathname: "/mine", tab: null })).toEqual([]);
     expect(tabsFor({ role: "admin", pathname: "/workspace/tutor/abc", tab: null })).toEqual([]);
     expect(tabsFor({ role: "admin", pathname: "/workspace/admin/students/abc/reading", tab: null })).toEqual([]);
-    expect(adminArea("/workspace/admin/students/import")).toBe(true);
+    expect(adminArea("/workspace/admin/students/abc/access")).toBe(true);
     expect(adminArea("/workspace/accounts")).toBe(true);
   });
 });
@@ -27,7 +27,7 @@ describe("which tab is current", () => {
   it("is one tab on every admin page the shell knows", () => {
     expect(current("admin", "/workspace/admin/students")).toEqual(["This week"]);
     expect(current("admin", "/workspace/admin/students", "students")).toEqual(["Students"]);
-    expect(current("admin", "/workspace/admin/students/import")).toEqual(["Students"]);
+    expect(current("admin", "/workspace/admin/students/abc/access")).toEqual(["Students"]);
     for (const path of ["/workspace/admin/invitations", "/workspace/admin/tutors", "/workspace/accounts"]) expect(current("admin", path)).toEqual(["People"]);
     for (const path of ["/workspace/more", "/workspace/admin/settings", "/workspace/admin/guides", "/workspace/email", "/workspace/claude"]) expect(current("admin", path)).toEqual(["More"]);
   });

@@ -121,7 +121,7 @@ describe("private portal HTTP adapters over actual SDK and restricted tenant ser
 
   it("requires exact POST Origin before parsing any mutation or preview body", async () => {
     const f = await fixture();
-    const denied = await f.call("/api/admin/students/import/preview", { who: "admin", body: { csv: "bad", allowDuplicates: false }, headers: { origin: "https://evil.example.test" } });
+    const denied = await f.call("/api/admin/students", { who: "admin", body: { student: "bad" }, headers: { origin: "https://evil.example.test" } });
     expect(denied.status === 403 && (await json(denied)).error === "forbidden").toBe(true);
     const missing = f.request("/api/practice/enter", { body: { studentId: f.students[0].id } }); missing.headers.delete("origin");
     expect((await handlePortalRequest(missing, f.runtime))?.status === 403).toBe(true);
@@ -145,20 +145,6 @@ describe("private portal HTTP adapters over actual SDK and restricted tenant ser
       const list = await f.call(`/api/students?mode=${mode}`, { who: mode === "student" ? "learner" : "multi" });
       const body = await list.text(); expect(body).not.toContain("parentEmail"); expect(body).not.toContain("ownEmail"); expect(body).not.toContain("studentKind");
     }
-  });
-
-  it("round-trips opaque CSV review without leaking private claims and detects a changed roster", async () => {
-    const f = await fixture();
-    const csv = "firstName,lastName,ceremonyDate,parentEmail,ownEmail\nSynthetic,Imported,2027-01-02,contact@example.test,";
-    const preview = await json(await f.call("/api/admin/students/import/preview", { who: "admin", body: { csv, allowDuplicates: false } }));
-    expect(preview.canConfirm && preview.validRows === 1 && /^v1\./.test(preview.binding) && !JSON.stringify(preview).includes("@")).toBe(true);
-    const decoded = Buffer.from(preview.binding.slice(3), "base64url").toString("utf8");
-    expect(!decoded.includes(f.identities.admin.id) && !decoded.includes(f.identities.admin.sessionId)).toBe(true);
-    const accepted = await f.call("/api/admin/students/import/confirm", { who: "admin", body: { csv, allowDuplicates: false, binding: preview.binding } });
-    expect(accepted.status === 201 && (await json(accepted)).ids.length === 1).toBe(true);
-    const nextCsv = csv.replace("Imported", "Later"), next = await json(await f.call("/api/admin/students/import/preview", { who: "admin", body: { csv: nextCsv, allowDuplicates: false } }));
-    await f.call("/api/admin/students", { who: "admin", body: { student: { ...contact, lastName: "Changes roster" } } });
-    expect((await f.call("/api/admin/students/import/confirm", { who: "admin", body: { csv: nextCsv, allowDuplicates: false, binding: next.binding } })).status === 409).toBe(true);
   });
 
   it("prepares/confirms exact staff readings, rejects parents, reports stale conflicts and exposes safe assigned DTOs", async () => {

@@ -43,10 +43,7 @@ test("manual morning/Havdalah scheduling and quiet intake enqueue automatically,
   for (const serviceSlot of ["morning", "havdalah"] as const) await f.studentsService.create(f.mutation(), { mode: "admin", student: { firstName: "Synthetic", lastName: serviceSlot, ceremonyDate: "2027-02-06", serviceSlot, parentEmail: "synthetic@example.test" } });
   expect(f.broker.ensure).toHaveBeenCalledTimes(2);
   expect(vi.mocked(f.broker.ensure).mock.calls.map(([input]) => input.ceremonyType)).toEqual(["morning", "havdalah"]);
-  const csv = "firstName,lastName,ceremonyDate,parentEmail,ownEmail,service_slot,parashah,tutor,parent1_name,household_phone,parent2_name,parent2_email,hebrew_name,notes\nSynthetic,Quiet,2027-03-06,synthetic@example.test,,havdalah,,,,,,,,";
-  const review = await f.studentsService.previewImport(f.mutation(), { mode: "admin", csv, allowDuplicates: false });
-  expect(review.canConfirm).toBe(true);
-  expect((await f.studentsService.confirmImport(f.mutation(), { mode: "admin", csv, allowDuplicates: false, binding: review.binding! })).ok).toBe(true);
+  await f.studentsService.create(f.mutation(), { mode: "admin", student: { firstName: "Synthetic", lastName: "Quiet", ceremonyDate: "2027-03-06", serviceSlot: "havdalah", parentEmail: "synthetic@example.test" } });
   expect(f.broker.ensure).toHaveBeenCalledTimes(3);
   expect(await f.owner(() => f.db.select().from(s.studentCeremony))).toHaveLength(3);
   expect(f.delivered).toHaveLength(3); // Only synthetic fixture sign-ins; intake sent no mail.
@@ -125,15 +122,14 @@ test("musical request stays pending until fresh authorized source change succeed
   expect(await f.ecosystem.respond(f.mutation(), selection)).toEqual({ ok: true });
 });
 
-test("bulk intake returns after one background dispatch without awaiting the connector and deduplicates joint ceremonies",async()=>{
+test("intake dispatches in the background without awaiting the connector and deduplicates joint ceremonies",async()=>{
+  // The CSV bulk import is gone (Daniel, 2026-11-17); Add student dispatches once per student and joint ceremonies still share one service.
   const f=await fixture(),dispatch=vi.fn();
   const students=createStudentService({access:f.service,signingSecret:randomBytes(48).toString("base64url"),loadReading:async()=>{throw new Error("Synthetic unused calendar");},dispatchScheduled:dispatch});
-  const csv="firstName,lastName,ceremonyDate,parentEmail,ownEmail,service_slot,parashah,tutor,parent1_name,household_phone,parent2_name,parent2_email,hebrew_name,notes\n"+Array.from({length:80},(_,i)=>`Synthetic,Bulk${i},2027-08-07,synthetic@example.test,,morning,,,,,,,,`).join("\n");
-  const preview=await students.previewImport(f.mutation(),{mode:"admin",csv,allowDuplicates:false});
-  const saved=await students.confirmImport(f.mutation(),{mode:"admin",csv,allowDuplicates:false,binding:preview.binding!});
-  expect(saved.ok).toBe(true);expect(dispatch).toHaveBeenCalledTimes(1);expect(f.broker.ensure).not.toHaveBeenCalled();
+  for(let i=0;i<3;i++)await students.create(f.mutation(),{mode:"admin",student:{firstName:"Synthetic",lastName:`Joint${i}`,ceremonyDate:"2027-08-07",serviceSlot:"morning",parentEmail:"synthetic@example.test"}});
+  expect(dispatch).toHaveBeenCalledTimes(3);expect(f.broker.ensure).not.toHaveBeenCalled();
   expect(await f.owner(()=>f.db.select().from(s.serviceCeremony))).toHaveLength(1);
-  expect(await f.owner(()=>f.db.select().from(s.studentCeremony))).toHaveLength(80);
+  expect(await f.owner(()=>f.db.select().from(s.studentCeremony))).toHaveLength(3);
 });
 
 test("concurrent drain leases prevent duplicate dispatch, source failure backs off, and expired leases recover",async()=>{

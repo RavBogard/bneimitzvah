@@ -11,7 +11,7 @@ import { parsePick,type Pick } from "../../lib/readings/leyning.mjs";
 import { expandReadingRanges,readingSegments,type CeremonyDate,type VerseCounts } from "../../lib/readings/ranges";
 import { proposeReading,ReadingUnavailable,type Calendar,type Snapshot } from "../../lib/readings/proposals";
 import { createBindings,digest } from "./bindings";
-import { identifier,parseStudentCsv,rehearsalsFit,revision,studentInput,type ImportedStudentInput,type StudentInput,type CsvParse } from "./validation";
+import { identifier,rehearsalsFit,revision,studentInput,type StudentInput } from "./validation";
 import { readingDate } from "../../lib/readings/reading-date";
 import { validatedSnapshot } from "./preparation";
 import { aliyahStarts } from "../../lib/readings/aliyah-starts";
@@ -45,35 +45,13 @@ export function calendarCustoms(customs:unknown){
 }
 export const actorBinding=(actor:Actor&{relationshipId?:StudentActor["relationshipId"];relationshipRevision?:StudentActor["relationshipRevision"]})=>({origin:actor.origin,membershipId:actor.membershipId,authorityRevision:actor.authorityRevision,roleGrantRevision:actor.roleGrantRevision,...("relationshipId" in actor?{relationshipId:actor.relationshipId,relationshipRevision:actor.relationshipRevision}:{}),tenantId:actor.tenantId,userId:actor.userId,authSessionId:actor.authSessionId,roleGrantId:actor.roleGrantId,mode:actor.mode});
 const sameActor=(claim:Record<string,unknown>,actor:Actor)=>digest(claim.actor)===digest(actorBinding(actor));
-const duplicateKey=(row:StudentInput)=>digest([row.firstName,row.lastName,row.ceremonyDate,row.studentKind,row.parentEmail,row.ownEmail]);
-const rosterState=(rows:{id:string;revision:number}[])=>digest(rows.map(row=>[row.id,row.revision]));
-function duplicates(rows:StudentInput[],existing:StudentInput[],rowNumbers:number[]){
-  const seen=new Set(existing.map(duplicateKey));const indices:number[]=[];
-  rows.forEach((row,index)=>{const key=duplicateKey(row);if(seen.has(key))indices.push(rowNumbers[index]);seen.add(key);});return indices;
-}
-const normalizedTutorName=(value:string)=>value.normalize("NFKC").trim().replace(/\s+/g," ").toLowerCase();
-function matchedImport(parsed:CsvParse,tutors:Awaited<ReturnType<typeof data.importTutors>>){
-  const names=new Set(parsed.rows.map(row=>row.importMetadata?.tutorName).filter((name):name is string=>!!name).map(normalizedTutorName));
-  const relevant=tutors.filter(tutor=>names.has(normalizedTutorName(tutor.name)));
-  const tutorMatches:{row:number;status:"matched"|"unmatched"|"ambiguous"}[]=[],missingSecondParentRows:number[]=[];
-  const rows=parsed.rows.map((row,index)=>{
-    const metadata=row.importMetadata;if(!metadata)return row;
-    if(!metadata.parent2Name || !row.secondParentEmail)missingSecondParentRows.push(parsed.rowNumbers[index]);
-    if(!metadata.tutorName)return row;
-    const matches=relevant.filter(tutor=>normalizedTutorName(tutor.name)===normalizedTutorName(metadata.tutorName!));
-    const tutorMatch=matches.length===1?{status:"matched" as const,grantId:matches[0].grantId}:{status:matches.length?"ambiguous" as const:"unmatched" as const};
-    tutorMatches.push({row:parsed.rowNumbers[index],status:tutorMatch.status});
-    return {...row,importMetadata:{...metadata,tutorMatch}};
-  });
-  return {rows,tutorMatches,missingSecondParentRows,tutorSnapshot:digest(relevant)};
-}
 
 /**
  * The one student-create write: the row, its ceremony schedule and the audit event. The portal's
- * create and CSV import and the MCP roster intake all write through here; the caller has already
+ * create and the MCP roster intake all write through here; the caller has already
  * established admin authority inside this transaction.
  */
-export async function writeNewStudent<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,actor:Actor,values:ImportedStudentInput,action:"student.create"|"student.import",at:number){
+export async function writeNewStudent<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,actor:Actor,values:StudentInput,action:"student.create"|"student.import",at:number){
   const student=await data.insertStudent(tx,actor.tenantId,values);
   await scheduleCeremony(tx,actor.tenantId,student,at);
   await data.audit(tx,actor,action,student.id);
@@ -243,7 +221,6 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
   dispatchScheduled?:()=>void|Promise<void>;
 }){
   const now=input.now??Date.now;
-  const bindings=createBindings(input.signingSecret,now);
   const afterSchedule=async(request:CookieMutationRequest,mode:ActiveMode,ids:string[])=>{
     if(input.dispatchScheduled){try{await input.dispatchScheduled();}catch{/* The durable queue survives an unavailable dispatcher. */}return;}
     // Intake is already committed. Remote failure cannot undo roster work.
@@ -289,44 +266,6 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
       return {ok:true as const,id,revision:updated.revision};
     });
   }
-  async function previewImport(request:CookieMutationRequest,selection:Mode&{csv:string;allowDuplicates:boolean}){
-    const parsed=parseStudentCsv(selection.csv);
-    if(typeof selection.allowDuplicates!=="boolean")throw new AccessDenied(403);
-    return input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
-      requireCookieMutation(request,actor.origin);
-      const existing=await data.roster(tx,actor.tenantId);if(existing.length>5000)throw new AccessDenied(403);
-      assertSessionLive(actor.authSessionExpiresAt);
-      const tutors=parsed.rows.some(row=>row.importMetadata?.tutorName)?await data.importTutors(tx,actor.tenantId):[];if(tutors.length>5000)throw new AccessDenied(403);
-      assertSessionLive(actor.authSessionExpiresAt);
-      const matched=matchedImport(parsed,tutors);
-      const duplicateRows=duplicates(parsed.rows,existing,parsed.rowNumbers);
-      const canConfirm=parsed.issues.length===0 && (!duplicateRows.length || selection.allowDuplicates);
-      const binding=canConfirm?bindings.sign({purpose:"student-import",actor:actorBinding(actor),input:digest(selection.csv),roster:rosterState(existing),tutors:matched.tutorSnapshot,allowDuplicates:selection.allowDuplicates}):null;
-      return {validRows:parsed.rows.length,issues:parsed.issues,duplicateRows,requiresDuplicateConfirmation:duplicateRows.length>0,canConfirm,binding,
-        tutorMatches:matched.tutorMatches,missingSecondParentRows:matched.missingSecondParentRows,tutorAssignmentsPending:true as const};
-    });
-  }
-  async function confirmImport(request:CookieMutationRequest,selection:Mode&{csv:string;allowDuplicates:boolean;binding:string}){
-    const parsed=parseStudentCsv(selection.csv),claim=bindings.verify(selection.binding,"student-import");
-    if(parsed.issues.length || typeof selection.allowDuplicates!=="boolean")throw new AccessDenied(403);
-    const result=await input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
-      requireCookieMutation(request,actor.origin);
-      if(!sameActor(claim,actor) || claim.input!==digest(selection.csv) || claim.allowDuplicates!==selection.allowDuplicates)throw new AccessDenied(403);
-      const existing=await data.roster(tx,actor.tenantId);if(existing.length>5000)throw new AccessDenied(403);
-      assertSessionLive(actor.authSessionExpiresAt);
-      if(claim.roster!==rosterState(existing))return conflict();
-      const tutors=parsed.rows.some(row=>row.importMetadata?.tutorName)?await data.importTutors(tx,actor.tenantId):[];if(tutors.length>5000)throw new AccessDenied(403);
-      assertSessionLive(actor.authSessionExpiresAt);
-      const matched=matchedImport(parsed,tutors);
-      if(claim.tutors!==matched.tutorSnapshot)return conflict();
-      if(duplicates(parsed.rows,existing,parsed.rowNumbers).length && !selection.allowDuplicates)throw new AccessDenied(403);
-      const ids:string[]=[];
-      for(const values of matched.rows){assertSessionLive(actor.authSessionExpiresAt);const student=await writeNewStudent(tx,actor,values,"student.import",now());ids.push(student.id);}
-      assertSessionLive(actor.authSessionExpiresAt);
-      return {ok:true as const,ids};
-    });
-    if(result.ok)await afterSchedule(request,selection.mode,result.ids);return result;
-  }
   // The portal's cookie authority for reading work: set-reading, then the same-origin POST check first.
   const cookieReading=(request:CookieMutationRequest,mode:ActiveMode):StudentAuthority<Q>=>(studentId,action)=>input.access.withStudentCapability(request,{mode,studentId,capability:"set-reading"},async(tx,actor,student)=>{
     requireCookieMutation(request,actor.origin);return action(tx,actor,student);});
@@ -338,5 +277,5 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
     if(result.ok && input.dispatchScheduled)try{await input.dispatchScheduled();}catch{/* The daily drain sends it. */}
     return result;
   }
-  return {listRoster,create,edit,disable,previewImport,confirmImport,prepareReading,confirmReading};
+  return {listRoster,create,edit,disable,prepareReading,confirmReading};
 }

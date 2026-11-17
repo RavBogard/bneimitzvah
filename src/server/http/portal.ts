@@ -19,7 +19,7 @@ import { requireCookieMutation } from "./mutations";
 import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
 
 type Kind = "short-explore-page" | "short-reference-page" | "explore-prepare" | "explore-page" | "preview-prepare" | "preview-page" | "session" | "session-begin" | "session-door" | "students" | "student" | "reading" | "study-text" | "study-word-aids" | "study-word-details" | "study-sources" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
-  | "admin-students" | "edit" | "disable" | "ceremony-done" | "ceremony-reverse" | "csv-preview" | "csv-confirm" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "invite-copy" | "invite-needed" | "pending" | "accept"
+  | "admin-students" | "edit" | "disable" | "ceremony-done" | "ceremony-reverse" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "invite-copy" | "invite-needed" | "pending" | "accept"
   | "eligible-tutors" | "relationships" | "tutor-assign" | "tutor-unassign" | "guardian-revoke" | "identity-revoke" | "guardian-practice" | "grant-revoke" | "cantor";
 type Route = { kind: Kind; methods: readonly string[]; id?: string; linkId?: string };
 const exact: Record<string, Route> = {
@@ -29,7 +29,6 @@ const exact: Record<string, Route> = {
   "/api/practice/exit": { kind: "practice-exit", methods: ["POST"] },
   "/api/admin/students": { kind: "admin-students", methods: ["GET", "POST"] },
   "/api/admin/tutors": { kind: "eligible-tutors", methods: ["GET"] },
-  "/api/admin/students/import/preview": { kind: "csv-preview", methods: ["POST"] }, "/api/admin/students/import/confirm": { kind: "csv-confirm", methods: ["POST"] },
   "/api/admin/invitations": { kind: "invite-issue", methods: ["GET", "POST"] },
   "/api/admin/invitations/needed": { kind: "invite-needed", methods: ["GET"] },
   "/api/invitations/pending": { kind: "pending", methods: ["GET"] }, "/api/invitations/accept": { kind: "accept", methods: ["POST"] },
@@ -91,7 +90,7 @@ function mode(value: unknown, child = false): ActiveMode | "child-practice" {
 }
 function baseMode(value: unknown): ActiveMode { return mode(value) as ActiveMode; }
 function staffMode(value: unknown): "admin" | "tutor" { const result = baseMode(value); if (result !== "admin" && result !== "tutor") throw new HttpBoundaryError(); return result; }
-const objectBody = async (request: Request, required: string[], optional: string[] = [], profile: "ordinary" | "binding" | "csv" | "work" = "ordinary") =>
+const objectBody = async (request: Request, required: string[], optional: string[] = [], profile: "ordinary" | "binding" | "work" = "ordinary") =>
   closedObject(await readJsonBody(request, profile), required, optional);
 function studentInput(value: unknown) {
   const row = closedObject(value, ["firstName", "lastName", "ceremonyDate"], ["studentKind", "serviceSlot", "parentEmail", "ownEmail", "hebrewName", "secondParentEmail", "rehearsal1", "rehearsal2"]);
@@ -471,19 +470,6 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
         const selection = { mode: "admin" as const, studentId: id!, expectedRevision: integer(body.expectedRevision) };
         const value = selected.kind === "ceremony-done" ? await runtime.ceremonyDone.set(request, selection) : await runtime.ceremonyDone.reverse(request, selection);
         return value.ok ? privateJson({ ok: true, id: value.id, revision: value.revision }) : stale();
-      }
-      case "csv-preview": case "csv-confirm": {
-        uniqueQuery(request.url, []); const body = await objectBody(request, selected.kind === "csv-preview" ? ["csv", "allowDuplicates"] : ["csv", "allowDuplicates", "binding"], [], "csv");
-        const csv = text(body.csv, 1024 * 1024), allowDuplicates = boolean(body.allowDuplicates);
-        if (Buffer.byteLength(csv) > 1024 * 1024) throw new HttpBoundaryError(413);
-        if (selected.kind === "csv-preview") {
-          const value = await runtime.students.previewImport(request, { mode: "admin", csv, allowDuplicates });
-          return privateJson({ validRows: value.validRows, issues: value.issues.map(issue => ({ row: issue.row, code: issue.code })), duplicateRows: value.duplicateRows,
-            requiresDuplicateConfirmation: value.requiresDuplicateConfirmation, canConfirm: value.canConfirm, binding: value.binding,
-            tutorMatches: value.tutorMatches, missingSecondParentRows: value.missingSecondParentRows, tutorAssignmentsPending: value.tutorAssignmentsPending });
-        }
-        const value = await runtime.students.confirmImport(request, { mode: "admin", csv, allowDuplicates, binding: text(body.binding, 48000) });
-        return value.ok ? privateJson({ ok: true, ids: value.ids }, 201) : stale();
       }
       case "prepare": {
         uniqueQuery(request.url, []); const body = await objectBody(request, ["mode"], ["kind", "pick", "ranges", "aliyahStarts", "preparationMode", "expectedAssignmentRevision"], "work");

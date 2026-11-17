@@ -62,7 +62,6 @@ test("a page whose h1 is fixed is titled with that h1", () => {
     ["components/portal/workspace/invitations/workspace.tsx", "app/(portal)/workspace/admin/invitations/page.tsx"],
     ["components/portal/workspace/settings/workspace.tsx", "app/(portal)/workspace/admin/settings/page.tsx"],
     ["components/portal/workspace/guide-admin/workspace.tsx", "app/(portal)/workspace/admin/guides/page.tsx"],
-    ["components/portal/workspace/csv-import/workspace.tsx", "app/(portal)/workspace/admin/students/import/page.tsx"],
     ["components/portal/workspace/roster.tsx", "app/(portal)/workspace/admin/students/page.tsx"],
     ["components/portal/connect.tsx", "app/connect/page.tsx"],
   ] as const) expect(headings(component), page).toContain(titleOf(page));

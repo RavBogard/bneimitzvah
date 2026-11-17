@@ -16,7 +16,7 @@ const SIGNED_IN = [
   // /workspace/student, /workspace/parent and /workspace/tutor redirect to /mine (E2), so they are checked below, not here.
   "/mine", "/mine/reading", `/mine/child/${ID_A}`, `/workspace/tutor/${ID_A}`,
   "/workspace/accounts", "/workspace/claude", "/workspace/email", "/workspace/more", "/workspace/admin/invitations",
-  "/workspace/admin/settings", "/workspace/admin/guides", "/workspace/admin/students", "/workspace/admin/students/import", `/workspace/admin/students/${ID_A}/reading`,
+  "/workspace/admin/settings", "/workspace/admin/guides", "/workspace/admin/students", `/workspace/admin/students/${ID_A}/reading`,
   `/workspace/admin/students/${ID_A}/access`, "/workspace/admin/tutors", "/account", "/connect", "/invitations/accept",
 ];
 

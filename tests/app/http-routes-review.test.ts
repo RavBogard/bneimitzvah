@@ -21,8 +21,8 @@ test("review: opaque reading review cannot cross a genuinely authorized role or 
     await f.owner(async () => { newCookie = (await f.signIn("multi@example.test")).cookie; });
     expect((await dispatch(f.request(`${path}?mode=tutor`, { headers: { cookie: newCookie } }))).status).toBe(200);
     expect((await dispatch(f.request(`${path}/confirm`, { headers: { cookie: newCookie }, body: { mode: "tutor", binding: prepared.binding } }))).status).toBe(403);
-    const csv = "firstName,lastName,ceremonyDate,parentEmail,ownEmail\nSynthetic,Review,2027-01-02,review@example.test,";
-    expect((await dispatch(f.request("/api/admin/students/import/confirm", { body: { csv, allowDuplicates: false, binding: prepared.binding } }))).status).toBe(403);
+    // The CSV import's confirm route is gone (Daniel, 2026-11-17): it answers as any unknown route does.
+    expect((await dispatch(f.request("/api/admin/students/import/confirm", { body: { binding: prepared.binding } }))).status).toBe(404);
     expect((await dispatch(f.request(`${path}/confirm`, { body: { mode: "tutor", binding: prepared.binding } }))).status).toBe(200);
     expect((await dispatch(f.request(`${path}/confirm`, { body: { mode: "tutor", binding: prepared.binding } }))).status).toBe(409);
   } finally { await f.client.close(); }
