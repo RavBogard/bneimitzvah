@@ -1,0 +1,25 @@
+name: Docs guard
+# ci.yml skips pull requests that change only documentation. This keeps the never-in-repo guard on them:
+# it scans every tracked file, docs included, for licensed text, family data and credentials.
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "*.md"
+      - ".impeccable/**"
+concurrency:
+  group: docs-guard-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  never-in-repo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      # The guard and its helpers use only Node built-ins, so no npm ci.
+      - run: node --test tests/never-in-repo.test.mjs

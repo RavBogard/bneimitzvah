@@ -1,7 +1,16 @@
 name: CI
 # A change is tested once, through its pull request, which tests the exact merge result; main is not retested after a merge. Run it by hand with workflow_dispatch when needed. A newer commit on the same pull request cancels the run it supersedes.
+# A pull request that changes only documentation (docs/, root Markdown, .impeccable notes) skips this workflow; docs-guard.yml
+# still runs never-in-repo on it. The 2.0 teaching drafts stay in: tests/app/service-course*.test.ts read them byte for byte.
+# Later patterns win, so the last line re-includes them after docs/** is excluded.
 on:
   pull_request:
+    paths:
+      - "**"
+      - "!docs/**"
+      - "!*.md"
+      - "!.impeccable/**/*.md"
+      - "docs/planning/2026-10-24-release-2-0/cowork/A3-DRAFTS/**"
   workflow_dispatch:
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
