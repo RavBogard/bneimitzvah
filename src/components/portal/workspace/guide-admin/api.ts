@@ -1,3 +1,4 @@
+import { gatedFetch } from "../session-gate";
 import { PortalRequestError } from "../../api";
 
 /**
@@ -68,7 +69,7 @@ export function parseGuideText(value: unknown): GuideText {
 async function call(path: string, body?: unknown, signal?: AbortSignal): Promise<{ status: number; value: unknown }> {
   let response: Response;
   try {
-    response = await fetch(path, { method: body === undefined ? "GET" : "POST", credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "same-origin", signal,
+    response = await gatedFetch(path, { method: body === undefined ? "GET" : "POST", credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "same-origin", signal,
       headers: body === undefined ? { accept: "application/json" } : { accept: "application/json", "content-type": "application/json" }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
   } catch { return bad(); }
   if (!response.ok && response.status !== 409) throw new PortalRequestError([401, 403, 404, 429].includes(response.status) ? response.status : 503);

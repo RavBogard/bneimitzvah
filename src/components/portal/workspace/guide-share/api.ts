@@ -1,3 +1,4 @@
+import { gatedFetch } from "../session-gate";
 import { PortalRequestError } from "../../api";
 
 /** What the guide sharing page shows of a preview or an import. Every field is read defensively: the page renders text only, never markup. */
@@ -31,7 +32,7 @@ async function post(path: string, file: unknown, signal?: AbortSignal): Promise<
   signal?.addEventListener("abort", abort, { once: true });
   const timeout = setTimeout(abort, 120_000);
   try {
-    const response = await fetch(path, { method: "POST", body: JSON.stringify({ file }), credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer", signal: controller.signal,
+    const response = await gatedFetch(path, { method: "POST", body: JSON.stringify({ file }), credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer", signal: controller.signal,
       headers: { accept: "application/json", "content-type": "application/json" } });
     if (!response.ok && response.status !== 400) throw new PortalRequestError([401, 403, 404, 413, 429, 503].includes(response.status) ? response.status : 503);
     if (!response.headers.get("content-type")?.toLowerCase().startsWith("application/json")) return bad();

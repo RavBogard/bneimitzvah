@@ -1,3 +1,4 @@
+import { gatedFetch } from "../session-gate";
 import { PortalRequestError } from "../../api";
 
 export type EmailKind = "weekly-digest" | "practice-reminder";
@@ -20,7 +21,7 @@ async function request(body?: object, signal?: AbortSignal): Promise<EmailOption
   const controller = new AbortController(), abort = () => controller.abort(); if (signal?.aborted) abort(); signal?.addEventListener("abort", abort, { once: true });
   const timeout = setTimeout(abort, 12_000);
   try {
-    const response = await fetch("/api/notifications/preferences", { method: body === undefined ? "GET" : "POST", body: body === undefined ? undefined : JSON.stringify(body), credentials: "same-origin", cache: "no-store",
+    const response = await gatedFetch("/api/notifications/preferences", { method: body === undefined ? "GET" : "POST", body: body === undefined ? undefined : JSON.stringify(body), credentials: "same-origin", cache: "no-store",
       redirect: "error", referrerPolicy: "no-referrer", signal: controller.signal, headers: body === undefined ? { accept: "application/json" } : { accept: "application/json", "content-type": "application/json" } });
     if (!response.ok) throw new PortalRequestError([400, 401, 403, 404, 429, 503].includes(response.status) ? response.status : 503);
     if (!response.headers.get("content-type")?.toLowerCase().startsWith("application/json")) return bad();

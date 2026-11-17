@@ -1,3 +1,4 @@
+import { gatedFetch } from "../workspace/session-gate";
 import { PortalRequestError } from "../api";
 import { parseSavedList, parseSavedPage, type SavedList, type SavedPage } from "../saved/api";
 
@@ -29,7 +30,7 @@ async function call(path: string, body?: object, signal?: AbortSignal): Promise<
   const controller = new AbortController(), abort = () => controller.abort(); if (signal?.aborted) abort(); signal?.addEventListener("abort", abort, { once: true });
   const timeout = setTimeout(abort, 12_000);
   try {
-    const response = await fetch(path, { method: body === undefined ? "GET" : "POST", body: body === undefined ? undefined : JSON.stringify(body), credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer", signal: controller.signal,
+    const response = await gatedFetch(path, { method: body === undefined ? "GET" : "POST", body: body === undefined ? undefined : JSON.stringify(body), credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer", signal: controller.signal,
       headers: body === undefined ? { accept: "application/json" } : { accept: "application/json", "content-type": "application/json" } });
     if (!response.headers.get("content-type")?.toLowerCase().startsWith("application/json")) return bad();
     const raw = await response.text(); if (raw.length > 256 * 1024) return bad();

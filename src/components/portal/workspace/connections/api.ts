@@ -1,3 +1,4 @@
+import { gatedFetch } from "../session-gate";
 import { PortalRequestError } from "../../api";
 
 export type ConnectionAccess = "read" | "study" | "roster";
@@ -18,7 +19,7 @@ async function request(path: string, body?: object, signal?: AbortSignal): Promi
   const controller = new AbortController(), abort = () => controller.abort(); if (signal?.aborted) abort(); signal?.addEventListener("abort", abort, { once: true });
   const timeout = setTimeout(abort, 12_000);
   try {
-    const response = await fetch(path, { method: body === undefined ? "GET" : "POST", body: body === undefined ? undefined : JSON.stringify(body), credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer", signal: controller.signal,
+    const response = await gatedFetch(path, { method: body === undefined ? "GET" : "POST", body: body === undefined ? undefined : JSON.stringify(body), credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer", signal: controller.signal,
       headers: body === undefined ? { accept: "application/json" } : { accept: "application/json", "content-type": "application/json" } });
     // A refused unlink (409) carries its reason; every other failure is only a status.
     if (!response.ok && response.status !== 409) throw new PortalRequestError([400, 401, 403, 404, 413, 429, 503].includes(response.status) ? response.status : 503);

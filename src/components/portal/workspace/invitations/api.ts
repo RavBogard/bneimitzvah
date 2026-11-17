@@ -1,3 +1,4 @@
+import { gatedFetch } from "../session-gate";
 import { PortalRequestError } from "../../api";
 import { identifier, type RosterStudent } from "../api";
 
@@ -63,7 +64,7 @@ async function request(path: string, body?: object, signal?: AbortSignal): Promi
   const controller = new AbortController(), abort = () => controller.abort(); if (signal?.aborted) abort(); signal?.addEventListener("abort", abort, { once: true });
   const timeout = setTimeout(abort, 12_000);
   try {
-    const response = await fetch(path, { method: body === undefined ? "GET" : "POST", body: body === undefined ? undefined : JSON.stringify(body), credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer", signal: controller.signal,
+    const response = await gatedFetch(path, { method: body === undefined ? "GET" : "POST", body: body === undefined ? undefined : JSON.stringify(body), credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer", signal: controller.signal,
       headers: body === undefined ? { accept: "application/json" } : { accept: "application/json", "content-type": "application/json" } });
     if (!response.ok) throw new PortalRequestError([400, 401, 403, 404, 409, 413, 429, 503].includes(response.status) ? response.status : 503);
     if (!response.headers.get("content-type")?.toLowerCase().startsWith("application/json")) return bad();

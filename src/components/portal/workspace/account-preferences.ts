@@ -1,3 +1,4 @@
+import { gatedFetch } from "./session-gate";
 import { changedFields, EMPTY_PREFERENCES, overlayPreferences, parsePreferences, PREFERENCE_FIELDS, PREFERENCE_TEXT_SIZES, PREFERENCE_TIKKUN_VIEWS, PREFERENCE_WORKS,
   PREFERENCE_MAX_WORKS, samePreferences, type PreferenceField, type Preferences } from "../../../lib/account-preferences/document";
 
@@ -237,7 +238,7 @@ export function onPreferencesApplied(listener: () => void): () => void { applier
 export function startAccountPreferences(activate: boolean) {
   if (typeof window === "undefined") return;
   if (!shared) {
-    const sync = createPreferencesSync({ fetch: (...args) => fetch(...args), storage: () => { try { return window.localStorage; } catch { return null; } },
+    const sync = createPreferencesSync({ fetch: (...args) => gatedFetch(...args), storage: () => { try { return window.localStorage; } catch { return null; } },
       onApplied: () => { for (const listener of [...appliers]) listener(); } });
     shared = sync;
     const hide = () => { if (document.visibilityState !== "visible") sync.flush(); };

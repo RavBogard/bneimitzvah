@@ -75,8 +75,12 @@ export function useHeldSession(clearPrivate: () => void) {
   }, [read, show]);
   /** Check access again (and opening another page from a failure state): read the session and mount the pages afresh. */
   const retry = useCallback(() => { clear.current(); show(null, "checking"); void read("retry"); }, [read, show]);
-  /** A page asking to re-check (its own refusal, or Refresh): the view stays while the session is read. */
-  const refresh = useCallback(() => phase.current === "ready" ? read("refresh") : (retry(), Promise.resolve(false)), [read, retry]);
+  /**
+   * A page asking to re-check (its own refusal, or Refresh): the view stays while the session is read. When the view is
+   * already gone or a check is under way it does nothing, so a refusal that reported `denied` and then asks to refresh
+   * cannot bring the pages back by itself: only "Check access again" (`retry`) leaves a failure state.
+   */
+  const refresh = useCallback(() => phase.current === "ready" ? read("refresh") : Promise.resolve(false), [read]);
 
   /** While unconfirmed, any reason to look again (a write that was refused locally, coming online, coming back) reads the session once. */
   const recheck = useCallback(() => { if (unconfirmed.current && phase.current === "ready" && !request.current) void read("return"); }, [read]);

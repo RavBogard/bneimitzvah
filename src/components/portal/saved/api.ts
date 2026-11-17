@@ -1,3 +1,4 @@
+import { gatedFetch } from "../workspace/session-gate";
 /**
  * The browser side of a member's own saved readings (Release 1.4). Same-origin, cookie session,
  * no-store and bounded, like requestPortal, but kept apart from the signed-out reading's public
@@ -28,7 +29,7 @@ async function request(path: SavedPath, body?: Record<string, unknown>, signal?:
   signal?.addEventListener("abort", abort, { once: true });
   const timeout = setTimeout(abort, 12_000);
   try {
-    const response = await fetch(path + search, { method: body === undefined ? "GET" : "POST", credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer",
+    const response = await gatedFetch(path + search, { method: body === undefined ? "GET" : "POST", credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer",
       signal: controller.signal, headers: body === undefined ? { accept: "application/json" } : { accept: "application/json", "content-type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body) });
     const status = [200, 400, 401, 403, 404, 409].includes(response.status) ? response.status : 503;
