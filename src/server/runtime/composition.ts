@@ -54,6 +54,8 @@ import { createMcpEndpoint, type McpEndpoint } from "../mcp/endpoint";
 import { createSefariaPinnedSourceReader } from "../study/source-text";
 import { createGuideChecker } from "../study-guides/citations";
 import { createGuideShareService } from "../guide-share/service";
+import { createGuideAdminService } from "../guide-admin/service";
+import { createDiscussionService } from "../discussions/service";
 import { createHaftarahSheets } from "../study-guides/haftarah-sheets";
 // The runtime is composed per request; the public haftarah index cache must outlive it.
 const haftarahSheets = createHaftarahSheets({ fetch: (...args) => fetch(...args) });
@@ -203,6 +205,8 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const studyGuides = studyGuideWebSurface(createStudyGuideService({ access, practice, check: createGuideChecker({ related: createSefariaMetadataReader({ fetch }).related }) }));
   // Guide sharing (plan ruling 11): admin export and import of reviewed guides; the only web write of guide rows, held and credited.
   const guideShare = createGuideShareService({ access, related: createSefariaMetadataReader({ fetch }).related });
+  // The admin's Guides page (gap A6): reads, and the MCP tools' own withdraw and approve service functions under the admin web authority.
+  const guideAdmin = createGuideAdminService({ access, discussions: createDiscussionService({ pinned: createSefariaPinnedSourceReader({ fetch }) }) });
   const lessonLog = createLessonLogService({ access, practice });
   const congregationSettings = createCongregationSettingsService({ access, emailEnabled: config.notificationsEnabled });
   // Release 1.1: staff end Claude connections from the portal; admins undo a wrong Maven link.
@@ -268,7 +272,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, guideShare, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, signInCodeCap, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved, learners, offline, courseProgress, verseReview, serviceCourseProgress, serviceCoursePath, servicePartFinished, practiceVisibility, staff, ceremonyDone, accounts });
+  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, guideShare, guideAdmin, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, signInCodeCap, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved, learners, offline, courseProgress, verseReview, serviceCourseProgress, serviceCoursePath, servicePartFinished, practiceVisibility, staff, ceremonyDone, accounts });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;
