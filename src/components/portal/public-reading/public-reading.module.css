@@ -56,8 +56,6 @@
 .chooser h3 { margin: 0 0 0.5rem; font-size: 1rem; font-weight: 700; }
 .choice { margin-block: 0 1.5rem; }
 .choice > label { display: block; margin-bottom: 0.5rem; font-weight: 700; }
-.choiceRow { display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; align-items: center; }
-.choiceRow select { flex: 1 1 16rem; min-width: 0; max-width: 28rem; min-height: 48px; }
 .custom { min-width: 0; }
 .credit { margin: 0; color: var(--color-muted); font-size: 0.875rem; }
 .passageNote { margin-block: 0.5rem 0; }
@@ -68,7 +66,6 @@
 .chooseRow { display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; margin-block: 0.5rem 1rem; }
 @media (max-width: 640px) {
   .chooser { padding: 1rem; }
-  .choiceRow > button { flex: 1 1 100%; }
   .weeks > :global(.button-hero-secondary) { flex: 1 1 auto; justify-content: center; }
   .picker { flex: 1 1 100%; justify-content: space-between; }
   .signIn a { width: 100%; }

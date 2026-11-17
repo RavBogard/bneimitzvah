@@ -55,7 +55,6 @@
   --color-focus: #154680;
   --radius-control: 12px;
   --radius-object: 16px;
-  --space-unit: 0.5rem;
   /* 1.9 N9 visual system (Daniel, decision 3, 2026-10-24). Six type steps, three weights, a radius per object, four staff
      tones and one focus ring. DESIGN.md has the dated amendment; src/components/ui adopts these, pages adopt them later. */
   --text-display: 2.5rem;
@@ -84,7 +83,7 @@
   --note-classic: #9a3412; --note-classic-tint: #fbeee4;
   --note-modern: #1e6b47; --note-modern-tint: #e3f2e9;
   --note-rabbi: #6b3d8f; --note-rabbi-tint: #f1eaf8;
-  --row-now: #f1f6fc; --note-chip: #6b4a00;
+  --row-now: #f1f6fc;
   color-scheme: light;
   font-family: "Bricolage Grotesque", "Bricolage Grotesque Fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
   font-optical-sizing: auto;
@@ -99,7 +98,7 @@
     --note-classic: #f2a97c; --note-classic-tint: #3a2216;
     --note-modern: #7fd1a8; --note-modern-tint: #133123;
     --note-rabbi: #cfaaf0; --note-rabbi-tint: #2c1d3d;
-    --row-now: #16304f; --note-chip: #f7d57a;
+    --row-now: #16304f;
     --color-surface: #13233a;
     --color-canvas: #0b1626;
     --color-ink: #e9f0f8;
@@ -194,7 +193,6 @@ button:disabled { cursor: wait; opacity: 0.6; }
 .google-button { width: 100%; gap: 0.75rem; }
 .google-button svg { flex: none; }
 .google-continue .google-button { margin-top: 1.5rem; }
-.entry-ask a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
 .form-divider { display: flex; align-items: center; gap: 1rem; color: var(--color-muted); font-size: 0.875rem; margin: 1.75rem 0; }
 .form-divider::before, .form-divider::after { content: ""; height: 1px; flex: 1; background: var(--color-rule); }
 label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
@@ -238,7 +236,6 @@ html { scrollbar-color: var(--color-control-rule) var(--color-canvas); scrollbar
 .workspace-state > p, .role-workspace > p { margin-bottom: 1rem; }
 .workspace-state > button, .workspace-state > a { margin-top: 1rem; }
 .workspace-notice { color: var(--color-teal); padding-block: 0.75rem; margin-bottom: 1.5rem; }
-.workspace-heading-row { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: start; gap: 1rem; margin-bottom: 1rem; }
 select { display: block; width: min(100%, 36rem); font: inherit; padding: 0.6875rem 2rem 0.6875rem 0.875rem; border: 1px solid var(--color-control-rule); border-radius: var(--radius-control); color: var(--color-ink); background: var(--color-surface); min-height: 48px; }
 .reading-workspace { display: grid; grid-template-columns: minmax(0, 2fr) minmax(min(15rem, 100%), 1fr); gap: 3rem; margin-top: 2.5rem; }
 .reading-workspace > section { min-width: 0; }
@@ -258,17 +255,6 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .reading-tools { align-self: start; padding-top: 1.5rem; border-top: 1px solid var(--color-ink); }
 .reading-tools p { margin-top: 1rem; }
 .reading-tools .button-primary { margin-top: 1.5rem; }
-.roster-scroll { overflow-x: auto; margin-top: 1.75rem; }
-.roster-table { width: 100%; border-collapse: collapse; text-align: left; font-variant-numeric: tabular-nums; }
-.roster-table caption { text-align: left; color: var(--color-muted); padding-bottom: 1rem; }
-.roster-table th, .roster-table td { border-bottom: 1px solid var(--color-rule); padding: 0.75rem 1rem 0.75rem 0; vertical-align: top; overflow-wrap: anywhere; }
-.roster-table th:nth-child(2), .roster-table td:nth-child(2), .roster-table th:nth-child(3), .roster-table td:nth-child(3) { width: 1%; white-space: nowrap; overflow-wrap: normal; }
-.roster-table tbody th { overflow-wrap: normal; word-break: normal; }
-.roster-student-kind { display: block; color: var(--color-muted); font-size: 0.875rem; font-weight: 400; }
-.roster-table tbody th bdi { overflow-wrap: anywhere; }
-.roster-table thead th { color: var(--color-muted); font-size: 0.875rem; font-weight: 600; }
-.roster-table .button-text { font-size: 1rem; margin: 0; text-align: start; }
-.roster-reading-link { display: block; width: fit-content; padding-block: 0.5rem; font-size: 0.875rem; font-weight: 400; }
 .reading-editor { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--color-ink); }
 .reading-editor > p, .reading-proposal > p { max-width: 70ch; margin-block: 1rem; }
 .reading-editor form { max-width: 44rem; }
@@ -276,20 +262,13 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .reading-custom { margin-block: 1.5rem; }
 .reading-custom textarea { width: 100%; min-height: 8rem; resize: vertical; border: 1px solid var(--color-muted); border-radius: 6px; padding: 0.75rem; font: inherit; background: var(--color-surface); color: var(--color-ink); caret-color: var(--color-action); }
 .reading-proposal { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--color-rule); }
-.reading-calendar-choices { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.75rem; }
-.reading-calendar-choices button { white-space: normal; text-align: start; }
 .invitation-compose, .invitation-action-review, .invitation-list-section, .invitation-outcome { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--color-rule); }
 .invitation-workspace > p, .invitation-compose > p, .invitation-action-review > p, .invitation-outcome > p { max-width: 70ch; margin-block: 1rem; }
 .invitation-compose form { max-width: 44rem; }
 .invitation-action-review .invitation-details dd, .invitation-action-review .invitation-details bdi { min-width: 0; overflow-wrap: anywhere; }
-.invitation-form-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; margin-block: 1.5rem; }
-.invitation-student { margin-block: 1.5rem; }
 .invitation-records { list-style: none; padding: 0; }
 .invitation-records > li { padding-block: 1.5rem 2rem; border-bottom: 1px solid var(--color-rule); }
 .invitation-records h3, .invitation-recipient { overflow-wrap: anywhere; }
-.invitation-record-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 2rem; max-width: 48rem; margin-top: 1rem; }
-.invitation-record-details dt { color: var(--color-muted); }
-.invitation-record-details dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .assigned-study { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--color-ink); }
 .assigned-study > p, .study-credits p { max-width: 70ch; margin-block: 1rem; }
 .study-verses { list-style: none; margin: 1.5rem 0; padding: 0; }
@@ -313,9 +292,6 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 /* Student work follows the verse on small screens and sits beside it on wide screens. */
 .reading-workspace.reading-with-work { grid-template-columns: minmax(0, 1fr); }
 .reading-with-work[hidden] { display: none; }
-.study-verses-with-work > li { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(18rem, 1fr); gap: 2rem; align-items: start; }
-.study-verses-with-work > li > article { min-width: 0; }
-.study-verses-with-work > li > .student-aliyah { grid-column: 1 / -1; }
 .verse-work { min-width: 0; border-inline-start: 1px solid var(--color-rule); padding-inline-start: 1.5rem; }
 .verse-work summary { min-height: 44px; padding-block: 0.625rem; cursor: pointer; overflow-wrap: anywhere; }
 .verse-work-content { padding-block: 0.5rem; }
@@ -333,24 +309,19 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .work-departure::backdrop { background: color-mix(in srgb, var(--color-ink) 30%, transparent); }
 .work-departure h2 { margin-bottom: 1rem; }
 @media (max-width: 1000px) {
-  .study-verses-with-work > li { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
   .verse-work { border-inline-start: 0; border-top: 1px solid var(--color-rule); padding-inline-start: 0; }
 }
-.access-section, .access-review { border-top: 1px solid var(--color-rule); margin-top: 2rem; padding-top: 1.5rem; }
+.access-review { border-top: 1px solid var(--color-rule); margin-top: 2rem; padding-top: 1.5rem; }
 .access-review { border-color: var(--color-ink); max-width: 44rem; }
-.access-review h2, .access-section h2 { margin-bottom: 1rem; }
+.access-review h2 { margin-bottom: 1rem; }
 .access-student { margin-top: 2rem; }
 .access-student h2, .access-records h2, .access-records h3 { overflow-wrap: anywhere; }
 .access-records { list-style: none; padding: 0; margin-block: 1rem; }
 .access-records > li { padding-block: 1.25rem; border-bottom: 1px solid var(--color-rule); overflow-wrap: anywhere; }
 .access-records p, .access-review > p { margin-block: 0.75rem; }
-.access-actions, .access-pages { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; margin-top: 1rem; }
-.access-actions .button-text { margin: 0; text-align: start; }
 .access-details { margin-block: 1rem; }
 .access-details > div { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 0.5rem 1rem; margin-block: 0.75rem; }
 .access-details dd { overflow-wrap: anywhere; }
-.access-assign { margin-block: 1.5rem; max-width: 44rem; }
-.access-assign > button { margin-top: 1rem; }
 .roster-pages, .form-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }
 .roster-editor { border-top: 1px solid var(--color-ink); padding-top: 1.5rem; margin-top: 2.5rem; }
 .roster-editor h2 { margin-bottom: 1.5rem; }
@@ -366,12 +337,8 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
   .study-kind-choice { margin-block: 0.5rem; }
   .study-verses { margin-top: 0.5rem; }
   .access-details > div { grid-template-columns: minmax(0, 1fr); gap: 0.25rem; }
-  .access-actions { align-items: stretch; }
   .roster-form-grid { grid-template-columns: minmax(0, 1fr); }
   .reading-editor-fields { grid-template-columns: minmax(0, 1fr); }
-  .invitation-form-fields, .invitation-record-details { grid-template-columns: minmax(0, 1fr); }
-  .workspace-heading-row > button { width: 100%; }
-  .roster-table th, .roster-table td { padding-inline-end: 0.5rem; font-size: 0.875rem; }
 }
 
 /* Staff preview extends the existing annotated reading, without assignment tools. */
@@ -394,9 +361,6 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 @media (max-width: 640px) {
   .assigned-study .study-verses > li > article > h4 { margin-block: 0 0.5rem; }
   .assigned-study .study-verses > li > article > .study-hebrew { margin-block-start: 0.5rem; }
-  .study-verses-with-work > li:has(> .student-aliyah) { row-gap: 0; }
-  .study-verses-with-work > li > .student-aliyah { margin-block: 0; font-size: 0.875rem; line-height: 1.4; }
-  .study-verses-with-work > li:has(> .student-aliyah) > .verse-work { margin-block-start: 1rem; }
 }
 
 /* Selected service parts extend the existing reading and explicit review controls. */
@@ -479,15 +443,13 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 /* The single next decision, at poster scale. */
 .reading-hero { margin-block: 0.5rem 1.75rem; min-width: 0; }
 .hero-who { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
-.hero-name { font-size: 1.0625rem; font-weight: 700; overflow-wrap: break-word; }
 /* The service slot shares the name line at the name's line height, so the hero keeps its phone height. */
 .hero-slot { color: var(--color-muted); line-height: 1.4; }
 /* The start time would wrap the name line on a phone; it shows on wider screens only. */
 @media (max-width: 640px) { .hero-slot-time { display: none; } }
 .hero-date { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; color: var(--color-muted); font-variant-numeric: tabular-nums; }
 .hero-rehearsals { margin: 0.125rem 0 0; color: var(--color-muted); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
-.hero-date time, .hero-rehearsals time, .hero-days { white-space: nowrap; }
-.hero-days { background: var(--marigold); color: var(--on-ink); font-weight: 650; font-size: 0.875rem; padding: 0.125rem 0.625rem; border-radius: 999px; }
+.hero-date time, .hero-rehearsals time { white-space: nowrap; }
 .hero-icon { margin-inline-start: auto; display: inline-grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 999px; background: transparent; color: var(--color-muted); }
 .hero-icon:hover { background: var(--color-hover); color: var(--color-ink); }
 .reading-hero .hero-reference { margin-top: 0.75rem; font-size: clamp(2.5rem, 7.5vw, 4.25rem); font-weight: 800; line-height: 1; letter-spacing: -0.035em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; max-width: 16ch; }
@@ -614,7 +576,6 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 .study-credits > summary { color: var(--color-action); width: fit-content; }
 
 /* Translation and notes beside each verse. */
-.study-verses-with-work > li { gap: 0.75rem 1.25rem; }
 .verse-work { border: 0; padding: 0; background: transparent; }
 .verse-work > summary { display: inline-flex; align-items: center; min-height: 44px; padding: 0 1rem; border-radius: 999px; background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); color: var(--color-action); text-decoration: none; font-weight: 600; font-size: 0.9375rem; }
 .verse-work > summary:hover { background: var(--color-hover); }
@@ -631,7 +592,6 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 .toolbar-item[aria-pressed="true"], .toolbar-item[data-active="true"] { background: #fff; color: var(--lake-deep); }
 .toolbar-item:disabled, .toolbar-item[aria-disabled="true"] { cursor: not-allowed; opacity: 1; color: rgb(255 255 255 / 0.62); }
 .toolbar-item[aria-disabled="true"]:hover { background: transparent; }
-.toolbar-soon { font-size: 0.75rem; font-weight: 500; color: rgb(255 255 255 / 0.82); }
 .reading-toolbar :focus-visible { outline: 3px solid var(--marigold); outline-offset: 2px; }
 .toolbar-menu { inset: auto; left: 50%; bottom: calc(max(0.75rem, env(safe-area-inset-bottom)) + 5.25rem); transform: translateX(-50%); margin: 0; width: min(calc(100% - 1.5rem), 22rem); padding: 0.5rem; border: 0; border-radius: 20px; background: var(--color-surface); color: var(--color-ink); box-shadow: inset 0 0 0 1px var(--color-rule), 0 0 0 2px var(--color-canvas); }
 .toolbar-menu button { display: flex; align-items: center; gap: 0.875rem; width: 100%; min-height: 52px; padding: 0 0.75rem; border: 0; border-radius: 14px; background: transparent; color: var(--color-ink); font-weight: 600; text-align: start; }
@@ -710,14 +670,11 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 .study-more > .study-print-action { display: inline-flex; align-items: center; min-height: 44px; margin: 0; padding: 0; font-size: 1rem; font-weight: 600; }
 .study-more > .study-print-sheet { display: none; }
 @media (max-width: 1000px) {
-  .reading-print-action[data-learner], .reading-print-sheet[data-learner] { display: none; }
   .study-more > .study-print-action { display: inline-flex; align-items: center; }
 }
 .verse-work > summary { gap: 0.3em; }
 .workspace-main:has(.reading-toolbar) .service-learning-panel { border-top: 0; padding: 1.25rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
-.reading-hero .hero-name { font-size: 1.0625rem; font-weight: 700; letter-spacing: 0; line-height: 1.4; }
 .reading-hero .hero-reference-empty { font-size: clamp(1.75rem, 6vw, 2.5rem); max-width: 20ch; }
-.study-verses-with-work > li > .student-aliyah { justify-self: start; width: fit-content; }
 
 /* Finish-review fixes: apparatus stays out of the lifted line, tools sit beside the verses on desktop. */
 /* A ketiv and its qere may wrap between their words; only the label and a maqaf chain are kept whole (a nowrap box here pushed the qere off the left edge). */
@@ -734,7 +691,6 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 .practice-bar .practice-bar-title { margin: 0 auto 0 0; font-size: 1.125rem; line-height: 1.25; letter-spacing: -0.01em; }
 .practice-switches { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.375rem; }
 .practice-bar .practice-pill { min-height: 44px; padding: 0 0.625rem; border-radius: 999px; font-size: 0.9375rem; text-align: center; }
-.practice-coach { margin: 0; }
 /* The tutor's ask, once, under the bar; then one line of what the tutor sees, open on a tap. */
 .practice-ask .lesson-before-next { margin: 0 0 0.25rem; }
 .practice-disclosure { margin: 0; }
@@ -768,15 +724,9 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 @media print { .reading-toolbar { display: none; } }
 
 /* 1.9 N7: the Study sources column. From 1180px (a laptop) the curated sources stand in their own column to the right of the verses, as the layout's last column, and stay in
-   view as the page scrolls; the Hebrew keeps its size setting (the text column only wraps more). Narrower, the column is not drawn and a "Sources" button in flow above the text
-   opens the same list in the Sheet: one tap, over no verse. */
-.reading-sources-open { margin-block: 0.25rem 0.5rem; }
-.reading-sources-open .button-secondary { min-height: 44px; }
+   view as the page scrolls; the Hebrew keeps its size setting (the text column only wraps more). Narrower, the column is not drawn. */
 .reading-sources-column { display: none; }
-.reading-sources-dock { display: contents; }
 @media (min-width: 1180px) {
-  .reading-sources-dock { display: none; }
-  .reading-sources-open { display: none; }
   .reading-passage-layout:has(> .reading-sources-column) { display: grid; grid-template-columns: minmax(0, 1fr) 6.5rem minmax(14rem, 18rem); column-gap: 1.5rem; }
   .reading-passage-layout:has(> .reading-sources-column):not(:has(> .reading-toolbar)) { grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem); }
   .reading-passage-layout:has(> .reading-sources-column) > :not(.reading-toolbar):not(.reading-sources-column) { grid-column: 1; min-width: 0; }
@@ -806,7 +756,6 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 .study-verse-detail > * { margin-block: 0; }
 
 /* Phase 2: tutor home as student cards, a page per student, the same reading. */
-.selection-lede { font-size: clamp(1.75rem, 5vw, 2.5rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin: 0.25rem 0 1.25rem; max-width: 20ch; }
 .student-cards { list-style: none; padding: 0; margin: 0 0 1.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); gap: 0.75rem; }
 .student-card { display: flex; flex-direction: column; align-items: flex-start; gap: 0.375rem; width: 100%; min-width: 0; min-height: 88px; padding: 1rem 1.25rem; border: 0; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); color: var(--color-ink); text-align: start; text-decoration: none; transition: box-shadow 160ms var(--ease-settle); }
 .student-card:hover { box-shadow: inset 0 0 0 2px var(--lake); color: var(--color-ink); }

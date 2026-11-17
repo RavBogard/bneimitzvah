@@ -215,16 +215,7 @@ a.stepLink:hover { background: var(--color-hover); color: var(--color-ink); }
 /* ---------- the one celebration: the verse on the lake sheet ---------- */
 .sheet { position: fixed; inset: 0; z-index: 20; display: grid; grid-template-rows: minmax(0, 1fr) auto; background: var(--lake); color: #fff; overflow-y: auto; }
 .sheet :focus-visible { outline: 3px solid var(--marigold); outline-offset: 3px; }
-.sheetStage { display: flex; flex-direction: column; justify-content: safe center; align-items: center; gap: 1.25rem; padding: 2rem 1.25rem 1rem; text-align: center; }
 .sheetHebrew { font-size: 3.2rem; line-height: 1.9; max-width: 22ch; margin: 0; }
-.sheetLine { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.01em; }
-.sheetRef { font-weight: 650; opacity: 0.85; }
-.sheetActions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.75rem; width: 100%; max-width: 32rem; margin-inline: auto; padding: 0.75rem 1rem max(1rem, env(safe-area-inset-bottom)); }
-.sheetStep { display: inline-flex; align-items: center; justify-content: center; min-height: 56px; padding: 0 1rem; border: 0; border-radius: 999px; background: rgb(255 255 255 / 0.14); color: #fff; font-size: 1.0625rem; font-weight: 700; text-decoration: none; text-align: center; }
-.sheetStep:hover { background: rgb(255 255 255 / 0.22); color: #fff; }
-.sheetPrimary { background: #fff; color: var(--lake-deep); }
-.sheetPrimary:hover { background: var(--lake-tint); color: var(--lake-deep); }
-.sheetHidden { visibility: hidden; }
 
 /* ---------- this week and first verse ---------- */
 .week { display: grid; gap: 0.75rem; }
@@ -234,9 +225,6 @@ a.stepLink:hover { background: var(--color-hover); color: var(--color-ink); }
 .readerVerse .phraseStandard { font-size: 1.625rem; }
 .found { font-weight: 650; font-variant-numeric: tabular-nums; }
 .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
-.stepItem { display: flex; align-items: center; gap: 0.75rem; font-weight: 600; color: var(--color-muted); }
-.stepItem[data-state="current"] { color: var(--color-ink); }
-.stepItem[data-state="done"] { color: var(--color-ink); }
 
 /* ---------- about ---------- */
 .about { max-width: 44rem; display: grid; gap: 1rem; }
@@ -244,7 +232,6 @@ a.stepLink:hover { background: var(--color-hover); color: var(--color-ink); }
 
 @media (prefers-color-scheme: dark) {
   .bar, .sheet { background: #10335e; box-shadow: 0 0 0 100vmax #10335e; }
-  .sheetPrimary, .sheetPrimary:hover { color: #10335e; }
   .play[data-state="playing"] { background: var(--color-action-fill); }
   .play { color: var(--color-action); }
   .dot[data-state="done"][data-plain] { background: var(--color-action-fill); }
@@ -271,7 +258,6 @@ a.stepLink:hover { background: var(--color-hover); color: var(--color-ink); }
   .verseRow { padding-inline: 0.75rem; column-gap: 0.75rem; }
   .verseBox { padding-inline: 0.875rem; }
   .sheetHebrew { font-size: 2.6rem; }
-  .sheetActions { grid-template-columns: minmax(0, 1fr); }
   .doneTitle { font-size: 2.125rem; }
   .slot, .tile { width: 4.25rem; min-width: 4.25rem; }
   .lookHebrew { font-size: 2.5rem; }
