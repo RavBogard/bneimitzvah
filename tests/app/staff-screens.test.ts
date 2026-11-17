@@ -54,8 +54,25 @@ describe("Needs you (N14)", () => {
     const statuses = new Map<string, StudentStatus>(response.json.students.map((row: StudentStatus) => [row.id, row]));
     // Only this congregation's students; the other congregation's is never named.
     expect([...statuses.keys()].sort()).toEqual([t.own.id, t.sibling.id, t.unrelated.id].sort());
-    expect(statuses.get(t.unrelated.id)).toEqual({ id: t.unrelated.id, tutors: 0, family: "none", reading: "none", honors: false, tutorName: null, got: 0, total: 0 });
+    expect(statuses.get(t.unrelated.id)).toEqual({ id: t.unrelated.id, tutors: 0, family: "none", reading: "none", honors: false, tutorName: null, got: 0, total: 0, solid: null });
     expect(statuses.get(t.own.id)).toMatchObject({ tutors: 1, family: "joined" });
+    // T2: the tutor's Solid count is null until the tutor assesses a verse; then it counts Solid verses of the confirmed reading only.
+    const assignment = await t.f.owner(async () => {
+      const [row] = await t.f.db.insert(s.assignment).values({ tenantId: t.unrelated.tenantId, studentId: t.unrelated.id, kind: "torah", basis: "custom", status: "confirmed", ref: "Genesis 1:1-4", aliyahStarts: null,
+        setByMembershipId: t.f.adminMember.id, proposalSnapshot: { confirmationDate: isoIn(42), serviceSlot: "morning", slotProvenance: 1, needsReview: false } }).returning();
+      await t.f.db.insert(s.assignmentVerse).values([1, 2, 3, 4].map(i => ({ tenantId: t.unrelated.tenantId, studentId: t.unrelated.id, assignmentId: row.id, ordinal: i, verseRef: `Genesis 1:${i}` })));
+      return row;
+    });
+    const statusOf = async () => (await t.call("/api/admin/student-status", "admin")).json.students.find((row: StudentStatus) => row.id === t.unrelated.id) as StudentStatus;
+    expect(await statusOf()).toMatchObject({ total: 4, got: 0, solid: null });
+    const head = (verse: number, state: string) => ({ tenantId: t.unrelated.tenantId, studentId: t.unrelated.id, assignmentId: assignment.id, verseRef: `Genesis 1:${verse}`, state, version: 1 });
+    // A reset to Not started is not an assessment; Working is, and Solid counts.
+    await t.f.owner(() => t.f.db.insert(s.verseAssessment).values([head(1, "not-started")]));
+    expect((await statusOf()).solid).toBeNull();
+    await t.f.owner(() => t.f.db.insert(s.verseAssessment).values([head(2, "working")]));
+    expect((await statusOf()).solid).toBe(0);
+    await t.f.owner(() => t.f.db.insert(s.verseAssessment).values([head(3, "solid"), head(4, "solid")]));
+    expect(await statusOf()).toMatchObject({ total: 4, got: 0, solid: 2 });
     // The tutor is named as the People page names them (never an address); verse counts are counts only.
     expect(typeof statuses.get(t.own.id)!.tutorName).toBe("string");
     // A parent whose address is unverified has not joined, by the same rule as the tutor's family line.

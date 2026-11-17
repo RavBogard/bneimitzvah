@@ -12,7 +12,7 @@ import { LiftedLine } from "../../src/components/portal/workspace/study/lift";
 import { ExplorationContent } from "../../src/components/portal/workspace/study/exploration-view";
 import { ThisWeekCards } from "../../src/components/portal/workspace/staff/this-week";
 import { ManageSheet, manageRows } from "../../src/components/portal/workspace/staff/manage-sheet";
-import { familyLine, isSunday, linkRequestLine, nextEventLine, weekCards, savedSections, statusChips, stillWorkingLine, studentFacts, teachesLine, verseList, waitingForDivisions, waitingLine, type StudentStatus } from "../../src/components/portal/workspace/staff/model";
+import { familyLine, isSunday, linkRequestLine, nextEventLine, readyCount, weekCards, savedSections, statusChips, stillWorkingLine, studentFacts, teachesLine, verseList, waitingForDivisions, waitingLine, type StudentStatus } from "../../src/components/portal/workspace/staff/model";
 import { parseFamily, parseNeeded, parseStatuses } from "../../src/components/portal/workspace/staff/api";
 import { explorationPrepared } from "./exploration-client-helper";
 
@@ -27,7 +27,7 @@ const today = new Date(2026, 9, 26);
 describe("This week's cards and the roster chips (N14)", () => {
   const student = (n: number, ceremonyDate: string, extra: Partial<{ serviceSlot: "morning" | "unknown"; disabledAt: string | null; ceremonyDoneAt: string | null; rehearsal1: string | null }> = {}) =>
     ({ id: id(n), firstName: `Synthetic${n}`, lastName: "Student", ceremonyDate, serviceSlot: "morning" as const, disabledAt: null, ceremonyDoneAt: null, ...extra });
-  const ready: Omit<StudentStatus, "id"> = { tutors: 1, family: "joined", reading: "confirmed", honors: true, tutorName: "Synthetic Tutor", got: 10, total: 10 };
+  const ready: Omit<StudentStatus, "id"> = { tutors: 1, family: "joined", reading: "confirmed", honors: true, tutorName: "Synthetic Tutor", got: 10, total: 10, solid: null };
   const links = (item: Node) => nodes(item).filter(node => "tagName" in node && node.tagName === "a");
   const render = (cards: ReturnType<typeof weekCards>, statuses: Map<string, StudentStatus>, linkRequests = 0) => parseFragment(renderToStaticMarkup(createElement(ThisWeekCards, { cards, statuses, linkRequests, disabled: false, onEdit() {}, onHonors() {} })));
   it("gives each student one card with at most two chips and a line per setup task, never a disabled or ceremony-done student", () => {
@@ -76,6 +76,21 @@ describe("This week's cards and the roster chips (N14)", () => {
     expect(studentFacts({ id: id(1), ...ready, got: 6, total: 12 })).toEqual(["Tutor: Synthetic Tutor", "Parent: joined", "6 of 12 verses got"]);
     expect(studentFacts({ id: id(1), ...ready, tutors: 0, tutorName: null, family: "invited", total: 0, got: 0 })).toEqual(["No tutor yet", "Parent: not joined yet"]);
     expect(studentFacts({ id: id(1), ...ready, family: null, total: 0, got: 0 })).toEqual(["Tutor: Synthetic Tutor"]);
+    // T2: once the tutor has assessed any verse, the tutor's Solid count leads and the student's Got it count sits beside it.
+    expect(studentFacts({ id: id(1), ...ready, got: 9, total: 16, solid: 6 })).toEqual(["Tutor: Synthetic Tutor", "Parent: joined", "6 of 16 solid · 9 got"]);
+  });
+  it("bases Behind on the tutor's Solid count once the tutor has assessed anything, and on the student's Got it marks until then (T2)", () => {
+    // Rehearsal in 3 days: inside the two-week window.
+    const near = [student(1, "2026-11-20", { rehearsal1: "2026-10-29" })];
+    const chipsFor = (status: Partial<StudentStatus>) => weekCards(near, new Map([[id(1), { id: id(1), ...ready, ...status }]]), today)[0]?.chips ?? [];
+    // The student marked most verses Got it, but the tutor has judged only 2 of 12 Solid: behind.
+    expect(chipsFor({ got: 11, total: 12, solid: 2 })).toEqual(["behind"]);
+    // The student marked few, but the tutor has judged 8 of 12 Solid: not behind.
+    expect(chipsFor({ got: 1, total: 12, solid: 8 })).toEqual([]);
+    // The tutor has assessed nothing (solid null): the student's own marks decide, as before.
+    expect(chipsFor({ got: 1, total: 12, solid: null })).toEqual(["behind"]);
+    expect(chipsFor({ got: 11, total: 12, solid: null })).toEqual([]);
+    expect(readyCount({ got: 4, solid: 0 })).toBe(0); expect(readyCount({ got: 4, solid: null })).toBe(4);
   });
   it("asks for a parent invitation when a child's family has none, or when the invitations service names the student", () => {
     const students = [student(1, "2026-11-21"), student(2, "2026-11-21")];
@@ -106,8 +121,10 @@ describe("This week's cards and the roster chips (N14)", () => {
   });
   it("flags a Sunday ceremony only", () => { expect(isSunday("2026-11-08")).toBe(true); expect(isSunday("2026-11-07")).toBe(false); expect(isSunday("")).toBe(false); });
   it("refuses a status page with unknown keys or states", () => {
-    const row = { id: id(1), tutors: 0, family: "none", reading: "none", honors: false, tutorName: null, got: 0, total: 0 };
+    const row = { id: id(1), tutors: 0, family: "none", reading: "none", honors: false, tutorName: null, got: 0, total: 0, solid: null };
     expect(parseStatuses({ students: [row] })).toHaveLength(1);
+    expect(parseStatuses({ students: [{ ...row, total: 4, solid: 3 }] })[0].solid).toBe(3);
+    for (const bad of [{ ...row, solid: 1 }, { ...row, solid: "1" }, (({ solid: _s, ...rest }) => rest)(row)]) expect(() => parseStatuses({ students: [bad] })).toThrow();
     // A tutor name that is not a clean name loses only the name, not the page.
     expect(parseStatuses({ students: [{ ...row, tutorName: "x@example.test" }, { ...row, id: id(2), tutorName: "Synthetic Tutor" }] }).map(value => value.tutorName)).toEqual([null, "Synthetic Tutor"]);
     for (const bad of [{ ...row, email: "x@example.test" }, { ...row, family: "maybe" }, { ...row, tutors: -1 }, { ...row, got: 2, total: 1 }]) expect(() => parseStatuses({ students: [bad] })).toThrow();

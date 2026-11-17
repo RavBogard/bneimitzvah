@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
 import * as s from "../db/index";
@@ -109,9 +109,12 @@ export async function tutorNames<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId
     .where(and(eq(s.tutorStudent.tenantId, tenantId), isNull(s.tutorStudent.revokedAt), isNull(s.roleGrant.revokedAt), isNull(s.membership.disabledAt)))
     .orderBy(asc(s.user.name), asc(s.tutorStudent.tutorGrantId)).limit(LIMIT);
 }
-/** Verses in each student's confirmed readings (total), and how many the student has marked Got it. Counts only. */
+/**
+ * Verses in each student's confirmed readings (total), how many the student has marked Got it, and (T2, 2026-11-17) per student the
+ * tutor has assessed at all, how many verses that is (Working or Solid) and how many are Solid. Counts only.
+ */
 export async function verseCounts<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string) {
-  const v = s.assignmentVerse, a = s.assignment, mark = s.verseSelfCheck;
+  const v = s.assignmentVerse, a = s.assignment, mark = s.verseSelfCheck, judged = s.verseAssessment;
   const confirmed = and(eq(v.tenantId, tenantId), eq(a.status, "confirmed"));
   const total = await tx.select({ studentId: v.studentId, count: sql<number>`count(*)::int` }).from(v)
     .innerJoin(a, and(eq(a.tenantId, v.tenantId), eq(a.id, v.assignmentId))).where(confirmed).groupBy(v.studentId).limit(LIMIT);
@@ -119,5 +122,9 @@ export async function verseCounts<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantI
     .innerJoin(a, and(eq(a.tenantId, v.tenantId), eq(a.id, v.assignmentId)))
     .innerJoin(mark, and(eq(mark.tenantId, v.tenantId), eq(mark.studentId, v.studentId), eq(mark.assignmentId, v.assignmentId), eq(mark.verseRef, v.verseRef), eq(mark.state, "got-it")))
     .where(confirmed).groupBy(v.studentId).limit(LIMIT);
-  return { total, got };
+  const assessed = await tx.select({ studentId: v.studentId, count: sql<number>`count(*)::int`, solid: sql<number>`(count(*) filter (where ${judged.state} = 'solid'))::int` }).from(v)
+    .innerJoin(a, and(eq(a.tenantId, v.tenantId), eq(a.id, v.assignmentId)))
+    .innerJoin(judged, and(eq(judged.tenantId, v.tenantId), eq(judged.studentId, v.studentId), eq(judged.assignmentId, v.assignmentId), eq(judged.verseRef, v.verseRef), inArray(judged.state, ["working", "solid"])))
+    .where(confirmed).groupBy(v.studentId).limit(LIMIT);
+  return { total, got, assessed };
 }

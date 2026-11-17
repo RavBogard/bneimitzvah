@@ -2,7 +2,9 @@
 // Wording is Daniel's (PLAN Strings: tier A, tier B "Keep all"); the This week chips and lines are decided here (2026-10-28 walk) and listed in the PR.
 
 export type FamilyState = "joined" | "invited" | "expiring" | "expired" | "none";
-export type StudentStatus = { id: string; tutors: number; family: FamilyState | null; reading: "none" | "confirmed" | "review"; honors: boolean; tutorName: string | null; got: number; total: number };
+export type StudentStatus = { id: string; tutors: number; family: FamilyState | null; reading: "none" | "confirmed" | "review"; honors: boolean; tutorName: string | null; got: number; total: number;
+  /** T2: verses the tutor has assessed Solid; null when the tutor has assessed nothing yet (then the student's own Got it marks stand in). */
+  solid: number | null };
 export type NeedsYouStudent = { id: string; firstName: string; lastName: string; ceremonyDate: string; rehearsal1?: string | null; rehearsal2?: string | null; serviceSlot: "morning" | "havdalah" | "unknown"; disabledAt: string | null; ceremonyDoneAt?: string | null };
 /** The nearest rehearsal or ceremony that has not passed, and how many days away it is. */
 export type NextEvent = { kind: "rehearsal" | "ceremony"; date: string; days: number };
@@ -31,8 +33,13 @@ export function isSunday(date: string) {
   return Number.isFinite(value.getTime()) && value.getUTCDay() === 0;
 }
 
-/** Within this many days of the next rehearsal or ceremony, a student with less than half the verses got is behind. */
+/** Within this many days of the next rehearsal or ceremony, a student with less than half the verses ready is behind. */
 export const BEHIND_WITHIN_DAYS = 14;
+/**
+ * T2 (2026-11-17): the verses that count as ready for "behind". The tutor's judgement leads: once the tutor has assessed any verse,
+ * the tutor's Solid count; until then, the student's own Got it marks.
+ */
+export const readyCount = (status: Pick<StudentStatus, "got" | "solid">) => status.solid ?? status.got;
 /** The nearest rehearsal or ceremony from today on; a rehearsal that has passed is ignored. */
 export function nextEvent(student: Pick<NeedsYouStudent, "ceremonyDate" | "rehearsal1" | "rehearsal2">, now = new Date()): NextEvent {
   const events: NextEvent[] = [];
@@ -50,7 +57,7 @@ const TASK_ORDER: TaskCondition[] = ["no-reading", "no-service", "honors"];
 /**
  * This week (admin walk 2026-10-28): one card per active student who has a rehearsal or ceremony in the next seven days or something to
  * set right, soonest next rehearsal or ceremony first. A card shows at most two chips, most urgent first: no tutor, behind (fewer than half
- * the verses marked Got it, within two weeks of the next date), a parent to invite (no invitation, an expired one, or one the invitations
+ * the verses ready by `readyCount`, the tutor's Solid once the tutor has assessed any, within two weeks of the next date), a parent to invite (no invitation, an expired one, or one the invitations
  * service names via `needsInvitation`), a reading to confirm. No reading, no service date and no honors form stay as one-verb lines.
  * Disabled and ceremony-done students are never listed, nor is anyone whose ceremony is past or beyond eight weeks with nothing this week.
  */
@@ -64,7 +71,7 @@ export function weekCards(students: readonly NeedsYouStudent[], statuses: Readon
     const chips = new Set<ChipCondition>(), tasks = new Set<TaskCondition>();
     if (status) {
       if (status.tutors === 0) chips.add("no-tutor");
-      if (next.days <= BEHIND_WITHIN_DAYS && status.total > 0 && status.got * 2 < status.total) chips.add("behind");
+      if (next.days <= BEHIND_WITHIN_DAYS && status.total > 0 && readyCount(status) * 2 < status.total) chips.add("behind");
       if (status.family === "expired" || status.family === "none" || status.family !== null && status.family !== "joined" && needsInvitation.has(student.id)) chips.add("needs-parent");
       if (status.reading === "review") chips.add("reading-review");
       if (status.reading === "none") tasks.add("no-reading");
@@ -104,13 +111,17 @@ export function statusChips(student: Pick<NeedsYouStudent, "serviceSlot" | "disa
 export const tutorLine = (name: string | null, tutors: number) => name === null || tutors === 0 ? "No tutor yet" : `Tutor: ${name}${tutors > 1 ? ` and ${tutors - 1} more` : ""}`;
 /** "Parent: joined" or "Parent: not joined yet"; nothing for an adult, who has no parent record. */
 export const parentLine = (family: FamilyState | null) => family === null ? null : family === "joined" ? "Parent: joined" : "Parent: not joined yet";
-/** "6 of 12 verses got"; nothing until a reading is assigned. */
-export const progressLine = (got: number, total: number) => total > 0 ? `${got} of ${total} ${total === 1 ? "verse" : "verses"} got` : null;
+/**
+ * "6 of 12 verses got"; once the tutor has assessed any verse, the tutor's count first and the student's beside it: "6 of 16 solid · 9 got" (T2).
+ * Nothing until a reading is assigned.
+ */
+export const progressLine = (got: number, total: number, solid: number | null = null) => total <= 0 ? null
+  : solid !== null ? `${solid} of ${total} solid · ${got} got` : `${got} of ${total} ${total === 1 ? "verse" : "verses"} got`;
 /** The facts a staff row shows under a student's name: who teaches, whether a parent joined, and how far along the verses are. */
-export const studentFacts = (status: StudentStatus): string[] => [tutorLine(status.tutorName, status.tutors), parentLine(status.family), progressLine(status.got, status.total)].filter((line): line is string => line !== null);
+export const studentFacts = (status: StudentStatus): string[] => [tutorLine(status.tutorName, status.tutors), parentLine(status.family), progressLine(status.got, status.total, status.solid)].filter((line): line is string => line !== null);
 
 /** A This week card's facts: who teaches (no line when no one does, the chip says so) and the verses got; whether a parent joined is a chip when it needs doing. */
-export const cardFacts = (status: StudentStatus): string[] => [status.tutors > 0 ? tutorLine(status.tutorName, status.tutors) : null, progressLine(status.got, status.total)].filter((line): line is string => line !== null);
+export const cardFacts = (status: StudentStatus): string[] => [status.tutors > 0 ? tutorLine(status.tutorName, status.tutors) : null, progressLine(status.got, status.total, status.solid)].filter((line): line is string => line !== null);
 
 /** Sorts students by ceremony date, soonest first, then by name (G10: "students sorted by ceremony date"). */
 export function byCeremony<T extends { ceremonyDate: string; lastName: string; firstName: string; id: string }>(rows: readonly T[]): T[] {

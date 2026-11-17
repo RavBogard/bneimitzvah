@@ -30,7 +30,7 @@ import * as data from "./data";
  */
 type Access<Q extends PgQueryResultHKT> = Pick<ReturnType<typeof createAccessService<Q>>, "withAdminCapability" | "withStudentCapability">;
 export type FamilyState = "joined" | "invited" | "expiring" | "expired" | "none";
-export type StudentStatus = Readonly<{ id: string; tutors: number; family: FamilyState | null; reading: "none" | "confirmed" | "review"; honors: boolean; tutorName: string | null; got: number; total: number }>;
+export type StudentStatus = Readonly<{ id: string; tutors: number; family: FamilyState | null; reading: "none" | "confirmed" | "review"; honors: boolean; tutorName: string | null; got: number; total: number; solid: number | null }>;
 const DAY_MS = 86_400_000;
 const conflict = () => Object.freeze({ ok: false as const, code: "stale-state" as const });
 const tooMany = (rows: readonly unknown[]) => { if (rows.length > 20_000) throw new AccessDenied(403); };
@@ -48,9 +48,11 @@ export function createStaffService<Q extends PgQueryResultHKT>(input: { access: 
       const [tutors, families, invites, readings, honors] = [await data.liveTutorCounts(tx, tenantId), await data.joinedFamilies(tx, tenantId),
         await data.openParentInvites(tx, tenantId), await data.confirmedAssignments(tx, tenantId), await data.honorsStarted(tx, tenantId)];
       const [names, verses] = [await data.tutorNames(tx, tenantId), await data.verseCounts(tx, tenantId)];
-      [tutors, families, invites, readings, honors, names, verses.total, verses.got].forEach(tooMany);
+      [tutors, families, invites, readings, honors, names, verses.total, verses.got, verses.assessed].forEach(tooMany);
       const firstTutor = new Map<string, string>(); for (const row of names) if (!firstTutor.has(row.studentId)) firstTutor.set(row.studentId, displayName(row.name));
       const totalOf = new Map(verses.total.map(row => [row.studentId, Number(row.count)])), gotOf = new Map(verses.got.map(row => [row.studentId, Number(row.count)]));
+      // T2: the tutor's Solid count, for a student the tutor has assessed at all (Working or Solid); null when the tutor has assessed nothing.
+      const solidOf = new Map(verses.assessed.filter(row => Number(row.count) > 0).map(row => [row.studentId, Number(row.solid)]));
       const tutorCount = new Map(tutors.map(row => [row.studentId, Number(row.count)])), joined = new Set(families.map(row => row.studentId)), started = new Set(honors.map(row => row.studentId));
       const group = <T extends { studentId: string | null }>(rows: readonly T[]) => { const map = new Map<string, T[]>(); for (const row of rows) if (row.studentId) map.set(row.studentId, [...map.get(row.studentId) ?? [], row]); return map; };
       const invitesOf = group(invites), readingsOf = group(readings), at = now();
@@ -64,7 +66,7 @@ export function createStaffService<Q extends PgQueryResultHKT>(input: { access: 
         const own = readingsOf.get(student.id) ?? [];
         const reading = !own.length ? "none" : own.some(row => assignmentNeedsReview(row.snapshot, student.ceremonyDate)) ? "review" : "confirmed";
         return Object.freeze({ id: student.id, tutors: tutorCount.get(student.id) ?? 0, family, reading, honors: started.has(student.id),
-          tutorName: firstTutor.get(student.id) ?? null, got: gotOf.get(student.id) ?? 0, total: totalOf.get(student.id) ?? 0 });
+          tutorName: firstTutor.get(student.id) ?? null, got: gotOf.get(student.id) ?? 0, total: totalOf.get(student.id) ?? 0, solid: solidOf.get(student.id) ?? null });
       }));
     });
   }
