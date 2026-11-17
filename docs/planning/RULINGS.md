@@ -186,3 +186,4 @@ From RV section 5, verbatim in substance:
 - Not wanted now: weekly verse assignment, bulk family invitations, a dated timeline per student.
 - Notifications stay parked (2026-11-16).
 - Relax the fresh sign-in rule for assigning a tutor and for invitations, on the web and through Claude (2026-11-16).
+- Later on 2026-11-17: release and hold of study guides on the web Guides page is wanted, with the production migration it needs (Daniel applies it). Parent invitations stay fully relaxed (Daniel: "whatever"; the lead's reasoning: the guarded case needs a stolen admin session, which already exposes every family's records). The read-only "Yours" translation row on saved readings is removed.
