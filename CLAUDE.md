@@ -37,7 +37,7 @@ Read first, every session: `docs/planning/RULINGS.md` (Daniel's rulings in force
 
 ## Git
 
-- Commit as `Claude <noreply@anthropic.com>`, the identity the cloud environment signs and GitHub shows as verified (Daniel 2026-11-17: "Commits as Claude are fine").
+- Commit as `Claude` with the noreply address the cloud environment configures, the identity it signs and GitHub shows as verified (Daniel 2026-11-17: "Commits as Claude are fine").
 - Subjects are long, descriptive single sentences, as in the haftarah repo: what changed and why, in plain words.
 - Never force-push `main`. Never rewrite pushed history.
 - The haftarah repo is read-only from here.
