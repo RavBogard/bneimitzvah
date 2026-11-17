@@ -4,7 +4,10 @@
 
 .pinned { display: grid; gap: 0.625rem; max-width: 40rem; min-width: 0; padding: 1rem 1.25rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
 .pinned > * { min-width: 0; margin: 0; max-width: none; }
-.holdRoom { min-height: 24rem; }
+/* The loading card holds the height the ready card first draws (its next step and Open my reading, then the held note, week and calendar), measured at 4x CPU:
+   632px on a tablet or laptop, 700px on a 412px phone, where the ranges, the caption and the links wrap. So the shelf below does not move when it arrives. */
+.holdRoom { min-height: 35.25rem; }
+@media (max-width: 640px) { .holdRoom { min-height: 39.5rem; } }
 /* Room held while the note, the week and the calendar arrive, so the shelf below does not move when they do. */
 .holdNote { min-height: 5.5rem; }
 .holdDots { min-height: 5.5rem; }
