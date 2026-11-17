@@ -3,7 +3,7 @@
 // every move is bounded by RULES and reported in the log a caller writes privately.
 //
 // Ported from the voice branch's machine-alignment rules (voice/human-alignment:trope/propose_alignment.py,
-// lines 109-185, explained in docs/planning/2026-10-16-voice/HUMAN-ALIGNMENT-RETURN.md there):
+// lines 109-185, explained in docs/archive/planning/2026-10-16-voice/HUMAN-ALIGNMENT-RETURN.md there):
 //  - a boundary is the CTC onset minus 20 ms;
 //  - a pause: the next word starts where the loudness rises out of the floor;
 //  - a vowel-to-vowel join across words is cut at the largest change in timbre;

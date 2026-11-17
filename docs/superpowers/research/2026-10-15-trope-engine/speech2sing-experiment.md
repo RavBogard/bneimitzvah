@@ -54,4 +54,4 @@ So 0.333 is the default noise setting. Single-verse ASR scores move by about ±0
 
 ## Setup on a fresh machine, and commands
 
-See `docs/superpowers/plans/2026-10-15-trope-home-setup.md`, section "5. Speech-to-singing". Licence: the Phonikud-TTS checkpoints are non-commercial. Daniel accepted that for an intermediate stage, since SVC replaces its voice.
+See `docs/archive/superpowers/plans/2026-10-15-trope-home-setup.md`, section "5. Speech-to-singing". Licence: the Phonikud-TTS checkpoints are non-commercial. Daniel accepted that for an intermediate stage, since SVC replaces its voice.

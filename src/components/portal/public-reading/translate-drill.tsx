@@ -5,7 +5,7 @@ import styles from "./translate-drill.module.css";
 /**
  * The translate drill's words, in one place so any line swaps here alone (accounts plan, "Changes from Daniel's
  * 2026-10-23 rulings", Decided here 3). "Translate drill", "Reveal", "Next verse" and "End drill" are the plan's;
- * every other line is the research report's proposal (docs/superpowers/research/2026-10-23-cowork-offload/translate-drill.md),
+ * every other line is the research report's proposal (docs/archive/superpowers/research/2026-10-23-cowork-offload/translate-drill.md),
  * which Daniel has not yet approved. No line may say correct, right, wrong, check, answer, score, try again, nice, great,
  * done, streak or progress, or count verses done.
  */

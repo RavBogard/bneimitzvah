@@ -142,7 +142,7 @@ Order of events (do sections 4 to 8 first; the person can only sign in after the
 
    Expected: `Owner bootstrap completed; remove private bootstrap configuration`. Running it before the person has signed in fails with `Owner bootstrap failed; verify private operator configuration` (verified). A failure prints one fixed sentence. Likely causes: the person has not signed in yet, the email is not verified, the owner cannot `SET ROLE portal_runtime` (section 3.4), or an admin already exists that this script did not create (it refuses to adopt one).
 4. Remove `BOOTSTRAP_OWNER_EMAIL` from `.env.operator`. Re-running it for the same person is safe and changes nothing; it prints the same completed line.
-5. The rabbi reloads the portal and sees the admin areas (Settings, Share guides, and so on). Adding more admins later is done with `scripts/manage-admin.mjs`, a private operator tool that needs a prepared review file; see `docs/planning/2026-10-15-kickoff/PROVIDER-SETUP.md` section 6. Ordinary staff are invited from inside the portal instead.
+5. The rabbi reloads the portal and sees the admin areas (Settings, Share guides, and so on). Adding more admins later is done with `scripts/manage-admin.mjs`, a private operator tool that needs a prepared review file; see `docs/archive/planning/2026-10-15-kickoff/PROVIDER-SETUP.md` section 6. Ordinary staff are invited from inside the portal instead.
 
 ## 4. Identity settings and the host row
 

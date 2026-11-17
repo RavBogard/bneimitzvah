@@ -2,7 +2,7 @@ import type { LookAlikeMark, LookAlikeWord } from "../../lib/learn/course";
 import { markPlace } from "../../lib/learn/verse";
 
 /**
- * The 1.6 activities' words. DRAFTED is docs/superpowers/research/2026-10-23-cowork-offload/learn-next-activities.md,
+ * The 1.6 activities' words. DRAFTED is docs/archive/superpowers/research/2026-10-23-cowork-offload/learn-next-activities.md,
  * as written (Daniel, 2026-10-23: use the drafted strings). Everything else the screens say is either existing Learn
  * wording, used where it is used today, or one of the NEW strings at the bottom, which the draft did not have.
  */

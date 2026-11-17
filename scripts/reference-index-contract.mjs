@@ -2,7 +2,7 @@
 // (pockettorah-verse-index/v1, or v2 with refined word boundaries), maps its aligned words onto the portal's own reading words, and builds
 // the small client-safe verse DTO a reviewed player adapter may serve. No I/O; only node:crypto. The
 // index's Hebrew is alignment evidence only; the portal's licensed study text stays the authority for
-// what a word is. See docs/planning/2026-10-17-reference-audio/REFERENCE-AUDIO-CONTRACT.md.
+// what a word is. See docs/archive/planning/2026-10-17-reference-audio/REFERENCE-AUDIO-CONTRACT.md.
 import { createHash } from "node:crypto";
 
 export const INDEX_SCHEMA = "pockettorah-verse-index/v1";

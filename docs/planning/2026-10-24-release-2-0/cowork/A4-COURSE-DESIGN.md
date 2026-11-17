@@ -766,7 +766,7 @@ Empty (no parts assigned): "No service parts are assigned yet."
 
 ## 15. Build slices (house plan style)
 
-Following `docs/superpowers/plans/2026-10-22-learn-to-lein.md` (settled decisions, decided here, then slices with files and tests).
+Following `docs/archive/superpowers/plans/2026-10-22-learn-to-lein.md` (settled decisions, decided here, then slices with files and tests).
 
 1. **Slice 1, signed out, morning, no new tables.** `course.json` (U0–U6), `tenants/crc.json`, the validator and its tests (every rule in §5.3, including "no Hebrew outside the alphabet"); the home, the lesson frame, About, Where, Done; moment lessons; the siddur link; browser progress. Read, Key words and Check wait for slice 2. Exit test: every morning lesson opens at 360 px, a moment lesson is marked done, the tone scan passes, and the siddur link opens the right printed page for the six U1 lessons (pages 10, 11, 22, 22, 23, 24).
 2. **Slice 2, the public text.** Migration B, the public-feed parser fork, `/api/public/service-text`, Read with the two toggles, Key words (glossary and `torahRef` cards), Check. **Adversarial review** (licensed-text boundary). Q1 decided: text comes from a public build of the Shabbat Morning volume, pinned by hash, never the licensed build. Exit test: no response of the new route ever carries a `legacy-beit-mitzvah` unit, and the build fails if `course.json` gains a Hebrew prayer word.

@@ -59,7 +59,7 @@ Rulings dated 2026-10-24 unless stated. The first block is what Cowork recorded;
 | A4 §2.1 note 2; G-PLAN question 9 (this file's earlier text) | Evening-only prayers use Sefaria liturgy per prayer where it exists | Batch 4, 2026-10-24: text comes from CRC's own texts in the shireishabbat and shirei-tfilah repos, public lane only (see Settled decisions) |
 | COWORK-HANDOFF.md and `../2026-10-23-cowork-offload/ROADMAP-2.md` ("Claude does not write that teaching fresh") | Gap for Daniel, no invented paragraph | Teaching ruling, 2026-10-24; all 49 approved |
 | MISSION and REVIEW reserved name `dvar_torah_draft` | An empty reserved kind or table for in-app D'var drafting | Batch 1 Q1: shared Google Doc, no drafting in the app. `dvar_torah_progress` (DV1) replaces it; the name `dvar_torah_draft` is retired |
-| COWORK-HANDOFF.md L101 and L369 | Learn-to-lein spec at `docs/superpowers/specs/2026-10-22-learn-to-lein.md` | No such file. The plan is `docs/superpowers/plans/2026-10-22-learn-to-lein.md`; the course docs are in `docs/planning/2026-10-22-learn-to-lein/` |
+| COWORK-HANDOFF.md L101 and L369 | Learn-to-lein spec at `docs/superpowers/specs/2026-10-22-learn-to-lein.md` | No such file. The plan is `docs/archive/superpowers/plans/2026-10-22-learn-to-lein.md`; the course docs are in `docs/archive/planning/2026-10-22-learn-to-lein/` |
 | Brief Batch 3 Q13 "pilot kit, approved or edited" | — | Never asked; Batch 3 Q13 became the glosses question. The pilot kit has no approval on record (open) |
 
 ## Decided here

@@ -50,7 +50,7 @@ Daniel replaced "quote only, never write teaching" (2026-10-24, verbatim in `QUE
 7. **R1:** `RavBogard/shirei-tfilah` is the curated public mirror of `shireishabbat`, about a month behind.
 8. **Beta/indexing docs are stale** (MISSION L36/L52 vs STATE L30).
 9. **D'var Torah is not in the app** (Daniel, 2026-10-24); Track B is cut.
-10. **Brief path error:** the learn-to-lein spec is at `docs/superpowers/plans/2026-10-22-learn-to-lein.md`.
+10. **Brief path error:** the learn-to-lein spec is at `docs/archive/superpowers/plans/2026-10-22-learn-to-lein.md`.
 
 ## Next session
 

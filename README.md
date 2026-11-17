@@ -4,11 +4,11 @@ A web portal for child and adult Beit Mitzvah students at Central Reform Congreg
 
 Tutors and rabbis manage assigned readings, sources and notes. Parents can use their own account and explicitly open a linked child's practice view. Every record belongs to a congregation. The current release serves CRC; adding another congregation remains a separate gate.
 
-Generated voices are outside1.0, and student recordings are parked. The retained trope engine computes chant scores from the te'amim using published melody tables. Its history-preserving move from the `trope-engine-research` branch of [RavBogard/haftarah](https://github.com/RavBogard/haftarah) preserves its research history and standalone tests. Daniel confirmed noncommercial use and public repository inclusion of the Binder/Avery tables; [the provenance note](trope/PROVENANCE.md) records the separate code, table and fixture terms. Future generated chant remains subject to its listening gates.
+Generated chant is not released: no student hears it until it passes Daniel's listening review. The retained trope engine computes chant scores from the te'amim using published melody tables. Its history-preserving move from the `trope-engine-research` branch of [RavBogard/haftarah](https://github.com/RavBogard/haftarah) preserves its research history and standalone tests. Daniel confirmed noncommercial use and public repository inclusion of the Binder/Avery tables; [the provenance note](trope/PROVENANCE.md) records the separate code, table and fixture terms. Future generated chant remains subject to its listening gates.
 
 ## Status
 
-The portal is deployed at [beitmitzvah.centralreform.org](https://beitmitzvah.centralreform.org). Authentication, roster/access management, assigned reading, practice and study features are being delivered in reviewed checkpoints. Revised1.0 is still in progress; [STATE.md](docs/planning/2026-10-15-kickoff/STATE.md) records the exact production commit, pending gates and next work. Reference playback remains administrator-only until Daniel accepts actual-source word-tap and tab-return behavior. Automated synthetic checks do not replace that listening/phone acceptance.
+CRC Torah is live in public beta at [beitmitzvah.centralreform.org](https://beitmitzvah.centralreform.org): public reading and study, Learn to lein, the service course, signed-in shelves of readings, and the Beit Mitzvah workspace for students, parents, tutors and the rabbi. Human reference recordings (PocketTorah) play for everyone. [STATE.md](docs/planning/2026-10-15-kickoff/STATE.md) says what is released, in progress and next; [RULINGS.md](docs/planning/RULINGS.md) lists Daniel's rulings in force. Another congregation can run its own copy: see [DEPLOYING.md](DEPLOYING.md).
 
 ## Run it
 
@@ -41,7 +41,7 @@ The guard detects prohibited filenames, known credential formats, non-synthetic 
 - Word analysis: STEPBible TAHOT and TBESH, data created by www.STEPBible.org based on work at Tyndale House Cambridge (CC BY 4.0); Open Scriptures Hebrew Bible morphology (CC BY 4.0); Westminster Leningrad Codex (public domain).
 - Melody tables: transcribed to scale degrees from the Binder/Avery tables (Standard Reform) and from Idelsohn, *Thesaurus of Hebrew Oriental Melodies* (Moroccan); each table and cell cites its source.
 - Syllables: [havarotjs](https://github.com/charlesLoder/havarotjs) by Charles Loder (MIT), vendored in `trope/vendor/havarotjs/`.
-- Fonts: Ezra SIL, Noto Serif Hebrew, Literata (SIL Open Font License).
+- Fonts: Noto Serif Hebrew and Bricolage Grotesque (SIL Open Font License 1.1); Taamey Frank CLM and Stam Ashkenaz CLM by Yoram Gnat, Culmus project (GNU GPL v2 with the font exception). Licences and sources sit beside each font; see [the font provenance](public/fonts/PROVENANCE.md).
 
 ## Licence
 
