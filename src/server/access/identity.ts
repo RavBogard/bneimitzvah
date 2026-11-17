@@ -3,6 +3,7 @@ import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAuthStack } from "../auth/factory";
 import { withTenantTransaction } from "../db/runtime";
 import { resolveTenantHost } from "../tenancy/resolve";
+import type { TenantHostLookup } from "../data/tenant-hosts";
 import { lockIdentityRecords } from "../data/authority";
 import { requireCookieMutation } from "../http/mutations";
 import { AccessDenied, AccessUnavailable } from "./errors";
@@ -11,12 +12,14 @@ import type { AccessDatabase, AccessRequest, AccessTransaction, DeploymentScope,
 
 export function createVerifiedIdentityAccess<Q extends PgQueryResultHKT>(input: {
   db: AccessDatabase<Q>; auth: Pick<ReturnType<typeof createAuthStack>, "api">; deployment: DeploymentScope;
+  /** The request's tenant directory, when the runtime has one: the same answer the dispatcher's host check already read. */
+  hosts?: TenantHostLookup;
 }) {
   const deployment = Object.freeze({ ...input.deployment });
   return async function withVerifiedIdentity<T>(request: AccessRequest & { method?: string }, options: { intent: LockIntent; mutation?: boolean; fresh?: boolean; allowPracticeContext?: boolean }, action: (tx: AccessTransaction<Q>, identity: VerifiedIdentity) => Promise<T>) {
     try {
       if (request.headers.has("X-Practice-Context") && !options.allowPracticeContext) throw new AccessDenied(403);
-      const resolved = await resolveTenantHost(input.db, request, deployment);
+      const resolved = await resolveTenantHost(input.db, request, deployment, "service", input.hosts);
       if (options.mutation) requireCookieMutation(request, resolved.origin);
       const sessionHeaders = new Headers(request.headers);
       // Browser identity uses only the signed session cookie, even if an SDK

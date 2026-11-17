@@ -2,7 +2,7 @@ import "server-only";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { AccessDenied } from "../access/errors";
 import type { AccessDatabase, AccessRequest, DeploymentScope } from "../access/types";
-import { lookupTenantHost } from "../data/tenant-hosts";
+import { lookupTenantHost, type TenantHostLookup } from "../data/tenant-hosts";
 import { createLogger, hostDenialEvent, type HostDenialStage, type HostFrame } from "../logging/logger";
 
 function authority(value: string, scheme: string) {
@@ -14,7 +14,8 @@ function authority(value: string, scheme: string) {
   return url.host;
 }
 
-export async function resolveTenantHost<Q extends PgQueryResultHKT>(db: AccessDatabase<Q>, request: AccessRequest, scope: DeploymentScope, frame: HostFrame = "service") {
+export async function resolveTenantHost<Q extends PgQueryResultHKT>(db: AccessDatabase<Q>, request: AccessRequest, scope: DeploymentScope, frame: HostFrame = "service",
+  lookup: TenantHostLookup = (host, origin) => lookupTenantHost(db, host, origin, scope)) {
   let stage: HostDenialStage = "scope";
   try {
     if (!scope.deployment || scope.deployment.trim() !== scope.deployment || !["production", "preview", "local", "test"].includes(scope.environment)) throw new AccessDenied(404);
@@ -45,7 +46,7 @@ export async function resolveTenantHost<Q extends PgQueryResultHKT>(db: AccessDa
     const forwardedPort = request.headers.get("x-forwarded-port");
     if (forwardedPort !== null && forwardedPort !== (url.port || (url.protocol === "https:" ? "443" : "80"))) throw new AccessDenied(404);
     stage = "directory-query";
-    const mapping = await lookupTenantHost(db, host, url.origin, scope);
+    const mapping = await lookup(host, url.origin);
     stage = "directory-missing";
     if (!mapping) throw new AccessDenied(404);
     return Object.freeze({ tenantId: mapping.tenantId, origin: url.origin });

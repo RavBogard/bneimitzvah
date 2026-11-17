@@ -3,6 +3,7 @@ import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAuthStack } from "../auth/factory";
 import { lockRoleGrant, lockStudent, lockStudentRelationship } from "../data/authority";
 import { createVerifiedIdentityAccess } from "./identity";
+import type { TenantHostLookup } from "../data/tenant-hosts";
 import { lockVisibleStudentCandidates } from "../data/students";
 import { tutorLinkPassesA1 } from "../data/learner-claims";
 import type { StudentPage, StudentView } from "../data/students";
@@ -60,6 +61,7 @@ export function createAccessService<Q extends PgQueryResultHKT>(input: {
   db: AccessDatabase<Q>;
   auth: Pick<ReturnType<typeof createAuthStack>, "api">;
   deployment: DeploymentScope;
+  hosts?: TenantHostLookup;
 }) {
   const withVerifiedIdentity = createVerifiedIdentityAccess(input);
 

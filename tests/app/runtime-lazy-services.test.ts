@@ -52,8 +52,8 @@ test("a signed-in read builds only what it uses, and a second request reuses no 
     expect(built).toContain("portal");
     expect(built.length).toBeLessThanOrEqual(8);
     for (const unused of ["mcp", "students", "accounts", "studyGuides", "invitations", "serviceEcosystem", "loadText"]) expect(built).not.toContain(unused);
-    // Today's measured cost of this read (role audits, one host lookup, the session and identity reads); a regression shows here.
-    expect(queries).toBeLessThanOrEqual(13);
+    // The measured cost of this read: two role audits, one host lookup (was three), the session and identity reads. A regression shows here.
+    expect(queries).toBeLessThanOrEqual(11);
 
     expect((await dispatch(new Request(`${origin}/api/session`, { headers: { cookie } }))).status).toBe(200);
     const second = runtimes[1], builtSecond = builtServices(second);

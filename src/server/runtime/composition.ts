@@ -64,6 +64,7 @@ import { createMavenLinkService } from "../students/maven-links";
 import { createPracticeCalendarService } from "../practice-calendar/service";
 import { createPublicStudyCoalescer, type PublicStudyCoalescer } from "../study/coalescing";
 import { resolveTenantHost } from "../tenancy/resolve";
+import { createTenantHostDirectory } from "../data/tenant-hosts";
 import { createHebcalReader } from "../../lib/readings/proposals";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import { createAccountMailTransport, createMailTransport, createNotificationTransport, mailProductName, projectMagicLink } from "../mail/transport";
@@ -184,6 +185,9 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     };
   }
   const sefaria = sharedSefariaReaders(fetch);
+  // The tenant host is read from the directory once per request: the configured check, the dispatcher's incoming check
+  // and each identity check run their own validation and denial logging, and share the one lookup.
+  const hosts = createTenantHostDirectory(db, config.deployment);
   const send = once("mail", () => createMailTransport({ ...config.mail, origin: config.origin, fetch }));
   // Mail names the product through the one shared reader (src/server/data/product-name.ts), in its own short transaction.
   const productNameOf = (tenantId: string) => withTenantTransaction(db, { tenantId }, tx => readProductName(tx, tenantId));
@@ -208,7 +212,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   };
   const signInCodeCap = once("signInCodeCap", () => createSignInCodeCap({ db, secret: purposeSecret(config, "sign-in-code-cap"), capped: event => createLogger().signInCodeCapped(event) }));
   const signInCodes = once("signInCodes", () => createSignInCodeBindings({ origin: config.origin, secret: purposeSecret(config, "sign-in-code-binding") }));
-  const access = once("access", () => createAccessService({ db, auth: auth(), deployment: config.deployment }));
+  const access = once("access", () => createAccessService({ db, auth: auth(), deployment: config.deployment, hosts }));
   const invitationTransport: InvitationTransport = async ({ email, url, tenantId, role, expiresAt }) => {
     // The congregation and product names come from the one shared reader; the email is given no student (decision 12).
     const names = await withTenantTransaction(db, { tenantId }, tx => readTenantNames(tx, tenantId));
@@ -290,7 +294,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const googleChallenges = once("googleChallenges", () => createGoogleChallenges({ db, origin: config.origin, secret: purposeSecret(config, "google-challenges") }));
   // An eventual auth handler must resolve the request host BEFORE invoking auth.
   const resolveHost = async (request: AccessRequest, frame: HostFrame = "incoming") => {
-    const resolved = await resolveTenantHost(db, request, config.deployment, frame);
+    const resolved = await resolveTenantHost(db, request, config.deployment, frame, hosts);
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
