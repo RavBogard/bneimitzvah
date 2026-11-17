@@ -212,7 +212,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
             <form onSubmit={submit}>
               <label htmlFor="entry-email">Email address</label>
               <input id="entry-email" name="email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required maxLength={254} value={email} onChange={event => setEmail(event.target.value)} disabled={pending !== null} aria-describedby="entry-email-help" />
-              <p className="field-help" id="entry-email-help">{invitation ? "Use the address on your invitation." : "We’ll email you a code to sign in."}</p>
+              <p className="field-help" id="entry-email-help">{invitation ? "Use the address on your invitation." : "We'll email you a sign-in link and a 6-digit code."}</p>
               <button type="submit" className="button-primary" data-testid="entry-email-submit" disabled={pending !== null}>{pending === "email" ? "Sending link…" : "Email me a sign-in link"}</button>
             </form>
             {/* Decision 13: "Ask for an account" is retired here; the shelf offers "Ask to be linked". */}</>)}

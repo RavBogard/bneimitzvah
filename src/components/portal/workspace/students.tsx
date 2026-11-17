@@ -10,6 +10,7 @@ import { ceremonyCountdown, ReadingPanel } from "./reading";
 import { reconcileSelectedStudent, selectAuthorizedStudent, sortStudentsByCeremony } from "./student-label";
 import { HonorsCardLine, HonorsEntry, HonorsNote } from "./honors/sheet";
 import { DocumentTitle } from "./document-title";
+import { UNLINKED_LINE } from "./today/model";
 
 /**
  * A student's reading page: /mine/reading (mode student, the signed-in student's own), /mine/child/<id> (mode parent) and /workspace/tutor/<id> (mode tutor).
@@ -120,7 +121,7 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
   const parentTitle = mode === "parent" && named ? `${named.firstName}’s reading` : studentName;
   return <section className={`role-workspace${focused ? " role-workspace-focused" : ""}`}>{parentTitle && <DocumentTitle heading={parentTitle} />}{!selected && <h1 className="sr-only">{heading}</h1>}
     {loading ? <p role="status">Loading available students…</p> : error ? <div role="alert"><p>Students couldn’t be loaded. No previous selection is being shown.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload students</button></div>
-      : !rows.length ? <p>No student is currently linked to this role. Ask the congregation for help with your assignment.</p>
+      : !rows.length ? <p>{mode === "student" ? UNLINKED_LINE : "No student is currently linked to this role. Ask the congregation for help with your assignment."}</p>
         : <>{(mode !== "student" || rows.length !== 1) && !(mode === "parent" && focused) && <><ul ref={strip} className={`student-cards${focused || selected ? " student-cards-compact" : ""}`} aria-label={mode === "parent" ? "Child" : "Student"}>{ordered.map(row => <li key={row.id}>
             {mode === "tutor" ? <WorkspaceLink href={`/workspace/tutor/${row.id}`} className="student-card" data-student-id={row.id} aria-current={selected === row.id ? "page" : undefined}><StudentCardBody row={row} practice={!focused && !selected} /></WorkspaceLink>
               : <button type="button" className="student-card" data-student-id={row.id} aria-pressed={selected === row.id} onClick={() => { void guardDeparture().then(leave => { if (leave) setSelected(row.id); }); }}><StudentCardBody row={row} honors={mode === "parent" && rows.length > 1 && !focused && !selected} /></button>}

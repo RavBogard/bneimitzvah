@@ -159,7 +159,7 @@ it("keeps an uncertain mark unverified until an explicit read succeeds, without 
     await ui(lift(student).getByRole("group", { name: "How Genesis 1:1 is going" })).toHaveCount(0);
     await ui.poll(() => [posts, reads]).toEqual([1, 1]);
     release();
-    const retry = lift(student).getByRole("button", { name: "Check what saved", exact: true });
+    const retry = lift(student).getByRole("button", { name: "Try again", exact: true });
     await ui(retry).toBeEnabled();
     await ui(lift(student).locator(".lift-progress-note[role=status]")).toContainText("The saved mark couldn’t be checked.");
     await ui(lift(student).getByRole("group", { name: "How Genesis 1:1 is going" })).toHaveCount(0);

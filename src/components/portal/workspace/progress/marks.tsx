@@ -14,7 +14,7 @@ const useStore = (store: ProgressStore) => useSyncExternalStore(store.subscribe,
 export function VerseMark({ store, kind, verseRef }: { store: ProgressStore; kind: StudyKind; verseRef: string }) {
   useStore(store);
   const verse = store.verse(kind, verseRef); if (!verse) return null;
-  if (store.unverified(kind, verseRef)) return <span className="verse-marks"><span className="verse-mark" data-testid="verse-mark">Mark unverified</span></span>;
+  if (store.unverified(kind, verseRef)) return <span className="verse-marks"><span className="verse-mark" data-testid="verse-mark">Mark may not have saved</span></span>;
   // Staff and parents see both marks, each named; students see their own. A parent (who writes no stream) reads the child's mark under the child's name (finding 8).
   const staff = store.stream !== "self-check", parent = store.stream === null, self = verse.selfCheck.state, assessment = verse.assessment.state;
   return <span className="verse-marks">
@@ -37,7 +37,7 @@ export function LiftProgress({ store, kind, verseRef, listening = true, childNam
   const checking = store.loading(kind);
   if (store.unverified(kind, verseRef) || !verse && store.failed(kind)) return <div className="lift-progress">
     <p className="lift-progress-note" role="status">{notice || "Marks are unavailable right now."}</p>
-    <button type="button" className="button-secondary" disabled={checking} onClick={() => store.retry(kind, verseRef)}>{checking ? "Checking mark…" : "Check what saved"}</button>
+    <button type="button" className="button-secondary" disabled={checking} onClick={() => store.retry(kind, verseRef)}>{checking ? "Checking mark…" : "Try again"}</button>
   </div>;
   if (!verse) return null;
   const self = verse.selfCheck.state, assessment = verse.assessment.state;

@@ -363,7 +363,7 @@ it("keeps unsent typing and an unknown save intact while phrase controls change"
     await ui(panel.getByTestId("work-status")).toHaveAttribute("data-work-state", "unconfirmed"); expect(writes).toBe(1);
   } finally { release(); await tab.unroute("**/work/draft"); }
   await openVerseTools(tab, "Genesis 1:1");
-  await safe(() => panel.getByRole("button", { name: "Check what saved", exact: true }).click());
+  await safe(() => panel.getByRole("button", { name: "Try again", exact: true }).click());
   await ui(field).toHaveValue("Synthetic queued typing kept through phrase colors"); await ui(panel.getByTestId("work-status")).toHaveAttribute("data-work-state", "saved", { timeout: 18_000 });
 });
 

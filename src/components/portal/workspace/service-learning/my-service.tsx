@@ -108,8 +108,8 @@ export function MyServicePanel({ mode, studentId, baseline,onConnected }: { mode
     {current?.error && <p role="alert">{current.error}</p>}
     {current?.resourceLink&&Date.parse(current.resourceLink.expiresAt)>Date.now()&&<p><a className="button-secondary" href={current.resourceLink.url} target="_blank" rel="noreferrer">Open authorized resource</a></p>}
     {current?.busy && <p role="status">Updating your service…</p>}
-    {!view && !current?.busy && <button type="button" className="button-secondary" onClick={() => void reload()}>{parentName ? "Try again" : "Load my service"}</button>}
-    {view && view.state !== "linked" && <p>{view.state === "ambiguous" ? "More than one service matches. Your tutor will connect the right one." : view.state === "review_required" ? "Your service is connected. Your tutor is reviewing the parts and resources." : "Your service connection is queued and retries automatically. The daily fallback may take until tomorrow; your roster and practice work are saved."}</p>}
+    {!view && !current?.busy && <button type="button" className="button-secondary" onClick={() => void reload()}>{parentName || !staff ? "Try again" : "Load my service"}</button>}
+    {view && view.state !== "linked" && <p>{view.state === "ambiguous" ? "More than one service matches. Your tutor will connect the right one." : view.state === "review_required" ? "Your service is connected. Your tutor is reviewing the parts and resources." : staff ? "Your service connection is queued and retries automatically. The daily fallback may take until tomorrow; your roster and practice work are saved." : parentName ? <><bdi dir="auto">{parentName}</bdi>'s service parts aren't ready yet. The tutor is setting them up.</> : "Your service parts aren't ready yet. Your tutor is setting them up."}</p>}
     {linked && <>
       <h3>Parts I lead</h3>
       {linked.parts.some(p => p.leads && !p.unresolved) ? <ol className={styles.parts}>{linked.rows.filter(row => linked.parts.some(p => p.rowId === row.rowId && p.leads)).map(row => part(row))}</ol> : <p>Your tutor will help you choose the parts you lead.</p>}
