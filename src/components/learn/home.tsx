@@ -15,6 +15,7 @@ import { useVerseReview } from "./own-verses";
 import { LearningStart } from "./learning-start";
 import styles from "./learn.module.css";
 import { SiteBar } from "../site/site-bar";
+import { COPY as SERVICE_COPY } from "../../lib/service-course/copy";
 
 export function LearnAppBar() {
   return <SiteBar />;
@@ -98,6 +99,8 @@ export function CourseHome() {
           {review && <a className={styles.review} href="/learn/review"><span>{reviewLine(review)}</span>{icons.arrow}</a>}
           {/* 1.9 N19: a student with their own reading runs through it, no audio and colours off. */}
           {mine && <a className={styles.review} href="/learn/run-through" data-run-through><span>Run-through</span>{icons.arrow}</a>}
+          {/* Student gaps A1 (Daniel, 2026-11-16): the service course, the blessings and prayers a student leads, for a student with their own reading. */}
+          {mine && <a className={styles.review} href="/learn/service" data-service-course><span>{SERVICE_COPY.home.title}</span>{icons.arrow}</a>}
           {ready && <QuickTenLinks progress={progress} />}
           <LearningStart />
           <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a>{mine && <a href="/mine">My Readings</a>}</nav>

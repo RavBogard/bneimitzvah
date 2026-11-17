@@ -7,6 +7,7 @@ import { EMPTY_LINE, shelfModel, sortOwnReadings, type OwnReadingsState } from "
 import { AccountSection, EmptyShelf, LearnSection, PinnedSection, Shelf, ShelfFoot, SHELF_STRINGS } from "../../src/components/portal/mine/shelf";
 import type { SessionSummary } from "../../src/components/portal/api";
 import { gotCount, pinnedOf, type TodaySlices } from "../../src/components/portal/workspace/today/today";
+import { UNLINKED_LINE } from "../../src/components/portal/workspace/today/model";
 import { CHILDREN_STRINGS, childCard, ChildrenView, childrenTitle, daysWord, orderChildren } from "../../src/components/portal/mine/children";
 
 // The shelf's session comes from the workspace; a static render has none, so the one hook is answered here.
@@ -90,7 +91,10 @@ describe("The pinned reading card", () => {
     expect(markup).toContain("Beit Mitzvah · Sat, May 1, 2027");
     expect(markup).toContain("Verses you’ve got");
     expect(markup).toContain("2 of 4");
-    expect(markup).toMatch(/<a [^>]*href="\/mine\/reading"[^>]*>Open<\/a>/);
+    // Student gaps A3: the primary action names the first verse not marked Got it and opens it Up close; the whole reading is the second way in.
+    expect(markup).toMatch(/<a data-testid="pinned-next"[^>]*href="\/mine\/reading#up-close:torah:Genesis%201%3A2">/);
+    expect(markup).toMatch(/<a data-testid="pinned-open"[^>]*href="\/mine\/reading">/);
+    expect(markup).toContain('href="/learn/service"');
     expect(markup).toContain('href="/mine/reading#service-parts"');
     expect(markup).toContain('href="/mine/reading#lessons"');
     expect(markup).toContain("Latest from");
@@ -112,7 +116,7 @@ describe("The pinned reading card", () => {
   it("loads, fails and finds no student in words the page already used", () => {
     expect(card(slices({ phase: "loading" }))).toContain("Loading the assigned reading");
     expect(card(slices({ phase: "error" }))).toContain("Reload students");
-    expect(card(slices({ rows: [] }))).toContain("No student is currently linked to this role.");
+    expect(card(slices({ rows: [] }))).toContain(UNLINKED_LINE);
     expect(card(slices({ phase: "off" }))).not.toContain("data-pinned-card");
   });
 });

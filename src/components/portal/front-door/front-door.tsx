@@ -13,6 +13,11 @@ import { SiteBar } from "../../site/site-bar";
 import type { Role } from "../api";
 import { homeRole, rolePaths } from "../shell/role-home";
 import { rememberedRole } from "../shell/role-memory";
+import { ownAssigned } from "../../learn/own-reading";
+import { fetchProgress, type ProgressRows } from "../workspace/progress/api";
+import type { Reading } from "../workspace/api";
+import type { ProgressVerse } from "../../../lib/progress/types";
+import { NEXT_STEP, nextStep, runThroughHref, UP_CLOSE_HREF, type NextStep } from "../workspace/today/model";
 
 /**
  * What the front door knows of the visitor: nothing while access is being checked (the Beit Mitzvah door holds its height), signed out,
@@ -55,7 +60,8 @@ const FALLBACK_TITLE = "This week’s reading";
 export type ThisWeekState = Readonly<{ date: string | null; status: "loading" } | { date: string; status: "ready"; week: PublicWeek } | { date: string | null; status: "failed" }> & Readonly<{ next?: boolean }>;
 
 /** This Shabbat at display scale. Lein and Study always work, whatever the reading call did. */
-export function ThisWeekView({ state }: { state: ThisWeekState }) {
+export function ThisWeekView({ state, quiet = false }: { state: ThisWeekState;
+  /** A student's own reading leads the page (student gaps A4): Lein is then a white pill, so the page keeps one lake pill, the student's next step. */ quiet?: boolean }) {
   const week = state.status === "ready" ? state.week : null, loading = state.status === "loading";
   return <section className={styles.week} data-testid="this-week" data-week-state={state.status === "loading" ? "pending" : state.status} data-week-which={state.next ? "next" : "this"} aria-labelledby="this-week-title" aria-busy={loading}>
     <p className={styles.eyebrow}>{state.next ? "Next Shabbat" : "This Shabbat"}</p>
@@ -66,7 +72,7 @@ export function ThisWeekView({ state }: { state: ThisWeekState }) {
       {week?.torah && <> · Torah <bdi dir="ltr">{displayRange(week.torah.ranges)}</bdi></>}
       {week?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(week.haftarah.ranges)}</bdi></>}</p>}
     <div className={styles.actions}>
-      <a className="button-start" href={state.next && state.date ? readAddress({ mode: "week", date: state.date, kind: null }) : "/read"}>Lein</a>
+      <a className={quiet ? "button-hero-secondary" : "button-start"} href={state.next && state.date ? readAddress({ mode: "week", date: state.date, kind: null }) : "/read"}>Lein</a>
       <a className="button-hero-secondary" href={state.next && state.date ? readAddress({ mode: "week", date: state.date, kind: null }, { study: true }) : "/read?lens=study"}>Study</a>
       {state.next && <a className="button-hero-secondary" data-testid="this-shabbat-link" href="/read">This Shabbat</a>}
     </div>
@@ -74,7 +80,7 @@ export function ThisWeekView({ state }: { state: ThisWeekState }) {
 }
 
 /** This Shabbat, from the same signed-out endpoint as /read, fetched in the browser. It never blocks the page. */
-function ThisWeek() {
+function ThisWeek({ quiet = false }: { quiet?: boolean }) {
   const [state, setState] = useState<ThisWeekState>({ date: null, status: "loading" });
   useEffect(() => {
     const controller = new AbortController();
@@ -85,7 +91,7 @@ function ThisWeek() {
       () => { if (!controller.signal.aborted) setState({ date, status: "failed", next }); });
     return () => controller.abort();
   }, []);
-  return <ThisWeekView state={state} />;
+  return <ThisWeekView state={state} quiet={quiet} />;
 }
 
 const DOOR_LINE = "For students, families and tutors preparing a Beit Mitzvah.";
@@ -97,7 +103,8 @@ const SIGNED_OUT_LINE = "Save the readings you’re working on, mark verses, kee
  * and the page below do not move. An account with no role, a refused account or an unavailable sign-in keeps the entry task, passed in
  * whole (request a role, Sign out, Try again).
  */
-function BeitMitzvahDoor({ account, children, place }: { account: FrontDoorAccount; children: ReactNode; place: "hero" | "doors" }) {
+function BeitMitzvahDoor({ account, children, place, next }: { account: FrontDoorAccount; children: ReactNode; place: "hero" | "doors" | "first";
+  /** A student's next step on their own reading (student gaps A3/A4), the door's primary action above Open My Readings. */ next?: ReactNode }) {
   const role = account?.kind === "account" ? homeRole(account.roles, rememberedRole()) : null;
   const door = role ? signedInDoor(role, account?.kind === "account" ? { pinned: account.pinned, child: account.child, nearest: account.nearest, count: account.count } : {}) : null;
   const task = account?.kind === "task" || (account?.kind === "account" && !role);
@@ -110,9 +117,39 @@ function BeitMitzvahDoor({ account, children, place }: { account: FrontDoorAccou
       <a className={`button-hero-secondary ${styles.doorAction}`} href="/sign-in" aria-describedby="beit-mitzvah-title">Sign in</a>
       <p className={styles.doorMore}><a href="/about#accounts">How accounts work</a></p>
     </>}
+    {role && door && next}
     {role && door && <a className={`button-hero-secondary ${styles.doorAction}`} data-testid="door-action" href={rolePaths[role]} aria-describedby="beit-mitzvah-title">{door.action}</a>}
     {task && <div className={styles.task}>{children}</div>}
   </section>;
+}
+
+/**
+ * The student's next step on the front door (student gaps A3/A4): the same step as the pinned card on My Readings, read the way Learn reads the student's
+ * own reading (the student's own workspace reads: the reading, then its Got it marks). Until those answer, or if they fail, Up close at the first unmarked
+ * verse, or the Run-through when the door already says every verse is got.
+ */
+function StudentNextStep({ pinned }: { pinned: NonNullable<DoorFacts["pinned"]> }) {
+  const [step, setStep] = useState<NextStep | null>(null);
+  useEffect(() => {
+    const controller = new AbortController(), signal = controller.signal;
+    void (async () => {
+      const assigned = await ownAssigned(); if (!assigned || signal.aborted) return;
+      const marks = new Map<Reading["kind"], ProgressVerse[]>();
+      for (const reading of assigned.readings) {
+        const verses: ProgressVerse[] = [];
+        for (let offset: number | null = 0, pages = 0; offset !== null && pages < 12; pages++) {
+          const page = await fetchProgress(assigned, reading.kind, { type: "page", offset }, signal) as ProgressRows;
+          verses.push(...page.verses); offset = page.nextOffset;
+        }
+        marks.set(reading.kind, verses);
+      }
+      if (!signal.aborted) setStep(nextStep(assigned.readings, marks));
+    })().catch(() => undefined);
+    return () => controller.abort();
+  }, []);
+  const all = pinned.total > 0 && pinned.done >= pinned.total;
+  const href = step?.href ?? (all ? runThroughHref([]) : UP_CLOSE_HREF), label = step?.label ?? (all ? NEXT_STEP.runThrough : NEXT_STEP.upClose);
+  return <a className={`button-start ${styles.doorAction}`} data-testid="door-next" data-step={step?.kind ?? (all ? "run-through" : "up-close")} href={href}>{label}</a>;
 }
 
 /**
@@ -121,19 +158,23 @@ function BeitMitzvahDoor({ account, children, place }: { account: FrontDoorAccou
  * account has no role or the door cannot say who is there.
  */
 export function FrontDoor({ account, children }: { account: FrontDoorAccount; children: ReactNode }) {
-  const keeps = account?.kind === "account" && account.saved, leads = doorLeads(account);
+  const keeps = account?.kind === "account" && account.saved;
+  // A signed-in student with an assigned reading sees it first, with its next step, and this Shabbat after it (student gaps A4, 2026-11-16); everyone else's page is unchanged.
+  const pinned = account?.kind === "account" && homeRole(account.roles, rememberedRole()) === "student" ? account.pinned ?? null : null;
+  const leads = !pinned && doorLeads(account);
   // An account that keeps saved readings keeps this browser's preferred commentaries and reading settings too (release 1.7 M3b).
   useEffect(() => { if (keeps) startAccountPreferences(true); }, [keeps]);
   return <div className="portal-shell">
     <a className="skip-link" href="#front-door-main">Skip to main content</a>
     <SiteBar signedIn={account === null ? undefined : account.kind === "task" ? account.signedIn : account.kind === "account"} />
     <main id="front-door-main" className={styles.main}>
-      <ThisWeek />
+      {pinned && <BeitMitzvahDoor account={account} place="first" next={<StudentNextStep pinned={pinned} />}>{children}</BeitMitzvahDoor>}
+      <ThisWeek quiet={pinned !== null} />
       {leads && <BeitMitzvahDoor account={account} place="hero">{children}</BeitMitzvahDoor>}
       <div className={styles.find}><FindReading place="home" /></div>
       <SavedLine />
       <div className={styles.doors}>
-        {!leads && <BeitMitzvahDoor account={account} place="doors">{children}</BeitMitzvahDoor>}
+        {!leads && !pinned && <BeitMitzvahDoor account={account} place="doors">{children}</BeitMitzvahDoor>}
         <section className={styles.door} aria-labelledby="learn-title" data-door="learn">
           <h2 id="learn-title" className={styles.doorTitle}>Learn to lein</h2>
           <p className={styles.doorLine} data-testid="learn-door-line">Hear the phrases, then lein a verse of this week's reading.</p>

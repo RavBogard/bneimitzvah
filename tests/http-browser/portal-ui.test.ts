@@ -318,7 +318,7 @@ it("keeps invitation landing nonaccepting and accepts one reviewed binding only,
   await safe(() => recipient.getByTestId("invitation-continue").click());
   // Continue lands on My Readings (Area A); the student's reading is the pinned card's Open link (E1).
   await ui(recipient.getByTestId("pinned-reading")).toBeVisible();
-  await recipient.getByTestId("pinned-reading").getByRole("link", { name: "Open", exact: true }).click();
+  await recipient.getByTestId("pinned-reading").getByTestId("pinned-open").click();
   await ui.poll(() => new URL(recipient.url()).pathname).toBe("/mine/reading");
   expect(await recipient.getByTestId("entry-task").count()).toBe(0);
   await openAuthMail(recipient, link);

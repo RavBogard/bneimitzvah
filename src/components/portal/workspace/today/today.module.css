@@ -42,6 +42,9 @@
 .calendar { padding-inline: 0.25rem; }
 .calendar :global(.practice-month) { margin-top: 0; }
 
+/* ---- The next step and the whole reading (student gaps A3) ---- */
+.step { display: grid; gap: 0.5rem; }
+
 /* ---- Open, and the two places inside the reading ---- */
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
 .links { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0; padding: 0; list-style: none; }

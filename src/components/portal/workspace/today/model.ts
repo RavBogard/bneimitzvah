@@ -74,6 +74,40 @@ export function rowState(verses: readonly ProgressVerse[], start: number, end: n
 }
 export const stateWord: Record<RowState, string> = { "not-started": "Not started", working: "Working", solid: "Solid" };
 
+/** The student's reading page with Up close open (student gaps A3). `upCloseHref` names the verse; the bare address opens at the first verse on the page not marked Got it. */
+export const UP_CLOSE_HREF = "/mine/reading#up-close";
+export const upCloseHref = (kind: Reading["kind"], ref: string) => `${UP_CLOSE_HREF}:${kind}:${encodeURIComponent(ref)}`;
+/** What an Up close address asks for: one verse, the first unmarked verse ("first"), or nothing. */
+export function upCloseTarget(hash: string): { kind: Reading["kind"]; ref: string } | "first" | null {
+  const value = hash.replace(/^#/, "");
+  if (value === "up-close") return "first";
+  const match = /^up-close:(torah|haftarah):(.+)$/.exec(value); if (!match) return null;
+  try { return { kind: match[1] as Reading["kind"], ref: decodeURIComponent(match[2]) }; } catch { return null; }
+}
+/** The Run-through of the student's own reading (1.9 N19): the Torah when there is one, else the haftarah. */
+export const runThroughHref = (readings: readonly Pick<Reading, "kind">[]) => readings.some(row => row.kind === "torah") || !readings.length ? "/learn/run-through" : "/learn/run-through?kind=haftarah";
+export const NEXT_STEP = Object.freeze({ upClose: "Practise up close", runThrough: "Run-through", open: "Open my reading", practise: (where: string) => `Practise ${where}` });
+
+/** A student session whose own reading is not linked yet (student gaps A8: was "No student is currently linked to this role."). */
+export const UNLINKED_LINE = "Your reading is not linked to this account yet. Ask your tutor or rabbi for help.";
+
+export type NextStep = Readonly<{ kind: "verse"; reading: Reading["kind"]; ref: string; label: string; href: string } | { kind: "run-through"; label: string; href: string }>;
+/**
+ * The one next step on the student's own reading (student gaps A3, restoring 1.9 N11's Next card): Up close at the first verse not yet marked Got it, named by
+ * its verse and, where the tutor recorded aliyot, its aliyah; once every verse is marked Got it, the Run-through. Null when no verse is assigned.
+ */
+export function nextStep(readings: readonly Reading[], marks: ReadonlyMap<Reading["kind"], readonly Pick<ProgressVerse, "verseRef" | "selfCheck">[]>): NextStep | null {
+  if (!readings.some(reading => reading.verses.length)) return null;
+  const rows = readingRows(readings);
+  for (const reading of readings) {
+    const got = new Set((marks.get(reading.kind) ?? []).filter(verse => verse.selfCheck.state === "got-it").map(verse => verse.verseRef));
+    const index = reading.verses.findIndex(ref => !got.has(ref)); if (index < 0) continue;
+    const ref = reading.verses[index], row = rows.find(item => item.kind === reading.kind && item.key !== reading.kind && index >= item.start && index < item.end);
+    return { kind: "verse", reading: reading.kind, ref, label: NEXT_STEP.practise(`${row ? `${row.label} · ` : ""}${displayRef(ref)}`), href: upCloseHref(reading.kind, ref) };
+  }
+  return { kind: "run-through", label: NEXT_STEP.runThrough, href: runThroughHref(readings) };
+}
+
 /** The seven days ending on the server's day, oldest first, each with whether the student practiced. Dates only: no count, ever. */
 export function lastSevenDays(serverDay: string, dates: ReadonlySet<string>): readonly { date: string; practised: boolean; today: boolean; weekday: number }[] {
   const end = dayOrdinal(serverDay);

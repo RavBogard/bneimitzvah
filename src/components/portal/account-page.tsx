@@ -13,6 +13,7 @@ import { homeRole, rolePaths } from "./shell/role-home";
 import { rememberedRole, rememberRole } from "./shell/role-memory";
 import { TabBar, TabSkipLink } from "./shell/tab-bar";
 import { workspaceApi } from "./workspace/api";
+import { emailApi } from "./workspace/email/api";
 import { SiteBar } from "../site/site-bar";
 import { Chip, List, ListRow, PageHeader } from "../ui";
 
@@ -23,17 +24,20 @@ const GUIDE = "https://www.centralreform.org/beit-mitzvah/";
 type State = Readonly<{ kind: "loading" } | { kind: "signed-out" } | { kind: "ready"; summary: SessionSummary }>;
 
 /** The signed-in Account, as a list: who is signed in, the roles (the current one marked), the rows that belong to the account, Sign out. */
-export function AccountView({ summary, current, signingOut, problem, onRole, onSignOut }: { summary: SessionSummary; current: Role | null; signingOut: boolean; problem: string; onRole: (role: Role) => void; onSignOut: () => void }) {
+export function AccountView({ summary, current, signingOut, problem, onRole, onSignOut, emailOffered = null }: { summary: SessionSummary; current: Role | null; signingOut: boolean; problem: string; onRole: (role: Role) => void; onSignOut: () => void;
+  /** Whether the congregation offers this account any portal email; null until known. A student sees Email settings only once one is offered (the page stays for a direct link). */
+  emailOffered?: boolean | null }) {
   const { roles } = summary, staff = roles.includes("admin") || roles.includes("tutor"), student = roles.includes("student");
   return <>
     <PageHeader title="Account" description="You’re signed in" />
-    {roles.length > 0 && <section className="account-section" aria-labelledby="account-roles">
+    {/* An account with one role has nothing to choose between here (2026-11-16 walkthrough); My Readings is in the site bar. */}
+    {roles.length > 1 && <section className="account-section" aria-labelledby="account-roles">
       <h2 id="account-roles">Roles</h2>
       <List label="Roles" testId="account-roles">{roles.map(role => <ListRow key={role} title={roleNames[role]} meta={roleTasks[role]} href={rolePaths[role]} onNavigate={() => onRole(role)} trailing={role === current ? <Chip tone="info">Current</Chip> : undefined} />)}</List>
     </section>}
     {roles.length > 0 && <section className="account-section">
       <List label="Your account">
-        <ListRow title="Email settings" meta="choose which portal emails you get" href="/workspace/email" />
+        {(!student || emailOffered === true) && <ListRow title="Email settings" meta="choose which portal emails you get" href="/workspace/email" />}
         {roles.includes("admin") && <ListRow title="Congregation settings" meta="the congregation’s name, dates and options" href="/workspace/admin/settings" />}
         {staff && <ListRow title="Claude connections" meta="see and end Claude’s access to the portal" href="/workspace/claude" />}
         {summary.approver && <ListRow title="Account requests" meta="approve accounts for people who ask" href="/workspace/accounts" />}
@@ -62,6 +66,13 @@ export function AccountView({ summary, current, signingOut, problem, onRole, onS
 export function AccountPage() {
   const [state, setState] = useState<State>({ kind: "loading" }), [signingOut, setSigningOut] = useState(false), [problem, setProblem] = useState("");
   const [current, setCurrent] = useState<Role | null>(null), controller = useRef<AbortController | null>(null), gate = useRef(false);
+  const [emailOffered, setEmailOffered] = useState<boolean | null>(null), student = state.kind === "ready" && state.summary.roles.includes("student");
+  // A student's Email settings row waits for the congregation to offer an email, from the same preferences read the page itself makes; a failed read keeps it hidden.
+  useEffect(() => {
+    if (!student) return; const request = new AbortController();
+    emailApi.read(request.signal).then(options => { if (!request.signal.aborted) setEmailOffered(options.some(option => option.offered)); }, () => { if (!request.signal.aborted) setEmailOffered(false); });
+    return () => request.abort();
+  }, [student]);
   const check = useCallback(() => {
     controller.current?.abort();
     const request = new AbortController(); controller.current = request;
@@ -102,7 +113,7 @@ export function AccountPage() {
     <SiteBar signedIn={state.kind === "ready" ? true : undefined} />
     <main id="account-main" className="workspace-main account-main" aria-busy={state.kind === "loading"}>
       {state.kind === "loading" ? <><PageHeader title="Account" /><p role="status">One moment while we check your access.</p></>
-        : <AccountView summary={state.summary} current={current} signingOut={signingOut} problem={problem} onRole={role => { rememberRole(role); setCurrent(role); }} onSignOut={() => void signOut()} />}
+        : <AccountView summary={state.summary} current={current} signingOut={signingOut} problem={problem} emailOffered={emailOffered} onRole={role => { rememberRole(role); setCurrent(role); }} onSignOut={() => void signOut()} />}
     </main>
     {state.kind === "ready" && <TabBar roles={roles} />}
   </div>;

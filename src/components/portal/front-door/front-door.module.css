@@ -35,6 +35,11 @@
 /* While access is being checked the Beit Mitzvah door holds the height of the signed-out door it usually becomes (its two-sentence line, Sign in and
    How accounts work; set to 19.5rem to clear four lines of the line at 320px, not yet measured), and a signed-in door holds the same, so the Learn door and everything below do not jump (D3). */
 .door[data-door-state="loading"], .door[data-door-state="sign-in"], .door[data-door-state="role"] { min-height: 19.5rem; }
+/* A student's own reading first (student gaps A4): it appears once the session has answered, above this Shabbat, so it holds no reserved room. Its next step
+   is the page's one lake pill, a full-width block like the door's other action. */
+.door[data-door-place="first"] { min-height: 0; margin-bottom: 2rem; }
+.door > :global(.button-start) { display: flex; align-items: center; justify-content: center; text-align: center; color: #fff; text-decoration: none; padding-block: 0.5rem; }
+.door > :global(.button-start):hover { color: #fff; }
 
 @media (min-width: 1001px) {
   .main { padding-top: 3rem; }

@@ -37,22 +37,27 @@ test.describe("at 390x844", () => {
     await expect(card(page).getByText(`9 of ${total}`, { exact: true })).toBeVisible();
   });
 
-  test("the card has one primary link, Open, to the reading, and the two places inside it", async ({ page }) => {
-    await mock(page);
+  // Student gaps A3 (2026-11-16): the primary action names the first verse not marked Got it and opens it Up close; the whole reading is the second way in.
+  test("the card's primary link opens Up close at the first verse not marked Got it, beside a way into the whole reading and the places inside it", async ({ page }) => {
+    await mock(page, { got: [0, 1, 2] });
     await page.goto("/mine");
-    await expect(card(page).getByRole("link", { name: "Open", exact: true })).toHaveAttribute("href", "/mine/reading");
+    await expect(card(page).getByTestId("pinned-next")).toHaveAttribute("data-step", "verse");
+    await expect(card(page).getByTestId("pinned-next")).toHaveAttribute("href", "/mine/reading#up-close:torah:Genesis%2037%3A4");
+    await expect(card(page).getByTestId("pinned-open")).toHaveAttribute("href", "/mine/reading");
     await expect(card(page).getByRole("link", { name: "Service parts", exact: true })).toHaveAttribute("href", "/mine/reading#service-parts");
     await expect(card(page).getByRole("link", { name: "Lessons", exact: true })).toHaveAttribute("href", "/mine/reading#lessons");
-    await expect(page.getByRole("link", { name: /Practice verses|Start where you left off/ })).toHaveCount(0);
+    // Student gaps A1 (Daniel, 2026-11-16): the service course has a way in from the card.
+    await expect(card(page).getByTestId("service-course-link")).toHaveAttribute("href", "/learn/service");
+    await expect(page.getByTestId("mine-add-another")).toHaveAttribute("href", "/readings?add=1");
   });
 
   test("no button or link in the card clips its text at 320px", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 700 });
     await mock(page, { practised: ["2026-10-14"], got: [0, 1, 2] });
     await page.goto("/mine");
-    await expect(card(page).getByRole("link", { name: "Open", exact: true })).toBeVisible();
-    // Open sits in the first viewport, whole, and is the card's full-width primary action.
-    const box = await card(page).getByRole("link", { name: "Open", exact: true }).boundingBox();
+    await expect(card(page).getByTestId("pinned-next")).toBeVisible();
+    // The next step sits in the first viewport, whole, and is the card's full-width primary action.
+    const box = await card(page).getByTestId("pinned-next").boundingBox();
     expect(box && box.y + box.height <= 700 && box.y >= 0).toBe(true);
     const cardBox = await card(page).boundingBox();
     expect(box && cardBox && box.width > cardBox.width - 60).toBe(true);
@@ -122,6 +127,22 @@ for (const width of [375, 390, 412]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }
+
+// Student gaps A3/A4 (2026-11-16): a signed-in student with an assigned reading sees it first on the front door, with the card's next step, and this Shabbat after it.
+test("the front door leads a student with their own reading and its next step, above this Shabbat, at 360px with no sideways scroll", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await mock(page, { got: [0, 1, 2] });
+  await page.route("**/api/session/door", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ pinned: { name: "Noa Synthetic", date: "2026-12-12", got: 3, total: verseTotal }, child: null, nearest: null, count: 0 }) }));
+  await page.goto("/");
+  const door = page.locator('[data-door="beit-mitzvah"]');
+  await expect(door).toHaveAttribute("data-door-place", "first");
+  await expect(door.getByTestId("door-next")).toHaveAttribute("href", "/mine/reading#up-close:torah:Genesis%2037%3A4");
+  await expect(door.getByTestId("door-action")).toHaveAttribute("href", "/mine");
+  const doorTop = (await door.boundingBox())!.y, weekTop = (await page.getByTestId("this-week").boundingBox())!.y;
+  expect(doorTop).toBeLessThan(weekTop);
+  expect((await door.getByTestId("door-next").boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
 
 test("Account has Need help? for a student", async ({ page }) => {
   await mock(page);

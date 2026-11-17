@@ -44,7 +44,7 @@ function aliyahSections(kind: StudyKind, assignment: Assigned["readings"][number
   return verses.flatMap((verse, index) => { const position = aliyahPosition(kind, assignment.aliyahStarts, assignment.verses, verse.ref);
     return position && (position.startsHere || index === 0) ? [{ index, label: `Aliyah ${position.number}${position.startsHere ? " starts here" : " · continued from the previous text page"}` }] : []; });
 }
-export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderGuide, guide, renderIntro, renderWork, renderActiveWork, onPage, onPrint, printSheetHref, learner = false, liftHandle, practiceHandle, textStartHandle, verseLookupHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, onPracticeReady, onService, active = true, audio, stopAudio, practising = false, gotIt }: {
+export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderGuide, guide, renderIntro, renderWork, renderActiveWork, onPage, onPrint, printSheetHref, learner = false, liftHandle, practiceHandle, upCloseHandle, textStartHandle, verseLookupHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, onPracticeReady, onService, active = true, audio, stopAudio, practising = false, gotIt }: {
   baseline: Assigned | null; register(value: StudyReload): () => void; reloadMetadata(): Promise<Assigned>; authorityFailed(status: number): void; onKindChange(kind: StudyKind): void;
   guardDeparture?(): Promise<boolean>; serviceHref?: string; renderGuide?(kind: StudyKind, verseRef: string): ReactNode;
   /** The study guide, so Study's rail can mark the verses it has notes on and open on the first of them. */
@@ -60,6 +60,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   learner?: boolean; liftHandle?: MutableRefObject<((index: number) => void) | null>;
   /** Opens Up close at a verse of the page on screen: its index, or a choice made from the page's verse refs (the first not yet Got it). */
   practiceHandle?: MutableRefObject<((index: number | ((refs: readonly string[]) => number)) => void) | null>;
+  /** Opens Up close at one verse of the assignment, loading the text page that holds it first (the pinned card's next step, student gaps A3); false when the verse is not assigned. */
+  upCloseHandle?: MutableRefObject<((kind: StudyKind, ref: string) => boolean) | null>;
   textStartHandle?: MutableRefObject<(() => void) | null>;
   /** Looks up a verse on the live page, for the Study walk; null while concealed or loading. */
   verseLookupHandle?: MutableRefObject<((ref: string) => StudyVerse | null) | null>;
@@ -98,6 +100,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const pendingPlace = useRef<{ kind: StudyKind; offset: number; turn: number; ref: string; wordIndex: number } | null>(null);
   // A chapter chosen on another text page: scrolled to once that page is on screen.
   const pendingJump = useRef<string | null>(null);
+  // A verse Up close was asked to open on, once the text page that holds it is on screen.
+  const pendingLift = useRef<{ kind: StudyKind; ref: string } | null>(null);
   const [state, setState] = useState<{ binding: string; kind?: StudyKind; page?: StudyPage; error?: number; loading?: boolean }>({ binding: "" });
   const key = baseline ? studyBinding(baseline) : "";
   const clear = useCallback(() => { stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.dispose(); shortMetadata.current = null; modalRequest.current?.abort(); modalOwner.current?.dispose(); modalOwner.current = null; generation.current++; controller.current?.abort(); setLift(null); setState({ binding: "", loading: true }); }, [stopAudio]);
@@ -244,6 +248,23 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       if (first) onVisit?.(kind, first.ref);
     } : null;
   }
+  // Up close at a verse on another text page or of the other reading: that page loads first, then Up close opens on it (student gaps A3).
+  useEffect(() => {
+    const want = pendingLift.current; if (!want || !livePage || concealed || state.kind !== want.kind) return;
+    const index = livePage.verses.findIndex(row => row.ref === want.ref); if (index < 0) return;
+    pendingLift.current = null; open(livePage, index);
+  }, [livePage]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (upCloseHandle) upCloseHandle.current = livePage && !concealed && baseline ? (want, ref) => {
+    const row = baseline.readings.find(item => item.kind === want), position = row ? row.verses.indexOf(ref) : -1;
+    if (!row || position < 0) return false;
+    const parts = want === "torah" ? sectionsFromStarts(row.verses, row.aliyahStarts) : [];
+    let at = parts.length ? parts[Math.max(0, sectionIndexAt(parts, position))].start : 0;
+    for (;;) { const plan = studyPlan(baseline, want, at); if (plan.nextOffset === null || plan.nextOffset > position) break; at = plan.nextOffset; }
+    pendingLift.current = { kind: want, ref };
+    if (state.kind === want && livePage.offset === at) { const index = livePage.verses.findIndex(verse => verse.ref === ref); if (index >= 0) { pendingLift.current = null; open(livePage, index); return true; } }
+    void explicitLoad(want, at);
+    return true;
+  } : null;
   if (liftHandle || practiceHandle) {
     // Parent actions bring this tab forward in the same event.
     // Inactivity still unmounts media; it does not revoke this explicit opener.

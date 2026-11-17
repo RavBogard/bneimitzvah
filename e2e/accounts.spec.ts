@@ -68,12 +68,15 @@ test("parents, tutors, admins and students are not offered a request on /account
   await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: [] }));
   await page.route("**/api/account/request", route => json(route, 200, { ok: true, state: "requestable", suggestedName: "", productName: "CRC Torah" }));
   await page.goto("/account");
-  await expect(page.getByRole("list", { name: "Roles" })).toBeVisible();
+  // A one-role account has no Roles list (2026-11-16 walkthrough); the page is ready once Sign out shows.
+  await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
+  await expect(page.getByTestId("account-roles")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Ask to be linked", exact: true })).toHaveCount(0);
   expect(asked).toEqual([]);
   roles = ["student"]; saved = false;
   await page.reload();
-  await expect(page.getByRole("list", { name: "Roles" }).getByRole("link", { name: /^Student/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
+  await expect(page.getByTestId("account-roles")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Ask to be linked", exact: true })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveCount(0);
   expect(asked).toEqual([]);

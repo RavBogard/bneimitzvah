@@ -76,12 +76,34 @@ describe("the signed-in door", () => {
   test("it leads the home, under the hero, once a reading is kept or pinned, and otherwise sits beside Learn", () => {
     const place = (account: Parameters<typeof FrontDoor>[0]["account"]) => /data-door-place="(\w+)"/.exec(renderToStaticMarkup(createElement(FrontDoor, { account, children: null })))![1];
     expect(place({ kind: "account", saved: true, roles: ["tutor"], count: 3, pinned: null })).toBe("hero");
-    expect(place({ kind: "account", saved: true, roles: ["student"], count: 0, pinned: { name: "Noa", ceremony: "2027-05-01", done: 0, total: 4 } })).toBe("hero");
     expect(place({ kind: "account", saved: true, roles: ["tutor"], count: 0, pinned: null })).toBe("doors");
     expect(place({ kind: "sign-in" })).toBe("doors");
     const markup = renderToStaticMarkup(createElement(FrontDoor, { account: { kind: "account", saved: true, roles: ["tutor"], count: 3, pinned: null }, children: null }));
     expect(markup.indexOf('id="this-week-title"')).toBeLessThan(markup.indexOf('data-door="beit-mitzvah"'));
     expect(markup.indexOf('data-door="beit-mitzvah"')).toBeLessThan(markup.indexOf('data-door="learn"'));
+  });
+  // Student gaps A4 (2026-11-16): a signed-in student with an assigned reading sees it first, with its next step as the page's one lake pill, then this Shabbat.
+  test("a student's own reading comes first, above this Shabbat, with the next step; a student with none, and every other role, keep the page as it was", () => {
+    rememberRole("student");
+    const pinned = { name: "Noa", ceremony: "2027-05-01", done: 0, total: 4 };
+    const markup = renderToStaticMarkup(createElement(FrontDoor, { account: { kind: "account", saved: true, roles: ["student"], count: 0, pinned }, children: null }));
+    expect(/data-door-place="(\w+)"/.exec(markup)![1]).toBe("first");
+    expect(markup.indexOf('data-door="beit-mitzvah"')).toBeLessThan(markup.indexOf('id="this-week-title"'));
+    expect(markup.match(/data-door="beit-mitzvah"/g)).toHaveLength(1);
+    expect(markup).toMatch(/class="button-start[^"]*"[^>]*data-testid="door-next"[^>]*href="\/mine\/reading#up-close"/);
+    expect(markup.match(/button-start/g)).toHaveLength(1);
+    expect(markup).toMatch(/class="button-hero-secondary" href="\/read">/);
+    const done = renderToStaticMarkup(createElement(FrontDoor, { account: { kind: "account", saved: true, roles: ["student"], count: 0, pinned: { ...pinned, done: 4 } }, children: null }));
+    expect(done).toMatch(/data-testid="door-next"[^>]*data-step="run-through"[^>]*href="\/learn\/run-through"/);
+    for (const account of [{ kind: "account", saved: true, roles: ["student"], count: 0, pinned: null }, { kind: "account", saved: true, roles: ["tutor"], count: 3, pinned: null }] as const) {
+      const other = renderToStaticMarkup(createElement(FrontDoor, { account, children: null }));
+      expect(other).not.toContain("door-next");
+      expect(other.indexOf('id="this-week-title"')).toBeLessThan(other.indexOf('data-door="beit-mitzvah"'));
+    }
+    rememberRole("tutor");
+    const tutorStudent = renderToStaticMarkup(createElement(FrontDoor, { account: { kind: "account", saved: true, roles: ["tutor", "student"], count: 0, pinned }, children: null }));
+    expect(tutorStudent).not.toContain("door-next");
+    rememberRole("student");
   });
   test("it replaces the Beit Mitzvah door, leads with the role's home, and is not a second lake pill", () => {
     rememberRole("student");
@@ -134,7 +156,15 @@ describe("the signed-out door and the page's one lake pill", () => {
 });
 
 describe("Account is a list: who is signed in, Roles with the current one marked, the account's rows, then Sign out", () => {
-  const view = (roles: Role[], current: Role | null, extra: Partial<SessionSummary> = {}) => renderToStaticMarkup(createElement(AccountView, { summary: summary(roles, extra), current, signingOut: false, problem: "", onRole: () => undefined, onSignOut: () => undefined }));
+  const view = (roles: Role[], current: Role | null, extra: Partial<SessionSummary> = {}, emailOffered: boolean | null = true) => renderToStaticMarkup(createElement(AccountView, { summary: summary(roles, extra), current, signingOut: false, problem: "", onRole: () => undefined, onSignOut: () => undefined, emailOffered }));
+  // 2026-11-16 walkthrough: a one-role account has no Roles list, and a student sees Email settings only once the congregation offers an email.
+  test("Roles shows only with two or more roles; a student's Email settings row waits for an offered email, everyone else's is there", () => {
+    for (const role of ["student", "parent", "tutor", "admin"] as const) expect(view([role], role)).not.toContain('data-testid="account-roles"');
+    expect(view(["parent", "tutor"], "tutor")).toContain('data-testid="account-roles"');
+    for (const offered of [false, null]) expect(view(["student"], "student", {}, offered)).not.toContain(">Email settings<");
+    expect(view(["student"], "student", {}, true)).toContain(">Email settings<");
+    for (const role of ["parent", "tutor"] as const) expect(view([role], role, {}, false)).toContain(">Email settings<");
+  });
   test("one row per role, each to its home, the current one marked", () => {
     const markup = view(["student", "tutor"], "tutor");
     expect(markup).toContain(">Account</h1>");
@@ -170,7 +200,7 @@ describe("wording", () => {
     expect(words(door(["tutor", "student"]))).toEqual(["Your readings", "Open My Readings"]);
     expect(words(door(["tutor"], 3))).toEqual(["Your readings", "3 saved readings", "Open My Readings"]);
     rememberRole("student");
-    expect(words(door(["student"], null, { name: "Noa", ceremony: "2027-05-01", done: 3, total: 12 }))).toEqual(["Your readings", "Noa · Beit Mitzvah, Sat, May 1, 2027 · 3 of 12 verses", "Open My Readings"]);
+    expect(words(door(["student"], null, { name: "Noa", ceremony: "2027-05-01", done: 3, total: 12 }))).toEqual(["Your readings", "Noa · Beit Mitzvah, Sat, May 1, 2027 · 3 of 12 verses", "Practise up close", "Open My Readings"]);
     expect(words(door(["parent"]))).toEqual(["Your readings", "Open My Readings"]);
     rememberRole("admin");
     expect(words(door(["admin"]))).toEqual(["This week", "Needs you, ceremonies and rehearsals.", "See this week"]);
@@ -180,7 +210,7 @@ describe("wording", () => {
   });
   test("Account", () => {
     const markup = renderToStaticMarkup(createElement(AccountView, { summary: summary(["tutor"], { approver: true }), current: "tutor", signingOut: false, problem: "", onRole: () => undefined, onSignOut: () => undefined }));
-    expect(words(markup)).toEqual(["Account", "You’re signed in", "Roles", "Tutor", "the students you teach", "Current", "Email settings", "choose which portal emails you get",
+    expect(words(markup)).toEqual(["Account", "You’re signed in", "Email settings", "choose which portal emails you get",
       "Claude connections", "see and end Claude’s access to the portal", "Account requests", "approve accounts for people who ask",
       // Readings for everyone, decision 16 (plan D8): the one sentence under the N23 line.
       "Readings you keep, with their marks and notes, can be seen by tutors and the rabbi.",

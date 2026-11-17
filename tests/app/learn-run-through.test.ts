@@ -82,6 +82,16 @@ describe("the Run-through", () => {
     expect(renderToStaticMarkup(createElement(CourseHome))).toContain('href="/learn/run-through" data-run-through="true"><span>Run-through</span>');
     for (const value of [{ status: "none" }, { status: "pending" }]) { own.value = value; expect(renderToStaticMarkup(createElement(CourseHome))).not.toContain("Run-through"); }
   });
+  // Student gaps A1 (Daniel, 2026-11-16): the service course has a way in from the course home, for the same students.
+  it("links the service course from the course home only for a student with their own reading", () => {
+    own.value = { status: "ready", torah: reading("torah", ["Genesis 23:1"]), haftarah: null };
+    expect(renderToStaticMarkup(createElement(CourseHome))).toMatch(/href="\/learn\/service" data-service-course="true">/);
+    for (const value of [{ status: "none" }, { status: "pending" }]) { own.value = value; expect(renderToStaticMarkup(createElement(CourseHome))).not.toContain("/learn/service"); }
+  });
+  it("says why a Run-through has nothing to run, rather than show an empty page", () => {
+    own.value = { status: "none" };
+    expect(renderToStaticMarkup(createElement(RunThroughScreen, { kind: null }))).toContain("data-run-empty");
+  });
 });
 
 describe("the Got it and Solid criteria", () => {

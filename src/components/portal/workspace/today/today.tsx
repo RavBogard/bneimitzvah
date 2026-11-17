@@ -21,7 +21,8 @@ import { serviceSlotName } from "../service-slot";
 import type { ProgressRows } from "../progress/api";
 import type { LessonLogEntry } from "../../../../lib/lesson-log/types";
 import type { ProgressVerse } from "../../../../lib/progress/types";
-import { calendarMarks, deviceDate, lastSevenDays, nextDateLine, refSegments } from "./model";
+import { COPY as SERVICE_COURSE } from "../../../../lib/service-course/copy";
+import { calendarMarks, deviceDate, lastSevenDays, NEXT_STEP, nextDateLine, nextStep, refSegments, UNLINKED_LINE, UP_CLOSE_HREF } from "./model";
 import styles from "./today.module.css";
 
 export type Slice<T> = { status: "loading" } | { status: "unavailable" } | { status: "ready"; value: T };
@@ -135,7 +136,7 @@ export function PinnedReadingCard({ slices }: { slices: TodaySlices }) {
   if (slices.phase === "off") return null;
   if (slices.phase === "loading") return <section className={styles.pinned} aria-busy="true" aria-live="polite" data-pinned-card><p className={styles.state} role="status">Loading the assigned reading</p><div className={styles.holdRoom} aria-hidden="true" /></section>;
   if (slices.phase === "error") return <section className={styles.pinned} data-pinned-card><div role="alert"><p>Students couldn’t be loaded. No previous selection is being shown.</p><button type="button" className="button-secondary" onClick={slices.reload}>Reload students</button></div></section>;
-  if (!slices.rows.length || !slices.assigned) return <section className={styles.pinned} data-pinned-card><p>No student is currently linked to this role. Ask the congregation for help with your assignment.</p></section>;
+  if (!slices.rows.length || !slices.assigned) return <section className={styles.pinned} data-pinned-card><p>{UNLINKED_LINE}</p></section>;
   return <PinnedReady slices={slices} assigned={slices.assigned} headingId={headingId} />;
 }
 
@@ -144,6 +145,8 @@ function PinnedReady({ slices, assigned, headingId }: { slices: TodaySlices; ass
   const today = deviceDate(), countdown = ceremonyCountdown(student.ceremonyDate), rehearsal = nextDateLine(student, today), caption = useId();
   const own = slices.rows.find(row => row.id === student.id), slot = congregation.ready ? serviceSlotName(student.serviceSlot, congregation.services) : null;
   const count = gotCount(readings, marks), note = lesson.status === "ready" ? lesson.value : null;
+  // The card names the work (student gaps A3): Up close at the first verse not marked Got it, or the Run-through once every verse is; until the marks are read, Up close at the first.
+  const step = marks.status === "ready" ? nextStep(readings, marks.value) : null;
   const dayMarks = calendarMarks(student), calendarDay = dates.status === "ready" ? dayOrdinal(dates.serverDay) : dayOrdinal(today);
   return <section className={styles.pinned} aria-labelledby={headingId} data-pinned-card data-testid="pinned-reading">
     <div className={styles.head}>
@@ -153,8 +156,11 @@ function PinnedReady({ slices, assigned, headingId }: { slices: TodaySlices; ass
     <h2 id={headingId} className={styles.name}><a href={PINNED_HREF} className={styles.nameLink}><bdi dir="auto">{student.firstName} {student.lastName}</bdi></a></h2>
     {(readings.length > 0 || slot) && <p className={styles.ranges}>{readings.flatMap(reading => refSegments(reading.ranges).map((segment, index) => `${index === 0 ? `${reading.kind === "torah" ? "Torah" : "Haftarah"} ` : ""}${segment}`))
       .map((text, index, all) => <span key={index}><span data-nobreak>{text}{(index < all.length - 1 || slot) && " ·"}</span>{" "}</span>)}{slot && <span data-nobreak>{slot}</span>}</p>}
-    {/* Open comes right after the name and ranges, so a phone shows it without scrolling. */}
-    <ButtonLink variant="primary" href={PINNED_HREF} block>Open</ButtonLink>
+    {/* The next step comes right after the name and ranges, so a phone shows it without scrolling; the whole reading is the quieter way in beside it. */}
+    {readings.length > 0 ? <div className={styles.step}>
+      <ButtonLink variant="primary" href={step?.href ?? UP_CLOSE_HREF} block data-testid="pinned-next" data-step={step?.kind ?? "up-close"}>{step?.label ?? NEXT_STEP.upClose}</ButtonLink>
+      <ButtonLink variant="secondary" href={PINNED_HREF} block data-testid="pinned-open">{NEXT_STEP.open}</ButtonLink>
+    </div> : <ButtonLink variant="primary" href={PINNED_HREF} block data-testid="pinned-open">{NEXT_STEP.open}</ButtonLink>}
     {rehearsal && <p className={styles.rehearsal} data-testid="rehearsal-line" data-nobreak>{rehearsal}</p>}
     {readings.length === 0 ? <p className={styles.empty}>Your tutor or rabbi will add your verses here.</p>
       : <div className={styles.got} data-testid="pinned-progress">
@@ -183,7 +189,8 @@ function PinnedReady({ slices, assigned, headingId }: { slices: TodaySlices; ass
     {dates.status !== "loading" && <div className={styles.calendar}><PracticeMonths today={calendarDay} first={dates.status === "ready" ? dayOrdinal(dates.fromDate) : calendarDay - 364}
       practiced={ordinal => dates.status === "ready" && dates.dates.has(dayString(ordinal))} marks={dayMarks} lastDay={dayOrdinal(student.ceremonyDate)} /></div>}
     {readings.length > 0 && <div className={styles.actions}>
-      {readings.length > 0 && <ul className={styles.links} aria-label="In your reading"><li><a href={`${PINNED_HREF}#service-parts`}>Service parts</a></li><li><a href={`${PINNED_HREF}#lessons`}>Lessons</a></li><li><a href={bookletHref(student.id)} data-testid="print-booklet">Print booklet</a></li></ul>}
+      {readings.length > 0 && <ul className={styles.links} aria-label="In your reading"><li><a href={`${PINNED_HREF}#service-parts`}>Service parts</a></li><li><a href={`${PINNED_HREF}#lessons`}>Lessons</a></li><li><a href={bookletHref(student.id)} data-testid="print-booklet">Print booklet</a></li>
+        <li><a href="/learn/service" data-testid="service-course-link">{SERVICE_COURSE.home.title}</a></li></ul>}
     </div>}
     {own?.ownAdultHonors === true && <HonorsEntry key={student.id} mode="student" studentId={student.id} name={`${student.firstName} ${student.lastName}`} />}
   </section>;

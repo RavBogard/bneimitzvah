@@ -116,7 +116,7 @@ it("shows the student's week on the pinned card, reports explicit inline verse v
     // Loading the shelf and its calendar is not practice.
     expect(seen.posts).toHaveLength(0);
     const before = await rows();
-    await safe(() => tab.getByTestId("pinned-reading").getByRole("link", { name: "Open", exact: true }).click());
+    await safe(() => tab.getByTestId("pinned-reading").getByTestId("pinned-open").click());
     await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
     // Loading the reading page and its text is not practice either; there is no Start reading button, a verse opens on a word.
     expect(seen.posts).toHaveLength(0); expect(await tab.getByRole("button", { name: "Start reading", exact: true }).count()).toBe(0);

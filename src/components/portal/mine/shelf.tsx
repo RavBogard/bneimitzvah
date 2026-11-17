@@ -21,6 +21,8 @@ import styles from "./shelf.module.css";
 export const SHELF_STRINGS = Object.freeze({
   title: "My Readings",
   add: "Add",
+  /** A student's quiet link under the pinned card: it adds a reading beside the assigned one, so it says so (2026-11-16 walkthrough). */
+  addAnother: "Add another reading",
   foot: "Tutors and the rabbi can see the readings you keep.",
   records: "What the site records about you",
   recordsHref: "/about#accounts",
@@ -103,7 +105,7 @@ export function Shelf() {
     {view.empty && !tutor && !summary.roles.includes("admin") && <EmptyShelf line={view.empty.line} linkable={summary.roles.length === 0} />}
     {view.sections.map(part)}
     <MyTutorLine />
-    {student && <p className={styles.addQuiet}><a href="/readings?add=1">{SHELF_STRINGS.add}</a></p>}
+    {student && <p className={styles.addQuiet}><a href="/readings?add=1" data-testid="mine-add-another">{SHELF_STRINGS.addAnother}</a></p>}
     <ShelfFoot />
   </section>;
 }

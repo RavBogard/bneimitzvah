@@ -15,6 +15,10 @@ import styles from "./learn.module.css";
  * a tutor, a parent or anyone else: the results live only in the student's own verse cards.
  * Anyone without an own reading (signed out, a tutor, a parent, an admin) sees only the way back.
  */
+export const RUN_THROUGH_EMPTY = Object.freeze({
+  none: "Run-through uses your own assigned reading. There is no reading to run through yet.",
+  text: "The text of this reading did not load.",
+});
 const close = <svg viewBox="0 0 24 24" width={22} height={22} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>;
 export function RunThroughScreen({ kind }: { kind: Melody | null }) {
   const own = useOwnReading(), verseCards = useVerseReview();
@@ -25,7 +29,8 @@ export function RunThroughScreen({ kind }: { kind: Melody | null }) {
   const back = <a className={styles.backLink} href="/learn">Back to the path</a>;
   if (own.status === "pending") return frame(<p role="status" className={styles.state}>Loading the reading…</p>);
   const reading = own.status === "ready" ? (kind ? own[kind] : null) ?? own.torah ?? own.haftarah : null;
-  if (!reading) return frame(null, back);
+  // Signed out, staff, a parent, or a student whose reading is waiting on the office's review: say so rather than show an empty page (2026-11-16 walkthrough).
+  if (!reading) return frame(<p className={styles.state} data-run-empty>{RUN_THROUGH_EMPTY.none}</p>, back);
   const both = own.status === "ready" && own.torah && own.haftarah;
   return <RunThroughReading key={`${reading.kind}:${reading.id}:${reading.revision}`} verses={reading.verses} kind={reading.kind} frame={frame} back={back} verseCards={verseCards}
     nav={both ? <nav className={styles.links} aria-label="Reading"><a href="/learn/run-through" aria-current={reading.kind === "torah" ? "page" : undefined}>Torah</a>
@@ -43,7 +48,7 @@ function RunThroughReading({ verses, kind, frame, back, nav, verseCards }: { ver
     const line = practiseAgain(stumbledRefs(done));
     return frame(<>{line && <p className={styles.doneLine} data-run-summary>{line}</p>}{nav}</>, back);
   }
-  if (!texts.verses.length) return frame(nav, back);
+  if (!texts.verses.length) return frame(<><div className={styles.state} data-run-empty><p>{RUN_THROUGH_EMPTY.text}</p><button type="button" className="button-secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></div>{nav}</>, back);
   return <VerseRunView verses={texts.verses} review={review} mode="run-through" frame={frame} onDone={setDone}
     onAnswer={(id, clean) => verseCards.update(value => recordVerse(value, id, clean, today.current, { until }))} />;
 }

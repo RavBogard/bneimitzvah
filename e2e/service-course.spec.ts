@@ -84,7 +84,9 @@ test("the course home opens at 360 px: the next lesson, the links, every unit, a
   expect(await noHorizontalScroll(page)).toBe(true);
 });
 
-test("nothing in the site links to the course yet: not the front door, the reading, the course of Learn to lein, or the offline page", async ({ page, request }) => {
+// Student gaps A1 (Daniel approved linking the course on 2026-11-16): a signed-in student reaches it from the pinned card on My Readings and from the Learn home
+// (e2e/student-today.spec.ts, tests/app/learn-run-through.test.ts). For everyone else the pages are as they were, and the course stays out of the sitemap.
+test("signed out, the front door, the reader, Learn to lein, the trope chart and sign-in do not link the course, and the sitemap leaves it out", async ({ page, request }) => {
   for (const path of ["/", "/read", "/learn", "/learn/about", "/trope-chart", "/offline", "/sign-in"]) {
     const response = await request.get(path);
     if (response.status() !== 200) continue;
