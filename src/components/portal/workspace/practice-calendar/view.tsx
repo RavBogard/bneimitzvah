@@ -2,6 +2,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { dayOrdinal, dayString } from "./api";
 import type { PracticeCalendar } from "./store";
+import { lastSevenDays } from "../../../../lib/practice-calendar/seven-days";
 
 const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -11,19 +12,22 @@ const parts = (ordinal: number) => { const [year, month, day] = dayString(ordina
 const spoken = (ordinal: number) => { const { month, day } = parts(ordinal); return `${weekdays[weekday(ordinal)]}, ${monthNames[month - 1]} ${day}`; };
 const check = <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
-/** This week, Sunday to Saturday, with practiced days filled. Dates only; the month view sits behind a disclosure. */
+/**
+ * The last seven days ending today (the window every practice surface uses: lib/practice-calendar/seven-days), with practiced days
+ * filled. Dates only; the month view sits behind a disclosure.
+ */
 export function PracticeDays({ calendar }: { calendar: PracticeCalendar }) {
   const state = useSyncExternalStore(calendar.subscribe, calendar.snapshot, calendar.snapshot);
   if (state.status === "off" || state.status === "ended") return null;
   if (state.status !== "ready") return <div className="practice-days" aria-busy={state.status === "loading"}>{state.status === "unavailable" && <p className="practice-days-note">Practice days couldn’t be loaded.</p>}</div>;
-  const today = dayOrdinal(state.serverDay), start = today - weekday(today), practiced = (ordinal: number) => state.dates.has(dayString(ordinal));
+  const today = dayOrdinal(state.serverDay), practiced = (ordinal: number) => state.dates.has(dayString(ordinal));
   return <div className="practice-days">
-    <ol className="practice-week" data-testid="practice-week" aria-label="Practice this week">{Array.from({ length: 7 }, (_, index) => {
-      const ordinal = start + index, done = ordinal <= today && practiced(ordinal), future = ordinal > today;
-      return <li key={ordinal} data-testid="practice-day" className={`practice-day${done ? " practice-day-done" : ""}${ordinal === today ? " practice-day-today" : ""}${future ? " practice-day-future" : ""}`}>
-        <span aria-hidden="true" className="practice-day-letter">{weekdays[weekday(ordinal)][0]}</span>
+    <ol className="practice-week" data-testid="practice-week" aria-label="Practice this week">{lastSevenDays(state.serverDay, state.dates).map(day => {
+      const ordinal = dayOrdinal(day.date), done = day.practised;
+      return <li key={day.date} data-testid="practice-day" className={`practice-day${done ? " practice-day-done" : ""}${day.today ? " practice-day-today" : ""}`}>
+        <span aria-hidden="true" className="practice-day-letter">{weekdays[day.weekday][0]}</span>
         <span className="practice-day-dot" aria-hidden="true">{done && check}</span>
-        <span className="sr-only">{spoken(ordinal)}{ordinal === today ? ", today" : ""}: {future ? "not yet" : done ? "practiced" : "not practiced"}</span>
+        <span className="sr-only">{spoken(ordinal)}{day.today ? ", today" : ""}: {done ? "practiced" : "not practiced"}</span>
       </li>;
     })}</ol>
     <PracticeMonths today={today} first={dayOrdinal(state.fromDate)} practiced={practiced} />

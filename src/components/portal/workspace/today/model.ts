@@ -5,7 +5,8 @@ import { NAMED_READINGS } from "../../../../lib/readings/named-readings";
 import { refFromVerses } from "../../../../lib/print/print-address";
 import { sectionsFromStarts, sectionLabel } from "../../../../lib/readings/sections";
 import type { ProgressVerse } from "../../../../lib/progress/types";
-import { dayOrdinal, dayString } from "../practice-calendar/api";
+import { dayOrdinal } from "../practice-calendar/api";
+import { lastSevenDays as sevenDays } from "../../../../lib/practice-calendar/seven-days";
 
 const dateParts = (date: string) => date.split("-").map(Number) as [number, number, number];
 export const shortDay = (date: string) => { const [year, month, day] = dateParts(date); return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }).format(Date.UTC(year, month - 1, day)); };
@@ -108,13 +109,10 @@ export function nextStep(readings: readonly Reading[], marks: ReadonlyMap<Readin
   return { kind: "run-through", label: NEXT_STEP.runThrough, href: runThroughHref(readings) };
 }
 
-/** The seven days ending on the server's day, oldest first, each with whether the student practiced. Dates only: no count, ever. */
-export function lastSevenDays(serverDay: string, dates: ReadonlySet<string>): readonly { date: string; practised: boolean; today: boolean; weekday: number }[] {
-  const end = dayOrdinal(serverDay);
-  return Array.from({ length: 7 }, (_, index) => {
-    const ordinal = end - 6 + index, date = dayString(ordinal);
-    return { date, practised: dates.has(date), today: ordinal === end, weekday: ((ordinal + 4) % 7 + 7) % 7 };
-  });
+/** The seven days ending on the server's day, oldest first, each with whether the student practiced. Dates only: no count, ever. The shared window (lib/practice-calendar/seven-days). */
+export function lastSevenDays(serverDay: string, dates: ReadonlySet<string>) {
+  dayOrdinal(serverDay); // refuses a malformed day, as before
+  return sevenDays(serverDay, dates);
 }
 
 export type DayMark = "rehearsal" | "ceremony";

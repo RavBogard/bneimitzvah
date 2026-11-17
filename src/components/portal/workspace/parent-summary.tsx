@@ -7,6 +7,7 @@ import { authorName, BeforeNext, type LessonSummarySnapshot } from "./lessons/pa
 import { nextDateLine } from "./parent-week";
 import { deviceDate } from "./today/model";
 import { gotCount, readMarks } from "./today/today";
+import { lastSevenDays, sevenDayWindow } from "../../../lib/practice-calendar/seven-days";
 
 type CalendarRead = (mode: "parent", studentId: string, operation: { type: "calendar"; fromDate: string; throughDate: string }, signal: AbortSignal) => Promise<PracticeDates>;
 type Lesson = LessonSummarySnapshot["lesson"];
@@ -48,7 +49,7 @@ export class ParentSummaryStore {
         page = await this.read("parent", active.baseline.student.id, { type: "calendar", ...window }, request.signal);
         if (!current()) return;
         if (page.studentId !== active.baseline.student.id || page.mode !== "parent" || page.fromDate !== window.fromDate || page.throughDate !== window.throughDate) throw new Error("Practice dates unavailable");
-        const end = dayOrdinal(page.serverDay), start = end - 6;
+        const end = dayOrdinal(page.serverDay), start = dayOrdinal(sevenDayWindow(page.serverDay).from);
         if (dayOrdinal(window.fromDate) <= start && dayOrdinal(window.throughDate) >= end) {
           this.state = { ...this.state, dates: { status: "ready", serverDay: page.serverDay, dates: page.dates.filter(date => dayOrdinal(date) >= start && dayOrdinal(date) <= end) } }; this.emit(); return;
         }
@@ -65,8 +66,6 @@ export class ParentSummaryStore {
 }
 const label = (date: string) => new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
 const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-// 1970-01-01 was a Thursday.
-const weekday = (ordinal: number) => (((ordinal + 4) % 7) + 7) % 7;
 
 /**
  * What the child has got across the whole reading, counted as the shelf's card counts it: every page of the child's marks, read through the
@@ -92,13 +91,12 @@ function useGot(baseline: Assigned | null, live: boolean, readProgress: Progress
 
 /** The week's dots as the student's card draws them, for the seven days the read covers (ending today); a practiced day carries its date. Dates only. */
 function WeekDots({ serverDay, dates, name }: { serverDay: string; dates: readonly string[]; name: string }) {
-  const today = dayOrdinal(serverDay), start = today - 6, practiced = new Set(dates);
-  return <ol className="parent-summary-dates parent-week" aria-label={`Days ${name} practiced this week`} data-testid="parent-week">{Array.from({ length: 7 }, (_, index) => {
-    const ordinal = start + index, date = dayString(ordinal), done = practiced.has(date);
-    return <li key={ordinal} className={`parent-day${done ? " parent-day-done" : ""}${ordinal === today ? " parent-day-today" : ""}`}>
-      <span aria-hidden="true" className="parent-day-letter">{weekdays[weekday(ordinal)][0]}</span>
+  return <ol className="parent-summary-dates parent-week" aria-label={`Days ${name} practiced this week`} data-testid="parent-week">{lastSevenDays(serverDay, dates).map(day => {
+    const done = day.practised;
+    return <li key={day.date} className={`parent-day${done ? " parent-day-done" : ""}${day.today ? " parent-day-today" : ""}`}>
+      <span aria-hidden="true" className="parent-day-letter">{weekdays[day.weekday][0]}</span>
       <span className="parent-day-dot" aria-hidden="true" />
-      <span className="sr-only">{done ? <time dateTime={date}>{weekdays[weekday(ordinal)]}</time> : weekdays[weekday(ordinal)]}{ordinal === today ? ", today" : ""}: {done ? "practiced" : "not practiced"}</span>
+      <span className="sr-only">{done ? <time dateTime={day.date}>{weekdays[day.weekday]}</time> : weekdays[day.weekday]}{day.today ? ", today" : ""}: {done ? "practiced" : "not practiced"}</span>
     </li>;
   })}</ol>;
 }

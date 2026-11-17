@@ -8,6 +8,7 @@ import * as data from "../data/practice-visibility";
 import { chicagoDate } from "../practice-calendar/policy";
 import { practiceVisibilityFrom } from "../../lib/practice-visibility/release";
 import { learnSummary } from "../../lib/practice-visibility/learn";
+import { sevenDayWindow } from "../../lib/practice-calendar/seven-days";
 import type { ParentPractice, PracticeDay, PracticeDayReading, PracticeKind, PracticeMark, PracticeMarkState, TutorPractice } from "../../lib/practice-visibility/types";
 
 /**
@@ -26,7 +27,7 @@ import type { ParentPractice, PracticeDay, PracticeDayReading, PracticeKind, Pra
  * student's disclosures on Account and in Learn, so no line reaches a tutor or parent before the student is told.
  */
 type Access<Q extends PgQueryResultHKT> = Pick<ReturnType<typeof createAccessService<Q>>, "withStudentCapability">;
-const DAY_MS = 86_400_000, WINDOW_DAYS = 14, PRACTISED_DAYS = 7;
+const DAY_MS = 86_400_000, WINDOW_DAYS = 14;
 const addDays = (day: string, days: number) => new Date(Date.parse(`${day}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
 const KINDS: readonly PracticeKind[] = ["torah", "haftarah"];
 const isState = (value: string): value is PracticeMarkState => value === "working" || value === "got-it";
@@ -49,7 +50,8 @@ export function createPracticeVisibilityService<Q extends PgQueryResultHKT>(inpu
         const markRows = await data.marks(tx, actor.tenantId, student.id);
         const learnRow = await data.learn(tx, actor.tenantId, student.id);
         await data.clearReader(tx);
-        const practised = await data.practisedDays(tx, actor.tenantId, student.id, addDays(today, 1 - PRACTISED_DAYS), today);
+        // "Practiced n of last 7 days" counts the same seven days every practice surface draws (lib/practice-calendar/seven-days).
+        const week = sevenDayWindow(today), practised = await data.practisedDays(tx, actor.tenantId, student.id, week.from, week.through);
         const lastLesson = await data.lastLesson(tx, actor.tenantId, student.id, today);
         if (actor.authSessionExpiresAt <= Date.now()) throw new AccessDenied(401);
 
