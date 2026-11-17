@@ -187,3 +187,4 @@ From RV section 5, verbatim in substance:
 - Notifications stay parked (2026-11-16).
 - Relax the fresh sign-in rule for assigning a tutor and for invitations, on the web and through Claude (2026-11-16).
 - Later on 2026-11-17: release and hold of study guides on the web Guides page is wanted, with the production migration it needs (Daniel applies it). Parent invitations stay fully relaxed (Daniel: "whatever"; the lead's reasoning: the guarded case needs a stolen admin session, which already exposes every family's records). The read-only "Yours" translation row on saved readings is removed.
+- Models (2026-11-17): Fable for strategy and direction, Opus for most work, Sonnet only when the task is bulletproof. Replaces "Sonnet builds; Opus for reviews and auth, RLS or licensed text" (2026-10-25).
