@@ -82,9 +82,9 @@ export function guideVersion(row: data.GuideRow | data.StudentGuideRow): GuideVe
 /** The service's own backstop: whatever a checker returns, no note may sit outside the allowed verses. */
 const versesOutside = (body: GuideBody, verses: ReadonlySet<string>) =>
   body.themes.flatMap(t => t.notes.filter(n => !verses.has(n.verseRef)).map(n => `${n.verseRef} is not in this reading`));
-/** A stored version that no longer passes today's rules is withheld, not served and not an error. */
 /** A head the rabbi held on the web Guides page: a held copy of the released version before it. */
 const heldFromWeb = (row: { hold: boolean; copyOfVersion: number | null } | null) => !!row && row.hold && row.copyOfVersion !== null;
+/** A stored version that no longer passes today's rules is withheld, not served and not an error. */
 const servable = (row: data.GuideRow | data.StudentGuideRow | null) => { if (!row) return null; try { return guideVersion(row); } catch { return null; } };
 /** The congregation settings' rabbi name first, then the legacy tenant.customs.credits key, then "the rabbi". */
 export function rabbiName(customs: unknown, settings: CongregationSettings | null = null): string {
