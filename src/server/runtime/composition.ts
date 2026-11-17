@@ -232,12 +232,15 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const notificationPreferences = once("notificationPreferences", () => createNotificationPreferences({ access: access(), enabled: config.notificationsEnabled }));
   const studentWork = once("studentWork", () => createStudentWorkService({ access: access(), practice: practice(), authorityBindingSecret: purposeSecret(config, "student-work-authority") }));
   const progress = once("progress", () => createProgressService({ access: access(), practice: practice() }));
-  // The web runtime gets reads, ticks and staff status only; guide writes need the MCP or the operator bridge.
-  const studyGuides = once("studyGuides", () => studyGuideWebSurface(createStudyGuideService({ access: access(), practice: practice(), check: createGuideChecker({ related: sefaria.metadata.related }) })));
+  // The web runtime gets reads, ticks and staff status only; guide text is written through the MCP or the operator bridge.
+  const studyGuideService = once("studyGuideService", () => createStudyGuideService({ access: access(), practice: practice(), check: createGuideChecker({ related: sefaria.metadata.related }) }));
+  const studyGuides = once("studyGuides", () => studyGuideWebSurface(studyGuideService()));
   // Guide sharing (plan ruling 11): admin export and import of reviewed guides; the only web write of guide rows, held and credited.
   const guideShare = once("guideShare", () => createGuideShareService({ access: access(), related: sefaria.metadata.related }));
-  // The admin's Guides page (gap A6): reads, and the MCP tools' own withdraw and approve service functions under the admin web authority.
-  const guideAdmin = once("guideAdmin", () => createGuideAdminService({ access: access(), discussions: createDiscussionService({ pinned: sefaria.pinned }) }));
+  // The admin's Guides page (gap A6): reads, and the MCP tools' own withdraw and approve service functions under the admin web authority;
+  // guide release and hold only (migration 0058), which copy an existing version and write no text.
+  const guideAdmin = once("guideAdmin", () => createGuideAdminService({ access: access(), discussions: createDiscussionService({ pinned: sefaria.pinned }),
+    guides: { publishBaseGuide: studyGuideService().publishBaseGuide, holdBaseGuide: studyGuideService().holdBaseGuide } }));
   const lessonLog = once("lessonLog", () => createLessonLogService({ access: access(), practice: practice() }));
   const congregationSettings = once("congregationSettings", () => createCongregationSettingsService({ access: access(), emailEnabled: config.notificationsEnabled }));
   // Release 1.1: staff end Claude connections from the portal; admins undo a wrong Maven link.
