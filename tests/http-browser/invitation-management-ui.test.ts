@@ -4,7 +4,7 @@ import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
@@ -116,7 +116,7 @@ it("separates failed delivery from pending lifecycle and preserves unknown reiss
   await ui(tab.getByRole("status", { name: "Latest invitation action", exact: true })).toContainText("We couldn’t confirm whether the last action went through.");
 });
 
-it("retains same-session drafts, invalidates changed student targets, requires fresh admin writes and discards drafts for a different session", async () => {
+it("retains same-session drafts, invalidates changed student targets, sends on an older session but revokes only on a fresh one, and discards drafts for a different session", async () => {
   const tab = await page("admin"); await navigate(tab, "/workspace/admin/invitations"); await fill(tab, "synthetic-retained-draft@example.test"); await focusChecked(tab);
   await ui(tab.getByLabel("Recipient email", { exact: true })).toHaveValue("synthetic-retained-draft@example.test"); await click(tab, "Review invitation");
   const [student] = await fixture.ownerDb.select().from(s.student).where(eq(s.student.id, fixture.student.id));
@@ -127,8 +127,15 @@ it("retains same-session drafts, invalidates changed student targets, requires f
   expect(await tab.getByRole("button", { name: "Send invitation", exact: true }).count()).toBe(0);
   await click(tab, "Reload invitations"); await click(tab, "Review invitation");
   await fixture.ownerDb.update(s.session).set({ createdAt: new Date(Date.now() - 60 * 60_000) }).where(eq(s.session.userId, fixture.admin.id));
-  await click(tab, "Send invitation"); await ui(main(tab).getByRole("alert")).toContainText("sign in again");
+  // A2 (Daniel, 2026-11-16): sending an invitation needs only a live admin session; revoking one still needs a fresh sign-in.
+  await click(tab, "Send invitation");
+  const live = () => fixture.ownerDb.select({ id: s.invite.id }).from(s.invite).where(and(eq(s.invite.email, "synthetic-retained-draft@example.test"), isNull(s.invite.revokedAt)));
+  await expect.poll(async () => (await live()).length, { timeout: 30_000 }).toBe(1);
+  const [sent] = await live(); await click(tab, "Reload invitations");
+  await safe(() => record(tab, sent.id).getByRole("button", { name: /^Revoke invitation to / }).click()); await click(tab, "Revoke invitation");
+  await ui(main(tab).getByRole("alert")).toContainText("sign in again");
   await ui(tab.getByRole("link", { name: "Check account and sign in again", exact: true })).toBeVisible();
+  expect(await live()).toHaveLength(1);
   const tutor = await page("tutor"); await navigate(tutor, "/workspace/admin/invitations"); await ui(tutor.getByRole("heading", { name: "Role unavailable", exact: true })).toBeVisible();
   expect(await tutor.getByLabel("Recipient email", { exact: true }).count()).toBe(0);
   expect((await api(tutor, "/api/admin/invitations", { role: "tutor", email: "synthetic-denied@example.test" })).status === 403).toBe(true);

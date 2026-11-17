@@ -12,12 +12,23 @@ import type { AccessDatabase, AccessRequest, AccessTransaction, ActiveMode, Acto
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 type StudentCapability = "read" | "set-reading" | "set-service-plan" | "practice-write" | "note-write" | "source-write" | "honors-read" | "honors-write" | "honoree-link-write";
-type AdminCapability = "read-relationships" | "read-invites" | "manage-students" | "manage-invites" | "manage-relationships" | "manage-defaults" | "read-defaults" | "read-guides";
+type AdminCapability = "read-relationships" | "read-invites" | "manage-students" | "issue-invites" | "manage-invites" | "assign-tutor" | "manage-relationships" | "manage-defaults" | "read-defaults" | "read-guides";
+/**
+ * `fresh: true` is a sign-in from the last 15 minutes (identity.ts). Daniel, 2026-11-16 (A2): assigning an existing tutor to a
+ * student and sending a new invitation (parent, student or tutor) need only a live admin session, on the web and through Claude;
+ * every other authority write below and in accountsRules keeps the fresh sign-in.
+ */
 const adminRules: Record<AdminCapability, { fresh: boolean; intent: LockIntent }> = {
   "read-relationships": { fresh: false, intent: "read" },
   "read-invites": { fresh: false, intent: "read" },
   "manage-students": { fresh: false, intent: "authority-write" },
+  // Invite: a new invitation, which the person must accept from their own verified mailbox (A2).
+  "issue-invites": { fresh: false, intent: "authority-write" },
+  // Revoke, Send again and Copy link (which hands the admin a live link).
   "manage-invites": { fresh: true, intent: "authority-write" },
+  // Assign an existing, live, verified tutor of this congregation to a student (A2).
+  "assign-tutor": { fresh: false, intent: "authority-write" },
+  // Remove a tutor from a student, family and student links, practice permission, Remove as a tutor, cantor, hand-over.
   "manage-relationships": { fresh: true, intent: "authority-write" },
   "manage-defaults": { fresh: false, intent: "authority-write" },
   // The congregation settings page reads what manage-defaults writes.

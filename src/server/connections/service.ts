@@ -28,7 +28,7 @@ const plain = (value: string | null | undefined, fallback: string) => {
 /**
  * Claude connections for a staff member's own page (release 1.1): a tutor sees and ends only their own; an admin also
  * sees and ends every other staff connection in the congregation. Ending one needs a sign-in from the last 15 minutes,
- * like the portal's other access changes (invitations, tutor and family links), and is audited.
+ * like the portal's other access removals (revoking invitations, removing tutor and family links), and is audited.
  */
 export function createClaudeConnectionsService<Q extends PgQueryResultHKT>(input: { access: Pick<ReturnType<typeof createAccessService<Q>>, "withVerifiedIdentity">; now?: () => number }) {
   const now = input.now ?? Date.now;

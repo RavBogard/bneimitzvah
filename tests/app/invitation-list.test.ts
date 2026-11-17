@@ -66,12 +66,12 @@ describe("private admin invitation status listing", () => {
     expect((await f.call("/api/admin/invitations", { who: "admin" })).status).toBe(403);
   });
 
-  it("retains nonfresh listing while existing issue/reissue/revoke still require fresh admin sessions", async () => {
+  it("retains nonfresh listing and issue (A2) while reissue/revoke/copy still require fresh admin sessions", async () => {
     const f = await fixture(); await seed(f, 1);
     vi.setSystemTime(new Date(Date.now() + 16 * 60_000));
     expect((await f.call("/api/admin/invitations", { who: "admin" })).status).toBe(200);
-    for (const action of ["reissue", "revoke"]) expect((await f.call(`/api/admin/invitations/${id(1)}/${action}`, { who: "admin", body: {} })).status).toBe(403);
-    expect((await f.call("/api/admin/invitations", { who: "admin", body: { role: "tutor", email: "synthetic-new@example.test" } })).status).toBe(403);
+    for (const action of ["reissue", "revoke", "copy"]) expect((await f.call(`/api/admin/invitations/${id(1)}/${action}`, { who: "admin", body: {} })).status).toBe(403);
+    expect((await f.call("/api/admin/invitations", { who: "admin", body: { role: "tutor", email: "synthetic-new@example.test" } })).status).toBe(201);
   });
 
   it("uses bounded stable UUID pagination and never joins targets or invitations from another tenant", async () => {

@@ -74,7 +74,7 @@ type Pending = { invitation: data.IssuedInvitation; actor: Actor; token: string 
 
 /**
  * The one invitation-issue write, inside the caller's transaction and under an admin authority the caller has already
- * established (the portal's manage-invites capability, or the portal MCP's live roster connection): the student checks,
+ * established (the portal's issue-invites capability, or the portal MCP's live roster connection): the student checks,
  * the send budget, the row and its audit. The raw token leaves only toward delivery; it is never stored, logged or returned.
  */
 export async function writeIssuedInvitation<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: Actor,
@@ -186,7 +186,7 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
     normalizedInvitationEmail(selection.email);
     if (!["parent", "student", "tutor"].includes(selection.role)) throw new AccessDenied(403);
     if (selection.role === "tutor" ? selection.studentId !== undefined : typeof selection.studentId !== "string" || !uuid.test(selection.studentId)) throw new AccessDenied(403);
-    const pending = await input.access.withAdminCapability(request, { mode: selection.mode, capability: "manage-invites" }, async (tx, actor) => {
+    const pending = await input.access.withAdminCapability(request, { mode: selection.mode, capability: "issue-invites" }, async (tx, actor) => {
       requireCookieMutation(request, actor.origin);
       return writeIssuedInvitation(tx, actor, selection, input.throttleSecret);
     });

@@ -62,9 +62,13 @@ describe("admin tenant authority management", () => {
     expect(await denied(() => f.relationships.listEligibleTutors(f.request("admin"), admin), 403)).toBe(true);
     await f.owner(async () => { await f.db.update(s.user).set({ emailVerified: true }).where(eq(s.user.id, f.identities.admin.id)); });
     vi.setSystemTime(new Date(Date.now() + 16 * 60_000));
-    // Reads retain ordinary session availability; only authority writes need freshness.
+    // Reads retain ordinary session availability. Assigning an existing tutor needs only a live session (A2, Daniel 2026-11-16);
+    // every other relationship write still needs freshness.
     expect((await f.relationships.listEligibleTutors(f.request("admin"), admin)).length === 1).toBe(true);
-    expect(await denied(() => f.relationships.assignTutor(f.request("admin"), { ...admin, studentId: f.students[1].id, tutorGrantId: f.tutorGrant.id, expectedState: "unassigned" }), 403)).toBe(true);
+    const assigned = await f.relationships.assignTutor(f.request("admin"), { ...admin, studentId: f.students[1].id, tutorGrantId: f.tutorGrant.id, expectedState: "unassigned" });
+    expect(assigned.ok).toBe(true); if (!assigned.ok) throw new Error("Expected assignment missing");
+    expect(await denied(() => f.relationships.revokeTutor(f.request("admin"), { ...admin, ...active, studentId: f.students[1].id, linkId: assigned.id }), 403)).toBe(true);
+    expect(await denied(() => f.relationships.setCantor(f.request("admin"), { ...admin, roleGrantId: f.tutorGrant.id, expectedRevision: 1, isCantor: true }), 403)).toBe(true);
   });
 
   it("assigns/unassigns explicit tutor grants, retains old rows and rejects stale exact-link operations", async () => {

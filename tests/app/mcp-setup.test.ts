@@ -7,6 +7,7 @@ import { parseRelatedMetadata } from "../../src/server/study/sources/metadata";
 import { closeMcpFixtures, mcpFixture } from "./mcp-fixture";
 import { createInvitationService } from "../../src/server/invitations/service";
 import { withTenantTransaction } from "../../src/server/db/runtime";
+import { hashOpaque } from "../../src/server/mcp/oauth";
 
 afterEach(async () => { vi.restoreAllMocks(); await closeMcpFixtures(); });
 
@@ -147,35 +148,35 @@ describe("student setup through the portal MCP", () => {
     expect(await audits(["tutor.assign"])).toHaveLength(1);
   });
 
-  it("adds a tutor only within 15 minutes of approving the connection, the portal's fresh sign-in, while removing stays allowed on an older one", async () => {
+  it("adds a tutor on a connection approved long ago (A2, Daniel 2026-11-16), and never on a revoked or expired one", async () => {
     let clock = Date.now();
     const { t, json, owner, audits, crc, unrelated } = await setup(() => clock);
     const tutor = t.f.tutorGrant.id, active = (id: string) => owner(async () => (await t.f.db.select().from(s.tutorStudent).where(eq(s.tutorStudent.studentId, id))).filter(l => !l.revokedAt));
-    const add = { studentId: unrelated.id, expectedTutorIds: [], tutorIds: [tutor] };
-    // Exactly 15 minutes after approval the connection is no longer fresh, as a 15-minute-old portal session is not.
-    clock += 15 * 60_000;
-    expect(await json("set_student_tutor", add)).toEqual({ ok: false, code: "fresh-sign-in-required", hint: "Adding a tutor needs a fresh sign-in. Reconnect Claude to the portal, then add the tutor within 15 minutes." });
-    expect(await active(unrelated.id)).toHaveLength(0);
-    // Swapping one tutor for another adds one, so it is refused whole: the removal half is not applied.
+    // Well past the old 15-minute window (the access token is still live): adding needs no reconnect.
+    clock += 55 * 60_000;
+    expect(await json("set_student_tutor", { studentId: unrelated.id, expectedTutorIds: [], tutorIds: [tutor] })).toMatchObject({ ok: true, added: [tutor] });
+    expect((await active(unrelated.id)).map(l => l.tutorGrantId)).toEqual([tutor]);
+    // A swap (one removed, one added) goes through whole on the same old connection.
     const second = await owner(async () => (await t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: t.f.adminMember.id, role: "tutor" }).returning())[0].id);
-    expect(await json("set_student_tutor", { studentId: crc.id, expectedTutorIds: [tutor], tutorIds: [second] })).toMatchObject({ ok: false, code: "fresh-sign-in-required" });
-    expect((await active(crc.id)).map(l => l.tutorGrantId)).toEqual([tutor]);
-    expect(await audits(["tutor.revoke"])).toHaveLength(0);
-    // Removing a tutor gives no one new access, so it stays allowed on the same old connection.
-    expect(await json("set_student_tutor", { studentId: crc.id, expectedTutorIds: [tutor], tutorIds: [] })).toMatchObject({ ok: true, removed: [tutor] });
-    expect(await active(crc.id)).toHaveLength(0);
-    expect(await audits(["tutor.assign"])).toHaveLength(0);
-    expect(await audits(["tutor.revoke"])).toHaveLength(1);
-    // Reconnecting (a new Google-confirmed approval) makes adding possible again, until its own 15 minutes run out.
-    await t.google("admin", new Date(clock));
-    const fresh = (await t.connect("admin", { scope: ALL })).access_token as string;
-    expect(await json("set_student_tutor", add, fresh)).toMatchObject({ ok: true, added: [tutor] });
-    clock += 15 * 60_000 - 1;
-    expect(await json("set_student_tutor", { studentId: crc.id, expectedTutorIds: [], tutorIds: [tutor] }, fresh)).toMatchObject({ ok: true, added: [tutor] });
-    clock += 1;
-    expect(await json("set_student_tutor", { studentId: crc.id, expectedTutorIds: [tutor], tutorIds: [] }, fresh)).toMatchObject({ ok: true, removed: [tutor] });
-    expect(await json("set_student_tutor", { studentId: crc.id, expectedTutorIds: [], tutorIds: [tutor] }, fresh)).toMatchObject({ ok: false, code: "fresh-sign-in-required" });
+    expect(await json("set_student_tutor", { studentId: crc.id, expectedTutorIds: [tutor], tutorIds: [second] })).toMatchObject({ ok: true, added: [second], removed: [tutor] });
+    expect((await active(crc.id)).map(l => l.tutorGrantId)).toEqual([second]);
     expect(await audits(["tutor.assign"])).toHaveLength(2);
+    // A revoked connection reaches nothing; nor, past its thirty days, an expired one (whose refresh token is refused too).
+    await t.google("admin", new Date(clock));
+    const revoked = (await t.connect("admin", { scope: ALL })).access_token as string, expired = await t.connect("admin", { scope: ALL });
+    const revokedId = (await owner(() => t.f.db.select().from(s.mcpToken).where(eq(s.mcpToken.tokenHash, hashOpaque(revoked)))))[0].connectionId;
+    await owner(async () => { await t.f.db.update(s.mcpConnection).set({ revokedAt: new Date(clock) }).where(eq(s.mcpConnection.id, revokedId)); });
+    const refused = async (token: string) => {
+      expect((await t.rpc(token, "tools/call", { name: "set_student_tutor", arguments: { studentId: crc.id, expectedTutorIds: [second], tutorIds: [second, tutor] } })).status).toBe(401);
+      expect((await t.rpc(token, "tools/call", { name: "invite_tutor", arguments: { email: "stale.connection@example.test" } })).status).toBe(401);
+    };
+    await refused(revoked);
+    clock += 30 * 24 * 3600_000 + 1000;
+    expect((await t.postForm("/api/oauth/token", { grant_type: "refresh_token", refresh_token: expired.refresh_token, client_id: expired.clientId })).status).toBe(400);
+    await refused(expired.access_token as string);
+    expect((await active(crc.id)).map(l => l.tutorGrantId)).toEqual([second]);
+    expect(await audits(["tutor.assign"])).toHaveLength(2);
+    expect(t.mail).toHaveLength(0);
   });
 
   it("adds a student who is not in Maven through the portal's Add student, once, never echoing an address, in this congregation only", async () => {
@@ -206,7 +207,7 @@ describe("student setup through the portal MCP", () => {
     for (const text of texts) { expect(text).not.toMatch(/@/); expect(text).not.toMatch(/withheld/); }
   });
 
-  it("invites a tutor through the portal's invitation write and email, once, on a fresh connection only, never showing the address or link", async () => {
+  it("invites a tutor through the portal's invitation write and email, once, on an old connection too, never showing the address or link", async () => {
     let clock = Date.now();
     const { t, json, texts, owner } = await setup(() => clock);
     const invites = () => owner(() => t.f.db.select().from(s.invite).where(eq(s.invite.role, "tutor")));
@@ -223,12 +224,12 @@ describe("student setup through the portal MCP", () => {
     expect(await json("invite_tutor", { email: "new.tutor@example.test" })).toMatchObject({ ok: true, alreadyInvited: true, inviteId: made.inviteId, invitationsSent: 0 });
     expect(t.mail).toHaveLength(1);
     expect(await json("invite_tutor", { email: "not an address" })).toMatchObject({ ok: false, code: "invalid-input" });
-    // Fifteen minutes after approving the connection it is no longer fresh, as for adding a tutor; nothing is written or sent.
-    clock += 15 * 60_000;
-    expect(await json("invite_tutor", { email: "second.tutor@example.test" })).toMatchObject({ ok: false, code: "fresh-sign-in-required" });
-    expect(t.mail).toHaveLength(1);
-    expect(await invites()).toHaveLength(before + 1);
-    expect(await issued()).toHaveLength(1);
+    // Well past the old 15-minute window (A2, Daniel 2026-11-16): the live connection still invites, once.
+    clock += 55 * 60_000;
+    expect(await json("invite_tutor", { email: "second.tutor@example.test" })).toMatchObject({ ok: true, delivery: "sent", invitationsSent: 1 });
+    expect(t.mail).toHaveLength(2);
+    expect(await invites()).toHaveLength(before + 2);
+    expect(await issued()).toHaveLength(2);
     // The address and the link never come back to the conversation.
     for (const text of texts) { expect(text).not.toMatch(/@/); expect(text).not.toMatch(/token|invitations\/open/); }
   });

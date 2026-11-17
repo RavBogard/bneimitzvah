@@ -110,7 +110,7 @@ describe("explicit invitation service", () => {
     expect(await denied(() => f.invitations.accept(f.request("recipient"), { token: expired }))).toBe(true);
   });
 
-  it("fails closed for unverified/disabled recipients and stale or nonadmin issuers", async () => {
+  it("fails closed for unverified/disabled recipients, nonadmin issuers and stale revokers", async () => {
     const f = await fixture();
     await f.invitations.issue(f.request("admin"), parent(f.students[0].id));
     const token = f.token();
@@ -120,7 +120,8 @@ describe("explicit invitation service", () => {
     expect(await denied(() => f.invitations.accept(f.request("recipient"), { token }), 403)).toBe(true);
     expect(await denied(() => f.invitations.issue(f.request("multi"), { ...parent(f.students[1].id), mode: "tutor" }), 403)).toBe(true);
     await f.owner(async () => { await f.db.update(s.session).set({ createdAt: new Date(Date.now() - 16 * 60_000) }).where(eq(s.session.id, f.identities.admin.sessionId)); });
-    expect(await denied(() => f.invitations.issue(f.request("admin"), parent(f.students[1].id)), 403)).toBe(true);
+    // A2 (Daniel, 2026-11-16): issuing needs only a live admin session; revoking still needs a fresh one.
+    await f.invitations.issue(f.request("admin"), parent(f.students[1].id));
     const before = f.delivered.length;
     expect(await denied(() => f.invitations.revoke(f.request("admin"), { mode: "admin", inviteId: crypto.randomUUID() }), 403)).toBe(true);
     expect(f.delivered.length === before).toBe(true);

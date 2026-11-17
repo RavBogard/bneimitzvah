@@ -28,7 +28,7 @@ import { parsePick } from "../../lib/readings/leyning.mjs";
 import type { Snapshot } from "../../lib/readings/proposals";
 import { expandReadingRanges } from "../../lib/readings/ranges";
 import { SCOPES } from "./oauth";
-import { GOOGLE_CONSENT_WINDOW_MS, type McpActor } from "./service";
+import type { McpActor } from "./service";
 import type { Tool, ToolContext } from "./tools";
 import { recordFailure } from "../logging/failure";
 
@@ -302,7 +302,7 @@ export function createSetupTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>
     },
     {
       name: "set_student_tutor", roles, scope, annotations: replaces,
-      description: "Set which tutors a student has: tutorIds is the whole new list (from list_tutors; [] for none) and expectedTutorIds the list get_student_setup showed. A tutor added can see that student in the portal; one removed no longer can. Adding a tutor needs a fresh sign-in, as in the portal: only within 15 minutes of connecting Claude (otherwise tell the rabbi to reconnect Claude to the portal and add the tutor within 15 minutes); removing needs none. Only on the rabbi's instruction in this conversation. Sends no invitation or e-mail.",
+      description: "Set which tutors a student has: tutorIds is the whole new list (from list_tutors; [] for none) and expectedTutorIds the list get_student_setup showed. A tutor added can see that student in the portal; one removed no longer can. Only on the rabbi's instruction in this conversation. Sends no invitation or e-mail.",
       inputSchema: closed({ studentId,
         expectedTutorIds: { type: "array", maxItems: 20, items: { type: "string", pattern: UUID.source }, description: "The tutorIds get_student_setup listed for this student, unchanged." },
         tutorIds: { type: "array", maxItems: 20, items: { type: "string", pattern: UUID.source }, description: "The student's whole new tutor list, by tutorId from list_tutors." } },
@@ -350,7 +350,7 @@ export function createSetupTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>
     },
     {
       name: "invite_tutor", roles, scope, annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-      description: "Invite a person to be a tutor here, as the portal's Invitations page does: the portal emails them its invitation, with a link to sign in and accept. Only on the rabbi's instruction in this conversation, naming the person. It needs a fresh sign-in, like adding a tutor: within 15 minutes of connecting Claude. Optional studentIds holds students for the tutor: they become the tutor's the moment the invitation is accepted. If that address already has a live tutor invitation, nothing new is sent, that invitation comes back, and any studentIds are held on it. Without held students, set_student_tutor assigns them after the tutor accepts. The address is never shown back.",
+      description: "Invite a person to be a tutor here, as the portal's Invitations page does: the portal emails them its invitation, with a link to sign in and accept. Only on the rabbi's instruction in this conversation, naming the person. Optional studentIds holds students for the tutor: they become the tutor's the moment the invitation is accepted. If that address already has a live tutor invitation, nothing new is sent, that invitation comes back, and any studentIds are held on it. Without held students, set_student_tutor assigns them after the tutor accepts. The address is never shown back.",
       inputSchema: closed({ email: { type: "string", maxLength: 254, description: "The tutor's email address." },
         studentIds: { type: "array", maxItems: 50, items: { type: "string", pattern: UUID.source }, description: "Optional: students to hold for this tutor, by id from list_students. They become the tutor's when the invitation is accepted." } }, ["email"]),
       handler: async (input, ctx) => inviteTutor(input, ctx),
@@ -394,16 +394,12 @@ async function setTutors<Q extends PgQueryResultHKT>(input: Record<string, unkno
   if (!expected || !wanted) return { ok: false, code: "invalid-input", hint: "expectedTutorIds and tutorIds are lists of at most 20 distinct tutorIds." };
   const id = input.studentId as string;
   const conflict = { ok: false, code: "conflict", hint: "The student's tutors changed since get_student_setup: read it again, show the rabbi, and resend with the current list." };
-  const stale = { ok: false, code: "fresh-sign-in-required", hint: "Adding a tutor needs a fresh sign-in. Reconnect Claude to the portal, then add the tutor within 15 minutes." };
   return refusal(() => asAdmin(ctx, "authority-write", async (tx, live, portal, alive) => {
     // Unlocked here (the portal locks tutor grants before the student); the locked read below decides.
     const [probe] = await tx.select({ disabledAt: s.student.disabledAt }).from(s.student).where(and(eq(s.student.tenantId, live.tenantId), eq(s.student.id, id))).limit(1);
     if (!probe || probe.disabledAt) throw new AccessDenied(404);
-    // The portal's fresh sign-in rule for tutor changes (manage-relationships: a session under 15 minutes old). The
-    // connection's approval needed a Google sign-in within 15 minutes, and its stored approval time stands in for the
-    // session's, so an addition is at most about 30 minutes after that sign-in. Only adding a tutor gives anyone new
-    // access; removing one stays allowed on an older connection (the portal asks for a fresh sign-in for both).
-    if (wanted.some(g => !expected.includes(g)) && ctx.mcp.now() - live.approvedAt >= GOOGLE_CONSENT_WINDOW_MS) throw new Refusal(stale);
+    // No fresh sign-in (Daniel, 2026-11-16, A2): a live, unrevoked admin roster connection adds or removes tutors, as a live
+    // admin session assigns one in the portal.
     const links = async () => (await relationships.inspectLinks(tx, live.tenantId, id)).tutors.map(t => ({ grantId: t.link.tutorGrantId, linkId: t.link.id }));
     if (!sameSet((await links()).map(l => l.grantId), expected)) throw new Refusal(conflict);
     // The portal's lock order for tutor changes: each tutor's grant, then the student; then recheck under those locks.
@@ -479,10 +475,8 @@ async function inviteTutor<Q extends PgQueryResultHKT>(input: Record<string, unk
   try { if (typeof input.email !== "string") throw new Error("email"); email = normalizedInvitationEmail(input.email); } catch { return { ok: false, code: "invalid-input", hint: "That is not an email address the portal can invite." }; }
   const studentIds = input.studentIds === undefined ? [] : uuids(input.studentIds, MAX_HELD_STUDENTS);
   if (!studentIds) return { ok: false, code: "invalid-input", hint: `studentIds is a list of at most ${MAX_HELD_STUDENTS} distinct student ids from list_students.` };
-  const stale = { ok: false, code: "fresh-sign-in-required", hint: "Inviting a tutor needs a fresh sign-in. Reconnect Claude to the portal, then invite within 15 minutes." };
   const missing = { ok: false, code: "student-not-found", hint: "A student in studentIds is not an active student here (or the ceremony is done); nothing was saved or sent. Check list_students." };
-  // The portal's fresh sign-in rule for invitations (manage-invites), as set_student_tutor applies it for adding a tutor.
-  const fresh = (live: McpActor) => { if (ctx.mcp.now() - live.approvedAt >= GOOGLE_CONSENT_WINDOW_MS) throw new Refusal(stale); };
+  // No fresh sign-in (Daniel, 2026-11-16, A2): a live, unrevoked admin roster connection invites, as the portal's issue-invites does.
   const openInvite = async (tx: AccessTransaction<Q>, tenantId: string) => (await tx.select({ id: s.invite.id, expiresAt: s.invite.expiresAt }).from(s.invite)
     .where(and(eq(s.invite.tenantId, tenantId), eq(s.invite.email, email), eq(s.invite.role, "tutor"), isNull(s.invite.acceptedAt), isNull(s.invite.revokedAt), gt(s.invite.expiresAt, new Date()))).limit(1))[0];
   // Students held for the invitation, in the caller's transaction; one that isn't an active student here refuses the whole call.
@@ -495,7 +489,6 @@ async function inviteTutor<Q extends PgQueryResultHKT>(input: Record<string, unk
     // asked for are held on that invitation too. authority-write locks this connection's row and admin grant FOR UPDATE, so two
     // deliveries of one call take turns.
     const existing = await asAdmin(ctx, "authority-write", async (tx, live, portal, alive) => {
-      fresh(live);
       const open = await openInvite(tx, live.tenantId);
       if (!open) return null;
       alive();
@@ -509,7 +502,6 @@ async function inviteTutor<Q extends PgQueryResultHKT>(input: Record<string, unk
   let writing = false, held = 0;
   try {
     const sent = await ctx.invitations.issueAs(work => asAdmin(ctx, "authority-write", async (tx, live, portal, alive) => {
-      fresh(live);
       if (await openInvite(tx, live.tenantId)) throw new Refusal({ ok: false, code: "conflict", hint: "A tutor invitation for this address was just made by another call; nothing more was sent. Call invite_tutor again to hold the students on it." });
       alive();
       writing = true;

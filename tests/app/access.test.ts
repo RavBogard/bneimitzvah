@@ -171,6 +171,11 @@ describe("exact host and database-live access", () => {
     await f.owner(async () => { await f.db.update(s.session).set({ createdAt: new Date(Date.now() - 16 * 60_000) }).where(eq(s.session.id, f.identities.admin.sessionId)); });
     expect(await denied(() => f.service.withAdminCapability(f.request("admin"), { mode: "admin", capability: "manage-relationships" }, async () => true), 403)).toBe(true);
     expect(await denied(() => f.service.withAdminCapability(f.request("admin"), { mode: "admin", capability: "manage-invites" }, async () => true), 403)).toBe(true);
+    for (const capability of ["manage-approvers", "manage-tutors"] as const)
+      expect(await denied(() => f.service.withAccountsCapability(f.request("admin"), { mode: "admin", capability }, async () => true), 403)).toBe(true);
+    // A2 (Daniel, 2026-11-16): assigning an existing tutor and issuing an invitation need only a live admin session.
+    for (const capability of ["assign-tutor", "issue-invites"] as const)
+      expect(await f.service.withAdminCapability(f.request("admin"), { mode: "admin", capability }, async () => true)).toBe(true);
     expect((await f.service.listStudents(f.request("admin"), { mode: "admin" })).length === 3).toBe(true);
     await f.auth.api.signOut({ headers: new Headers({ cookie: f.identities.multi.cookie }) });
     expect(await denied(() => f.service.listStudents(f.request("multi"), { mode: "parent" }), 401)).toBe(true);

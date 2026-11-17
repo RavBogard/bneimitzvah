@@ -23,8 +23,8 @@ export function displayName(value: string, fallback: "Parent" | "Student" | "Tut
 
 /**
  * The one tutor-assignment write, shared by the portal's relationship controls and the portal MCP; the
- * caller has already established admin authority in this transaction (manage-relationships, or a live
- * admin MCP connection with the roster consent).
+ * caller has already established admin authority in this transaction (assign-tutor or manage-relationships, or a
+ * live admin MCP connection with the roster consent).
  */
 export async function writeTutorAssignment<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: Actor, studentId: string, grantId: string) {
   const subject = await data.subjectGrant(tx, actor.tenantId, grantId, "authority-write");
@@ -72,8 +72,8 @@ export async function writeGrantRevocation<Q extends PgQueryResultHKT>(tx: Acces
 }
 
 export function createRelationshipService<Q extends PgQueryResultHKT>(input: { access: ReturnType<typeof createAccessService<Q>> }) {
-  function write<T>(request: CookieMutationRequest, selection: AdminSelection, action: (tx: AccessTransaction<Q>, actor: Actor) => Promise<T>) {
-    return input.access.withAdminCapability(request, { mode: selection.mode, capability: "manage-relationships" }, async (tx, actor) => {
+  function write<T>(request: CookieMutationRequest, selection: AdminSelection, action: (tx: AccessTransaction<Q>, actor: Actor) => Promise<T>, capability: "assign-tutor" | "manage-relationships" = "manage-relationships") {
+    return input.access.withAdminCapability(request, { mode: selection.mode, capability }, async (tx, actor) => {
       requireCookieMutation(request, actor.origin);
       return action(tx, actor);
     });
@@ -106,7 +106,7 @@ export function createRelationshipService<Q extends PgQueryResultHKT>(input: { a
   async function assignTutor(request: CookieMutationRequest, selection: AdminSelection & { studentId: string; tutorGrantId: string; expectedState: "unassigned" }) {
     const studentId = identifier(selection.studentId), grantId = identifier(selection.tutorGrantId);
     if (selection.expectedState !== "unassigned") throw new AccessDenied(403);
-    return write(request, selection, (tx, actor) => writeTutorAssignment(tx, actor, studentId, grantId));
+    return write(request, selection, (tx, actor) => writeTutorAssignment(tx, actor, studentId, grantId), "assign-tutor");
   }
 
   async function revokeTutor(request: CookieMutationRequest, selection: LinkSelection) {
