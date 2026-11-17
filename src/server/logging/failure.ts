@@ -7,7 +7,7 @@ import { causeChain, describeError, methodForLog, OWN_REASON, routeForLog, siteF
 // line passes through redact.ts; read that module for what may and may not be logged. Expected outcomes (401, 403,
 // 404, 409, validation refusals, rate limits) are not failures and are never written here.
 //
-// The line: {"event":"server.failure","requestId","method","route","site","status"?,"error":{name,message?,code?,
+// The line: {"event":"server.failure","level":"error"|"warn","requestId","method","route","site","status"?,"error":{name,message?,code?,
 // reason?,constraint?,table?,schema?,column?,routine?,stack?,cause?}|null}
 
 type Context = { requestId: string; method: string; route: string; recorded: boolean };
@@ -15,11 +15,59 @@ const context = new AsyncLocalStorage<Context>();
 // Errors already written, so a wrapper rethrown further up (RuntimeUnavailable with this as its cause) is not
 // written a second time.
 const written = new WeakSet<object>();
-let sink: (line: string) => void = line => console.error(line);
 
-/** Tests only: capture lines instead of writing to stderr. Returns a restore function. */
-export function setFailureSinkForTests(next: (line: string) => void): () => void {
+export type FailureLevel = "error" | "warn";
+// An unexpected failure goes to stderr through console.error. A degraded outcome the product handles by design
+// goes to stdout as a plain line, never through console: in `next dev`, React replays a server component's
+// console.error calls into the browser, where the dev overlay opens over the page (the http-browser suite's
+// signed-out reader hit exactly this on the product-name fallback, 2026-11-17).
+const defaultSink = (line: string, level: FailureLevel) => {
+  if (level === "error") console.error(line);
+  else process.stdout.write(`${line}\n`);
+};
+let sink: (line: string, level: FailureLevel) => void = defaultSink;
+
+/** Tests only: capture lines instead of writing them. Returns a restore function. */
+export function setFailureSinkForTests(next: (line: string, level: FailureLevel) => void): () => void {
   const previous = sink; sink = next; return () => { sink = previous; };
+}
+
+// The one place that decides whether a failure is unexpected (error) or a degraded outcome by design (warn).
+// Degraded: an upstream text, calendar, metadata or audio source that is unavailable (the UI already says so),
+// a cache that cannot be read or written (the reader falls back), and anything inside expectDegraded (a caller
+// with a designed fallback, such as the public product-name reader). Still an error, even then: a database error
+// (a Postgres SQLSTATE anywhere in the cause chain) or a programming error (ReferenceError, RangeError, EvalError,
+// URIError, or any TypeError other than a failed fetch).
+const UPSTREAM_NAMES = new Set(["StudyUnavailable", "PublicReadingUnavailable", "SourceTextUnavailable", "CommentaryUnavailable",
+  "TranslationsUnavailable", "SourceMetadataUnavailable", "SefariaJsonUnavailable", "StepSourceUnavailable", "ReadingUnavailable",
+  "StudyCacheUnavailable", "ReferenceUnavailable", "CourseTextUnavailable", "PhraseUnavailable"]);
+const DEGRADED_SITES = new Set(["reading-cache/get", "reading-cache/set", "study-cache/get", "study-cache/set", "study-sources/related", "mcp/setup-related-sources"]);
+const degradedScope = new AsyncLocalStorage<true>();
+
+/** Runs a call whose failures have a designed fallback: they are written at the warn level, not as errors. */
+export function expectDegraded<T>(action: () => Promise<T>): Promise<T> { return degradedScope.run(true, action); }
+
+function seriousIn(chain: readonly unknown[]): boolean {
+  return chain.some(item => {
+    if (!(item instanceof Error)) return false;
+    try {
+      const code = (item as { code?: unknown }).code;
+      if (typeof code === "string" && /^[0-9A-Z]{5}$/.test(code) && !/^[A-Z]+$/.test(code)) return true;
+      if (item instanceof ReferenceError || item instanceof RangeError || item instanceof EvalError || item instanceof URIError) return true;
+      // A failed fetch and a malformed configured URL (new URL in config.ts) are environment failures, not bugs.
+      return item instanceof TypeError && item.message !== "fetch failed" && code !== "ERR_INVALID_URL";
+    } catch { return true; }
+  });
+}
+/** The level a failure is written at; pure apart from the expectDegraded scope. */
+export function failureLevel(error: unknown, site: string): FailureLevel {
+  try {
+    const chain = causeChain(error);
+    if (seriousIn(chain)) return "error";
+    if (degradedScope.getStore() === true || DEGRADED_SITES.has(site)) return "warn";
+    // By class name or constructor name (a few of these classes never set `name`).
+    return chain.some(item => item instanceof Error && (UPSTREAM_NAMES.has(item.name) || UPSTREAM_NAMES.has(item.constructor?.name ?? ""))) ? "warn" : "error";
+  } catch { return "error"; }
 }
 
 /** Runs one request with a generated id, its method and its redacted route, for every line it writes. */
@@ -47,11 +95,12 @@ function write(site: string, error: unknown, status: number | undefined, describ
     // nothing is written.
     if (!store && process.env.NEXT_PHASE === "phase-production-build") return;
     if (store) store.recorded = true;
-    const line: Record<string, unknown> = { event: "server.failure", requestId: store?.requestId ?? randomUUID(),
+    const level: FailureLevel = describe ? failureLevel(error, site) : "error";
+    const line: Record<string, unknown> = { event: "server.failure", level, requestId: store?.requestId ?? randomUUID(),
       method: store?.method ?? "NONE", route: store?.route ?? "[no-request]", site: siteForLog(site) };
     if (typeof status === "number" && Number.isInteger(status) && status >= 100 && status <= 599) line.status = status;
     line.error = describe ? describeError(error) : null;
-    sink(JSON.stringify(line));
+    sink(JSON.stringify(line), level);
   } catch { /* Logging cannot change the operation outcome. */ }
 }
 

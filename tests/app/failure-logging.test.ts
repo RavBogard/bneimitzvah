@@ -5,7 +5,11 @@ vi.mock("server-only", () => ({}));
 import { createHttpDispatcher } from "../../src/server/http/dispatch";
 import { errorResponse } from "../../src/server/http/responses";
 import { AccessDenied } from "../../src/server/access/errors";
-import { causedBy, recordFailure, setFailureSinkForTests, Unavailable } from "../../src/server/logging/failure";
+import { causedBy, expectDegraded, failureLevel, recordFailure, setFailureSinkForTests, Unavailable, type FailureLevel } from "../../src/server/logging/failure";
+import { StudyUnavailable } from "../../src/server/study/types";
+import { CommentaryUnavailable } from "../../src/server/study/commentary";
+import { RuntimeUnavailable } from "../../src/server/runtime/errors";
+import { readPublicProductName, forgetPublicProductName } from "../../src/server/public-site/names";
 
 // Synthetic values only (CLAUDE.md: never a real token, cookie, connection string or address).
 const ORIGIN = "http://localhost:3000";
@@ -55,8 +59,8 @@ test("a database failure inside a service writes one line with route, class, SQL
   expect([...response.headers]).toEqual([...expected.headers]);
   expect(lines.length).toBe(1);
   const line = JSON.parse(lines[0]);
-  expect(Object.keys(line).sort()).toEqual(["error", "event", "method", "requestId", "route", "site", "status"]);
-  expect(line).toMatchObject({ event: "server.failure", method: "GET", route: "/api/saved/learner/readings", status: 503 });
+  expect(Object.keys(line).sort()).toEqual(["error", "event", "level", "method", "requestId", "route", "site", "status"]);
+  expect(line).toMatchObject({ event: "server.failure", level: "error", method: "GET", route: "/api/saved/learner/readings", status: 503 });
   expect(line.requestId).toMatch(/^[0-9a-f-]{36}$/);
   expect(line.error.name).toBe("DrizzleQueryError");
   expect(line.error.stack.length).toBeGreaterThan(0);
@@ -160,4 +164,57 @@ test("every new Unavailable(...) in src passes a unique static reason code", () 
   expect(reasons.length).toBeGreaterThan(80);
   const duplicates = reasons.filter((reason, i) => reasons.indexOf(reason) !== i);
   expect(duplicates).toEqual([]);
+});
+
+// 2026-11-17: in `next dev`, a server component's console.error is replayed into the browser and opens the dev
+// overlay over the page. Degraded-by-design outcomes are therefore written at "warn" (stdout), never console.error.
+test("classification: upstream and cache outcomes are warn, database and programming errors stay error", () => {
+  const pg = Object.assign(new Error("canceling statement due to statement timeout"), { code: "57014" });
+  const fetchFailed = new TypeError("fetch failed");
+  const cases: [unknown, string, FailureLevel][] = [
+    [new StudyUnavailable("upstream"), "http/error-response", "warn"],
+    [causedBy(new StudyUnavailable("upstream"), fetchFailed), "http/error-response", "warn"],
+    [new CommentaryUnavailable("upstream"), "public-reading/handler", "warn"],
+    [new Unavailable("reading-cache/row-binding"), "reading-cache/get", "warn"],
+    [causedBy(new StudyUnavailable("upstream"), pg), "http/error-response", "error"],
+    [pg, "reading-cache/get", "error"],
+    [causedBy(new RuntimeUnavailable(), new Unavailable("config/database-url-missing")), "public-runtime/scope", "error"],
+    [new TypeError("Cannot read properties of undefined"), "http/error-response", "error"],
+    [causedBy(new StudyUnavailable("upstream"), new ReferenceError("x is not defined")), "http/error-response", "error"],
+    [new Error("boom"), "http/error-response", "error"],
+  ];
+  for (const [error, site, level] of cases) expect(failureLevel(error, site), `${site} ${(error as Error).name}`).toBe(level);
+});
+
+test("a designed fallback (expectDegraded) writes warn to the sink, never console.error", async () => {
+  const levels: FailureLevel[] = [];
+  const restoreSink = setFailureSinkForTests((_line, level) => levels.push(level));
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    await expectDegraded(async () => recordFailure(causedBy(new RuntimeUnavailable(), new Unavailable("config/auth-url-missing")), "public-runtime/scope", 503));
+    expect(levels).toEqual(["warn"]);
+    // A database error inside the same fallback is still an error.
+    await expectDegraded(async () => recordFailure(Object.assign(new Error("terminating connection"), { code: "57P01" }), "public-runtime/scope", 503));
+    expect(levels).toEqual(["warn", "error"]);
+  } finally { restoreSink(); }
+  // The default sink: warn goes to stdout, not console.error.
+  const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+  try {
+    await expectDegraded(async () => recordFailure(new Unavailable("config/portal-environment"), "public-runtime/scope", 503));
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(String(stdout.mock.calls.at(-1)?.[0])).toContain('"level":"warn"');
+  } finally { stdout.mockRestore(); consoleError.mockRestore(); }
+});
+
+test("the public product-name reader's fallback (signed-out pages) never calls console.error", async () => {
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+  try {
+    forgetPublicProductName();
+    const failing = async () => { throw causedBy(new RuntimeUnavailable(), new Unavailable("config/database-url-shape")); };
+    // The real public scope records inside itself; this stands in for it the same way.
+    const scope = (async () => { try { return await failing(); } catch (error) { recordFailure(error, "public-runtime/scope", 503); throw error; } }) as never;
+    expect(typeof await readPublicProductName(scope)).toBe("string");
+    expect(consoleError).not.toHaveBeenCalled();
+  } finally { stdout.mockRestore(); consoleError.mockRestore(); forgetPublicProductName(); }
 });

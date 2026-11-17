@@ -120,7 +120,7 @@ test("request-scoped composition validates roles/mapping before use, logs unexpe
     for (const line of failures) {
       for (const secret of [database.password, database.href, "synthetic_login", config.BETTER_AUTH_SECRET, config.RESEND_API_KEY, "synthetic-private-cookie", "synthetic-private-cause-cookie"])
         expect(line.includes(secret)).toBe(false);
-      expect(Object.keys(JSON.parse(line)).sort().join(",")).toMatch(/^error,event,method,requestId,route,site(?:,status)?$/);
+      expect(Object.keys(JSON.parse(line)).sort().join(",")).toMatch(/^error,event,level,method,requestId,route,site(?:,status)?$/);
     }
   } finally { spy.mockRestore(); restore(); }
 });

@@ -2,6 +2,7 @@ import "server-only";
 import { resolveIdentity } from "../../lib/site/identity";
 import { createPublicRuntimeScope } from "../runtime/public-composition";
 import type { PublicRuntimeScope } from "../http/public-reading";
+import { expectDegraded } from "../logging/failure";
 
 const TTL_MS = 5 * 60_000;
 let remembered: { name: string; at: number } | null = null;
@@ -18,7 +19,9 @@ export async function readPublicProductName(scope?: PublicRuntimeScope, now: () 
   if (remembered && now() - remembered.at < TTL_MS) return remembered.name;
   try {
     const found: { name: string | null } = { name: null };
-    await (scope ?? createPublicRuntimeScope())(async runtime => { found.name = await runtime.productName(); return new Response(null); });
+    // A failure here falls back to the configured name by design: it is written at the warn level (stdout), never
+    // through console.error, which a server component in `next dev` would replay into the browser's dev overlay.
+    await expectDegraded(() => (scope ?? createPublicRuntimeScope())(async runtime => { found.name = await runtime.productName(); return new Response(null); }));
     const name = found.name;
     if (typeof name === "string" && name.trim() !== "") { remembered = { name, at: now() }; return name; }
   } catch { /* Fall through to the default. */ }
