@@ -40,7 +40,7 @@ The code that makes this a configuration switch is `src/lib/navigation/canonical
    - `torah /api/public/reading?date=<this Shabbat>` gives 200 JSON. A known short-v1 clip gives 200 `audio/mpeg` with `x-reference-license`.
    - `/.well-known/oauth-protected-resource/api/mcp` shows `resource: https://torah.centralreform.org/api/mcp` and `authorization_servers: ["https://torah.centralreform.org"]`; `/.well-known/oauth-authorization-server` shows issuer torah.
    - `POST /api/mcp` gives 401 with `WWW-Authenticate … resource_metadata="https://torah.centralreform.org/.well-known/oauth-protected-resource/api/mcp"`.
-   - Vercel runtime logs show no burst of `runtime.unavailable` 503s.
+   - Vercel runtime logs show no burst of `server.failure` lines (status 503); each names its route, site and error class.
 4. **Daniel, live sign-in:** Google popup on desktop, Google redirect on his phone, an email link (the link host must be torah), and the code (if B has shipped).
 5. **Daniel, Claude:**
    - remove the old "CRC B'nei Mitzvah" connector;

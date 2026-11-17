@@ -44,7 +44,7 @@ test("scrubText removes emails, connection strings, URLs with tokens, JWTs, cook
 
 test("scrubText keeps one line, bounds length and never throws on hostile input", () => {
   expect(scrubText("a\nb\r\nc\u2028d")).toBe("a b c d");
-  expect(scrubText("x".repeat(10_000)).length).toBeLessThanOrEqual(303);
+  expect(scrubText("x ".repeat(10_000)).length).toBeLessThanOrEqual(304);
   expect(scrubText(undefined)).toBe("");
   expect(scrubText({ toString() { throw new Error("touched"); } })).toBe("");
 });
@@ -139,4 +139,70 @@ test("describeError: hostile and odd throwables never throw, never call toString
   expect(describeError(Object.assign(new Error("x"), { code: EMAIL })).code).toBeUndefined();
   expect(describeError(Object.assign(new Error("x"), { code: "sarah" })).code).toBeUndefined();
   expect(describeError(Object.assign(new Error("x"), { constraint: `bad "${EMAIL}"` })).constraint).toBeUndefined();
+  // A lookalike of our own class names gains neither a free lowercase code nor a reason.
+  const spoof = Object.assign(new Error("x"), { name: "Unavailable", code: "alice-cohen", reason: "alice-cohen/ruth" });
+  expect(describeError(spoof)).not.toHaveProperty("reason");
+  expect(describeError(spoof)).not.toHaveProperty("code");
+});
+
+// Adversarial review of def1a6d: drizzle copies its params (free text from a lesson note) into the message, and V8
+// copies the whole message into the stack. Nothing from it may survive as a "frame".
+const NOTE = "Worked on aliyah 3 with Noa Levinson\nat Rabbi Bogard's study, Noa's mum noa.levinson.mum@example.test will drive\n  at home: dad (Ari Levinson) code 483920 token abcdefghijklmnopqrstuvwxyzabcd";
+const NOTE_SECRETS = ["Noa", "Levinson", "Bogard", "noa.levinson", "483920", "abcdefghijklmnopqrstuvwxyzabcd", "Ari", "home", "params"];
+test("a DrizzleQueryError whose params hold a multi-line note leaves nothing of the note in stack or message", async () => {
+  const { DrizzleQueryError } = await import("drizzle-orm/errors");
+  const pg = Object.assign(new Error("canceling statement due to statement timeout"), { code: "57014" });
+  for (const note of [NOTE, `${NOTE}\nat Noa Levinson's house (kitchen table:12:34)\n    at Levinson (notes:12:34)`]) {
+    const error = new DrizzleQueryError('insert into "lesson_log" ("student_id","note") values ($1, $2)', ["0b6c2a8e-1111-4222-8333-444455556666", note], pg);
+    const described = describeError(error);
+    const text = JSON.stringify(described);
+    for (const secret of NOTE_SECRETS) expect(text.includes(secret), `${secret}: ${text}`).toBe(false);
+    expect(described.stack?.length).toBeGreaterThan(0);
+    // Every kept frame is a code location: function plus a relative path and line:column.
+    for (const frame of described.stack!) expect(frame).toMatch(/^at (?:[\w$.<> \[\]]+ \()?(?:node_modules\/|node:|[\w@.\-/[\]()]+\.[cm]?[jt]sx?:)[^\s]*\)?$/);
+    expect(described.cause).toMatchObject({ code: "57014" });
+  }
+  // The same lines with the header no longer matching (message changed after construction) are still dropped.
+  const mutated = new Error(`first\n${NOTE}`); mutated.message = "first";
+  const mutatedText = JSON.stringify(describeError(mutated));
+  for (const secret of NOTE_SECRETS) expect(mutatedText.includes(secret), secret).toBe(false);
+  // A hostile line that ends like a frame but whose location is not a code file is dropped.
+  const forged = new Error("x"); forged.stack = "Error: x\n    at Noa Levinson's study (home:12:34)\n    at Noa (kitchen:12:34)\n    at fn (/srv/app/src/a.ts:1:2)";
+  // Outside the project root and node_modules, only the last three path segments are kept.
+  expect(describeError(forged).stack).toEqual(["at fn (app/src/a.ts:1:2)"]);
+});
+
+test("Unicode, fullwidth, zero-width and repeatedly percent-encoded addresses are all removed whole", () => {
+  const fullwidthAt = String.fromCharCode(0xff20), zwsp = String.fromCharCode(0x200b), rtl = String.fromCharCode(0x202e);
+  const cases: [string, string[]][] = [
+    ["send failed for josé@example.test", ["jos"]],
+    ["send failed for zoë.cohen@example.test", ["zo", "cohen"]],
+    ["rcpt alice@exämple.test rejected", ["alice", "mple"]],
+    [`rcpt alice${fullwidthAt}example.test rejected`, ["alice"]],
+    [`rcpt alice${zwsp}@example.test`, ["alice"]],
+    [`rcpt ali${rtl}ce@example.test`, ["ali", "ce@"]],
+    ["u=alice%2540example.test", ["alice"]],
+    ["u=alice%252540example.test", ["alice"]],
+  ];
+  for (const [input, leftovers] of cases) {
+    const out = scrubText(input);
+    expect(out, input).toContain("[email]");
+    for (const piece of leftovers) expect(out.includes(piece), `${input} -> ${out}`).toBe(false);
+  }
+});
+
+test("capping never leaves part of an address at the edge, and token-shaped runs and 6-digit codes are removed", () => {
+  const out = scrubText(`${"A1".repeat(595)} john.smith@example.test`);
+  expect(out).not.toMatch(/john|smit/);
+  const huge = scrubText(`${"word ".repeat(2000)}john.smith@example.test`);
+  expect(huge).not.toMatch(/john|smit/);
+  expect(scrubText("verification code 483920 rejected")).toBe("verification code [number] rejected");
+  expect(scrubText("token abcdefghijklmnopqrstuvwxyzabcde invalid")).toBe("token [token] invalid");
+  expect(scrubText("key ABCDEFGHIJKLMNOPQRSTUVWXYZABCDE invalid")).toBe("key [token] invalid");
+  expect(scrubText("id abcdefghijklmnop-qrstuvwxyzabcdefgh-ijklmnopqrstuvwx")).not.toMatch(/qrstuvwxyzabcdefgh/);
+  // Ordinary text, ports, SQLSTATE-free messages and our reason codes pass unchanged.
+  expect(scrubText("connect ECONNREFUSED 10.0.0.1:5432")).toBe("connect ECONNREFUSED 10.0.0.1:5432");
+  expect(scrubText("reading-cache/haftarah-ranges")).toBe("reading-cache/haftarah-ranges");
+  const reasoned = describeError(new Error("x", { cause: Object.assign(new Error("57014 timeout"), { code: "57014" }) }));
+  expect(reasoned.cause?.code).toBe("57014");
 });

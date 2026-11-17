@@ -28,7 +28,10 @@ const OWN_CLOSED_CODE_NAMES = new Set([
   "SefariaJsonUnavailable", "StepSourceUnavailable", "CommentaryUnavailable", "TranslationsUnavailable",
   "CourseTextUnavailable", "ReviewUnavailable", "ReviewInvalid", "PhraseUnavailable",
 ]);
-const OWN_CODE = /^[a-z][a-z-]{0,30}$/;
+// The closed codes those classes carry (their constructors' union types).
+const OWN_CODES = new Set(["invalid-request", "upstream", "invalid-response", "cache", "not-found", "unsupported", "unavailable", "config", "auth", "write"]);
+/** Set (non-enumerable) by failure.ts's Unavailable; only an error carrying it has its `reason` written. */
+export const OWN_REASON: unique symbol = Symbol("own-reason");
 
 export const MAX_CAUSE_DEPTH = 4;
 const MAX_FRAMES = 15;
@@ -38,7 +41,8 @@ const MAX_SEGMENTS = 12;
 
 const IDENTIFIER = /^[A-Za-z_$][\w$]{0,63}$/;
 // Postgres SQLSTATE (5 chars of 0-9A-Z) or a Node/undici-style code (ECONNREFUSED, UND_ERR_CONNECT_TIMEOUT, ERR_INVALID_URL).
-const ERROR_CODE = /^(?:[0-9A-Z]{5}|[A-Z][A-Z0-9_]{1,47})$/;
+// Each underscore-separated part is at most 16 characters, so a token-shaped run never passes as a code.
+const ERROR_CODE = /^(?=.{2,48}$)(?:[0-9A-Z]{5}|[A-Z][A-Z0-9]{0,15}(?:_[A-Z0-9]{1,16})*)$/;
 // Postgres object names are logged only when they look like a plain identifier (never a quoted value).
 const SQL_IDENTIFIER = /^[a-z_][a-z0-9_$]{0,62}$/i;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -103,29 +107,48 @@ const SCRUB_RULES: readonly Rule[] = [
   [/\b([a-z][a-z0-9+.-]{1,20}):\/\/(?:[^\s/'"<>]*@)?([^\s/?#:'"<>@]+)[^\s'"<>]*/gi, (_m, scheme: string, host: string) => `${scheme}://${host}/[redacted]`],
   // libpq key=value connection strings and any credential-named key=value or key: value pair.
   [/\b(password|passwd|pwd|secret|client_secret|api[_-]?key|apikey|access[_-]?token|refresh[_-]?token|id[_-]?token|session[_-]?token|token|otp|sslpassword|sslkey|user|username|email|host|dbname)\s*[=:]\s*("[^"]*"|'[^']*'|[^\s,;&]+)/gi, "$1=[redacted]"],
-  // Email addresses, also percent-encoded.
-  [/[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+(?:@|%40)[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,63}/g, "[email]"],
+  // Email addresses: Unicode local parts and domains (josé@, exämple.com), and @ percent-encoded once or more
+  // (%40, %2540, %252540). Fullwidth @ and zero-width/bidi characters are normalised away before any rule runs.
+  [/[\p{L}\p{M}\p{N}.!#$%&'*+/=?^_`{|}~-]+(?:@|%(?:25)*40)[\p{L}\p{M}\p{N}-]+(?:\.[\p{L}\p{M}\p{N}-]+)*\.[\p{L}\p{M}]{2,63}/gu, "[email]"],
   // JSON Web Tokens.
   [/\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}(?:\.[A-Za-z0-9_-]*)?/g, "[jwt]"],
   // Query strings outside a URL: "?t=...", "&token=...".
   [/[?&][A-Za-z0-9_.-]{1,40}=[^\s&'"]*/g, "?[query]"],
 ];
-// Long hex, base64 and base64url runs (session tokens, API keys, HMACs, invitation tokens, signed links, sign-in
-// codes). Not applied to stack frames, whose bundler chunk names have this shape and come from our build, not data.
+// Long hex, base64 and base64url runs (session tokens, API keys, HMACs, invitation tokens, signed links), letter
+// runs of 20 or more in any case (sign-in tokens are 32 letters; no English word in a message is that long), and
+// standalone 6-digit numbers (sign-in codes). Our reason codes ("reading-cache/haftarah-ranges") have no run of
+// 20 letters and travel in their own `reason` field as well; SQLSTATE codes travel in `code`.
 const TOKEN_RULES: readonly Rule[] = [
-  // A run of only lowercase letters, hyphens and slashes ("reading-cache/haftarah-ranges", our reason codes) is kept.
   [/[A-Za-z0-9+/_-]{20,}={0,2}/g, (match: string) => /\d/.test(match) || /[A-Z]/.test(match) && /[a-z]/.test(match) || /[_+]/.test(match) ? "[token]" : match],
-  [/\b[A-Za-z]{32,}\b/g, "[token]"],
+  [/(?<![\p{L}\p{M}\p{N}])[\p{L}\p{M}]{20,}(?![\p{L}\p{M}\p{N}])/gu, "[token]"],
+  [/(?<![\p{N}.:])\p{N}{6}(?![\p{N}.:])/gu, "[number]"],
+  // A hyphen-joined run of 40 or more characters (a slug-shaped token); our longest reason segment is 39.
+  [/(?<![\p{L}\p{N}_-])[\p{L}\p{N}_]+(?:-[\p{L}\p{N}_]+)+(?![\p{L}\p{N}_-])/gu, (match: string) => match.length >= 40 ? "[token]" : match],
 ];
 const MESSAGE_RULES = [...SCRUB_RULES, ...TOKEN_RULES];
+// The longest input the rules see. Longer input is cut at the last whitespace before this bound and the partial
+// word at the cut is dropped, so no half of an address or token survives at the edge.
+const SCRUB_INPUT_BOUND = 8192;
+
+/** NFKC (fullwidth ＠ becomes @), then zero-width, soft-hyphen and bidi control characters removed. */
+function normalise(text: string): string {
+  return text.normalize("NFKC").replace(/[­؜᠎​-‏‪-‮⁠-⁩﻿]/g, "");
+}
+function boundAtWhitespace(text: string, bound: number): string {
+  if (text.length <= bound) return text;
+  const cut = text.slice(0, bound), space = cut.search(/\s\S*$/);
+  return space > 0 ? `${cut.slice(0, space)} ...` : "...";
+}
 
 function scrub(input: unknown, max: number, rules: readonly Rule[]): string {
   try {
     if (typeof input !== "string") return "";
-    let text = input.length > 4 * max ? input.slice(0, 4 * max) : input;
+    // Scrub first on a generously bounded input, then cap at a whitespace boundary.
+    let text = boundAtWhitespace(normalise(input.length > 4 * SCRUB_INPUT_BOUND ? input.slice(0, 4 * SCRUB_INPUT_BOUND) : input), SCRUB_INPUT_BOUND);
     for (const [pattern, replacement] of rules) text = text.replace(pattern, replacement as never);
     text = text.trim();
-    return text.length > max ? `${text.slice(0, max)}...` : text;
+    return text.length > max ? boundAtWhitespace(text, max) : text;
   } catch { return "[unreadable]"; }
 }
 
@@ -148,21 +171,53 @@ export function stripQuotedValues(text: string): string {
     .replace(/\u0000(\d+)\u0000/g, (_m, index: string) => `"${kept[Number(index)]}"`);
 }
 
-function read(target: unknown, key: string): unknown {
-  try { return target !== null && (typeof target === "object" || typeof target === "function") ? (target as Record<string, unknown>)[key] : undefined; }
+function read(target: unknown, key: string | symbol): unknown {
+  try { return target !== null && (typeof target === "object" || typeof target === "function") ? (target as Record<string | symbol, unknown>)[key] : undefined; }
   catch { return undefined; }
 }
 
-function framesOf(error: Error): string[] {
+// A V8 frame, strictly: "at [async ][new ]<function>[ [as <name>]] (<location>)" or "at <location>", where the
+// function is identifier-shaped and the location is a code file with :line:column, a node: builtin, or one of V8's
+// fixed placeholders. Anything else (including free text that begins "at ") is dropped, never scrubbed and kept.
+const FRAME = /^at (?:(async )?(new )?([A-Za-z_$][\w$]*(?:\.(?:[A-Za-z_$<][\w$<>]*|<anonymous>))*)(?: \[as [A-Za-z_$][\w$]*\])? \((.+)\)|(.+))$/;
+const CODE_LOCATION = /^((?:file:\/\/|webpack-internal:\/\/\/)?(?:node:[a-z_/]+|[^\s'"<>`]*\/[^\s'"<>`]*\.(?:[cm]?[jt]sx?)))(?::(\d{1,7}):(\d{1,7}))$/;
+const PLACEHOLDER = /^(?:<anonymous>|native|index \d{1,4})$/;
+function projectRoot(): string {
+  try { return typeof process !== "undefined" && typeof process.cwd === "function" ? process.cwd().replaceAll("\\", "/") : ""; } catch { return ""; }
+}
+/** Reduces a frame to function plus a project-relative (or node_modules/...) path and line:column, else null. */
+function codeFrame(line: string, root: string): string | null {
+  const match = FRAME.exec(line);
+  if (!match) return null;
+  const fn = match[3] ? `${match[1] ?? ""}${match[2] ?? ""}${match[3]}` : "";
+  const where = match[4] ?? match[5];
+  if (PLACEHOLDER.test(where)) return fn ? `at ${fn} (${where})` : null;
+  const location = CODE_LOCATION.exec(where);
+  if (!location) return null;
+  let path = location[1].replace(/^(?:file:\/\/|webpack-internal:\/\/\/)/, "").replaceAll("\\", "/");
+  const modules = path.lastIndexOf("node_modules/");
+  if (modules >= 0) path = path.slice(modules);
+  else if (root && path.startsWith(`${root}/`)) path = path.slice(root.length + 1);
+  else if (!path.startsWith("node:")) path = path.split("/").slice(-3).join("/");
+  const at = location[2] ? `${path}:${location[2]}:${location[3]}` : path;
+  const frame = fn ? `at ${fn} (${at})` : `at ${at}`;
+  return frame.length <= MAX_FRAME ? frame : null;
+}
+
+function framesOf(error: Error, rawMessage: unknown, rawName: unknown): string[] {
   const stack = read(error, "stack");
   if (typeof stack !== "string") return [];
-  // Only lines that are stack frames; the stack's first lines repeat the (unscrubbed) message and are never kept.
-  // A message with an embedded "\n    at ..." line could pose as a frame, so every frame is scrubbed as well.
-  const frames: string[] = [];
-  for (const line of stack.slice(0, 32768).split("\n")) {
-    const trimmed = line.trim();
-    if (!/^at \S[^\n]{0,400}$/.test(trimmed)) continue;
-    frames.push(scrub(trimmed, MAX_FRAME, SCRUB_RULES));
+  // The stack starts with "<name>: <message>", and V8 copies a multi-line message (drizzle's "params: ..." line,
+  // a note with a line beginning "at ") into it whole. That header is removed by the message's own line count, and
+  // every remaining line must then be a strict V8 frame; anything else is dropped.
+  let lines = stack.slice(0, 65536).split("\n");
+  const header = typeof rawName === "string" && typeof rawMessage === "string" ? (rawMessage ? `${rawName}: ${rawMessage}` : rawName) : null;
+  if (header !== null && stack.startsWith(header)) lines = stack.slice(header.length).split("\n").slice(1);
+  else if (typeof rawMessage === "string") lines = lines.slice(rawMessage.split("\n").length);
+  const root = projectRoot(), frames: string[] = [];
+  for (const line of lines) {
+    const frame = codeFrame(line.trim(), root);
+    if (frame) frames.push(frame);
     if (frames.length >= MAX_FRAMES) break;
   }
   return frames;
@@ -191,14 +246,15 @@ function describeOne(error: unknown, depth: number, seen: Set<unknown>): ErrorDe
   }
   const own = OWN_CLOSED_CODE_NAMES.has(name);
   const code = read(error, "code");
-  if (typeof code === "string" && (ERROR_CODE.test(code) || own && OWN_CODE.test(code))) description.code = code;
-  const reason = own ? read(error, "reason") : undefined;
+  if (typeof code === "string" && (ERROR_CODE.test(code) || own && OWN_CODES.has(code))) description.code = code;
+  // A reason only from a real Unavailable (marked by this module's private symbol), never from a lookalike name.
+  const reason = read(error, OWN_REASON) === true ? read(error, "reason") : undefined;
   if (typeof reason === "string" && SITE.test(reason)) description.reason = reason;
   for (const key of ["constraint", "table", "schema", "column", "routine"] as const) {
     const value = read(error, key);
     if (typeof value === "string" && SQL_IDENTIFIER.test(value)) description[key] = value;
   }
-  const frames = framesOf(error);
+  const frames = framesOf(error, rawMessage, rawName);
   if (frames.length) description.stack = frames;
   const cause = read(error, "cause");
   if (cause !== undefined && depth + 1 < MAX_CAUSE_DEPTH && !seen.has(cause)) description.cause = describeOne(cause, depth + 1, seen);

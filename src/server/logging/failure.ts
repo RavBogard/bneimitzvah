@@ -1,7 +1,7 @@
 import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
-import { causeChain, describeError, methodForLog, routeForLog, siteForLog } from "./redact";
+import { causeChain, describeError, methodForLog, OWN_REASON, routeForLog, siteForLog } from "./redact";
 
 // One structured line per unexpected server failure, to stderr (Vercel collects it). Every value that reaches the
 // line passes through redact.ts; read that module for what may and may not be logged. Expected outcomes (401, 403,
@@ -42,6 +42,10 @@ export function failureRecorded(): boolean {
 function write(site: string, error: unknown, status: number | undefined, describe: boolean) {
   try {
     const store = context.getStore();
+    // `next build` prerenders public pages whose name reader falls back by design when no runtime is configured
+    // (src/server/public-site/names.ts); those are not runtime failures. Outside a request during the build phase,
+    // nothing is written.
+    if (!store && process.env.NEXT_PHASE === "phase-production-build") return;
     if (store) store.recorded = true;
     const line: Record<string, unknown> = { event: "server.failure", requestId: store?.requestId ?? randomUUID(),
       method: store?.method ?? "NONE", route: store?.route ?? "[no-request]", site: siteForLog(site) };
@@ -72,6 +76,11 @@ export function recordUnexplainedStatus(site: string, status: number): void {
 /**
  * Attaches the original error as a non-enumerable `cause` to a fixed error a catch rethrows, so the boundary's
  * line names the real failure. Never changes the error's name, message or status, and JSON.stringify skips it.
+ *
+ * The cause is the raw, unredacted original (a driver error with row values in `detail`, a fetch error with a
+ * signed URL). An error carrying one must never be passed whole to console.error/log, util.inspect, structuredClone
+ * or a response: only recordFailure (through redact.ts) may read it. tests/app/failure-logging.test.ts pins the
+ * console calls in src/server.
  */
 export function causedBy<T extends Error>(error: T, cause: unknown): T {
   try { if (cause !== undefined) Object.defineProperty(error, "cause", { value: cause, enumerable: false, configurable: true, writable: true }); }
@@ -88,6 +97,7 @@ export class Unavailable extends Error {
   constructor(readonly reason: string, options?: { cause?: unknown }) {
     super(reason);
     this.name = "Unavailable";
+    Object.defineProperty(this, OWN_REASON, { value: true, enumerable: false });
     if (options && "cause" in options) causedBy(this, options.cause);
   }
 }

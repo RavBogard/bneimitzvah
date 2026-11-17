@@ -58,7 +58,11 @@ async function callTool<Q extends PgQueryResultHKT>(tool: Tool<Q>, args: unknown
     const value = await Promise.race([tool.handler(input, { ...ctx, signal: controller.signal }), expired]);
     if (value === "timeout") return errorResult(`${tool.name} took too long; nothing more is reported for this call. Saves are idempotent by mutationId, so read again before resending.`);
     return textResult(value);
-  } catch (error) { return errorResult(message(error)); }
+  } catch (error) {
+    // Written server-side when unexpected (a refusal is not); the site is the tool's own static name, never its arguments.
+    recordIfUnexpected(error, `mcp-tool/${tool.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`);
+    return errorResult(message(error));
+  }
   finally { clearTimeout(timer); outer.removeEventListener("abort", relay); if (late) controller.signal.removeEventListener("abort", late); }
 }
 

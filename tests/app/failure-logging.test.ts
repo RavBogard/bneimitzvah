@@ -114,6 +114,33 @@ test("a response the server could not serialize names its static reason", async 
   expect(lines[0]).not.toContain(EMAIL);
 });
 
+// Errors now carry their raw, unredacted cause (causedBy). Only the failure log may read one, so no console call in
+// src/server outside src/server/logging may be added without review: these are the reviewed lines, none of which
+// passes an error object (each writes a fixed string or a closed JSON record).
+const REVIEWED_CONSOLE = [
+  "src/server/reference-audio/short-diagnostic.ts: console.warn(JSON.stringify(record",
+  "src/server/http/roster-sheet.ts: console.error(`roster sheet sync failed: ${result.reason}`)",
+  "src/server/service-course/finished.ts: console.error(JSON.stringify({ event: \"service-part.finish-skipped\" }))",
+  "src/server/notifications/service.ts: console.error(`notifications run: ${counts.sent} sent",
+];
+test("no console call or inspector outside the logging module can pass a caught error (raw cause) to the logs", () => {
+  const found: string[] = [];
+  const walk = (dir: string) => { for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name).replaceAll("\\", "/");
+    if (entry.isDirectory()) { if (path !== "src/server/logging") walk(path); }
+    else if (/\.(?:ts|tsx|mjs)$/.test(entry.name)) {
+      for (const line of readFileSync(path, "utf8").split("\n")) {
+        for (const match of line.matchAll(/console\.(?:error|log|warn|info|debug|trace)\(|\butil\.inspect\(|\b(?:inspect|structuredClone)\((?:error|err|e|cause|failure)\b/g)) {
+          const at = line.slice(match.index);
+          if (!REVIEWED_CONSOLE.some(entry => { const [file, start] = entry.split(": "); return file === path && at.startsWith(start); })) found.push(`${path}: ${at.slice(0, 100)}`);
+        }
+      }
+    }
+  } };
+  walk("src/server");
+  expect(found).toEqual([]);
+});
+
 test("every new Unavailable(...) in src passes a unique static reason code", () => {
   const files: string[] = [];
   const walk = (dir: string) => { for (const entry of readdirSync(dir, { withFileTypes: true })) {
