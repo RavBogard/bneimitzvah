@@ -1,25 +1,23 @@
 import "server-only";
 import type { HttpRuntime } from "../runtime/composition";
-import { readJsonBody } from "./body";
-import { closedObject, uniqueQuery } from "./query";
+import { uniqueQuery } from "./query";
 import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
-import { requireCookieMutation } from "./mutations";
 
 // Web routes for study guides. Guide and voice bodies are never written from the web (S10):
-// those writes arrive only through the portal MCP. The web reads the student view, ticks themes,
-// and shows the rabbi status and held drafts.
+// those writes arrive only through the portal MCP. The web reads the student view and shows the
+// rabbi status and held drafts. The "I read this" theme tick was retired (Study v6, Daniel 2026-10-28),
+// and its route with it: a POST to .../study-guide/theme-read is now an unknown route (404).
 type Found =
-  | { route: "student"; studentId: string } | { route: "theme-read"; studentId: string }
+  | { route: "student"; studentId: string }
   | { route: "admin-guide"; kind: string; readingKey: string } | { route: "admin-voice" };
 function route(pathname: string): Found | null {
   let m = /^\/api\/students\/([^/]+)\/study-guide$/.exec(pathname); if (m) return { route: "student", studentId: m[1] };
-  m = /^\/api\/students\/([^/]+)\/study-guide\/theme-read$/.exec(pathname); if (m) return { route: "theme-read", studentId: m[1] };
   m = /^\/api\/admin\/study-guides\/(torah|haftarah)\/([a-z0-9-]{1,160})$/.exec(pathname); if (m) return { route: "admin-guide", kind: m[1], readingKey: m[2] };
   if (pathname === "/api/admin/study-voice") return { route: "admin-voice" };
   return null;
 }
 export function studyGuidesRouteMethods(pathname: string): readonly string[] | null {
-  const found = route(pathname); return found ? [found.route === "theme-read" ? "POST" : "GET"] : null;
+  const found = route(pathname); return found ? ["GET"] : null;
 }
 const MODES = ["student", "parent", "tutor", "admin", "child-practice"] as const;
 function mode(value: unknown): (typeof MODES)[number] {
@@ -37,12 +35,6 @@ export async function handleStudyGuidesRequest(request: Request, runtime: HttpRu
       const view = await runtime.studyGuides.studentGuide(request, selection);
       // The haftarah card also links that week's public study sheet; the lookup runs after the authorized read, outside it.
       result = selection.kind === "haftarah" ? { ok: true, view, sheet: await runtime.haftarahSheets.sheetFor(await runtime.studyGuides.readingDate(request, selection)) } : { ok: true, view };
-    } else if (found.route === "theme-read") {
-      uniqueQuery(request.url, []);
-      requireCookieMutation(request, runtime.origin);
-      const body = closedObject(await readJsonBody(request), ["mode", "kind", "readingKey", "themeId", "read", "expectedVersion"]);
-      result = await runtime.studyGuides.setThemeRead(request, { mode: mode(body.mode), studentId: found.studentId, kind: body.kind, readingKey: body.readingKey,
-        themeId: body.themeId, read: body.read, expectedVersion: body.expectedVersion });
     } else if (found.route === "admin-guide") {
       uniqueQuery(request.url, []);
       result = { ok: true, guide: await runtime.studyGuides.staffGuide(request, { kind: found.kind, readingKey: found.readingKey }) };

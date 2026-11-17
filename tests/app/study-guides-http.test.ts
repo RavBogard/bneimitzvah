@@ -52,18 +52,14 @@ test("student GET 200 with the view; parent GET 200 identical", async () => {
   expect(parent.body.view.tickable).toBe(false);
 });
 
-test("theme-read is retired: parent, tutor and student POSTs are all refused, and the view shows no read mark", async () => {
+test("theme-read is retired: the route no longer exists for any role, nothing is written, and the view shows no read mark", async () => {
   const f = await fixture(), path = `/api/students/${f.studentId}/study-guide/theme-read`;
-  expect((await f.send(path, { who: "multi", body: tick(f, "parent") })).status).toBe(403);
-  expect((await f.send(path, { who: "multi", body: tick(f, "tutor") })).status).toBe(403);
-  expect((await f.send(path, { who: "learner", body: tick(f, "student") })).status).toBe(403);
+  expect((await f.send(path, { who: "multi", body: tick(f, "parent") })).status).toBe(404);
+  expect((await f.send(path, { who: "multi", body: tick(f, "tutor") })).status).toBe(404);
+  expect((await f.send(path, { who: "learner", body: tick(f, "student") })).status).toBe(404);
+  expect((await f.send(path, { who: "learner", method: "GET" })).status).toBe(404);
   expect((await f.send(view(f.studentId, "tutor"), { who: "multi" })).body.view.tickable).toBe(false);
-  // Nothing was written: no tick row exists after any of the refused posts.
   expect(await f.owner(async () => f.db.select().from(s.studyThemeRead))).toEqual([]);
-  // Cross-site and malformed writes never reach the service.
-  expect((await f.send(path, { who: "learner", body: tick(f, "student", { expectedVersion: 1 }), headers: { origin: "https://evil.example" } })).status).toBe(403);
-  expect((await f.send(path, { who: "learner", body: { ...tick(f, "student"), extra: 1 } })).status).toBe(400);
-  expect((await f.send(path, { who: "learner", method: "GET" })).status).toBe(405);
 });
 
 test("unknown student 404 generic; anonymous denied", async () => {

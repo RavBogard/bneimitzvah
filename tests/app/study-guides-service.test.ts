@@ -181,14 +181,10 @@ test("student guide is null when readingKey is null and no additions", async () 
   expect(await f.read("learner", "student")).toBeNull();
 });
 
-test("\"I read this\" is retired: no mode can write a tick, and no view is tickable", async () => {
+test("\"I read this\" is retired: the service has no tick write, and no view is tickable", async () => {
   const f = await fixture();
   await f.save({ body: guide({ themes: [theme("cloud", { notes: [note("Exodus 40:34")] })] }) });
-  const tick = (who: "learner" | "multi", mode: "student" | "parent" | "tutor", extra: Record<string, unknown> = {}) =>
-    f.guides.setThemeRead(f.post(who), { mode, studentId: f.studentId, kind: "torah", readingKey: "pekudei", themeId: "cloud", read: true, expectedVersion: 0, ...extra });
-  expect(await denied(() => tick("learner", "student"))).toBe(true);
-  expect(await denied(() => tick("multi", "parent"))).toBe(true);
-  expect(await denied(() => tick("multi", "tutor"))).toBe(true);
+  expect("setThemeRead" in f.guides).toBe(false);
   for (const [who, mode] of [["learner", "student"], ["multi", "parent"], ["multi", "tutor"]] as const) expect((await f.read(who, mode))?.tickable).toBe(false);
 });
 
@@ -265,13 +261,11 @@ test("a base theme never reaches a viewer, an addition does, and a reading no st
   const verses = f.check.mock.lastCall![0].verses; expect(verses.has("I Kings 8:21") && verses.has("I Kings 7:51") && !verses.has("I Kings 8:22")).toBe(true);
 });
 
-test("a parent's child-practice session cannot tick either; the child's view is not tickable", async () => {
+test("a parent's child-practice view of the guide is not tickable", async () => {
   const f = await fixture();
   await f.save({ body: guide({ themes: [theme("cloud", { notes: [note("Exodus 40:34")] })] }) });
   const entered = await f.practice.enter(f.post("multi"), { studentId: f.studentId });
   const child = { ...f.request("multi", "http://localhost:3000", { origin: "http://localhost:3000", "X-Practice-Context": entered.handle }), method: "POST" };
-  const body = { studentId: f.studentId, kind: "torah", readingKey: "pekudei", themeId: "cloud", read: true, expectedVersion: 0 };
-  expect(await denied(() => f.guides.setThemeRead(child, { mode: "child-practice", ...body }))).toBe(true);
   expect((await f.guides.studentGuide(child, { mode: "child-practice", studentId: f.studentId, kind: "torah" }))?.tickable).toBe(false);
   const audits = await f.owner(async () => (await f.db.select().from(s.auditEvent)).filter(a => a.action === "study-theme.read"));
   expect(audits).toHaveLength(0);

@@ -320,11 +320,6 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       return row ? readingView(row, student!.ceremonyDate).source.date : null;
     });
   }
-  /** "I read this" is retired (Study v6, Daniel 2026-10-28): the route and the stored ticks stay, but nothing writes one and no mode may. */
-  async function setThemeRead(_request: AccessRequest, _selection: { mode: Mode; studentId: string; kind: unknown; readingKey: unknown; themeId: unknown; read: unknown; expectedVersion: unknown }): Promise<never> {
-    throw new AccessDenied(403);
-  }
-
   // Rabbi's web status and preview (cookie, admin mode, read only; S10) --------------------------
   async function staffGuide(request: AccessRequest, supplied: { kind: unknown; readingKey: unknown }) {
     const kind = kindOf(supplied.kind), readingKey = keyOf(supplied.readingKey);
@@ -415,10 +410,10 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       return Object.freeze({ studentId, kind, assignment: reading ? Object.freeze({ assignmentId: reading.id, assignmentRevision: reading.revision, readingKey: reading.readingKey, verses: reading.verses }) : null, view });
     });
   }
-  return Object.freeze({ getVoice, setVoice, getBaseGuide, setBaseGuide, publishBaseGuide, setStudentGuide, studentGuide, readingDate, setThemeRead, staffGuide, staffVoice, guideWork, guideCatalog, guidePassage, rabbiStudentGuide });
+  return Object.freeze({ getVoice, setVoice, getBaseGuide, setBaseGuide, publishBaseGuide, setStudentGuide, studentGuide, readingDate, staffGuide, staffVoice, guideWork, guideCatalog, guidePassage, rabbiStudentGuide });
 }
 
-/** The only part the web HTTP runtime receives: reads, theme ticks and staff status. No guide or voice writes (S10). */
+/** The only part the web HTTP runtime receives: reads and staff status. No guide or voice writes (S10). */
 export function studyGuideWebSurface<Q extends PgQueryResultHKT>(service: ReturnType<typeof createStudyGuideService<Q>>) {
-  return Object.freeze({ studentGuide: service.studentGuide, readingDate: service.readingDate, setThemeRead: service.setThemeRead, staffGuide: service.staffGuide, staffVoice: service.staffVoice });
+  return Object.freeze({ studentGuide: service.studentGuide, readingDate: service.readingDate, staffGuide: service.staffGuide, staffVoice: service.staffVoice });
 }
