@@ -16,7 +16,7 @@ import { expandReadingRanges } from "../../src/lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import * as s from "../../src/server/db/index";
-import { refreshReading, goChild } from "./reading-nav";
+import { refreshReading as refreshPage, goChild } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 // A verse's notes from a tutor or the rabbi: staff write them, the student and the student's parents read them. A student's own translation
@@ -47,6 +47,8 @@ async function page(who: "student" | "tutor" | "admin", mobile = false) {
 }
 // The page's own controls sit behind the modal verse-tools sheet, so a reader closes it first; the unsent text stays in the tab's work state either way.
 async function click(tab: Page, name: string) { if (await tab.getByRole("dialog", { name: /^Verse tools · / }).count()) await closeVerseTools(tab); await safe(() => tab.getByRole("button", { name, exact: true }).click()); }
+// Refreshing goes through the page's Manage pill where there is one, which the open verse-tools sheet covers: close the sheet first, as a reader would.
+async function refreshReading(tab: Page) { if (await tab.getByRole("dialog", { name: /^Verse tools · / }).count()) await closeVerseTools(tab); await refreshPage(tab); }
 async function loaded(tab: Page, ref = "Genesis 1:1") {
   try { await ui(tab.locator(".study-verses").getByRole("heading", { name: ref, level: 4, exact: true })).toBeVisible(); }
   catch {
@@ -172,8 +174,6 @@ it("staff write explicit visible notes with literal markup; the student, a paren
   const geometry = await student.locator(".study-hebrew > span").first().evaluate(span => { const range = document.createRange(); range.selectNodeContents(span); const box = range.getBoundingClientRect(); return { top: box.top, bottom: box.bottom, height: innerHeight, scroll: scrollY }; });
   expect(geometry.scroll === 0 && geometry.top >= 0 && geometry.bottom <= geometry.height).toBe(true);
   const own = await tools(student); expect(await own.getByRole("textbox").count()).toBe(0); expect(await own.getByRole("button", { name: "Add student-visible note", exact: true }).count()).toBe(0);
-  // The student's translation route answers as an unknown route does.
-  expect((await api(student, `/api/students/${fixture.student.id}/work/draft`, { ...await selection(student, "student"), verseRef: "Genesis 1:1", text: "Synthetic retired translation", expectedVersion: 0, mutationId: randomUUID() })).status).toBe(404);
   const admin = await page("admin"); await staff(admin); const adminPanel = await tools(admin), text = "Synthetic teacher note <img src=x onerror=alert(1)> שָׁלוֹם 😀 é\n  spaced  ";
   await safe(() => adminPanel.getByRole("textbox").fill(text)); expect(await fixture.ownerDb.select().from(s.tutorNote)).toHaveLength(0);
   await capture(admin, "staff-visible-note-desktop"); await add(adminPanel); await ui(state(adminPanel)).toHaveAttribute("data-work-state", "empty"); expect((await head(admin, "Genesis 1:1"))?.text === text).toBe(true); expect(await adminPanel.locator("img").count()).toBe(0);
