@@ -63,7 +63,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   /** Opens Up close at one verse of the assignment, loading the text page that holds it first (the pinned card's next step, student gaps A3); false when the verse is not assigned. */
   upCloseHandle?: MutableRefObject<((kind: StudyKind, ref: string) => boolean) | null>;
   textStartHandle?: MutableRefObject<(() => void) | null>;
-  /** Looks up a verse on the live page, for the Study walk; null while concealed or loading. */
+  /** Looks up a verse on the live page, for the Study walk; null while loading. */
   verseLookupHandle?: MutableRefObject<((ref: string) => StudyVerse | null) | null>;
   /** The Song session reading: English follows the remembered toolbar preference. */
   songSession?: boolean;
@@ -82,7 +82,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   /** True when the student has marked this verse Got it (the check beside its number). */
   gotIt?(kind: StudyKind, verseRef: string): boolean;
 }) {
-  const { readStudy, createShortReferenceOwner, readWordAids, readWordDetails, summary, concealed, epoch, guardDeparture: guardLeaving } = useWorkspace(), aidsGroup = useId(), prefs = useReadingPrefs();
+  const { readStudy, createShortReferenceOwner, readWordAids, readWordDetails, summary, epoch, guardDeparture: guardLeaving } = useWorkspace(), aidsGroup = useId(), prefs = useReadingPrefs();
   const lens = useStudyLens(), study = lens.lens === "study", leinLink = useCommentLink();
   const shortMetadata = useRef<ShortReferenceOwner | null>(null);
   const playback = useRef<ReadingPlayerHandle | null>(null), registerPlayback = useCallback((value: ReadingPlayerHandle | null) => { playback.current = value; }, []);
@@ -164,14 +164,14 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const sectionNow = livePage && sections.length ? sectionIndexAt(sections, livePage.offset) : -1;
   useEffect(() => { const ref = pendingJump.current; if (ref && livePage?.verses.some(row => row.ref === ref)) { pendingJump.current = null; scrollToVerse(ref); } }, [livePage]);
   const listeningEnabled = baseline?.referenceListeningEnabled === true;
-  const textReady = Boolean(livePage && !concealed), canHear = textReady && active && listeningEnabled;
-  const shortView = useRef({ baseline, page: livePage, kind: state.kind, active, concealed, lift });
-  shortView.current = { baseline, page: livePage, kind: state.kind, active, concealed, lift };
+  const textReady = Boolean(livePage), canHear = textReady && active && listeningEnabled;
+  const shortView = useRef({ baseline, page: livePage, kind: state.kind, active, lift });
+  shortView.current = { baseline, page: livePage, kind: state.kind, active, lift };
   useLayoutEffect(() => {
     if (!baseline || !livePage || !state.kind || !listeningEnabled || study) return;
     const value = baseline, page = livePage, kind = state.kind, turn = generation.current;
     const live = () => { const now = shortView.current; return now.baseline === value && metadata.current === value && now.page === page && now.kind === kind
-      && turn === generation.current && !now.concealed && now.active && !now.lift && document.visibilityState === "visible"; };
+      && turn === generation.current && now.active && !now.lift && document.visibilityState === "visible"; };
     let owned: ShortReferenceOwner;
     try { owned = createShortReferenceOwner(value, kind, page.offset, live); } catch { return; }
     shortMetadata.current = owned;
@@ -179,8 +179,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     return () => { owned.dispose(); if (shortMetadata.current === owned) shortMetadata.current = null; };
   }, [baseline, livePage, state.kind, createShortReferenceOwner, epoch, key, listeningEnabled, study]);
   useLayoutEffect(() => {
-    if (concealed || !active || lift) shortMetadata.current?.suspend();
-  }, [concealed, active, lift]);
+    if (!active || lift) shortMetadata.current?.suspend();
+  }, [active, lift]);
   useLayoutEffect(() => {
     const background = () => { if (document.visibilityState !== "visible") shortMetadata.current?.suspend(); };
     const leave = () => shortMetadata.current?.suspend();
@@ -194,7 +194,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     const value = baseline, page = livePage, kind = state.kind, opening = lift.opening, turn = generation.current;
     const live = () => { const now = shortView.current; return now.baseline === value && metadata.current === value && now.page === page && now.kind === kind
       && turn === generation.current && modalScope.current?.opening === opening && modalScope.current.page === page
-      && !now.concealed && now.active && document.visibilityState === "visible"; };
+      && now.active && document.visibilityState === "visible"; };
     let owned: ShortReferenceOwner;
     try { owned = createShortReferenceOwner(value, kind, page.offset, live); } catch { return; }
     modalOwner.current = owned; // Deliberately no prepare on mount/navigation.
@@ -205,16 +205,16 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     return () => { deadline(); modalRequest.current?.abort(); owned.dispose(); if (modalOwner.current === owned) modalOwner.current = null;
       document.removeEventListener("visibilitychange", hidden); window.removeEventListener("pagehide", stop); };
   }, [baseline, livePage, state.kind, lift?.opening, createShortReferenceOwner, epoch, key, audio, stopAudio, listeningEnabled]);
-  useLayoutEffect(() => { if (concealed || !active) { modalRequest.current?.abort(); modalOwner.current?.suspend(); } }, [concealed, active]);
-  const openerScope = useRef({ baseline, page: livePage, concealed, epoch });
-  openerScope.current = { baseline, page: livePage, concealed, epoch };
+  useLayoutEffect(() => { if (!active) { modalRequest.current?.abort(); modalOwner.current?.suspend(); } }, [active]);
+  const openerScope = useRef({ baseline, page: livePage, epoch });
+  openerScope.current = { baseline, page: livePage, epoch };
   useLayoutEffect(() => { onHearReady?.(canHear); return () => onHearReady?.(false); }, [canHear, onHearReady]);
   useLayoutEffect(() => { onPracticeReady?.(textReady); return () => onPracticeReady?.(false); }, [textReady, onPracticeReady]);
-  useLayoutEffect(() => { if (concealed || !active) setLift(null); }, [concealed, active, epoch]);
+  useLayoutEffect(() => { if (!active) setLift(null); }, [active, epoch]);
   const shown = livePage && state.kind ? [state.kind, livePage.offset, livePage.verses.length] as const : null;
   // Commentary for the verses on screen, after they render: Rashi (Lein's "Rashi (n)" and Study), and the
   // Women's Commentary when Study shows it on Torah. Public texts only; nothing about the student is sent.
-  const commentaryRefs = useMemo(() => livePage && !concealed ? livePage.verses.map(verse => verse.ref) : [], [livePage, concealed]);
+  const commentaryRefs = useMemo(() => livePage ? livePage.verses.map(verse => verse.ref) : [], [livePage]);
   const corpus = state.kind === "haftarah" ? "neviim" : "torah";
   const guideView = useGuideView(guide, state.kind);
   const { rashi, works } = useReadingWorks(commentaryRefs, { ready: commentaryRefs.length > 0, study, chosen: lens.works, corpus: state.kind === "torah" ? "torah" : "neviim" });
@@ -237,12 +237,12 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const open = (page: StudyPage, index: number) => { setPicked(page.verses[index].ref); stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.suspend(); modalRequest.current?.abort();
     const old = modalScope.current, next = { page, index, opening: old?.page === page ? old.opening : ++modalSequence.current, navigation: (old?.navigation ?? 0) + 1 };
     modalScope.current = next; setLift(next); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
-  if (verseLookupHandle) verseLookupHandle.current = livePage && !concealed ? ref => livePage.verses.find(row => row.ref === ref) ?? null : null;
+  if (verseLookupHandle) verseLookupHandle.current = livePage ? ref => livePage.verses.find(row => row.ref === ref) ?? null : null;
   // Explicit held Start reports the first verse of this live page; focus/reload do not.
   if (textStartHandle) {
     const scope = openerScope.current, turn = generation.current, kind = state.kind;
-    textStartHandle.current = livePage && !concealed && !listeningEnabled && kind ? () => {
-      if (openerScope.current !== scope || scope.concealed || metadata.current !== baseline
+    textStartHandle.current = livePage && !listeningEnabled && kind ? () => {
+      if (openerScope.current !== scope || metadata.current !== baseline
         || generation.current !== turn || controller.current?.signal.aborted) return;
       const first = livePage.verses[0];
       if (first) onVisit?.(kind, first.ref);
@@ -250,11 +250,11 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   }
   // Up close at a verse on another text page or of the other reading: that page loads first, then Up close opens on it (student gaps A3).
   useEffect(() => {
-    const want = pendingLift.current; if (!want || !livePage || concealed || state.kind !== want.kind) return;
+    const want = pendingLift.current; if (!want || !livePage || state.kind !== want.kind) return;
     const index = livePage.verses.findIndex(row => row.ref === want.ref); if (index < 0) return;
     pendingLift.current = null; open(livePage, index);
   }, [livePage]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (upCloseHandle) upCloseHandle.current = livePage && !concealed && baseline ? (want, ref) => {
+  if (upCloseHandle) upCloseHandle.current = livePage && baseline ? (want, ref) => {
     const row = baseline.readings.find(item => item.kind === want), position = row ? row.verses.indexOf(ref) : -1;
     if (!row || position < 0) return false;
     const parts = want === "torah" ? sectionsFromStarts(row.verses, row.aliyahStarts) : [];
@@ -269,8 +269,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     // Parent actions bring this tab forward in the same event.
     // Inactivity still unmounts media; it does not revoke this explicit opener.
     const scope = openerScope.current, turn = generation.current;
-    const act = (practice: boolean) => livePage && !concealed ? (choice: number | ((refs: readonly string[]) => number)) => {
-      if (openerScope.current !== scope || scope.concealed || metadata.current !== baseline
+    const act = (practice: boolean) => livePage ? (choice: number | ((refs: readonly string[]) => number)) => {
+      if (openerScope.current !== scope || metadata.current !== baseline
         || generation.current !== turn || controller.current?.signal.aborted) return;
       const index = typeof choice === "function" ? choice(livePage.verses.map(row => row.ref)) : choice;
       const selected = Math.min(Math.max(index, 0), livePage.verses.length - 1);
@@ -289,7 +289,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const single = livePage ? previous === undefined && livePage.nextOffset === null : false;
   // Study's word card (1.7): the verse panel reads word details through the same authority checks as Word tools.
   const wordScope = JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage?.offset, generation.current]);
-  const wordHost: WordPanelHost | null = study && !concealed && active && livePage && !current?.loading ? {
+  const wordHost: WordPanelHost | null = study && active && livePage && !current?.loading ? {
     scopeKey: wordScope, verses: livePage.verses,
     readAids: async (index, signal) => {
       const value = baseline, page = livePage!, turn = generation.current;
@@ -354,8 +354,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       {/* The end of the section (N3): the next one's first verse, faint, and the way on. The verse comes from the page already loaded, when it is on it. */}
       {sectionNow >= 0 && sectionNow + 1 < sections.length && livePage.nextOffset === null
         && <NextSection onNext={() => goSection(sectionNow + 1)} preview={rawPage?.verses[sections[sectionNow + 1].start - rawPage.offset]} />}
-      {!concealed && listeningEnabled && !study && <ReadingPlayer key={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])}
-        scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])} idleLabel={learner ? undefined : "Listen to the reading"} verses={livePage.verses} active={active && !lift} enabled={!concealed && !lift} expiresAt={baseline?.context ? Date.parse(baseline.context.expiresAt) : undefined} audio={audio ? { coordinator: audio, slot: "assigned" } : undefined}
+      {listeningEnabled && !study && <ReadingPlayer key={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])}
+        scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])} idleLabel={learner ? undefined : "Listen to the reading"} verses={livePage.verses} active={active && !lift} enabled={!lift} expiresAt={baseline?.context ? Date.parse(baseline.context.expiresAt) : undefined} audio={audio ? { coordinator: audio, slot: "assigned" } : undefined}
         register={registerPlayback} onActiveWord={setPlayingWord} load={async (index, signal) => {
           const value = baseline, page = livePage!, turn = generation.current;
           if (signal.aborted || metadata.current !== value || page !== livePage || !page.verses[index]) throw new PortalRequestError(409);
@@ -364,7 +364,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
           if (signal.aborted || turn !== generation.current || metadata.current !== value) throw new PortalRequestError(409);
           return result;
         }} />}
-      {!concealed && active && <WordTools sheet={practicing} key={`word-tools:${JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])}`}
+      {active && <WordTools sheet={practicing} key={`word-tools:${JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])}`}
         scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])} verses={livePage.verses} register={registerTools}
         readAids={async (index, signal) => {
           const value = baseline, page = livePage!, turn = generation.current;
@@ -405,8 +405,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
           {!songSession && !study && <p className="study-english" data-testid="detail-english" lang="en" dir="ltr">{toolsVerse.english ?? "English reference unavailable for this verse."}</p>}
           <Apparatus verse={toolsVerse} learner={learner} />{!study && renderGuide?.(kind, toolsVerse.ref)}
           {!study && <VerseRashi verse={toolsVerse} state={rashi.lookup.forVerse(toolsVerse.ref)} link={leinLink} retry={rashi.retry} />}
-          {!concealed && <SourcesPanel key={`sources:${JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage!.offset, generation.current, toolsVerse.ref])}`}
-            scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage!.offset, generation.current, toolsVerse.ref])} baseline={baseline} kind={kind} offset={livePage!.offset + livePage.verses.indexOf(toolsVerse)} onRefreshReading={reloadMetadata} />}
+          <SourcesPanel key={`sources:${JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage!.offset, generation.current, toolsVerse.ref])}`}
+            scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage!.offset, generation.current, toolsVerse.ref])} baseline={baseline} kind={kind} offset={livePage!.offset + livePage.verses.indexOf(toolsVerse)} onRefreshReading={reloadMetadata} />
           {renderWork?.(kind, toolsVerse.ref)}
         </div>
       </Sheet>}
@@ -418,7 +418,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       {study && <CommentaryCredits works={works} refs={commentaryRefs} />}
       <div className="study-more"><StudyCredits chapters={livePage.chapters} summary={learner ? "About this text" : undefined} />{learner && !practicing && <WorkspaceLink href="/trope-chart">Trope chart</WorkspaceLink>}{learner && onPrint && <button type="button" className="button-text study-print-action" onClick={onPrint}>Print practice sheet</button>}{learner && !practicing && printSheetHref && <WorkspaceLink className="study-print-sheet" href={printSheetHref}>Print the whole reading</WorkspaceLink>}{learner && <div className="reading-lens-foot"><LensSwitch /></div>}</div>
       {lift && textReady && lift.page === livePage && <LiftedLine learner={learner} verses={livePage.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} index={lift.index} total={livePage.totalVerses} offset={livePage.offset}
-        reference={audio && listeningEnabled ? { audio, active: active && !concealed, expiresAt: baseline.context ? Date.parse(baseline.context.expiresAt) : undefined,
+        reference={audio && listeningEnabled ? { audio, active, expiresAt: baseline.context ? Date.parse(baseline.context.expiresAt) : undefined,
           navigation: lift.navigation, scopeKey: JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current, lift.opening]),
           load: async (index, signal) => {
             const owner = modalOwner.current, selected = modalScope.current, turn = generation.current;

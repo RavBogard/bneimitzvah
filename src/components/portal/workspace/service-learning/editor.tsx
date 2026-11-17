@@ -9,7 +9,7 @@ export function ServicePlanEditor({ mode, studentId, baseline, metadata, onConfi
   mode: "admin" | "tutor"; studentId: string; baseline: Assigned | null; metadata: ServiceMetadata | null;
   onConfirmed(): Promise<ServiceMetadata>; reloadReading(): Promise<Assigned>; onDepartureActive(active: boolean): void;
 }) {
-  const { registerWork, registerDeparture, guardDeparture, verifyServiceSession, serviceAuthorityFailed, concealed } = useWorkspace();
+  const { registerWork, registerDeparture, guardDeparture, serviceAuthorityFailed } = useWorkspace();
   const [catalog, setCatalog] = useState<Catalog | null>(null), [selected, setSelected] = useState<string[]>([]), [clearIntent, setClearIntent] = useState(false);
   const [review, setReview] = useState<PreparedServicePlan | null>(null), [pending, setPending] = useState<"catalog" | "prepare" | "confirm" | null>(null);
   const reviewRef = useRef(review); reviewRef.current = review;
@@ -46,14 +46,14 @@ export function ServicePlanEditor({ mode, studentId, baseline, metadata, onConfi
   useEffect(() => {
     const canFocus = (node: HTMLElement | null) => Boolean(node?.isConnected && !node.matches(":disabled") && !node.closest("[hidden], [inert], dialog:not([open])") && node.getClientRects().length);
     if (visible && canFocus(keepEditing.current) && !dialog.current?.contains(document.activeElement)) keepEditing.current?.focus();
-    if (!leaving && !concealed && (origin.current || originSheet.current)) {
+    if (!leaving && (origin.current || originSheet.current)) {
       const opener = origin.current, sheet = originSheet.current; origin.current = null; originSheet.current = null;
       if (canFocus(opener)) opener?.focus();
       // Access revalidation may remove the old confirmation button. The same
       // retained sheet has reopened; keep its native initial focus in that case.
       else if (!sheet?.open && canFocus(catalogButton.current)) catalogButton.current?.focus();
     }
-  }, [leaving, visible, concealed]);
+  }, [leaving, visible]);
   useEffect(() => { if (stale) setReview(null); }, [stale]);
   useEffect(() => {
     if (!review) return;
@@ -78,9 +78,7 @@ export function ServicePlanEditor({ mode, studentId, baseline, metadata, onConfi
     if (gate.current || !baseline || paused) return;
     gate.current = true; const turn = ++generation.current, controller = new AbortController(); request.current = controller; pendingRef.current = "catalog"; setPending("catalog"); setReview(null); setMessage("");
     try {
-      await verifyServiceSession(controller.signal);
       const next = await serviceApi.catalog(mode, studentId, controller.signal);
-      await verifyServiceSession(controller.signal);
       if (!alive.current || controller.signal.aborted || turn !== generation.current) return;
       const value = latest.current;
       if (!value.baseline || next.state === "available" && (next.studentRevision !== value.baseline.student.revision || next.ceremonyDate !== value.baseline.student.ceremonyDate || value.metadata && next.expectedPlanRevision !== (value.metadata.state === "no-plan" ? 0 : value.metadata.plan.revision))) throw Object.assign(new Error("Stale service catalog"), { stale: true });
@@ -98,9 +96,7 @@ export function ServicePlanEditor({ mode, studentId, baseline, metadata, onConfi
     gate.current = true; const turn = ++generation.current, controller = new AbortController(), selectedContext = context.current; request.current = controller;
     pendingRef.current = "prepare"; setPending("prepare"); setReview(null); setMessage("");
     try {
-      await verifyServiceSession(controller.signal);
       const proposal = await serviceApi.prepare(mode, studentId, catalog, selected, controller.signal);
-      await verifyServiceSession(controller.signal);
       if (!alive.current || controller.signal.aborted || turn !== generation.current || selectedContext !== context.current) return;
       setReview(proposal); queueMicrotask(() => reviewHeading.current?.focus());
     } catch (error) { if (alive.current && !controller.signal.aborted && turn === generation.current) { if ([401, 403, 404].includes(statusOf(error))) serviceAuthorityFailed(statusOf(error)); else { setBlocked(true); setMessage(statusOf(error) === 409 ? "The student or their service parts changed. Reload, then review again. Your choices are kept." : "These choices couldn’t be checked. Reload the current service parts, then review again. Your choices are kept."); } } }
@@ -115,9 +111,7 @@ export function ServicePlanEditor({ mode, studentId, baseline, metadata, onConfi
     gate.current = true; const turn = ++generation.current, controller = new AbortController(); request.current = controller; pendingRef.current = "confirm"; setPending("confirm"); setReview(null); setMessage("");
     const operation = (async () => {
       try {
-        await verifyServiceSession(controller.signal);
         const receipt = await serviceApi.confirm(mode, studentId, proposal.binding, controller.signal);
-        await verifyServiceSession(controller.signal);
         if (!alive.current) return;
         if (turn !== generation.current || selectedContext !== context.current) throw new Error("Confirmation context changed");
         const fresh = await onConfirmed();

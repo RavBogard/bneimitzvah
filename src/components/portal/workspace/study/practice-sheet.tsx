@@ -74,7 +74,7 @@ type Load = { status: "loading" } | { status: "ready"; text: SheetText } | { sta
 export function PracticeSheet({ baseline, initialKind, onClose, authorityFailed }: {
   baseline: Assigned; initialKind: StudyKind; onClose(): void; authorityFailed(status: number): void;
 }) {
-  const { readStudy, concealed } = useWorkspace(), heading = useId(), prefs = useReadingPrefs();
+  const { readStudy } = useWorkspace(), heading = useId(), prefs = useReadingPrefs();
   const kinds = baseline.readings.map(row => row.kind), [kind, setKind] = useState<StudyKind>(kinds.includes(initialKind) ? initialKind : kinds[0]);
   const reading = baseline.readings.find(row => row.kind === kind)!;
   const [tikkun, setTikkun] = useState(prefs.tikkunView !== "off"), [aliyahBreaks, setAliyahBreaks] = useState(false), [retry, setRetry] = useState(0);
@@ -123,7 +123,7 @@ export function PracticeSheet({ baseline, initialKind, onClose, authorityFailed 
     catch { if (alive.current) setPrintState("error"); }
     finally { gate.current = false; }
   }
-  if (!host || concealed) return null;
+  if (!host) return null;
   return createPortal(<div ref={panel} className={styles.panel} role="dialog" aria-modal="true" aria-labelledby={heading}>
     <div className={styles.controls} data-practice-sheet-controls>
       <div className={styles.controlsHead}>

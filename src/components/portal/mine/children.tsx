@@ -95,19 +95,19 @@ export function ChildrenView({ state, onRetry, onPractice, busy }: { state: Stat
  * so a card shows nothing the child's page would not. A read that fails leaves its line out; the card is still a way in.
  */
 export function ChildrenSection() {
-  const { epoch, readVerified, readProgress, readLessons, selectChild, busy, serviceAuthorityFailed } = useWorkspace();
+  const { epoch, read, readProgress, readLessons, selectChild, busy, serviceAuthorityFailed } = useWorkspace();
   const [state, setState] = useState<State>({ status: "loading" }), [retry, setRetry] = useState(0);
   // The reads are the provider's; a change in their identity must not start the load again, only the epoch (a new access check) or Try again does.
-  const reads = useRef({ readVerified, readProgress, readLessons, serviceAuthorityFailed }); reads.current = { readVerified, readProgress, readLessons, serviceAuthorityFailed };
+  const reads = useRef({ read, readProgress, readLessons, serviceAuthorityFailed }); reads.current = { read, readProgress, readLessons, serviceAuthorityFailed };
   useEffect(() => {
-    const { readVerified, readProgress, readLessons, serviceAuthorityFailed } = reads.current;
+    const { read, readProgress, readLessons, serviceAuthorityFailed } = reads.current;
     const controller = new AbortController();
     setState({ status: "loading" });
     (async () => {
       const students = orderChildren(await workspaceApi.students("parent", undefined, controller.signal));
       const details = await Promise.all(students.map(async (student): Promise<Detail> => {
         let value: Assigned;
-        try { value = await readVerified("parent", student.id, controller.signal); } catch (error) { if (!controller.signal.aborted && [401, 403, 404].includes(statusOf(error))) serviceAuthorityFailed(statusOf(error)); return FAILED_DETAIL; }
+        try { value = await read("parent", student.id, controller.signal); } catch (error) { if (!controller.signal.aborted && [401, 403, 404].includes(statusOf(error))) serviceAuthorityFailed(statusOf(error)); return FAILED_DETAIL; }
         const [marks, note] = await Promise.all([
           (async (): Promise<MarkSlice> => {
             try { const next = new Map<Reading["kind"], readonly ProgressVerse[]>(); for (const reading of value.readings) next.set(reading.kind, await readMarks(readProgress, value, reading.kind, controller.signal)); return { status: "ready", value: next }; }

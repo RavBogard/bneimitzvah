@@ -42,19 +42,19 @@ export function HonorsNote() {
  * It says nothing until a form has a saved section, or if the read fails; the row's own wording for "nothing saved yet" is an action, not a status.
  */
 export function HonorsCardLine({ studentId }: { studentId: string }) {
-  const { verifyServiceSession } = useWorkspace(), [saved, setSaved] = useState<{ id: string; sections: number } | null>(null);
+  const [saved, setSaved] = useState<{ id: string; sections: number } | null>(null);
   useEffect(() => {
     const request = new AbortController();
     let api: ReturnType<typeof createHonorsClient>;
-    try { api = createHonorsClient({ studentId, mode: "parent", verify: verifyServiceSession, denied: () => undefined }); } catch { return; }
+    try { api = createHonorsClient({ studentId, mode: "parent", denied: () => undefined }); } catch { return; }
     api.read(request.signal).then(value => { if (!request.signal.aborted) setSaved(value.saved ? { id: studentId, sections: savedSections(value.saved.form) } : null); }, () => undefined);
     return () => request.abort();
-  }, [studentId, verifyServiceSession]);
+  }, [studentId]);
   return saved?.id === studentId && saved.sections > 0 ? <span className="student-card-status" data-testid="child-honors-line">{honorsRowLine(saved.sections)}</span> : null;
 }
 /** focusOnShow: the parent's Honors tab brings this heading into focus when the row appears (1.9 N10.1). */
 export function HonorsEntry({ studentId, name, mode = "parent", focusOnShow = false }: { studentId: string; name: string; mode?: "parent" | "student"; focusOnShow?: boolean }) {
-  const [open, setOpen] = useState(false), { busy, context, verifyServiceSession } = useWorkspace(), origin = useRef<HTMLButtonElement>(null), heading = useRef<HTMLHeadingElement>(null);
+  const [open, setOpen] = useState(false), { busy, context } = useWorkspace(), origin = useRef<HTMLButtonElement>(null), heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { if (focusOnShow) { heading.current?.focus({ preventScroll: true }); heading.current?.scrollIntoView({ block: "start" }); } }, [focusOnShow]);
   // 1.9 N13 (TP-15): once a form is saved, the row says how far it has got ("Family honors · 6 of 7 sections saved · Edit").
   // The saved form is read before the form opens, and again each time it closes; until then (or if the read fails) the row
@@ -64,10 +64,10 @@ export function HonorsEntry({ studentId, name, mode = "parent", focusOnShow = fa
     if (open || context) return;
     const request = new AbortController();
     let api: ReturnType<typeof createHonorsClient>;
-    try { api = createHonorsClient({ studentId, mode, verify: verifyServiceSession, denied: () => undefined }); } catch { return; }
+    try { api = createHonorsClient({ studentId, mode, denied: () => undefined }); } catch { return; }
     api.read(request.signal).then(value => { if (!request.signal.aborted) setSaved(value.saved ? { key, sections: savedSections(value.saved.form) } : null); }, () => undefined);
     return () => request.abort();
-  }, [open, context, studentId, mode, key, verifyServiceSession, readTurn]);
+  }, [open, context, studentId, mode, key, readTurn]);
   const progress = saved?.key === key && saved.sections > 0 ? saved.sections : null;
   return <><section className={styles.entry} aria-label="Family honors" data-honors-sections={progress ?? undefined}>
     {progress === null ? <><div><h2 id="family-honors" ref={heading} tabIndex={-1}>Family honors</h2><p>Choose the people who will take part in the ceremony.</p></div><button ref={origin} type="button" className="button-secondary" disabled={busy || !!context} onClick={() => setOpen(true)}>Open the honors form</button></>
@@ -75,7 +75,7 @@ export function HonorsEntry({ studentId, name, mode = "parent", focusOnShow = fa
     {open && <HonorsSheet studentId={studentId} name={name} mode={mode} onClose={() => { setOpen(false); setReadTurn(value => value + 1); origin.current?.focus(); }} />}</>;
 }
 export function HonorsSheet({ studentId, name, mode, onClose }: { studentId: string; name: string; mode: "parent" | "admin" | "student"; onClose(): void }) {
-  const { summary, context, verifyServiceSession, serviceAuthorityFailed, registerDeparture, registerWork, registerReload, registerQuiet } = useWorkspace();
+  const { summary, context, serviceAuthorityFailed, registerDeparture, registerWork, registerReload } = useWorkspace();
   const congregation = useCongregation(true), congregationRef = useRef(congregation); congregationRef.current = congregation;
   const dialog = useRef<HTMLDialogElement>(null), heading = useRef<HTMLHeadingElement>(null), lastFocus = useRef<HTMLElement | null>(null), settled = useRef(false), id = useId();
   const [state, setState] = useState<HonorsState | null>(null), [departure, setDeparture] = useState(false), [discardReview, setDiscardReview] = useState(false), [printing, setPrinting] = useState(false), [printError, setPrintError] = useState("");
@@ -92,9 +92,9 @@ export function HonorsSheet({ studentId, name, mode, onClose }: { studentId: str
   useLayoutEffect(() => {
     let active = true; setState(null); setLinkState(null); setDeparture(false); setPrintError("");
     if (context) { onClose(); return; }
-    const api = createHonorsClient({ studentId, mode, verify: verifyServiceSession, denied: status => { if (active && lifetime.current?.active) serviceAuthorityFailed(status); } });
+    const api = createHonorsClient({ studentId, mode, denied: status => { if (active && lifetime.current?.active) serviceAuthorityFailed(status); } });
     const owner = createHonorsOwner(api, value => { if (active) setState(value); });
-    const linkApi = createHonoreeClient({ studentId, mode, origin: window.location.origin, verify: verifyServiceSession, denied: status => { if (active && lifetime.current?.active) serviceAuthorityFailed(status); } });
+    const linkApi = createHonoreeClient({ studentId, mode, origin: window.location.origin, denied: status => { if (active && lifetime.current?.active) serviceAuthorityFailed(status); } });
     const clearSecretDOM = () => { dialog.current?.querySelectorAll<HTMLInputElement>("input[data-honoree-secret]").forEach(field => { field.value = ""; field.defaultValue = ""; field.removeAttribute("value"); }); };
     const links = createHonoreeOwner(linkApi, { honors: () => owner.state, blocked: () => printingRef.current || !!pendingDeparture.current, changed: value => { if (active) { if (!value.secret) clearSecretDOM(); setLinkState(value); } } });
     const life = { owner, links, api, active: true }; lifetime.current = life; setState(owner.state); setLinkState(links.state);
@@ -104,11 +104,11 @@ export function HonorsSheet({ studentId, name, mode, onClose }: { studentId: str
     const restored = (event: PageTransitionEvent) => { if (event.persisted) pauseLinks(); };
     document.addEventListener("visibilitychange", concealed); window.addEventListener("pagehide", pauseLinks); window.addEventListener("pageshow", restored);
     const lifecycle = { pause() { owner.pause(); pauseLinks(); cleanupPrint(); }, clear() { clearSecretDOM(); cleanupPrint(); links.clear(); owner.clear(); finishDeparture(false); }, async settle() { await Promise.all([owner.settle(), links.settle()]); }, hasUnsaved() { return owner.hasUnsaved() || links.uncertain(); }, reveal() { links.resume(); } };
-    const removeWork = registerWork(lifecycle), removeDeparture = registerDeparture(guard), removeReload = registerReload(async () => { if (life.active) { await owner.load(); links.resume(); } }), removeQuiet = registerQuiet(async signal => { const same = await owner.quiet(signal); if (same && !signal.aborted) links.resume(); return same; });
+    const removeWork = registerWork(lifecycle), removeDeparture = registerDeparture(guard), removeReload = registerReload(async () => { if (life.active) { await owner.load(); links.resume(); } });
     void owner.load();
-    return () => { active = false; life.active = false; clearSecretDOM(); cleanupPrint(); links.clear(); owner.clear(); finishDeparture(false); removeWork(); removeDeparture(); removeReload(); removeQuiet(); document.removeEventListener("visibilitychange", concealed); window.removeEventListener("pagehide", pauseLinks); window.removeEventListener("pageshow", restored); if (lifetime.current === life) lifetime.current = null; };
+    return () => { active = false; life.active = false; clearSecretDOM(); cleanupPrint(); links.clear(); owner.clear(); finishDeparture(false); removeWork(); removeDeparture(); removeReload(); document.removeEventListener("visibilitychange", concealed); window.removeEventListener("pagehide", pauseLinks); window.removeEventListener("pageshow", restored); if (lifetime.current === life) lifetime.current = null; };
     // Session binding and selected student define this private owner. Practice never supplies authority.
-  }, [studentId, mode, summary.sessionBinding, context?.id, verifyServiceSession, serviceAuthorityFailed, registerDeparture, registerWork, registerReload, registerQuiet, guard, finishDeparture]);
+  }, [studentId, mode, summary.sessionBinding, context?.id, serviceAuthorityFailed, registerDeparture, registerWork, registerReload, guard, finishDeparture]);
   const shown = useWorkspaceModal(dialog, true), shownRef = useRef(shown); shownRef.current = shown;
   useLayoutEffect(() => { settled.current = false; if (!shown) return; const field = lastFocus.current; (field?.isConnected && dialog.current?.contains(field) ? field : heading.current)?.focus(); settled.current = true; }, [shown]);
   useEffect(() => { if (departure) departureHeading.current?.focus(); }, [departure]);

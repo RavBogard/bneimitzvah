@@ -71,7 +71,7 @@ export function ProposedTorahText({ baseline, reloadMetadata, authorityFailed, a
   baseline: Assigned | null; reloadMetadata(): Promise<Assigned>; authorityFailed(status: number): void; active?: boolean;
   audio?: ReturnType<typeof createReadingAudioCoordinator>; hearHandle?: MutableRefObject<((index: number) => void) | null>; onHearReady?(value: boolean): void; onReadingReady?(value: boolean): void;
 }) {
-  const { readExploration, readExplorationPage, createShortExplorationOwner, summary, epoch, concealed, registerWork } = useWorkspace(), group = useId();
+  const { readExploration, readExplorationPage, createShortExplorationOwner, summary, epoch, registerWork } = useWorkspace(), group = useId();
   const listeningEnabled = baseline?.referenceListeningEnabled === true;
   const environment = useRef({ readExploration, readExplorationPage, authorityFailed });
   environment.current = { readExploration, readExplorationPage, authorityFailed };
@@ -85,31 +85,31 @@ export function ProposedTorahText({ baseline, reloadMetadata, authorityFailed, a
   const key = baseline ? explorationBinding(baseline) : "", scope = JSON.stringify([summary.sessionBinding, epoch, key]);
   const permitted = baseline !== null && baseline.mode !== "parent" && !baseline.readings.some(row => row.kind === "torah");
   useLayoutEffect(() => {
-    if (concealed || !permitted) { owner.clear(); return; }
+    if (!permitted) { owner.clear(); return; }
     const changed = owner.configure(baseline, scope);
     if (active && (changed || !owner.snapshot().page && !owner.snapshot().result && !owner.snapshot().pending && !owner.snapshot().error)) void owner.load();
     if (!active) owner.pause();
-  }, [owner, scope, concealed, permitted, active, baseline]);
+  }, [owner, scope, permitted, active, baseline]);
   useLayoutEffect(() => { const unregister = registerWork({ clear: owner.clear, pause: owner.pause, settle: async () => {}, hasUnsaved: () => false, reveal: () => {} });
     return () => { unregister(); owner.clear(); };
   }, [registerWork, owner]);
   useEffect(() => {
     const resume = () => { const current = owner.snapshot();
-      if (document.visibilityState === "visible" && permitted && !concealed && active && !current.page && !current.result && !current.error && !current.pending) void owner.load();
+      if (document.visibilityState === "visible" && permitted && active && !current.page && !current.result && !current.error && !current.pending) void owner.load();
     };
     document.addEventListener("visibilitychange", resume); return () => document.removeEventListener("visibilitychange", resume);
-  }, [owner, permitted, concealed, active]);
+  }, [owner, permitted, active]);
   const prepared = state.result?.status === "prepared" ? state.result : undefined, currentPage = state.page;
   const shortMetadata = useRef<ShortExplorationOwner | null>(null), playback = useRef<ReadingPlayerHandle | null>(null);
   const registerPlayback = useCallback((value: ReadingPlayerHandle | null) => { playback.current = value; }, []);
   const [activeWord, setActiveWord] = useState<{ verse: number; index: number } | null>(null), [expiredClaim, setExpiredClaim] = useState<string | null>(null);
-  const view = useRef({ baseline, prepared, page: currentPage, scope, permitted, pending: state.pending, error: state.error, active, concealed });
-  view.current = { baseline, prepared, page: currentPage, scope, permitted, pending: state.pending, error: state.error, active, concealed };
+  const view = useRef({ baseline, prepared, page: currentPage, scope, permitted, pending: state.pending, error: state.error, active });
+  view.current = { baseline, prepared, page: currentPage, scope, permitted, pending: state.pending, error: state.error, active };
   useLayoutEffect(() => {
     if (!permitted || !baseline || !prepared || !currentPage || !listeningEnabled) return;
     const value = baseline, claim = prepared, page = currentPage, capturedScope = scope;
     const live = () => { const now = view.current; return now.baseline === value && now.prepared === claim && now.page === page && now.scope === capturedScope
-      && now.permitted && !now.pending && !now.error && now.active && !now.concealed && document.visibilityState === "visible" && claim.expiresAt > Date.now(); };
+      && now.permitted && !now.pending && !now.error && now.active && document.visibilityState === "visible" && claim.expiresAt > Date.now(); };
     let owned: ShortExplorationOwner;
     try { owned = createShortExplorationOwner(value, claim, page, live); } catch { return; }
     shortMetadata.current = owned;
@@ -117,8 +117,8 @@ export function ProposedTorahText({ baseline, reloadMetadata, authorityFailed, a
     return () => { owned.dispose(); if (shortMetadata.current === owned) shortMetadata.current = null; };
   }, [baseline, prepared, currentPage, scope, permitted, createShortExplorationOwner, listeningEnabled]);
   useLayoutEffect(() => {
-    if (concealed || !active || state.pending || state.error || !permitted) { playback.current?.suspend(); shortMetadata.current?.suspend(); }
-  }, [concealed, active, state.pending, state.error, permitted]);
+    if (!active || state.pending || state.error || !permitted) { playback.current?.suspend(); shortMetadata.current?.suspend(); }
+  }, [active, state.pending, state.error, permitted]);
   const deadline = prepared ? readingAudioDeadline(prepared.expiresAt, baseline?.context?.expiresAt) : NaN;
   useLayoutEffect(() => {
     if (!prepared) return;
@@ -132,7 +132,7 @@ export function ProposedTorahText({ baseline, reloadMetadata, authorityFailed, a
     return () => { leave(); document.removeEventListener("visibilitychange", hidden); window.removeEventListener("pagehide", leave); };
   }, []);
   const expired = Boolean(prepared && (expiredClaim === prepared.binding || !Number.isFinite(deadline) || deadline <= Date.now()));
-  const textReady = Boolean(permitted && prepared && currentPage && !concealed && !state.pending && !state.error && !expired);
+  const textReady = Boolean(permitted && prepared && currentPage && !state.pending && !state.error && !expired);
   const available = Boolean(audio && textReady && listeningEnabled);
   useLayoutEffect(() => { onHearReady?.(available); return () => onHearReady?.(false); }, [available, onHearReady]);
   useLayoutEffect(() => { onReadingReady?.(textReady); return () => onReadingReady?.(false); }, [textReady, onReadingReady]);
@@ -141,7 +141,7 @@ export function ProposedTorahText({ baseline, reloadMetadata, authorityFailed, a
     const hear = (index: number) => { if (available) playback.current?.select(index, "verse"); };
     hearHandle.current = hear; return () => { if (hearHandle.current === hear) hearHandle.current = null; };
   }, [hearHandle, available, currentPage]);
-  if (!permitted || concealed) return null;
+  if (!permitted) return null;
   const reloadPage = (offset?: number) => { playback.current?.suspend(); shortMetadata.current?.suspend(); void owner.load(offset); };
   const hearing = audio && prepared && currentPage && listeningEnabled ? {
     activeWord, onWord: (index: number) => playback.current?.select(index, "verse"), onVerse: (index: number) => playback.current?.select(index, "verse"),

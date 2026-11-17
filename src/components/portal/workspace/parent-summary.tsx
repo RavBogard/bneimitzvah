@@ -107,10 +107,10 @@ function WeekDots({ serverDay, dates, name }: { serverDay: string; dates: readon
  * Everything on it is read through reads the parent already has (the child's dates, the practice calendar, the lesson notes, the marks).
  * notice: the congregation's consent notice from its settings (what is stored, who hears it, when it is deleted); nothing when unset.
  */
-export function ParentStudySummary({ store, baseline, scope, concealed, notice = null, action, readProgress }: { store: ParentSummaryStore; baseline: Assigned | null; scope: string; concealed: boolean; notice?: string | null; action?: ReactNode;
+export function ParentStudySummary({ store, baseline, scope, notice = null, action, readProgress }: { store: ParentSummaryStore; baseline: Assigned | null; scope: string; notice?: string | null; action?: ReactNode;
   /** The parent's own progress read (the provider's), for what the child has got; without it the line is left out. */ readProgress?: ProgressRead }) {
   const state = useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);
-  const live = Boolean(baseline && baseline.mode === "parent" && !concealed && store.matches(baseline, scope)), got = useGot(baseline, live, readProgress);
+  const live = Boolean(baseline && baseline.mode === "parent" && store.matches(baseline, scope)), got = useGot(baseline, live, readProgress);
   if (!baseline || !live) return null;
   const lesson = state.lesson, dates = state.dates, next = nextDateLine(baseline.student, deviceDate()), first = baseline.student.firstName;
   return <section className="parent-study-summary" aria-label="Preparation summary" data-testid="parent-this-week">

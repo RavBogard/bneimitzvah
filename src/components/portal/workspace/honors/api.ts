@@ -65,7 +65,7 @@ async function commit(value: unknown, studentId: string, intent: HonorsIntent, r
     || saved.reviewedContext.snapshot.tenantId !== currentContext.snapshot.tenantId || v.needsReview !== (saved.reviewedContext.hash !== currentContext.hash)) return fail();
   return Object.freeze({ ok: true, outcome: "committed", replayed: bool(v.replayed), committedVersion, currentLatestVersion, committed: saved, currentContext, needsReview: bool(v.needsReview) });
 }
-export function createHonorsClient(input: { studentId: string; mode: "parent" | "admin" | "student"; verify(signal: AbortSignal): Promise<void>; denied(status: number): void }) {
+export function createHonorsClient(input: { studentId: string; mode: "parent" | "admin" | "student"; verify?(signal: AbortSignal): Promise<void>; denied(status: number): void }) {
   const studentId = uuid(input.studentId), mode = input.mode;
   if (mode !== "parent" && mode !== "admin" && mode !== "student") throw new HonorsClientError(403);
   const endpoint = `/api/students/${studentId}/honors`;
@@ -79,7 +79,7 @@ export function createHonorsClient(input: { studentId: string; mode: "parent" | 
       task.then(value => { controller.signal.removeEventListener("abort", stopped); resolve(value); }, error => { controller.signal.removeEventListener("abort", stopped); reject(error); });
     });
     try {
-      live(); await wait(input.verify(controller.signal)); live();
+      live(); if (input.verify) await wait(input.verify(controller.signal)); live();
       const response = await wait(fetch(path, { method: body ? "POST" : "GET", credentials: "same-origin", redirect: "error", cache: "no-store", referrerPolicy: "no-referrer", signal: controller.signal,
         headers: body ? { "Content-Type": "application/json", Accept: "application/json" } : { Accept: "application/json" }, ...(body ? { body: JSON.stringify(body) } : {}) }));
       live(); if ([401, 403, 404].includes(response.status)) throw new HonorsClientError(response.status);
@@ -96,7 +96,7 @@ export function createHonorsClient(input: { studentId: string; mode: "parent" | 
       const value: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(storage.subarray(0, length))); live();
       let fixed: HonorsClientError | undefined;
       if (response.status !== 200) { const v = own(value, ["ok", "code"]), valid = v.ok === false && (response.status === 409 && ["conflict", "stale-context"].includes(v.code as string) || response.status === 400 && v.code === "invalid-request"); if (!valid) return fail(); fixed = new HonorsClientError(response.status, v.code as string, true); }
-      const result = fixed ? undefined : await wait(parse(value)); live(); await wait(input.verify(controller.signal)); live(); if (fixed) throw fixed; return result as T;
+      const result = fixed ? undefined : await wait(parse(value)); live(); if (input.verify) await wait(input.verify(controller.signal)); live(); if (fixed) throw fixed; return result as T;
     } catch (error) { if (error instanceof PortalRequestError && [401, 403, 404].includes(error.status)) input.denied(error.status); if (error instanceof PortalRequestError) throw error; return fail(); }
     finally { clearTimeout(total); clearTimeout(idle); signal.removeEventListener("abort", abort); controller.abort(); try { void reader?.cancel().catch(() => {}); } catch {} try { reader?.releaseLock(); } catch {} }
   }

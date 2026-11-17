@@ -17,7 +17,7 @@ import { useCongregation } from "./settings/links";
 import type { ServiceSettings } from "./settings/api";
 
 export function ReadingEditor({ mode, baseline, reload, onBusy, active: open }: { mode: StaffMode; baseline: Assigned | null; reload(): Promise<Assigned>; onBusy?(busy: boolean): void; active: boolean }) {
-  const { guardDeparture, summary, epoch, concealed } = useWorkspace(), active = open && !concealed;
+  const { guardDeparture, summary, epoch } = useWorkspace(), active = open;
   const congregation = useCongregation(active);
   const [kind, setKind] = useState<ReadingKind>("torah"), [drafts,setDrafts]=useState<Record<ReadingKind,ReadingDraft>>(()=>({torah:emptyReadingDraft(),haftarah:emptyReadingDraft()}));
   const draft=drafts[kind],{method,custom}=draft,currentAssignment=baseline?.readings.find(row=>row.kind===kind);
@@ -25,7 +25,7 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open }: 
   const [review, setReview] = useState<{ proposal: PreparedReading; baseline: string; expiresAt: number } | null>(null);
   const [pending, setPending] = useState<"prepare" | "confirm" | "reload" | null>(null), [message, setMessage] = useState(""), [blocked, setBlocked] = useState(false);
   const gate = useRef(false), generation = useRef(0), alive = useRef(true), heading = useRef<HTMLHeadingElement>(null);
-  const key = baseline && !concealed ? JSON.stringify([summary.sessionBinding, epoch, readingBaseline(baseline, kind)]) : null, keyRef = useRef(key); keyRef.current = key;
+  const key = baseline ? JSON.stringify([summary.sessionBinding, epoch, readingBaseline(baseline, kind)]) : null, keyRef = useRef(key); keyRef.current = key;
   const lastKey = useRef<string | null>(null);
   const seeded = useRef(new Set<ReadingKind>());
   const [calendar, setCalendar] = useState<{ key: string; proposal: NeedsSelection | null; loading: boolean; failed: boolean }>({ key: "", proposal: null, loading: false, failed: false });

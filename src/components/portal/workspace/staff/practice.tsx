@@ -36,9 +36,9 @@ export function useTutorPracticeRead(mode: string, studentId: string, from: stri
   return open && state?.id === studentId ? state.value : null;
 }
 /** Provides the read to the lines below it. The read's state lives here, so its answer re-renders only the context's users. */
-export function TutorPracticeScope({ mode, studentId, concealed, children }: { mode: string; studentId: string; concealed: boolean; children: ReactNode }) {
+export function TutorPracticeScope({ mode, studentId, children }: { mode: string; studentId: string; children: ReactNode }) {
   const value = useTutorPracticeRead(mode, studentId);
-  return <TutorPracticeContext.Provider value={concealed ? null : value}>{children}</TutorPracticeContext.Provider>;
+  return <TutorPracticeContext.Provider value={value}>{children}</TutorPracticeContext.Provider>;
 }
 
 /** The assigned tutor's read for the lesson card's "Since your last lesson" (null for anyone else, while the gate is closed, or on failure). */

@@ -9,7 +9,6 @@ import { workspaceApi, type Assigned, type Reading, type Student } from "../api"
 import { statusOf, useWorkspace } from "../provider";
 import { ButtonLink, Chip } from "../../../ui";
 import { ceremonyCountdown } from "../reading";
-import { quietReadingAuthority } from "../quiet-refresh";
 import { reconcileSelectedStudent, sortStudentsByCeremony } from "../student-label";
 import { PracticeCalendar } from "../practice-calendar/store";
 import { PracticeMonths } from "../practice-calendar/view";
@@ -59,13 +58,13 @@ export type TodaySlices = Readonly<{
 }>;
 
 export function useStudentToday(enabled = true): TodaySlices {
-  const { epoch, readVerified, readProgress, readPracticeCalendar, readLessons, registerReload, registerWork, registerQuiet, serviceAuthorityFailed } = useWorkspace();
+  const { epoch, read, readProgress, readPracticeCalendar, readLessons, registerReload, registerWork, serviceAuthorityFailed } = useWorkspace();
   const [rows, setRows] = useState<Student[]>([]), [assigned, setAssigned] = useState<Assigned | null>(null);
   const [phase, setPhase] = useState<"loading" | "error" | "ready">("loading"), [retry, setRetry] = useState(0);
   const [marks, setMarks] = useState<MarkSlice>({ status: "loading" });
   const [lesson, setLesson] = useState<Slice<LessonLogEntry | null>>({ status: "loading" });
   const selected = useRef<string | null>(null), abort = useRef<AbortController | null>(null), sequence = useRef(0);
-  const env = useRef({ readVerified, readProgress, readPracticeCalendar, readLessons, serviceAuthorityFailed, reload: () => undefined as unknown });
+  const env = useRef({ read, readProgress, readPracticeCalendar, readLessons, serviceAuthorityFailed, reload: () => undefined as unknown });
   const calendarRef = useRef<PracticeCalendar | null>(null);
   if (!calendarRef.current) calendarRef.current = new PracticeCalendar((...args) => env.current.readPracticeCalendar(...args), () => { void env.current.reload(); });
   const calendar = calendarRef.current, dates = useSyncExternalStore(calendar.subscribe, calendar.snapshot, calendar.snapshot);
@@ -80,7 +79,7 @@ export function useStudentToday(enabled = true): TodaySlices {
       const id = students.some(row => row.id === selected.current) ? selected.current : sortStudentsByCeremony(students)[0]?.id ?? null;
       selected.current = id; setRows(students);
       if (!id) { setPhase("ready"); return; }
-      const value = await env.current.readVerified("student", id, request.signal); if (stale()) return;
+      const value = await env.current.read("student", id, request.signal); if (stale()) return;
       setRows(previous => reconcileSelectedStudent(previous, id, value.student));
       calendar.configure(value); setAssigned(value); setPhase("ready");
       const reads = [
@@ -106,20 +105,11 @@ export function useStudentToday(enabled = true): TodaySlices {
       await Promise.all(reads);
     } catch (error) { if (!stale()) { setPhase("error"); throw error; } }
   }, [calendar, enabled]);
-  env.current = { readVerified, readProgress, readPracticeCalendar, readLessons, serviceAuthorityFailed, reload: () => load().catch(() => undefined) };
+  env.current = { read, readProgress, readPracticeCalendar, readLessons, serviceAuthorityFailed, reload: () => load().catch(() => undefined) };
   useEffect(() => enabled ? registerReload(async () => { await load(); }) : undefined, [registerReload, load, enabled]);
   useEffect(() => { void load().catch(() => undefined); return () => { sequence.current++; abort.current?.abort(); }; }, [load, epoch, retry]);
   // Like every private view: nothing is kept while access is being checked, and what is shown is checked again in the background.
   useLayoutEffect(() => enabled ? registerWork({ pause: () => { abort.current?.abort(); calendar.clear(); }, clear: () => { abort.current?.abort(); calendar.configure(null); }, settle: async () => {}, hasUnsaved: () => false, reveal() {} }) : undefined, [registerWork, calendar, enabled]);
-  useLayoutEffect(() => {
-    if (!assigned || !enabled) return;
-    const expected = JSON.stringify(assigned), authority = quietReadingAuthority(assigned);
-    return registerQuiet(async signal => {
-      const fresh = await env.current.readVerified("student", assigned.student.id, signal);
-      if (!signal.aborted && quietReadingAuthority(fresh) !== authority) throw new PortalRequestError(404);
-      return !signal.aborted && JSON.stringify(fresh) === expected;
-    });
-  }, [assigned, registerQuiet, enabled]);
   return { phase: enabled ? phase : "off", rows, assigned, marks, lesson, dates, reload: () => setRetry(value => value + 1) };
 }
 
