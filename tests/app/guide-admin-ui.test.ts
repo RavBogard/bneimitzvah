@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
-import { arrange, GuidesView, type Actions } from "../../src/components/portal/workspace/guide-admin/workspace";
+import { arrange, GuidesView, holdDescription, releaseDescription, type Actions } from "../../src/components/portal/workspace/guide-admin/workspace";
 import { parseOverview, type Overview } from "../../src/components/portal/workspace/guide-admin/api";
 
 // The admin's Guides page (gap A6). Invented rows only. Ordering and actions are asserted by test ids and data attributes;
@@ -72,4 +72,9 @@ test("the page's wording, pinned once", () => {
   expect(markup).toContain("Open the study page");
   expect(render(parseOverview({ ...answer, guides: [], discussions: [], summaries: [] }))).toContain("No study content yet");
   expect(markup).not.toMatch(/[A-Za-z.]!|practise/);
+  // The release and hold confirmations say what readers will then see: version, writer, review state and label, or no guide.
+  const [vayera, pekudei, noach] = parseOverview(answer).guides;
+  expect(releaseDescription(pekudei, "Rabbi Synthetic", "CRC")).toBe('Readers then see version 2, written by Claude, not reviewed. Its label reads "Written by Claude for CRC · not yet reviewed by Rabbi Synthetic." It takes the place of version 1.');
+  expect(holdDescription(noach, "Rabbi Synthetic", "CRC")).toBe('Readers then see version 1, written by Claude, not reviewed. Its label reads "Written by Claude for CRC · not yet reviewed by Rabbi Synthetic." Version 3 stays held until it is released again.');
+  expect(holdDescription(vayera, "Rabbi Synthetic", "CRC")).toBe("Readers then see no guide for this reading until version 1 is released again.");
 });

@@ -58,6 +58,8 @@ test("release a held draft and hold it again from the web: readers see the relea
   const f = await fixture();
   await f.holdThroughClaude(1);
   expect(await f.reader()).toMatchObject({ version: 1, overview: expect.stringContaining("FIRST-RELEASE") });
+  // A draft held through Claude is not one the rabbi held on the web.
+  expect(await f.guides.getBaseGuide(f.mcp, { kind: "torah", readingKey: "pekudei" })).toMatchObject({ held: { version: 2 }, heldFromWeb: false });
   const publishes = await f.audits("study-guide.publish"), sets = await f.audits("study-guide.set");
 
   const released = await f.post(RELEASE, at(2));
@@ -83,10 +85,16 @@ test("release a held draft and hold it again from the web: readers see the relea
   expect(all[3].body).toEqual(all[2].body);
   expect(await f.audits("study-guide.set")).toBe(sets + 1);
   // MCP parity: get_guide reads it as held, with version 1 in front of readers; publish_guide releases it again.
-  expect(await f.guides.getBaseGuide(f.mcp, { kind: "torah", readingKey: "pekudei" })).toMatchObject({ currentVersion: 4, visible: { version: 1 }, held: { version: 4, hold: true } });
+  expect(await f.guides.getBaseGuide(f.mcp, { kind: "torah", readingKey: "pekudei" })).toMatchObject({ currentVersion: 4, visible: { version: 1 }, held: { version: 4, hold: true }, heldFromWeb: true });
+  // list_guide_work and the guide catalog say so too, so Claude does not take it for a draft awaiting publish_guide.
+  const work = (await f.guides.guideWork(f.mcp)).work.find(w => w.readingKey === "pekudei");
+  expect(work?.base).toMatchObject({ currentVersion: 4, visibleVersion: 1, heldDraft: true, heldFromWeb: true });
+  const entry = (await f.guides.guideCatalog(f.mcp)).entries.find(e => e.kind === "torah" && e.readingKey === "pekudei");
+  expect(entry?.base).toMatchObject({ status: "held-draft", version: 4, visibleVersion: 1, heldFromWeb: true });
   expect((await f.send("/api/admin/guides", { who: "admin" })).body.guides[0]).toMatchObject({ state: "held", current: { version: 4 }, visible: { version: 1 } });
   expect(await f.guides.publishBaseGuide(f.mcp, { ...at(4), mutationId: randomUUID() })).toMatchObject({ ok: true, version: 5 });
   expect(await f.reader()).toMatchObject({ version: 5, overview: expect.stringContaining("HELD-DRAFT") });
+  expect(await f.guides.getBaseGuide(f.mcp, { kind: "torah", readingKey: "pekudei" })).toMatchObject({ held: null, heldFromWeb: false });
 });
 
 test("holding the only release leaves readers with no guide; releasing it brings it back", async () => {

@@ -37,8 +37,8 @@ test("0058 adds only the copy column, lets the web channel copy a version exactl
       r.channel ?? "mcp", randomUUID(), DIGEST, r.credit ?? null, r.importKey ?? null];
     const values = "'crc','torah',$1,$2,$3,$4,$5,$6,$7,$8,'release-admin',$9,$10,'admin','admin',$11,$12,$13,$14,$15";
     // The insert the deployed code makes: no copy column at all.
-    const old = (r: Row) => client.query(`insert into study_guide(${columns}) values(${values})`, params(r));
-    const copy = (r: Row & { copyOf: number | null }) => client.query(`insert into study_guide(${columns},copy_of_version) values(${values},$16)`, [...params(r), r.copyOf]);
+    const old = (r: Row) => client.query(`insert into public.study_guide(${columns}) values(${values})`, params(r));
+    const copy = (r: Row & { copyOf: number | null }) => client.query(`insert into public.study_guide(${columns},copy_of_version) values(${values},$16)`, [...params(r), r.copyOf]);
 
     // Before 0058: a released guide, a held draft over it, and an import.
     await old({ key: "pekudei", version: 1, reviewed: true });
@@ -77,6 +77,15 @@ test("0058 adds only the copy column, lets the web channel copy a version exactl
       ["a copy of nothing", { key: "toldot", version: 1, channel: "web", hold: true, copyOf: 0 }],
     ];
     for (const [label, row] of refused) await expect(copy(row), label).rejects.toThrow();
+    // A version-one web row naming a copy has no version before it: the check refuses it on its own, with the trigger switched off.
+    await client.query("begin"); await client.query("alter table study_guide disable trigger study_guide_copy");
+    await expect(copy({ key: "toldot", version: 1, channel: "web", hold: true, copyOf: 1 }), "a version one copy").rejects.toThrow();
+    await client.query("rollback");
+    // A temporary table called study_guide cannot stand in for the real one: the trigger reads public.study_guide only.
+    await client.query("create temp table study_guide as select * from public.study_guide where false");
+    await client.query("insert into pg_temp.study_guide (tenant_id,kind,reading_key,version,body,origin,reviewed,hold) values ('crc','torah','pekudei',5,$1,'rabbi',true,false)", [BODY]);
+    await expect(copy({ key: "pekudei", version: 6, channel: "web", hold: true, body: BODY, origin: "rabbi", reviewed: true, copyOf: 5 }), "a shadowed source").rejects.toThrow();
+    await client.query("drop table pg_temp.study_guide");
     expect((await client.query("select count(*)::int as n from study_guide")).rows).toEqual([{ n: 8 }]);
     // The trigger function is the migration owner's, executable by no one else.
     const acl = (await client.query("select proacl::text as acl from pg_proc where proname = 'portal_study_guide_copy'")).rows as { acl: string | null }[];

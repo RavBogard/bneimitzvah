@@ -71,7 +71,7 @@ export const studyGuide = pgTable("study_guide", {
   // only that channel may carry import provenance in) or a copy: the rabbi releasing or holding the version just before it, whose text,
   // origin, review state and provenance the row repeats exactly (study_guide_copy below, and the trigger portal_study_guide_copy).
   check("study_guide_web_channel", sql`${t.channel} <> 'web' or ${t.copyOfVersion} is not null or (${t.version} = 1 and ${t.hold} and not ${t.reviewed} and ${t.importCredit} is not null and ${t.importKey} is not null)`),
-  check("study_guide_copy", sql`${t.copyOfVersion} is null or (${t.channel} = 'web' and ${t.copyOfVersion} = ${t.previousVersion})`),
+  check("study_guide_copy", sql`${t.copyOfVersion} is null or (${t.channel} = 'web' and ${t.previousVersion} is not null and ${t.copyOfVersion} = ${t.previousVersion})`),
   check("study_guide_import_whole", sql`(${t.importCredit} is null) = (${t.importKey} is null)`),
   check("study_guide_import_credit", sql`${t.importCredit} is null or (public.portal_source_plain(${t.importCredit}, 240) and strpos(${t.importCredit}, '@') = 0)`),
   check("study_guide_import_key", sql`${t.importKey} is null or ${t.importKey} ~ '^[a-f0-9]{64}$'`),

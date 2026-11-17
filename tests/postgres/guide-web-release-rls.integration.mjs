@@ -67,6 +67,14 @@ test("real PostgreSQL: a web guide row copies the version before it exactly, und
       assert.equal(trigger.tgenabled, "O");
     });
 
+    await t.test("the copy check alone refuses a version-one copy, with no version before it to name", async () => {
+      await begin(owner);
+      try {
+        await query(owner, "ALTER TABLE study_guide DISABLE TRIGGER study_guide_copy");
+        await rejects(owner, ...row(people.rabbi, "bo", 1, { channel: "web", hold: true, copyOf: 1 }), "23514");
+      } finally { await query(owner, "ROLLBACK"); }
+    });
+
     await t.test("the runtime releases and holds by exact copy only; new text, labels and other congregations are refused", async () => {
       const client = await checkout();
       try {
@@ -90,6 +98,15 @@ test("real PostgreSQL: a web guide row copies the version before it exactly, und
         await query(client, ...row(r, "pekudei", 4, { channel: "web", body: OTHER, hold: true, copyOf: 3 }));
         assert.deepEqual((await query(client, "SELECT version, channel, hold, copy_of_version FROM study_guide WHERE reading_key = 'pekudei' ORDER BY version")).rows.map(x => [x.version, x.channel, x.hold, x.copy_of_version]),
           [[1, "mcp", false, null], [2, "mcp", true, null], [3, "web", false, 2], [4, "web", true, 3]]);
+        // A temporary table called study_guide (the runtime may create temporary tables) cannot stand in for the real one.
+        await query(client, "SAVEPOINT shadow");
+        await query(client, "CREATE TEMP TABLE study_guide AS SELECT * FROM public.study_guide WHERE false");
+        await query(client, `INSERT INTO pg_temp.study_guide (tenant_id,kind,reading_key,version,body,origin,reviewed,hold) VALUES ('crc','torah','pekudei',4,$1,'rabbi',true,true)`, [BODY]);
+        await rejects(client, `INSERT INTO public.study_guide (${columns}) VALUES ($1,'torah',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'admin','admin',$13,$14,$15,$16)`,
+          row(r, "pekudei", 5, { channel: "web", body: BODY, origin: "rabbi", reviewed: true, copyOf: 4 })[1], "23514");
+        await query(client, "ROLLBACK TO SAVEPOINT shadow");
+        // A version-one web row naming a copy is refused.
+        await rejects(client, ...row(r, "bo", 1, { channel: "web", hold: true, copyOf: 1 }), "23514");
         // Rows stay immutable.
         await rejects(client, "UPDATE study_guide SET hold = false WHERE version = 4", [], "42501");
         await rejects(client, "DELETE FROM study_guide", [], "42501");

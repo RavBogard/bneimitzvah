@@ -8,12 +8,13 @@ DROP INDEX "study_guide_import_once";--> statement-breakpoint
 ALTER TABLE "study_guide" ADD COLUMN "copy_of_version" integer;--> statement-breakpoint
 CREATE UNIQUE INDEX "study_guide_import_once" ON "study_guide" USING btree ("tenant_id","kind","reading_key","import_key") WHERE "study_guide"."channel" = 'web' and "study_guide"."copy_of_version" is null;--> statement-breakpoint
 ALTER TABLE "study_guide" ADD CONSTRAINT "study_guide_web_channel" CHECK ("study_guide"."channel" <> 'web' or "study_guide"."copy_of_version" is not null or ("study_guide"."version" = 1 and "study_guide"."hold" and not "study_guide"."reviewed" and "study_guide"."import_credit" is not null and "study_guide"."import_key" is not null));--> statement-breakpoint
-ALTER TABLE "study_guide" ADD CONSTRAINT "study_guide_copy" CHECK ("study_guide"."copy_of_version" is null or ("study_guide"."channel" = 'web' and "study_guide"."copy_of_version" = "study_guide"."previous_version"));--> statement-breakpoint
--- A web copy repeats the version it names, exactly. jsonb compares by value, so the stored text is the same text.
-CREATE FUNCTION portal_study_guide_copy() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,public AS $$
+ALTER TABLE "study_guide" ADD CONSTRAINT "study_guide_copy" CHECK ("study_guide"."copy_of_version" is null or ("study_guide"."channel" = 'web' and "study_guide"."previous_version" is not null and "study_guide"."copy_of_version" = "study_guide"."previous_version"));--> statement-breakpoint
+-- A web copy repeats the version it names, exactly. jsonb compares by value, so the stored text is the same text. The table is named
+-- with its schema and pg_temp is searched last, so a caller's temporary table called study_guide can never stand in for the real one.
+CREATE FUNCTION portal_study_guide_copy() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,public,pg_temp AS $$
 DECLARE source record;
 BEGIN
-  SELECT g.body, g.origin, g.reviewed, g.hold, g.import_credit, g.import_key INTO source FROM study_guide g
+  SELECT g.body, g.origin, g.reviewed, g.hold, g.import_credit, g.import_key INTO source FROM public.study_guide g
     WHERE g.tenant_id = NEW.tenant_id AND g.kind = NEW.kind AND g.reading_key = NEW.reading_key AND g.version = NEW.copy_of_version;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'A release or hold names a version of the same guide' USING ERRCODE = '23514';

@@ -4,9 +4,9 @@ Daniel decided on 2026-11-17 that he wants to release and hold study guides on t
 
 ## What it does
 
-Migration `0058_guide_web_release` adds one nullable column to `study_guide`, `copy_of_version`, so that a row written from the web Guides page can record the rabbi releasing a held version or holding a released one, as an exact copy of the version just before it. A new trigger (`study_guide_copy`, function `portal_study_guide_copy`) refuses any such web row whose text, origin, review state or import credit differs from that version, or that neither releases nor holds it; the web still cannot write guide text, and an import works as before.
+Migration `0058_guide_web_release` adds one nullable column to `study_guide`, `copy_of_version`, so that a row written from the web Guides page can record the rabbi releasing a held version or holding a released one, as an exact copy of the version just before it. A new trigger (`study_guide_copy`, function `portal_study_guide_copy`, which names `public.study_guide` and searches `pg_temp` last, so a temporary table cannot stand in for it) refuses any such web row whose text, origin, review state or import credit differs from that version, or that neither releases nor holds it; the web still cannot write guide text, and an import works as before.
 
-The statements, in one transaction: drop the check `study_guide_web_import`; drop and re-create the index `study_guide_import_once` so it covers imports only (`... and copy_of_version is null`); add the column; add the checks `study_guide_web_channel` (a web row is an import, as before, or a copy) and `study_guide_copy` (a copy is web only and names the version just before it); create the trigger function, the trigger, and revoke the function from PUBLIC. No grant changes: `portal_runtime` already has SELECT and INSERT on the whole table. RLS stays forced. No existing row changes.
+The statements, in one transaction: drop the check `study_guide_web_import`; drop and re-create the index `study_guide_import_once` so it covers imports only (`... and copy_of_version is null`); add the column; add the checks `study_guide_web_channel` (a web row is an import, as before, or a copy) and `study_guide_copy` (a copy is web only and names the version just before it, so never on a version one); create the trigger function, the trigger, and revoke the function from PUBLIC. No grant changes: `portal_runtime` already has SELECT and INSERT on the whole table. RLS stays forced. No existing row changes.
 
 ## Why it is safe to apply before the deploy
 
@@ -15,6 +15,7 @@ The statements, in one transaction: drop the check `study_guide_web_import`; dro
 - The import index keeps refusing a second import of the same content: imports are still web rows with the column null.
 - Every existing row already satisfies the new checks (the old check was stricter), so adding them cannot fail on production data.
 - Reads in the running code ignore the column. Until the new code deploys, nothing writes a copy row, so readers see exactly what they see now.
+- The previous code does not know that a web hold takes a version away from readers. So between the apply and the end of the deploy, and after any code-only rollback, a guide held from the web shows to readers again under the previous code. Nothing can be held from the web before the deploy, so this matters only if a deploy overlaps a hold or the code is rolled back.
 - The table is small; the index rebuild and constraint checks take moments inside one transaction. If any statement fails, nothing is applied.
 
 ## Check, apply, verify
@@ -55,7 +56,7 @@ SELECT count(*) FROM drizzle.__drizzle_migrations;
 -- expect 58
 
 SELECT hash, created_at FROM drizzle.__drizzle_migrations ORDER BY created_at DESC LIMIT 1;
--- expect hash 5e4650ea6bc0772e1a6a54dc83b219df55310512e8d26e0ba6f357861c1d8e8b
+-- expect hash 87ac78af341454ac625e4df4197f847827c5589ba017d317504fe379a8602256
 --        created_at 1794892911813   (0058_guide_web_release)
 
 SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname = 'study_guide';
@@ -99,7 +100,7 @@ DROP INDEX study_guide_import_once;
 ALTER TABLE study_guide DROP COLUMN copy_of_version;
 CREATE UNIQUE INDEX study_guide_import_once ON study_guide USING btree (tenant_id, kind, reading_key, import_key) WHERE channel = 'web';
 ALTER TABLE study_guide ADD CONSTRAINT study_guide_web_import CHECK (channel <> 'web' or (version = 1 and hold and not reviewed and import_credit is not null and import_key is not null));
-DELETE FROM drizzle.__drizzle_migrations WHERE hash = '5e4650ea6bc0772e1a6a54dc83b219df55310512e8d26e0ba6f357861c1d8e8b';
+DELETE FROM drizzle.__drizzle_migrations WHERE hash = '87ac78af341454ac625e4df4197f847827c5589ba017d317504fe379a8602256';
 COMMIT;
 ```
 

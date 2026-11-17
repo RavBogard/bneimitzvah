@@ -6,7 +6,7 @@ import { guideLabelText } from "../study/guide-card";
 import { MarkdownLite } from "../study/markdown-lite";
 import { sectionLabel } from "../../../../lib/readings/sections";
 import { useIdentity } from "../../../site/identity-context";
-import { guideAdminApi, type DiscussionRow, type GuideRow, type GuideText, type Overview, type SummaryRow, type WriteOutcome } from "./api";
+import { guideAdminApi, type DiscussionRow, type GuideRow, type GuideVersionInfo, type GuideText, type Overview, type SummaryRow, type WriteOutcome } from "./api";
 import styles from "./guide-admin.module.css";
 
 /**
@@ -83,6 +83,23 @@ function GuideTextFold({ row, version }: { row: GuideRow; version: number }) {
   </details>;
 }
 
+/**
+ * What readers will see, in full, for the release and hold confirmations: the version, who it is written by, whether it is reviewed,
+ * and the label readers see on it.
+ */
+function readersSee(info: GuideVersionInfo, rabbiName: string, shortName: string) {
+  const writer = info.importedFrom ?? (info.origin === "rabbi" ? rabbiName : "Claude");
+  const label = guideLabelText({ origin: info.origin, reviewed: info.reviewed, rabbiName, ...(info.importedFrom ? { importedFrom: info.importedFrom } : {}) }, shortName);
+  return `version ${info.version}, written by ${writer}, ${info.reviewed ? "reviewed" : "not reviewed"}. Its label reads "${label}."`;
+}
+export function releaseDescription(row: GuideRow, rabbiName: string, shortName: string) {
+  return `Readers then see ${readersSee(row.current, rabbiName, shortName)}${row.visible ? ` It takes the place of version ${row.visible.version}.` : ""}`;
+}
+export function holdDescription(row: GuideRow, rabbiName: string, shortName: string) {
+  return row.afterHold ? `Readers then see ${readersSee(row.afterHold, rabbiName, shortName)} Version ${row.current.version} stays held until it is released again.`
+    : `Readers then see no guide for this reading until version ${row.current.version} is released again.`;
+}
+
 /** A release is not destructive, so it does not take the danger tone; it asks in the same confirm sheet the destructive buttons use. */
 function ConfirmedButton({ confirm, children, ...rest }: { confirm: ConfirmSpec; children: string; "data-testid": string }) {
   const [asking, setAsking] = useState(false), [busy, setBusy] = useState(false), cancel = useRef<HTMLButtonElement>(null);
@@ -116,10 +133,10 @@ function GuideItem({ row, rabbiName, actions }: { row: GuideRow; rabbiName: stri
       {/* Release and hold copy version N exactly as stored; neither changes its text or marks it reviewed. */}
       {row.state === "held"
         ? <ConfirmedButton data-testid="guide-admin-release"
-          confirm={{ title: `Release version ${row.current.version}?`, description: `Readers then see version ${row.current.version} of this guide${row.visible ? ` in place of version ${row.visible.version}` : ""}, labeled as it is now.`,
+          confirm={{ title: `Release version ${row.current.version}?`, description: releaseDescription(row, rabbiName, shortName),
             confirmLabel: "Release", cancelLabel: "Not now", onConfirm: () => actions.releaseGuide(row) }}>Release</ConfirmedButton>
         : <Button destructive variant="secondary" data-testid="guide-admin-hold"
-          confirm={{ title: `Hold version ${row.current.version}?`, description: row.afterHold ? `Readers go back to version ${row.afterHold.version} until this one is released again.` : "Readers see no guide for this reading until this one is released again.",
+          confirm={{ title: `Hold version ${row.current.version}?`, description: holdDescription(row, rabbiName, shortName),
             confirmLabel: "Hold", cancelLabel: "Not now", onConfirm: () => actions.holdGuide(row) }}>Hold</Button>}
     </div>
   </li>;

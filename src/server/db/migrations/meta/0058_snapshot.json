@@ -9357,7 +9357,7 @@
         },
         "study_guide_copy": {
           "name": "study_guide_copy",
-          "value": "\"study_guide\".\"copy_of_version\" is null or (\"study_guide\".\"channel\" = 'web' and \"study_guide\".\"copy_of_version\" = \"study_guide\".\"previous_version\")"
+          "value": "\"study_guide\".\"copy_of_version\" is null or (\"study_guide\".\"channel\" = 'web' and \"study_guide\".\"previous_version\" is not null and \"study_guide\".\"copy_of_version\" = \"study_guide\".\"previous_version\")"
         },
         "study_guide_import_whole": {
           "name": "study_guide_import_whole",

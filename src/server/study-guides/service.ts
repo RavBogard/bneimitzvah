@@ -83,6 +83,8 @@ export function guideVersion(row: data.GuideRow | data.StudentGuideRow): GuideVe
 const versesOutside = (body: GuideBody, verses: ReadonlySet<string>) =>
   body.themes.flatMap(t => t.notes.filter(n => !verses.has(n.verseRef)).map(n => `${n.verseRef} is not in this reading`));
 /** A stored version that no longer passes today's rules is withheld, not served and not an error. */
+/** A head the rabbi held on the web Guides page: a held copy of the released version before it. */
+const heldFromWeb = (row: { hold: boolean; copyOfVersion: number | null } | null) => !!row && row.hold && row.copyOfVersion !== null;
 const servable = (row: data.GuideRow | data.StudentGuideRow | null) => { if (!row) return null; try { return guideVersion(row); } catch { return null; } };
 /** The congregation settings' rabbi name first, then the legacy tenant.customs.credits key, then "the rabbi". */
 export function rabbiName(customs: unknown, settings: CongregationSettings | null = null): string {
@@ -154,7 +156,8 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     return authority.run(async (tx, writer) => {
       const heads = await data.guideHeads(tx, writer.tenantId, kind, readingKey);
       const visible = servable(heads.visible), head = servable(heads.head);
-      return Object.freeze({ kind, readingKey, currentVersion: heads.head?.version ?? 0, visible, held: head?.hold ? head : null });
+      // heldFromWeb: the rabbi held this released version on purpose on the web Guides page (migration 0058); it is not a draft awaiting publish.
+      return Object.freeze({ kind, readingKey, currentVersion: heads.head?.version ?? 0, visible, held: head?.hold ? head : null, heldFromWeb: heldFromWeb(heads.head) });
     });
   }
   async function setBaseGuide(authority: RabbiAuthority<Q>, supplied: { kind: unknown; readingKey: unknown; expectedVersion: unknown; body: unknown; origin: unknown; reviewed: unknown; hold: unknown; mutationId: unknown }): Promise<GuideSaveResult> {
@@ -389,7 +392,7 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       for (const group of groups.values()) {
         const heads = await data.guideHeads(tx, writer.tenantId, group.kind, group.readingKey);
         work.push(Object.freeze({ kind: group.kind, readingKey: group.readingKey, studentCount: group.students.length,
-          base: heads.head ? Object.freeze({ currentVersion: heads.head.version, visibleVersion: heads.visible?.version ?? null, reviewed: heads.visible?.reviewed ?? false, heldDraft: heads.head.hold }) : null,
+          base: heads.head ? Object.freeze({ currentVersion: heads.head.version, visibleVersion: heads.visible?.version ?? null, reviewed: heads.visible?.reviewed ?? false, heldDraft: heads.head.hold, heldFromWeb: heldFromWeb(heads.head) }) : null,
           students: Object.freeze(group.students.map(x => Object.freeze(x))) }));
       }
       return Object.freeze({ work: Object.freeze(work), customReadings: Object.freeze(unkeyed.map(x => Object.freeze(x))) });
@@ -411,14 +414,14 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
         const id = `${row.kind}:${row.readingKey}`, stream = streams.get(id) ?? { head: row, released: [] };
         stream.head = row; data.releasedStack(stream.released, row); streams.set(id, stream);
       }
-      const heads = new Map([...streams].map(([id, { head, released }]) => [id, { version: head.version, hold: head.hold,
+      const heads = new Map([...streams].map(([id, { head, released }]) => [id, { version: head.version, hold: head.hold, heldFromWeb: heldFromWeb(head),
         visible: released.at(-1)?.version ?? null, visibleReviewed: released.at(-1)?.reviewed ?? false }]));
       const out = [];
       for (const entry of entries) {
         const head = heads.get(`${entry.kind}:${entry.readingKey}`);
         const status = !head ? "none" : head.hold ? "held-draft" : head.visibleReviewed ? "reviewed" : "published-unreviewed";
         const draftable = (await passage(tx, writer.tenantId, entry.kind, entry.readingKey)).size > 0;
-        out.push(Object.freeze({ ...entry, draftable, base: Object.freeze({ status, version: head?.version ?? 0, visibleVersion: head?.visible ?? null }) }));
+        out.push(Object.freeze({ ...entry, draftable, base: Object.freeze({ status, version: head?.version ?? 0, visibleVersion: head?.visible ?? null, heldFromWeb: head?.heldFromWeb ?? false }) }));
       }
       return Object.freeze({ calendar: "diaspora", entries: Object.freeze(out), unresolved: Object.freeze(unresolved) });
     });
