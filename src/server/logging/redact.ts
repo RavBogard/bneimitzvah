@@ -93,6 +93,7 @@ export function routeForLog(input: unknown): string {
 }
 
 type Rule = readonly [RegExp, string | ((match: string, ...groups: string[]) => string)];
+const EMAIL_RULE: Rule = [/[\p{L}\p{M}\p{N}.!#$%&'*+/=?^_`{|}~-]+(?:@|%(?:25)*40)[\p{L}\p{M}\p{N}-]+(?:\.[\p{L}\p{M}\p{N}-]+)*\.[\p{L}\p{M}]{2,63}/gu, "[email]"];
 // Applied in order. Each targets a shape, not a known value, so it also catches secrets we have never seen.
 const SCRUB_RULES: readonly Rule[] = [
   // Control characters and line breaks: one line per field, and no forged log lines or stack frames.
@@ -109,7 +110,7 @@ const SCRUB_RULES: readonly Rule[] = [
   [/\b(password|passwd|pwd|secret|client_secret|api[_-]?key|apikey|access[_-]?token|refresh[_-]?token|id[_-]?token|session[_-]?token|token|otp|sslpassword|sslkey|user|username|email|host|dbname)\s*[=:]\s*("[^"]*"|'[^']*'|[^\s,;&]+)/gi, "$1=[redacted]"],
   // Email addresses: Unicode local parts and domains (josé@, exämple.com), and @ percent-encoded once or more
   // (%40, %2540, %252540). Fullwidth @ and zero-width/bidi characters are normalised away before any rule runs.
-  [/[\p{L}\p{M}\p{N}.!#$%&'*+/=?^_`{|}~-]+(?:@|%(?:25)*40)[\p{L}\p{M}\p{N}-]+(?:\.[\p{L}\p{M}\p{N}-]+)*\.[\p{L}\p{M}]{2,63}/gu, "[email]"],
+  EMAIL_RULE,
   // JSON Web Tokens.
   [/\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}(?:\.[A-Za-z0-9_-]*)?/g, "[jwt]"],
   // Query strings outside a URL: "?t=...", "&token=...".
@@ -129,11 +130,11 @@ const TOKEN_RULES: readonly Rule[] = [
 const MESSAGE_RULES = [...SCRUB_RULES, ...TOKEN_RULES];
 // The longest input the rules see. Longer input is cut at the last whitespace before this bound and the partial
 // word at the cut is dropped, so no half of an address or token survives at the edge.
-const SCRUB_INPUT_BOUND = 8192;
+const SCRUB_INPUT_BOUND = 2048;
 
-/** NFKC (fullwidth ＠ becomes @), then zero-width, soft-hyphen and bidi control characters removed. */
+/** NFKC (fullwidth @ becomes @), ideographic and small full stops become ".", then zero-width, soft-hyphen and bidi control characters removed. */
 function normalise(text: string): string {
-  return text.normalize("NFKC").replace(/[­؜᠎​-‏‪-‮⁠-⁩﻿]/g, "");
+  return text.normalize("NFKC").replace(/[\u3002\uff61\ufe52]/g, ".").replace(/[\u00ad\u061c\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/g, "");
 }
 function boundAtWhitespace(text: string, bound: number): string {
   if (text.length <= bound) return text;
@@ -180,27 +181,41 @@ function read(target: unknown, key: string | symbol): unknown {
 // function is identifier-shaped and the location is a code file with :line:column, a node: builtin, or one of V8's
 // fixed placeholders. Anything else (including free text that begins "at ") is dropped, never scrubbed and kept.
 const FRAME = /^at (?:(async )?(new )?([A-Za-z_$][\w$]*(?:\.(?:[A-Za-z_$<][\w$<>]*|<anonymous>))*)(?: \[as [A-Za-z_$][\w$]*\])? \((.+)\)|(.+))$/;
-const CODE_LOCATION = /^((?:file:\/\/|webpack-internal:\/\/\/)?(?:node:[a-z_/]+|[^\s'"<>`]*\/[^\s'"<>`]*\.(?:[cm]?[jt]sx?)))(?::(\d{1,7}):(\d{1,7}))$/;
+const CODE_LOCATION = /^((?:file:\/\/|webpack-internal:\/\/\/)?(?:node:[a-z_/]+|[^\s'"<>`]*[\/\\][^\s'"<>`]*\.(?:[cm]?[jt]sx?)))(?::(\d{1,7}):(\d{1,7}))$/;
 const PLACEHOLDER = /^(?:<anonymous>|native|index \d{1,4})$/;
 function projectRoot(): string {
   try { return typeof process !== "undefined" && typeof process.cwd === "function" ? process.cwd().replaceAll("\\", "/") : ""; } catch { return ""; }
 }
 /** Reduces a frame to function plus a project-relative (or node_modules/...) path and line:column, else null. */
+const FRAME_PART_RULES: readonly Rule[] = [EMAIL_RULE, ...TOKEN_RULES];
+/** Defence in depth on a frame's function name and path: the email rule and the token rules. */
+function scrubFramePart(text: string): string {
+  let out = normalise(text);
+  for (const [pattern, replacement] of FRAME_PART_RULES) out = out.replace(pattern, replacement as never);
+  return out;
+}
+// Longer trimmed stack lines are skipped before any frame regex runs (CODE_LOCATION can backtrack on long input).
+const MAX_STACK_LINE = 600;
 function codeFrame(line: string, root: string): string | null {
+  if (line.length > MAX_STACK_LINE) return null;
   const match = FRAME.exec(line);
   if (!match) return null;
   const fn = match[3] ? `${match[1] ?? ""}${match[2] ?? ""}${match[3]}` : "";
   const where = match[4] ?? match[5];
-  if (PLACEHOLDER.test(where)) return fn ? `at ${fn} (${where})` : null;
+  if (PLACEHOLDER.test(where)) return fn ? `at ${scrubFramePart(fn)} (${where})` : null;
   const location = CODE_LOCATION.exec(where);
   if (!location) return null;
   let path = location[1].replace(/^(?:file:\/\/|webpack-internal:\/\/\/)/, "").replaceAll("\\", "/");
   const modules = path.lastIndexOf("node_modules/");
   if (modules >= 0) path = path.slice(modules);
   else if (root && path.startsWith(`${root}/`)) path = path.slice(root.length + 1);
-  else if (!path.startsWith("node:")) path = path.split("/").slice(-3).join("/");
-  const at = location[2] ? `${path}:${location[2]}:${location[3]}` : path;
-  const frame = fn ? `at ${fn} (${at})` : `at ${at}`;
+  // Outside the project and node_modules (a home directory, a user's folder name): the file's basename only.
+  else if (!path.startsWith("node:")) path = path.slice(path.lastIndexOf("/") + 1);
+  // A node: builtin path ("node:internal/process/task_queues") is fixed by Node itself, so it is kept as written.
+  const shown = path.startsWith("node:") && /^node:[a-z_/]+$/.test(path) ? path : scrubFramePart(path);
+  const at = location[2] ? `${shown}:${location[2]}:${location[3]}` : shown;
+  const name = scrubFramePart(fn);
+  const frame = name ? `at ${name} (${at})` : `at ${at}`;
   return frame.length <= MAX_FRAME ? frame : null;
 }
 

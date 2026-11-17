@@ -168,8 +168,8 @@ test("a DrizzleQueryError whose params hold a multi-line note leaves nothing of 
   for (const secret of NOTE_SECRETS) expect(mutatedText.includes(secret), secret).toBe(false);
   // A hostile line that ends like a frame but whose location is not a code file is dropped.
   const forged = new Error("x"); forged.stack = "Error: x\n    at Noa Levinson's study (home:12:34)\n    at Noa (kitchen:12:34)\n    at fn (/srv/app/src/a.ts:1:2)";
-  // Outside the project root and node_modules, only the last three path segments are kept.
-  expect(describeError(forged).stack).toEqual(["at fn (app/src/a.ts:1:2)"]);
+  // Outside the project root and node_modules, only the basename is kept.
+  expect(describeError(forged).stack).toEqual(["at fn (a.ts:1:2)"]);
 });
 
 test("Unicode, fullwidth, zero-width and repeatedly percent-encoded addresses are all removed whole", () => {
@@ -205,4 +205,29 @@ test("capping never leaves part of an address at the edge, and token-shaped runs
   expect(scrubText("reading-cache/haftarah-ranges")).toBe("reading-cache/haftarah-ranges");
   const reasoned = describeError(new Error("x", { cause: Object.assign(new Error("57014 timeout"), { code: "57014" }) }));
   expect(reasoned.cause?.code).toBe("57014");
+});
+
+// Delta review of 06c5354.
+test("a frame that survives the header cut still loses addresses, tokens and user directory names", () => {
+  const e = new Error("one\nnote\nat NoaLevinson (/home/noa.levinson@example.test/x.js:1:2)"); void e.stack; e.message = "one";
+  const text = JSON.stringify(describeError(e));
+  expect(text).not.toContain("noa.levinson");
+  expect(text).not.toContain("home");
+  const hand = new Error("x"); hand.stack = "Error: x\n    at f (/home/NoaLevinson/repo/src/a.ts:3:4)\n    at C:\\Users\\Ari\\a.js:1:2\n    at g (/srv/x/abcdefghijklmnopqrstuvwxyzabcd.js:1:2)";
+  const frames = describeError(hand).stack ?? [];
+  expect(frames).toEqual(["at f (a.ts:3:4)", "at a.js:1:2", "at g ([token].js:1:2)"]);
+  const ideographic = scrubText(`rcpt alice@example${String.fromCharCode(0x3002)}test`);
+  expect(ideographic).toBe("rcpt [email]");
+});
+
+test("a 100 KB single-line stack and a 65 KB run of slashes are described quickly", () => {
+  for (const line of ["/a.js".repeat(20_000), "/".repeat(65_000), "/a.".repeat(34_000)]) {
+    const e = new Error("x"); e.stack = `Error: x\n    at f (${line})\n    at g (${line}:1)`;
+    const started = performance.now();
+    describeError(e);
+    expect(performance.now() - started).toBeLessThan(200);
+  }
+  const started = performance.now();
+  scrubText(`${"a.".repeat(50_000)} end`);
+  expect(performance.now() - started).toBeLessThan(200);
 });
