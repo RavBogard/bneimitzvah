@@ -89,7 +89,7 @@ it("student sees the overview card with the Claude label and nothing else of the
   await closeVerseTools(tab);
 });
 
-it("Your translation & notes sits at the bottom of each verse card", async () => {
+it("The verse notes sit at the bottom of each verse card", async () => {
   const tab = await page("student");
   const detail = await verse(tab, "Genesis 1:3");
   await ui(detail.getByTestId("verse-work").locator("summary")).toBeVisible();

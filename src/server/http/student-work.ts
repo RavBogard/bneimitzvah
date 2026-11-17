@@ -7,12 +7,12 @@ import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from ".
 import { requireCookieMutation } from "./mutations";
 
 function route(pathname: string) {
-  const match = /^\/api\/students\/([^/]+)\/work(?:\/(history|receipt|recovery|draft|note))?$/.exec(pathname);
+  const match = /^\/api\/students\/([^/]+)\/work(?:\/(history|receipt|recovery|note))?$/.exec(pathname);
   return match ? { studentId: match[1], operation: match[2] ?? "page" } : null;
 }
 export function studentWorkRouteMethods(pathname: string): readonly string[] | null {
   const found = route(pathname);
-  return found ? [["draft", "note", "recovery"].includes(found.operation) ? "POST" : "GET"] : null;
+  return found ? [["note", "recovery"].includes(found.operation) ? "POST" : "GET"] : null;
 }
 const binding = ["mode", "kind", "assignmentId", "assignmentRevision"];
 function number(value: unknown) {

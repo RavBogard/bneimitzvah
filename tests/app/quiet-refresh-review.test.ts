@@ -6,13 +6,13 @@ import { WorkCoordinator, type WorkTransport } from "../../src/components/portal
 import type { WorkPage, WorkReceipt, WorkVersion } from "../../src/components/portal/workspace/work/api";
 
 const id = "10000000-0000-4000-8000-000000000001", assignmentId = "10000000-0000-4000-8000-000000000002", ref = "Genesis 1:1";
-const baseline: Assigned = { mode: "student", student: { id, firstName: "Synthetic", lastName: "Review", ceremonyDate: "2027-01-02", revision: 1 }, context: null,
+const baseline: Assigned = { mode: "tutor", student: { id, firstName: "Synthetic", lastName: "Review", ceremonyDate: "2027-01-02", revision: 1 }, context: null,
   readings: [{ id: assignmentId, kind: "torah", revision: 1, ranges: [ref], verses: [ref], needsReview: false, aliyahStarts: null, basis: "custom", confirmationDate: null,
     source: { status: "unknown", fetchedAt: null, date: null, calendar: null, attribution: null } }] };
 const revised = (): Assigned => ({ ...baseline, readings: [{ ...baseline.readings[0], revision: 2 }] });
 function deferred<T>() { let resolve!: (value: T) => void, reject!: (error: unknown) => void; const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
 async function flush() { for (let i = 0; i < 24; i++) await Promise.resolve(); }
-function page(head: WorkVersion | null = null): WorkPage { return { authorityBinding: "a".repeat(43), offset: 0, totalVerses: 1, nextOffset: null, verses: [{ ref, draft: head, notes: [] }] }; }
+function page(head: WorkVersion | null = null): WorkPage { return { authorityBinding: "a".repeat(43), offset: 0, totalVerses: 1, nextOffset: null, verses: [{ ref, notes: head ? [head] : [] }] }; }
 const denied = (error: unknown) => error instanceof PortalRequestError && [401, 403, 404].includes(error.status);
 const owned: WorkCoordinator[] = [];
 async function coordinator(transport: WorkTransport) {
@@ -21,9 +21,9 @@ async function coordinator(transport: WorkTransport) {
 }
 afterEach(() => { for (const work of owned.splice(0)) work.dispose(); vi.useRealTimers(); });
 
-it("metadata reconciliation reaches actual revision recovery without erasing an unsent draft or issuing a write", async () => {
+it("metadata reconciliation reaches actual revision recovery without erasing an unsent note or issuing a write", async () => {
   vi.useFakeTimers(); const transport = vi.fn<WorkTransport>(async () => page()), work = await coordinator(transport);
-  work.edit("torah", ref, "draft", "Synthetic unsent revision text"); const completed = deferred<void>();
+  work.edit("torah", ref, "note", "Synthetic unsent revision text"); const completed = deferred<void>();
   const quiet = createQuietRefresh({ capture: () => "same principal/student/context", denied,
     verify: async () => false,
     changed: reason => {
@@ -32,9 +32,9 @@ it("metadata reconciliation reaches actual revision recovery without erasing an 
       void (async () => { await work.settle(); work.configure(revised(), true); await work.reload(new AbortController().signal, "torah"); work.accept(work.lifecycle); work.reveal(); completed.resolve(); })().catch(completed.reject);
     } });
   quiet.request(); await completed.promise;
-  expect(work.cell("torah", ref, "draft")).toMatchObject({ text: "Synthetic unsent revision text", phase: "revision", revisionRecovery: { originalRevision: 1, outcome: "unsaved" } });
+  expect(work.cell("torah", ref, "note")).toMatchObject({ text: "Synthetic unsent revision text", phase: "revision", revisionRecovery: { originalRevision: 1, outcome: "unsaved" } });
   expect(work.hasUnsaved()).toBe(true);
-  await work.save("torah", ref, "draft"); await vi.advanceTimersByTimeAsync(3000);
+  await work.save("torah", ref, "note"); await vi.advanceTimersByTimeAsync(3000);
   expect(transport.mock.calls.every(([, , operation]) => operation.type === "page")).toBe(true);
   quiet.cancel();
 });
@@ -43,20 +43,20 @@ it("a save already dispatched retains its acknowledgement while metadata reconci
   vi.useFakeTimers(); const receipt = deferred<WorkReceipt>(), entered = deferred<void>(), completed = deferred<void>(); let head: WorkVersion | null = null;
   const transport = vi.fn<WorkTransport>(async (_baseline, _kind, operation) => operation.type === "page" ? page(head) : receipt.promise);
   const work = await coordinator(transport);
-  work.edit("torah", ref, "draft", "Synthetic dispatched body"); const save = work.save("torah", ref, "draft");
-  const pending = work.cell("torah", ref, "draft")!.pending!;
-  work.edit("torah", ref, "draft", "Synthetic newer unsent body");
+  work.edit("torah", ref, "note", "Synthetic dispatched body"); const save = work.save("torah", ref, "note");
+  const pending = work.cell("torah", ref, "note")!.pending!;
+  work.edit("torah", ref, "note", "Synthetic newer unsent body");
   const quiet = createQuietRefresh({ capture: () => "same scope", verify: async () => false, denied, changed: reason => {
     expect(reason).toBe("metadata"); work.pause(); entered.resolve();
     void (async () => { await work.settle(); work.configure(revised(), true); await work.reload(new AbortController().signal, "torah"); work.accept(work.lifecycle); work.reveal(); completed.resolve(); })().catch(completed.reject);
   } });
   quiet.request(); await entered.promise;
-  expect(work.cell("torah", ref, "draft")!.pending).toBe(pending);
+  expect(work.cell("torah", ref, "note")!.pending).toBe(pending);
   head = { id, verseRef: ref, version: 1, text: pending.text, assignmentId, assignmentRevision: 1,
-    author: { membershipId: id, displayName: "Portal member", mode: "student", assisted: false }, createdAt: "2026-10-16T10:00:00.000Z" };
+    author: { membershipId: id, displayName: "Portal member", mode: "tutor", assisted: false }, createdAt: "2026-10-16T10:00:00.000Z" };
   receipt.resolve({ committedVersion: 1, currentLatestVersion: 1, committed: head });
   await save; await completed.promise;
-  const cell = work.cell("torah", ref, "draft")!;
+  const cell = work.cell("torah", ref, "note")!;
   expect(cell).toMatchObject({ text: "Synthetic newer unsent body", head: { text: pending.text }, phase: "revision", revisionRecovery: { outcome: "unsaved" } });
   expect(cell.pending).toBeUndefined(); await vi.advanceTimersByTimeAsync(3000);
   expect(transport.mock.calls.filter(([, , operation]) => operation.type !== "page")).toHaveLength(1);
@@ -64,7 +64,7 @@ it("a save already dispatched retains its acknowledgement while metadata reconci
 });
 
 it.each([401, 403, 404])("actual authority denial %s clears real private coordinator cells instead of revision recovery", async status => {
-  vi.useFakeTimers(); const work = await coordinator(async () => page()); work.edit("torah", ref, "draft", "Synthetic private draft");
+  vi.useFakeTimers(); const work = await coordinator(async () => page()); work.edit("torah", ref, "note", "Synthetic private note");
   const reasons: string[] = [], quiet = createQuietRefresh({ capture: () => "current scope", verify: async () => { throw new PortalRequestError(status); }, denied,
     changed: reason => { reasons.push(reason); work.clear(); } });
   quiet.request(); await flush();
@@ -72,11 +72,11 @@ it.each([401, 403, 404])("actual authority denial %s clears real private coordin
 });
 
 it.each([409, 503])("a replaced request or unavailable check %s cannot clear or reconfigure private work", async status => {
-  vi.useFakeTimers(); const work = await coordinator(async () => page()); work.edit("torah", ref, "draft", "Synthetic retained draft");
-  const cell = work.cell("torah", ref, "draft"), lifecycle = work.lifecycle, changed = vi.fn();
+  vi.useFakeTimers(); const work = await coordinator(async () => page()); work.edit("torah", ref, "note", "Synthetic retained note");
+  const cell = work.cell("torah", ref, "note"), lifecycle = work.lifecycle, changed = vi.fn();
   const quiet = createQuietRefresh({ capture: () => "current scope", verify: async () => { throw new PortalRequestError(status); }, denied, changed });
   quiet.request(); await flush();
-  expect(changed).not.toHaveBeenCalled(); expect(work.cell("torah", ref, "draft")).toBe(cell); expect(work.lifecycle).toBe(lifecycle); quiet.cancel();
+  expect(changed).not.toHaveBeenCalled(); expect(work.cell("torah", ref, "note")).toBe(cell); expect(work.lifecycle).toBe(lifecycle); quiet.cancel();
 });
 
 it("old completion cannot release a replacement's in-flight coalescing fence or reconcile the old metadata", async () => {

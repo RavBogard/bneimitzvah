@@ -319,8 +319,7 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .verse-work { min-width: 0; border-inline-start: 1px solid var(--color-rule); padding-inline-start: 1.5rem; }
 .verse-work summary { min-height: 44px; padding-block: 0.625rem; cursor: pointer; overflow-wrap: anywhere; }
 .verse-work-content { padding-block: 0.5rem; }
-.work-streams, .work-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-block: 0.75rem; }
-.work-streams [aria-pressed="true"] { color: var(--color-ink); font-weight: 600; text-decoration-thickness: 2px; }
+.work-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-block: 0.75rem; }
 .work-editor label { display: block; margin-top: 1rem; font-weight: 600; }
 .work-editor textarea { display: block; width: 100%; min-height: 9rem; margin-top: 0.75rem; padding: 0.75rem; resize: vertical; font: inherit; line-height: 1.6; color: var(--color-ink); background: var(--color-surface); border: 1px solid var(--color-rule); border-radius: var(--radius-control); caret-color: var(--color-action); }
 .work-text { white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: plaintext; line-height: 1.7; }

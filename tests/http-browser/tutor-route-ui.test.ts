@@ -77,7 +77,6 @@ it("opens authorized card and copied direct routes, captures tutor home and phon
   await safe(() => tab.setViewportSize({ width: 1440, height: 1000 })); await capture(tab, "desktop-reading");
   const copied = await tab.context().newPage(); await navigate(copied, `/workspace/tutor/${fixture.student.id}`); await loaded(copied, "Genesis 1:1");
   const panel = await workPanel(tab); await safe(() => panel.locator("summary").click());
-  await safe(() => panel.getByRole("button", { name: "Teacher notes", exact: true }).click());
   const field = panel.getByRole("textbox"), draft = "Synthetic unsent tutor card departure note"; await ui(field).toBeVisible(); await safe(() => field.fill(draft));
   let writes = 0; tab.on("request", request => { if (request.method() === "POST" && new URL(request.url()).pathname.endsWith("/work/note")) writes++; });
   await closeVerseTools(tab); // the student cards are behind the sheet; closing it loses no text

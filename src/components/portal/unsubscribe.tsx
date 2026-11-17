@@ -4,7 +4,7 @@ import { unsubscribe, type EmailKind } from "./workspace/email/api";
 import { PortalRequestError } from "./api";
 import { SiteBar } from "../site/site-bar";
 
-const names: Record<EmailKind, string> = { "tutor-draft": "draft notices", "weekly-digest": "weekly updates", "practice-reminder": "practice reminders" };
+const names: Record<EmailKind, string> = { "weekly-digest": "weekly updates", "practice-reminder": "practice reminders" };
 type View = { kind: "ready" | "missing" | "pending" | "invalid" | "unavailable" } | { kind: "done"; stopped: EmailKind };
 
 /**

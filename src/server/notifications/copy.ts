@@ -35,19 +35,6 @@ function footer(why: string, stop: string, links: Links) {
   return ["--", why, `${stop}: ${links.unsubscribe}`, `Email settings: ${links.settings}`].join("\n");
 }
 
-export function tutorDraftMessage(input: { product: string; tutorName: string | null; studentFirstName: string; links: Links }): Message {
-  return {
-    subject: "A new translation draft to read",
-    text: [
-      greeting(input.tutorName), "",
-      `${input.studentFirstName} saved a translation draft in ${input.product}. Sign in to read it:`, "",
-      input.links.portal, "",
-      "You'll get at most one of these a day for each student.", "",
-      footer(`You're getting this because you're ${input.studentFirstName}'s tutor in ${input.product}.`, "Stop draft emails", input.links),
-    ].join("\n"),
-  };
-}
-
 function digestBlock(student: DigestStudent): string[] {
   const lines = [student.firstName];
   if (student.practicedDays !== null) lines.push(student.practicedDays === 0 ? "- No practice was recorded in the last 7 days." : `- Practiced on ${days(student.practicedDays)} of the last 7.`);

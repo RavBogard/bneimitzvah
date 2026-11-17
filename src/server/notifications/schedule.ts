@@ -1,10 +1,13 @@
 import { chicagoDate } from "../practice-calendar/policy";
 
-/** The three kinds, each with its own admin switch, member choice and unsubscribe link. */
-export const KINDS = ["tutor-draft", "weekly-digest", "practice-reminder"] as const;
+/**
+ * The two kinds, each with its own admin switch, member choice and unsubscribe link. The tutor's draft notice ("tutor-draft", code t)
+ * went with the student's translation on 2026-11-17; the database still allows the name for the rows it holds, and its links no longer open.
+ */
+export const KINDS = ["weekly-digest", "practice-reminder"] as const;
 export type NotificationKind = (typeof KINDS)[number];
-export const KIND_CODE: Record<NotificationKind, "t" | "d" | "r"> = { "tutor-draft": "t", "weekly-digest": "d", "practice-reminder": "r" };
-export const KIND_OF_CODE: Record<string, NotificationKind> = { t: "tutor-draft", d: "weekly-digest", r: "practice-reminder" };
+export const KIND_CODE: Record<NotificationKind, "d" | "r"> = { "weekly-digest": "d", "practice-reminder": "r" };
+export const KIND_OF_CODE: Record<string, NotificationKind> = { d: "weekly-digest", r: "practice-reminder" };
 /** Sunday, when a congregation has not chosen a digest day. */
 export const DEFAULT_DIGEST_WEEKDAY = 0;
 /** A digest or reminder the morning run could not reach is still sent up to this many days late, never later. */

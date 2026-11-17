@@ -2,10 +2,11 @@ import { PortalRequestError } from "../../api";
 import { identifier, type Assigned, type ReadingMode, type Selection } from "../api";
 import type { StudyKind } from "../study/api";
 
-export type Stream = "draft" | "note";
+/** A tutor's or the rabbi's student-visible note per verse: the one stream left since the student's own translation was removed (2026-11-17). */
+export type Stream = "note";
 export type WorkVersion = { id: string; verseRef: string; version: number; text: string; assignmentId: string; assignmentRevision: number;
   author: { membershipId: string; displayName: string; mode: ReadingMode; assisted: boolean }; createdAt: string };
-export type WorkVerse = { ref: string; draft: WorkVersion | null; notes: WorkVersion[] };
+export type WorkVerse = { ref: string; notes: WorkVersion[] };
 export type WorkPage = { authorityBinding: string; offset: number; totalVerses: number; nextOffset: number | null; verses: WorkVerse[] };
 export type WorkHistory = { versions: WorkVersion[]; nextBeforeVersion: number | null };
 export type WorkReceipt = { committedVersion: number; currentLatestVersion: number; committed: WorkVersion; replayed?: boolean };
@@ -15,7 +16,7 @@ export type WorkRecovery = { assignmentId: string; assignmentRevision: number; o
 export type WorkOperation = { type: "page"; offset: number } | { type: "history"; stream: Stream; verseRef: string; beforeVersion?: number }
   | { type: "receipt"; stream: Stream; verseRef: string; mutationId: string }
   | { type: "recovery"; stream: Stream; originalRevision: number; write: WorkWrite; authorityBinding: string }
-  | { type: "draft" | "note"; verseRef: string; text: string; expectedVersion: number; mutationId: string };
+  | { type: "note"; verseRef: string; text: string; expectedVersion: number; mutationId: string };
 export class WorkError extends PortalRequestError {
   constructor(status: number, public readonly code?: "conflict" | "stale-revision" | "invalid-request") { super(status); }
 }
@@ -55,8 +56,8 @@ function ordered(values: unknown, ref: string, stream: Stream, max: number, befo
 export function parseWorkPage(value: unknown, baseline: Assigned, kind: StudyKind, offset: number): WorkPage {
   const row = object(value, ["ok", "studentId", "assignmentId", "assignmentRevision", "authorityBinding", "offset", "totalVerses", "nextOffset", "verses"]), assignment = baseline.readings.find(row => row.kind === kind);
   if (!assignment || row.ok !== true || row.studentId !== baseline.student.id || row.assignmentId !== assignment.id || row.assignmentRevision !== assignment.revision || row.offset !== offset || row.totalVerses !== assignment.verses.length || !Array.isArray(row.verses) || !row.verses.length || row.verses.length > 10 || offset < 0 || offset >= assignment.verses.length) return bad();
-  const verses = row.verses.map((value, i) => { const v = object(value, ["ref", "draft", "notes"]), ref = assignment.verses[offset + i];
-    if (!ref || v.ref !== ref) return bad(); return { ref, draft: v.draft === null ? null : version(v.draft, ref, "draft"), notes: ordered(v.notes, ref, "note", 3) }; });
+  const verses = row.verses.map((value, i) => { const v = object(value, ["ref", "notes"]), ref = assignment.verses[offset + i];
+    if (!ref || v.ref !== ref) return bad(); return { ref, notes: ordered(v.notes, ref, "note", 3) }; });
   const nextOffset = offset + verses.length < assignment.verses.length ? offset + verses.length : null;
   if (row.nextOffset !== nextOffset || typeof row.authorityBinding !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(row.authorityBinding)) return bad();
   return { authorityBinding: row.authorityBinding, offset, nextOffset, totalVerses: assignment.verses.length, verses };
@@ -68,7 +69,7 @@ export function parseWorkHistory(value: unknown, ref: string, stream: Stream, be
   return { versions, nextBeforeVersion: row.nextBeforeVersion as number | null };
 }
 export function parseWorkReceipt(value: unknown, operation: WorkOperation, assignment: { id: string; revision: number }): WorkReceipt {
-  const write = operation.type === "draft" || operation.type === "note", row = object(value, ["ok", ...(write ? ["replayed"] : []), "committedVersion", "currentLatestVersion", "committed"]);
+  const write = operation.type === "note", row = object(value, ["ok", ...(write ? ["replayed"] : []), "committedVersion", "currentLatestVersion", "committed"]);
   if (operation.type === "page" || operation.type === "history" || operation.type === "recovery" || row.ok !== true || (write && typeof row.replayed !== "boolean")) return bad();
   const stream = write ? operation.type as Stream : (operation as Extract<WorkOperation, { type: "receipt" }>).stream;
   const committed = version(row.committed, operation.verseRef, stream), committedVersion = integer(row.committedVersion), currentLatestVersion = integer(row.currentLatestVersion);
@@ -90,7 +91,7 @@ export async function fetchWork(baseline: Assigned, kind: StudyKind, operation: 
   const assignment = baseline.readings.find(row => row.kind === kind); if (!assignment || (baseline.mode === "child-practice") !== Boolean(selection)) return bad();
   if (selection && (selection.context.studentId !== baseline.student.id || selection.context.id !== baseline.context?.id || selection.context.authorityRevision !== baseline.context?.authorityRevision)) return bad();
   const binding = { mode: baseline.mode, kind, assignmentId: identifier(assignment.id), assignmentRevision: assignment.revision };
-  const write = operation.type === "draft" || operation.type === "note" || operation.type === "recovery", query = new URLSearchParams(Object.entries(binding).map(([k, v]) => [k, String(v)]));
+  const write = operation.type === "note" || operation.type === "recovery", query = new URLSearchParams(Object.entries(binding).map(([k, v]) => [k, String(v)]));
   if (operation.type === "page") query.set("offset", String(operation.offset));
   else if (!write) for (const [key, value] of Object.entries(operation)) if (key !== "type" && value !== undefined) query.set(key, String(value));
   const { type, ...fields } = operation, controller = new AbortController(), abort = () => controller.abort();

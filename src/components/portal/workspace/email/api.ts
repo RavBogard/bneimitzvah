@@ -1,14 +1,14 @@
 import { PortalRequestError } from "../../api";
 
-export type EmailKind = "tutor-draft" | "weekly-digest" | "practice-reminder";
+export type EmailKind = "weekly-digest" | "practice-reminder";
 export type EmailOption = { kind: EmailKind; enabled: boolean; offered: boolean; weekday: number | null; audience?: "parent" | "self" | "both" };
 const bad = (): never => { throw new PortalRequestError(503); };
-const KINDS: readonly EmailKind[] = ["tutor-draft", "weekly-digest", "practice-reminder"];
+const KINDS: readonly EmailKind[] = ["weekly-digest", "practice-reminder"];
 const weekday = (value: unknown) => value === null || (Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 6);
 
 function parse(value: unknown): EmailOption[] {
   const outer = value as { ok?: unknown; view?: { options?: unknown } } | null;
-  if (!outer || outer.ok !== true || !outer.view || typeof outer.view !== "object" || !Array.isArray(outer.view.options) || outer.view.options.length > 3) return bad();
+  if (!outer || outer.ok !== true || !outer.view || typeof outer.view !== "object" || !Array.isArray(outer.view.options) || outer.view.options.length > 2) return bad();
   return outer.view.options.map((option: unknown) => {
     const o = option as Record<string, unknown> | null;
     if (!o || typeof o !== "object" || !KINDS.includes(o.kind as EmailKind) || typeof o.enabled !== "boolean" || typeof o.offered !== "boolean" || !weekday(o.weekday)
@@ -40,7 +40,7 @@ export function unsubscribeBody(token: string) {
 }
 /** The unsubscribe page posts the token from its own fragment; the answer says only which kind stopped. */
 export async function unsubscribe(token: string): Promise<EmailKind> {
-  if (!/^[tdr]\.[0-9a-f-]{36}\.[A-Za-z0-9_-]{43}$/.test(token)) throw new PortalRequestError(404);
+  if (!/^[dr]\.[0-9a-f-]{36}\.[A-Za-z0-9_-]{43}$/.test(token)) throw new PortalRequestError(404);
   const response = await fetch("/api/notifications/unsubscribe", { method: "POST", credentials: "omit", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer",
     headers: { accept: "application/json", "content-type": "application/x-www-form-urlencoded" }, body: unsubscribeBody(token) });
   if (!response.ok) throw new PortalRequestError(response.status === 404 ? 404 : 503);

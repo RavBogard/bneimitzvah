@@ -18,8 +18,6 @@ type Request = AccessRequest & { method?: string };
 export function createStudentWorkService<Q extends PgQueryResultHKT>(input: {
   access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>;
   authorityBindingSecret: string;
-  /** Release 1.1 tutor notices: queued inside a new draft's own write, dispatched after it commits. */
-  notify?: Readonly<{ queue: (tx: AccessTransaction<Q>, target: { tenantId: string; studentId: string }) => Promise<boolean>; dispatch: (tenantId: string) => Promise<void> }>;
 }) {
   if (input.authorityBindingSecret.length < 32) throw new Error("Work authority unavailable");
   const authorityBinding = async (tx: AccessTransaction<Q>, actor: data.WorkActor) => createHmac("sha256", input.authorityBindingSecret).update(JSON.stringify([
@@ -50,12 +48,6 @@ export function createStudentWorkService<Q extends PgQueryResultHKT>(input: {
       assertLive();
       return result;
     };
-    if (operation === "draft") {
-      if (selection.mode !== "student" && selection.mode !== "child-practice") {
-        return input.access.withStudentCapability(request, { mode: selection.mode, studentId: selection.studentId, capability: "practice-write" }, run);
-      }
-      return input.practice.withPracticeCapability(request, { mode: selection.mode, studentId: selection.studentId, capability: "practice-write" }, run);
-    }
     if (operation === "note") {
       if (selection.mode === "child-practice") throw new AccessDenied(403);
       return input.access.withStudentCapability(request, { mode: selection.mode, studentId: selection.studentId, capability: "note-write" }, run);
@@ -97,8 +89,7 @@ export function createStudentWorkService<Q extends PgQueryResultHKT>(input: {
         if (offset >= verses.length) return { ok: false as const, code: "invalid-request" as const };
         const rows = [];
         for (const ref of verses.slice(offset, offset + 10)) {
-          const row = { ref, draft: await latest(tx, actor, "draft", ref).then(row => row ? data.view(row) : null),
-            notes: (await data.history(tx, actor, "note", ref, undefined, 3)).map(data.view) };
+          const row = { ref, notes: (await data.history(tx, actor, "note", ref, undefined, 3)).map(data.view) };
           // Quoted/backslash-heavy valid text expands in JSON. Keep a page
           // useful within the transport bound by stopping at a verse boundary.
           if (rows.length && Buffer.byteLength(JSON.stringify([...rows, row])) > 240 * 1024) break;
@@ -131,8 +122,7 @@ export function createStudentWorkService<Q extends PgQueryResultHKT>(input: {
       const write = validate.write(suppliedWrite, stream);
       const digest = createHash("sha256").update(JSON.stringify([stream, selection.kind, selection.assignmentId, selection.assignmentRevision,
         selection.mode, write.verseRef, write.expectedVersion, write.text])).digest("hex");
-      let queued: string | null = null;
-      const result = await authorized(request, selection, stream, async (tx, actor, verses) => {
+      return authorized(request, selection, stream, async (tx, actor, verses) => {
         requireVerse(verses, write.verseRef);
         const replay = async (row: data.WorkRow) => row.requestDigest === digest && row.verseRef === write.verseRef && row.mode === actor.mode
           && row.roleGrantId === actor.roleGrantId && row.guardianId === (actor.mode === "child-practice" ? actor.relationshipId : null)
@@ -143,17 +133,10 @@ export function createStudentWorkService<Q extends PgQueryResultHKT>(input: {
         const head = await latest(tx, actor, stream, write.verseRef);
         if ((head?.version ?? 0) !== write.expectedVersion) return conflict;
         const inserted = await data.append(tx, actor, stream, selection, write, digest);
-        if (inserted) {
-          // Only a student's own new draft (or one entered with them in child practice) tells their tutors.
-          if (stream === "draft" && input.notify && await input.notify.queue(tx, { tenantId: actor.tenantId, studentId: actor.studentId })) queued = actor.tenantId;
-          return { ok: true as const, replayed: false, committedVersion: inserted.version, currentLatestVersion: inserted.version, committed: data.view(inserted) };
-        }
+        if (inserted) return { ok: true as const, replayed: false, committedVersion: inserted.version, currentLatestVersion: inserted.version, committed: data.view(inserted) };
         const raced = await data.receipt(tx, actor, stream, write.mutationId);
         return raced ? replay(raced) : conflict;
       });
-      // The draft has committed; a notice that cannot be sent now waits for the morning run.
-      if (queued && input.notify) try { await input.notify.dispatch(queued); } catch { /* The ledger keeps it pending. */ }
-      return result;
     },
   });
 }

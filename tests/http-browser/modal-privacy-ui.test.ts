@@ -31,7 +31,6 @@ async function page() {
 }
 async function pendingDeparture(tab: Page, draft: string) {
   const verse = await workPanel(tab); await safe(() => verse.locator("summary").click());
-  await safe(() => verse.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await safe(() => verse.getByRole("textbox").fill(draft));
   await closeVerseTools(tab); // the page's controls are behind the sheet; closing it loses no text
   await manage(tab, "Change verses"); await ui(editor(tab)).toBeVisible();
@@ -77,9 +76,8 @@ it("retains the sole rightful departure modal during a quiet check without confi
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
   await safe(() => tab.keyboard.press("Escape")); await ui(editor(tab)).toBeHidden();
   await ui(tab.getByRole("button", { name: "Manage", exact: true })).toBeFocused();
-  // The retained note stream remains independently selectable after the guard.
+  // The retained unsent note is still there after the guard.
   const notePanel = await workPanel(tab);
-  await safe(() => notePanel.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await ui(notePanel.getByRole("textbox")).toHaveValue(draft);
   await closeVerseTools(tab);
   await manage(tab, "Change verses"); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");

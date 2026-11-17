@@ -6,7 +6,6 @@ import { AccessDenied, AccessUnavailable } from "../access/errors";
 import type { createAccessService } from "../access/service";
 import type { AccessDatabase, AccessRequest, AccessTransaction, ActiveMode } from "../access/types";
 import { lockRoleGrant, lockStudent, lockStudentRelationship } from "../data/authority";
-import { tutorLinkPassesA1 } from "../data/learner-claims";
 import * as data from "../data/notifications";
 import { calendar } from "../data/practice-calendar";
 import { lockVisibleStudentCandidates } from "../data/students";
@@ -16,13 +15,13 @@ import * as s from "../db/index";
 import type { NotificationMessage, NotificationOutcome } from "../mail/transport";
 import type { NotificationSettings } from "../settings/validation";
 import { serviceSlotLine } from "../../components/portal/workspace/service-slot";
-import { greetingName, plainName, practiceReminderMessage, tutorDraftMessage, weeklyDigestMessage, type DigestStudent, type Links, type Message } from "./copy";
+import { greetingName, plainName, practiceReminderMessage, weeklyDigestMessage, type DigestStudent, type Links, type Message } from "./copy";
 import { addDays, chicagoDay, DEFAULT_DIGEST_WEEKDAY, dueOccurrence, KINDS, validWeekday, CATCH_UP_DAYS, type NotificationKind } from "./schedule";
 import { openUnsubscribe, signUnsubscribe, UNSUBSCRIBE_TOKEN } from "./tokens";
 
 type Tx<Q extends PgQueryResultHKT> = AccessTransaction<Q>;
 const DAY = 86_400_000;
-/** A tutor's notice is sent soon after the draft; one the run finds later than this is dropped, not sent late. */
+/** A pending row older than this is dropped, not sent late. Only the retired tutor draft notice was ever queued pending. */
 const TUTOR_NOTICE_WINDOW = 2 * DAY;
 const MAX_ATTEMPTS = 3;
 export type RunCounts = { sent: number; failed: number; unknown: number; skipped: number };
@@ -30,15 +29,15 @@ export type RunResult = Readonly<{ ok: true; enabled: boolean; at: string; defer
 type Composed = Readonly<{ email: string; message: Message; unsubscribe: string }>;
 
 const switchOn = (n: NotificationSettings, kind: NotificationKind) =>
-  kind === "tutor-draft" ? n.tutorDraft === true : kind === "weekly-digest" ? n.weeklyDigest === true : n.studentReminder === true;
+  kind === "weekly-digest" ? n.weeklyDigest === true : n.studentReminder === true;
 async function notificationSettings<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string): Promise<NotificationSettings> {
   return (await currentSettings(tx, tenantId))?.notifications ?? {};
 }
 
 /**
- * Notification delivery: the tutor's draft notice (queued in the student's own write, sent right
- * after it and by the morning run), the weekly digest and the practice reminder (both from the
- * morning run). Nothing is sent unless the deployment switch (`enabled`) and the congregation's
+ * Notification delivery: the weekly digest and the practice reminder, both from the morning run.
+ * (The tutor's draft notice went with the student's translation on 2026-11-17; a row of that
+ * kind still in the ledger is skipped.) Nothing is sent unless the deployment switch (`enabled`) and the congregation's
  * switch for that kind are both on. Every row is re-authorized when it is sent: congregation on,
  * member current, address verified, grant unrevoked, student current and the link live, and the
  * member's own choice not off. Content comes only through the relationships the portal itself
@@ -60,22 +59,6 @@ export function createNotificationDelivery<Q extends PgQueryResultHKT>(input: {
       header: `${input.origin}/api/notifications/unsubscribe?t=${token}` };
   };
   const today = () => chicagoDay(now()).date;
-
-  async function composeTutorDraft(tx: Tx<Q>, row: data.DeliveryRow): Promise<Composed | null> {
-    if (!switchOn(await notificationSettings(tx, row.tenantId), "tutor-draft") || !row.studentId) return null;
-    const recipient = await data.liveRecipient(tx, row.tenantId, row.membershipId, "tutor");
-    if (!recipient || recipient.grant.id !== row.roleGrantId || recipient.userId !== row.userId) return null;
-    const choice = await data.preference(tx, row.tenantId, row.membershipId, "tutor-draft");
-    if (choice && !choice.enabled) return null;
-    const student = await lockStudent(tx, row.tenantId, row.studentId, "read");
-    if (!student || student.disabledAt) return null;
-    const link = await lockStudentRelationship(tx, row.tenantId, student.id, recipient.grant.id, "tutor", "read");
-    // A1 (PR #153 follow-up): a link the tutor's own claim made reaches the tutor only while that claim passes canView.
-    if (!link?.id || !(await tutorLinkPassesA1(tx, row.tenantId, row.membershipId, link.id))) return null;
-    const l = links(row.tenantId, row.membershipId, "tutor-draft");
-    return { email: recipient.email, unsubscribe: l.header, message: tutorDraftMessage({ product: recipient.productName, tutorName: greetingName(recipient.name),
-      studentFirstName: plainName(student.firstName) ?? "Your student", links: l.body }) };
-  }
 
   async function digestStudent(tx: Tx<Q>, tenantId: string, student: { id: string; firstName: string; ceremonyDate: string; rehearsal1: string | null; rehearsal2: string | null },
     day: string, since: Date): Promise<DigestStudent | null> {
@@ -139,7 +122,8 @@ export function createNotificationDelivery<Q extends PgQueryResultHKT>(input: {
       studentFirstName: plainName(student.firstName) ?? greetingName(recipient.name) ?? "", practicedDays: practiced, ceremonyDate: student.ceremonyDate, weekday: choice.weekday, links: l.body }) } as Composed };
   }
   async function composeRow(tx: Tx<Q>, row: data.DeliveryRow): Promise<Composed | null> {
-    if (row.kind === "tutor-draft") return composeTutorDraft(tx, row);
+    // The retired tutor draft notice: a row left in the ledger is never sent.
+    if (row.kind === "tutor-draft") return null;
     const result = row.kind === "weekly-digest" ? await composeDigest(tx, row.tenantId, row.membershipId, row.id) : await composeReminder(tx, row.tenantId, row.membershipId);
     // A retry goes only to the same member under the same grant it was first claimed for.
     return result && result.recipient.grant.id === row.roleGrantId ? result.composed : null;
@@ -238,28 +222,6 @@ export function createNotificationDelivery<Q extends PgQueryResultHKT>(input: {
 
   return Object.freeze({
     enabled: input.enabled,
-    /**
-     * Inside a student's own draft write: queue one notice per live tutor for this student and
-     * Central-time day. Runs in a savepoint, so a notice can never cost the student their draft.
-     */
-    async queueTutorDraft(tx: Tx<Q>, target: { tenantId: string; studentId: string }): Promise<boolean> {
-      if (!input.enabled) return false;
-      try {
-        return await tx.transaction(async savepoint => {
-          const t = savepoint as unknown as Tx<Q>;
-          if (!switchOn(await notificationSettings(t, target.tenantId), "tutor-draft")) return false;
-          let queued = false;
-          const period = `${target.studentId}:${today()}`;
-          for (const tutor of await data.assignedTutors(t, target.tenantId, target.studentId)) {
-            const choice = await data.preference(t, target.tenantId, tutor.membershipId, "tutor-draft");
-            if (choice && !choice.enabled) continue;
-            if (await data.insertDelivery(t, { tenantId: target.tenantId, membershipId: tutor.membershipId, userId: tutor.userId, roleGrantId: tutor.grantId, role: "tutor",
-              kind: "tutor-draft", periodKey: period, studentId: target.studentId, status: "pending" }, new Date(now()))) queued = true;
-          }
-          return queued;
-        });
-      } catch { return false; }
-    },
     deliverPending: (tenantId: string, limit = 5) => deliverPending(tenantId, limit),
     run,
     /** Vercel Cron: GET with the project's CRON_SECRET bearer, never a cookie. */
@@ -283,7 +245,7 @@ export function createNotificationDelivery<Q extends PgQueryResultHKT>(input: {
         if (!existing || existing.enabled) {
           await data.setPreference(t, { tenantId: resolved.tenantId, membershipId: member.id, userId: member.userId, kind: opened.kind, enabled: false,
             weekday: opened.kind === "practice-reminder" ? existing?.weekday ?? null : null, via: "unsubscribe" });
-          const roles: ("tutor" | "student" | "parent")[] = opened.kind === "tutor-draft" ? ["tutor"] : opened.kind === "practice-reminder" ? ["student"] : ["parent", "student"];
+          const roles: ("student" | "parent")[] = opened.kind === "practice-reminder" ? ["student"] : ["parent", "student"];
           const [grant] = await t.select({ id: s.roleGrant.id, role: s.roleGrant.role }).from(s.roleGrant)
             .where(and(eq(s.roleGrant.tenantId, resolved.tenantId), eq(s.roleGrant.membershipId, member.id), inArray(s.roleGrant.role, roles)))
             .orderBy(desc(s.roleGrant.createdAt)).limit(1);
@@ -305,18 +267,16 @@ export type PreferencesView = Readonly<{ options: readonly PreferenceOption[] }>
 export function createNotificationPreferences<Q extends PgQueryResultHKT>(input: { access: Pick<ReturnType<typeof createAccessService<Q>>, "withVerifiedIdentity">; enabled: boolean }) {
   async function roles(tx: Tx<Q>, tenantId: string, membershipId: string) {
     // One statement at a time on the transaction's single connection.
-    const tutor = await lockRoleGrant(tx, tenantId, membershipId, "tutor", "read"), parent = await lockRoleGrant(tx, tenantId, membershipId, "parent", "read"),
-      student = await lockRoleGrant(tx, tenantId, membershipId, "student", "read");
+    const parent = await lockRoleGrant(tx, tenantId, membershipId, "parent", "read"), student = await lockRoleGrant(tx, tenantId, membershipId, "student", "read");
     const own = student && !student.revokedAt ? await data.ownStudent(tx, tenantId, student.id) : null;
     const ownStudent = own ? await lockStudent(tx, tenantId, own, "read") : null;
-    return { tutor: tutor && !tutor.revokedAt ? tutor : null, parent: parent && !parent.revokedAt ? parent : null, student: ownStudent && !ownStudent.disabledAt ? student! : null,
+    return { parent: parent && !parent.revokedAt ? parent : null, student: ownStudent && !ownStudent.disabledAt ? student! : null,
       adult: ownStudent?.studentKind === "adult" && !ownStudent.disabledAt };
   }
   async function project(tx: Tx<Q>, tenantId: string, membershipId: string): Promise<PreferencesView> {
     const live = await roles(tx, tenantId, membershipId), n = await notificationSettings(tx, tenantId);
     const rows = new Map((await data.preferences(tx, tenantId, membershipId)).map(row => [row.kind, row]));
     const offered = (kind: NotificationKind) => input.enabled && switchOn(n, kind), options: PreferenceOption[] = [];
-    if (live.tutor) options.push({ kind: "tutor-draft", enabled: rows.get("tutor-draft")?.enabled ?? true, offered: offered("tutor-draft"), weekday: null });
     if (live.parent || (live.student && live.adult)) {
       const row = rows.get("weekly-digest"), audience = live.parent && live.student && live.adult ? "both" : live.parent ? "parent" : "self";
       // As composeDigest sends it: a parent's update is on until they turn it off; an adult's own part
@@ -341,7 +301,7 @@ export function createNotificationPreferences<Q extends PgQueryResultHKT>(input:
       return input.access.withVerifiedIdentity(request, { intent: "data-write", mutation: true }, async (tx, identity) => {
         if (!identity.membership) throw new AccessDenied(403);
         const live = await roles(tx, identity.tenantId, identity.membership.id);
-        const grant = kind === "tutor-draft" ? live.tutor : kind === "practice-reminder" ? live.student : live.parent ?? (live.adult ? live.student : null);
+        const grant = kind === "practice-reminder" ? live.student : live.parent ?? (live.adult ? live.student : null);
         if (!grant) throw new AccessDenied(403);
         const existing = await data.preference(tx, identity.tenantId, identity.membership.id, kind);
         const weekday = kind === "practice-reminder" ? (validWeekday(body.weekday) ? body.weekday : existing?.weekday ?? null) : null;

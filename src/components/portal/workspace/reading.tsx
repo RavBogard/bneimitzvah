@@ -424,7 +424,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   }); };
   const refresh = () => {
     const target = studyDenied, turn = sequence.current;
-    // Explicit reload retains translation drafts; only Sources must settle before their owners are replaced.
+    // Explicit reload retains unsent notes; only Sources must settle before their owners are replaced.
     void guardDeparture("sources").then(leave => { if (leave && environment.current.studyDenied === target && sequence.current === turn && !abort.current?.signal.aborted) setRetry(value => value + 1); });
   };
   const writeNote = () => { toSection(SECTION_IDS.lessons); requestAnimationFrame(() => document.querySelector<HTMLButtonElement>("[data-lesson-add]")?.click()); };

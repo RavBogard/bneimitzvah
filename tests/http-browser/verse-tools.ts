@@ -61,7 +61,7 @@ export async function openVerseTools(tab: Page, ref: string): Promise<Locator> {
   return sheet.locator(`[data-testid="study-verse-detail"][data-verse-ref="${ref}"]`);
 }
 
-/** The first verse's "Your translation & notes" disclosure, with the sheet opened for it. The locator is lazy: it needs the sheet open whenever it is used. */
+/** The first verse's notes disclosure ("Notes from your teachers", or "Teacher notes" for staff), with the sheet opened for it. The locator is lazy: it needs the sheet open whenever it is used. */
 export async function workPanel(tab: Page): Promise<Locator> { return (await openVerseTools(tab, "Genesis 1:1")).getByTestId("verse-work"); }
 
 /** Closes whatever verse-tools sheet is open, with Esc (which asks the departure guard first, as leaving the page would). */

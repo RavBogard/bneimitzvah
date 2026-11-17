@@ -31,7 +31,7 @@ async function heldReading(tab: Page) {
   await expectSilentAudio(tab);
   expect(await tab.evaluate(() => (window as unknown as { silentAudioProbe: { elements: HTMLAudioElement[] } }).silentAudioProbe.elements.length)).toBe(0);
 }
-async function page(mode: "student" | "parent" = "student") {
+async function page(mode: "student" | "parent" | "tutor" = "student") {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, viewport: { width: 1200, height: 700 }, serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
   await observeSilentAudio(context); await countPageFetches(context);
   await context.route("**/*", async route => { try { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); } catch { await route.abort(); } });
@@ -41,14 +41,15 @@ async function page(mode: "student" | "parent" = "student") {
     expect(await tab.evaluate(async () => (await fetch("/api/auth/sign-in/magic-link", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "pg-tutor@example.test" }) })).status)).toBe(200);
     await openAuthMail(tab, fixture.takeMail("pg-tutor@example.test")); cached.set("tutor", await context.cookies());
   }
-  await tab.goto(`/workspace/${mode}${mode === "student" ? "?tab=reading" : ""}`, { waitUntil: "domcontentloaded" });
+  await tab.goto(mode === "tutor" ? `/workspace/tutor/${fixture.student.id}` : `/workspace/${mode}${mode === "student" ? "?tab=reading" : ""}`, { waitUntil: "domcontentloaded" });
   if (mode === "parent") await goChild(tab, fixture.student.id);
   await ui(tab.locator(".study-verses")).toBeVisible(); await heldReading(tab); return tab;
 }
+// The one editor left in the verse tools is the tutor's student-visible note (a student's own translation was removed 2026-11-17).
 async function editor(tab: Page, ordinal = 0) {
   const tools = (await openVerseTools(tab, `Genesis 1:${ordinal + 1}`)).locator(".verse-work");
   if (await tools.getAttribute("open") === null) await tools.locator("summary").click();
-  const field = tools.getByRole("textbox", { name: `My translation · Genesis 1:${ordinal + 1}`, exact: true }); await ui(field).toBeVisible(); return { tools, field };
+  const field = tools.getByRole("textbox", { name: `Student-visible note · Genesis 1:${ordinal + 1}`, exact: true }); await ui(field).toBeVisible(); return { tools, field };
 }
 beforeAll(async () => {
   try {
@@ -67,7 +68,7 @@ afterAll(async () => { await Promise.all(contexts.map(context => context.close()
 afterEach(async () => { for (const context of contexts) for (const tab of context.pages()) if (!tab.isClosed()) await heldReading(tab); await Promise.all(contexts.splice(0).map(context => context.close().catch(() => undefined))); });
 
 it("coalesces tab-return checks while preserving actual reading DOM, scroll and unsent work without text reload", async () => {
-  const tab = await page(), { field, tools } = await editor(tab), initialPageCount = shortRequests.get(tab)!.counts().seen; await field.fill("Synthetic quiet unsent draft");
+  const tab = await page("tutor"), { field, tools } = await editor(tab), initialPageCount = shortRequests.get(tab)!.counts().seen; await field.fill("Synthetic quiet unsent draft");
   const node = await tab.locator(".study-verses").elementHandle(), scroll = await tab.evaluate(() => { window.scrollTo(0, 200); return window.scrollY; });
   let release!: () => void, entered = false, sessions = 0, text = 0, metadata = 0; const gate = new Promise<void>(yes => { release = yes; });
   tab.on("request", request => { const path = new URL(request.url()).pathname; if (path.endsWith("/study-text")) text++; if (path.endsWith("/reading")) metadata++; });
@@ -82,12 +83,12 @@ it("coalesces tab-return checks while preserving actual reading DOM, scroll and 
     await ui(field).toHaveValue("Synthetic quiet unsent draft"); expect(await node!.evaluate(value => value === document.querySelector(".study-verses"))).toBe(true); expect(await tab.evaluate(() => window.scrollY)).toBe(scroll);
   } finally { release(); }
   await ui.poll(() => metadata).toBe(1); await ui.poll(() => sessions).toBe(4); expect(shortRequests.get(tab)!.counts().seen).toBe(initialPageCount); expect(text).toBe(0); expect(await node!.evaluate(value => value === document.querySelector(".study-verses"))).toBe(true);
-  await ui(field).toHaveValue("Synthetic quiet unsent draft"); await ui(tools.locator(".work-status")).toHaveText("Saved"); await heldReading(tab); await tab.context().close();
+  await ui(field).toHaveValue("Synthetic quiet unsent draft"); await ui(tools.getByTestId("work-status")).toHaveAttribute("data-work-state", "unsubmitted"); await heldReading(tab); await tab.context().close();
 });
 
-it("a committed draft acknowledgement remains authoritative while an independent focus check is pending", async () => {
-  const tab = await page(), { field, tools } = await editor(tab, 1); let release!: () => void, responded = false, status = 0, code: string | null = null, expectedVersion = -1; const gate = new Promise<void>(yes => { release = yes; });
-  await tab.route("**/work/draft", async route => {
+it("a committed note acknowledgement remains authoritative while an independent focus check is pending", async () => {
+  const tab = await page("tutor"), { field, tools } = await editor(tab, 1); let release!: () => void, responded = false, status = 0, code: string | null = null, expectedVersion = -1; const gate = new Promise<void>(yes => { release = yes; });
+  await tab.route("**/work/note", async route => {
     expectedVersion = Number(route.request().postDataJSON().expectedVersion);
     const response = await privateRouteFetch(route, tab); if (!response) return; status = response.status();
     if (status !== 200) { const value = await response.json(); code = ["conflict", "stale-revision", "invalid-request"].includes(value.code) ? value.code : "other"; }
@@ -95,12 +96,13 @@ it("a committed draft acknowledgement remains authoritative while an independent
     await route.fulfill({ response }).catch(() => undefined);
   });
   try {
-    await field.fill("Synthetic focus committed draft"); await tools.getByRole("button", { name: "Save now", exact: true }).click(); await ui.poll(() => responded).toBe(true);
+    await field.fill("Synthetic focus committed draft"); await tools.getByRole("button", { name: "Add student-visible note", exact: true }).click(); await ui.poll(() => responded).toBe(true);
     expect({ status, code, expectedVersion }).toMatchObject({ status: 200, code: null });
     const checked = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading") && response.status() === 200);
     await focus(tab); await checked; await ui(tab.locator(".study-verses")).toBeVisible();
   } finally { release(); }
-  await ui(tools.locator(".work-status")).toHaveText("Saved"); await ui(field).toHaveValue("Synthetic focus committed draft");
+  // An acknowledged note joins the notes and leaves the editor empty for the next one.
+  await ui(tools.getByTestId("work-status")).toHaveAttribute("data-work-state", "empty"); await ui(field).toHaveValue(""); await ui(tools.locator(".work-notes")).toContainText("Synthetic focus committed draft");
   expect(await tab.getByText("Save not confirmed. Your text is still in this tab.", { exact: true }).count()).toBe(0); await heldReading(tab); await tab.context().close();
 });
 

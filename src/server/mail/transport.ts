@@ -147,7 +147,7 @@ export function createMailTransport(input: { origin: string; apiKey: string; fro
 export type NotificationMessage = Readonly<{ email: string; subject: string; text: string; unsubscribeUrl: string; idempotencyKey: string }>;
 /** sent: the provider accepted it. rejected: definitely not sent (refused, or never handed over). unknown: no answer. */
 export type NotificationOutcome = "sent" | "rejected" | "unknown";
-const NOTIFICATION_TOKEN = /^[tdr]\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[A-Za-z0-9_-]{43}$/;
+const NOTIFICATION_TOKEN = /^[dr]\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[A-Za-z0-9_-]{43}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /**

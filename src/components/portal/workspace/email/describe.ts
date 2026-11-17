@@ -4,7 +4,6 @@ export const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday",
 
 /** The line under each email choice. It must say what the checkbox does as the server sends it. */
 export function describeEmailOption(option: EmailOption) {
-  if (option.kind === "tutor-draft") return "One short email with a link to sign in. At most one a day for each student.";
   const day = WEEKDAYS[option.weekday ?? 0];
   if (option.kind === "weekly-digest") {
     if (option.audience === "self") return `Each ${day} morning: your days practiced, new lesson notes and upcoming dates.`;

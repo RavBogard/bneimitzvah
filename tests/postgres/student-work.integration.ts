@@ -159,19 +159,6 @@ test("session expiry during a real uniqueness wait denies after waking and keeps
   expect(await f.ownerDb.select().from(s.tutorNote)).toHaveLength(1);
 });
 
-test("session deletion cascades child context while retained attribution/history survives for a current reader", async () => {
-  const f = await fixture(), practice = await f.practice();
-  const child = await practice.a.enter(practice.request(), { studentId: f.student.id });
-  const selection = { ...f.selection, mode: "child-practice" as const }, input = f.write("Synthetic assisted draft");
-  expect(await f.workA.append(practice.request(child.handle), selection, "draft", input)).toMatchObject({ ok: true });
-  await f.ownerDb.delete(s.session).where(eq(s.session.id, f.tutor.sessionId));
-  expect(await f.ownerDb.select().from(s.practiceContext)).toHaveLength(0);
-  const [row] = await f.ownerDb.select().from(s.translationDraft);
-  expect(row).toMatchObject({ contextId: child.context.id, actorUserId: f.tutor.id });
-  await expect(f.workB.history(practice.request(child.handle), selection, "draft", input.verseRef)).rejects.toMatchObject({ status: 401 });
-  expect(await f.workB.history(f.workRequest("admin"), { ...f.selection, mode: "admin" }, "draft", input.verseRef)).toMatchObject({ versions: [{ version: 1, author: { mode: "child-practice", assisted: true } }] });
-});
-
 test("assignment replacement waits on append; removed work cannot be read/replayed and re-add exposes original history", async () => {
   const f = await fixture(), input = f.write(), entered = deferred(), release = deferred();
   const stop = await f.intercept("a", text => text.startsWith('insert into "tutor_note"'), async proceed => {
@@ -256,10 +243,17 @@ test("fresh real PG migration enforces tenant RLS, grants, append-only guard and
   const flags = await f.ownerDb.execute(sql`select relrowsecurity, relforcerowsecurity from pg_class where relname in ('translation_draft','tutor_note')`);
   expect(flags.rows).toEqual([{ relrowsecurity: true, relforcerowsecurity: true }, { relrowsecurity: true, relforcerowsecurity: true }]);
 
+  // A student's translation (translation_draft) is no longer written by the app (removed 2026-11-17); the table, its FKs and RLS stay,
+  // so the rows the removed service wrote are inserted here directly.
   const practice = await f.practice(), child = await practice.a.enter(practice.request(), { studentId: f.student.id });
-  await f.workA.append(practice.request(child.handle), { ...f.selection, mode: "child-practice" }, "draft", f.write("Synthetic assisted draft"));
-  const [assisted] = await f.ownerDb.select().from(s.translationDraft);
-  const { id: _assistedId, ...assistedValues } = assisted;
+  const [guardian] = await f.ownerDb.select().from(s.guardian).where(eq(s.guardian.studentId, f.student.id));
+  const [parentGrant] = await f.ownerDb.select().from(s.roleGrant).where(eq(s.roleGrant.id, guardian.parentGrantId));
+  const [parentMember] = await f.ownerDb.select().from(s.membership).where(eq(s.membership.id, parentGrant.membershipId));
+  const assistedValues = { tenantId: "crc", studentId: f.student.id, verseRef: "Genesis 1:1", version: 1, baseVersion: 0, assignmentId: f.assignment.id, assignmentRevision: 1,
+    text: "Synthetic assisted draft", actorUserId: parentMember.userId, actorMembershipId: parentMember.id, roleGrantId: parentGrant.id, role: "parent" as const, mode: "child-practice" as const,
+    guardianId: guardian.id, contextId: child.context.id, mutationId: randomUUID(), requestDigest: "a".repeat(64) };
+  expect(await sqlState(f.ownerDb.insert(s.translationDraft).values(assistedValues))).toBe("accepted");
+  expect(await withTenantTransaction(f.aDb, { tenantId: "other" }, tx => tx.select().from(s.translationDraft))).toEqual([]);
   const [siblingGuardian] = await f.ownerDb.select().from(s.guardian).where(eq(s.guardian.studentId, practice.sibling.id));
   expect(await sqlState(f.ownerDb.insert(s.translationDraft).values({ ...assistedValues, version: 2, baseVersion: 1, mutationId: randomUUID(), guardianId: siblingGuardian.id }))).toBe("23503");
   const [adminMember] = await f.ownerDb.select().from(s.membership).where(eq(s.membership.userId, f.admin.id));
@@ -267,10 +261,10 @@ test("fresh real PG migration enforces tenant RLS, grants, append-only guard and
   expect(await sqlState(f.ownerDb.insert(s.translationDraft).values({ ...assistedValues, version: 2, baseVersion: 1, mutationId: randomUUID(), actorUserId: f.admin.id, actorMembershipId: adminMember.id, roleGrantId: otherParentGrant.id }))).toBe("23503");
 
   const [ownGrant] = await f.ownerDb.insert(s.roleGrant).values({ tenantId: "crc", membershipId: adminMember.id, role: "student" }).returning();
-  await f.ownerDb.insert(s.studentIdentity).values({ tenantId: "crc", studentId: f.student.id, roleGrantId: ownGrant.id });
-  await f.workA.append(f.workRequest("admin"), { ...f.selection, mode: "student" }, "draft", f.write("Synthetic own draft", 1));
-  const [own] = await f.ownerDb.select().from(s.translationDraft).where(eq(s.translationDraft.version, 2));
-  const { id: _ownId, ...ownValues } = own;
+  const [ownIdentity] = await f.ownerDb.insert(s.studentIdentity).values({ tenantId: "crc", studentId: f.student.id, roleGrantId: ownGrant.id }).returning();
+  const ownValues = { ...assistedValues, version: 2, baseVersion: 1, text: "Synthetic own draft", actorUserId: f.admin.id, actorMembershipId: adminMember.id, roleGrantId: ownGrant.id,
+    role: "student" as const, mode: "student" as const, guardianId: null, contextId: null, studentIdentityId: ownIdentity.id, mutationId: randomUUID() };
+  expect(await sqlState(f.ownerDb.insert(s.translationDraft).values(ownValues))).toBe("accepted");
   const [tutorMember] = await f.ownerDb.select().from(s.membership).where(eq(s.membership.userId, f.tutor.id));
   const [siblingGrant] = await f.ownerDb.insert(s.roleGrant).values({ tenantId: "crc", membershipId: tutorMember.id, role: "student" }).returning();
   const [siblingIdentity] = await f.ownerDb.insert(s.studentIdentity).values({ tenantId: "crc", studentId: practice.sibling.id, roleGrantId: siblingGrant.id }).returning();
@@ -281,34 +275,12 @@ test("fresh real PG migration enforces tenant RLS, grants, append-only guard and
   expect(receipt.committed.author).not.toHaveProperty("email");
 });
 
-test("child append commits before a context switch; old context cannot replay or read receipts afterwards", async () => {
-  const f = await fixture(), practice = await f.practice();
-  const child = await practice.a.enter(practice.request(), { studentId: f.student.id });
-  const selection = { ...f.selection, mode: "child-practice" as const }, input = f.write("Synthetic child work");
-  const entered = deferred(), release = deferred();
-  const stop = await f.intercept("a", text => text.startsWith('insert into "translation_draft"'), async proceed => {
-    const result = await proceed(); entered.resolve(); await release.promise; return result;
-  });
-  const save = safe(f.workA.append(practice.request(child.handle), selection, "draft", input));
-  let switching: Promise<unknown> | undefined;
-  try {
-    await waitForEntry(entered.promise, save);
-    switching = safe(practice.b.switch(practice.request(child.handle), { studentId: practice.sibling.id }));
-    await f.waitForLock(f.pidB, f.pidA);
-  } finally { release.resolve(); stop(); await Promise.all([save, switching]); }
-  expect(await save).toMatchObject({ ok: true }); expect(await switching).toHaveProperty("handle");
-  await expect(f.workA.append(practice.request(child.handle), selection, "draft", input)).rejects.toMatchObject({ status: 404 });
-  await expect(f.workB.receipt(practice.request(child.handle), selection, "draft", input.verseRef, input.mutationId)).rejects.toMatchObject({ status: 404 });
-});
-
-for (const change of ["link", "context", "assignment"] as const) test(`reverse ${change} change wins before waiting work and leaves no version/audit`, async () => {
+// A child-practice context wrote only a student's translation, removed 2026-11-17: notes are the tutor's, so only link and assignment changes race a write.
+for (const change of ["link", "assignment"] as const) test(`reverse ${change} change wins before waiting work and leaves no version/audit`, async () => {
   const f = await fixture();
-  const practice = change === "context" ? await f.practice() : null;
-  const child = practice ? await practice.a.enter(practice.request(), { studentId: f.student.id }) : null;
   const entered = deferred(), release = deferred();
   const mutation = safe(f.ownerDb.transaction(async tx => {
     if (change === "link") await tx.update(s.tutorStudent).set({ revokedAt: new Date() }).where(eq(s.tutorStudent.id, f.link.id));
-    else if (change === "context") await tx.update(s.practiceContext).set({ revokedAt: new Date() }).where(eq(s.practiceContext.id, child!.context.id));
     else await tx.update(s.assignment).set({ revision: 2 }).where(eq(s.assignment.id, f.assignment.id));
     entered.resolve(); await release.promise; return { committed: true };
   }));
@@ -316,7 +288,7 @@ for (const change of ["link", "context", "assignment"] as const) test(`reverse $
   try {
     await waitForEntry(entered.promise, mutation);
     const ownerPid = (await query<{ pid: number }>(f.owner, "select pg_backend_pid() as pid")).rows[0].pid;
-    operation = f.workA.append(practice && child ? practice.request(child.handle) : f.workRequest(), practice ? { ...f.selection, mode: "child-practice" } : f.selection, practice ? "draft" : "note", f.write())
+    operation = f.workA.append(f.workRequest(), f.selection, "note", f.write())
       .then(value => value, error => ({ denied: error instanceof AccessDenied ? error.status : 503 }));
     await f.waitForLock(f.pidA, ownerPid);
   } finally { release.resolve(); await Promise.all([mutation, operation]); }

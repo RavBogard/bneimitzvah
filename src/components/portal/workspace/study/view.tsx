@@ -228,7 +228,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   useEffect(() => { if (shown) onShown?.(...shown); }, [livePage]); // eslint-disable-line react-hooks/exhaustive-deps
   const toolsVerse = livePage && toolsRef ? livePage.verses.find(row => row.ref === toolsRef) ?? null : null;
   useEffect(() => { if (toolsRef && livePage && !toolsVerse) setToolsRef(null); }, [toolsRef, livePage, toolsVerse]);
-  // Closing asks the sources guard first, because the sheet's Sources hold choices that closing would drop. Unsent translation and notes are not asked about:
+  // Closing asks the sources guard first, because the sheet's Sources hold choices that closing would drop. Unsent notes are not asked about:
   // their text lives in the work coordinator, not in the sheet, so closing loses nothing and the reader's place and words are all still there on reopening.
   const closeTools = async () => { if (!await guardLeaving("sources")) return false; setToolsRef(null); return true; };
   const openTools = (ref: string, opener: HTMLElement | null) => { toolsOpener.current = opener; setPicked(ref); setToolsRef(ref); };

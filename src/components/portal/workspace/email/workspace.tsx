@@ -6,7 +6,6 @@ import { describeEmailOption as describe, WEEKDAYS } from "./describe";
 import { Button, PageHeader } from "../../../ui";
 
 const copy: Record<EmailKind, { title: string; choice: string }> = {
-  "tutor-draft": { title: "Draft notices", choice: "Email me when a student I teach saves a translation draft" },
   "weekly-digest": { title: "Weekly update", choice: "Send me the weekly update" },
   "practice-reminder": { title: "Practice reminder", choice: "Remind me to practice every week" },
 };

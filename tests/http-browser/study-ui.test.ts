@@ -343,14 +343,15 @@ it("retains optional close-up during a quiet unchanged access check without requ
 });
 
 it("keeps unsent typing and an unknown save intact while phrase controls change", async () => {
-  const tab = await page("student"); await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab, "Genesis 1:1");
-  // The translation and notes are in the verse tools sheet; closing the sheet (to use the page's controls) leaves the unsent text in the tab, and reopening shows it.
+  // The tutor's student-visible note (the one editor left since a student's translation was removed, 2026-11-17) is in the verse tools sheet;
+  // closing the sheet (to use the page's controls) leaves the unsent text in the tab, and reopening shows it.
+  const tab = await page("tutor"); await navigate(tab, `/workspace/tutor/${fixture.student.id}`); await loaded(tab, "Genesis 1:1");
   const panel = (await openVerseTools(tab, "Genesis 1:1")).getByTestId("verse-work"); await safe(() => panel.locator("summary").click());
   const field = panel.getByRole("textbox"); await ui(field).toBeVisible();
   let release!: () => void, committed = false, writes = 0; const gate = new Promise<void>(resolve => { release = resolve; });
-  await tab.route("**/work/draft", async route => { writes++; const response = await privateRouteFetch(route, tab); if (!response) return; committed = response.status() === 200; await gate; await route.fulfill({ response }).catch(() => undefined); });
+  await tab.route("**/work/note", async route => { writes++; const response = await privateRouteFetch(route, tab); if (!response) return; committed = response.status() === 200; await gate; await route.fulfill({ response }).catch(() => undefined); });
   try {
-    await safe(() => field.fill("Synthetic save held during phrase colors")); await safe(() => panel.getByRole("button", { name: "Save now", exact: true }).click());
+    await safe(() => field.fill("Synthetic save held during phrase colors")); await safe(() => panel.getByRole("button", { name: "Add student-visible note", exact: true }).click());
     await ui.poll(() => committed).toBe(true);
     await safe(() => field.fill("Synthetic queued typing kept through phrase colors"));
     await ui(panel.getByTestId("work-status")).toHaveAttribute("data-work-state", "unconfirmed", { timeout: 18_000 });
@@ -361,10 +362,12 @@ it("keeps unsent typing and an unknown save intact while phrase controls change"
     await openVerseTools(tab, "Genesis 1:1");
     await ui(field).toHaveValue("Synthetic queued typing kept through phrase colors");
     await ui(panel.getByTestId("work-status")).toHaveAttribute("data-work-state", "unconfirmed"); expect(writes).toBe(1);
-  } finally { release(); await tab.unroute("**/work/draft"); }
+  } finally { release(); await tab.unroute("**/work/note"); }
   await openVerseTools(tab, "Genesis 1:1");
   await safe(() => panel.getByRole("button", { name: "Try again", exact: true }).click());
-  await ui(field).toHaveValue("Synthetic queued typing kept through phrase colors"); await ui(panel.getByTestId("work-status")).toHaveAttribute("data-work-state", "saved", { timeout: 18_000 });
+  // The held note is confirmed and listed; the later typing stays unsent in the editor.
+  await ui(panel.locator(".work-notes")).toContainText("Synthetic save held during phrase colors", { timeout: 18_000 });
+  await ui(field).toHaveValue("Synthetic queued typing kept through phrase colors"); await ui(panel.getByTestId("work-status")).toHaveAttribute("data-work-state", "unsubmitted");
 });
 
 it("discards held old-child text after a switch, keeps another tab independent, and clears text after relationship revocation", async () => {

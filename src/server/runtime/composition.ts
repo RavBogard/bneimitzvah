@@ -152,14 +152,6 @@ function notificationDelivery<Q extends PgQueryResultHKT>(config: RuntimeConfig,
   return createNotificationDelivery({ db, origin: config.origin, secret: purposeSecret(config, "notification-unsubscribe"), enabled: config.notificationsEnabled,
     cronSecret: config.serviceCronSecret, send: createNotificationTransport({ ...config.mail, origin: config.origin, fetch }) });
 }
-async function dispatchNotificationJobs(config: RuntimeConfig, fetch: typeof globalThis.fetch, tenantId: string) {
-  // after() runs after the request's pool is closed; own this background connection, like the service drain.
-  const pool = new Pool({ connectionString: config.databaseUrl, max: 2, connectionTimeoutMillis: 5000, idleTimeoutMillis: 1000, statement_timeout: 10000, query_timeout: 12000 });
-  pool.on("error", () => undefined);
-  try { await notificationDelivery(config, drizzle(pool, { schema, logger: false }), fetch).deliverPending(tenantId); }
-  catch (error) { recordFailure(error, "notifications/background-delivery"); /* The morning run sends anything still pending. */ }
-  finally { await pool.end().catch(() => undefined); }
-}
 export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig, db: AccessDatabase<Q>, fetch: typeof globalThis.fetch,
   studyTasks: PublicStudyCoalescer = sharedStudyTasks(fetch), stepSource: StepSourceLoader = publicStepSource) {
   const send = createMailTransport({ ...config.mail, origin: config.origin, fetch });
@@ -204,9 +196,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const serviceLearning = createServiceLearningService({ access, practice, signingSecret: purposeSecret(config, "service-plan-preparations"), resolveCeremonyUnit: serviceEcosystem.materialMapping });
   const notifications = notificationDelivery(config, db, fetch);
   const notificationPreferences = createNotificationPreferences({ access, enabled: config.notificationsEnabled });
-  // A student's draft queues the tutors' notice in the same write; it is sent once the reply has gone.
-  const studentWork = createStudentWorkService({ access, practice, authorityBindingSecret: purposeSecret(config, "student-work-authority"),
-    notify: { queue: notifications.queueTutorDraft, dispatch: async tenantId => { const { after } = await import("next/server"); after(async () => { await dispatchNotificationJobs(config, fetch, tenantId); }); } } });
+  const studentWork = createStudentWorkService({ access, practice, authorityBindingSecret: purposeSecret(config, "student-work-authority") });
   const progress = createProgressService({ access, practice });
   // The web runtime gets reads, ticks and staff status only; guide writes need the MCP or the operator bridge.
   const studyGuides = studyGuideWebSurface(createStudyGuideService({ access, practice, check: createGuideChecker({ related: createSefariaMetadataReader({ fetch }).related }) }));

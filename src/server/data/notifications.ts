@@ -50,15 +50,6 @@ export function recipientActor(recipient: LiveRecipient, origin: string, mode: A
     authSessionExpiresAt: Number.MAX_SAFE_INTEGER, roleGrantId: recipient.grant.id, roleGrantRevision: recipient.grant.revision, mode, authorityRevision: recipient.authorityRevision });
 }
 
-/** The student's live tutors: assignment unrevoked, tutor grant unrevoked, member current. */
-export async function assignedTutors<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, studentId: string) {
-  return tx.select({ grantId: s.roleGrant.id, membershipId: s.membership.id, userId: s.membership.userId }).from(s.tutorStudent)
-    .innerJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.tutorStudent.tenantId), eq(s.roleGrant.id, s.tutorStudent.tutorGrantId), eq(s.roleGrant.role, "tutor"), isNull(s.roleGrant.revokedAt)))
-    .innerJoin(s.membership, and(eq(s.membership.tenantId, s.roleGrant.tenantId), eq(s.membership.id, s.roleGrant.membershipId), isNull(s.membership.disabledAt)))
-    .where(and(eq(s.tutorStudent.tenantId, tenantId), eq(s.tutorStudent.studentId, studentId), isNull(s.tutorStudent.revokedAt)))
-    .orderBy(asc(s.membership.id)).limit(20);
-}
-
 export async function insertDelivery<Q extends PgQueryResultHKT>(tx: Tx<Q>, row: { tenantId: string; membershipId: string; userId: string; roleGrantId: string; role: "parent" | "student" | "tutor";
   kind: NotificationKind; periodKey: string; studentId: string | null; status: "pending" | "sending" }, at: Date) {
   const [inserted] = await tx.insert(d).values({ ...row, attempts: row.status === "sending" ? 1 : 0, createdAt: at, attemptedAt: row.status === "sending" ? at : null })

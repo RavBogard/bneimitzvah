@@ -15,7 +15,10 @@ export const SERVICE_SLOTS = ["morning", "havdalah"] as const;
 export type SettingsKey = (typeof SETTINGS_KEYS)[number];
 export type ServiceSlot = (typeof SERVICE_SLOTS)[number];
 export type ServiceSetting = { label?: string; start?: string };
-/** Each kind's admin switch (absent or false is off) and the weekly digest's day, Sunday 0 to Saturday 6. */
+/**
+ * Each kind's admin switch (absent or false is off) and the weekly digest's day, Sunday 0 to Saturday 6. `tutorDraft` is retired with the
+ * student's translation (2026-11-17): still accepted so a congregation's saved settings keep validating, and offered or read nowhere.
+ */
 export type NotificationSettings = { tutorDraft?: boolean; weeklyDigest?: boolean; studentReminder?: boolean; digestWeekday?: number };
 export type CongregationSettings = {
   rabbiDisplayName?: string; services?: Partial<Record<ServiceSlot, ServiceSetting>>; preferredSources?: string[];

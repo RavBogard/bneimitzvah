@@ -8,8 +8,9 @@ import type { Stream, WorkSelection, WorkWrite } from "../student-work/validatio
 import * as s from "../db/index";
 
 export type WorkActor = StudentActor | PracticeActor;
-const table = (stream: Stream) => stream === "draft" ? s.translationDraft : s.tutorNote;
-export type WorkRow = typeof s.translationDraft.$inferSelect & { displayName: string };
+// Only the note stream is written or read now. A student's translation (translation_draft) was removed on 2026-11-17; its rows stay in the database.
+const table = (_stream: Stream) => s.tutorNote;
+export type WorkRow = typeof s.tutorNote.$inferSelect & { displayName: string };
 export async function studentRevision<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: WorkActor) {
   const [row] = await tx.select({ revision: s.student.revision }).from(s.student).where(and(eq(s.student.tenantId, actor.tenantId), eq(s.student.id, actor.studentId)));
   if (!row) throw new Error("Work authority unavailable");
@@ -30,7 +31,7 @@ export async function history<Q extends PgQueryResultHKT>(tx: AccessTransaction<
     .innerJoin(s.user, eq(s.user.id, s.membership.userId))
     .where(and(eq(t.tenantId, actor.tenantId), eq(t.studentId, actor.studentId), eq(t.verseRef, verseRef), before === undefined ? undefined : lt(t.version, before)))
     .orderBy(desc(t.version)).limit(limit);
-  return rows.map(row => ({ ...(row.row as typeof s.translationDraft.$inferSelect), displayName: row.displayName }));
+  return rows.map(row => ({ ...(row.row as typeof s.tutorNote.$inferSelect), displayName: row.displayName }));
 }
 export async function receipt<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: WorkActor, stream: Stream, mutationId: string) {
   const t = table(stream);
@@ -38,7 +39,7 @@ export async function receipt<Q extends PgQueryResultHKT>(tx: AccessTransaction<
     .innerJoin(s.membership, and(eq(s.membership.tenantId, t.tenantId), eq(s.membership.id, t.actorMembershipId), eq(s.membership.userId, t.actorUserId)))
     .innerJoin(s.user, eq(s.user.id, s.membership.userId))
     .where(and(eq(t.tenantId, actor.tenantId), eq(t.studentId, actor.studentId), eq(t.actorUserId, actor.userId), eq(t.mutationId, mutationId))).limit(1);
-  return found ? { ...(found.row as typeof s.translationDraft.$inferSelect), displayName: found.displayName } : null;
+  return found ? { ...(found.row as typeof s.tutorNote.$inferSelect), displayName: found.displayName } : null;
 }
 export async function append<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: WorkActor, stream: Stream, selection: WorkSelection, write: WorkWrite, digest: string) {
   const t = table(stream);
@@ -51,6 +52,6 @@ export async function append<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q
     mutationId: write.mutationId, requestDigest: digest }).onConflictDoNothing().returning();
   if (row) await tx.insert(s.auditEvent).values({ tenantId: actor.tenantId, actorUserId: actor.userId, actorMembershipId: actor.membershipId,
     mode: actor.mode, actingStudentId: actor.studentId, roleGrantId: actor.roleGrantId, guardianId: child ? actor.relationshipId : null,
-    action: stream === "draft" ? "draft.append" : "note.append", targetType: stream === "draft" ? "translation_draft" : "tutor_note", targetId: row.id, requestId: randomUUID() });
+    action: "note.append", targetType: "tutor_note", targetId: row.id, requestId: randomUUID() });
   return row ? receipt(tx, actor, stream, write.mutationId) : null;
 }

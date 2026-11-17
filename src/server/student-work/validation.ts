@@ -5,7 +5,8 @@ import type { ActiveMode } from "../access/types";
 
 export type WorkSelection = Readonly<{ mode: ActiveMode | "child-practice"; studentId: string; kind: "torah" | "haftarah"; assignmentId: string; assignmentRevision: number }>;
 export type WorkWrite = Readonly<{ verseRef: string; text: string; expectedVersion: number; mutationId: string }>;
-export type Stream = "draft" | "note";
+/** A tutor's or the rabbi's student-visible note per verse. A student's own translation ("My translation") was removed 2026-11-17; its rows stay in translation_draft. */
+export type Stream = "note";
 export const bindingKeys = ["mode", "studentId", "kind", "assignmentId", "assignmentRevision"] as const;
 export function uuid(value: unknown): string {
   if (typeof value !== "string" || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value)) throw new HttpBoundaryError();
@@ -28,10 +29,10 @@ export function write(value: unknown, stream: Stream): WorkWrite {
   const row = closedObject(value, ["verseRef", "text", "expectedVersion", "mutationId"]);
   if (typeof row.text !== "string" || !row.text.isWellFormed()) throw new HttpBoundaryError();
   const text = row.text.replace(/\r\n?/g, "\n");
-  if (Buffer.byteLength(text, "utf8") > 4096 || /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/.test(text) || (stream === "note" && !text.trim())) throw new HttpBoundaryError();
+  if (Buffer.byteLength(text, "utf8") > 4096 || /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/.test(text) || !text.trim()) throw new HttpBoundaryError();
   return Object.freeze({ verseRef: verse(row.verseRef), text, expectedVersion: integer(row.expectedVersion, 0), mutationId: uuid(row.mutationId) });
 }
 export function stream(value: unknown): Stream {
-  if (value !== "draft" && value !== "note") throw new HttpBoundaryError();
+  if (value !== "note") throw new HttpBoundaryError();
   return value;
 }

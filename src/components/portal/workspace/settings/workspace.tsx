@@ -9,7 +9,7 @@ import { Button, Chip, PageHeader } from "../../../ui";
 type Draft = { rabbiDisplayName: string; preferredSources: string; morningLabel: string; morningStart: string; havdalahLabel: string; havdalahStart: string;
   siddurUrl: string; musicUrl: string; rosterSheetId: string; consentNotice: string; digestWeekday: string };
 type Field = keyof Draft;
-type Switches = Required<Pick<NotificationSettings, "tutorDraft" | "weeklyDigest" | "studentReminder">>;
+type Switches = Required<Pick<NotificationSettings, "weeklyDigest" | "studentReminder">>;
 type Switch = keyof Switches;
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
 const fieldFor: Record<string, Field[]> = {
@@ -35,7 +35,7 @@ function draftOf(settings: CongregationSettings): Draft {
     siddurUrl: settings.siddurUrl ?? "", musicUrl: settings.musicUrl ?? "", rosterSheetId: settings.rosterSheetId ?? "", consentNotice: settings.consentNotice ?? "",
     digestWeekday: String(settings.notifications?.digestWeekday ?? 0) };
 }
-const switchesOf = (settings: CongregationSettings): Switches => ({ tutorDraft: settings.notifications?.tutorDraft === true,
+const switchesOf = (settings: CongregationSettings): Switches => ({
   weeklyDigest: settings.notifications?.weeklyDigest === true, studentReminder: settings.notifications?.studentReminder === true });
 /** Blank fields are left out, so they keep the portal's current behaviour. */
 function settingsOf(draft: Draft, switches: Switches): CongregationSettings {
@@ -62,7 +62,7 @@ function notificationsOf(draft: Draft, switches: Switches): NotificationSettings
 export function CongregationSettingsWorkspace() { return <RequireRole role="admin"><CongregationSettingsPage /></RequireRole>; }
 function CongregationSettingsPage() {
   const { registerReload } = useWorkspace();
-  const [switches, setSwitches] = useState<Switches>({ tutorDraft: false, weeklyDigest: false, studentReminder: false });
+  const [switches, setSwitches] = useState<Switches>({ weeklyDigest: false, studentReminder: false });
   const [view, setView] = useState<SettingsView | null>(null), [draft, setDraft] = useState<Draft | null>(null), [loading, setLoading] = useState(true), [failure, setFailure] = useState(false);
   const [pending, setPending] = useState(false), [problems, setProblems] = useState<string[]>([]), [message, setMessage] = useState<{ text: string; tone: "status" | "alert" } | null>(null);
   const [conflict, setConflict] = useState(false), [accessError, setAccessError] = useState(false);
@@ -154,8 +154,7 @@ function CongregationSettingsPage() {
         </section>
         <section className="people-card" aria-labelledby="settings-email"><div className="people-card-head"><h2 id="settings-email">Email</h2><p>Each kind is off until you turn it on here. Nothing is sent until the portal’s operator has turned email on as well. Every email has a one-click unsubscribe, and people can turn each kind off in their own email settings.</p>
             {view.portal.email !== null && <p className="settings-email-status" data-testid="settings-email-status"><Chip tone={view.portal.email ? "done" : "neutral"}>{view.portal.email ? "Email is on for this portal" : "Email is off for this portal"}</Chip></p>}</div>
-          {([["tutorDraft", "Draft notices for tutors", "When a student saves a translation draft, their tutor gets one short email with a link to sign in. At most one a day for each student."],
-            ["weeklyDigest", "Weekly updates for parents", "Once a week, each parent gets their own child’s days practiced, new lesson notes and upcoming dates. Adult students can turn this on for themselves."],
+          {([["weeklyDigest", "Weekly updates for parents", "Once a week, each parent gets their own child’s days practiced, new lesson notes and upcoming dates. Adult students can turn this on for themselves."],
             ["studentReminder", "Practice reminders for students", "Students who sign in with their own email can ask for a weekly reminder on a day they choose. No student gets one unless they turn it on."]] as const).map(([key, label, help]) =>
             <div className="roster-field" key={key}><label className="email-choice"><input type="checkbox" checked={switches[key]} disabled={locked} onChange={event => toggle(key, event.target.checked)} aria-describedby={`settings-${key}-help`} />{label}</label>
               <p className="field-help" id={`settings-${key}-help`}>{help}</p></div>)}

@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { KIND_CODE, KIND_OF_CODE, type NotificationKind } from "./schedule";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-export const UNSUBSCRIBE_TOKEN = /^([tdr])\.([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.([A-Za-z0-9_-]{43})$/;
+export const UNSUBSCRIBE_TOKEN = /^([dr])\.([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.([A-Za-z0-9_-]{43})$/;
 const mac = (secret: string, tenantId: string, membershipId: string, kind: NotificationKind) =>
   createHmac("sha256", secret).update(JSON.stringify(["notification-unsubscribe/v1", tenantId, membershipId, kind])).digest("base64url");
 

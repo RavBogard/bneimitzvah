@@ -116,7 +116,7 @@ it("serializes service and unknown-note guards, and canceling the later decision
   const tab = await page(), writes = countWrites(tab), text = "Synthetic uncertain service-guard note";
   await choose(tab);
   const note = await workPanel(tab); await safe(() => note.locator("summary").first().click());
-  await safe(() => note.getByRole("button", { name: "Teacher notes", exact: true }).click()); await safe(() => note.getByRole("textbox").fill(text));
+  await safe(() => note.getByRole("textbox").fill(text));
   // A real authorized commit followed by a lost response creates an unknown
   // outcome. No second POST may be issued by the departure sequence.
   await tab.route("**/work/note", async route => { const response = await route.fetch(); expect(response.status()).toBe(200); await response.dispose(); await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' }); });
@@ -137,7 +137,6 @@ it("serializes service and unknown-note guards, and canceling the later decision
   await safe(() => tab.locator("[data-testid=\"reading-workspace\"]").scrollIntoViewIfNeeded());
   await openVerseTools(tab, "Genesis 1:1");
   if (await note.getAttribute("open") === null) await safe(() => note.locator("summary").first().click());
-  await safe(() => note.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await ui(note.getByRole("textbox")).toHaveValue(text); await ui(note.locator(".work-status")).toContainText("Save not confirmed");
   expect(writes).toEqual({ confirm: 0, note: 1 }); await tab.unroute("**/work/note");
   // An explicit departure clears the unknown local copy and unmounts both

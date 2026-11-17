@@ -5,7 +5,6 @@ import { and, eq } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
 import { portalRoutesFixture } from "./portal-routes-fixture";
 import { createHttpDispatcher } from "../../src/server/http/dispatch";
-import { createStudentWorkService } from "../../src/server/student-work/service";
 import { createNotificationDelivery, createNotificationPreferences } from "../../src/server/notifications/service";
 import { createNotificationTransport, type NotificationMessage, type NotificationOutcome } from "../../src/server/mail/transport";
 import { openUnsubscribe, signUnsubscribe } from "../../src/server/notifications/tokens";
@@ -37,9 +36,7 @@ async function setup() {
     send: async message => { sent.push(message); return outcome.next; }, now: () => clock.now, pause: async () => {} });
   const env = { enabled: true };
   const delivery = () => make(env.enabled);
-  const work = createStudentWorkService({ access: f.service, practice: f.runtime.practice, authorityBindingSecret: "synthetic-work-authority-binding-secret",
-    notify: { queue: (tx, target) => delivery().queueTutorDraft(tx as never, target), dispatch: async tenantId => { await delivery().deliverPending(tenantId); } } });
-  const runtime = (): HttpRuntime => ({ ...f.runtime, studentWork: work, notifications: delivery(), notificationPreferences: createNotificationPreferences({ access: f.service, enabled: env.enabled }) });
+  const runtime = (): HttpRuntime => ({ ...f.runtime, notifications: delivery(), notificationPreferences: createNotificationPreferences({ access: f.service, enabled: env.enabled }) });
   const dispatch = (request: Request) => createHttpDispatcher(async action => action(runtime()))(request);
   let version = 0;
   async function switches(n: NotificationSettings | null, extra: Record<string, unknown> = {}) {
@@ -72,12 +69,9 @@ async function setup() {
     return { people, assignment };
   });
   const emailOf = async (userId: string) => (await f.owner(() => f.db.select({ email: s.user.email }).from(s.user).where(eq(s.user.id, userId))))[0].email;
-  const draft = (text = "Synthetic draft", verse = 1) => work.append(f.request("/", { who: "learner", method: "POST" }),
-    { mode: "student", studentId: f.students[0].id, kind: "torah", assignmentId: extra.assignment.id, assignmentRevision: 1 }, "draft",
-    { verseRef: `Genesis 1:${verse}`, text, expectedVersion: 0, mutationId: randomUUID() });
   const ledger = () => f.owner(() => f.db.select().from(s.notificationDelivery));
   const asRequest = (who: "multi" | "learner" | "admin", path: string, body?: unknown) => f.request(path, { who, body });
-  return { ...f, sent, outcome, clock, secret, cronSecret, env, delivery, dispatch, switches, extra, emailOf, draft, ledger, asRequest, ceremony, rehearsal };
+  return { ...f, sent, outcome, clock, secret, cronSecret, env, delivery, dispatch, switches, extra, emailOf, ledger, asRequest, ceremony, rehearsal };
 }
 /** PGlite owner maintenance: make a statement on notification_delivery fail, to force an error inside a send. */
 async function failDeliveries(f: Awaited<ReturnType<typeof setup>>, name: string, timing: "INSERT" | "UPDATE", when: string) {
@@ -131,7 +125,7 @@ describe("switches and settings", () => {
     expect(loadRuntimeConfig({ ...env, PORTAL_NOTIFICATIONS_ENABLED: "true" }).notificationsEnabled).toBe(true);
     for (const value of ["false", "TRUE", "1", "yes", " true", ""]) expect(loadRuntimeConfig({ ...env, PORTAL_NOTIFICATIONS_ENABLED: value }).notificationsEnabled).toBe(false);
   });
-  it("the congregation setting is a closed object of three switches and a weekday", () => {
+  it("the congregation setting is a closed object of three switches (one retired, still read) and a weekday", () => {
     for (const ok of [{ tutorDraft: true }, { weeklyDigest: false, digestWeekday: 0 }, { tutorDraft: true, weeklyDigest: true, studentReminder: true, digestWeekday: 6 }]) expect(validateSettings({ notifications: ok }).ok).toBe(true);
     for (const bad of [{}, { tutorDraft: "true" }, { digestWeekday: 7 }, { digestWeekday: 1.5 }, { digestWeekday: -1 }, { recordings: true }, [], null])
       expect(validateSettings({ notifications: bad })).toEqual({ ok: false, problems: ["notifications"] });
@@ -142,101 +136,18 @@ describe("switches and settings", () => {
   });
 });
 
-describe("tutor draft notices", () => {
-  it("send nothing unless both the deployment switch and the congregation switch are on", async () => {
-    const f = await setup();
-    await f.draft("Synthetic draft one", 1);
-    await f.switches({ tutorDraft: false, weeklyDigest: true, studentReminder: true });
-    await f.draft("Synthetic draft two", 2);
-    f.env.enabled = false; await f.switches({ tutorDraft: true });
-    await f.draft("Synthetic draft three", 3);
-    expect(f.sent).toEqual([]); expect(await f.ledger()).toEqual([]);
-    // Even a morning run with the deployment switch off sends nothing.
-    expect(await f.delivery().run("crc")).toMatchObject({ ok: true, enabled: false, sent: 0 });
-    expect(f.sent).toEqual([]);
-  });
-
-  it("name the product from the congregation's own setting, through the shared reader", async () => {
-    const f = await setup(); await f.switches({ tutorDraft: true });
-    await f.owner(() => f.db.update(s.tenant).set({ productName: "Synthetic Portal" }).where(eq(s.tenant.id, "crc")));
-    expect(await f.draft("Synthetic draft one", 1)).toMatchObject({ ok: true });
-    expect(f.sent).toHaveLength(1);
-    expect(f.sent[0].text).toContain("saved a translation draft in Synthetic Portal."); expect(f.sent[0].text).not.toContain("CRC Torah");
-  });
-
-  it("go to the student's assigned tutor only, once per student per day, with a sign-in link and no bearer link", async () => {
-    const f = await setup(); await f.switches({ tutorDraft: true });
-    expect(await f.draft("Synthetic draft one", 1)).toMatchObject({ ok: true });
-    expect(f.sent).toHaveLength(1);
-    const [message] = f.sent;
-    expect(message.email).toBe(await f.emailOf(f.identities.multi.id));
-    expect(message.subject).toBe("A new translation draft to read");
-    expect(message.text).toContain("Ada saved a translation draft"); expect(message.text).toContain(`${ORIGIN}/\n`);
-    expect(message.text).not.toContain("Synthetic draft one"); expect(message.text).not.toMatch(/token=|#token|\/workspace\/tutor/);
-    expect(message.text).toContain(`${ORIGIN}/unsubscribe#t=t.`);
-    noOtherData(message, "Ben", "Cy");
-    // The second draft the same day is coalesced; the second tutor (Cy's) never hears about Ada.
-    await f.draft("Synthetic draft two", 2); expect(f.sent).toHaveLength(1);
-    expect((await f.ledger()).map(r => [r.kind, r.status, r.membershipId])).toEqual([["tutor-draft", "sent", f.multiMember.id]]);
-    f.clock.now += DAY; await f.draft("Synthetic draft three", 3); expect(f.sent).toHaveLength(2);
-    expect(f.sent.map(m => m.idempotencyKey)).toEqual((await f.ledger()).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()).map(r => r.id));
-  });
-
-  it("respect the tutor's own choice, a revoked assignment and a disabled student, and never cost the student the draft", async () => {
-    const f = await setup(); await f.switches({ tutorDraft: true });
-    const off = await f.dispatch(f.asRequest("multi", "/api/notifications/preferences", { kind: "tutor-draft", enabled: false }));
-    expect(off.status).toBe(200);
-    expect(await f.draft("Synthetic draft one", 1)).toMatchObject({ ok: true }); expect(f.sent).toEqual([]); expect(await f.ledger()).toEqual([]);
-    await f.dispatch(f.asRequest("multi", "/api/notifications/preferences", { kind: "tutor-draft", enabled: true }));
-    // Queued, then the assignment is revoked before the morning run sends it: the row is skipped, not sent.
-    const later = f.delivery();
-    const queue = createStudentWorkService({ access: f.service, practice: f.runtime.practice, authorityBindingSecret: "synthetic-work-authority-binding-secret",
-      notify: { queue: (tx, target) => later.queueTutorDraft(tx as never, target), dispatch: async () => {} } });
-    await queue.append(f.request("/", { who: "learner", method: "POST" }), { mode: "student", studentId: f.students[0].id, kind: "torah", assignmentId: f.extra.assignment.id, assignmentRevision: 1 }, "draft",
-      { verseRef: "Genesis 1:5", text: "Synthetic", expectedVersion: 0, mutationId: randomUUID() });
-    expect((await f.ledger()).map(r => r.status)).toEqual(["pending"]);
-    await f.owner(() => f.db.update(s.tutorStudent).set({ revokedAt: new Date() }).where(eq(s.tutorStudent.id, f.tutorLink.id)));
-    expect(await later.run("crc")).toMatchObject({ sent: 0, skipped: 1 }); expect(f.sent).toEqual([]);
-    expect(await f.owner(() => f.db.select().from(s.translationDraft))).toHaveLength(2);
-  });
-  it("skip a tutor whose link a claim made on someone who is now staff (A1), and send again once the claim is gone", async () => {
-    const f = await setup(); await f.switches({ tutorDraft: true });
-    // The tutor's link to Ada recorded as made by a live claim on a staff member: A1 says that link opens nothing.
-    const [claim] = await f.owner(() => f.db.insert(s.learnerClaim).values({ tenantId: "crc", learnerMembershipId: f.adminMember.id, tutorGrantId: f.tutorGrant.id, tutorLinkId: f.tutorLink.id }).returning());
-    expect(await f.draft("Synthetic draft one", 1)).toMatchObject({ ok: true }); expect(f.sent).toEqual([]);
-    await f.owner(() => f.db.update(s.learnerClaim).set({ revokedAt: new Date(), revokedBy: "admin", revokedByMembershipId: f.adminMember.id }).where(eq(s.learnerClaim.id, claim.id)));
-    f.clock.now += DAY; await f.draft("Synthetic draft two", 2); expect(f.sent).toHaveLength(1);
-  });
-
-  it("a notice queue that throws inside the draft save still leaves the student's draft committed", async () => {
-    const f = await setup(); await f.switches({ tutorDraft: true });
-    // Every ledger insert fails, so the queue throws inside the student's own write.
-    const restore = await failDeliveries(f, "synthetic_queue_failure", "INSERT", "true");
-    try {
-      const saved = await f.draft("Synthetic draft kept", 1);
-      expect(saved).toMatchObject({ ok: true, committedVersion: 1 });
-    } finally { await restore(); }
-    const drafts = await f.owner(() => f.db.select().from(s.translationDraft));
-    expect(drafts.map(d => [d.verseRef, d.version])).toEqual([["Genesis 1:1", 1]]);
-    expect(await f.ledger()).toEqual([]); expect(f.sent).toEqual([]);
-    // The next draft, with the ledger healthy again, notifies as usual.
-    await f.draft("Synthetic draft two", 2); expect(f.sent).toHaveLength(1);
-  });
-
-  it("retry refused notices that still have attempts left, even behind many spent ones", async () => {
+describe("retired tutor draft notices", () => {
+  it("a draft notice left in the ledger is skipped by the morning run and never sent, and a saved switch still validates", async () => {
     const f = await setup(); await f.switches({ tutorDraft: true });
     const today = chicagoDay(f.clock.now).date, student = f.students[0].id;
-    const row = (back: number, attempts: number, minutesAgo: number) => ({ tenantId: "crc", membershipId: f.multiMember.id, userId: f.identities.multi.id, roleGrantId: f.tutorGrant.id, role: "tutor" as const,
-      kind: "tutor-draft" as const, periodKey: `${student}:${addDays(today, -back)}`, studentId: student, status: "failed" as const, attempts, createdAt: new Date(f.clock.now - minutesAgo * 60_000) });
-    // Five spent rows, all older than the one that may still be retried.
-    await f.owner(() => f.db.insert(s.notificationDelivery).values([...[1, 2, 3, 4, 5].map(i => row(i, 3, 120 - i)), row(0, 1, 30)]));
-    const tight = createNotificationDelivery({ db: f.db, origin: ORIGIN, secret: f.secret, enabled: true, send: async m => { f.sent.push(m); return "sent"; },
-      now: () => f.clock.now, pause: async () => {}, limits: { perRun: 2 } });
-    expect(await tight.run("crc")).toMatchObject({ sent: 1, failed: 0 });
-    expect(f.sent).toHaveLength(1); expect(f.sent[0].email).toBe(await f.emailOf(f.identities.multi.id));
-    const rows = await f.ledger();
-    expect(rows.filter(r => r.status === "sent").map(r => [r.periodKey, r.attempts])).toEqual([[`${student}:${today}`, 2]]);
-    expect(rows.filter(r => r.status === "failed").every(r => r.attempts === 3)).toBe(true);
+    const row = (status: "pending" | "failed", back: number, attempts: number) => ({ tenantId: "crc", membershipId: f.multiMember.id, userId: f.identities.multi.id, roleGrantId: f.tutorGrant.id,
+      role: "tutor" as const, kind: "tutor-draft" as const, periodKey: `${student}:${addDays(today, -back)}`, studentId: student, status, attempts, createdAt: new Date(f.clock.now - 30 * 60_000) });
+    await f.owner(() => f.db.insert(s.notificationDelivery).values([row("pending", 0, 0), row("failed", 1, 1)]));
+    expect(await f.delivery().run("crc")).toMatchObject({ ok: true, enabled: true, sent: 0, skipped: 2 });
+    expect(f.sent).toEqual([]); expect((await f.ledger()).map(r => r.status)).toEqual(["skipped", "skipped"]);
+    // A tutor is offered no email of their own, and cannot choose the retired kind.
+    expect((await (await f.dispatch(f.asRequest("multi", "/api/notifications/preferences"))).json()).view.options.map((o: { kind: string }) => o.kind)).not.toContain("tutor-draft");
+    expect((await f.dispatch(f.asRequest("multi", "/api/notifications/preferences", { kind: "tutor-draft", enabled: false }))).status).toBe(403);
   });
 });
 
@@ -424,42 +335,46 @@ describe("practice reminders", () => {
 });
 
 describe("unsubscribe", () => {
+  async function digested() {
+    const f = await setup(); f.clock.now = nextMorning(0); await f.switches({ weeklyDigest: true, digestWeekday: 0 });
+    await f.delivery().run("crc"); const message = f.sent.find(m => m.email === "multi@example.test")!;
+    return { ...f, message, token: new URL(message.unsubscribeUrl).searchParams.get("t")! };
+  }
   it("one click turns that kind off for that member only; forged, altered or foreign tokens do nothing", async () => {
-    const f = await setup(); await f.switches({ tutorDraft: true });
-    await f.draft(); const header = f.sent[0].unsubscribeUrl, token = new URL(header).searchParams.get("t")!;
-    expect(openUnsubscribe(f.secret, "crc", token)).toEqual({ membershipId: f.multiMember.id, kind: "tutor-draft" });
+    const f = await digested(), token = f.token;
+    expect(openUnsubscribe(f.secret, "crc", token)).toEqual({ membershipId: f.multiMember.id, kind: "weekly-digest" });
     const post = (t: string, headers: Record<string, string> = {}) => f.dispatch(new Request(`${ORIGIN}/api/notifications/unsubscribe?t=${encodeURIComponent(t)}`,
       { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", ...headers }, body: "List-Unsubscribe=One-Click" }));
     const mac = token.split(".")[2];
-    for (const forged of [`t.${f.adminMember.id}.${mac}`, `d.${f.multiMember.id}.${mac}`, `t.${f.multiMember.id}.${"A".repeat(43)}`, signUnsubscribe(randomBytes(48).toString("base64url"), "crc", f.multiMember.id, "tutor-draft"),
-      signUnsubscribe(f.secret, "other", f.multiMember.id, "tutor-draft"), "t.nope", ""]) expect((await post(forged)).status).toBe(404);
+    // `t.` was the retired tutor draft notice's code: its links no longer open.
+    for (const forged of [`d.${f.adminMember.id}.${mac}`, `r.${f.multiMember.id}.${mac}`, `t.${f.multiMember.id}.${mac}`, `d.${f.multiMember.id}.${"A".repeat(43)}`, signUnsubscribe(randomBytes(48).toString("base64url"), "crc", f.multiMember.id, "weekly-digest"),
+      signUnsubscribe(f.secret, "other", f.multiMember.id, "weekly-digest"), "d.nope", ""]) expect((await post(forged)).status).toBe(404);
     expect(await f.owner(() => f.db.select().from(s.notificationPreference))).toEqual([]);
-    const response = await post(token); expect(response.status).toBe(200); expect(await response.json()).toEqual({ ok: true, kind: "tutor-draft" });
+    const response = await post(token); expect(response.status).toBe(200); expect(await response.json()).toEqual({ ok: true, kind: "weekly-digest" });
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect((await post(token)).status).toBe(200);
     const prefs = await f.owner(() => f.db.select().from(s.notificationPreference));
-    expect(prefs.map(p => [p.membershipId, p.kind, p.enabled, p.updatedVia])).toEqual([[f.multiMember.id, "tutor-draft", false, "unsubscribe"]]);
+    expect(prefs.map(p => [p.membershipId, p.kind, p.enabled, p.updatedVia])).toEqual([[f.multiMember.id, "weekly-digest", false, "unsubscribe"]]);
     const audits = await f.owner(() => f.db.select().from(s.auditEvent).where(eq(s.auditEvent.action, "notification.unsubscribe")));
-    expect(audits.map(a => [a.actorMembershipId, a.mode, a.targetId])).toEqual([[f.multiMember.id, "tutor", "tutor-draft"]]);
-    f.clock.now += DAY; await f.draft("Synthetic later", 4); expect(f.sent).toHaveLength(1);
+    expect(audits.map(a => [a.actorMembershipId, a.mode, a.targetId])).toEqual([[f.multiMember.id, "parent", "weekly-digest"]]);
+    f.clock.now += 7 * DAY; await f.delivery().run("crc"); expect(f.sent.filter(m => m.email === "multi@example.test")).toHaveLength(1);
     // The header link opened in a browser goes to the confirmation page, keeping the token in the fragment.
     const opened = await f.dispatch(new Request(`${ORIGIN}/api/notifications/unsubscribe?t=${token}`));
     expect(opened.status).toBe(303); expect(opened.headers.get("location")).toBe(`/unsubscribe#t=${token}`);
     expect((await f.dispatch(new Request(`${ORIGIN}/api/notifications/unsubscribe?t=${token}&x=1`))).status).toBe(400);
   });
   it("the unsubscribe page sends the token in the body, never the URL; the header link keeps the query form", async () => {
-    const f = await setup(); await f.switches({ tutorDraft: true });
-    await f.draft(); const token = new URL(f.sent[0].unsubscribeUrl).searchParams.get("t")!;
+    const f = await digested(), token = f.token;
     // The page's own request, captured from fetch: no query string, the token only in the body.
     const calls: { url: string; init: RequestInit }[] = [];
     vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
       calls.push({ url, init });
       return f.dispatch(new Request(`${ORIGIN}${url}`, { method: init.method, headers: init.headers, body: init.body as string }));
     });
-    try { expect(await pageUnsubscribe(token)).toBe("tutor-draft"); } finally { vi.unstubAllGlobals(); }
+    try { expect(await pageUnsubscribe(token)).toBe("weekly-digest"); } finally { vi.unstubAllGlobals(); }
     expect(calls).toHaveLength(1); expect(calls[0].url).toBe("/api/notifications/unsubscribe"); expect(calls[0].url).not.toContain(token);
     expect(calls[0].init.body).toBe(unsubscribeBody(token)); expect(String(calls[0].init.body)).toContain(token);
-    expect((await f.owner(() => f.db.select().from(s.notificationPreference))).map(p => [p.kind, p.enabled, p.updatedVia])).toEqual([["tutor-draft", false, "unsubscribe"]]);
+    expect((await f.owner(() => f.db.select().from(s.notificationPreference))).map(p => [p.kind, p.enabled, p.updatedVia])).toEqual([["weekly-digest", false, "unsubscribe"]]);
     const body = (text: string, type = "application/x-www-form-urlencoded") => f.dispatch(new Request(`${ORIGIN}/api/notifications/unsubscribe`, { method: "POST", headers: { "content-type": type }, body: text }));
     expect((await body(unsubscribeBody(token))).status).toBe(200);
     // The body form is closed: exactly the one-click field and one token.
@@ -468,8 +383,8 @@ describe("unsubscribe", () => {
     expect((await body(unsubscribeBody(token), "application/json")).status).toBe(415);
     expect((await body(unsubscribeBody(`t.${f.adminMember.id}.${"A".repeat(43)}`))).status).toBe(404);
     // A mail provider's RFC 8058 POST to the header link still works.
-    const header = await f.dispatch(new Request(f.sent[0].unsubscribeUrl, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: "List-Unsubscribe=One-Click" }));
-    expect(header.status).toBe(200); expect(await header.json()).toEqual({ ok: true, kind: "tutor-draft" });
+    const header = await f.dispatch(new Request(f.message.unsubscribeUrl, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: "List-Unsubscribe=One-Click" }));
+    expect(header.status).toBe(200); expect(await header.json()).toEqual({ ok: true, kind: "weekly-digest" });
   });
 });
 
@@ -488,10 +403,10 @@ describe("the morning run route", () => {
 
   it("logs only counts: no address, token or name reaches the console", async () => {
     const f = await setup(); f.clock.now = nextMorning(0);
-    await f.switches({ tutorDraft: true, weeklyDigest: true, studentReminder: true, digestWeekday: 0 });
+    await f.switches({ weeklyDigest: true, studentReminder: true, digestWeekday: 0 });
     const spies = (["log", "info", "warn", "error", "debug"] as const).map(name => vi.spyOn(console, name).mockImplementation(() => {}));
     try {
-      await f.draft(); f.outcome.next = "rejected"; await f.delivery().run("crc"); f.outcome.next = "unknown"; await f.delivery().run("crc");
+      f.outcome.next = "rejected"; await f.delivery().run("crc"); f.outcome.next = "unknown"; await f.delivery().run("crc");
       const lines = spies.flatMap(spy => spy.mock.calls.map(call => call.map(String).join(" ")));
       expect(lines.length).toBeGreaterThan(0);
       for (const line of lines) expect(line).toMatch(/^notifications run: \d+ sent, \d+ refused, \d+ unanswered, \d+ deferred$/);
@@ -501,15 +416,15 @@ describe("the morning run route", () => {
 
 describe("member preferences", () => {
   it("show each member only the kinds their live roles receive, and need a same-origin POST", async () => {
-    const f = await setup(); await f.switches({ tutorDraft: true, weeklyDigest: true, digestWeekday: 5 });
+    const f = await setup(); await f.switches({ weeklyDigest: true, digestWeekday: 5 });
     const view = async (who: "multi" | "learner" | "admin") => (await (await f.dispatch(f.asRequest(who, "/api/notifications/preferences"))).json()).view.options;
-    expect(await view("multi")).toEqual([{ kind: "tutor-draft", enabled: true, offered: true, weekday: null }, { kind: "weekly-digest", enabled: true, offered: true, weekday: 5, audience: "parent" }]);
+    expect(await view("multi")).toEqual([{ kind: "weekly-digest", enabled: true, offered: true, weekday: 5, audience: "parent" }]);
     expect(await view("admin")).toEqual([]);
     expect(await view("learner")).toEqual([{ kind: "practice-reminder", enabled: false, offered: false, weekday: null }]);
     f.env.enabled = false; expect((await view("multi")).every((o: { offered: boolean }) => !o.offered)).toBe(true);
     const foreign = await f.dispatch(f.request("/api/notifications/preferences", { who: "multi", body: { kind: "weekly-digest", enabled: false }, headers: { origin: "https://evil.example.test" } }));
     expect(foreign.status).toBe(403);
-    for (const bad of [{ kind: "recording", enabled: false }, { kind: "weekly-digest", enabled: "no" }, { kind: "weekly-digest", enabled: true, weekday: 2 }])
+    for (const bad of [{ kind: "recording", enabled: false }, { kind: "tutor-draft", enabled: false }, { kind: "weekly-digest", enabled: "no" }, { kind: "weekly-digest", enabled: true, weekday: 2 }])
       expect((await f.dispatch(f.asRequest("multi", "/api/notifications/preferences", bad))).status).toBe(403);
     expect((await f.dispatch(f.asRequest("multi", "/api/notifications/preferences", { kind: "weekly-digest", enabled: false, extra: 1 }))).status).toBe(400);
     expect((await f.dispatch(f.request("/api/notifications/preferences", { who: "anonymous" }))).status).toBe(401);
