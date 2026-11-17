@@ -32,7 +32,7 @@ async function openRoutes(page: Page) {
   });
 }
 const pageOf = (reading: typeof base) => { const list = verses(reading.ranges).slice(0, 10);
-  return { ok: true, reading, offset: 0, totalVerses: reading.verseCount, nextOffset: reading.verseCount > 10 ? 10 : null, verses: list.map(ref => ({ ref, translation: null, note: null, mark: null })) }; };
+  return { ok: true, reading, offset: 0, totalVerses: reading.verseCount, nextOffset: reading.verseCount > 10 ? 10 : null, verses: list.map(ref => ({ ref, note: null, mark: null })) }; };
 const bar = (page: Page) => page.locator("[data-choose-bar]");
 const line = (page: Page) => bar(page).locator("[data-choose-line]");
 const verse = (page: Page, number: number) => page.getByRole("button", { name: `Select Deuteronomy 31:${number}`, exact: true });

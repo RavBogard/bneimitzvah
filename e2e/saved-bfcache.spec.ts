@@ -26,7 +26,7 @@ async function routes(page: Page, signedIn: { value: boolean }) {
   await page.route("**/api/session", route => signedIn.value ? json(route, 200, { membershipAvailable: true, roles: ["parent"], saved: true, approver: false, sessionBinding: binding }) : json(route, 401, { error: "authentication-required" }));
   await page.route("**/api/saved/readings", route => signedIn.value ? json(route, 200, { ok: true, readings: [reading] }) : json(route, 401, { error: "authentication-required" }));
   await page.route("**/api/saved/reading?*", route => signedIn.value ? json(route, 200, { ok: true, reading, offset: 0, totalVerses: 3, nextOffset: null,
-    verses: refs.map(ref => ({ ref, translation: null, note: null, mark: null })) }) : json(route, 401, { error: "authentication-required" }));
+    verses: refs.map(ref => ({ ref, note: null, mark: null })) }) : json(route, 401, { error: "authentication-required" }));
 }
 /**
  * Whether Back was served from the back-forward cache (an annotation only). goBack can resolve while Chromium is still committing the

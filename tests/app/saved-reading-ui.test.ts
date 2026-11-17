@@ -38,6 +38,9 @@ describe("the saved reading client", () => {
     const value = parseSavedPage(200, page(), 0);
     expect(value.state === "ready" && value.verses.map(row => row.mark?.state ?? null)).toEqual([null, "working", "got-it"]);
     expect(value.state === "ready" && value.verses[1].note).toEqual({ text: "Mine", version: 2 });
+    // A response from before the translation row was removed still reads, its retired field dropped.
+    const legacy = page(); (legacy.verses as Record<string, unknown>[])[0].translation = null;
+    expect(parseSavedPage(200, legacy, 0)).toEqual(value);
     expect(parseSavedPage(401, {}, 0)).toEqual({ state: "signed-out" });
     expect(parseSavedPage(403, {}, 0)).toEqual({ state: "not-eligible" });
     expect(parseSavedPage(404, {}, 0)).toEqual({ state: "missing" });

@@ -118,7 +118,8 @@ export function parseSavedPage(status: number, value: unknown, offset: number): 
   if (!row || !reading || row.offset !== offset || row.totalVerses !== reading.verseCount || !Array.isArray(row.verses) || row.verses.length < 1 || row.verses.length > 10
     || (row.nextOffset !== null && row.nextOffset !== offset + row.verses.length)) throw new SavedRequestError(503);
   const verses = row.verses.map(item => {
-    const verse = record(item, ["ref", "note", "mark"]);
+    // A page from before the translation row was removed may still carry its retired field: tolerated and dropped.
+    const verse = record(item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(Object.entries(item).filter(([key]) => key !== "translation")) : item, ["ref", "note", "mark"]);
     if (!verse || typeof verse.ref !== "string" || !VERSE.test(verse.ref)) throw new SavedRequestError(503);
     return Object.freeze({ ref: verse.ref, note: verse.note === null ? null : parseWork(verse.note),
       mark: verse.mark === null ? null : parseMark(verse.mark) });

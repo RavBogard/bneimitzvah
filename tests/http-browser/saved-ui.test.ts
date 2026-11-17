@@ -221,7 +221,7 @@ it("another member's saved reading id opens nothing", async () => {
   expect(await tab.content()).not.toContain(other.name);
 }, 120_000);
 
-it("on their own saved reading a member sees stored translation and note text read-only in Yours, stars a comment, and the drill reveals JPS only; no editor is offered, and no work is written or audited", async () => {
+it("on their own saved reading a member sees the stored note read-only in Yours (a stored translation is shown nowhere), stars a comment, and the drill reveals JPS only; no editor is offered, and no work is written or audited", async () => {
   const { tab, seen } = await visitor(390);
   await signIn(tab, "pg-admin@example.test");
   await tab.goto("/read", { waitUntil: "domcontentloaded" });
@@ -268,7 +268,7 @@ it("on their own saved reading a member sees stored translation and note text re
   await studyNotes(tab, "Genesis 1:1");
   await ui(tab.getByRole("article", { name: "Rashi on Genesis 1:1" }).locator('[data-star="rashi|Genesis 1:1|1"]')).toHaveAttribute("aria-pressed", "true");
   await tab.locator('[data-yours-ref="Genesis 1:1"]').getByTestId("yours-toggle").click();
-  await ui(tab.locator('[data-yours-ref="Genesis 1:1"]').getByText("Synthetic own words for the first verse.", { exact: true })).toBeVisible();
+  await ui(tab.locator('[data-yours-ref="Genesis 1:1"]').getByText("Synthetic private note.", { exact: true })).toBeVisible();
   // Lein: the drill reveals JPS only, with no own translation and no way into Yours.
   await tab.getByRole("group", { name: "Reading lens", exact: true }).getByRole("button", { name: "Lein", exact: true }).click();
   await tab.locator('[data-testid="study-verses"] [data-verse-ref="Genesis 1:1"] [data-word-index="0"]').first().click();
