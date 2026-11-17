@@ -18,14 +18,14 @@ concurrency:
 permissions:
   contents: read
 jobs:
-  # The app Vitest suite is split four ways per OS (vitest --shard); the engine suite (node --test), typecheck and the
-  # Windows build run once per OS in "unit-static". Together the legs run exactly what `npm test` and the old unit job ran.
+  # The app Vitest suite is split four ways (vitest --shard); the engine suite (node --test) and typecheck run in
+  # "unit-static". Linux only since 2026-11-17 (Daniel: all coding goes through Claude; production is Linux).
   unit:
     name: unit (${{ matrix.os }}, shard ${{ matrix.shard }}/4)
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest]
         shard: [1, 2, 3, 4]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -44,7 +44,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     env:
@@ -58,12 +58,6 @@ jobs:
       - run: npm ci
       - run: npm run test:node
       - run: npm run typecheck
-      # Ubuntu's build is the separate build job below, which the postgres and browser jobs reuse; only Windows builds here.
-      - run: npm run build
-        if: matrix.os == 'windows-latest'
-        env:
-          # CRC's identity needs a positive signal (src/lib/site/identity.ts); the built pages must be CRC's, as the browser gate's server is.
-          BETTER_AUTH_URL: https://beitmitzvah.centralreform.org
   # The one Ubuntu build of the pull request. The postgres and browser jobs download .next instead of building it again.
   # next start (the browser job and production-denial.test.ts) reads only .next plus the checkout; the output is not standalone.
   build:

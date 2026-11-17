@@ -169,3 +169,20 @@ From RV section 5, verbatim in substance:
 5. **Several congregations on one deployment.** M D11 and D-a (2026-10-23): "One deployment" serving several congregations at 2.5. FK 1 (2026-10-30): the first other congregation runs a separate copy, "not a second tenant on CRC's site". RV section 5 (2026-11-16) asks only to scope the tenant plumbing.
 6. **Windows.** C "Done" and M "Proof" (2026-10-15): green on Windows. RV section 5 (2026-11-16): "tests on Windows" came back "Na".
 7. **Practice-history retention.** M ruling 14 note (2026-10-16) is binding, but RV S8 (2026-11-16) found the retention job is never run. Whether to wire it or change the ruling is open.
+
+## Decided 2026-11-17 (Daniel, in session; resolves "Unclear" items 1, 2 and 6)
+
+- No fixed launch date; no one is using the site now. Simplify the code now, alongside visible work, and move students, tutors and admin forward evenly.
+- Student-visible changes ship when CI is green and Daniel is told afterwards with a short list; he can ask for a revert. Replaces "anything student-visible before it ships". Resolves Unclear 1.
+- American spelling: "practice" for verb and noun. Replaces "practise". Resolves Unclear 2.
+- Windows is dropped from CI: all coding goes through Claude and production is Linux. Resolves Unclear 6.
+- Land on `main` directly after a green CI run; a pull request only when Daniel asks.
+- Commits are authored as Claude. Replaces the RavBogard identity rule.
+- The cleaned-up CLAUDE.md is adopted.
+- Oversight stays as it is: no cross-student list of days practised, no Claude status tool, no tutor's private line, no dated timeline. The assigned tutor watches practice.
+- Remove students' "My translation". Existing rows stay in the database.
+- Remove the CSV roster upload and the roster Google Sheet. Maven through Claude and the Add student form remain.
+- Build a web page for guides: see, hold, release and withdraw study guides, discussions and portion summaries.
+- Not wanted now: weekly verse assignment, bulk family invitations, a dated timeline per student.
+- Notifications stay parked (2026-11-16).
+- Relax the fresh sign-in rule for assigning a tutor and for invitations, on the web and through Claude (2026-11-16).
