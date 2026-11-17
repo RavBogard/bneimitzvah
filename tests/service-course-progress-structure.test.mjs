@@ -82,7 +82,9 @@ test("the path never carries a unit's name or caption: it copies lesson ids and 
   assert.doesNotMatch(path, /mode: "(admin|tutor|parent|child-practice)"/);
   // It is handed the metadata read; it imports nothing of the licensed catalog's side itself.
   for (const spec of importsOf(path)) assert.doesNotMatch(spec, /service-learning|service-ecosystem|siddur\/|booklet/, `path.ts imports ${spec}`);
-  assert.match(text("src/server/runtime/composition.ts"), /createServiceCoursePath\(\{ access, serviceLearning \}\)/);
+  // The composition builds services lazily (2026-11-17): the path is still handed exactly the access gate and the service plan's
+  // metadata read, now through their per-request getters, and nothing else.
+  assert.match(text("src/server/runtime/composition.ts"), /createServiceCoursePath\(\{ access: access\(\), serviceLearning: serviceLearning\(\) \}\)/);
   // The wire shape is copied field by field.
   assert.match(http, /function pathJson\(path: Path\): JsonValue/);
   assert.doesNotMatch(http, /privateJson\(await runtime\.serviceCoursePath\.read/);

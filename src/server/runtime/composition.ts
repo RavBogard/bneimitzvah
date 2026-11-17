@@ -150,19 +150,51 @@ function notificationDelivery<Q extends PgQueryResultHKT>(config: RuntimeConfig,
   return createNotificationDelivery({ db, origin: config.origin, secret: purposeSecret(config, "notification-unsubscribe"), enabled: config.notificationsEnabled,
     cronSecret: config.serviceCronSecret, send: createNotificationTransport({ ...config.mail, origin: config.origin, fetch }) });
 }
+// The Sefaria readers are pure: each closes over the fetch it is given and nothing else (no cache, no request, tenant,
+// session or actor). One set per fetch function, so a server instance builds them once instead of eight times a request.
+const publicSefariaReaders = new WeakMap<typeof globalThis.fetch, Readonly<{
+  metadata: ReturnType<typeof createSefariaMetadataReader>; content: ReturnType<typeof createSefariaContentReader>; pinned: ReturnType<typeof createSefariaPinnedSourceReader> }>>();
+export function sharedSefariaReaders(fetch: typeof globalThis.fetch) {
+  let readers = publicSefariaReaders.get(fetch);
+  if (!readers) {
+    readers = Object.freeze({ metadata: createSefariaMetadataReader({ fetch }), content: createSefariaContentReader({ fetch }), pinned: createSefariaPinnedSourceReader({ fetch }) });
+    publicSefariaReaders.set(fetch, readers);
+  }
+  return readers;
+}
+// Which services a runtime has built so far, by name (tests measure how little a request builds).
+const builtByRuntime = new WeakMap<object, readonly string[]>();
+export function builtServices(runtime: object): readonly string[] { return [...builtByRuntime.get(runtime) ?? []]; }
+
 export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig, db: AccessDatabase<Q>, fetch: typeof globalThis.fetch,
   studyTasks: PublicStudyCoalescer = sharedStudyTasks(fetch), stepSource: StepSourceLoader = publicStepSource) {
-  const send = createMailTransport({ ...config.mail, origin: config.origin, fetch });
+  // Every service is built the first time a handler asks for it in this request, then reused for the rest of the request;
+  // a new runtime (a new request) builds its own. A construction failure is written and answered exactly as it was when
+  // everything was built up front inside the runtime scope: one runtime/scope line and the fixed RuntimeUnavailable.
+  const built: string[] = [];
+  function once<T>(name: string, make: () => T): () => T {
+    let state: { value: T } | { error: unknown } | undefined;
+    return () => {
+      if (!state) {
+        try { state = { value: make() }; built.push(name); }
+        catch (error) { recordFailure(error, "runtime/scope", 503); state = { error: causedBy(new RuntimeUnavailable(), error) }; }
+      }
+      if ("error" in state) throw state.error;
+      return state.value;
+    };
+  }
+  const sefaria = sharedSefariaReaders(fetch);
+  const send = once("mail", () => createMailTransport({ ...config.mail, origin: config.origin, fetch }));
   // Mail names the product through the one shared reader (src/server/data/product-name.ts), in its own short transaction.
   const productNameOf = (tenantId: string) => withTenantTransaction(db, { tenantId }, tx => readProductName(tx, tenantId));
   // One email carries the link and a typed code (1.5). If the code cannot be created, nothing is sent.
-  const auth = createAuthStack(db, schema, { origin: config.origin, secret: config.authSecret, google: config.google, codeSecret: purposeSecret(config, "sign-in-code"),
+  const auth = once("auth", () => createAuthStack(db, schema, { origin: config.origin, secret: config.authSecret, google: config.google, codeSecret: purposeSecret(config, "sign-in-code"),
     sendMagicLink: async ({ email, url, token }) => {
       // The SDK turns a throw here into its own 500 and drops the error, so it is written here (server-side only,
       // never the address: redact.ts scrubs emails from every message) and rethrown unchanged.
       try { await sendSignIn(email, url, token); }
       catch (error) { recordFailure(error, "auth/send-magic-link"); throw error; }
-    } });
+    } }));
   const sendSignIn = async (email: string, url: string, token: string) => {
       const link = projectMagicLink(url, token, config.origin);
       // The congregation this deployment's origin serves names the product (E1). Read before a code exists, so a
@@ -171,99 +203,115 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
       const productName = await productNameOf(tenantId);
       if (!mailProductName(productName)) throw new RuntimeUnavailable();
       // Past 3 codes for this address in the hour, the email carries the link only (review §2.8 finding 1).
-      const code = await signInCodeCap.claimCode(email) ? await auth.api.createVerificationOTP({ body: { email, type: "sign-in" } }) : null;
-      await send("magic-link", { email, url: link, productName, code });
+      const code = await signInCodeCap().claimCode(email) ? await auth().api.createVerificationOTP({ body: { email, type: "sign-in" } }) : null;
+      await send()("magic-link", { email, url: link, productName, code });
   };
-  const signInCodeCap = createSignInCodeCap({ db, secret: purposeSecret(config, "sign-in-code-cap"), capped: event => createLogger().signInCodeCapped(event) });
-  const signInCodes = createSignInCodeBindings({ origin: config.origin, secret: purposeSecret(config, "sign-in-code-binding") });
-  const access = createAccessService({ db, auth, deployment: config.deployment });
+  const signInCodeCap = once("signInCodeCap", () => createSignInCodeCap({ db, secret: purposeSecret(config, "sign-in-code-cap"), capped: event => createLogger().signInCodeCapped(event) }));
+  const signInCodes = once("signInCodes", () => createSignInCodeBindings({ origin: config.origin, secret: purposeSecret(config, "sign-in-code-binding") }));
+  const access = once("access", () => createAccessService({ db, auth: auth(), deployment: config.deployment }));
   const invitationTransport: InvitationTransport = async ({ email, url, tenantId, role, expiresAt }) => {
     // The congregation and product names come from the one shared reader; the email is given no student (decision 12).
     const names = await withTenantTransaction(db, { tenantId }, tx => readTenantNames(tx, tenantId));
-    await send("invitation", { email, url, productName: names.productName, congregation: names.name, role, expiresAt });
+    await send()("invitation", { email, url, productName: names.productName, congregation: names.name, role, expiresAt });
   };
-  const invitationThrottle = purposeSecret(config, "invitation-throttle");
-  const invitations = createInvitationService({ db, access, transport: invitationTransport, throttleSecret: invitationThrottle });
-  const loadReading = createHebcalReader({ fetch, cache: createPersistentReadingCache(db), verseCounts: TANAKH_VERSE_COUNTS });
-  const musicBroker = createMusicBroker(config.serviceMusic, fetch);
-  const practice = createPracticeService({ access });
+  const invitationThrottle = once("invitationThrottle", () => purposeSecret(config, "invitation-throttle"));
+  const invitations = once("invitations", () => createInvitationService({ db, access: access(), transport: invitationTransport, throttleSecret: invitationThrottle() }));
+  const loadReading = once("loadReading", () => createHebcalReader({ fetch, cache: createPersistentReadingCache(db), verseCounts: TANAKH_VERSE_COUNTS }));
+  const musicBroker = once("musicBroker", () => createMusicBroker(config.serviceMusic, fetch));
+  const practice = once("practice", () => createPracticeService({ access: access() }));
   const dispatchScheduled=async()=>{const {after}=await import("next/server");after(async()=>{await dispatchServiceJobs(config,fetch);});};
-  const serviceEcosystem = createServiceEcosystemService({ access,practice,broker: musicBroker, studentAudioRelease: config.referenceAudio?.studentRelease,dispatchScheduled });
-  const serviceScheduler = createServiceScheduler({ db, broker: musicBroker, cronSecret: config.serviceCronSecret, ...(config.musicDetailsEnabled ? { details: "send" as const } : {}) });
-  const students = createStudentService({ access, loadReading, signingSecret: purposeSecret(config, "student-preparations"), verseCounts: TANAKH_VERSE_COUNTS, dispatchScheduled });
-  const serviceLearning = createServiceLearningService({ access, practice, signingSecret: purposeSecret(config, "service-plan-preparations"), resolveCeremonyUnit: serviceEcosystem.materialMapping });
-  const notifications = notificationDelivery(config, db, fetch);
-  const notificationPreferences = createNotificationPreferences({ access, enabled: config.notificationsEnabled });
-  const studentWork = createStudentWorkService({ access, practice, authorityBindingSecret: purposeSecret(config, "student-work-authority") });
-  const progress = createProgressService({ access, practice });
+  const serviceEcosystem = once("serviceEcosystem", () => createServiceEcosystemService({ access: access(),practice: practice(),broker: musicBroker(), studentAudioRelease: config.referenceAudio?.studentRelease,dispatchScheduled }));
+  const serviceScheduler = once("serviceScheduler", () => createServiceScheduler({ db, broker: musicBroker(), cronSecret: config.serviceCronSecret, ...(config.musicDetailsEnabled ? { details: "send" as const } : {}) }));
+  const students = once("students", () => createStudentService({ access: access(), loadReading: loadReading(), signingSecret: purposeSecret(config, "student-preparations"), verseCounts: TANAKH_VERSE_COUNTS, dispatchScheduled }));
+  const serviceLearning = once("serviceLearning", () => createServiceLearningService({ access: access(), practice: practice(), signingSecret: purposeSecret(config, "service-plan-preparations"), resolveCeremonyUnit: serviceEcosystem().materialMapping }));
+  const notifications = once("notifications", () => notificationDelivery(config, db, fetch));
+  const notificationPreferences = once("notificationPreferences", () => createNotificationPreferences({ access: access(), enabled: config.notificationsEnabled }));
+  const studentWork = once("studentWork", () => createStudentWorkService({ access: access(), practice: practice(), authorityBindingSecret: purposeSecret(config, "student-work-authority") }));
+  const progress = once("progress", () => createProgressService({ access: access(), practice: practice() }));
   // The web runtime gets reads, ticks and staff status only; guide writes need the MCP or the operator bridge.
-  const studyGuides = studyGuideWebSurface(createStudyGuideService({ access, practice, check: createGuideChecker({ related: createSefariaMetadataReader({ fetch }).related }) }));
+  const studyGuides = once("studyGuides", () => studyGuideWebSurface(createStudyGuideService({ access: access(), practice: practice(), check: createGuideChecker({ related: sefaria.metadata.related }) })));
   // Guide sharing (plan ruling 11): admin export and import of reviewed guides; the only web write of guide rows, held and credited.
-  const guideShare = createGuideShareService({ access, related: createSefariaMetadataReader({ fetch }).related });
+  const guideShare = once("guideShare", () => createGuideShareService({ access: access(), related: sefaria.metadata.related }));
   // The admin's Guides page (gap A6): reads, and the MCP tools' own withdraw and approve service functions under the admin web authority.
-  const guideAdmin = createGuideAdminService({ access, discussions: createDiscussionService({ pinned: createSefariaPinnedSourceReader({ fetch }) }) });
-  const lessonLog = createLessonLogService({ access, practice });
-  const congregationSettings = createCongregationSettingsService({ access, emailEnabled: config.notificationsEnabled });
+  const guideAdmin = once("guideAdmin", () => createGuideAdminService({ access: access(), discussions: createDiscussionService({ pinned: sefaria.pinned }) }));
+  const lessonLog = once("lessonLog", () => createLessonLogService({ access: access(), practice: practice() }));
+  const congregationSettings = once("congregationSettings", () => createCongregationSettingsService({ access: access(), emailEnabled: config.notificationsEnabled }));
   // Release 1.1: staff end Claude connections from the portal; admins undo a wrong Maven link.
-  const claudeConnections = createClaudeConnectionsService({ access });
-  const mavenLinks = createMavenLinkService({ access });
-  const practiceCalendar = createPracticeCalendarService({ access, practice });
-  const loadText = createSefariaStudyReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS, cache: createPersistentStudyCache(db), coalescer: studyTasks });
-  const study = createStudyService({ access, practice, load: loadText });
-  const readingExploration = createReadingExplorationService({ access, practice, loadReading, loadText, signingSecret: purposeSecret(config, "reading-exploration") });
-  const studyWordAids = createStudyWordAidsService({ access, practice, loadText });
-  const sourceMetadata = createSefariaMetadataReader({ fetch });
-  const sourceContent = createSourceContentService({ access, practice, related: sourceMetadata.related, editions: sourceMetadata.editions, content: createSefariaContentReader({ fetch }).text });
-  const sourceAssignments = createSourceAssignmentsService({ access, practice, related: createSefariaMetadataReader({ fetch }).related });
-  const honors = createHonorsService({ access });
+  const claudeConnections = once("claudeConnections", () => createClaudeConnectionsService({ access: access() }));
+  const mavenLinks = once("mavenLinks", () => createMavenLinkService({ access: access() }));
+  const practiceCalendar = once("practiceCalendar", () => createPracticeCalendarService({ access: access(), practice: practice() }));
+  const loadText = once("loadText", () => createSefariaStudyReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS, cache: createPersistentStudyCache(db), coalescer: studyTasks }));
+  const study = once("study", () => createStudyService({ access: access(), practice: practice(), load: loadText() }));
+  const readingExploration = once("readingExploration", () => createReadingExplorationService({ access: access(), practice: practice(), loadReading: loadReading(), loadText: loadText(), signingSecret: purposeSecret(config, "reading-exploration") }));
+  const studyWordAids = once("studyWordAids", () => createStudyWordAidsService({ access: access(), practice: practice(), loadText: loadText() }));
+  const sourceContent = once("sourceContent", () => createSourceContentService({ access: access(), practice: practice(), related: sefaria.metadata.related, editions: sefaria.metadata.editions, content: sefaria.content.text }));
+  const sourceAssignments = once("sourceAssignments", () => createSourceAssignmentsService({ access: access(), practice: practice(), related: sefaria.metadata.related }));
+  const honors = once("honors", () => createHonorsService({ access: access() }));
   // Portal MCP: the full study service (writes too) behind live, grant-bound connection authority.
   // Null until enabled by configuration; then its routes exist at all.
-  const mcp: McpEndpoint | null = config.mcpEnabled ? createMcpEndpoint({ db, access, practice, secret: purposeSecret(config, "portal-mcp"), loadText, related: sourceMetadata.related, loadReading, pinnedSource: createSefariaPinnedSourceReader({ fetch }), invitations: { transport: invitationTransport, throttleSecret: invitationThrottle } }) : null;
+  const mcp = once("mcp", (): McpEndpoint | null => config.mcpEnabled ? createMcpEndpoint({ db, access: access(), practice: practice(), secret: purposeSecret(config, "portal-mcp"), loadText: loadText(), related: sefaria.metadata.related, loadReading: loadReading(), pinnedSource: sefaria.pinned, invitations: { transport: invitationTransport, throttleSecret: invitationThrottle() } }) : null);
   // Approved material is loaded within the existing RLS transaction.
-  const honoree = createHonoreeService({ db, access, deployment: config.deployment, origin: config.origin, signingSecret: config.authSecret, projectMaterial: loadHonoreeMaterial });
-  const studySources = createStudySourceDiscoveryService({ access, practice, loadText, related: createSefariaMetadataReader({ fetch }).related });
-  const studyWordDetails = createStudyWordDetailsService({ access, practice, loadText, source: stepSource });
-  const referenceAudio = createReferenceAudioService({ access, practice, loadText, loadCatalog: createRuntimeReferenceLoader(config.referenceAudio), studentRelease: config.referenceAudio?.studentRelease });
-  const shortMetadata = createRuntimeShortMetadata(config, process.env);
-  const shortReferenceAudio = createShortReferenceAudioService({ access, practice, loadText, ...shortMetadata, studentRelease: config.referenceAudio?.studentRelease });
-  const shortExplorationAudio = createShortExplorationService({ access, practice, loadReading, loadText, signingSecret: purposeSecret(config, "reading-exploration"),
-    ...shortMetadata, studentRelease: config.referenceAudio?.studentRelease });
-  const readingPreview = createReadingPreviewService({ access, loadReading, loadText, signingSecret:purposeSecret(config,"reading-preview") });
-  const relationships = createRelationshipService({ access });
+  const honoree = once("honoree", () => createHonoreeService({ db, access: access(), deployment: config.deployment, origin: config.origin, signingSecret: config.authSecret, projectMaterial: loadHonoreeMaterial }));
+  const studySources = once("studySources", () => createStudySourceDiscoveryService({ access: access(), practice: practice(), loadText: loadText(), related: sefaria.metadata.related }));
+  const studyWordDetails = once("studyWordDetails", () => createStudyWordDetailsService({ access: access(), practice: practice(), loadText: loadText(), source: stepSource }));
+  const referenceAudio = once("referenceAudio", () => createReferenceAudioService({ access: access(), practice: practice(), loadText: loadText(), loadCatalog: createRuntimeReferenceLoader(config.referenceAudio), studentRelease: config.referenceAudio?.studentRelease }));
+  const shortMetadata = once("shortMetadata", () => createRuntimeShortMetadata(config, process.env));
+  const shortReferenceAudio = once("shortReferenceAudio", () => createShortReferenceAudioService({ access: access(), practice: practice(), loadText: loadText(), ...shortMetadata(), studentRelease: config.referenceAudio?.studentRelease }));
+  const shortExplorationAudio = once("shortExplorationAudio", () => createShortExplorationService({ access: access(), practice: practice(), loadReading: loadReading(), loadText: loadText(), signingSecret: purposeSecret(config, "reading-exploration"),
+    ...shortMetadata(), studentRelease: config.referenceAudio?.studentRelease }));
+  const readingPreview = once("readingPreview", () => createReadingPreviewService({ access: access(), loadReading: loadReading(), loadText: loadText(), signingSecret:purposeSecret(config,"reading-preview") }));
+  const relationships = once("relationships", () => createRelationshipService({ access: access() }));
   // Release 1.4: a member's own readings, translation, notes, marks and stars, readable only by that member.
-  const saved = createSavedService({ access });
+  const saved = once("saved", () => createSavedService({ access: access() }));
   // The home's door names the pinned reading and counts what is kept, each through the service that already serves it.
-  const portal = createPortalService({ access, practice, sessionBindingSecret: purposeSecret(config, "session-ui-binding"), door: { progress, saved } });
+  const portal = once("portal", () => createPortalService({ access: access(), practice: practice(), sessionBindingSecret: purposeSecret(config, "session-ui-binding"), door: { progress: progress(), saved: saved() } }));
   // Readings for everyone: the learner directory and tutor claims; counts come from the saved service's own directory read.
-  const learners = createLearnersService({ access, saved });
-  const offline = createOfflineService({ access, portal, saved, ownerSecret: purposeSecret(config, "offline-owner") });
+  const learners = once("learners", () => createLearnersService({ access: access(), saved: saved() }));
+  const offline = once("offline", () => createOfflineService({ access: access(), portal: portal(), saved: saved(), ownerSecret: purposeSecret(config, "offline-owner") }));
   // Release 1.4: account requests and the Member role. Its two emails go to real people only from production.
-  const accounts = createAccountsService({ db, access, throttleSecret: purposeSecret(config, "account-throttle"),
-    send: createAccountMailTransport({ ...config.mail, origin: config.origin, fetch, enabled: config.deployment.environment === "production" }) });
+  const accounts = once("accounts", () => createAccountsService({ db, access: access(), throttleSecret: purposeSecret(config, "account-throttle"),
+    send: createAccountMailTransport({ ...config.mail, origin: config.origin, fetch, enabled: config.deployment.environment === "production" }) }));
   // Learn to lein, slice 3: a member's own course progress, readable only by that member.
-  const courseProgress = createCourseProgressService({ access });
+  const courseProgress = once("courseProgress", () => createCourseProgressService({ access: access() }));
   // 1.9 N19: a student's own verse review cards, readable only by that student.
-  const verseReview = createVerseReviewService({ access });
+  const verseReview = once("verseReview", () => createVerseReviewService({ access: access() }));
   // Release 2.0 SC4: a member's own service-course progress, readable only by that member, and a student's own path through the course.
-  const serviceCourseProgress = createServiceCourseProgressService({ access });
-  const serviceCoursePath = createServiceCoursePath({ access, serviceLearning });
+  const serviceCourseProgress = once("serviceCourseProgress", () => createServiceCourseProgressService({ access: access() }));
+  const serviceCoursePath = once("serviceCoursePath", () => createServiceCoursePath({ access: access(), serviceLearning: serviceLearning() }));
   // Release 2.0 SC5: the per-part finished mark, read only by a student's assigned tutors and admins (A4 9).
-  const servicePartFinished = createServicePartFinished({ access });
+  const servicePartFinished = once("servicePartFinished", () => createServicePartFinished({ access: access() }));
   // 1.9 N23: practice visibility for the assigned tutor and parent counts, refused until its release gate is set.
-  const practiceVisibility = createPracticeVisibilityService({ access });
+  const practiceVisibility = once("practiceVisibility", () => createPracticeVisibilityService({ access: access() }));
   // 1.9 N21: "Ceremony done", set and reversed only by admins (rabbis are admins); setting it ends every tutor assignment.
-  const ceremonyDone = createCeremonyDoneService({ access });
+  const ceremonyDone = once("ceremonyDone", () => createCeremonyDoneService({ access: access() }));
   // 1.9 N14/N15: Needs you, the tutor hand-over, the tutor's family line and Confirm reading is still right.
-  const staff = createStaffService({ access });
-  const pendingInvitations = createPendingInvitations({ secret: config.authSecret, origin: config.origin, environment: config.deployment.environment as "local" | "preview" | "production" });
-  const googleChallenges = createGoogleChallenges({ db, origin: config.origin, secret: purposeSecret(config, "google-challenges") });
+  const staff = once("staff", () => createStaffService({ access: access() }));
+  const pendingInvitations = once("pendingInvitations", () => createPendingInvitations({ secret: config.authSecret, origin: config.origin, environment: config.deployment.environment as "local" | "preview" | "production" }));
+  const googleChallenges = once("googleChallenges", () => createGoogleChallenges({ db, origin: config.origin, secret: purposeSecret(config, "google-challenges") }));
   // An eventual auth handler must resolve the request host BEFORE invoking auth.
   const resolveHost = async (request: AccessRequest, frame: HostFrame = "incoming") => {
     const resolved = await resolveTenantHost(db, request, config.deployment, frame);
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, guideShare, guideAdmin, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, signInCodeCap, resolveHost, mcp, notifications, notificationPreferences, saved, learners, offline, courseProgress, verseReview, serviceCourseProgress, serviceCoursePath, servicePartFinished, practiceVisibility, staff, ceremonyDone, accounts });
+  const runtime = Object.freeze({ origin: config.origin, resolveHost, haftarahSheets,
+    get auth() { return auth(); }, get access() { return access(); }, get invitations() { return invitations(); }, get students() { return students(); },
+    get practice() { return practice(); }, get study() { return study(); }, get readingExploration() { return readingExploration(); }, get studyWordAids() { return studyWordAids(); },
+    get studyWordDetails() { return studyWordDetails(); }, get studySources() { return studySources(); }, get sourceAssignments() { return sourceAssignments(); },
+    get sourceContent() { return sourceContent(); }, get referenceAudio() { return referenceAudio(); }, get shortReferenceAudio() { return shortReferenceAudio(); },
+    get shortExplorationAudio() { return shortExplorationAudio(); }, get readingPreview() { return readingPreview(); }, get studentWork() { return studentWork(); },
+    get progress() { return progress(); }, get studyGuides() { return studyGuides(); }, get guideShare() { return guideShare(); }, get guideAdmin() { return guideAdmin(); },
+    get congregationSettings() { return congregationSettings(); }, get claudeConnections() { return claudeConnections(); }, get mavenLinks() { return mavenLinks(); },
+    get lessonLog() { return lessonLog(); }, get practiceCalendar() { return practiceCalendar(); }, get serviceLearning() { return serviceLearning(); },
+    get serviceEcosystem() { return serviceEcosystem(); }, get serviceScheduler() { return serviceScheduler(); }, get honors() { return honors(); }, get honoree() { return honoree(); },
+    get portal() { return portal(); }, get relationships() { return relationships(); }, get pendingInvitations() { return pendingInvitations(); },
+    get googleChallenges() { return googleChallenges(); }, get signInCodes() { return signInCodes(); }, get signInCodeCap() { return signInCodeCap(); }, get mcp() { return mcp(); },
+    get notifications() { return notifications(); }, get notificationPreferences() { return notificationPreferences(); }, get saved() { return saved(); },
+    get learners() { return learners(); }, get offline() { return offline(); }, get courseProgress() { return courseProgress(); }, get verseReview() { return verseReview(); },
+    get serviceCourseProgress() { return serviceCourseProgress(); }, get serviceCoursePath() { return serviceCoursePath(); }, get servicePartFinished() { return servicePartFinished(); },
+    get practiceVisibility() { return practiceVisibility(); }, get staff() { return staff(); }, get ceremonyDone() { return ceremonyDone(); }, get accounts() { return accounts(); } });
+  builtByRuntime.set(runtime, built);
+  return runtime;
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;
