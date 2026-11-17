@@ -7,13 +7,13 @@ import { portalRoutesFixture } from "./portal-routes-fixture";
 /**
  * Characterization of the request path (2026-11-17, route-table refactor): a fixed table of requests covering every
  * route module the dispatcher owns, recorded as status, Allow, cache-control, content-type, location and whether a body
- * came back. The fixture next to this file was generated from the dispatcher before the refactor and must stay
+ * came back. The fixture (tests/fixtures/portal, where the repository policy allows data files) was generated from the dispatcher before the refactor and must stay
  * byte-identical through it. Regenerate only on purpose: UPDATE_DISPATCH_CHARACTERIZATION=1.
  *
  * Every route module gets, per path: each method it declares (signed in, with an empty JSON object for a POST), a wrong
  * method, HEAD and OPTIONS, a signed-out call, a trailing slash, a near miss and an unexpected query.
  */
-const FIXTURE = new URL("./dispatch-characterization.fixture.json", import.meta.url);
+const FIXTURE = new URL("../fixtures/portal/dispatch-characterization.json", import.meta.url);
 const S = "{student}", L = "{link}", U = "00000000-0000-4000-8000-000000000000";
 
 // [path, declared methods]; {student} is the fixture's first student and {link} a well-formed unknown id.
