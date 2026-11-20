@@ -2,11 +2,12 @@ import { TANAKH_VERSE_COUNTS } from "../readings/catalog";
 import { catalogTorahVerses } from "../readings/guide-catalog";
 import { hebcalRef, parseRange } from "../readings/leyning.mjs";
 import { TORAH_BOOKS } from "../readings/ranges";
+import { CRC_IDENTITY } from "../site/identity";
 import source from "./human-tracks.json";
 
 export const HUMAN_VOICES = {
   "rotem-cohen": { name: "Hazan Rotem Cohen", tradition: "Egyptian Karaite tradition" },
-  "josh-finkel": { name: "Cantor Josh Finkel", tradition: "Central Reform Congregation" },
+  "josh-finkel": { name: "Cantor Josh Finkel", tradition: CRC_IDENTITY.name },
 } as const;
 export const HUMAN_TRACK_KINDS = { torah: "Torah", haftarah: "Haftarah", megillah: "Megillah", other: "Other recordings" } as const;
 export type HumanVoice = keyof typeof HUMAN_VOICES;
