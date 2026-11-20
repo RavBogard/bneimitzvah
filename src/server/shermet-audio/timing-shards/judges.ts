@@ -1,0 +1,3 @@
+import type { ShermetTiming } from "../../../lib/reference-audio/shermet-timing";
+const rows: readonly ShermetTiming[] = [{"version":1,"kind":"haftarah","ref":"Judges 5:3","audioSha256":"38ed37d46e93ac65c2ea2048c68f2229ee62b870d321171c1b65f89606f74a08","readingTextSha256":"76aad126ae25fdf3aabdeae5e926ad677c53a5dc3f6e6ed85196c1f6b8a9fec9","wordCount":12,"duration":24.659625,"words":[{"start":1.1925,"end":2.87},{"start":2.8725,"end":4.46},{"start":4.9125,"end":6.35},{"start":6.3525,"end":8.51},{"start":9.0525,"end":11.56},{"start":12.0125,"end":13.33},{"start":13.3325,"end":15.09},{"start":15.0925,"end":16.57},{"start":17.2525,"end":19.7},{"start":20.1925,"end":21.93},{"start":21.9325,"end":22.65},{"start":22.6525,"end":24.65}],"status":"ready"}];
+export default rows;

@@ -1027,8 +1027,16 @@
       "title": "High Holiday Blessings",
       "label": "HH Zochreinu-Melech Ozer",
       "pageUrl": "https://www.templeisraelomaha.com/high-holiday-blessings.html",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446726,
+          "sha256": "16cf1c107acc88de21fd57b5505a81727c3a4b96045200f4d86a014aa65c8ac4",
+          "duration": 41.540499,
+          "bytes": 7327802,
+          "mimeType": "audio/wav"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_0002eb33d74f96be221ebaf8b0b3f53c",
@@ -1036,8 +1044,16 @@
       "title": "High Holiday Blessings",
       "label": "HH Barchu",
       "pageUrl": "https://www.templeisraelomaha.com/high-holiday-blessings.html",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446728,
+          "sha256": "f328860cf7df5a089bc1053663ceecf82f7fd542ee20455ac49823dff877d9d6",
+          "duration": 24.868571,
+          "bytes": 4386874,
+          "mimeType": "audio/wav"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_7796a8cfde5e80534af87ebf01873215",
@@ -12327,8 +12343,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-breishit",
       "ref": "Genesis 1:1",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446580,
+          "sha256": "0281fcad8596f96eee515db385cb738fd82a715fd4794429a5a81ff6613b9e7c",
+          "duration": 10.939875,
+          "bytes": 175455,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_102c6662f46fb3c898ad69b3bcf96c5d",
@@ -12338,8 +12362,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-breishit",
       "ref": "Genesis 1:2",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446581,
+          "sha256": "2fccadd1d6922ef4d049e2d5cb891627c38956ccbb43a4f61bf1b3e8c4409ee2",
+          "duration": 21.2175,
+          "bytes": 339897,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_41823019fca711bd5f5b360423d9f544",
@@ -12349,8 +12381,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-breishit",
       "ref": "Genesis 1:3",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446577,
+          "sha256": "1444da6bbf48efefb422521b195c3749a065b380c4ccb615d757197669b7e8ca",
+          "duration": 8.524125,
+          "bytes": 136803,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_018d9f1f96bee799444d1d7dbe482234",
@@ -12360,8 +12400,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-breishit",
       "ref": "Genesis 1:4",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446579,
+          "sha256": "91decfdf66a3a23e0674e1d6a66dc23f943e7aafd82ed9190026478ebad0d07c",
+          "duration": 17.836563,
+          "bytes": 285802,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_eab145a3118fd197d5f038a3ef6f42a1",
@@ -12371,8 +12419,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-breishit",
       "ref": "Genesis 1:5",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446582,
+          "sha256": "80e0ee9b9b7fcca331c7868a699b4f57a25263336175bb0a70b4e760ad512b13",
+          "duration": 18.031438,
+          "bytes": 288920,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_48e8eedf8b743b4adaa263323da3b403",
@@ -12382,8 +12438,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-breishit",
       "ref": "Genesis 1:6",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446583,
+          "sha256": "24dfeee4aaf4d7750cf7d54c185a60ee2c47436a258bc5275ba945987d17636f",
+          "duration": 15.712,
+          "bytes": 251809,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_b5010ecb7edfedc16405207912cc1383",
@@ -12393,8 +12457,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-breishit",
       "ref": "Genesis 1:7",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446584,
+          "sha256": "ccc36c56853c5b6a68122429cbcc6b8d83667733f26d5f8c5905c61074b50c64",
+          "duration": 30.948,
+          "bytes": 495585,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_1e6c3a917d8177668a64ddb06361f32a",
@@ -12404,8 +12476,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-breishit",
       "ref": "Genesis 1:8",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446585,
+          "sha256": "6367279b00b4ff5e2c94b3bf4d51ca0759aed55b62b04466e6c9f1f6485728f9",
+          "duration": 15.415188,
+          "bytes": 247060,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_005caf0ddfc46116bc10bc7149f386ec",
@@ -12415,8 +12495,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-breishit",
       "ref": "Genesis 1:9",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446552,
+          "sha256": "019035685f974c38278d01883d7823b4ae53e27156816a6e58d1c04597c4fc82",
+          "duration": 22.343938,
+          "bytes": 357920,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_ec92f5474349cdf7e9fc6a82bd9d6b7c",
@@ -12426,8 +12514,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-breishit",
       "ref": "Genesis 1:10",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446553,
+          "sha256": "24705cd2d766354500a2c87e3feffc6577ff521595e4551a2af72e71c9b97151",
+          "duration": 17.333875,
+          "bytes": 277759,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_dfb38a5940af67fb029aa4a97befcc42",
@@ -12437,8 +12533,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-breishit",
       "ref": "Genesis 1:11",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446555,
+          "sha256": "f45857af8c8c47415b85e37ed813d35701d18fab289c0f970bf629ac86fb1792",
+          "duration": 29.8415,
+          "bytes": 477881,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_3c59b0e966373ebb5794954d980b7032",
@@ -12448,8 +12552,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-breishit",
       "ref": "Genesis 1:12",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446554,
+          "sha256": "dd8af2a147f262057298fae3a4a79f5a08750bb0168c7c419f29b0955195c541",
+          "duration": 32.73775,
+          "bytes": 524221,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_98c5e60305c997cc19c4bcce943feb06",
@@ -12459,8 +12571,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-breishit",
       "ref": "Genesis 1:13",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446551,
+          "sha256": "e742e2659c797c49d71d8f1616825120143ffa098d9551e5c405acc5422a8d15",
+          "duration": 6.029,
+          "bytes": 96881,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_42af40778bb43d51f74f20894f5f9c8a",
@@ -12470,8 +12590,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-breishit",
       "ref": "Genesis 1:14",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446556,
+          "sha256": "1024e038a58b42ef65055e34748d4be403932d4531b5c8b5548c70ee38bc7d30",
+          "duration": 33.166188,
+          "bytes": 531076,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_3e376912a2c2463108e8d664d5565c4d",
@@ -12861,8 +12989,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:1",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446546,
+          "sha256": "e73108c4c0708ed83cfa6c4ed2e56fca0e6e72030e65e0cd625823793c35e0db",
+          "duration": 24.935063,
+          "bytes": 399378,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_e2a0866183dc6efc4fa7233ee7422976",
@@ -12872,8 +13008,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:2",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446545,
+          "sha256": "edb6e8e7709fa01245890247537eaaaa223a1d7e38e56da4a21e427d427f8364",
+          "duration": 39.8495,
+          "bytes": 638009,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_74dc9c919f1548d61b1630448526856d",
@@ -12883,8 +13027,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:3",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446547,
+          "sha256": "3fcf76dd66d4290742ef676dcd437338a83371dbe157a326dc6ca3899d58472a",
+          "duration": 47.7485,
+          "bytes": 764393,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_8bee1e8ee636a3d0086b19b3b07ffcaf",
@@ -12894,8 +13046,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:4",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446548,
+          "sha256": "23a6df8ec00aece527c5716b6b5fd0a92533748077ace4bcb2cf1ed4bbe81b0f",
+          "duration": 22.430813,
+          "bytes": 359310,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_6ce59f33de75bd4e2a584b5046e6e445",
@@ -12905,8 +13065,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:5",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446549,
+          "sha256": "19175ff53dc2c9368da2cb0b9b0ff6da4997b8d1feb6f5f66f4c675990028668",
+          "duration": 27.344438,
+          "bytes": 437928,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_aff355148ae1fd9b6fad9157c7075e5f",
@@ -12916,8 +13084,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:6",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446550,
+          "sha256": "91a58364f9e834531dc39de4e1056199e0d7ea4869e18aaf57465553db97f464",
+          "duration": 29.846688,
+          "bytes": 477964,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_c3236ee98545f6b68070a5ad38c77c4c",
@@ -12927,8 +13103,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:7",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446535,
+          "sha256": "5ca0a38c1ed7ea527c024b4b0f8f6f6d9c6dbf9baab58397af11c1d9d755eea6",
+          "duration": 29.6695,
+          "bytes": 475129,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_9cead90b060815763d94c4ebc3a67d49",
@@ -12938,8 +13122,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:8",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446534,
+          "sha256": "7bde71bb1cd47224d555df68dde173c762c7835de0c0f4382213794a068fdf28",
+          "duration": 21.533,
+          "bytes": 344945,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_29ac1eaa8006d82a99ef05f3494fdaa9",
@@ -12949,8 +13141,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:9",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446537,
+          "sha256": "e89f42809451d2789dd5f60b9e6944d2e491cf398a9c1387ae95f4dbc63e939b",
+          "duration": 42.855063,
+          "bytes": 686098,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_807eb9c43846d45a5cc93c90f85c1d50",
@@ -12960,8 +13160,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:10",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446532,
+          "sha256": "feb57b18115b8e894725b19c567fc3a3de4495a18cc5710400d5ace4a0bbb6ce",
+          "duration": 14.726063,
+          "bytes": 236034,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_dfa3858349e900b77ddda58f93934942",
@@ -12971,8 +13179,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:11",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446533,
+          "sha256": "42667723927857dff53ac59c8896f3f7db147601259a5614287cbaf337c336ae",
+          "duration": 17.73,
+          "bytes": 284097,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_8deda4c5518ec4d3996a2b98b02c4c6c",
@@ -12982,8 +13198,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:12",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446536,
+          "sha256": "cc3d32c773f7e3c8437b15729a05ef87413a489375d0c64cfbdf7a313608c868",
+          "duration": 38.928,
+          "bytes": 623265,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_10e4e1041d463d83e9f8c58fb7e4600c",
@@ -12993,8 +13217,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:13",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446541,
+          "sha256": "b0875ab56b1ad31a5cd231196e00362eaa510bee37404c53b8693edf48df8d48",
+          "duration": 35.027625,
+          "bytes": 560859,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_09bcbdc18251b9118f73104eb05b698f",
@@ -13004,8 +13236,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:14",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446540,
+          "sha256": "02b8fe04df919fd3170de7af356a3a686300eb739d8b3023a105a8926d793b4a",
+          "duration": 22.843875,
+          "bytes": 365919,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_dcf01a38644e3cc5b68951cf21ef060c",
@@ -13015,8 +13255,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:15",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446538,
+          "sha256": "934d9d072cde9b5b18fd75a54c0f31d220b0aa64fd1879c7c6ddb124843af9d1",
+          "duration": 14.22325,
+          "bytes": 227989,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_9f683acb1b96f5a387236153a079e5d8",
@@ -13026,8 +13274,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:16",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446539,
+          "sha256": "a86300801a249ded1efa314cb7bf8c04ffd454818b1ee08a0ab8b408ef4d9304",
+          "duration": 28.845813,
+          "bytes": 461950,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_b39b013ea3e4e959fc74c67f7255e979",
@@ -13037,8 +13293,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:17",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446543,
+          "sha256": "326b94ac762afd4066c246639941705f4ca7c7f9ad1acf63d57b9ff129f4c92f",
+          "duration": 37.844,
+          "bytes": 605921,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_9ea30813271848766deab9c10a3cf60d",
@@ -13048,8 +13312,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:18",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446542,
+          "sha256": "389cfbd7059a3fbee825ee352b5a4eb45c9458fa89e14fd195b088a045424034",
+          "duration": 19.035125,
+          "bytes": 304979,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_cb8dd92f8b85318127605bd5b876aa06",
@@ -13059,8 +13331,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/rosh-hashanah-akeda",
       "ref": "Genesis 22:19",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446544,
+          "sha256": "72a9cce1163f57944f4ff96d09b86d787cec0749da37debdb4fd2ad0a5f9e9d7",
+          "duration": 26.740875,
+          "bytes": 428271,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_30060ec0737f157a6239f7a544617732",
@@ -13068,8 +13348,16 @@
       "title": "Nehemiah 7:72; 8:1-3, 9-10",
       "label": "Nehemiah 7:72",
       "pageUrl": "https://www.templeisraelomaha.com/nehemiah-772-81-3-9-10.html",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 440858,
+          "sha256": "ee88f7634fa727b7b1c2536cd396cae87ea86b314bfbd66436d1ffeca7651883",
+          "duration": 13.918188,
+          "bytes": 223108,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_ec2190e12a36bae4b7bd1201479a387f",
@@ -13077,8 +13365,16 @@
       "title": "Nehemiah 7:72; 8:1-3, 9-10",
       "label": "Nehemiah 8:1",
       "pageUrl": "https://www.templeisraelomaha.com/nehemiah-772-81-3-9-10.html",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 440856,
+          "sha256": "622bc728e391648e7f4f21aae709a721be51c248c3801d498a2b3e2e91738c30",
+          "duration": 36.2265,
+          "bytes": 580041,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_00019f38a8c3b4d8dfbaec890e2f2ee6",
@@ -13086,8 +13382,16 @@
       "title": "Nehemiah 7:72; 8:1-3, 9-10",
       "label": "Nehemiah 8:2",
       "pageUrl": "https://www.templeisraelomaha.com/nehemiah-772-81-3-9-10.html",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 440854,
+          "sha256": "a3af5feb65579cd72561344fb3f0876e5d7eebe5bd6bb5dc1ff9f3f37e06978b",
+          "duration": 29.46075,
+          "bytes": 471789,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_269ebf60ba192d84577cc53fccb08c32",
@@ -13095,8 +13399,16 @@
       "title": "Nehemiah 7:72; 8:1-3, 9-10",
       "label": "Nehemiah 8:3",
       "pageUrl": "https://www.templeisraelomaha.com/nehemiah-772-81-3-9-10.html",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 440855,
+          "sha256": "dce5269159eb8962e3d11a58fcbf25d4a4c3a678269991e52f15b96f3cc4fb3d",
+          "duration": 36.827375,
+          "bytes": 589655,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_362698b446d5374156973fbf772d7ea0",
@@ -13104,8 +13416,16 @@
       "title": "Nehemiah 7:72; 8:1-3, 9-10",
       "label": "Nehemiah 8:9",
       "pageUrl": "https://www.templeisraelomaha.com/nehemiah-772-81-3-9-10.html",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 440860,
+          "sha256": "7e766b6b47673ca90b8e74ff42e2b7eeb003a19485b4fa3b6c26ee63de8d90b2",
+          "duration": 56.732813,
+          "bytes": 908142,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_ab8a535b756e4dfb44e7f55f074d9d5d",
@@ -13113,8 +13433,16 @@
       "title": "Nehemiah 7:72; 8:1-3, 9-10",
       "label": "Nehemiah 8:10",
       "pageUrl": "https://www.templeisraelomaha.com/nehemiah-772-81-3-9-10.html",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 440861,
+          "sha256": "fc83764e15488fae38a45e431cd3da90fe5e0a7fa4ecc238e21a8651b274d24d",
+          "duration": 46.335875,
+          "bytes": 741791,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_90d4eebb3c293688422360b0f8da4cfe",
@@ -13124,8 +13452,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/yom-kippur-morning",
       "ref": "Deuteronomy 29:9",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446605,
+          "sha256": "f9471519096f445f810405229d6a4e913a3ac47b020469b99b72fa190db8bb46",
+          "duration": 26.111125,
+          "bytes": 419095,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_39ed685f69c00ea1ed7d26a96517c273",
@@ -13135,8 +13471,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/yom-kippur-morning",
       "ref": "Deuteronomy 29:10",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446603,
+          "sha256": "eb23cc080b2c0518411d8bfbdec4208f62b505288c0c397418929b3bc2cb7ec1",
+          "duration": 21.384438,
+          "bytes": 343468,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_a8f3c3671b135b38c946ea73e9993eaa",
@@ -13146,8 +13490,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/yom-kippur-morning",
       "ref": "Deuteronomy 29:11",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446604,
+          "sha256": "41c88dcbb59812aabc0510e84640e3eabf2ef8ad283dea0ed5601ec9a4b861e8",
+          "duration": 23.892313,
+          "bytes": 383594,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_7b2a3c2c897661d405a516f3d1b1f5d0",
@@ -13157,8 +13509,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/yom-kippur-morning",
       "ref": "Deuteronomy 29:12",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446591,
+          "sha256": "6e2f78e14610c617587090927bcba62e4eadc864fdbea9b1b15f07ba44a692cf",
+          "duration": 35.797438,
+          "bytes": 574076,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_08926113042684e716cb381ddd852e0f",
@@ -13168,8 +13528,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/yom-kippur-morning",
       "ref": "Deuteronomy 29:13",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446586,
+          "sha256": "8c816b5a3dce5af7ed4e55a2f5b1528ceacf07db2e6a6ec44d0a343c183f14e2",
+          "duration": 19.291438,
+          "bytes": 309980,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_9f33a2800e2a5d66cfbb5e47a58a7786",
@@ -13179,8 +13547,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/yom-kippur-morning",
       "ref": "Deuteronomy 29:14",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446590,
+          "sha256": "5732b3b1f23e499e1fffdb0498a6d83f774cf54b049923a85e2238f32958f7d9",
+          "duration": 29.68275,
+          "bytes": 476241,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_deb9b72405299a3f8f833434e61c86b2",
@@ -13190,8 +13566,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/yom-kippur-morning",
       "ref": "Deuteronomy 30:11",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446587,
+          "sha256": "655df6d16fcd79690c713a37dbf0512e5c18de81e251f787a3f30d7959398b1c",
+          "duration": 22.586188,
+          "bytes": 362696,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_5641342e141b0d9186738f99d88f53d1",
@@ -13201,8 +13585,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/yom-kippur-morning",
       "ref": "Deuteronomy 30:12",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446588,
+          "sha256": "1d4fe4700efb0119addf0ccaef9a964a2fe80df19a6eae10c9e2a9b1eebb75a8",
+          "duration": 24.987313,
+          "bytes": 401114,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_7fab08baeec183c83d869fa6f619ccea",
@@ -13212,8 +13604,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/yom-kippur-morning",
       "ref": "Deuteronomy 30:13",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446589,
+          "sha256": "d2c14ef7e0a9c878e75d3ea94fab57bba67f3e6bafd96df2c97074de81cc60ab",
+          "duration": 27.281875,
+          "bytes": 437827,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_41479a6a2e83466845ff77e22bc0c45b",
@@ -13223,8 +13623,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/yom-kippur-morning",
       "ref": "Deuteronomy 30:14",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446592,
+          "sha256": "f1a2eaa0a45354fd3a7d4c58a51845e0b2963abfc41890a54de89c34a11977ce",
+          "duration": 15.787125,
+          "bytes": 253911,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_eb3118b18456950ffe3f95fcc1ba1dca",
@@ -13234,8 +13642,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/yom-kippur-morning",
       "ref": "Deuteronomy 30:15",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446594,
+          "sha256": "d7ccc8f45b195dade10b366ccc043d2ae55561158d18d2bd43c38f7d1a75a41b",
+          "duration": 16.781438,
+          "bytes": 269820,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_9c40da4504c1798e156a354502903fc3",
@@ -13245,8 +13661,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/yom-kippur-morning",
       "ref": "Deuteronomy 30:16",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446596,
+          "sha256": "656925eb39e7b5a752441da9406e641667f180d3682e0b284d0ea5e7bf2f21d5",
+          "duration": 53.747438,
+          "bytes": 860376,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_e5031a0b01287d16ea136910ae96be81",
@@ -13256,8 +13680,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/yom-kippur-morning",
       "ref": "Deuteronomy 30:17",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446593,
+          "sha256": "c1362bebda7d05dc241e60dc668a6ad7f6d7ac4266ff14db6b218e9e7301f755",
+          "duration": 22.054438,
+          "bytes": 354188,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_c02a638d3806ac670e65820175b3db5a",
@@ -13267,8 +13699,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/yom-kippur-morning",
       "ref": "Deuteronomy 30:18",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446595,
+          "sha256": "eb222cbe43c9ea7432083ec2642c4e3578dae56f7cc0f85d5ddc3dc9586df87a",
+          "duration": 29.68975,
+          "bytes": 476353,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_4affd40f71bc0a803f3a903b1c49d973",
@@ -13278,8 +13718,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/yom-kippur-morning",
       "ref": "Deuteronomy 30:19",
       "kind": "torah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 446597,
+          "sha256": "2e5f31c7747ec517b386956327004c91b1f2e40523f1d8c5b74327478e07d890",
+          "duration": 35.094625,
+          "bytes": 562831,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_05b6bca760735d703473cfe76cd149a9",
@@ -13288,6 +13736,188 @@
       "label": "Deuteronomy 30:20",
       "pageUrl": "https://www.templeisraelomaha.com/yom-kippur-morning",
       "ref": "Deuteronomy 30:20",
+      "kind": "torah",
+      "recordings": [
+        {
+          "sourceId": 446598,
+          "sha256": "b3a7bd5515afda59e819384f7d516a6195ebaa3629b1983af831ceaf2f97240d",
+          "duration": 53.480438,
+          "bytes": 857004,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_2b94e35ec564df8eaa7c0c89d8d72b19",
+      "category": "source-conflict",
+      "title": "Vayakheil (Exodus 35:1-38:20)",
+      "label": "Vayakheil Exodus 35:31",
+      "pageUrl": "https://www.templeisraelomaha.com/vayakheil-exodus",
+      "ref": "Exodus 35:31",
+      "kind": "torah",
+      "recordings": [],
+      "status": "pending"
+    },
+    {
+      "id": "sr_31c2512888f4032a48b16b6cc9f6c579",
+      "category": "source-conflict",
+      "title": "Vayakheil (Exodus 35:1-38:20)",
+      "label": "Vayakheil Exodus 36:31",
+      "pageUrl": "https://www.templeisraelomaha.com/vayakheil-exodus",
+      "ref": "Exodus 36:31",
+      "kind": "torah",
+      "recordings": [],
+      "status": "pending"
+    },
+    {
+      "id": "sr_9d51502f200400812fd167320fca45f8",
+      "category": "source-conflict",
+      "title": "Deuteronomy Ch 26",
+      "label": "Deuteronomy 26:16",
+      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-26.html",
+      "ref": "Deuteronomy 26:16",
+      "kind": "torah",
+      "recordings": [],
+      "status": "pending"
+    },
+    {
+      "id": "sr_ec7b44c558dfc14153b9f3d01fd1e5a1",
+      "category": "source-conflict",
+      "title": "Deuteronomy Ch 32",
+      "label": "Deuteronomy 32:16",
+      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-32.html",
+      "ref": "Deuteronomy 32:16",
+      "kind": "torah",
+      "recordings": [],
+      "status": "pending"
+    },
+    {
+      "id": "sr_e259340f6460165dfd4e80fc03c395f1",
+      "category": "source-conflict",
+      "title": "Deuteronomy Ch 32",
+      "label": "Deuteronomy 32:29",
+      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-32.html",
+      "ref": "Deuteronomy 32:29",
+      "kind": "torah",
+      "recordings": [],
+      "status": "pending"
+    },
+    {
+      "id": "sr_650910bbfb350e4d49ada082a2d6140f",
+      "category": "source-conflict",
+      "title": "Deuteronomy Ch 32",
+      "label": "Deuteronomy 32:39",
+      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-32.html",
+      "ref": "Deuteronomy 32:39",
+      "kind": "torah",
+      "recordings": [],
+      "status": "pending"
+    },
+    {
+      "id": "sr_015ec04cf843ce4eb6bac1fba3108034",
+      "category": "source-conflict",
+      "title": "Jeremiah 8:13-9:23",
+      "label": "Jeremiah 9:1",
+      "pageUrl": "https://www.templeisraelomaha.com/jeremiah-813-923.html",
+      "ref": "Jeremiah 9:1",
+      "kind": "haftarah",
+      "recordings": [],
+      "status": "pending"
+    },
+    {
+      "id": "sr_78b1916bdc2de49659d00225a852363d",
+      "category": "source-conflict",
+      "title": "Jeremiah 8:13-9:23",
+      "label": "Jeremiah 9:2",
+      "pageUrl": "https://www.templeisraelomaha.com/jeremiah-813-923.html",
+      "ref": "Jeremiah 9:2",
+      "kind": "haftarah",
+      "recordings": [],
+      "status": "pending"
+    },
+    {
+      "id": "sr_8efaf8fade910da357d742c684e8d9d0",
+      "category": "source-conflict",
+      "title": "Jeremiah 8:13-9:23",
+      "label": "Jeremiah 9:7",
+      "pageUrl": "https://www.templeisraelomaha.com/jeremiah-813-923.html",
+      "ref": "Jeremiah 9:7",
+      "kind": "haftarah",
+      "recordings": [],
+      "status": "pending"
+    },
+    {
+      "id": "sr_c1e32830cccba0624fd52a7311ca1fae",
+      "category": "source-conflict",
+      "title": "Jeremiah 8:13-9:23",
+      "label": "Jeremiah 9:8",
+      "pageUrl": "https://www.templeisraelomaha.com/jeremiah-813-923.html",
+      "ref": "Jeremiah 9:8",
+      "kind": "haftarah",
+      "recordings": [],
+      "status": "pending"
+    },
+    {
+      "id": "sr_bdab4abc5017983d3a9e6974fb58c23b",
+      "category": "source-conflict",
+      "title": "Leviticus Ch 17",
+      "label": "Leviticus 17:7",
+      "pageUrl": "https://www.templeisraelomaha.com/leviticus-ch-17.html",
+      "ref": "Leviticus 17:7",
+      "kind": "torah",
+      "recordings": [],
+      "status": "pending"
+    },
+    {
+      "id": "sr_3c59a3a8243cbc0daefab9a901f04400",
+      "category": "source-conflict",
+      "title": "Leviticus Ch 17",
+      "label": "Leviticus 17:17",
+      "pageUrl": "https://www.templeisraelomaha.com/leviticus-ch-17.html",
+      "recordings": [],
+      "status": "pending"
+    },
+    {
+      "id": "sr_cf7356bd7c48b9fa8fa105c7be5f348a",
+      "category": "source-conflict",
+      "title": "Leviticus Ch 23",
+      "label": "Emor Leviticus 23:7",
+      "pageUrl": "https://www.templeisraelomaha.com/leviticus-ch-23.html",
+      "ref": "Leviticus 23:7",
+      "kind": "torah",
+      "recordings": [],
+      "status": "pending"
+    },
+    {
+      "id": "sr_0bd58701a2e6de025fc7815022aabbea",
+      "category": "source-conflict",
+      "title": "Leviticus Ch 24",
+      "label": "Emor Leviticus 24:7",
+      "pageUrl": "https://www.templeisraelomaha.com/leviticus-ch-24.html",
+      "ref": "Leviticus 24:7",
+      "kind": "torah",
+      "recordings": [],
+      "status": "pending"
+    },
+    {
+      "id": "sr_ce69f4d91c7498f4fb94ea38a0a54af9",
+      "category": "source-conflict",
+      "title": "Leviticus Ch 27",
+      "label": "Leviticus 27:30",
+      "pageUrl": "https://www.templeisraelomaha.com/leviticus-ch-27.html",
+      "ref": "Leviticus 27:30",
+      "kind": "torah",
+      "recordings": [],
+      "status": "pending"
+    },
+    {
+      "id": "sr_37722f14c5e3c6b7b66c2fcee12de3ec",
+      "category": "source-conflict",
+      "title": "Leviticus Ch 27",
+      "label": "Leviticus 27:31",
+      "pageUrl": "https://www.templeisraelomaha.com/leviticus-ch-27.html",
+      "ref": "Leviticus 27:31",
       "kind": "torah",
       "recordings": [],
       "status": "pending"
@@ -13383,39 +14013,6 @@
       "status": "pending"
     },
     {
-      "id": "sr_437ed65485ff6c1e50e076fa9f26c99a",
-      "category": "source-conflict",
-      "title": "Isaiah 66:1-13; 23",
-      "label": "Isaiah 66:3",
-      "pageUrl": "https://www.templeisraelomaha.com/isaiah-661-13-23.html",
-      "ref": "Isaiah 66:3",
-      "kind": "haftarah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
-      "id": "sr_90f33f0c93110c130d7052d25b9f36d0",
-      "category": "source-conflict",
-      "title": "Isaiah 66:1-13; 23",
-      "label": "Isaiah 66:3",
-      "pageUrl": "https://www.templeisraelomaha.com/isaiah-661-13-231.html",
-      "ref": "Isaiah 66:3",
-      "kind": "haftarah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
-      "id": "sr_7e1ea09adb2146f5161689bc39c12181",
-      "category": "source-conflict",
-      "title": "Isaiah",
-      "label": "Isaiah 66:3",
-      "pageUrl": "https://www.templeisraelomaha.com/isaiah-additions.html",
-      "ref": "Isaiah 66:3",
-      "kind": "haftarah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
       "id": "sr_58095c145491d43512c461b55ed3ca72",
       "category": "source-conflict",
       "title": "Isaiah 66:1-13; 23",
@@ -13423,8 +14020,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/isaiah-661-13-23.html",
       "ref": "Isaiah 66:23",
       "kind": "haftarah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 432727,
+          "sha256": "8d39a68558b8ff3f414e25e90d2acb4fbf56b71f14c740317ded855b27478c53",
+          "duration": 25.5285,
+          "bytes": 408873,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_0fbd14db54f5743eb38d65c353e51de2",
@@ -13434,8 +14039,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/isaiah-661-13-231.html",
       "ref": "Isaiah 66:23",
       "kind": "haftarah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 432726,
+          "sha256": "1a45984985bf86dd2710468ef12511cbefe62af1c2f216c3e6b8d469745ef118",
+          "duration": 25.02825,
+          "bytes": 400869,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_590f595d0a30b0d80391d82ccc85a6f1",
@@ -13445,8 +14058,356 @@
       "pageUrl": "https://www.templeisraelomaha.com/isaiah-additions.html",
       "ref": "Isaiah 66:23",
       "kind": "haftarah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 432727,
+          "sha256": "8d39a68558b8ff3f414e25e90d2acb4fbf56b71f14c740317ded855b27478c53",
+          "duration": 25.5285,
+          "bytes": 408873,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_54ffcee98ecd3da439918d9e2ca0b63c",
+      "category": "source-conflict",
+      "title": "Genesis Ch 23",
+      "label": "Genesis 23:20",
+      "pageUrl": "https://www.templeisraelomaha.com/genesis-ch-23.html",
+      "recordings": [
+        {
+          "sourceId": 433885,
+          "sha256": "341c98b115169fda0a441ea475b9db0c0846986e4fb4d631f81a33c1933345df",
+          "duration": 18.023125,
+          "bytes": 288787,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_81e2f7f1c77fc4d08b29d455db8d684d",
+      "category": "source-conflict",
+      "title": "Genesis Ch 33",
+      "label": "Genesis 33:18",
+      "pageUrl": "https://www.templeisraelomaha.com/genesis-ch-33.html",
+      "recordings": [
+        {
+          "sourceId": 434542,
+          "sha256": "26e224f8931c4082abcbd9592c6028e8adb415e4134b9318b0630da2f5c2890a",
+          "duration": 22.340063,
+          "bytes": 357858,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_0c6905a34cbbc4d31ae5d91d8b56b0fb",
+      "category": "source-conflict",
+      "title": "Genesis Ch 42",
+      "label": "Genesis 42:29",
+      "pageUrl": "https://www.templeisraelomaha.com/genesis-ch-42.html",
+      "recordings": [
+        {
+          "sourceId": 439136,
+          "sha256": "5623c835e0dd2f5acc93648a7a7bacc37b0771384f4a6dc0dcce9c107a7f9d2d",
+          "duration": 30.933,
+          "bytes": 495345,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_45edeca5644870ef85871d7ac81701a9",
+      "category": "source-conflict",
+      "title": "Genesis Ch 47",
+      "label": "Genesis 47:8",
+      "pageUrl": "https://www.templeisraelomaha.com/genesis-ch-47.html",
+      "recordings": [
+        {
+          "sourceId": 439224,
+          "sha256": "9e327693d6a1218a6f301763fd743541cc95b01c60c25f868b997db27191dec1",
+          "duration": 29.527125,
+          "bytes": 472851,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_cb24f68b167364e7cd4b31d7352f7743",
+      "category": "source-conflict",
+      "title": "B’midbar (Numbers 1:1-4:20)",
+      "label": "B’midbar Numbers 3:21",
+      "pageUrl": "https://www.templeisraelomaha.com/bmidbar-numbers",
+      "recordings": [
+        {
+          "sourceId": 416487,
+          "sha256": "233c7f448a15184732804b29b035aa175fbe4fd8c8373fb8fbf4ef58f655b420",
+          "duration": 20.937813,
+          "bytes": 335422,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_78a5521de2e50e16998dcfd8cf9363f8",
+      "category": "source-conflict",
+      "title": "Naso (Numbers 4:21-7:89)",
+      "label": "Naso Numbers 7:83",
+      "pageUrl": "https://www.templeisraelomaha.com/naso-numbers",
+      "recordings": [
+        {
+          "sourceId": 417127,
+          "sha256": "3a8895f4644081af2bf54959f8fdfb60d1bf1c705d64d3cca621215efb0a9db5",
+          "duration": 6.433875,
+          "bytes": 103359,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_876e2106663003ce800b301dd2c94927",
+      "category": "source-conflict",
+      "title": "B’haalot’cha (Numbers 8:1-12:16)",
+      "label": "B’haalot’cha Exodus 9:4",
+      "pageUrl": "https://www.templeisraelomaha.com/bhaalotcha-numbers-81-1216.html",
+      "recordings": [
+        {
+          "sourceId": 417308,
+          "sha256": "eebe6d7784a7971e7e84d88f788f151783d59b758b70a2565700788b45c8f5d8",
+          "duration": 42.25225,
+          "bytes": 676453,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_bf92d3fe7e8090d9e786b3ebef9f23c6",
+      "category": "source-conflict",
+      "title": "B’haalot’cha (Numbers 8:1-12:16)",
+      "label": "B’haalot’cha Exodus 10:27",
+      "pageUrl": "https://www.templeisraelomaha.com/bhaalotcha-numbers-81-1216.html",
+      "recordings": [
+        {
+          "sourceId": 417351,
+          "sha256": "fe6c247141141aa9a6d0f718e01f099f4b604d13b236314f26992d439277b7fa",
+          "duration": 12.126625,
+          "bytes": 194443,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_be613c1ee2a0a615a407076ce7c3ef83",
+      "category": "source-conflict",
+      "title": "Sh’lach L’cha (Numbers 13:1-15:41)",
+      "label": "Sh'lach L'cha Numbers 15:36",
+      "pageUrl": "https://www.templeisraelomaha.com/shlach-lcha-numbers-131-1541.html",
+      "recordings": [
+        {
+          "sourceId": 426642,
+          "sha256": "fee3b46a55049400ff75a98eb5c01d27eb431bb8e29a9cf39a94f67db02984e9",
+          "duration": 35.139563,
+          "bytes": 562650,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_77845f15f1301891698717870ead6afd",
+      "category": "source-conflict",
+      "title": "Korach (Numbers 16:1-18:32)",
+      "label": "Korach Numbers 18:31",
+      "pageUrl": "https://www.templeisraelomaha.com/korach-numbers-161-1832.html",
+      "recordings": [
+        {
+          "sourceId": 426762,
+          "sha256": "5856284ff9939163478e882d1b187db0a7f78e0df66a1e8a8ccff9ed904b4837",
+          "duration": 23.132125,
+          "bytes": 370531,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_7fa9e96c132d5f0383ca1a3eac83446e",
+      "category": "source-conflict",
+      "title": "Numbers Ch 28",
+      "label": "Pinchas Numbers 28:7",
+      "pageUrl": "https://www.templeisraelomaha.com/numbers-ch-28.html",
+      "recordings": [
+        {
+          "sourceId": 427159,
+          "sha256": "d312060ffc72bdc54ba07e7f005d494d4ad73d693eec0323111fcacf1c6140e7",
+          "duration": 24.31925,
+          "bytes": 389525,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_0053e2d1d2b7d2c796359e6f0e832759",
+      "category": "source-conflict",
+      "title": "Mas’ei (Numbers 35)",
+      "label": "Mas'ei Numbers 35:24",
+      "pageUrl": "https://www.templeisraelomaha.com/masei-numbers-35.html",
+      "recordings": [
+        {
+          "sourceId": 427410,
+          "sha256": "2f2d8104b7c54fea91a3d165a644e0f541683c9ce1d1509a068bce9785508765",
+          "duration": 9.941313,
+          "bytes": 159478,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_437ed65485ff6c1e50e076fa9f26c99a",
+      "category": "source-conflict",
+      "title": "Isaiah 66:1-13; 23",
+      "label": "Isaiah 66:3",
+      "pageUrl": "https://www.templeisraelomaha.com/isaiah-661-13-23.html",
+      "recordings": [
+        {
+          "sourceId": 432767,
+          "sha256": "5f49db529a3a564c1b9a52417419ca0f34c6d8d044f696a3828948833ba376bf",
+          "duration": 35.532813,
+          "bytes": 568942,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_764371a3be9b271796fe3e46d654f146",
+      "category": "source-conflict",
+      "title": "Bo (Exodus 10:1-13:16)",
+      "label": "Bo Exodus 10:6",
+      "pageUrl": "https://www.templeisraelomaha.com/bo-exodus",
+      "recordings": [
+        {
+          "sourceId": 418296,
+          "sha256": "aec09b7dafd6e561b6e984e9faa2e7d52195fc57250e10a59d4ba3bd15bd6553",
+          "duration": 11.84575,
+          "bytes": 189949,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_79640f6855f97a4f5ab4466ab801e041",
+      "category": "source-conflict",
+      "title": "Bo (Exodus 10:1-13:16)",
+      "label": "Bo Exodus 10:22",
+      "pageUrl": "https://www.templeisraelomaha.com/bo-exodus",
+      "recordings": [
+        {
+          "sourceId": 413332,
+          "sha256": "020aaa16259bb30caeb6a6c11ffe587551f38c72315642e5ac57902a2b9b46a2",
+          "duration": 13.709,
+          "bytes": 219761,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_aa7c5a72980c0bf922d446acb829cd34",
+      "category": "source-conflict",
+      "title": "Isaiah 6:1-7:6; 9:5-6",
+      "label": "Isaiah 6:12",
+      "pageUrl": "https://www.templeisraelomaha.com/isaiah-61-76-95-6.html",
+      "recordings": [
+        {
+          "sourceId": 432908,
+          "sha256": "58edc52d142c0b38ab081428210c989ec3a6f5cd525aea2ca6a221c4178138d0",
+          "duration": 36.656188,
+          "bytes": 586916,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_0edb9bb5ff56b6d87651a9e7c76055fa",
+      "category": "source-conflict",
+      "title": "Mishpatim (Exodus 21:1-24:18)",
+      "label": "Mishpatim Exodus 23:22",
+      "pageUrl": "https://www.templeisraelomaha.com/mishpatim-exodus",
+      "recordings": [
+        {
+          "sourceId": 413668,
+          "sha256": "db0d6deef71f11041b379ccc6dd99e7b229c329e954186044c0bc0da1ddd39cd",
+          "duration": 17.601375,
+          "bytes": 282039,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_5bc8114500f893c3e3b7fe63a05d50a0",
+      "category": "source-conflict",
+      "title": "Ki Tisa (Exodus 30:11-34:35)",
+      "label": "Ki Tisa Exodus 30:31",
+      "pageUrl": "https://www.templeisraelomaha.com/ki-tisa-exodus",
+      "recordings": [
+        {
+          "sourceId": 414098,
+          "sha256": "349bb74f5c362c08c40642464e3d3a178829cb871e96b2f7625a34e91331cae2",
+          "duration": 11.847375,
+          "bytes": 189975,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_beb560598d6a6731051be4b9a5f34a91",
+      "category": "source-conflict",
+      "title": "Ki Tisa (Exodus 30:11-34:35)",
+      "label": "Ki Tisa Exodus 31:14",
+      "pageUrl": "https://www.templeisraelomaha.com/ki-tisa-exodus",
+      "recordings": [
+        {
+          "sourceId": 414138,
+          "sha256": "a57d9c73ca9727641898ccb6cc1857783c63d6bef977adc6931803fe4d940af8",
+          "duration": 12.824313,
+          "bytes": 205606,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_583bd3a31673f6661113e76f2e94a7e9",
+      "category": "source-conflict",
+      "title": "Ki Tisa (Exodus 30:11-34:35)",
+      "label": "Ki Tisa Exodus 33:16",
+      "pageUrl": "https://www.templeisraelomaha.com/ki-tisa-exodus",
+      "recordings": [
+        {
+          "sourceId": 414084,
+          "sha256": "42f8a68eb3548ecf75840b372cb139229fc3284899dc0f0309f5c03ec8fb007e",
+          "duration": 36.52825,
+          "bytes": 584869,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_05393217591f1a59de39370998ff89a7",
@@ -13456,7 +14417,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_e14bdb2a34713a7487c3b48b68198520",
@@ -13466,7 +14427,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_d206a1906b69845479f77c86d24ebebc",
@@ -13476,7 +14437,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_60923cebe11a61697a297e75c4f7d30b",
@@ -13486,7 +14447,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_d5b7b8ca4cbcdc3b01438b9e4f699b55",
@@ -13496,7 +14457,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_05f3dcda8f4a4ec78a69e8e56c374bc4",
@@ -13506,7 +14467,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_452a74f3ae348d374cc0f702277f517a",
@@ -13516,7 +14477,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_42b3d4c422a0017bfb0cf2a694866358",
@@ -13526,7 +14487,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_d2596e9cfb02bd436c610363440e34c6",
@@ -13536,7 +14497,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_4e43fee243e245816ffb5a598ad7d152",
@@ -13546,7 +14507,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_d0090a78e48b8d60f86737def3ff6e12",
@@ -13556,7 +14517,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_f30c2f086500fb065fcf5aab713af5ba",
@@ -13566,7 +14527,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_631776cc2e955d6df33556bff60e190e",
@@ -13576,7 +14537,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_58f2dee6305401998c7ae97f5f98c6f0",
@@ -13586,7 +14547,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_cc6938204d0c7e26dc480fd008a91035",
@@ -13596,7 +14557,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_beddc04ab1fd60c87b18ccb4a59bda7f",
@@ -13606,7 +14567,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_0c75140acbeec22fb4ee8d6e925e4952",
@@ -13616,7 +14577,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_616ce7e5a7834584654258b718ebe4ef",
@@ -13626,7 +14587,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_b6b83e530deab36dabfdacae7ab9dcd5",
@@ -13636,7 +14597,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_756dd50c2b00429642fc8b71ac54cb66",
@@ -13646,7 +14607,7 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
     },
     {
       "id": "sr_cb65de3dfa76ef1fb9d4ae3abc61eb12",
@@ -13656,7 +14617,24 @@
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
       "recordings": [],
       "status": "pending",
-      "reason": "Visible page title and row disagree on biblical book"
+      "reason": "book-mismatch"
+    },
+    {
+      "id": "sr_4d3d9748effcc3be162821ca9bee7723",
+      "category": "source-conflict",
+      "title": "Isaiah 43:21-44:23",
+      "label": "Isaiah 44:3",
+      "pageUrl": "https://www.templeisraelomaha.com/isaiah-4321-4423.html",
+      "recordings": [
+        {
+          "sourceId": 423780,
+          "sha256": "6461ea6779cf7c95937adb175774ddc1319aa617159d8cf93105745c35abcda0",
+          "duration": 25.03725,
+          "bytes": 401013,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     }
   ]
 }

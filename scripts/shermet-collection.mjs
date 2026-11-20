@@ -1,7 +1,7 @@
 // Public-page metadata acquisition only. All inventory, receipts and audio stay outside Git.
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile, appendFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, appendFile, rename } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
@@ -20,7 +20,8 @@ const MEGILLOT = new Set(['Ruth', 'Esther', 'Song of Songs', 'Ecclesiastes', 'La
 const publicPage = value => { try { const u = new URL(value); return u.protocol === 'https:' && u.hostname === 'www.templeisraelomaha.com' && !u.username && !u.password; } catch { return false; } };
 const short = (value, max = 300) => typeof value === 'string' && value.length <= max && !/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value);
 async function readJson(path, fallback) { try { return JSON.parse(await readFile(path, 'utf8')); } catch (error) { if (error.code === 'ENOENT') return fallback; throw error; } }
-async function saveJson(path, value) { await writeFile(path, JSON.stringify(value, null, 2) + '\n'); }
+let saveSequence = 0;
+async function saveJson(path, value) { const temporary = `${path}.${process.pid}.${saveSequence++}.tmp`; await writeFile(temporary, JSON.stringify(value, null, 2) + '\n'); await rename(temporary, path); }
 async function outputRoot(directory) {
   if (!directory || await insideGitWorkingTree(directory)) throw new Error('Collection output must be outside every Git working tree');
   const root = resolve(directory); await mkdir(root, { recursive: true }); return root;
@@ -79,7 +80,13 @@ export async function acquireCollection(directory, maximum = 100, quiet = false)
   const inventory = validateInventory(await readJson(join(root, 'inventory.json'), null));
   const checkpoint = await readJson(join(root, 'acquisition.json'), { version: 1, media: {} });
   const ids = [...new Set(inventory.pages.flatMap(p => p.rows.flatMap(r => r.sources.map(audioId))))];
-  const queue = ids.filter(id => { const prior = checkpoint.media[id]; return prior?.status !== 'verified' && !(prior?.status === 'failed' && Date.now() - Date.parse(prior.attemptedAt) < 15 * 60 * 1000); }).slice(0, maximum);
+  const priorities = await readJson(join(root, 'priority-refs.json'), { refs: [] });
+  if (priorities.refs.length) {
+    const refs = new Set(priorities.refs), priorityIds = new Set(mapInventory(inventory).provenance.filter(row => refs.has(row.ref)).map(row => String(row.sourceId)));
+    ids.sort((a, b) => Number(priorityIds.has(b)) - Number(priorityIds.has(a)));
+  }
+  if (checkpoint.hostBlock && Date.now() < Date.parse(checkpoint.hostBlock.until)) return { observedIds: ids.length, attempted: 0, verified: ids.filter(id => checkpoint.media[id]?.status === 'verified').length, blocked: checkpoint.hostBlock };
+  const queue = ids.filter(id => { const prior = checkpoint.media[id]; return prior?.status !== 'verified' && !(prior?.status === 'failed' && (prior.retryable === false || Date.now() - Date.parse(prior.attemptedAt) < 15 * 60 * 1000)); }).slice(0, maximum);
   let attempted = 0, nextStart = 0, checkpointWrite = Promise.resolve();
   async function worker() {
    while (queue.length) {
@@ -92,17 +99,25 @@ export async function acquireCollection(directory, maximum = 100, quiet = false)
     const url = `https://images.shulcloud.com/14396/${id}.mp3`;
     try {
       const response = await fetch(url, { redirect: 'error', credentials: 'omit', signal: AbortSignal.timeout(60000) });
-      if (!response.ok || !response.body) { if ([403, 406, 429].includes(response.status)) queue.length = 0; throw new Error(`HTTP ${response.status}`); }
+      if (!response.ok || !response.body) {
+        if ([403, 406, 429].includes(response.status)) {
+          queue.length = 0;
+          const retry = Number(response.headers.get('retry-after'));
+          checkpoint.hostBlock = { status: response.status, until: new Date(Date.now() + (response.status === 429 ? Math.max(60, Number.isFinite(retry) ? retry : 60) : 15 * 60) * 1000).toISOString() };
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
       const chunks = []; let length = 0;
       for await (const chunk of response.body) { length += chunk.length; if (length > 20 * 1024 * 1024) throw new Error('Audio exceeds 20 MiB limit'); chunks.push(chunk); }
       const bytes = Buffer.concat(chunks), sha256 = digest(bytes), file = `${sha256}.mp3`, path = join(root, file);
+      if (!bytes.length) throw new Error('Audio source is empty');
       await writeFile(path, bytes);
       const probe = JSON.parse((await run('ffprobe', ['-v', 'error', '-show_entries', 'format=duration,format_name:stream=codec_name,codec_type,sample_rate,channels', '-of', 'json', path], { windowsHide: true })).stdout);
       const mimeType = probe.format?.format_name === 'wav' && probe.streams?.some(s => s.codec_type === 'audio' && s.codec_name === 'pcm_s16le') ? 'audio/wav' : probe.streams?.some(s => s.codec_type === 'audio' && s.codec_name === 'mp3') ? 'audio/mpeg' : null;
       if (!mimeType || !(Number(probe.format?.duration) > 0)) throw new Error('Unsupported audio container/codec; inspect original before accepting');
       await run('ffmpeg', ['-v', 'error', '-xerror', '-i', path, '-f', 'null', '-'], { windowsHide: true });
       checkpoint.media[id] = { status: 'verified', sourceUrl: url, sha256, file, bytes: bytes.length, duration: Number(probe.format.duration), mimeType, streams: probe.streams, decode: 'passed', acquiredAt: new Date().toISOString() };
-    } catch (error) { checkpoint.media[id] = { status: 'failed', sourceUrl: url, error: String(error.message).slice(0, 200), attemptedAt: new Date().toISOString() }; }
+    } catch (error) { checkpoint.media[id] = { status: 'failed', sourceUrl: url, error: String(error.message).slice(0, 200), retryable: !/Audio source is empty|Unsupported audio container|Command failed: ffprobe|Command failed: ffmpeg/.test(error.message), attemptedAt: new Date().toISOString() }; }
     checkpointWrite = checkpointWrite.then(() => saveJson(join(root, 'acquisition.json'), checkpoint));
     await checkpointWrite;
    }
@@ -115,8 +130,9 @@ export async function acquireCollection(directory, maximum = 100, quiet = false)
 
 /** Classification comes from exact visible row references and observed page hierarchy.
  * Variants and non-verse rows remain separate and never replace ordinary recordings. */
-export function mapInventory(inventory, media = {}) {
+export function mapInventory(inventory, media = {}, adjudications = []) {
   const checked = validateInventory(inventory), ordinary = [], variants = [], deferred = [];
+  const decisions = new Map(adjudications.map(row => [row.sourceId, row]));
   const incoming = new Map();
   for (const page of checked.pages) for (const link of page.links) {
     const list = incoming.get(link.href) ?? []; list.push({ page: page.url, title: page.title, label: link.text }); incoming.set(link.href, list);
@@ -131,17 +147,30 @@ export function mapInventory(inventory, media = {}) {
     const positions = correction ? page.rows.map(r => / ([1-9]\d*:[1-9]\d*)$/.exec(r.label)?.[1]) : null;
     const corrected = expected && expected.length === positions.length && expected.every((value, index) => value === positions[index]);
     const label = normalizeLabel(row.label.trim()).replace(corrected ? /\b(?:Genesis|Exodus|Numbers) (?=\d+:\d+$)/ : /$^/, corrected ? correction.book + ' ' : '');
-    const match = REF_SUFFIX.exec(label);
-    const ref = match ? `${match[1]} ${match[2]}:${match[3]}` : undefined;
+    let match = REF_SUFFIX.exec(label);
+    let ref = match ? `${match[1]} ${match[2]}:${match[3]}` : undefined;
     const context = `${page.title} ${new URL(page.url).pathname}`;
     const parents = incoming.get(page.url) ?? [];
     const parentContext = parents.map(p => `${p.title} ${p.label}`).join(' ');
     const holiday = /high.holiday|rosh.hashan|yom.kippur|holiday.torah|alternate|alternative|variant/i.test(context);
     // A dedicated holiday-only link is a variant even if its leaf title uses just a biblical reference.
     const holidayOnly = parents.length > 0 && parents.every(p => /high.holiday|rosh.hashan|yom.kippur|holiday.torah/i.test(`${p.title} ${p.label}`));
+    const observedId = row.sources.length === 1 ? Number(audioId(row.sources[0])) : null;
+    const decision = decisions.get(observedId);
+    const qa = decision && media[String(observedId)]?.sha256 === decision.sha256 ? decision : null;
+    let audioCorrection;
+    if (qa && ref !== qa.ref) {
+      const target = SINGLE_REF.exec(qa.ref);
+      const titleMatches = target && normalizeLabel(page.title).includes(target[1]);
+      if (target && match && target[2] === match[2] && target[3] === match[3] && titleMatches) {
+        ref = qa.ref; match = target; audioCorrection = 'Independent SHA-bound ASR and phone contrast confirm the title/parent reference over the printed row book.';
+      } else {
+        deferred.push({ pageUrl: page.url, pageTitle: page.title, rowLabel: row.label, parents, category: 'source-conflict', reason: 'Independent SHA-bound audio identity disagrees with the printed row reference', sources: row.sources, adjudicationSha256: qa.evidenceSha256 }); continue;
+      }
+    }
     const book = match?.[1], kind = book ? TORAH_BOOKS.has(book) ? 'torah' : MEGILLOT.has(book) ? 'megillah' : 'haftarah' : undefined;
     const category = (holiday || holidayOnly) && kind !== 'haftarah' ? 'holiday-variant' : kind === 'megillah' ? 'megillah' : /blessing|b.rach|berach|brach/i.test(context + parentContext + row.label) ? 'blessing' : /trope|lesson|cantillation|tutorial/i.test(context + parentContext) ? 'lesson' : /passover|pesach/i.test(context + parentContext) && !match ? 'festival-song' : match ? 'verse' : 'unclassified';
-    const evidence = { pageUrl: page.url, pageTitle: page.title, rowLabel: row.label, parents, ...(corrected ? { correction: correction.reason } : {}) };
+    const evidence = { pageUrl: page.url, pageTitle: page.title, rowLabel: row.label, parents, ...(corrected ? { correction: correction.reason } : {}), ...(qa ? { adjudicationSha256: qa.evidenceSha256 } : {}), ...(audioCorrection ? { correction: audioCorrection } : {}) };
     const titleBooks = [...normalizeLabel(page.title).matchAll(new RegExp(`${BOOKS} (?:[1-9]\\d*:|Ch(?:apter)?\\b)`, 'gi'))].map(m => m[1].toLowerCase());
     if (match && titleBooks.length && !corrected && !titleBooks.includes(book.toLowerCase())) {
       deferred.push({ ...evidence, category: 'source-conflict', reason: 'Visible page title and row disagree on biblical book', sources: row.sources }); continue;
@@ -152,11 +181,30 @@ export function mapInventory(inventory, media = {}) {
     if (category === 'verse') ordinary.push(record); else variants.push(record);
   }
   const grouped = new Map();
-  for (const entry of ordinary) { const key = `${entry.kind}:${entry.ref}`, list = grouped.get(key) ?? []; list.push(entry); grouped.set(key, list); }
-  const recordings = [], conflicts = [];
+  const sourceRefs = new Map(), hashRefs = new Map();
+  for (const entry of ordinary) {
+    const ref = `${entry.kind}:${entry.ref}`, refs = sourceRefs.get(entry.sourceId) ?? new Set(); refs.add(ref); sourceRefs.set(entry.sourceId, refs);
+    if (entry.sha256) { const same = hashRefs.get(entry.sha256) ?? new Set(); same.add(ref); hashRefs.set(entry.sha256, same); }
+  }
+  const collision = entry => (sourceRefs.get(entry.sourceId).size > 1 || entry.sha256 && hashRefs.get(entry.sha256).size > 1)
+    && !(decisions.get(entry.sourceId)?.ref === entry.ref && decisions.get(entry.sourceId)?.sha256 === entry.sha256);
+  const sourceCollisions = ordinary.filter(collision);
+  for (const entry of ordinary) {
+    if (collision(entry)) continue;
+    const key = `${entry.kind}:${entry.ref}`, list = grouped.get(key) ?? []; list.push(entry); grouped.set(key, list);
+  }
+  const recordings = [], conflicts = [...sourceCollisions];
   for (const list of grouped.values()) {
     const ids = new Set(list.map(entry => entry.sourceId));
-    if (ids.size !== 1) { conflicts.push(...list); continue; }
+    if (ids.size !== 1) {
+      conflicts.push(...list);
+      // Several independently confirmed full performances may fit one ref.
+      // Preserve all in the library and prefer the longest verified ordinary
+      // performance, rather than an unreviewed cut or a holiday Torah variant.
+      const qualified = list.filter(entry => entry.sha256 && decisions.get(entry.sourceId)?.ref === entry.ref && decisions.get(entry.sourceId)?.sha256 === entry.sha256).sort((a, b) => (b.duration ?? 0) - (a.duration ?? 0));
+      if (!qualified.length) continue;
+      const entry = qualified[0]; recordings.push({ kind: entry.kind, ref: entry.ref, sourceId: entry.sourceId, sha256: entry.sha256, bytes: entry.bytes, mimeType: entry.mimeType ?? 'audio/mpeg' }); continue;
+    }
     const entry = list.find(r => r.sha256);
     if (entry) recordings.push({ kind: entry.kind, ref: entry.ref, sourceId: entry.sourceId, sha256: entry.sha256, ...(Number.isSafeInteger(entry.bytes) ? { bytes: entry.bytes } : {}), mimeType: entry.mimeType ?? 'audio/mpeg' });
   }
@@ -164,15 +212,17 @@ export function mapInventory(inventory, media = {}) {
     summary: { pages: checked.pages.length, observedRows: ordinary.length + variants.length + deferred.length,
       ordinaryReferences: grouped.size, verifiedOrdinaryReferences: recordings.length,
       torah: recordings.filter(r => r.kind === 'torah').length, haftarah: recordings.filter(r => r.kind === 'haftarah').length,
-      variantRows: variants.length, conflictedRows: conflicts.length, deferredRows: deferred.length } };
+      variantRows: variants.length, conflictedRows: conflicts.length, crossReferenceSourceIds: new Set(sourceCollisions.map(r => r.sourceId)).size,
+      crossReferenceAudioHashes: new Set(sourceCollisions.filter(r => r.sha256 && hashRefs.get(r.sha256)?.size > 1).map(r => r.sha256)).size, deferredRows: deferred.length } };
 }
 
 export async function generateManifest(directory) {
   const root = await outputRoot(directory);
   const inventory = await readJson(join(root, 'inventory.json'), { version: 1, pages: [] });
   const checkpoint = await readJson(join(root, 'acquisition.json'), { media: {} });
-  const result = mapInventory(inventory, checkpoint.media);
-  const { canonicalReadingRef } = await loadCanonicalReading(root);
+  const adjudication = await readJson(join(root, 'source-adjudications.json'), { records: [] });
+  const result = mapInventory(inventory, checkpoint.media, adjudication.records);
+  const { canonicalReadingRef, TANAKH_VERSE_COUNTS } = await loadCanonicalReading(root);
   result.recordings = result.recordings.filter(entry => {
     const parsed = canonicalReadingRef(entry.ref, entry.kind);
     if (parsed?.verses.length === 1 && parsed.verses[0] === entry.ref) return true;
@@ -182,8 +232,10 @@ export async function generateManifest(directory) {
   const items = [...result.variants, ...result.conflicts.map(r => ({ ...r, category: 'source-conflict' })), ...result.deferred].map(row => {
     const sources = row.sources ?? [`https://images.shulcloud.com/14396/${row.sourceId}.mp3`];
     const recordings = sources.flatMap(url => { const id = audioId(url), media = checkpoint.media[id]; return media?.status === 'verified' ? [{ sourceId: Number(id), sha256: media.sha256, duration: media.duration, bytes: media.bytes, mimeType: media.mimeType ?? 'audio/mpeg' }] : []; });
+    const parsed = row.ref ? canonicalReadingRef(row.ref, row.kind) : null, megillah = row.ref ? SINGLE_REF.exec(row.ref) : null;
+    const validRef = parsed?.verses.length === 1 && parsed.verses[0] === row.ref || row.kind === 'megillah' && megillah && MEGILLOT.has(megillah[1]) && Number(megillah[3]) <= TANAKH_VERSE_COUNTS[megillah[1]]?.[Number(megillah[2]) - 1];
     return { id: 'sr_' + digest(row.pageUrl + '\n' + row.rowLabel).slice(0, 32), category: row.category, title: row.pageTitle, label: row.rowLabel, pageUrl: row.pageUrl,
-      ...(row.ref ? { ref: row.ref, kind: row.kind } : {}), recordings, status: recordings.length ? 'available' : sources.length ? 'pending' : 'missing', ...(row.reason ? { reason: row.reason } : {}) };
+      ...(validRef ? { ref: row.ref, kind: row.kind } : {}), recordings, status: recordings.length ? 'available' : sources.length ? 'pending' : 'missing', ...(row.reason?.includes('biblical book') ? { reason: 'book-mismatch' } : {}) };
   });
   await saveJson(join(root, 'public-verse-manifest.json'), { version: 1, recordings: result.recordings });
   await saveJson(join(root, 'mapped-inventory.json'), result);
@@ -193,6 +245,7 @@ export async function generateManifest(directory) {
 
 export async function watchCollection(directory) {
   const root = await outputRoot(directory); let last = '';
+  await saveJson(join(root, 'watcher-state.json'), { pid: process.pid, startedAt: new Date().toISOString(), scriptSha256: digest(await readFile(fileURLToPath(import.meta.url))) });
   while (true) {
     const next = await readJson(join(root, 'inventory.json'), { version: 1, pages: [] });
     const version = digest(JSON.stringify(next));

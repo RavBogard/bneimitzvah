@@ -16,7 +16,15 @@ export async function loadCanonicalReading(directory) {
     text = text.replace(/from (["'])\.\/(reading-ref|catalog|commentary|ranges)(?:\.ts)?\1/g, (_, quote, module) => `from ${quote}./${module}.mjs${quote}`);
     await writeFile(join(root, name.replace(/\.ts$/, '.mjs')), text);
   }
-  return import(pathToFileURL(join(root, 'reading-ref.mjs')).href);
+  return { ...(await import(pathToFileURL(join(root, 'reading-ref.mjs')).href)), ...(await import(pathToFileURL(join(root, 'catalog.mjs')).href)), sourceDirectory: root };
+}
+
+export async function loadTimingParser(directory) {
+  const canonical = await loadCanonicalReading(directory);
+  const source = await readFile(new URL('../src/lib/reference-audio/shermet-timing.ts', import.meta.url), 'utf8');
+  const code = stripTypeScriptTypes(source, { mode: 'transform' }).replace(/from ["']\.\.\/readings\/reading-ref["']/g, `from ${JSON.stringify(pathToFileURL(join(canonical.sourceDirectory, 'reading-ref.mjs')).href)}`);
+  const path = join(canonical.sourceDirectory, 'shermet-timing.mjs'); await writeFile(path, code);
+  return import(pathToFileURL(path).href);
 }
 
 export async function loadHebrewProjection(directory) {

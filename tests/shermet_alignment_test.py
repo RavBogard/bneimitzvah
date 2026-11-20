@@ -12,7 +12,7 @@ spec.loader.exec_module(pipeline)
 class EmissionClockTests(unittest.TestCase):
     def test_native_frame_clock_is_contiguous_and_unique_at_window_edges(self):
         for seconds in (11.3, 28.9, 29.8, 30, 30.01, 57.7, 58, 59.8, 90.1):
-            for shift in (0, .24):
+            for shift in (0, .137, .24):
                 samples = round((seconds + shift) * 16000)
                 grid = [begin // 320 + frame for begin, _, first, end in pipeline.emission_plan(samples) for frame in range(first, end)]
                 self.assertEqual(grid, list(range((samples - 400) // 320 + 1)), (seconds, shift))

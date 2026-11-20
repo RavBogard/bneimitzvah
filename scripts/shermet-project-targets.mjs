@@ -10,7 +10,7 @@ export async function prepareProjection(inventoryFile, priorChapters, outputDire
   const root = resolve(outputDirectory), cache = join(root, 'mam-chapters'); await mkdir(cache, { recursive: true });
   const { normalizeHebrew, projectStudyVerse, sourceRuntimeSha256 } = await loadHebrewProjection(root);
   const inventory = JSON.parse((await readFile(inventoryFile, 'utf8')).replace(/^\uFEFF/, ''));
-  const refs = [...new Set((inventory.recordings ?? inventory.provenance ?? []).map(r => r.ref).filter(Boolean))];
+  const refs = [...new Set((inventory.provenance ?? inventory.recordings ?? []).map(r => r.ref).filter(Boolean))];
   const chapters = [...new Set(refs.map(ref => ref.replace(/:\d+$/, '')))];
   const verses = {}, holds = [];
   for (const chapter of chapters) {

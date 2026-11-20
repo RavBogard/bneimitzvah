@@ -13,7 +13,7 @@ import subprocess
 import time
 import unicodedata
 
-PIPELINE_VERSION = "shermet-ctc-native-grid-v2"
+PIPELINE_VERSION = "shermet-ctc-native-grid-energy-v3"
 
 
 def read(path):
@@ -21,7 +21,9 @@ def read(path):
 
 
 def save(path, value):
-    Path(path).write_text(json.dumps(value, ensure_ascii=False, indent=1), encoding="utf-8")
+    temporary = Path(str(path) + f".{os.getpid()}.tmp")
+    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=1), encoding="utf-8")
+    os.replace(temporary, path)
 
 
 def sha(data):
@@ -165,11 +167,11 @@ def align_entry(entry, audio_directory, indexed, projected, model, feature, voca
         if word["start"] < last_end or word["end"] <= word["start"] or word["end"] > duration:
             holds.append("Word interval invariant failed")
         last_end = word["end"]
-    # Independent inference grid: an added 240 ms silence prefix must not move
+    # Independent inference grid: a non-grid 137 ms silence prefix must not move
     # the inferred boundaries after that known offset is removed.
     comparison = None
     if verify:
-        shifted = align_audio(model, feature, vocab, pcm, tokens, prefix=0.24)
+        shifted = align_audio(model, feature, vocab, pcm, tokens, prefix=0.137)
         differences = [abs(a["start"] - b["start"]) for a, b in zip(phones, shifted)]
         comparison = {"medianPhoneStartDifference": float(np.median(differences)), "p95PhoneStartDifference": float(np.percentile(differences, 95)), "maxPhoneStartDifference": max(differences)}
         if comparison["p95PhoneStartDifference"] > 0.12 or comparison["maxPhoneStartDifference"] > 0.3:
@@ -186,13 +188,30 @@ def align_entry(entry, audio_directory, indexed, projected, model, feature, voca
     threshold = max(-55, min(float(np.percentile(db, 10)) + 10, float(np.percentile(db, 90)) - 14))
     active = np.where(db > threshold)[0]
     acoustic = {"thresholdDb": threshold, "firstActive": float(active[0] * .01) if len(active) else None, "lastActive": float((active[-1] + 1) * .01) if len(active) else None}
+    endpoints = []
+    for index, word in enumerate(words):
+        ctc_end = word["end"]
+        limit = words[index + 1]["start"] if index + 1 < len(words) else duration
+        first_frame, final_frame = max(0, int(ctc_end / .01)), min(len(db), int(limit / .01))
+        quiet, last_voiced, stop = 0, ctc_end, "next-word-onset" if index + 1 < len(words) else "audio-end"
+        for frame_index in range(first_frame, final_frame):
+            if db[frame_index] > threshold:
+                last_voiced = min(limit, (frame_index + 1) * .01)
+                quiet = 0
+            else:
+                quiet += 1
+                if quiet >= 8:
+                    stop = "sustained-quiet"
+                    break
+        word["end"] = round(max(ctc_end, min(limit, last_voiced)), 4)
+        endpoints.append({"ctcEnd": ctc_end, "energyEnd": word["end"], "extensionSeconds": round(word["end"] - ctc_end, 4), "stop": stop})
     if not len(active) or words[0]["start"] > acoustic["firstActive"] + 0.6 or words[-1]["end"] < acoustic["lastActive"] - 0.6:
         holds.append("Aligned phones omit substantial acoustic start or tail")
     timing = {"version": 1, "kind": entry["kind"], "ref": ref, "audioSha256": audio_sha,
               "readingTextSha256": sha(unicodedata.normalize("NFC", portal["readingText"]).encode("utf-8")),
               "wordCount": len(words), "duration": duration, "words": words, "status": "ready"}
     return {"status": "hold" if holds else "candidate", "reasons": holds, "timing": timing,
-            "quality": {"meanPhoneScore": mean_score, "minimumWordScore": minimum_word_score, "wordScores": word_scores, "independentComparison": comparison, "acoustic": acoustic},
+            "quality": {"meanPhoneScore": mean_score, "minimumWordScore": minimum_word_score, "wordScores": word_scores, "independentComparison": comparison, "acoustic": acoustic, "endpoints": endpoints},
             "phoneTargetSha256": sha(identity_bytes), "phones": phones,
             "publication": "Candidate requires independent quality review; no automatic release"}
 
@@ -209,31 +228,44 @@ def main():
     parser.add_argument("--maximum", type=int, default=20)
     parser.add_argument("--verify", action="store_true")
     parser.add_argument("--retry-holds", action="store_true")
+    parser.add_argument("--watch", action="store_true")
+    parser.add_argument("--priority-refs")
     args = parser.parse_args()
     output = private_output(args.output)
     index = target_index(args.packs)
     for extra in args.extra_packs:
         index.update(target_index(extra))
-    projection = read(args.portal_words)["verses"]
-    projection = {canonical(ref): value for ref, value in projection.items()}
-    catalog = read(args.catalog)["recordings"]
     model, feature, vocab = load_model(args.model)
-    attempted = 0
-    for entry in catalog:
-        key = sha((PIPELINE_VERSION + ":" + entry["kind"] + ":" + entry["ref"] + ":" + entry.get("sha256", entry.get("file", "").removesuffix(".mp3"))).encode())
-        destination = output / (key + ".json")
-        if destination.exists() and not (args.retry_holds and read(destination).get("status") == "hold") or attempted >= args.maximum:
-            continue
-        attempted += 1
-        begin = time.monotonic()
-        try:
-            result = align_entry(entry, args.audio_directory, index, projection, model, feature, vocab, args.verify)
-        except Exception as error:
-            result = {"status": "hold", "reasons": [str(error)[:300]], "ref": entry["ref"]}
-        result["elapsedSeconds"] = round(time.monotonic() - begin, 3)
-        result["pipelineVersion"] = PIPELINE_VERSION
-        save(destination, result)
-        print(json.dumps({"ref": entry["ref"], "status": result["status"], "reasons": result["reasons"], "seconds": result["elapsedSeconds"]}), flush=True)
+    while True:
+        if args.watch:
+            index = target_index(args.packs)
+            for extra in args.extra_packs:
+                index.update(target_index(extra))
+        projection = {canonical(ref): value for ref, value in read(args.portal_words)["verses"].items()}
+        catalog = read(args.catalog)["recordings"]
+        priorities = set(read(args.priority_refs).get("refs", [])) if args.priority_refs else set()
+        catalog.sort(key=lambda entry: 0 if entry["ref"] in priorities else 1)
+        attempted = 0
+        for entry in catalog:
+            key = sha((PIPELINE_VERSION + ":" + entry["kind"] + ":" + entry["ref"] + ":" + entry.get("sha256", entry.get("file", "").removesuffix(".mp3"))).encode())
+            destination = output / (key + ".json")
+            prior = read(destination) if destination.exists() else None
+            newly_targeted = prior and prior.get("status") == "hold" and any("Missing untimed phone target" in reason for reason in prior.get("reasons", [])) and canonical(entry["ref"]) in index and canonical(entry["ref"]) in projection
+            if prior and not newly_targeted and not (args.retry_holds and prior.get("status") == "hold") or attempted >= args.maximum:
+                continue
+            attempted += 1
+            begin = time.monotonic()
+            try:
+                result = align_entry(entry, args.audio_directory, index, projection, model, feature, vocab, args.verify)
+            except Exception as error:
+                result = {"status": "hold", "reasons": [str(error)[:300]], "ref": entry["ref"]}
+            result["elapsedSeconds"] = round(time.monotonic() - begin, 3)
+            result["pipelineVersion"] = PIPELINE_VERSION
+            save(destination, result)
+            print(json.dumps({"ref": entry["ref"], "status": result["status"], "reasons": result["reasons"], "seconds": result["elapsedSeconds"]}), flush=True)
+        if not args.watch:
+            break
+        time.sleep(5)
 
 
 if __name__ == "__main__":

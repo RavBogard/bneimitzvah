@@ -70,3 +70,15 @@ test('uses portal Roman names and refuses a contradictory source book without a 
     assert.equal(canonicalReadingRef('Numbers 8:99', 'torah'), null);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
+
+test('holds equal audio bytes assigned distinct refs, then accepts only a digest-bound adjudicated identity', () => {
+  const a = page(); a.rows[0].label = 'Genesis 1:1';
+  const b = page('b'); b.rows[0].label = 'Genesis 1:2'; b.rows[0].sources = ['https://images.shulcloud.com/14396/124.mp3'];
+  const media = { '123': { status: 'verified', sha256: 'a'.repeat(64) }, '124': { status: 'verified', sha256: 'a'.repeat(64) } };
+  const inventory = { version: 1, pages: [a, b] };
+  assert.equal(mapInventory(inventory, media).recordings.length, 0);
+  const decision = [{ sourceId: 123, sha256: 'a'.repeat(64), ref: 'Genesis 1:1', evidenceSha256: 'b'.repeat(64) }];
+  assert.deepEqual(mapInventory(inventory, media, decision).recordings.map(r => r.ref), ['Genesis 1:1']);
+  decision[0].sha256 = 'c'.repeat(64);
+  assert.equal(mapInventory(inventory, media, decision).recordings.length, 0);
+});

@@ -1,0 +1,3 @@
+import type { ShermetTiming } from "../../../lib/reference-audio/shermet-timing";
+const rows: readonly ShermetTiming[] = [{"version":1,"kind":"haftarah","ref":"Hosea 14:2","audioSha256":"545edab242ab73ead88d4e563220f4bb0b2ae973466f595314d9f1f51717ee2f","readingTextSha256":"c366061ead3ff48016780104aa060cf64ae6c62c65476b6f0369c199dd31a94c","wordCount":8,"duration":14.6285625,"words":[{"start":1.2525,"end":2.27},{"start":2.2725,"end":3.75},{"start":4.1725,"end":4.53},{"start":4.5325,"end":5.41},{"start":5.6325,"end":7.62},{"start":8.1325,"end":8.75},{"start":9.1525,"end":11.17},{"start":11.7125,"end":14.21}],"status":"ready"}];
+export default rows;
