@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
-import { mockVayera } from './aliyot-fixture';
+import { createHash } from 'node:crypto';
+import { projectStudyVerse } from '../src/lib/hebrew/study-tokens';
+import { syntheticCourseRoutes, syntheticWords } from './learn-synthetic';
+import { mockVayera, verseOf } from './aliyot-fixture';
 
 // Synthetic silent PCM only: no human audio or scripture enters the browser fixtures.
 function syntheticAudio() {
@@ -21,7 +24,14 @@ for (const [kind, ref] of [['torah', 'Exodus 35:1'], ['haftarah', 'Micah 7:18']]
       await catalogGate;
       await route.fulfill({ json: { refs: [ref] } });
     });
-    await page.route('**/api/shermet-audio/timing?*', route => route.fulfill({ status: 404 }));
+    const projection = projectStudyVerse(ref, verseOf(ref, 0).hebrew);
+    if (projection.status !== 'ready') throw new Error('Synthetic projection failed');
+    const words = Array.from({ length: projection.projection.words.length }, (_, index) => ({ start: index * 2, end: index * 2 + 1.8 }));
+    const sha = (data: Buffer | string) => createHash('sha256').update(data).digest('hex');
+    await page.route('**/api/shermet-audio/timing?*', route => route.fulfill({ json: { timing: {
+      version: 1, status: 'ready', kind, ref, audioSha256: sha(audio), readingTextSha256: sha(projection.projection.readingText.normalize('NFC')),
+      wordCount: words.length, duration: 30, words,
+    } } }));
     await page.route('**/api/shermet-audio?*', route => {
       requested.push(new URL(route.request().url()).searchParams.get('ref')!);
       const range = /^bytes=(\d+)-(\d*)$/.exec(route.request().headers().range ?? '');
@@ -51,6 +61,15 @@ for (const [kind, ref] of [['torah', 'Exodus 35:1'], ['haftarah', 'Micah 7:18']]
     await expect(player.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
     await expect(player.getByTestId('player-selection')).toHaveAttribute('data-selected-ref', ref);
     await expect(player.getByRole('combobox', { name: 'Practice', exact: true })).toHaveValue('verse');
+    const rate = () => page.evaluate(() => (window as unknown as { shermetAudio: HTMLMediaElement }).shermetAudio.playbackRate);
+    const speed = player.getByRole('combobox', { name: 'Speed', exact: true });
+    await expect.poll(rate).toBe(1.25);
+    await speed.selectOption('0.75'); await expect.poll(rate).toBe(0.9375);
+    await speed.selectOption('1.25'); await expect.poll(rate).toBe(1.5625);
+    expect(await page.evaluate(() => (window as unknown as { shermetAudio: HTMLMediaElement }).shermetAudio.preservesPitch)).toBe(true);
+    // Native time, not wall time or a scaled boundary, determines the active word.
+    await page.evaluate(() => { (window as unknown as { shermetAudio: HTMLMediaElement }).shermetAudio.currentTime = 4.1; });
+    await expect(row.locator('[data-word-index="2"]').first()).toHaveAttribute('data-reference-active', 'true');
     await player.getByText('Recording credit', { exact: true }).click();
     await expect(player.getByRole('link', { name: /Cantor Wendy Shermet.*Temple Israel, Omaha/ })).toBeVisible();
     const repeat = player.getByRole('button', { name: 'Repeat', exact: true });
@@ -64,6 +83,7 @@ for (const [kind, ref] of [['torah', 'Exodus 35:1'], ['haftarah', 'Micah 7:18']]
     // Seek to the real synthetic media end, exercising its native ended event and replay.
     await page.evaluate(() => { const audio = (window as unknown as { shermetAudio: HTMLMediaElement }).shermetAudio; audio.currentTime = audio.duration - 0.05; });
     await expect.poll(() => page.evaluate(() => (window as unknown as { shermetPlays: number }).shermetPlays)).toBeGreaterThan(before);
+    await expect.poll(rate).toBe(1.5625); await expect(speed).toHaveValue('1.25');
     await player.getByRole('button', { name: 'Pause', exact: true }).click();
     await player.getByRole('button', { name: 'Play', exact: true }).click();
     await expect(player.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
@@ -72,6 +92,39 @@ for (const [kind, ref] of [['torah', 'Exodus 35:1'], ['haftarah', 'Micah 7:18']]
     await source.selectOption('shermet');
     await row.locator('[data-word-index="0"]').first().click();
     await expect(player.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+    await expect.poll(rate).toBe(1.5625); await expect(speed).toHaveValue('1.25');
     expect(requested.length).toBeGreaterThan(0); expect(requested.every(value => value === ref)).toBe(true);
   });
 }
+
+test('Learn replays Shermet at its baseline and keeps PocketTorah fallback independent', async ({ page }) => {
+  await syntheticCourseRoutes().install(page);
+  const audio = syntheticAudio();
+  let covered = true;
+  await page.route('**/api/shermet-audio/timing?*', route => {
+    if (!covered) return route.fulfill({ status: 404 });
+    const ref = new URL(route.request().url()).searchParams.get('ref')!;
+    const text = syntheticWords(ref, 'torah').join(' ').normalize('NFC');
+    const projection = projectStudyVerse(ref, { text, readingText: text, segments: [{ kind: 'text', text }], paragraphAfter: null });
+    if (projection.status !== 'ready') throw new Error('Synthetic projection failed');
+    const sha = (data: Buffer | string) => createHash('sha256').update(data).digest('hex');
+    const words = projection.projection.words.map((_, i) => ({ start: i * .4, end: i * .4 + .35 }));
+    return route.fulfill({ json: { timing: { version: 1, status: 'ready', kind: 'torah', ref, audioSha256: sha(audio), readingTextSha256: sha(text), wordCount: words.length, duration: 30, words } } });
+  });
+  await page.route('**/api/shermet-audio?*', route => route.fulfill({ contentType: 'audio/wav', body: audio }));
+  await page.addInitScript(() => {
+    const target = window as unknown as { courseAudio: HTMLMediaElement };
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () { if (this.src.startsWith('blob:')) target.courseAudio = this; return play.call(this); };
+  });
+  const nativeRate = () => page.evaluate(() => (window as unknown as { courseAudio: HTMLMediaElement }).courseAudio.playbackRate);
+  await page.goto('/learn/torah-sof-pasuk');
+  const hear = page.getByRole('button', { name: 'Hear it', exact: true });
+  await hear.click(); await expect(hear).toHaveAttribute('data-state', 'playing');
+  await expect.poll(nativeRate).toBe(1.25);
+  await hear.click(); await hear.click(); await expect(hear).toHaveAttribute('data-state', 'playing');
+  await expect.poll(nativeRate).toBe(1.25);
+  covered = false;
+  await page.reload(); await hear.click(); await expect(hear).toHaveAttribute('data-state', 'playing');
+  await expect.poll(nativeRate).toBe(1);
+});

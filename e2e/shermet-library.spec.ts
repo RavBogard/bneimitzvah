@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
 function wave() {
-  const body = Buffer.alloc(44 + 8000 * 4 * 2);
+  const body = Buffer.alloc(44 + 8000 * 30 * 2);
   body.write("RIFF"); body.writeUInt32LE(body.length - 8, 4); body.write("WAVE", 8); body.write("fmt ", 12); body.writeUInt32LE(16, 16); body.writeUInt16LE(1, 20); body.writeUInt16LE(1, 22); body.writeUInt32LE(8000, 24); body.writeUInt32LE(16000, 28); body.writeUInt16LE(2, 32); body.writeUInt16LE(16, 34); body.write("data", 36); body.writeUInt32LE(body.length - 44, 40);
   return body;
 }
 test("recording library searches original labels, filters categories, and plays only a chosen available item", async ({ page }) => {
-  const available = { id: "sr_" + "a".repeat(32), category: "blessing", title: "Traditional Blessings", label: "Synthetic blessing", pageUrl: "https://www.templeisraelomaha.com/traditional-blessings.html", status: "available", recordings: [{ sourceId: 123456, sha256: "a".repeat(64), duration: 4, bytes: wave().length, mimeType: "audio/wav" }] };
+  const available = { id: "sr_" + "a".repeat(32), category: "blessing", title: "Traditional Blessings", label: "Synthetic blessing", pageUrl: "https://www.templeisraelomaha.com/traditional-blessings.html", status: "available", recordings: [{ sourceId: 123456, sha256: "a".repeat(64), duration: 30, bytes: wave().length, mimeType: "audio/wav" }] };
   const pending = { ...available, id: "sr_" + "b".repeat(32), category: "lesson", title: "Torah Trope", label: "Synthetic pending lesson", status: "pending", recordings: [] };
   const corrected = { ...available, id: "sr_" + "c".repeat(32), category: "source-conflict", title: "Source variants", label: "Genesis 23:20", ref: "Genesis 25:20", kind: "torah" };
   const media: string[] = [];
@@ -14,7 +14,14 @@ test("recording library searches original labels, filters categories, and plays 
     const items = [available, pending, corrected].filter(item => (!query.get("category") || query.get("category") === item.category) && (!query.get("q") || item.label.toLowerCase().includes(query.get("q")!.toLowerCase())));
     return route.fulfill({ json: { items, nextOffset: null } });
   });
-  await page.route("**/api/shermet-library/media?*", route => { media.push(route.request().url()); return route.fulfill({ contentType: "audio/wav", body: wave() }); });
+  await page.route("**/api/shermet-library/media?*", route => {
+    media.push(route.request().url()); const body = wave();
+    const range = /^bytes=(\d+)-(\d*)$/.exec(route.request().headers().range ?? "");
+    const first = range ? Number(range[1]) : 0, last = range?.[2] ? Math.min(Number(range[2]), body.length - 1) : body.length - 1;
+    const headers: Record<string, string> = { "accept-ranges": "bytes", "content-length": String(last - first + 1) };
+    if (range) headers["content-range"] = `bytes ${first}-${last}/${body.length}`;
+    return route.fulfill({ status: range ? 206 : 200, contentType: "audio/wav", headers, body: body.subarray(first, last + 1) });
+  });
   await page.goto("/recordings");
   await expect(page.getByRole("heading", { name: "Synthetic blessing", exact: true })).toBeVisible();
   await expect(page.getByText("Recording not available yet.", { exact: true })).toBeVisible(); expect(media).toEqual([]);
@@ -30,6 +37,31 @@ test("recording library searches original labels, filters categories, and plays 
   await expect(page.getByRole("heading", { name: "Synthetic pending lesson", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Listen to Synthetic blessing", exact: true }).click();
   const audio = page.getByRole("region", { name: "Selected recording", exact: true }).locator("audio");
-  await expect(audio).toBeVisible(); await expect.poll(() => audio.evaluate(node => !(node as HTMLAudioElement).paused)).toBe(true);
+  const player = page.getByRole("region", { name: "Selected recording", exact: true });
+  await expect(player.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  await expect(audio).not.toHaveAttribute("controls");
+  const rate = () => audio.evaluate(node => (node as HTMLAudioElement).playbackRate);
+  await expect.poll(rate).toBe(1.25);
+  await player.getByRole("combobox", { name: "Speed", exact: true }).selectOption("0.75"); await expect.poll(rate).toBe(0.9375);
+  await player.getByRole("combobox", { name: "Speed", exact: true }).selectOption("1.25"); await expect.poll(rate).toBe(1.5625);
+  await player.getByRole("button", { name: "Repeat", exact: true }).click();
+  expect(await audio.evaluate(node => (node as HTMLAudioElement).loop)).toBe(true);
+  await player.getByRole("button", { name: "Pause", exact: true }).click();
+  const seek = player.getByRole("slider", { name: "Recording position", exact: true });
+  await seek.focus();
+  const beforeSeek = await audio.evaluate(node => (node as HTMLAudioElement).currentTime);
+  await seek.press("ArrowRight");
+  await expect.poll(() => audio.evaluate(node => (node as HTMLAudioElement).currentTime)).toBeGreaterThan(beforeSeek);
+  await player.getByRole("button", { name: "Mute", exact: true }).click();
+  expect(await audio.evaluate(node => (node as HTMLAudioElement).muted)).toBe(true);
+  const volume = player.getByRole("slider", { name: "Volume", exact: true });
+  await volume.focus(); await volume.press("ArrowLeft");
+  await expect.poll(() => audio.evaluate(node => (node as HTMLAudioElement).volume)).toBe(0.95);
+  await player.getByRole("button", { name: "Play", exact: true }).click();
+  await expect.poll(() => audio.evaluate(node => !(node as HTMLAudioElement).paused)).toBe(true); await expect.poll(rate).toBe(1.5625);
+  expect(await audio.evaluate(node => (node as HTMLAudioElement).preservesPitch)).toBe(true);
+  await audio.evaluate(node => { const media = node as HTMLAudioElement; media.currentTime = media.duration - .05; });
+  await expect.poll(() => audio.evaluate(node => (node as HTMLAudioElement).currentTime)).toBeLessThan(2);
+  await expect.poll(rate).toBe(1.5625);
   expect(media.length).toBeGreaterThan(0); expect(media.every(url => new URL(url).searchParams.get("id") === available.id)).toBe(true);
 });

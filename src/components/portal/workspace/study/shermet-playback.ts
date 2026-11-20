@@ -2,6 +2,7 @@ import type { ReferenceAudioElement } from "../../../../lib/reference-audio/play
 import type { ReadingPlaybackState, ReadingSelection } from "./main-playback";
 import type { ShermetTiming } from "../../../../lib/reference-audio/shermet-timing";
 import type { ShermetTimedClip } from "../../../../lib/reference-audio/shermet-timed-audio";
+import { applyRecordingTempo, recordingPitchSupported, validRecordingSpeed } from "../../../../lib/reference-audio/recording-tempo";
 export type ShermetPlaybackTiming = {
   timing(index: number, signal: AbortSignal): Promise<ShermetTiming | null>;
   clip(index: number, word: number, signal: AbortSignal): Promise<ShermetTimedClip | null>;
@@ -12,10 +13,11 @@ export function createShermetPlayback(input: {
   verses: readonly { ref: string }[]; available: ReadonlySet<string> | (() => ReadonlySet<string>); canContinue(): boolean;
   onState(state: ReadingPlaybackState): void; onActiveWord(value: { verse: number; index: number } | null): void;
   timed?: ShermetPlaybackTiming;
+  initialSpeed?: number;
   audio?(): ReferenceAudioElement;
 }) {
   let state: ReadingPlaybackState = { verse: null, selection: "verse", timingHeld: false, suspended: false,
-    playback: { status: "idle", selection: "verse", repeat: false, speed: 1, speedSupported: false, wordsReady: false, wordCount: 0, retryPlay: false } };
+    playback: { status: "idle", selection: "verse", repeat: false, speed: validRecordingSpeed(input.initialSpeed ?? 1) ? input.initialSpeed ?? 1 : 1, speedSupported: false, wordsReady: false, wordCount: 0, retryPlay: false } };
   let media: ReferenceAudioElement | null = null, closed = false, generation = 0, lastPlay = 0, wantsPlay = false;
   let abort = new AbortController(), url: string | null = null, frame: number | null = null;
   let words: readonly { word: number; start: number; end: number }[] = [];
@@ -23,6 +25,7 @@ export function createShermetPlayback(input: {
   const allowed = () => !closed && input.canContinue();
   function clearWord() { if (frame !== null) cancelAnimationFrame(frame); frame = null; input.onActiveWord(null); }
   function sounding() { if (state.playback.status === "playing") { clearWord(); follow(); } }
+  function tempo() { if (media) applyRecordingTempo(media, "shermet", state.playback.speed); }
   function follow() {
     frame = null;
     if (!allowed() || !media || state.playback.status !== "playing" || state.verse === null) { input.onActiveWord(null); return; }
@@ -32,7 +35,7 @@ export function createShermetPlayback(input: {
   }
   function drop() {
     generation++; wantsPlay = false; abort.abort(); abort = new AbortController(); words = []; clearWord();
-    if (media) { media.pause(); media.removeEventListener("ended", ended); media.removeEventListener("error", failed); media.removeEventListener("playing", sounding); media.removeEventListener("waiting", clearWord); media.removeEventListener("seeking", clearWord); media.removeAttribute("src"); media.load(); media = null; }
+    if (media) { media.pause(); media.removeEventListener("ended", ended); media.removeEventListener("error", failed); media.removeEventListener("playing", sounding); media.removeEventListener("waiting", clearWord); media.removeEventListener("seeking", clearWord); media.removeEventListener("ratechange", tempo); media.removeAttribute("src"); media.load(); media = null; }
     if (url) { URL.revokeObjectURL(url); url = null; }
   }
   function failed() { if (allowed()) { drop(); publish({}, { status: "error" }); } }
@@ -46,6 +49,7 @@ export function createShermetPlayback(input: {
     if (!media) { await select(state.verse, state.selection); return; }
     const selected = media, ticket = generation, attempt = ++lastPlay; wantsPlay = true;
     try {
+      tempo();
       await selected.play();
       if (!allowed() || ticket !== generation || media !== selected || attempt !== lastPlay) { if (!allowed() || media !== selected || !wantsPlay) selected.pause(); return; }
       publish({ suspended: false }, { status: "playing", retryPlay: false });
@@ -55,7 +59,7 @@ export function createShermetPlayback(input: {
   async function select(index: number, selection: ReadingSelection = "verse") {
     if (!allowed() || !Number.isSafeInteger(index) || !input.verses[index]) return;
     drop();
-    publish({ verse: index, selection, timingHeld: selection !== "verse", suspended: false }, { selection, status: "loading", retryPlay: false });
+    publish({ verse: index, selection, timingHeld: selection !== "verse", suspended: false }, { selection, status: "loading", retryPlay: false, wordsReady: false, wordCount: 0 });
     const available = typeof input.available === "function" ? input.available() : input.available;
     if (!available.has(input.verses[index].ref)) { publish({}, { status: "unavailable", repeat: false }); return; }
     const ticket = generation, signal = abort.signal;
@@ -72,8 +76,8 @@ export function createShermetPlayback(input: {
     media.preload = "auto"; media.src = url ?? `/api/shermet-audio?${new URLSearchParams({ ref: input.verses[index].ref })}`;
     media.addEventListener("ended", ended); media.addEventListener("error", failed);
     media.addEventListener("playing", sounding); media.addEventListener("waiting", clearWord); media.addEventListener("seeking", clearWord);
-    publish({}, { speedSupported: "preservesPitch" in media });
-    media.preservesPitch = true; media.playbackRate = state.playback.speed;
+    publish({}, { speedSupported: recordingPitchSupported(media) });
+    media.addEventListener("ratechange", tempo); tempo();
     if (selection === "verse" && input.timed) {
       void input.timed.timing(index, signal).then(row => {
         if (row && !signal.aborted && allowed() && generation === ticket) { words = row.words.map((word, i) => ({ ...word, word: i })); publish({}, { wordsReady: true, wordCount: row.wordCount }); }
@@ -86,7 +90,7 @@ export function createShermetPlayback(input: {
     pause() { generation++; wantsPlay = false; media?.pause(); clearWord(); publish({}, { status: state.playback.status === "playing" ? "ready" : state.playback.status }); },
     suspend() { drop(); publish({ suspended: true }, { status: state.verse === null ? "idle" : "ready" }); },
     setRepeat(value: boolean) { if (allowed() && !state.timingHeld) publish({}, { repeat: value }); },
-    setSpeed(value: number) { if (allowed() && media && state.playback.speedSupported && [0.5, 0.75, 1, 1.25].includes(value)) { media.playbackRate = value; publish({}, { speed: value }); } },
+    setSpeed(value: number) { if (allowed() && media && state.playback.speedSupported && validRecordingSpeed(value)) { publish({}, { speed: value }); tempo(); } },
     dispose() { closed = true; drop(); },
   };
 }

@@ -27,3 +27,7 @@ CRC can play all 8,153 distinct source files that returned decodable audio. The 
 | Combined | 7,315 | 7,475 | 97.86% |
 
 The remaining 119 ordinary verse recordings fall outside the weekly and festival baseline and can be used for custom readings. The local coverage report lists every remaining full-verse gap. Source identity checks include original page/row evidence, canonical verse bounds and independent comparisons of the sung Hebrew wherever a file was assigned to different biblical texts.
+
+## Playback pace
+
+Daniel selected a faster teaching pace on November 20 after hearing the live recordings. The displayed 1× plays Cantor Shermet at 125% of the recorded tempo, with pitch preserved. Relative rates 0.5×, 0.75× and 1.25× play at 62.5%, 93.75% and 156.25% of the original. Reader highlights and clip boundaries follow the recording’s media clock. The same convention applies to the library, prayer lessons, Learn examples and offline practice. PocketTorah uses its own natural tempo.
