@@ -1,10 +1,14 @@
+import { pageTitle } from "../../lib/site/product-name";
+import { readPublicProductName } from "../../server/public-site/names";
 import { notFound } from "next/navigation";
 import { resolveIdentity } from "../../lib/site/identity";
 import { SiteBar } from "../../components/site/site-bar";
 import { ShermetLibrary } from "../../components/shermet-library/library";
 import { SHERMET_CATEGORIES } from "../../lib/reference-audio/shermet-library";
 import styles from "../about/about.module.css";
-export const metadata = { title: "Recordings | CRC Torah", referrer: "no-referrer" as const };
+export async function generateMetadata() {
+  return { title: pageTitle(await readPublicProductName(), "Recordings"), referrer: "no-referrer" as const };
+}
 export default async function RecordingsPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
   if (!resolveIdentity().crc) notFound();
   const params = await searchParams, category = params.category && Object.hasOwn(SHERMET_CATEGORIES, params.category) ? params.category : "";
