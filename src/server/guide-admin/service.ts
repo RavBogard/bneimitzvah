@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAccessService } from "../access/service";
@@ -8,12 +9,13 @@ import { requireCookieMutation } from "../http/mutations";
 import * as s from "../db/index";
 import { currentSettings } from "../data/tenant-settings";
 import * as discussionData from "../discussions/data";
+import * as guideData from "../data/study-guides";
 import type { CuratorAuthority, DiscussionService } from "../discussions/service";
 import { selectorName } from "../discussions/validation";
 import * as summaryData from "../portion-summary/data";
 import { approveSummary, withdrawSummary, type SummaryAuthority } from "../portion-summary/service";
 import { lockRabbi } from "../study-guides/authority";
-import { guideVersion, rabbiName } from "../study-guides/service";
+import { guideVersion, rabbiName, type createStudyGuideService, type RabbiAuthority } from "../study-guides/service";
 import { placeOfGuide, placeOfSummary, placeOfVerse, studyAddress, type ReadingPlace } from "../../lib/guide-admin/places";
 
 /**
@@ -26,9 +28,10 @@ import { placeOfGuide, placeOfSummary, placeOfVerse, studyAddress, type ReadingP
  * Writes: one code path. Each action calls the very service function its MCP tool calls (`discussions.withdrawDiscussion`,
  * `approveSummary`, `withdrawSummary`) with the same arguments (`slug`/`reading` and the `revision` last read), under an authority
  * built the way the MCP builds its own: the admin grant re-locked by `lockRabbi` inside the write transaction. A web session is always
- * attended. Guides themselves are read-only here: `publishBaseGuide` and `setBaseGuide` refuse any channel but the MCP's, and the
- * database refuses a web-channel guide row other than an import (study_guide_web_import), so a web release or hold would need a schema
- * change. Nothing here marks anything reviewed.
+ * attended. Guides (Daniel 2026-11-17, migration 0058): release a held version (`publishBaseGuide`, publish_guide's own function) or hold
+ * a released one (`holdBaseGuide`), with the version last read, under the same authority with channel "web". Neither writes text: the
+ * row is a copy of the version just before it, and the database refuses a web row whose text or labels differ (portal_study_guide_copy).
+ * `setBaseGuide` refuses the web channel. Nothing here marks anything reviewed.
  */
 type Access<Q extends PgQueryResultHKT> = Pick<ReturnType<typeof createAccessService<Q>>, "withAdminCapability">;
 type Kind = "torah" | "haftarah";
@@ -37,7 +40,8 @@ const KEY = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const readingOf = (place: ReadingPlace | null) => place ? Object.freeze({ slug: place.slug, name: place.name, order: place.order }) : null;
 
-export function createGuideAdminService<Q extends PgQueryResultHKT>(input: { access: Access<Q>; discussions: Pick<DiscussionService<Q>, "withdrawDiscussion"> }) {
+type Guides<Q extends PgQueryResultHKT> = Pick<ReturnType<typeof createStudyGuideService<Q>>, "publishBaseGuide" | "holdBaseGuide">;
+export function createGuideAdminService<Q extends PgQueryResultHKT>(input: { access: Access<Q>; discussions: Pick<DiscussionService<Q>, "withdrawDiscussion">; guides: Guides<Q> }) {
   const read = <T>(request: AccessRequest, action: (tx: AccessTransaction<Q>, actor: Actor) => Promise<T>) =>
     input.access.withAdminCapability(request, { mode: "admin", capability: "read-guides" }, action);
   /** The admin write wrapper: admin mode, a same-origin cookie POST, then the admin grant re-locked as the MCP's authority does. */
@@ -59,26 +63,34 @@ export function createGuideAdminService<Q extends PgQueryResultHKT>(input: { acc
       action(tx, Object.freeze({ tenantId: actor.tenantId, membershipId: rabbi.membershipId, roleGrantId: rabbi.roleGrantId, attended: true }), live)),
   });
 
+  /** The rabbi authority the MCP builds, from the admin's own web session: channel "web", never a review. */
+  const rabbi = (request: AccessRequest & { method?: string }): RabbiAuthority<Q> => ({
+    run: action => write(request, (tx, actor, locked, live) =>
+      action(tx, Object.freeze({ tenantId: actor.tenantId, userId: locked.userId, membershipId: locked.membershipId, roleGrantId: locked.roleGrantId, channel: "web" as const, mayReview: false }), live)),
+  });
+
   /** Everything the page lists for the caller's own congregation. Guide bodies are left out; one version's text is `guideText`. */
   async function overview(request: AccessRequest) {
     return read(request, async (tx, actor) => {
       const [tenant] = await tx.select({ customs: s.tenant.customs }).from(s.tenant).where(eq(s.tenant.id, actor.tenantId)).limit(1);
       const name = rabbiName(tenant?.customs, await currentSettings(tx, actor.tenantId));
       const t = s.studyGuide;
-      const rows = await tx.select({ kind: t.kind, readingKey: t.readingKey, version: t.version, hold: t.hold, reviewed: t.reviewed, origin: t.origin, importCredit: t.importCredit, createdAt: t.createdAt })
-        .from(t).where(eq(t.tenantId, actor.tenantId)).orderBy(asc(t.kind), asc(t.readingKey), asc(t.version)).limit(MAX_GUIDE_ROWS);
+      const rows = await tx.select({ kind: t.kind, readingKey: t.readingKey, version: t.version, hold: t.hold, reviewed: t.reviewed, origin: t.origin, importCredit: t.importCredit,
+        copyOfVersion: t.copyOfVersion, createdAt: t.createdAt }).from(t).where(eq(t.tenantId, actor.tenantId)).orderBy(asc(t.kind), asc(t.readingKey), asc(t.version)).limit(MAX_GUIDE_ROWS);
       type Row = (typeof rows)[number];
-      const streams = new Map<string, { head: Row; visible: Row | null }>();
+      // `before`: the release readers go back to if the released head is held (data.releasedStack), for the Hold confirmation.
+      const released = new Map<string, Row[]>(), streams = new Map<string, { head: Row; visible: Row | null; before: Row | null }>();
       for (const row of rows) {
-        const id = `${row.kind}:${row.readingKey}`, prior = streams.get(id);
-        streams.set(id, { head: row, visible: row.hold ? prior?.visible ?? null : row });
+        const id = `${row.kind}:${row.readingKey}`, stack = guideData.releasedStack(released.get(id) ?? [], row);
+        released.set(id, stack); streams.set(id, { head: row, visible: stack.at(-1) ?? null, before: stack.at(-2) ?? null });
       }
       const version = (row: Row) => Object.freeze({ version: row.version, origin: row.origin === "rabbi" ? "rabbi" : "claude", reviewed: row.reviewed,
         ...(row.importCredit ? { importedFrom: row.importCredit } : {}), changedAt: row.createdAt.toISOString() });
-      const guides = [...streams.values()].map(({ head, visible }) => {
+      const guides = [...streams.values()].map(({ head, visible, before }) => {
         const place = placeOfGuide(head.kind as Kind, head.readingKey);
         return Object.freeze({ kind: head.kind, readingKey: head.readingKey, reading: readingOf(place),
           state: head.hold ? "held" : head.reviewed ? "reviewed" : "draft", current: version(head), visible: visible ? version(visible) : null,
+          ...(head.hold ? {} : { afterHold: before ? version(before) : null }),
           href: visible && place ? studyAddress(place) : null });
       });
 
@@ -132,5 +144,11 @@ export function createGuideAdminService<Q extends PgQueryResultHKT>(input: { acc
   const withdrawPortionSummary = (request: AccessRequest & { method?: string }, supplied: { reading: unknown; revision: unknown }) =>
     withdrawSummary(summaries(request), { reading: supplied.reading, revision: supplied.revision });
 
-  return Object.freeze({ overview, guideText, authorize, withdrawDiscussion, approvePortionSummary, withdrawPortionSummary });
+  /** Release a held guide version, or hold a released one; `version` is the guide's current version as last read. A fresh mutation id each time. */
+  const releaseGuide = (request: AccessRequest & { method?: string }, supplied: { kind: unknown; readingKey: unknown; version: unknown }) =>
+    input.guides.publishBaseGuide(rabbi(request), { kind: supplied.kind, readingKey: supplied.readingKey, version: supplied.version, mutationId: randomUUID() });
+  const holdGuide = (request: AccessRequest & { method?: string }, supplied: { kind: unknown; readingKey: unknown; version: unknown }) =>
+    input.guides.holdBaseGuide(rabbi(request), { kind: supplied.kind, readingKey: supplied.readingKey, version: supplied.version, mutationId: randomUUID() });
+
+  return Object.freeze({ overview, guideText, authorize, withdrawDiscussion, approvePortionSummary, withdrawPortionSummary, releaseGuide, holdGuide });
 }

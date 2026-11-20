@@ -181,13 +181,13 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
     },
     {
       name: "list_guide_work", roles: ["admin"], scope: SCOPES.read, annotations: readOnly,
-      description: "What needs a guide: every current student's confirmed reading grouped by guide key, with student count, whether a base guide exists, whether students see a reviewed version, any held draft, and which students have their own additions. Readings with no calendar key (custom ranges) are listed separately; they can only get per-student additions.",
+      description: "What needs a guide: every current student's confirmed reading grouped by guide key, with student count, whether a base guide exists, whether students see a reviewed version, any held draft (heldFromWeb), and which students have their own additions. Readings with no calendar key (custom ranges) are listed separately; they can only get per-student additions. A guide with heldFromWeb true was held on purpose by the rabbi on the web Guides page; release it only when he asks.",
       inputSchema: closed({}),
       handler: async (_input, ctx) => ctx.guides.guideWork(rabbiAuthority(ctx)),
     },
     {
       name: "list_guide_catalog", roles: ["admin"], scope: SCOPES.read, annotations: readOnly,
-      description: "Every guide key CRC's rite can read, in calendar order, whether or not a student has it: the parashot and doubled weeks (Torah keys), each regular haftarah, the special-Shabbat haftarot, and holiday and fast-day readings. Each entry has kind, readingKey, name, group (a Torah book, special or holiday), verseCount, `draftable` (whether get_reading_for_guide and save_guide return verses for the key: an assigned student's reading, or the catalog's own passage) and base: none, held-draft, published-unreviewed or reviewed, with versions. `unresolved` lists catalog readings that produce no key. No student data.",
+      description: "Every guide key CRC's rite can read, in calendar order, whether or not a student has it: the parashot and doubled weeks (Torah keys), each regular haftarah, the special-Shabbat haftarot, and holiday and fast-day readings. Each entry has kind, readingKey, name, group (a Torah book, special or holiday), verseCount, `draftable` (whether get_reading_for_guide and save_guide return verses for the key: an assigned student's reading, or the catalog's own passage) and base: none, held-draft, published-unreviewed or reviewed, with versions and heldFromWeb (held on purpose by the rabbi on the web Guides page; release it only when he asks). `unresolved` lists catalog readings that produce no key. No student data.",
       inputSchema: closed({}),
       handler: async (_input, ctx) => ctx.guides.guideCatalog(rabbiAuthority(ctx)),
     },
@@ -222,7 +222,7 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
     },
     {
       name: "get_guide", roles: ["admin"], scope: SCOPES.read, annotations: readOnly,
-      description: "The base guide for one reading: the version students see now and any newer held draft, with currentVersion to pass as expectedVersion.",
+      description: "The base guide for one reading: the version students see now and any newer held draft, with currentVersion to pass as expectedVersion. A guide with heldFromWeb true was held on purpose by the rabbi on the web Guides page; release it only when he asks.",
       inputSchema: closed({ kind, readingKey }, ["kind", "readingKey"]),
       handler: async (input, ctx) => ctx.guides.getBaseGuide(rabbiAuthority(ctx), input as never),
     },
@@ -235,7 +235,7 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
     },
     {
       name: "publish_guide", roles: ["admin"], scope: SCOPES.study, annotations: write,
-      description: "Release a held draft to students, as the rabbi's decision.",
+      description: "Release a held draft to students, as the rabbi's decision. A guide with heldFromWeb true was held on purpose by the rabbi on the web Guides page; release it only when he asks.",
       inputSchema: closed({ kind, readingKey, version: { type: "integer", minimum: 1, maximum: 1000000, description: "The held version to publish." }, mutationId }, ["kind", "readingKey", "version", "mutationId"]),
       handler: async (input, ctx) => { requireStudy(ctx); return outcome(await ctx.guides.publishBaseGuide(rabbiAuthority(ctx), input as never)); },
     },

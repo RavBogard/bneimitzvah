@@ -4,12 +4,15 @@ import { PortalRequestError } from "../../api";
 /**
  * The admin's Guides page (gap A6) talks to /api/admin/guides. Every answer is read defensively and rendered as text only.
  * The writes send exactly what the MCP tools send: a discussion's slug, or a parashah and summary revision, with the revision the
- * page last read (none of these tools takes a mutation id).
+ * page last read (none of these tools takes a mutation id). A guide release or hold sends the guide and its current version; the server
+ * makes the mutation id, and copies that version's text as stored.
  */
 export type Reading = { slug: string; name: string; order: number };
 export type GuideState = "reviewed" | "draft" | "held";
 export type GuideVersionInfo = { version: number; origin: "claude" | "rabbi"; reviewed: boolean; importedFrom?: string; changedAt: string };
-export type GuideRow = { kind: "torah" | "haftarah"; readingKey: string; reading: Reading | null; state: GuideState; current: GuideVersionInfo; visible: GuideVersionInfo | null; href: string | null };
+export type GuideRow = { kind: "torah" | "haftarah"; readingKey: string; reading: Reading | null; state: GuideState; current: GuideVersionInfo; visible: GuideVersionInfo | null;
+  /** For a released guide: the release readers go back to if it is held, or null for none. Absent on a held guide. */
+  afterHold?: GuideVersionInfo | null; href: string | null };
 export type DiscussionRow = { slug: string; title: string; kind: "torah" | "haftarah"; status: "published" | "withdrawn"; revision: number; sourceCount: number; reading: Reading | null; changedAt: string; href: string | null };
 export type SummaryRow = { reading: string; readingPlace: Reading | null; revision: number; status: "draft" | "approved" | "withdrawn"; summary: string; outline: { aliyah: number; line: string }[];
   credit?: string; importedFrom?: string; changedAt: string; href: string | null };
@@ -43,7 +46,8 @@ export function parseOverview(value: unknown): Overview {
     rabbiName: text(r.rabbiName, 240), truncated: r.truncated === true,
     guides: list(r.guides).map(raw => { const g = rec(raw);
       return { kind: kind(g.kind), readingKey: text(g.readingKey, 160), reading: reading(g.reading), state: g.state === "held" || g.state === "draft" || g.state === "reviewed" ? g.state : bad(),
-        current: versionInfo(g.current), visible: g.visible === null ? null : versionInfo(g.visible), href: href(g.href) }; }),
+        current: versionInfo(g.current), visible: g.visible === null ? null : versionInfo(g.visible),
+        ...(g.afterHold === undefined ? {} : { afterHold: g.afterHold === null ? null : versionInfo(g.afterHold) }), href: href(g.href) }; }),
     discussions: list(r.discussions).map(raw => { const d = rec(raw);
       return { slug: text(d.slug, 80), title: text(d.title, 400), kind: kind(d.kind), status: d.status === "published" || d.status === "withdrawn" ? d.status : bad(), revision: int(d.revision),
         sourceCount: int(d.sourceCount), reading: reading(d.reading), changedAt: date(d.changedAt), href: href(d.href) }; }),
@@ -92,4 +96,6 @@ export const guideAdminApi = {
   withdrawDiscussion: async (slug: string, revision: number) => outcome(await call("/api/admin/guides/discussions/withdraw", { slug, revision })),
   approveSummary: async (reading: string, revision: number) => outcome(await call("/api/admin/guides/summaries/approve", { reading, revision })),
   withdrawSummary: async (reading: string, revision: number) => outcome(await call("/api/admin/guides/summaries/withdraw", { reading, revision })),
+  releaseGuide: async (row: { kind: string; readingKey: string; version: number }) => outcome(await call("/api/admin/guides/release", { kind: row.kind, readingKey: row.readingKey, version: row.version })),
+  holdGuide: async (row: { kind: string; readingKey: string; version: number }) => outcome(await call("/api/admin/guides/hold", { kind: row.kind, readingKey: row.readingKey, version: row.version })),
 };

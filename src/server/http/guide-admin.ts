@@ -12,6 +12,8 @@ import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from ".
  *   POST /api/admin/guides/discussions/withdraw         same-origin cookie POST, then withAdminCapability "manage-defaults" (+ lockRabbi)
  *   POST /api/admin/guides/summaries/approve            same
  *   POST /api/admin/guides/summaries/withdraw           same
+ *   POST /api/admin/guides/release                      same; { kind, readingKey, version } of a held version (migration 0058)
+ *   POST /api/admin/guides/hold                         same; { kind, readingKey, version } of a released version
  *
  * A POST is refused before its body is read unless `authorize` passes (admin mode, a cookie POST from the tenant host's own origin);
  * the write itself runs the same authority again inside its own transaction.
@@ -19,6 +21,7 @@ import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from ".
 const routes = {
   "/api/admin/guides": ["GET"], "/api/admin/guides/text": ["GET"],
   "/api/admin/guides/discussions/withdraw": ["POST"], "/api/admin/guides/summaries/approve": ["POST"], "/api/admin/guides/summaries/withdraw": ["POST"],
+  "/api/admin/guides/release": ["POST"], "/api/admin/guides/hold": ["POST"],
 } as const;
 export function guideAdminRouteMethods(pathname: string): readonly string[] | null {
   return Object.hasOwn(routes, pathname) ? routes[pathname as keyof typeof routes] : null;
@@ -39,7 +42,11 @@ export async function handleGuideAdminRequest(request: Request, runtime: HttpRun
       uniqueQuery(request.url, []);
       // Authority first, as guide sharing does: admin mode and a same-origin cookie POST against the host's own origin.
       await runtime.guideAdmin.authorize(request);
-      if (pathname === "/api/admin/guides/discussions/withdraw") {
+      if (pathname === "/api/admin/guides/release" || pathname === "/api/admin/guides/hold") {
+        // No body or text field: the version named is copied as stored, and a smuggled field is refused here before anything is read further.
+        const body = closedObject(await readJsonBody(request), ["kind", "readingKey", "version"]), supplied = { kind: body.kind, readingKey: body.readingKey, version: body.version };
+        result = pathname.endsWith("/release") ? await runtime.guideAdmin.releaseGuide(request, supplied) : await runtime.guideAdmin.holdGuide(request, supplied);
+      } else if (pathname === "/api/admin/guides/discussions/withdraw") {
         const body = closedObject(await readJsonBody(request), ["slug", "revision"]);
         result = await runtime.guideAdmin.withdrawDiscussion(request, { slug: body.slug, revision: body.revision });
       } else {

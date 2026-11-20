@@ -1,24 +1,26 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { RequireRole, statusOf } from "../provider";
-import { Button, ButtonLink, Chip, EmptyState, PageHeader, type ChipTone } from "../../../ui";
+import { Button, ButtonLink, Chip, EmptyState, PageHeader, Sheet, type ChipTone, type ConfirmSpec } from "../../../ui";
 import { guideLabelText } from "../study/guide-card";
 import { MarkdownLite } from "../study/markdown-lite";
 import { sectionLabel } from "../../../../lib/readings/sections";
 import { useIdentity } from "../../../site/identity-context";
-import { guideAdminApi, type DiscussionRow, type GuideRow, type GuideText, type Overview, type SummaryRow, type WriteOutcome } from "./api";
+import { guideAdminApi, type DiscussionRow, type GuideRow, type GuideVersionInfo, type GuideText, type Overview, type SummaryRow, type WriteOutcome } from "./api";
 import styles from "./guide-admin.module.css";
 
 /**
  * The admin's Guides page (gap A6, Daniel 2026-11-17): every study guide, discussion and portion summary of this congregation, held
- * drafts and unapproved summaries first. See, approve and withdraw only; nothing here edits text or marks a guide reviewed. A guide's
- * held draft is released through Claude: the web cannot write a guide version (see server/guide-admin/service.ts).
+ * drafts and unapproved summaries first. See, release, hold, approve and withdraw; nothing here edits text or marks a guide reviewed.
+ * A guide's release or hold copies the version shown, as stored (migration 0058; see server/guide-admin/service.ts).
  */
 export function GuideAdminWorkspace() { return <RequireRole role="admin"><GuideAdminPage /></RequireRole>; }
 
 type Item = { type: "guide"; row: GuideRow } | { type: "summary"; row: SummaryRow } | { type: "discussion"; row: DiscussionRow };
 type Group = { key: string; name: string; order: number; items: Item[] };
 export type Actions = {
+  releaseGuide(row: GuideRow): Promise<void>;
+  holdGuide(row: GuideRow): Promise<void>;
   withdrawDiscussion(row: DiscussionRow): Promise<void>;
   approveSummary(row: SummaryRow): Promise<void>;
   withdrawSummary(row: SummaryRow): Promise<void>;
@@ -81,15 +83,62 @@ function GuideTextFold({ row, version }: { row: GuideRow; version: number }) {
   </details>;
 }
 
-function GuideItem({ row, rabbiName }: { row: GuideRow; rabbiName: string }) {
+/**
+ * What readers will see, in full, for the release and hold confirmations: the version, who it is written by, whether it is reviewed,
+ * and the label readers see on it.
+ */
+function readersSee(info: GuideVersionInfo, rabbiName: string, shortName: string) {
+  const writer = info.importedFrom ?? (info.origin === "rabbi" ? rabbiName : "Claude");
+  const label = guideLabelText({ origin: info.origin, reviewed: info.reviewed, rabbiName, ...(info.importedFrom ? { importedFrom: info.importedFrom } : {}) }, shortName);
+  return `version ${info.version}, written by ${writer}, ${info.reviewed ? "reviewed" : "not reviewed"}. Its label reads "${label}."`;
+}
+export function releaseDescription(row: GuideRow, rabbiName: string, shortName: string) {
+  return `Readers then see ${readersSee(row.current, rabbiName, shortName)}${row.visible ? ` It takes the place of version ${row.visible.version}.` : ""}`;
+}
+export function holdDescription(row: GuideRow, rabbiName: string, shortName: string) {
+  return row.afterHold ? `Readers then see ${readersSee(row.afterHold, rabbiName, shortName)} Version ${row.current.version} stays held until it is released again.`
+    : `Readers then see no guide for this reading until version ${row.current.version} is released again.`;
+}
+
+/** A release is not destructive, so it does not take the danger tone; it asks in the same confirm sheet the destructive buttons use. */
+function ConfirmedButton({ confirm, children, ...rest }: { confirm: ConfirmSpec; children: string; "data-testid": string }) {
+  const [asking, setAsking] = useState(false), [busy, setBusy] = useState(false), cancel = useRef<HTMLButtonElement>(null);
+  async function confirmed() {
+    if (busy) return;
+    setBusy(true);
+    try { await confirm.onConfirm(); } finally { setBusy(false); setAsking(false); }
+  }
+  return <>
+    <Button {...rest} variant="primary" aria-haspopup="dialog" onClick={() => setAsking(true)}>{children}</Button>
+    <Sheet open={asking} onClose={() => { if (!busy) setAsking(false); }} title={confirm.title} dismissible={!busy} initialFocus={cancel}
+      footer={<>
+        <Button ref={cancel} onClick={() => setAsking(false)} disabled={busy}>{confirm.cancelLabel}</Button>
+        <Button variant="primary" onClick={() => void confirmed()} disabled={busy} aria-busy={busy || undefined}>{confirm.confirmLabel}</Button>
+      </>}>
+      {confirm.description && <div>{confirm.description}</div>}
+    </Sheet>
+  </>;
+}
+
+function GuideItem({ row, rabbiName, actions }: { row: GuideRow; rabbiName: string; actions: Actions }) {
   const shortName = useIdentity().shortName, [chip, tone] = GUIDE_CHIP[row.state];
   const label = guideLabelText({ origin: row.current.origin, reviewed: row.current.reviewed, rabbiName, ...(row.current.importedFrom ? { importedFrom: row.current.importedFrom } : {}) }, shortName);
   return <li className={styles.item} data-testid="guide-admin-guide" data-state={row.state} data-key={`${row.kind}:${row.readingKey}`}>
     <div className={styles.head}><p className={styles.title}>Study guide · {kindName(row.kind)}{row.reading ? ` · ${row.reading.name}` : ""}</p><Chip tone={tone}>{chip}</Chip></div>
     <p className={styles.meta}>Version {row.current.version} · {label} · changed {day(row.current.changedAt)}</p>
-    {row.state === "held" && <p className={styles.meta}>{row.visible ? `Readers see version ${row.visible.version} until this draft is released.` : "Readers see no guide for this reading until this draft is released."} Release it through Claude.</p>}
+    {row.state === "held" && <p className={styles.meta}>{row.visible ? `Readers see version ${row.visible.version} until this draft is released.` : "Readers see no guide for this reading until this draft is released."}</p>}
     <GuideTextFold row={row} version={row.current.version} />
-    {row.href && <div className={styles.actions}><ButtonLink variant="quiet" href={row.href} data-testid="guide-admin-open">Open the study page</ButtonLink></div>}
+    <div className={styles.actions}>
+      {row.href && <ButtonLink variant="quiet" href={row.href} data-testid="guide-admin-open">Open the study page</ButtonLink>}
+      {/* Release and hold copy version N exactly as stored; neither changes its text or marks it reviewed. */}
+      {row.state === "held"
+        ? <ConfirmedButton data-testid="guide-admin-release"
+          confirm={{ title: `Release version ${row.current.version}?`, description: releaseDescription(row, rabbiName, shortName),
+            confirmLabel: "Release", cancelLabel: "Not now", onConfirm: () => actions.releaseGuide(row) }}>Release</ConfirmedButton>
+        : <Button destructive variant="secondary" data-testid="guide-admin-hold"
+          confirm={{ title: `Hold version ${row.current.version}?`, description: holdDescription(row, rabbiName, shortName),
+            confirmLabel: "Hold", cancelLabel: "Not now", onConfirm: () => actions.holdGuide(row) }}>Hold</Button>}
+    </div>
   </li>;
 }
 
@@ -131,7 +180,7 @@ function DiscussionItem({ row, actions }: { row: DiscussionRow; actions: Actions
 }
 
 function ItemView({ item, rabbiName, actions }: { item: Item; rabbiName: string; actions: Actions }) {
-  return item.type === "guide" ? <GuideItem row={item.row} rabbiName={rabbiName} /> : item.type === "summary" ? <SummaryItem row={item.row} actions={actions} /> : <DiscussionItem row={item.row} actions={actions} />;
+  return item.type === "guide" ? <GuideItem row={item.row} rabbiName={rabbiName} actions={actions} /> : item.type === "summary" ? <SummaryItem row={item.row} actions={actions} /> : <DiscussionItem row={item.row} actions={actions} />;
 }
 
 /** The loaded page, separate from loading so it renders on its own. */
@@ -162,6 +211,9 @@ const REFUSED: Record<string, string> = {
   withdrawn: "That was already withdrawn. The list now shows the latest.",
   "not-draft": "That revision is already approved. The list now shows the latest.",
   "no-credit": "This congregation has no portion summary credit set, so nothing can be approved yet.",
+  "not-held": "That version is no longer held. The list now shows the latest.",
+  "not-released": "That version is already held. The list now shows the latest.",
+  invalid: "That version no longer meets the guide rules. Save a corrected version through Claude.",
 };
 
 function GuideAdminPage() {
@@ -181,13 +233,15 @@ function GuideAdminPage() {
     await load();
   }
   const actions: Actions = {
+    releaseGuide: row => act(() => guideAdminApi.releaseGuide({ kind: row.kind, readingKey: row.readingKey, version: row.current.version }), "Guide released."),
+    holdGuide: row => act(() => guideAdminApi.holdGuide({ kind: row.kind, readingKey: row.readingKey, version: row.current.version }), "Guide held."),
     withdrawDiscussion: row => act(() => guideAdminApi.withdrawDiscussion(row.slug, row.revision), "Discussion withdrawn. Readers stop seeing it within about five minutes."),
     approveSummary: row => act(() => guideAdminApi.approveSummary(row.reading, row.revision), "Summary approved. Readers see it within about ten minutes."),
     withdrawSummary: row => act(() => guideAdminApi.withdrawSummary(row.reading, row.revision), "Summary withdrawn."),
   };
   return <section className="role-workspace admin-workspace settings-workspace" data-testid="guide-admin">
     <PageHeader title="Guides" />
-    <p className={styles.note}>Study guides, discussions and portion summaries, as readers see them. Writing and editing happen through Claude; here you can approve or withdraw.</p>
+    <p className={styles.note}>Study guides, discussions and portion summaries, as readers see them. Writing and editing happen through Claude; here you can release, hold, approve or withdraw.</p>
     {message && <p className={message.tone === "alert" ? "request-error roster-message" : "workspace-notice roster-message"} role={message.tone} data-testid="guide-admin-message">{message.text}</p>}
     {failed && !overview ? <div role="alert" className="request-error" data-testid="guide-admin-failed"><p>The guides could not be loaded.</p><Button onClick={() => { setFailed(false); void load(); }}>Try again</Button></div>
       : overview ? <GuidesView overview={overview} actions={actions} /> : <p className={styles.meta} role="status">Loading</p>}

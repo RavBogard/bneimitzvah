@@ -54,6 +54,9 @@ export const studyGuide = pgTable("study_guide", {
   body: jsonb("body").$type<GuideBody>().notNull(), ...actor(),
   // Migration 0055 (guide sharing): the original author's display name and the content key of a guide that arrived by import.
   importCredit: text("import_credit"), importKey: text("import_key"),
+  // Migration 0058 (release and hold on the web Guides page): set only on a web row that releases or holds the version just before it,
+  // copying that version's text exactly (the trigger portal_study_guide_copy enforces it). A held copy takes the version it copies away from readers.
+  copyOfVersion: integer("copy_of_version"),
 }, t => [
   unique("study_guide_stream_key").on(t.tenantId, t.kind, t.readingKey, t.version),
   unique("study_guide_receipt_key").on(t.tenantId, t.actorUserId, t.mutationId),
@@ -64,13 +67,17 @@ export const studyGuide = pgTable("study_guide", {
   check("study_guide_origin", sql`${t.origin} in ('claude','rabbi')`),
   check("study_guide_body", sql`public.portal_study_guide_body_valid(${t.body}, true)`),
   check("study_guide_operator_draft", sql`${t.channel} in ('mcp','web') or (${t.origin} = 'claude' and not ${t.reviewed})`),
-  // An import arrives from the web as a held, unreviewed version-one draft with its credit; only that channel may carry import provenance in.
-  check("study_guide_web_import", sql`${t.channel} <> 'web' or (${t.version} = 1 and ${t.hold} and not ${t.reviewed} and ${t.importCredit} is not null and ${t.importKey} is not null)`),
+  // The web channel never writes guide text of its own. A web row is either an import (a held, unreviewed version-one draft with its credit;
+  // only that channel may carry import provenance in) or a copy: the rabbi releasing or holding the version just before it, whose text,
+  // origin, review state and provenance the row repeats exactly (study_guide_copy below, and the trigger portal_study_guide_copy).
+  check("study_guide_web_channel", sql`${t.channel} <> 'web' or ${t.copyOfVersion} is not null or (${t.version} = 1 and ${t.hold} and not ${t.reviewed} and ${t.importCredit} is not null and ${t.importKey} is not null)`),
+  check("study_guide_copy", sql`${t.copyOfVersion} is null or (${t.channel} = 'web' and ${t.previousVersion} is not null and ${t.copyOfVersion} = ${t.previousVersion})`),
   check("study_guide_import_whole", sql`(${t.importCredit} is null) = (${t.importKey} is null)`),
   check("study_guide_import_credit", sql`${t.importCredit} is null or (public.portal_source_plain(${t.importCredit}, 240) and strpos(${t.importCredit}, '@') = 0)`),
   check("study_guide_import_key", sql`${t.importKey} is null or ${t.importKey} ~ '^[a-f0-9]{64}$'`),
   // The same content is imported into a reading once: a second import of the same file finds this row and adds nothing.
-  uniqueIndex("study_guide_import_once").on(t.tenantId, t.kind, t.readingKey, t.importKey).where(sql`${t.channel} = 'web'`),
+  // Imports only: a web release or hold of an imported guide carries the same content key forward.
+  uniqueIndex("study_guide_import_once").on(t.tenantId, t.kind, t.readingKey, t.importKey).where(sql`${t.channel} = 'web' and ${t.copyOfVersion} is null`),
   ...actorConstraints("study_guide", t, "'mcp','operator','web'"),
 ]);
 

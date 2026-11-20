@@ -48,7 +48,8 @@ test("0055 adds only the import provenance, lets the web channel carry nothing b
     const capture = async () => (await client.query("select * from study_guide order by id")).rows as object[];
     const before = await capture();
     await migrate(db, { migrationsFolder: folder }); await migrate(db, { migrationsFolder: folder });
-    expect(await capture()).toEqual(before.map(row => ({ ...row, import_credit: null, import_key: null })));
+    // This applies every later migration too: 0058 adds copy_of_version, null on every existing row.
+    expect(await capture()).toEqual(before.map(row => ({ ...row, import_credit: null, import_key: null, copy_of_version: null })));
 
     // The web channel carries an import and nothing else.
     await guide("pekudei", "web");

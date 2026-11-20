@@ -47,7 +47,7 @@ export type StudentGuideView = Readonly<{
   base: Readonly<{ version: number; label: GuideLabel; overview: string; themes: readonly StudentTheme[]; updatedAt: string }> | null;
   additions: Readonly<{ version: number; label: GuideLabel; themes: readonly StudentTheme[]; updatedAt: string }> | null;
 }>;
-type FailureCode = "conflict" | "no-change" | "invalid" | "review-not-permitted" | "channel-not-permitted" | "stale-assignment" | "not-held" | "no-reading";
+type FailureCode = "conflict" | "no-change" | "invalid" | "review-not-permitted" | "channel-not-permitted" | "stale-assignment" | "not-held" | "not-released" | "no-reading";
 type Failure = Readonly<{ ok: false; code: FailureCode; problems?: readonly string[] }>;
 export type GuideSaveResult = Failure | Readonly<{ ok: true; replayed: boolean; version: number; held: boolean; heldBecauseReviewed?: boolean }>;
 export type VersionSaveResult = Failure | Readonly<{ ok: true; replayed: boolean; version: number }>;
@@ -82,6 +82,8 @@ export function guideVersion(row: data.GuideRow | data.StudentGuideRow): GuideVe
 /** The service's own backstop: whatever a checker returns, no note may sit outside the allowed verses. */
 const versesOutside = (body: GuideBody, verses: ReadonlySet<string>) =>
   body.themes.flatMap(t => t.notes.filter(n => !verses.has(n.verseRef)).map(n => `${n.verseRef} is not in this reading`));
+/** A head the rabbi held on the web Guides page: a held copy of the released version before it. */
+const heldFromWeb = (row: { hold: boolean; copyOfVersion: number | null } | null) => !!row && row.hold && row.copyOfVersion !== null;
 /** A stored version that no longer passes today's rules is withheld, not served and not an error. */
 const servable = (row: data.GuideRow | data.StudentGuideRow | null) => { if (!row) return null; try { return guideVersion(row); } catch { return null; } };
 /** The congregation settings' rabbi name first, then the legacy tenant.customs.credits key, then "the rabbi". */
@@ -154,7 +156,8 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     return authority.run(async (tx, writer) => {
       const heads = await data.guideHeads(tx, writer.tenantId, kind, readingKey);
       const visible = servable(heads.visible), head = servable(heads.head);
-      return Object.freeze({ kind, readingKey, currentVersion: heads.head?.version ?? 0, visible, held: head?.hold ? head : null });
+      // heldFromWeb: the rabbi held this released version on purpose on the web Guides page (migration 0058); it is not a draft awaiting publish.
+      return Object.freeze({ kind, readingKey, currentVersion: heads.head?.version ?? 0, visible, held: head?.hold ? head : null, heldFromWeb: heldFromWeb(heads.head) });
     });
   }
   async function setBaseGuide(authority: RabbiAuthority<Q>, supplied: { kind: unknown; readingKey: unknown; expectedVersion: unknown; body: unknown; origin: unknown; reviewed: unknown; hold: unknown; mutationId: unknown }): Promise<GuideSaveResult> {
@@ -165,7 +168,8 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     const requestDigest = digest(["study-guide/v1", kind, readingKey, expected, origin, reviewed, hold, shape.value]);
     const replay = (row: data.GuideRow) => row.requestDigest === requestDigest && row.kind === kind && row.readingKey === readingKey
       ? Object.freeze({ ok: true as const, replayed: true, version: row.version, held: row.hold }) : fail("conflict");
-    const permitted = (writer: RabbiWriter) => reviewed && !writer.mayReview ? fail("review-not-permitted")
+    // The web Guides page releases and holds; it never writes a guide's text.
+    const permitted = (writer: RabbiWriter) => writer.channel === "web" ? fail("channel-not-permitted") : reviewed && !writer.mayReview ? fail("review-not-permitted")
       : writer.channel === "operator" && origin !== "claude" ? fail("channel-not-permitted") : null;
     // Phase 1: authority, receipt and version, before any network work.
     const first = await authority.run(async (tx, writer) => {
@@ -208,8 +212,9 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     const requestDigest = digest(["study-guide-publish/v1", kind, readingKey, version]);
     const replay = (row: data.GuideRow) => row.requestDigest === requestDigest ? Object.freeze({ ok: true as const, replayed: true, version: row.version, held: false }) : fail("conflict");
     return authority.run(async (tx, writer, live) => {
-      // Publishing is a review act: it can put a draft in front of reviewed work.
-      if (!writer.mayReview || writer.channel !== "mcp") return fail("review-not-permitted");
+      // Publishing is a review act: it can put a draft in front of reviewed work. The rabbi does it through Claude (an attended
+      // delegation) or, since 2026-11-17, on the web Guides page (an admin's own session; Daniel 2026-11-17). Never the operator bridge.
+      if (writer.channel === "operator" || (writer.channel === "mcp" && !writer.mayReview)) return fail("review-not-permitted");
       const prior = await data.guideReceipt(tx, writer, mutationId); if (prior) return replay(prior);
       const heads = await data.guideHeads(tx, writer.tenantId, kind, readingKey);
       if (!heads.head || heads.head.version !== version) return fail("conflict");
@@ -217,10 +222,38 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       const held = servable(heads.head);
       if (!held) return invalid(["The held version no longer meets the guide rules; save a corrected version instead."]);
       live();
-      const row = await data.appendGuide(tx, writer, { kind, readingKey, expected: version, origin: held.origin, reviewed: held.reviewed, hold: false, body: held.body, mutationId, digest: requestDigest, publish: true,
-        importCredit: heads.head.importCredit, importKey: heads.head.importKey });
+      // Release keeps the held version's origin and review state as they are: it never marks anything reviewed. From the web the row is
+      // a copy of the stored version as stored (migration 0058's trigger compares them), so the body is the stored one, not a re-read.
+      const web = writer.channel === "web";
+      const row = await data.appendGuide(tx, writer, { kind, readingKey, expected: version, origin: held.origin, reviewed: held.reviewed, hold: false, body: web ? heads.head.body : held.body,
+        mutationId, digest: requestDigest, publish: true, importCredit: heads.head.importCredit, importKey: heads.head.importKey, copyOfVersion: web ? version : null });
       live();
       if (row) return Object.freeze({ ok: true as const, replayed: false, version: row.version, held: false });
+      const raced = await data.guideReceipt(tx, writer, mutationId); return raced ? replay(raced) : fail("conflict");
+    });
+  }
+
+  /**
+   * Hold a released guide from the web Guides page (Daniel 2026-11-17): a held copy of the released head, its text, origin and review state
+   * unchanged. Readers go back to the release before it, or to none (data.guideHeads); publish releases it again. Through Claude a hold is
+   * save_guide with hold: true, which is unchanged.
+   */
+  async function holdBaseGuide(authority: RabbiAuthority<Q>, supplied: { kind: unknown; readingKey: unknown; version: unknown; mutationId: unknown }): Promise<GuideSaveResult> {
+    const kind = kindOf(supplied.kind), readingKey = keyOf(supplied.readingKey), version = versionOf(supplied.version), mutationId = mutationOf(supplied.mutationId);
+    const requestDigest = digest(["study-guide-hold/v1", kind, readingKey, version]);
+    const replay = (row: data.GuideRow) => row.requestDigest === requestDigest ? Object.freeze({ ok: true as const, replayed: true, version: row.version, held: true }) : fail("conflict");
+    return authority.run(async (tx, writer, live) => {
+      if (writer.channel !== "web") return fail("channel-not-permitted");
+      const prior = await data.guideReceipt(tx, writer, mutationId); if (prior) return replay(prior);
+      const heads = await data.guideHeads(tx, writer.tenantId, kind, readingKey);
+      if (!heads.head || heads.head.version !== version) return fail("conflict");
+      if (heads.head.hold) return fail("not-released");
+      live();
+      const head = heads.head;
+      const row = await data.appendGuide(tx, writer, { kind, readingKey, expected: version, origin: originOf(head.origin), reviewed: head.reviewed, hold: true, body: head.body,
+        mutationId, digest: requestDigest, publish: false, importCredit: head.importCredit, importKey: head.importKey, copyOfVersion: version });
+      live();
+      if (row) return Object.freeze({ ok: true as const, replayed: false, version: row.version, held: true });
       const raced = await data.guideReceipt(tx, writer, mutationId); return raced ? replay(raced) : fail("conflict");
     });
   }
@@ -359,7 +392,7 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       for (const group of groups.values()) {
         const heads = await data.guideHeads(tx, writer.tenantId, group.kind, group.readingKey);
         work.push(Object.freeze({ kind: group.kind, readingKey: group.readingKey, studentCount: group.students.length,
-          base: heads.head ? Object.freeze({ currentVersion: heads.head.version, visibleVersion: heads.visible?.version ?? null, reviewed: heads.visible?.reviewed ?? false, heldDraft: heads.head.hold }) : null,
+          base: heads.head ? Object.freeze({ currentVersion: heads.head.version, visibleVersion: heads.visible?.version ?? null, reviewed: heads.visible?.reviewed ?? false, heldDraft: heads.head.hold, heldFromWeb: heldFromWeb(heads.head) }) : null,
           students: Object.freeze(group.students.map(x => Object.freeze(x))) }));
       }
       return Object.freeze({ work: Object.freeze(work), customReadings: Object.freeze(unkeyed.map(x => Object.freeze(x))) });
@@ -374,19 +407,21 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     const { entries, unresolved } = guideCatalogEntries(TANAKH_VERSE_COUNTS);
     return authority.run(async (tx, writer) => {
       const t = s.studyGuide;
-      const rows = await tx.select({ kind: t.kind, readingKey: t.readingKey, version: t.version, hold: t.hold, reviewed: t.reviewed }).from(t)
+      const rows = await tx.select({ kind: t.kind, readingKey: t.readingKey, version: t.version, hold: t.hold, reviewed: t.reviewed, copyOfVersion: t.copyOfVersion }).from(t)
         .where(eq(t.tenantId, writer.tenantId)).orderBy(asc(t.kind), asc(t.readingKey), asc(t.version)).limit(20000);
-      const heads = new Map<string, { version: number; hold: boolean; visible: number | null; visibleReviewed: boolean }>();
+      const streams = new Map<string, { head: (typeof rows)[number]; released: (typeof rows)[number][] }>();
       for (const row of rows) {
-        const id = `${row.kind}:${row.readingKey}`, prior = heads.get(id);
-        heads.set(id, { version: row.version, hold: row.hold, visible: row.hold ? prior?.visible ?? null : row.version, visibleReviewed: row.hold ? prior?.visibleReviewed ?? false : row.reviewed });
+        const id = `${row.kind}:${row.readingKey}`, stream = streams.get(id) ?? { head: row, released: [] };
+        stream.head = row; data.releasedStack(stream.released, row); streams.set(id, stream);
       }
+      const heads = new Map([...streams].map(([id, { head, released }]) => [id, { version: head.version, hold: head.hold, heldFromWeb: heldFromWeb(head),
+        visible: released.at(-1)?.version ?? null, visibleReviewed: released.at(-1)?.reviewed ?? false }]));
       const out = [];
       for (const entry of entries) {
         const head = heads.get(`${entry.kind}:${entry.readingKey}`);
         const status = !head ? "none" : head.hold ? "held-draft" : head.visibleReviewed ? "reviewed" : "published-unreviewed";
         const draftable = (await passage(tx, writer.tenantId, entry.kind, entry.readingKey)).size > 0;
-        out.push(Object.freeze({ ...entry, draftable, base: Object.freeze({ status, version: head?.version ?? 0, visibleVersion: head?.visible ?? null }) }));
+        out.push(Object.freeze({ ...entry, draftable, base: Object.freeze({ status, version: head?.version ?? 0, visibleVersion: head?.visible ?? null, heldFromWeb: head?.heldFromWeb ?? false }) }));
       }
       return Object.freeze({ calendar: "diaspora", entries: Object.freeze(out), unresolved: Object.freeze(unresolved) });
     });
@@ -410,7 +445,7 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       return Object.freeze({ studentId, kind, assignment: reading ? Object.freeze({ assignmentId: reading.id, assignmentRevision: reading.revision, readingKey: reading.readingKey, verses: reading.verses }) : null, view });
     });
   }
-  return Object.freeze({ getVoice, setVoice, getBaseGuide, setBaseGuide, publishBaseGuide, setStudentGuide, studentGuide, readingDate, staffGuide, staffVoice, guideWork, guideCatalog, guidePassage, rabbiStudentGuide });
+  return Object.freeze({ getVoice, setVoice, getBaseGuide, setBaseGuide, publishBaseGuide, holdBaseGuide, setStudentGuide, studentGuide, readingDate, staffGuide, staffVoice, guideWork, guideCatalog, guidePassage, rabbiStudentGuide });
 }
 
 /** The only part the web HTTP runtime receives: reads and staff status. No guide or voice writes (S10). */

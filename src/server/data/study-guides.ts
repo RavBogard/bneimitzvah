@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
 import type { GuideBody } from "../study-guides/validation";
@@ -12,7 +12,8 @@ import { expandReadingRanges, type VerseCounts } from "../../lib/readings/ranges
  * The rabbi, as established by a rabbi authority (portal MCP delegation or the operator bridge),
  * re-locked inside the same transaction that writes. Never built from request input.
  */
-export type RabbiWriter = Readonly<{ tenantId: string; userId: string; membershipId: string; roleGrantId: string; channel: "mcp" | "operator"; mayReview: boolean }>;
+/** Channel "web" is the admin's Guides page: it may only release or hold a version that already exists (migration 0058), never write text. */
+export type RabbiWriter = Readonly<{ tenantId: string; userId: string; membershipId: string; roleGrantId: string; channel: "mcp" | "operator" | "web"; mayReview: boolean }>;
 export type GuideKind = "torah" | "haftarah";
 export type VoiceRow = typeof s.studyVoice.$inferSelect;
 export type GuideRow = typeof s.studyGuide.$inferSelect;
@@ -47,11 +48,23 @@ export async function appendVoice<Q extends PgQueryResultHKT>(tx: AccessTransact
 }
 
 // Base guide -------------------------------------------------------------------------------------
+/**
+ * Readers see the latest released version that has not been held since. A web hold (migration 0058) is a held copy of the released
+ * version just before it, so it takes that version away: readers go back to the release before it, or to none.
+ */
+const notHeldSince = (t: typeof s.studyGuide) => sql`not exists (select 1 from "study_guide" "held" where "held"."tenant_id" = ${t.tenantId}
+  and "held"."kind" = ${t.kind} and "held"."reading_key" = ${t.readingKey} and "held"."hold" and "held"."copy_of_version" = ${t.version})`;
+/** The same rule for a stream read in ascending version order: the released versions still standing, the visible one last. */
+export function releasedStack<R extends { version: number; hold: boolean; copyOfVersion: number | null }>(stack: R[], row: R) {
+  if (!row.hold) stack.push(row);
+  else if (row.copyOfVersion !== null && stack.at(-1)?.version === row.copyOfVersion) stack.pop();
+  return stack;
+}
 /** All versions of one guide stream are few (one per save); read the head and the latest visible. */
 export async function guideHeads<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, kind: GuideKind, readingKey: string) {
   const t = s.studyGuide, where = and(eq(t.tenantId, tenantId), eq(t.kind, kind), eq(t.readingKey, readingKey));
   const [head] = await tx.select().from(t).where(where).orderBy(desc(t.version)).limit(1);
-  const [visible] = await tx.select().from(t).where(and(where, eq(t.hold, false))).orderBy(desc(t.version)).limit(1);
+  const [visible] = await tx.select().from(t).where(and(where, eq(t.hold, false), notHeldSince(t))).orderBy(desc(t.version)).limit(1);
   const [reviewed] = await tx.select({ version: t.version }).from(t).where(and(where, eq(t.reviewed, true))).orderBy(desc(t.version)).limit(1);
   return { head: head ?? null, visible: visible ?? null, anyReviewed: !!reviewed };
 }
@@ -64,10 +77,12 @@ export async function appendGuide<Q extends PgQueryResultHKT>(tx: AccessTransact
   kind: GuideKind; readingKey: string; expected: number; origin: "claude" | "rabbi"; reviewed: boolean; hold: boolean; body: GuideBody; mutationId: string; digest: string; publish: boolean;
   /** Carried forward unchanged when an imported guide is published, so the original author's credit stays with it. */
   importCredit?: string | null; importKey?: string | null;
+  /** A web release or hold: the version (always `expected`) this row copies exactly. The database refuses any other web row. */
+  copyOfVersion?: number | null;
 }) {
   const [row] = await tx.insert(s.studyGuide).values({ tenantId: writer.tenantId, kind: write.kind, readingKey: write.readingKey, ...versions(write.expected),
     origin: write.origin, reviewed: write.reviewed, hold: write.hold, body: write.body, importCredit: write.importCredit ?? null, importKey: write.importKey ?? null,
-    ...actorValues(writer, write.mutationId, write.digest) }).onConflictDoNothing().returning();
+    copyOfVersion: write.copyOfVersion ?? null, ...actorValues(writer, write.mutationId, write.digest) }).onConflictDoNothing().returning();
   if (row) await audit(tx, writer, write.publish ? "study-guide.publish" : "study-guide.set", "study_guide", row.id, null);
   return row ?? null;
 }
@@ -103,7 +118,7 @@ export async function importedKeys<Q extends PgQueryResultHKT>(tx: AccessTransac
 export async function reviewedVisibleGuides<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, limit: number) {
   const t = s.studyGuide;
   return tx.selectDistinctOn([t.kind, t.readingKey], { kind: t.kind, readingKey: t.readingKey, origin: t.origin, reviewed: t.reviewed, body: t.body, importCredit: t.importCredit })
-    .from(t).where(and(eq(t.tenantId, tenantId), eq(t.hold, false))).orderBy(t.kind, t.readingKey, desc(t.version)).limit(limit);
+    .from(t).where(and(eq(t.tenantId, tenantId), eq(t.hold, false), notHeldSince(t))).orderBy(t.kind, t.readingKey, desc(t.version)).limit(limit);
 }
 
 /**

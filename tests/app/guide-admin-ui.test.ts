@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
-import { arrange, GuidesView, type Actions } from "../../src/components/portal/workspace/guide-admin/workspace";
+import { arrange, GuidesView, holdDescription, releaseDescription, type Actions } from "../../src/components/portal/workspace/guide-admin/workspace";
 import { parseOverview, type Overview } from "../../src/components/portal/workspace/guide-admin/api";
 
 // The admin's Guides page (gap A6). Invented rows only. Ordering and actions are asserted by test ids and data attributes;
@@ -11,9 +11,9 @@ const version = (n: number, extra: Record<string, unknown> = {}) => ({ version: 
 const answer = {
   ok: true, rabbiName: "Rabbi Synthetic", truncated: false,
   guides: [
-    { kind: "torah", readingKey: "vayera", reading: { slug: "vayera", name: "Vayera", order: 3 }, state: "reviewed", current: version(1, { origin: "rabbi", reviewed: true }), visible: version(1, { origin: "rabbi", reviewed: true }), href: "/read?reading=vayera&lens=study" },
+    { kind: "torah", readingKey: "vayera", reading: { slug: "vayera", name: "Vayera", order: 3 }, state: "reviewed", current: version(1, { origin: "rabbi", reviewed: true }), visible: version(1, { origin: "rabbi", reviewed: true }), afterHold: null, href: "/read?reading=vayera&lens=study" },
     { kind: "torah", readingKey: "pekudei", reading: { slug: "pekudei", name: "Pekudei", order: 22 }, state: "held", current: version(2), visible: version(1, { reviewed: true }), href: "/read?reading=pekudei&lens=study" },
-    { kind: "torah", readingKey: "noach", reading: { slug: "noach", name: "Noach", order: 1 }, state: "draft", current: version(1), visible: version(1), href: "/read?reading=noach&lens=study" },
+    { kind: "torah", readingKey: "noach", reading: { slug: "noach", name: "Noach", order: 1 }, state: "draft", current: version(3), visible: version(3), afterHold: version(1), href: "/read?reading=noach&lens=study" },
   ],
   discussions: [{ slug: "why-this-verse", title: "Why this verse", kind: "torah", status: "published", revision: 1, sourceCount: 2, reading: { slug: "noach", name: "Noach", order: 1 }, changedAt: at, href: "/read?reading=noach&lens=study" }],
   summaries: [
@@ -21,7 +21,7 @@ const answer = {
     { reading: "noach", readingPlace: { slug: "noach", name: "Noach", order: 1 }, revision: 1, status: "approved", summary: "A synthetic approved summary.", outline: [1, 2, 3, 4, 5, 6, 7].map(aliyah => ({ aliyah, line: `Line ${aliyah}` })), credit: "Rabbi Synthetic", changedAt: at, href: "/read?reading=noach&lens=study" },
   ],
 };
-const actions: Actions = { withdrawDiscussion: async () => {}, approveSummary: async () => {}, withdrawSummary: async () => {} };
+const actions: Actions = { releaseGuide: async () => {}, holdGuide: async () => {}, withdrawDiscussion: async () => {}, approveSummary: async () => {}, withdrawSummary: async () => {} };
 const render = (overview: Overview) => renderToStaticMarkup(createElement(GuidesView, { overview, actions }));
 
 test("held guide drafts and unapproved summaries come first, under their own heading, before the readings in calendar order", () => {
@@ -36,7 +36,14 @@ test("held guide drafts and unapproved summaries come first, under their own hea
   expect(waitingAt).toBeLessThan(readingsAt);
   expect(markup.indexOf('data-state="held"')).toBeGreaterThan(waitingAt);
   expect(markup.indexOf('data-state="held"')).toBeLessThan(readingsAt);
-  // Approval sits only on a draft, under its text; withdrawal on a published discussion and a non-withdrawn summary; no guide has a write.
+  // Release sits only on a held guide, Hold only on a released one (Daniel 2026-11-17); neither offers a review.
+  expect(markup.match(/data-testid="guide-admin-release"/g)).toHaveLength(1);
+  expect(markup.match(/data-testid="guide-admin-hold"/g)).toHaveLength(2);
+  const held = markup.slice(markup.indexOf('data-state="held"'), markup.indexOf("</li>", markup.indexOf('data-state="held"')));
+  expect(held).toContain('data-testid="guide-admin-release"');
+  expect(held).not.toContain('data-testid="guide-admin-hold"');
+  expect(markup).not.toMatch(/data-testid="guide-admin-review/);
+  // Approval sits only on a draft, under its text; withdrawal on a published discussion and a non-withdrawn summary.
   expect(markup.match(/data-testid="guide-admin-approve"/g)).toHaveLength(1);
   expect(markup.match(/data-testid="guide-admin-withdraw-summary"/g)).toHaveLength(2);
   expect(markup.match(/data-testid="guide-admin-withdraw-discussion"/g)).toHaveLength(1);
@@ -51,16 +58,23 @@ test("an empty congregation shows the empty state, and an address that is not a 
   expect(empty).not.toContain("guide-admin-readings");
   expect(() => parseOverview({ ...answer, discussions: [{ ...answer.discussions[0], href: "https://evil.example/" }] })).toThrow();
   expect(() => parseOverview({ ...answer, guides: [{ ...answer.guides[0], state: "published" }] })).toThrow();
+  expect(() => parseOverview({ ...answer, guides: [{ ...answer.guides[0], afterHold: { version: "1" } }] })).toThrow();
 });
 
 test("the page's wording, pinned once", () => {
   const markup = render(parseOverview(answer));
   expect(markup).toContain("Waiting for Rabbi Synthetic");
   expect(markup).toContain("Held guide drafts and unapproved portion summaries. Readers do not see these yet.");
-  expect(markup).toContain("Readers see version 1 until this draft is released. Release it through Claude.");
+  expect(markup).toContain("Readers see version 1 until this draft is released.");
+  expect(markup).not.toContain("Release it through Claude");
   expect(markup).toContain("By reading");
   expect(markup).toContain("Approve revision 2");
   expect(markup).toContain("Open the study page");
   expect(render(parseOverview({ ...answer, guides: [], discussions: [], summaries: [] }))).toContain("No study content yet");
   expect(markup).not.toMatch(/[A-Za-z.]!|practise/);
+  // The release and hold confirmations say what readers will then see: version, writer, review state and label, or no guide.
+  const [vayera, pekudei, noach] = parseOverview(answer).guides;
+  expect(releaseDescription(pekudei, "Rabbi Synthetic", "CRC")).toBe('Readers then see version 2, written by Claude, not reviewed. Its label reads "Written by Claude for CRC · not yet reviewed by Rabbi Synthetic." It takes the place of version 1.');
+  expect(holdDescription(noach, "Rabbi Synthetic", "CRC")).toBe('Readers then see version 1, written by Claude, not reviewed. Its label reads "Written by Claude for CRC · not yet reviewed by Rabbi Synthetic." Version 3 stays held until it is released again.');
+  expect(holdDescription(vayera, "Rabbi Synthetic", "CRC")).toBe("Readers then see no guide for this reading until version 1 is released again.");
 });
