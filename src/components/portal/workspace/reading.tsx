@@ -158,7 +158,7 @@ function AssignmentContext({ row, current = false, staff }: { row: Reading; curr
 export const SECTION_IDS = Object.freeze({ service: "service-parts", lessons: "lessons" });
 const sectionIds: readonly string[] = Object.values(SECTION_IDS);
 /** The sentence that says listening is not released yet: under the reading for staff and parents, and on a student's disabled Listen. */
-const LISTENING_OFF = "Listening isn’t available yet. You can read, use word tools and practice up close.";
+const LISTENING_OFF = "Listening isn’t available yet. You can still read, use word tools, and practice.";
 /** The parent's page has no Up close (practice is its own mode), so its line names only what the page offers (finding 15). */
 const LISTENING_OFF_PARENT = "Listening isn’t available yet. You can read and use word tools.";
 

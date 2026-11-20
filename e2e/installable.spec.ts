@@ -116,6 +116,42 @@ test("offline, the installed app opens this week's reading from its shell and a 
   expect(app.state.fromWorker.filter(path => path.startsWith("/reference-audio/") || /^\/api\/public\/(?:reading|text|reference|aliyot|portion-summary)/.test(path))).toEqual([]);
 });
 
+test("offline on a phone, an exact owner-pack passage reopens from the built reader shell and its chant plays", async ({ context, page }, testInfo) => {
+  test.skip(testInfo.project.name !== "phone", "the exact-passage shell and playback check runs on the phone");
+  test.setTimeout(240_000);
+  const app = await installedApp(context), owner = "a".repeat(43), ref = "Genesis 1:1-3";
+  // The native database fixture proves who may own this passage. This built
+  // harness supplies only that private descriptor; text/audio use the existing
+  // synthetic public sources and the ordinary owner-checked packer.
+  await context.route("**/api/offline/packs", route => app.state.offline ? route.abort("internetdisconnected")
+    : route.fulfill({ json: { owner, packs: [{ kind: "torah", ref, name: null }], evening: false } }));
+  const href = "/read?ref=Genesis+1%3A1-3&kind=torah";
+  await page.goto(href);
+  await expect(page.locator('.study-verses [data-verse-ref="Genesis 1:1"]')).toBeVisible();
+  await expect.poll(() => page.evaluate(async ([name, key, expectedOwner, expectedRef]) => {
+    const response = await (await caches.open(name)).match(key);
+    if (!response) return false;
+    const index = await response.json() as { owner: string; packs: { owner: string; descriptor: { type: string; ref?: string }; assets: string[] }[] };
+    return index.owner === expectedOwner && index.packs.some(pack => pack.owner === expectedOwner && pack.descriptor.type === "ref" && pack.descriptor.ref === expectedRef
+      && pack.assets.some(asset => asset.startsWith("/reference-audio/short-v1/")));
+  }, [OFFLINE_CACHE, INDEX, owner, ref] as const), { timeout: 120_000 }).toBe(true);
+  await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
+  app.state.fromWorker.length = 0;
+  await app.offline(true);
+  await page.goto(href);
+  await expect(page.locator(".study-verses [data-verse-ref]")).toHaveCount(3, { timeout: 30_000 });
+  await expect(page.locator('.study-verses [data-verse-ref="Genesis 1:3"]')).toBeVisible();
+  const plays = () => page.evaluate(() => (window as unknown as { learnPlays: string[] }).learnPlays.length);
+  const before = await plays();
+  await page.locator('.study-verses [data-verse-ref="Genesis 1:1"] [data-word-index="0"]').first().click();
+  await expect.poll(plays, { timeout: 20_000 }).toBeGreaterThan(before);
+  await expect(page.getByRole("region", { name: "Reading playback", exact: true }).getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  expect(app.state.fromWorker).toEqual(expect.arrayContaining(["/read", "/api/public/reading", "/api/public/text"]));
+  expect(app.state.fromWorker.some(path => path.startsWith("/reference-audio/short-v1/"))).toBe(true);
+  expect(app.state.fromWorker).not.toContain("/api/offline/packs");
+  expect(app.state.ranges).toEqual([]);
+});
+
 test("offline, a Learn to lein lesson opens from the shell and can be finished; the progress is kept on the device", async ({ context, page }, testInfo) => {
   test.skip(testInfo.project.name !== "phone", "one device is enough for the worker");
   test.setTimeout(240_000);

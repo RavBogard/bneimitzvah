@@ -126,7 +126,7 @@ test("signed in, the site bar shows My Readings and the Beit Mitzvah door is the
   await expect(door).toHaveAttribute("data-door-role", "tutor");
   await expect(page.getByRole("link", { name: "My Readings", exact: true })).toHaveAttribute("href", "/mine");
   await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveCount(0);
-  await expect(door.getByTestId("door-action")).toHaveAttribute("href", "/mine");
+  await expect(door.getByTestId("door-action")).toHaveAttribute("href", "/mine#your-students");
   await expect(page.getByTestId("account-roles")).toHaveCount(0);
   await page.unroute("**/api/session"); await session(page, roles(["student", "parent", "tutor", "admin"]));
   await page.reload();

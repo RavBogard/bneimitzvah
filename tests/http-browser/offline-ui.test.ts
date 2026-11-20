@@ -164,8 +164,8 @@ it("A2: a student's own confirmed reading is packed under its owner, and another
     expect(own.assets.every(asset => asset.startsWith("/api/public/") || asset.startsWith("/reference-audio/short-v1/") || asset === "/api/shermet-audio/catalog")).toBe(true);
     // The private endpoint is never answered by the worker.
     expect(seen.fromWorker.filter(path => path.startsWith("/api/") && !path.startsWith("/api/public/"))).toEqual([]);
-    // Practice opens the exact owner-checked reference. Prove the worker serves the passage and clip
-    // offline here; the built-server installable test covers loading the reader shell and native playback.
+    // Practice opens the exact owner-checked reference. Inspect the owner pack with the network disabled here;
+    // Next dev cannot hydrate the worker shell. The built installable test proves exact-ref reopening and native playback.
     await tab.goto("/mine/reading", { waitUntil: "domcontentloaded" });
     await tab.getByTestId("dock-up-close").click();
     const assignedOffline = tab.getByTestId("assigned-practice-offline");
@@ -177,13 +177,17 @@ it("A2: a student's own confirmed reading is packed under its owner, and another
     expect(textPath).toBeDefined(); expect(clipPath).toBeDefined();
     await offline(true);
     try {
-      const saved = await tab.evaluate(async ({ text, clip }) => {
-        const options = { credentials: "omit" as const, cache: "no-store" as const };
-        const [page, audio] = await Promise.all([fetch(text, options), fetch(clip, options)]);
-        const body = await page.json();
-        return { text: page.ok && JSON.stringify(body).includes("Genesis 1:3"), audio: audio.ok && (await audio.arrayBuffer()).byteLength > 0 };
-      }, { text: textPath!, clip: clipPath! });
-      expect(saved).toEqual({ text: true, audio: true });
+      const saved = await tab.evaluate(async ({ text, clip, name }) => {
+        const cache = await caches.open(name);
+        const [page, audio] = await Promise.all([cache.match(new URL(text, location.origin).href), cache.match(new URL(clip, location.origin).href)]);
+        if (!page || !audio) return null;
+        const body = await page.json() as { ref: string; verses: { ref: string }[] }, bytes = await audio.arrayBuffer();
+        const digest = await crypto.subtle.digest("SHA-256", bytes);
+        return { ref: body.ref, verses: body.verses.map(verse => verse.ref), audioBytes: bytes.byteLength,
+          audioDigest: Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, "0")).join("") };
+      }, { text: textPath!, clip: clipPath!, name: OFFLINE_CACHE });
+      const syntheticClip = shortBodies.get(clipPath!)!;
+      expect(saved).toEqual({ ref: "Genesis 1:1-3", verses: ["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"], audioBytes: syntheticClip.length, audioDigest: sha(syntheticClip) });
     } finally { await offline(false); }
     // Another account signs in on this device with no sign-out in between: its session replaces this one's.
     await fixture.ownerDb.delete(rateLimit);

@@ -83,8 +83,8 @@ export function TutorSpoken(props: TutorSpokenProps) {
     gate.current = true; setPending(true); setNotice(null); const current = generation.current;
     const query = new URLSearchParams(binding); query.set("expectedClipRevision", String(metadata.expectedClipRevision)); if (metadata.expectedClipId) query.set("expectedClipId", metadata.expectedClipId);
     try {
-      const response = await gatedFetch(`${endpoint}?${query}`, { method: withdraw ? "DELETE" : "POST", credentials: "same-origin", cache: "no-store", redirect: "error",
-        ...(withdraw ? {} : { headers: { "content-type": draft!.type || "application/octet-stream" }, body: draft }) });
+      const response = await gatedFetch(`${endpoint}${withdraw ? "/withdraw" : ""}?${query}`, { method: "POST", credentials: "same-origin", cache: "no-store", redirect: "error",
+        ...(withdraw ? { headers: { "content-type": "application/json" }, body: JSON.stringify({}) } : { headers: { "content-type": draft!.type || "application/octet-stream" }, body: draft }) });
       if (!response.ok || (await response.json()).ok !== true) throw 0;
       if (current === generation.current) { setDraft(null); setRound(value => value + 1); }
     } catch { if (current === generation.current) setNotice("The recording wasn't saved. Refresh this aliyah and try again."); }

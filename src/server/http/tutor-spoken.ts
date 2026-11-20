@@ -3,13 +3,14 @@ import type { HttpRuntime } from "../runtime/composition";
 import { spokenSelection } from "../tutor-spoken/service";
 import type { ActiveMode } from "../access/types";
 import { boundedAudio, MAX_SPOKEN_BYTES, mediaType } from "../tutor-spoken/media";
-import { uniqueQuery } from "./query";
+import { readJsonBody } from "./body";
+import { closedObject, uniqueQuery } from "./query";
 import { requireCookieMutation } from "./mutations";
 import { errorResponse, HttpBoundaryError, privateHeaders, privateJson, type JsonValue } from "./responses";
 
 const binding = ["mode", "assignmentId", "assignmentRevision", "startVerse"];
-function route(path: string) { const found = /^\/api\/students\/([^/]+)\/tutor-spoken(?:\/(audio))?$/.exec(path); return found ? { studentId: found[1], audio: !!found[2] } : null; }
-export function tutorSpokenRouteMethods(path: string): readonly string[] | null { const found = route(path); return found ? found.audio ? ["GET"] : ["GET", "POST", "DELETE"] : null; }
+function route(path: string) { const found = /^\/api\/students\/([^/]+)\/tutor-spoken(?:\/(audio|withdraw))?$/.exec(path); return found ? { studentId: found[1], audio: found[2] === "audio", withdraw: found[2] === "withdraw" } : null; }
+export function tutorSpokenRouteMethods(path: string): readonly string[] | null { const found = route(path); return found ? found.audio ? ["GET"] : found.withdraw ? ["POST"] : ["GET", "POST"] : null; }
 export async function handleTutorSpokenRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
   const found = route(new URL(request.url).pathname); if (!found) return null;
   try {
@@ -27,7 +28,7 @@ export async function handleTutorSpokenRequest(request: Request, runtime: HttpRu
     if (!write) result = await runtime.tutorSpoken.read(request, selection);
     else {
       const expected = { revision: number("expectedClipRevision", true), id: query.get("expectedClipId") };
-      if (request.method === "DELETE") { if (request.body) throw new HttpBoundaryError(); result = await runtime.tutorSpoken.withdraw(request, selection, expected); }
+      if (found.withdraw) { closedObject(await readJsonBody(request), []); result = await runtime.tutorSpoken.withdraw(request, selection, expected); }
       else {
         const length = request.headers.get("content-length");
         if (length !== null && (!/^[1-9][0-9]*$/.test(length) || Number(length) > MAX_SPOKEN_BYTES)) throw new HttpBoundaryError(413);

@@ -10782,27 +10782,9 @@
   "body": true
  },
  {
-  "request": "DELETE /api/students/{student}/tutor-spoken",
-  "status": 400,
-  "allow": null,
-  "cacheControl": "private, no-store",
-  "contentType": "application/json; charset=utf-8",
-  "location": null,
-  "body": true
- },
- {
-  "request": "DELETE /api/students/{student}/tutor-spoken (signed out)",
-  "status": 400,
-  "allow": null,
-  "cacheControl": "private, no-store",
-  "contentType": "application/json; charset=utf-8",
-  "location": null,
-  "body": true
- },
- {
   "request": "PUT /api/students/{student}/tutor-spoken (wrong method)",
   "status": 405,
-  "allow": "GET, POST, DELETE",
+  "allow": "GET, POST",
   "cacheControl": "private, no-store",
   "contentType": "application/json; charset=utf-8",
   "location": null,
@@ -10811,7 +10793,7 @@
  {
   "request": "HEAD /api/students/{student}/tutor-spoken",
   "status": 405,
-  "allow": "GET, POST, DELETE",
+  "allow": "GET, POST",
   "cacheControl": "private, no-store",
   "contentType": "application/json; charset=utf-8",
   "location": null,
@@ -10820,7 +10802,7 @@
  {
   "request": "OPTIONS /api/students/{student}/tutor-spoken",
   "status": 405,
-  "allow": "GET, POST, DELETE",
+  "allow": "GET, POST",
   "cacheControl": "private, no-store",
   "contentType": "application/json; charset=utf-8",
   "location": null,
@@ -10846,6 +10828,78 @@
  },
  {
   "request": "GET /api/students/{student}/tutor-spoken?unexpected=1 (unexpected query)",
+  "status": 400,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "POST /api/students/{student}/tutor-spoken/withdraw",
+  "status": 400,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "POST /api/students/{student}/tutor-spoken/withdraw (signed out)",
+  "status": 400,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/students/{student}/tutor-spoken/withdraw (wrong method)",
+  "status": 405,
+  "allow": "POST",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "HEAD /api/students/{student}/tutor-spoken/withdraw",
+  "status": 405,
+  "allow": "POST",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "OPTIONS /api/students/{student}/tutor-spoken/withdraw",
+  "status": 405,
+  "allow": "POST",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "POST /api/students/{student}/tutor-spoken/withdraw/ (trailing slash)",
+  "status": 404,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "POST /api/students/{student}/tutor-spoken/withdrawx (near miss)",
+  "status": 404,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "POST /api/students/{student}/tutor-spoken/withdraw?unexpected=1 (unexpected query)",
   "status": 400,
   "allow": null,
   "cacheControl": "private, no-store",

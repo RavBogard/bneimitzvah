@@ -146,3 +146,20 @@ test("0060 forces tenant isolation on clips and cleanup rows and forbids deletin
   const flags = await f.owner(() => f.client.query<{ relname: string; relrowsecurity: boolean; relforcerowsecurity: boolean }>("select relname, relrowsecurity, relforcerowsecurity from pg_class where relname in ('tutor_spoken','tutor_spoken_cleanup') order by relname"));
   expect(flags.rows).toEqual([{ relname: "tutor_spoken", relrowsecurity: true, relforcerowsecurity: true }, { relname: "tutor_spoken_cleanup", relrowsecurity: true, relforcerowsecurity: true }]);
 });
+
+
+test("the dedicated POST withdrawal route keeps the origin boundary and rejects DELETE and nonempty bodies", async () => {
+  const f = await fixture();
+  await f.service.replace(f.request(), f.selection, { id: null, revision: 0 }, bytes, "audio/wav");
+  const info = await f.service.read(f.request(), f.selection);
+  const query = new URLSearchParams({ mode: "tutor", assignmentId: f.selection.assignmentId, assignmentRevision: "1", startVerse: f.selection.startVerse, expectedClipRevision: String(info.expectedClipRevision), expectedClipId: info.expectedClipId! });
+  const path = `/api/students/${f.selection.studentId}/tutor-spoken`;
+  const withdraw = (origin: string, body: unknown = {}) => new Request(`http://localhost:3000${path}/withdraw?${query}`, { method: "POST", headers: { cookie: f.identities.multi.cookie, origin, "content-type": "application/json" }, body: JSON.stringify(body) });
+  expect((await f.dispatch(withdraw("https://evil.example"))).status).toBe(403);
+  expect((await f.dispatch(withdraw("http://localhost:3000", { extra: true }))).status).toBe(400);
+  expect((await f.dispatch(new Request(`http://localhost:3000${path}?${query}`, { method: "DELETE", headers: { cookie: f.identities.multi.cookie, origin: "http://localhost:3000" } }))).status).toBe(405);
+  expect((await f.service.read(f.request(), f.selection)).clip).not.toBeNull();
+  const result = await f.dispatch(withdraw("http://localhost:3000"));
+  expect(result.status).toBe(200); expect(await result.json()).toEqual({ ok: true });
+  expect((await f.service.read(f.request(), f.selection)).clip).toBeNull(); expect(f.blobs.size).toBe(0);
+});
