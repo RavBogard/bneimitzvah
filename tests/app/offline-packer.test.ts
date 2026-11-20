@@ -22,6 +22,8 @@ import { publicAliyotPath } from "../../src/components/portal/print/api";
 import { portionSummaryPath } from "../../src/lib/portion-summary/reading";
 import { coursePassages } from "../../src/components/learn/verses-api";
 import { lookAlikeRefs, MELODIES } from "../../src/lib/learn/course";
+import { createHash } from "node:crypto";
+import { SHERMET_CATALOG_PATH, SHERMET_MANIFEST_PATH, shermetAudioPath, shermetTimingPath } from "../../src/lib/reference-audio/shermet-manifest";
 
 // The packer reads its own clock (io.now), so the week under test is derived from the same fixed instant, never the wall clock.
 // The packer against the real public routes, with a synthetic calendar, synthetic text and one synthetic clip.
@@ -35,7 +37,7 @@ class FakeCache {
 }
 class FakeCaches { stores = new Map<string, FakeCache>(); async open(name: string) { if (!this.stores.has(name)) this.stores.set(name, new FakeCache()); return this.stores.get(name)!; } async has(name: string) { return this.stores.has(name); } async delete(name: string) { return this.stores.delete(name); } async keys() { return [...this.stores.keys()]; } }
 
-async function harness(options: { pocketTorah?: boolean; origin?: string; parashah?: string; portionSummary?: PublicRuntime["portionSummary"] } = {}) {
+async function harness(options: { pocketTorah?: boolean; shermet?: boolean; origin?: string; parashah?: string; portionSummary?: PublicRuntime["portionSummary"] } = {}) {
   const base = options.origin ?? origin;
   const calendar = async (value: string, cal: "diaspora" | "israel") => ({ fetchedAt: Date.now(), snapshot: { date: parseCeremonyDate(value), calendar: cal, classification: "regular" as const,
     reading: { parashah: options.parashah ?? "Synthetic portion", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1 as const, ref: "Genesis 1:1-2:3" }], triennial: null }, haftarah: "Isaiah 1:1-3" } });
@@ -51,12 +53,17 @@ async function harness(options: { pocketTorah?: boolean; origin?: string; parash
   const dispatch = createHttpDispatcher(async () => { throw new Error("The session runtime must not be reached"); }, async action => action(runtime));
   const requests: { url: string; init: RequestInit }[] = [];
   let clipBody: Uint8Array = source.body, status: ((url: string) => number | null) = () => null, marked = false;
+  let shermetBody = new TextEncoder().encode("synthetic Shermet bytes");
+  const recording = { kind: "torah", ref: "Genesis 1:1", sha256: createHash("sha256").update(shermetBody).digest("hex"), bytes: shermetBody.length };
   const fetch = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
     const url = String(input); requests.push({ url, init });
     const forced = status(url);
     if (forced) return new Response(null, { status: forced });
     let response: Response;
-    if (new URL(url).pathname === source.source.path) response = new Response(clipBody.slice(), { headers: { "content-type": "audio/mpeg", "x-reference-license": "CC-BY-SA-3.0" } });
+    if (options.shermet && new URL(url).pathname === "/api/shermet-audio/catalog") response = Response.json({ recordings: [recording] });
+    else if (options.shermet && new URL(url).pathname === "/api/shermet-audio/timing") response = Response.json({ timing: null });
+    else if (options.shermet && new URL(url).pathname === "/api/shermet-audio") response = new Response(shermetBody.slice(), { headers: { "content-type": "audio/mpeg", "content-length": String(shermetBody.length) } });
+    else if (new URL(url).pathname === source.source.path) response = new Response(clipBody.slice(), { headers: { "content-type": "audio/mpeg", "x-reference-license": "CC-BY-SA-3.0" } });
     else response = await dispatch(new Request(url.replace(base, source.origin)));
     if (marked) { const headers = new Headers(response.headers); headers.set(OFFLINE_HEADER, "1"); response = new Response(response.body, { status: response.status, headers }); }
     Object.defineProperty(response, "url", { value: url });
@@ -66,11 +73,50 @@ async function harness(options: { pocketTorah?: boolean; origin?: string; parash
   let now = NOW, quota = 10 ** 9;
   const io: PackerIo = { origin: base, fetch, caches: caches as unknown as CacheStorage, now: () => now, estimate: async () => ({ usage: 0, quota }) };
   return { io, caches, requests, fetch, source, setNow: (value: number) => { now = value; }, setQuota: (value: number) => { quota = value; },
-    setClip: (value: Uint8Array) => { clipBody = value; }, setStatus: (value: (url: string) => number | null) => { status = value; }, setMarked: (value: boolean) => { marked = value; } };
+    setClip: (value: Uint8Array) => { clipBody = value; }, setShermet: (value: Uint8Array<ArrayBuffer>) => { shermetBody = value; }, setStatus: (value: (url: string) => number | null) => { status = value; }, setMarked: (value: boolean) => { marked = value; } };
 }
 const offline = async (h: Awaited<ReturnType<typeof harness>>) => (await h.caches.open(OFFLINE_CACHE)) as unknown as FakeCache;
 const packs = async (h: Awaited<ReturnType<typeof harness>>) => (await readIndex((await h.caches.open(OFFLINE_CACHE)) as unknown as Cache)).packs;
 const signal = () => new AbortController().signal;
+describe("Shermet offline recordings", () => {
+  test("packs verified Shermet without PocketTorah, with discovery and truthful timing holds", async () => {
+    const h = await harness({ shermet: true, pocketTorah: false });
+    await renewPack(h.io, { type: "week", date }, signal());
+    const [pack] = await packs(h), media = shermetAudioPath("Genesis 1:1"), timing = shermetTimingPath("Genesis 1:1");
+    expect(pack.assets).toEqual(expect.arrayContaining([SHERMET_CATALOG_PATH, media, timing]));
+    expect(await (await (await offline(h)).match(origin + SHERMET_CATALOG_PATH))!.json()).toEqual({ refs: ["Genesis 1:1"] });
+    expect(await (await (await offline(h)).match(origin + timing))!.json()).toEqual({ timing: null });
+    expect(h.requests.every(row => row.init.credentials === "omit")).toBe(true);
+    const mediaRequests = () => h.requests.filter(row => row.url === origin + media).length;
+    expect(mediaRequests()).toBe(1);
+    await renewPack(h.io, { type: "week", date }, signal()); expect(mediaRequests()).toBe(1);
+  });
+  test("rejects bad human media without renewing, reserves quota, and clears it through the existing purge", async () => {
+    const wrong = await harness({ shermet: true }); wrong.setShermet(new TextEncoder().encode("wrong"));
+    await expect(renewPack(wrong.io, { type: "week", date }, signal())).rejects.toEqual(new PackStopped("failed"));
+    expect(await packs(wrong)).toEqual([]);
+    expect((await offline(wrong)).entries.has(origin + shermetAudioPath("Genesis 1:1"))).toBe(false);
+    const limited = await harness({ shermet: true }); limited.setQuota(1000);
+    await expect(renewPack(limited.io, { type: "week", date }, signal())).rejects.toEqual(new PackStopped("no-space"));
+    expect((await offline(limited)).entries.size).toBe(0);
+    const good = await harness({ shermet: true }); await renewPack(good.io, { type: "week", date }, signal());
+    vi.stubGlobal("caches", good.caches);
+    try { await purgeOffline(); } finally { vi.unstubAllGlobals(); }
+    expect(good.caches.stores.size).toBe(0);
+  });
+  test("upgrades fresh legacy public and saved-reading packs once instead of waiting twelve hours", async () => {
+    const h = await harness({ shermet: true }), owner = "A".repeat(43);
+    const own = async () => ({ state: "owner" as const, owner, packs: [{ kind: "torah" as const, ref: "Genesis 1:1-3", name: null }] });
+    await openOffline({ ...h.io, owner: own });
+    const cache = await offline(h), before = await readIndex(cache as unknown as Cache);
+    await writeIndex(cache as unknown as Cache, { ...before, packs: before.packs.map(pack => ({ ...pack, assets: pack.assets.filter(asset => asset !== SHERMET_CATALOG_PATH) })) });
+    h.requests.splice(0);
+    await openOffline({ ...h.io, owner: own });
+    const current = await packs(h);
+    expect(current.filter(pack => ["week", "ref", "course"].includes(pack.descriptor.type)).every(pack => pack.assets.includes(SHERMET_CATALOG_PATH))).toBe(true);
+    expect(h.requests.some(row => row.url.endsWith(SHERMET_MANIFEST_PATH))).toBe(true);
+  });
+});
 
 describe("This week", () => {
   test("packs exactly the reader's requests and Learn's by-ref requests, byte for byte the URLs api.ts and verses-api.ts make, plus the clip", async () => {
@@ -81,7 +127,7 @@ describe("This week", () => {
     expect(pack).toMatchObject({ key: `week:${date}`, owner: "public", label: "Synthetic portion", descriptor: { type: "week", date }, format: 1, renewedAt: NOW });
     expect(pack.expiresAt - pack.renewedAt).toBe(WINDOW_MS);
     expect([...pack.assets].sort()).toEqual([publicReadingPath(week), publicTextPath(week, "torah", 0), publicShortPath(week, "torah", 0), publicTextPath(torah, "torah", 0), publicShortPath(torah, "torah", 0),
-      publicTextPath(week, "haftarah", 0), publicShortPath(week, "haftarah", 0), publicTextPath(haftarah, "haftarah", 0), publicShortPath(haftarah, "haftarah", 0), h.source.source.path, publicAliyotPath(date)]
+      publicTextPath(week, "haftarah", 0), publicShortPath(week, "haftarah", 0), publicTextPath(haftarah, "haftarah", 0), publicShortPath(haftarah, "haftarah", 0), h.source.source.path, publicAliyotPath(date), SHERMET_CATALOG_PATH]
       .map(path => new URL(path, origin)).map(url => url.pathname + url.search).sort());
     expect(pack.assets.every(packAssetAllowed)).toBe(true);
     const cache = await offline(h);
@@ -90,7 +136,7 @@ describe("This week", () => {
     expect((await cache.match(origin + h.source.source.path))!.headers.get("x-reference-license")).toBe("CC-BY-SA-3.0");
     // No cookie, no referrer, three at a time at most; nothing private was asked for.
     expect(h.requests.every(row => row.init.credentials === "omit" && row.init.referrerPolicy === "no-referrer")).toBe(true);
-    expect(h.requests.some(row => !/\/api\/public\/|\/reference-audio\/short-v1\//.test(row.url))).toBe(false);
+    expect(h.requests.some(row => !/\/api\/public\/|\/reference-audio\/short-v1\/|\/api\/shermet-audio\/catalog\?format=manifest$/.test(row.url))).toBe(false);
   });
   test("without recordings, no short pages and no clips", async () => {
     const h = await harness({ pocketTorah: false });
@@ -224,9 +270,9 @@ describe("owner packs (A2): the person's own readings, and the purge on an accou
     expect(await renewPack(h.io, { type: "ref", kind: "torah", ref: "Genesis 1:1-2:3" }, signal(), { owner: A, label: "" })).toBe("saved");
     const [pack] = await packs(h), selector = { by: "ref" as const, ref: "Genesis 1:1-2:3", kind: "torah" as const };
     expect(pack).toMatchObject({ key: ownerPackKey("torah", "Genesis 1:1-2:3"), owner: A, label: "", descriptor: { type: "ref", kind: "torah", ref: "Genesis 1:1-2:3" } });
-    expect([...pack.assets].sort()).toEqual([publicReadingPath(selector), publicTextPath(selector, "torah", 0), publicShortPath(selector, "torah", 0), h.source.source.path]
+    expect([...pack.assets].sort()).toEqual([publicReadingPath(selector), publicTextPath(selector, "torah", 0), publicShortPath(selector, "torah", 0), h.source.source.path, SHERMET_CATALOG_PATH]
       .map(path => new URL(path, origin)).map(url => url.pathname + url.search).sort());
-    expect(h.requests.every(row => row.init.credentials === "omit" && /\/api\/public\/|\/reference-audio\/short-v1\//.test(row.url))).toBe(true);
+    expect(h.requests.every(row => row.init.credentials === "omit" && /\/api\/public\/|\/reference-audio\/short-v1\/|\/api\/shermet-audio\/catalog\?format=manifest$/.test(row.url))).toBe(true);
     // An owner pack needs its owner, and a public pack must not name one.
     await expect(renewPack(h.io, { type: "ref", kind: "torah", ref: "Genesis 1:1-2:3" }, signal())).rejects.toEqual(new PackStopped("failed"));
     await expect(renewPack(h.io, { type: "week", date }, signal(), { owner: A, label: "" })).rejects.toEqual(new PackStopped("failed"));
@@ -347,7 +393,7 @@ describe("N24: on the beitmitzvah origin (decision 14) the learner's assigned re
     expect(pack!.assets).toEqual(expect.arrayContaining([publicReadingPath(selector), publicTextPath(selector, "torah", 0)].map(path => { const url = new URL(path, BEIT_MITZVAH_ORIGIN); return url.pathname + url.search; })));
     // Only the public reading routes and PocketTorah short clips: no private route, nothing generated (G3).
     expect(pack!.assets.every(packAssetAllowed)).toBe(true);
-    expect(pack!.assets.every(asset => /^\/api\/public\/(?:reading|text|reference\/short)\?|^\/reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$/.test(asset))).toBe(true);
+    expect(pack!.assets.every(asset => /^\/api\/public\/(?:reading|text|reference\/short)\?|^\/reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$|^\/api\/shermet-audio\/catalog$/.test(asset))).toBe(true);
     // Every pack request went to this origin with no cookie; the private endpoint is asked only through io.owner.
     expect(h.requests.length).toBeGreaterThan(0);
     expect(h.requests.every(row => row.url.startsWith(BEIT_MITZVAH_ORIGIN + "/") && row.init.credentials === "omit")).toBe(true);

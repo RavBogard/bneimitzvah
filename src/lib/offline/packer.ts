@@ -1,7 +1,11 @@
 import { MELODIES } from "../learn/course";
 import { canonicalReadingRef } from "../readings/reading-ref";
 import { thisShabbat } from "../readings/public-shabbat";
-import { downloadShortReferenceAudio } from "../reference-audio/short-playback";
+import { downloadShortReferenceAudio, shortAudioDigest } from "../reference-audio/short-playback";
+import { parseShermetManifest, shermetAudioPath, shermetTimingPath, SHERMET_CATALOG_PATH, SHERMET_MANIFEST_PATH, verifyShermetRecording, type ShermetRecording } from "../reference-audio/shermet-manifest";
+import { parseShermetTiming, shermetTextMatches } from "../reference-audio/shermet-timing";
+import { projectStudyVerse } from "../hebrew/study-tokens";
+import type { StudyVerse } from "../../components/portal/workspace/study/api";
 import type { ShortReferenceSource } from "../reference-audio/short-source";
 import { coursePassages } from "../../components/learn/verses-api";
 import { parsePublicRefReading, parsePublicShortPage, parsePublicTextPage, parsePublicWeek, refSource, weekSource, type PublicSource } from "../../components/portal/public-reading/api";
@@ -86,7 +90,7 @@ export function ownerPackKey(kind: "torah" | "haftarah", ref: string): string {
   for (let i = 0; i < text.length; i++) { const c = text.charCodeAt(i); a = Math.imul(a ^ c, 0x01000193) >>> 0; b = Math.imul(b ^ c, 0x0100019d) >>> 0; }
   return `ref:${kind}:${a.toString(16).padStart(8, "0")}${b.toString(16).padStart(8, "0")}`;
 }
-type Plan = { label: string; json: Map<string, Response>; clips: Map<string, ShortReferenceSource>; bytes: number };
+type Plan = { label: string; json: Map<string, Response>; clips: Map<string, ShortReferenceSource>; bytes: number; verses?: Map<string, StudyVerse>; shermet?: Map<string, ShermetRecording> };
 
 const JSON_LIMIT = 2 * 1024 * 1024;
 async function fetchJson(io: PackerIo, path: string, signal: AbortSignal, plan: Plan | null, generation: number): Promise<unknown> {
@@ -145,12 +149,52 @@ async function passage(io: PackerIo, source: PublicSource, signal: AbortSignal, 
   const kind = source.passage.kind;
   for (const { offset } of source.passage.pages) {
     const text = await fetchJson(io, publicTextPath(source.selector, kind, offset), signal, plan, generation);
-    parsed(() => parsePublicTextPage(text, source, offset));
+    const page = parsed(() => parsePublicTextPage(text, source, offset));
+    plan.verses ??= new Map();
+    for (const verse of page.verses) plan.verses.set(verse.ref, verse);
     if (!source.listening) continue;
     const short = await fetchJson(io, publicShortPath(source.selector, kind, offset), signal, plan, generation);
     for (const reference of parsed(() => parsePublicShortPage(short, source, offset)).references) {
       // Resolution-only clip sources: a parsed PocketTorah short-v1 path, never anything generated (G3).
       if (reference.source && packAssetAllowed(reference.source.path)) plan.clips.set(reference.source.path, reference.source);
+    }
+  }
+}
+
+/** Published human recordings may be packed with Daniel's offline permission.
+ * The fallback PocketTorah sources stay in the same pack for timing holds. */
+async function addShermet(io: PackerIo, plan: Plan, signal: AbortSignal, generation: number) {
+  let recordings: readonly ShermetRecording[] = [];
+  try {
+    const parsedManifest = parseShermetManifest(await fetchJson(io, SHERMET_MANIFEST_PATH, signal, null, generation));
+    if (parsedManifest) recordings = parsedManifest;
+  } catch (error) { if (!(error instanceof PackStopped) || error.reason !== "failed") throw error; }
+  const discovery = { refs: recordings.map(row => row.ref) };
+  const body = JSON.stringify(discovery);
+  plan.json.set(SHERMET_CATALOG_PATH, new Response(body, { headers: { "Content-Type": "application/json" } }));
+  plan.bytes += new TextEncoder().encode(body).length;
+  plan.shermet = new Map();
+  const selected = recordings.filter(recording => plan.verses?.has(recording.ref));
+  for (const recording of selected) {
+    plan.shermet.set(shermetAudioPath(recording.ref), recording);
+  }
+  // Pack only the requested verses' timings, at most 32 per request. This stays
+  // small even when the published recording library covers the entire Torah.
+  for (let offset = 0; offset < selected.length; offset += 32) {
+    const batch = selected.slice(offset, offset + 32), query = new URLSearchParams();
+    for (const recording of batch) query.append("ref", recording.ref);
+    let value: unknown;
+    try { value = await fetchJson(io, `/api/shermet-audio/timing?${query}`, signal, null, generation); }
+    catch (error) { if (error instanceof PackStopped && error.reason === "failed") continue; throw error; }
+    const answer = value as { timing?: unknown; timings?: unknown[] };
+    const timings = Array.isArray(answer?.timings) ? answer.timings : answer?.timing ? [answer.timing] : [];
+    for (const recording of batch) {
+      const projection = projectStudyVerse(recording.ref, plan.verses!.get(recording.ref)!.hebrew);
+      const textSha = projection.status === "ready" ? await (io.digest ?? shortAudioDigest)(new TextEncoder().encode(projection.projection.readingText.normalize("NFC"))) : null;
+      const matches = timings.map(parseShermetTiming).filter(timing => timing && timing.audioSha256 === recording.sha256 && textSha && shermetTextMatches(timing, { ref: recording.ref, readingTextSha256: textSha, wordCount: projection.status === "ready" ? projection.projection.words.length : 0 }));
+      const body = JSON.stringify({ timing: matches.length === 1 ? matches[0] : null });
+      plan.json.set(shermetTimingPath(recording.ref), new Response(body, { headers: { "Content-Type": "application/json" } }));
+      plan.bytes += new TextEncoder().encode(body).length;
     }
   }
 }
@@ -262,11 +306,19 @@ export async function renewPack(io: PackerIo, descriptor: PackDescriptor, signal
     : descriptor.type === "ref" ? await planRef(io, descriptor.kind, descriptor.ref, signal, generation)
     : descriptor.type === "evening" ? await planEvening(io, signal, generation) : descriptor.type === "service" ? await planService(io, signal, generation)
     : await planCourse(io, signal, generation);
+  if (["week", "ref", "course"].includes(descriptor.type)) await addShermet(io, plan, signal, generation);
   if (purgeGeneration() !== generation || signal.aborted) throw new PackStopped("purged");
   const cache = await io.caches.open(OFFLINE_CACHE);
   const missing: ShortReferenceSource[] = [];
   for (const source of plan.clips.values()) if (!await cache.match(io.origin + source.path)) missing.push(source);
-  const needed = plan.bytes + missing.reduce((sum, source) => sum + source.bytes, 0);
+  const missingShermet: [string, ShermetRecording][] = [];
+  for (const [path, source] of plan.shermet ?? []) {
+    const hit = await cache.match(io.origin + path);
+    let verified = false;
+    if (hit) try { await verifyShermetRecording(hit, source, io.origin + path, signal, io.digest ?? shortAudioDigest, true); verified = true; } catch { /* Changed or incomplete cached bytes are downloaded again. */ }
+    if (!verified) missingShermet.push([path, source]);
+  }
+  const needed = plan.bytes + missing.reduce((sum, source) => sum + source.bytes, 0) + missingShermet.reduce((sum, [, source]) => sum + source.bytes, 0);
   // A browser that cannot estimate its storage packs anyway; one that can is held to the budget.
   const { usage = 0, quota = 0 } = await io.estimate().catch(() => ({ usage: 0, quota: 0 }));
   if (quota > 0 && usage + needed > Math.min(BUDGET.quotaShare * quota, BUDGET.capBytes)) throw new PackStopped("no-space");
@@ -288,9 +340,22 @@ export async function renewPack(io: PackerIo, descriptor: PackDescriptor, signal
     catch { throw new PackStopped("failed"); }
     await put(source.path, original);
   });
+  await pool(missingShermet, async ([path, source]) => {
+    if (purgeGeneration() !== generation || signal.aborted) throw new PackStopped("purged");
+    const url = io.origin + path;
+    let response: Response;
+    try { response = await io.fetch(url, { credentials: "omit", mode: "same-origin", redirect: "error", referrerPolicy: "no-referrer", cache: "no-store", signal }); }
+    catch { throw new PackStopped("failed"); }
+    if (response.status === 429) throw new PackStopped("rate-limited");
+    if (response.headers.has(OFFLINE_HEADER)) throw new PackStopped("failed");
+    const original = response.clone();
+    try { await verifyShermetRecording(response, source, url, signal, io.digest ?? shortAudioDigest); }
+    catch { throw new PackStopped("failed"); }
+    await put(path, original);
+  });
   // The JSON goes in only once every clip it names is stored, so a failed renewal never leaves new pages over old clips.
   for (const [key, response] of plan.json) await put(key, response);
-  const assets = [...plan.json.keys(), ...plan.clips.keys()];
+  const assets = [...plan.json.keys(), ...plan.clips.keys(), ...(plan.shermet?.keys() ?? [])];
   if (!assets.every(packAssetAllowed)) throw new PackStopped("failed");
   if (purgeGeneration() !== generation || signal.aborted) throw new PackStopped("purged");
   const key = descriptor.type === "week" ? `week:${descriptor.date}` : descriptor.type === "ref" ? ownerPackKey(descriptor.kind, descriptor.ref) : descriptor.type === "evening" ? EVENING_PACK_KEY
@@ -300,7 +365,7 @@ export async function renewPack(io: PackerIo, descriptor: PackDescriptor, signal
   // 2.0 SC6: the service-course pack is public-lane text only, by the one rule the stored index also holds it to.
   if (descriptor.type === "service" && !assets.every(servicePackAssetAllowed)) throw new PackStopped("failed");
   const pack: Pack = Object.freeze({ key, owner: own ? own.owner : "public", label: own ? own.label : plan.label, descriptor, assets: Object.freeze(assets),
-    bytes: plan.bytes + [...plan.clips.values()].reduce((sum, source) => sum + source.bytes, 0), renewedAt: now, expiresAt: now + WINDOW_MS, format: 1 });
+    bytes: plan.bytes + [...plan.clips.values()].reduce((sum, source) => sum + source.bytes, 0) + [...plan.shermet?.values() ?? []].reduce((sum, source) => sum + source.bytes, 0), renewedAt: now, expiresAt: now + WINDOW_MS, format: 1 });
   const index = await readIndex(cache);
   // An owner pack joins only its own owner's index: an account switch since this pack began means it is not kept.
   if (own && index.owner !== own.owner) throw new PackStopped("purged");
@@ -353,7 +418,7 @@ export async function openOffline(io: PackerIo & { locks?: Locks | null }) {
       // (their firewall allows 120 requests a minute per address). Decided here: renewal is at most twice a day.
       const current = fresh.packs.find(pack => pack.key === job.key);
       // A course pack built from an older set of fixed passages (a release that moved them, 1.6) is renewed at once.
-      if (current && (!job.own || current.label === job.own.label) && (job.key !== "course" || coursePackCurrent(current, io.origin)) && (job.key !== SERVICE_PACK_KEY || servicePackCurrent(current))
+      if (current && (!["week", "ref", "course"].includes(job.descriptor.type) || current.assets.includes(SHERMET_CATALOG_PATH)) && (!job.own || current.label === job.own.label) && (job.key !== "course" || coursePackCurrent(current, io.origin)) && (job.key !== SERVICE_PACK_KEY || servicePackCurrent(current))
         && io.now() - current.renewedAt < RENEW_AFTER_MS && await inspectPack(cache, current, io.now(), io.origin) === "saved") continue;
       if (job.state) setOfflineState({ [job.state]: "saving" });
       try { await renewPack(io, job.descriptor, controller.signal, job.own); }

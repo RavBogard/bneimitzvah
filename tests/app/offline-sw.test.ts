@@ -169,6 +169,30 @@ describe("packed assets are served only from a live pack", () => {
   });
 });
 
+test("Shermet offline media supports Safari ranges and stops immediately after pack expiry or purge", async () => {
+  const media = "/api/shermet-audio?ref=Genesis+1%3A1", catalog = "/api/shermet-audio/catalog", timing = "/api/shermet-audio/timing?ref=Genesis+1%3A1";
+  const w = await load();
+  await seed(w.caches, [pack(Date.now(), [media, catalog, timing])], {
+    [media]: new Response(new Uint8Array([1, 2, 3]), { headers: { "content-type": "audio/mpeg", "content-length": "3" } }),
+    [catalog]: Response.json({ refs: ["Genesis 1:1"] }), [timing]: Response.json({ timing: null }),
+  });
+  const probe = (await w.request(media, { headers: { range: "bytes=0-0" } }))!;
+  expect(probe.status).toBe(206); expect(probe.headers.get("content-range")).toBe("bytes 0-0/3");
+  expect(probe.headers.get(OFFLINE_HEADER)).toBe("1"); expect([...new Uint8Array(await probe.arrayBuffer())]).toEqual([1]);
+  const suffix = (await w.request(media, { headers: { range: "bytes=-2" } }))!;
+  expect([...new Uint8Array(await suffix.arrayBuffer())]).toEqual([2, 3]);
+  const invalid = (await w.request(media, { headers: { range: "bytes=3-" } }))!;
+  expect(invalid.status).toBe(416); expect(invalid.headers.get("content-range")).toBe("bytes */3");
+  expect((await w.request(media, { method: "HEAD" }))!.headers.get("content-length")).toBe("3");
+  expect(await (await w.request(catalog))!.json()).toEqual({ refs: ["Genesis 1:1"] });
+  expect(await (await w.request(timing))!.json()).toEqual({ timing: null });
+  const cache = await w.caches.open(OFFLINE_CACHE);
+  await cache.put(INDEX_KEY, Response.json({ format: 1, packs: [pack(Date.now() - 15 * DAY_MS, [media, catalog, timing])] }));
+  await expect(w.request(media, { headers: { range: "bytes=0-0" } })).rejects.toThrow();
+  await w.caches.delete(OFFLINE_CACHE);
+  await expect(w.request(media)).rejects.toThrow(); expect(await w.caches.has(OFFLINE_CACHE)).toBe(false);
+});
+
 describe("owner packs (A2) are served exactly like public ones, only under their own index owner", () => {
   const A = "A".repeat(43), B = "B".repeat(43), REF = "/api/public/text?ref=Genesis+1%3A1-5&kind=torah&offset=0";
   const ownPack = (owner: string) => ({ key: "ref:torah:0123456789abcdef", owner, label: "", descriptor: { type: "ref", kind: "torah", ref: "Genesis 1:1-5" }, assets: [REF, CLIP],

@@ -135,6 +135,15 @@ export function createShermetAudio(directory: string | undefined, publicEnabled 
   }
   return {
     async catalog(request: Request) {
+      if (new URL(request.url).searchParams.get("format") === "manifest") {
+        // Offline permission is for published CRC assets only. Local operator
+        // extras are deliberately excluded from pack discovery.
+        const recordings = publicEntries.flatMap(entry => {
+          const bytes = "bytes" in entry ? entry.bytes : null;
+          return typeof bytes === "number" && Number.isSafeInteger(bytes) && bytes > 0 && bytes <= MAX_AUDIO ? [{ kind: entry.kind, ref: entry.ref, sha256: entry.sha256, bytes }] : [];
+        });
+        return Response.json({ recordings }, { headers });
+      }
       const asked = new URL(request.url).searchParams.getAll("ref");
       const local = await localCatalog();
       const configured = [...publicEntries.map(entry => entry.ref), ...(local?.entries.filter(entry => entry && valid(entry)).map(entry => entry.ref) ?? [])];

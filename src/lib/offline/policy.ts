@@ -1,3 +1,4 @@
+import { canonicalReadingRef } from "../readings/reading-ref";
 /**
  * The installable app's offline policy (1.5 plan, A1, §3). One source for the page and the service worker:
  * the worker route writes `workerPolicy()` into the head of /sw.js, so the two can never drift.
@@ -93,6 +94,13 @@ const EXACT_QUERY: Readonly<Record<string, RegExp>> = Object.freeze({
 export function packAssetAllowed(asset: string): boolean {
   if (typeof asset !== "string" || !asset.startsWith("/") || asset.startsWith("//") || asset.length > 2048 || /[\s#\\]/.test(asset)) return false;
   const query = asset.indexOf("?"), path = query < 0 ? asset : asset.slice(0, query), search = query < 0 ? "" : asset.slice(query);
+  if (path === "/api/shermet-audio/catalog") return search === "" || search === "?format=manifest";
+  if (path === "/api/shermet-audio" || path === "/api/shermet-audio/timing") {
+    const values = new URLSearchParams(search);
+    const refs = values.getAll("ref");
+    if (!refs.length || refs.length > (path.endsWith("/timing") ? 32 : 1) || values.size !== refs.length || `?${values}` !== search) return false;
+    return refs.every(ref => { const parsed = canonicalReadingRef(ref, "torah") ?? canonicalReadingRef(ref, "haftarah"); return parsed?.verses.length === 1 && parsed.verses[0] === ref; });
+  }
   if (CLIP_PATH.test(path)) return search === "";
   // 1.9 N24: these two take exactly one known parameter, as the reader asks for them: a parashah slug, or a date.
   const exact = EXACT_QUERY[path];
@@ -206,6 +214,7 @@ export function workerPolicy(input: { build: string; enabled: boolean; shellPage
     shellPages: Object.freeze([...input.shellPages]), shellAssets: [MANIFEST_PATH], shellLimits: SHELL_LIMITS, manifestPath: MANIFEST_PATH,
     staticPath: STATIC_PATH.source, staticUnsafe: STATIC_UNSAFE.source, clipPath: CLIP_PATH.source, packDataPath: PACK_DATA_PATH.source, ownerKey: OWNER_KEY.source,
     ownerOnlyPath: OWNER_ONLY_PATH.source,
+    shermetAudioPath: "^/api/shermet-audio$", shermetDataPath: "^/api/shermet-audio/(?:catalog|timing)$",
   });
 }
 export type WorkerPolicy = ReturnType<typeof workerPolicy>;

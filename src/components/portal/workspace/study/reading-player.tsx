@@ -5,7 +5,7 @@ import { projectStudyVerse } from "../../../../lib/hebrew/study-tokens";
 import type { ReferenceShortResolution } from "../../../../lib/reference-audio/short-resolution";
 import type { ReadingPlaybackState, ReadingSelection } from "./main-playback";
 import { createPreferredReadingPlayback } from "./preferred-reading-playback";
-import { useShermetRecordings } from "./use-shermet-recordings";
+import { getShermetRecordingRefs, useShermetRecordings } from "./use-shermet-recordings";
 import { createShermetTimedAudio } from "../../../../lib/reference-audio/shermet-timed-audio";
 import type { StudyVerse } from "./api";
 import { createReadingPlayerIntent, readingAudioCurrent, readingPlayerPreview, createReadingPlayerTarget } from "./reading-player-intent";
@@ -55,6 +55,7 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
       onState: (value: ReadingPlaybackState) => { if (current) setState(value); }, onActiveWord: (value: { verse: number; index: number } | null) => { if (current && (value === null || owned?.isCurrent() && targetCurrent())) callbacks.current.onActiveWord(value); },
     };
     const playback = createPreferredReadingPlayback({ ...common, preference: recording, available: () => callbacks.current.shermetRefs,
+      resolveAvailability: getShermetRecordingRefs,
       timed: { timing: (index, signal) => timed.timing(verses[index].ref, verses[index].hebrew, signal), clip: (index, word, signal) => timed.clip(verses[index].ref, verses[index].hebrew, word, word, signal) },
       verses: verses.map(verse => { const projection = projectStudyVerse(verse.ref, verse.hebrew); return { ref: verse.ref, readingText: verse.hebrew.readingText, wordCount: projection.status === "ready" ? projection.projection.words.length : 0 }; }),
       load: async (index, signal) => { if (!owned?.isCurrent()) throw new Error("Reading intent replaced"); const result = await callbacks.current.load(index, signal); if (!owned?.isCurrent()) throw new Error("Reading intent replaced"); return result; },

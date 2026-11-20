@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 let catalog: { expires: number; work: Promise<ReadonlySet<string>> } | null = null;
 /** One bounded metadata discovery per page interval, shared by the main text,
  * assigned reading and any lifted verse. Audio is never fetched here. */
-function availableRefs() {
+export function getShermetRecordingRefs() {
   if (catalog && catalog.expires > Date.now()) return catalog.work;
   const work = fetch("/api/shermet-audio/catalog", { signal: AbortSignal.timeout(10000), cache: "no-store", credentials: "omit", redirect: "error" })
     .then(async response => {
@@ -23,7 +23,7 @@ export function useShermetRecordings(refs: readonly string[]) {
   const [available, setAvailable] = useState<ReadonlySet<string>>(new Set());
   useEffect(() => {
     let current = true; setAvailable(new Set());
-    void availableRefs().then(value => { if (current) setAvailable(new Set(refs.filter(ref => value.has(ref)))); }).catch(() => {});
+    void getShermetRecordingRefs().then(value => { if (current) setAvailable(new Set(refs.filter(ref => value.has(ref)))); }).catch(() => {});
     return () => { current = false; };
   }, [refs]);
   return available;

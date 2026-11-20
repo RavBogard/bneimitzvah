@@ -13,6 +13,8 @@ const STATIC_PATH = new RegExp(POLICY.staticPath);
 const STATIC_UNSAFE = new RegExp(POLICY.staticUnsafe, "i");
 const CLIP_PATH = new RegExp(POLICY.clipPath);
 const PACK_DATA_PATH = new RegExp(POLICY.packDataPath);
+const SHERMET_AUDIO_PATH = new RegExp(POLICY.shermetAudioPath || "^/api/shermet-audio$");
+const SHERMET_DATA_PATH = new RegExp(POLICY.shermetDataPath || "^/api/shermet-audio/(?:catalog|timing)$");
 const OWNER_KEY = new RegExp(POLICY.ownerKey);
 /** The CRC siddur's evening text (2.0 SC7): served offline only from a pack of the index's own owner, never from a public pack. */
 const OWNER_ONLY_PATH = typeof POLICY.ownerOnlyPath === "string" && POLICY.ownerOnlyPath ? new RegExp(POLICY.ownerOnlyPath) : /^\/api\/public\/evening-text$/;
@@ -138,6 +140,34 @@ async function fromPack(url) {
 async function clip(request, url) {
   return (await fromPack(url)) ?? fetch(request);
 }
+/** Safari probes and seeks use the verified full object held by a live pack.
+ * Range responses are never stored and never bypass the pack index or purge. */
+async function shermetClip(request, url) {
+  const hit = await fromPack(url);
+  if (!hit) return fetch(request);
+  if (request.method === "HEAD") return new Response(null, { status: 200, headers: hit.headers });
+  const range = request.headers.has("if-range") ? null : request.headers.get("range");
+  if (range === null) return hit;
+  const bytes = new Uint8Array(await hit.arrayBuffer()), length = bytes.length;
+  const match = /^bytes=(\d*)-(\d*)$/i.exec(range.trim());
+  let start = 0, end = length - 1, valid = Boolean(match && length && (match[1] || match[2]));
+  if (valid && match[1]) {
+    start = Number(match[1]); end = match[2] ? Number(match[2]) : end;
+    valid = Number.isSafeInteger(start) && Number.isSafeInteger(end) && start < length && start <= end;
+    end = Math.min(end, length - 1);
+  } else if (valid) {
+    const suffix = Number(match[2]); valid = Number.isSafeInteger(suffix) && suffix > 0;
+    start = Math.max(0, length - suffix);
+  }
+  const headers = new Headers(hit.headers);
+  headers.set("accept-ranges", "bytes");
+  if (!valid) {
+    headers.set("content-range", `bytes */${length}`); headers.set("content-length", "0");
+    return new Response(null, { status: 416, headers });
+  }
+  headers.set("content-range", `bytes ${start}-${end}/${length}`); headers.set("content-length", String(end - start + 1));
+  return new Response(bytes.slice(start, end + 1), { status: 206, headers });
+}
 async function packData(request, url) {
   try { return await fetch(request); }
   catch (error) { const hit = await fromPack(url); if (hit) return hit; throw error; }
@@ -169,7 +199,9 @@ function onFetch(event) {
   const request = event.request;
   let url;
   try { url = new URL(request.url); } catch { return; }
+  if (url.origin === OWN_ORIGIN && ["GET", "HEAD"].includes(request.method) && SHERMET_AUDIO_PATH.test(url.pathname) && /^\?ref=[A-Za-z0-9+%.-]{1,100}$/.test(url.search)) return event.respondWith(shermetClip(request, url));
   if (url.origin !== OWN_ORIGIN || request.method !== "GET" || request.headers.has("range")) return;
+  if (SHERMET_DATA_PATH.test(url.pathname) && (url.pathname.endsWith("/catalog") ? url.search === "" || url.search === "?format=manifest" : /^\?ref=[A-Za-z0-9+%.-]{1,100}$/.test(url.search))) return event.respondWith(packData(request, url));
   if (request.mode === "navigate") return event.respondWith(navigate(request, url));
   if (STATIC_PATH.test(url.pathname) && !STATIC_UNSAFE.test(url.pathname)) return event.respondWith(appCode(request));
   if (CLIP_PATH.test(url.pathname) && url.search === "") return event.respondWith(clip(request, url));

@@ -23,3 +23,14 @@ it("prefers Shermet per verse, truthfully falls back before play, and never chan
   expect(player.state.source).toBe("shermet"); expect(calls).toHaveLength(count);
   player.dispose();
 });
+it("waits for first-tap discovery and cancels a pending selection before it can play", async () => {
+  const calls: string[] = [];
+  const initial: ReadingPlaybackState = { verse: null, selection: "verse", suspended: false, timingHeld: false, playback: { status: "idle", selection: "verse", repeat: false, speed: 1, speedSupported: false, wordsReady: false, wordCount: 0, retryPlay: false } };
+  const factory = (name: string) => () => ({ state: initial, async select() { calls.push(name); }, async play() {}, pause() {}, suspend() {}, setRepeat() {}, setSpeed() {}, dispose() {} });
+  let release!: (refs: ReadonlySet<string>) => void;
+  const discovery = new Promise<ReadonlySet<string>>(resolve => { release = resolve; });
+  const player = createPreferredReadingPlayback({ preference: "shermet", verses: [{ ref: "Exodus 35:1", readingText: "", wordCount: 2 }], available: () => new Set(), resolveAvailability: () => discovery, canContinue: () => true, load: async () => { throw new Error("Unused"); }, onState() {}, onActiveWord() {} }, { pockettorah: factory("pockettorah"), shermet: factory("shermet") });
+  const first = player.select(0); expect(calls).toEqual([]); player.suspend();
+  release(new Set(["Exodus 35:1"])); await first; expect(calls).toEqual([]);
+  await player.select(0); expect(calls).toEqual(["shermet"]); player.dispose();
+});

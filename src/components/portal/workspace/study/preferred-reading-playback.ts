@@ -6,13 +6,15 @@ type PocketInput = Parameters<typeof createShortReadingPlayback>[0];
 type Transport = Pick<ReturnType<typeof createShortReadingPlayback>, "state" | "select" | "play" | "pause" | "suspend" | "setRepeat" | "setSpeed" | "dispose">;
 export function createPreferredReadingPlayback(input: PocketInput & {
   preference: "shermet" | "pockettorah"; available(): ReadonlySet<string>; canContinue(): boolean; timed?: ShermetPlaybackTiming;
+  resolveAvailability?(): Promise<ReadonlySet<string>>;
 }, factories = { pockettorah: createShortReadingPlayback, shermet: createShermetPlayback }) {
   let source: "shermet" | "pockettorah" = "pockettorah", fallback: ReadingPlaybackState["fallback"];
   let heard = false, closed = false;
+  let selectionTurn = 0, resolvedAvailability: ReadonlySet<string> | null = null;
   let state: ReadingPlaybackState;
   const publish = (next: ReadingPlaybackState) => { state = { ...next, source, fallback }; input.onState(state); };
   const pocket = factories.pockettorah({ ...input, canContinue: () => !closed && source === "pockettorah" && input.canContinue(), onState: next => { if (!closed && source === "pockettorah") publish(next); } });
-  const shermet = factories.shermet({ verses: input.verses, available: input.available, timed: input.timed,
+  const shermet = factories.shermet({ verses: input.verses, available: () => resolvedAvailability ?? input.available(), timed: input.timed,
     canContinue: () => !closed && source === "shermet" && input.canContinue(), onActiveWord: input.onActiveWord,
     onState(next) {
       if (closed || source !== "shermet") return;
@@ -33,17 +35,22 @@ export function createPreferredReadingPlayback(input: PocketInput & {
     get state() { return state; },
     async select(index: number, selection: ReadingSelection = "verse") {
       if (closed || !input.canContinue() || !input.verses[index]) return;
-      const covered = input.available().has(input.verses[index].ref);
       // Stop both before replacing source identity, so old callbacks cannot
       // publish state for the newly selected recording.
       pocket.suspend(); shermet.suspend(); heard = false;
+      const turn = ++selectionTurn;
+      if (input.preference === "shermet" && input.resolveAvailability) {
+        try { resolvedAvailability = await input.resolveAvailability(); } catch { resolvedAvailability = input.available(); }
+        if (closed || turn !== selectionTurn || !input.canContinue()) return;
+      }
+      const covered = (resolvedAvailability ?? input.available()).has(input.verses[index].ref);
       source = input.preference === "shermet" && covered && (selection === "verse" || input.timed) ? "shermet" : "pockettorah";
       fallback = input.preference === "shermet" && source === "pockettorah" ? covered ? "timing" : "missing" : undefined;
       await active().select(index, selection);
     },
-    play: () => active().play(), pause: () => active().pause(),
-    suspend() { pocket.suspend(); shermet.suspend(); },
+    play: () => active().play(), pause() { selectionTurn++; active().pause(); },
+    suspend() { selectionTurn++; pocket.suspend(); shermet.suspend(); },
     setRepeat: (value: boolean) => active().setRepeat(value), setSpeed: (value: number) => active().setSpeed(value),
-    dispose() { closed = true; pocket.dispose(); shermet.dispose(); },
+    dispose() { closed = true; selectionTurn++; pocket.dispose(); shermet.dispose(); },
   };
 }
