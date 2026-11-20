@@ -148,11 +148,12 @@ export function createShermetAudio(directory: string | undefined, publicEnabled 
       const asked = new URL(request.url).searchParams.getAll("ref");
       const local = await localCatalog();
       const configured = [...publicEntries.map(entry => entry.ref), ...(local?.entries.filter(entry => entry && valid(entry)).map(entry => entry.ref) ?? [])];
+      const configuredRefs = new Set(configured);
       const refs = asked.length ? asked : configured;
       if (asked.length > 100 || refs.some(ref => !singleVerse(ref))) return new Response(null, { status: 400, headers });
       const available: string[] = [];
       // Availability is metadata only; fetch/verify media only when chosen.
-      for (const ref of new Set(refs)) if (configured.includes(ref)) available.push(ref);
+      for (const ref of new Set(refs)) if (configuredRefs.has(ref)) available.push(ref);
       return Response.json({ refs: available }, { headers });
     },
     async audio(request: Request) {

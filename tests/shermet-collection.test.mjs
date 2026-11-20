@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { validateInventory, saveInventory, acquireCollection, mapInventory } from '../scripts/shermet-collection.mjs';
+import { validateInventory, saveInventory, acquireCollection, mapInventory, generateManifest } from '../scripts/shermet-collection.mjs';
 import { loadCanonicalReading } from '../scripts/shermet-source-runtime.mjs';
 
 const page = (suffix = 'a') => ({ url: `https://www.templeisraelomaha.com/synthetic-${suffix}`, title: 'Synthetic metadata fixture',
@@ -81,8 +81,34 @@ test('holds equal audio bytes assigned distinct refs, then accepts only a digest
   assert.deepEqual(mapInventory(inventory, media, decision).recordings.map(r => r.ref), ['Genesis 1:1']);
   const mislabeled = { ...a, rows: [{ ...a.rows[0], label: 'Genesis 1:2' }] };
   const correction = mapInventory({ version: 1, pages: [mislabeled] }, media, decision).deferred[0];
-  assert.equal(correction.ref, 'Genesis 1:1');
+  assert.equal(Object.hasOwn(correction, 'ref'), false);
+  assert.equal(Object.hasOwn(correction, 'kind'), false);
   assert.equal(correction.rowLabel, 'Genesis 1:2');
+  // The same exact source and bytes have a separately accepted ordinary row.
+  const duplicate = mapInventory({ version: 1, pages: [a, { ...mislabeled, url: 'https://www.templeisraelomaha.com/synthetic-secondary' }] }, media, decision).deferred[0];
+  assert.equal(duplicate.ref, 'Genesis 1:1'); assert.equal(duplicate.kind, 'torah');
+  assert.equal(duplicate.rowLabel, 'Genesis 1:2');
+  // A matching recording under another source ID cannot corroborate this row.
+  const otherSource = { ...a, rows: [{ ...a.rows[0], sources: ['https://images.shulcloud.com/14396/124.mp3'] }] };
+  assert.equal(Object.hasOwn(mapInventory({ version: 1, pages: [otherSource, mislabeled] }, media, decision).deferred[0], 'ref'), false);
   decision[0].sha256 = 'c'.repeat(64);
   assert.equal(mapInventory(inventory, media, decision).recordings.length, 0);
+});
+test('canonical rejection removes a deferred correction identity before public library publication', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'shermet-correction-'));
+  try {
+    const ordinary = page('accepted'); ordinary.title = 'Numbers Ch 8'; ordinary.rows[0].label = 'Numbers 8:99';
+    const secondary = page('secondary'); secondary.title = 'Numbers Ch 8'; secondary.rows[0].label = 'Numbers 8:98';
+    const inventory = { version: 1, pages: [ordinary, secondary] };
+    const media = { '123': { status: 'verified', sha256: 'a'.repeat(64), duration: 1, bytes: 100, mimeType: 'audio/mpeg' } };
+    const records = [{ sourceId: 123, sha256: 'a'.repeat(64), ref: 'Numbers 8:99', evidenceSha256: 'b'.repeat(64) }];
+    await writeFile(join(root, 'inventory.json'), JSON.stringify(inventory));
+    await writeFile(join(root, 'acquisition.json'), JSON.stringify({ media }));
+    await writeFile(join(root, 'source-adjudications.json'), JSON.stringify({ records }));
+    await generateManifest(root);
+    const library = JSON.parse(await readFile(join(root, 'nonverse-catalog.json'), 'utf8'));
+    const held = library.items.find(row => row.label === 'Numbers 8:98');
+    assert.ok(held); assert.equal(Object.hasOwn(held, 'ref'), false); assert.equal(Object.hasOwn(held, 'kind'), false);
+    assert.equal(held.status, 'available'); // Playback remains explicitly unconfirmed, not falsely titled.
+  } finally { await rm(root, { recursive: true, force: true }); }
 });

@@ -17,6 +17,21 @@ const REF_SUFFIX = new RegExp(`(?:^|\\s)${BOOKS} ([1-9]\\d*):([1-9]\\d*)$`);
 const normalizeLabel = value => value.replace(/\b([12]) (Samuel|Kings)\b/g, (_, n, book) => `${n === '2' ? 'II' : 'I'} ${book}`).replace(/\bEicha\b/g, 'Lamentations').replace(/\bKohelet\b/g, 'Ecclesiastes').replace(/\bShir haShirim\b/gi, 'Song of Songs').replace(/\b(Genesis|Exodus|Leviticus|Numbers|Deuteronomy)(?=\d)/g, '$1 ');
 const TORAH_BOOKS = new Set(['Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy']);
 const MEGILLOT = new Set(['Ruth', 'Esther', 'Song of Songs', 'Ecclesiastes', 'Lamentations']);
+const AUDIO_IDENTITY_CONFLICT = 'Independent SHA-bound audio identity disagrees with the printed row reference';
+function corroborateDeferredIdentities(result, media, decisions) {
+  const accepted = new Map(result.recordings.map(row => [`${row.sourceId}:${row.sha256}:${row.ref}`, row]));
+  for (const row of result.deferred) {
+    if (row.reason !== AUDIO_IDENTITY_CONFLICT) continue;
+    // An adjudication is a proposal here: the row/title checks already failed.
+    // Promote it only through a separately accepted ordinary source identity.
+    delete row.ref; delete row.kind;
+    if (row.sources.length !== 1) continue;
+    const id = Number(audioId(row.sources[0])), decision = decisions.get(id), acquired = media[String(id)];
+    if (!decision || acquired?.status !== 'verified' || acquired.sha256 !== decision.sha256) continue;
+    const ordinary = accepted.get(`${id}:${decision.sha256}:${decision.ref}`);
+    if (ordinary) { row.ref = ordinary.ref; row.kind = ordinary.kind; }
+  }
+}
 const publicPage = value => { try { const u = new URL(value); return u.protocol === 'https:' && u.hostname === 'www.templeisraelomaha.com' && !u.username && !u.password; } catch { return false; } };
 const short = (value, max = 300) => typeof value === 'string' && value.length <= max && !/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value);
 async function readJson(path, fallback) { try { return JSON.parse(await readFile(path, 'utf8')); } catch (error) { if (error.code === 'ENOENT') return fallback; throw error; } }
@@ -176,7 +191,7 @@ export function mapInventory(inventory, media = {}, adjudications = []) {
       if (target && match && target[2] === match[2] && target[3] === match[3] && titleMatches) {
         ref = qa.ref; match = target; audioCorrection = 'Independent SHA-bound ASR and phone contrast confirm the title/parent reference over the printed row book.';
       } else {
-        deferred.push({ pageUrl: page.url, pageTitle: page.title, rowLabel: row.label, parents, ...(target ? { ref: qa.ref, kind: TORAH_BOOKS.has(target[1]) ? 'torah' : 'haftarah' } : {}), category: 'source-conflict', reason: 'Independent SHA-bound audio identity disagrees with the printed row reference', sources: row.sources, adjudicationSha256: qa.evidenceSha256 }); continue;
+        deferred.push({ pageUrl: page.url, pageTitle: page.title, rowLabel: row.label, parents, category: 'source-conflict', reason: AUDIO_IDENTITY_CONFLICT, sources: row.sources, adjudicationSha256: qa.evidenceSha256 }); continue;
       }
     }
     const book = match?.[1], kind = book ? TORAH_BOOKS.has(book) ? 'torah' : MEGILLOT.has(book) ? 'megillah' : 'haftarah' : undefined;
@@ -219,12 +234,14 @@ export function mapInventory(inventory, media = {}, adjudications = []) {
     const entry = list.find(r => r.sha256);
     if (entry) recordings.push({ kind: entry.kind, ref: entry.ref, sourceId: entry.sourceId, sha256: entry.sha256, ...(Number.isSafeInteger(entry.bytes) ? { bytes: entry.bytes } : {}), mimeType: entry.mimeType ?? 'audio/mpeg' });
   }
-  return { version: 1, recordings, variants, conflicts, deferred, provenance: ordinary,
+  const result = { version: 1, recordings, variants, conflicts, deferred, provenance: ordinary,
     summary: { pages: checked.pages.length, observedRows: ordinary.length + variants.length + deferred.length,
       ordinaryReferences: grouped.size, verifiedOrdinaryReferences: recordings.length,
       torah: recordings.filter(r => r.kind === 'torah').length, haftarah: recordings.filter(r => r.kind === 'haftarah').length,
       variantRows: variants.length, conflictedRows: conflicts.length, crossReferenceSourceIds: new Set(sourceCollisions.map(r => r.sourceId)).size,
       crossReferenceAudioHashes: new Set(sourceCollisions.filter(r => r.sha256 && hashRefs.get(r.sha256)?.size > 1).map(r => r.sha256)).size, deferredRows: deferred.length } };
+  corroborateDeferredIdentities(result, media, decisions);
+  return result;
 }
 
 export async function generateManifest(directory) {
@@ -239,6 +256,9 @@ export async function generateManifest(directory) {
     if (parsed?.verses.length === 1 && parsed.verses[0] === entry.ref) return true;
     result.deferred.push({ category: 'source-conflict', pageUrl: result.provenance.find(p => p.ref === entry.ref)?.pageUrl, pageTitle: 'Reference held', rowLabel: entry.ref, sources: [`https://images.shulcloud.com/14396/${entry.sourceId}.mp3`], reason: 'App canonicalReadingRef rejects the source reference' }); return false;
   });
+  // A syntactically plausible ordinary proposal may have failed the portal's
+  // actual corpus bounds. It cannot corroborate a public corrected title.
+  corroborateDeferredIdentities(result, checkpoint.media, new Map(adjudication.records.map(row => [row.sourceId, row])));
   Object.assign(result.summary, { verifiedOrdinaryReferences: result.recordings.length, torah: result.recordings.filter(r => r.kind === 'torah').length, haftarah: result.recordings.filter(r => r.kind === 'haftarah').length, deferredRows: result.deferred.length });
   const items = [...result.variants, ...result.conflicts.map(r => ({ ...r, category: 'source-conflict' })), ...result.deferred].map(row => {
     const sources = row.sources ?? [`https://images.shulcloud.com/14396/${row.sourceId}.mp3`];

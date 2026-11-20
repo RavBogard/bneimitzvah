@@ -23,6 +23,13 @@ async function fixture() {
 }
 const request = (ref: string) => new Request(`http://localhost/api/shermet-audio?${new URLSearchParams({ ref })}`);
 describe("operator configured Shermet recordings", () => {
+  it("keeps requested availability order and removes duplicate refs", async () => {
+    const f = await fixture();
+    await f.catalog([f.entry, { ...f.entry, ref: "Genesis 1:2" }]);
+    const query = new URLSearchParams();
+    for (const ref of ["Genesis 1:2", "Genesis 1:1", "Genesis 1:2", "Genesis 1:3"]) query.append("ref", ref);
+    expect(await (await f.api.catalog(new Request(`http://localhost/catalog?${query}`))).json()).toEqual({ refs: ["Genesis 1:2", "Genesis 1:1"] });
+  });
   it("limits public metadata to CRC and keeps local-only extras out of production and forks", async () => {
     const f = await fixture();
     // A local-only reference must stay outside the public pilot as it grows.
