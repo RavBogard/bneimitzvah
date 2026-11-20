@@ -13,6 +13,7 @@
 .actions > :global(.button-start) { display: inline-flex; align-items: center; justify-content: center; color: #fff; text-decoration: none; }
 .actions > :global(.button-start):hover { color: #fff; }
 .actions > :global(.button-hero-secondary) { justify-content: center; min-width: 7rem; }
+.actions > :global(.button-start), .actions > :global(.button-hero-secondary) { text-align: center; }
 
 /* Find a reading sits under the hero's buttons; its chips hold their row while the calendar arrives. */
 .find { margin-bottom: 2.5rem; }
@@ -53,8 +54,8 @@
   .find { margin-bottom: 2rem; }
   .parashah { font-size: clamp(2.5rem, 12vw, 3.25rem); }
   .actions { margin-top: 1.25rem; }
-  /* Lein and Study share one row on a phone so the Beit Mitzvah sign-in stays near the top. */
-  .actions > :global(.button-start), .actions > :global(.button-hero-secondary) { flex: 1 1 0; min-width: 0; padding-inline: 1rem; }
+  /* Keep both labels on one line when they fit side by side; wrap the actions as units on narrower screens. */
+  .actions > :global(.button-start), .actions > :global(.button-hero-secondary) { flex: 1 1 auto; min-width: 0; max-width: 100%; padding-inline: 1rem; }
   .doors { gap: 1rem; }
   .door { padding: 1.25rem 1rem 1.5rem; }
   .doorAction { width: 100%; }

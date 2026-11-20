@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode, type Ref } from "react";
 import { addDays, congregationToday, isSaturday, thisShabbat } from "../../../lib/readings/public-shabbat";
 import { fetchPublicWeek, type PublicWeek } from "../public-reading/api";
 import { readAddress } from "../public-reading/urls";
@@ -60,22 +60,25 @@ const FALLBACK_TITLE = "This week’s reading";
 export type ThisWeekState = Readonly<{ date: string | null; status: "loading" } | { date: string; status: "ready"; week: PublicWeek } | { date: string | null; status: "failed" }> & Readonly<{ next?: boolean }>;
 
 /** This Shabbat at display scale. Lein and Study always work, whatever the reading call did. */
-export function ThisWeekView({ state, quiet = false }: { state: ThisWeekState;
-  /** A student's own reading leads the page (student gaps A4): Lein is then a white pill, so the page keeps one lake pill, the student's next step. */ quiet?: boolean }) {
+export function ThisWeekView({ state, quiet = false, label, titleRef, actions }: { state: ThisWeekState;
+  /** A student's own reading leads the page (student gaps A4): Lein is then a white pill, so the page keeps one lake pill, the student's next step. */
+  quiet?: boolean;
+  /** Preview supplies its own label and navigation within the sample. */
+  label?: string; titleRef?: Ref<HTMLHeadingElement>; actions?: ReactNode }) {
   const week = state.status === "ready" ? state.week : null, loading = state.status === "loading";
   return <section className={styles.week} data-testid="this-week" data-week-state={state.status === "loading" ? "pending" : state.status} data-week-which={state.next ? "next" : "this"} aria-labelledby="this-week-title" aria-busy={loading}>
-    <p className={styles.eyebrow}>{state.next ? "Next Shabbat" : "This Shabbat"}</p>
-    <h1 id="this-week-title" className={styles.parashah}>
+    <p className={styles.eyebrow}>{label ?? (state.next ? "Next Shabbat" : "This Shabbat")}</p>
+    <h1 id="this-week-title" ref={titleRef} tabIndex={titleRef ? -1 : undefined} className={styles.parashah}>
       {loading ? <><span className="sr-only">{FALLBACK_TITLE}</span><span className={styles.skeleton} aria-hidden="true" data-skeleton /></> : week?.parashah ?? FALLBACK_TITLE}
     </h1>
     {state.date && <p className={styles.meta} data-testid="week-ranges"><time dateTime={state.date}>{longDate(state.date)}</time>
       {week?.torah && <> · Torah <bdi dir="ltr">{displayRange(week.torah.ranges)}</bdi></>}
       {week?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(week.haftarah.ranges)}</bdi></>}</p>}
-    <div className={styles.actions}>
+    <div className={styles.actions}>{actions ?? <>
       <a className={quiet ? "button-hero-secondary" : "button-start"} href={state.next && state.date ? readAddress({ mode: "week", date: state.date, kind: null }) : "/read"}>Practice a reading</a>
       <a className="button-hero-secondary" href={state.next && state.date ? readAddress({ mode: "week", date: state.date, kind: null }, { study: true }) : "/read?lens=study"}>Study Torah</a>
       {state.next && <a className="button-hero-secondary" data-testid="this-shabbat-link" href="/read">This Shabbat</a>}
-    </div>
+    </>}</div>
   </section>;
 }
 
@@ -95,7 +98,7 @@ function ThisWeek({ quiet = false }: { quiet?: boolean }) {
 }
 
 const DOOR_LINE = "For students, families and tutors preparing a Beit Mitzvah.";
-const SIGNED_OUT_LINE = "Save the readings you’re working on, mark verses, keep notes. Beit Mitzvah students and families find their assigned reading and tutor here too.";
+export const SIGNED_OUT_LINE = "Save the readings you’re working on, mark verses, keep notes. Beit Mitzvah students and families find their assigned reading and tutor here too.";
 
 /**
  * The "Your readings" door. Signed out: Sign in and How accounts work (the form lives on /sign-in alone). Signed in: the door of
