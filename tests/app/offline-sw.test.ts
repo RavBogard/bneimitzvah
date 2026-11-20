@@ -3,7 +3,7 @@ import vm from "node:vm";
 import { workerSource } from "../../src/lib/offline/worker-source";
 import { CLIP_PATH, DAY_MS, INDEX_KEY, OFFLINE_CACHE, OFFLINE_HEADER, PACK_DATA_PATH, SHELL_LIMITS, SKEW_MS, STATIC_PATH, TORAH_ORIGIN, BEIT_MITZVAH_ORIGIN, WINDOW_MS, workerPolicy } from "../../src/lib/offline/policy";
 import { HUMAN_TRACKS, offlineHumanTrackAvailable, offlineHumanTrackPath } from "../../src/lib/reference-audio/human-tracks";
-import { HUMAN_TRACK_CACHE, HUMAN_TRACK_EXPIRY } from "../../src/lib/reference-audio/human-track-offline";
+import { HUMAN_TRACK_CACHE, HUMAN_TRACK_DOWNLOAD, HUMAN_TRACK_EXPIRY } from "../../src/lib/reference-audio/human-track-offline";
 import { SHELL_PAGES } from "../../src/lib/offline/shell";
 
 // The service worker in node:vm with a fake self, caches and fetch (1.5 plan §6.1). Synthetic bodies only.
@@ -364,7 +364,8 @@ test("only exact current catalog copies are available offline, with expiration a
   expect(part?.status).toBe(206);
   expect(part?.headers.get("content-range")).toBe("bytes 1-2/4");
   expect([...new Uint8Array(await part!.arrayBuffer())]).toEqual([2, 3]);
-  expect((await w.request(path, { cache: "reload" }))?.status).toBe(503);
+  expect((await w.request(path, { cache: "reload" }))?.status).toBe(200);
+  expect((await w.request(path, { headers: { [HUMAN_TRACK_DOWNLOAD]: "1" } }))?.status).toBe(503);
   await cache.put(path, media(Date.now() - 1));
   expect((await w.request(path))?.status).toBe(503);
   expect(await cache.match(path)).toBeUndefined();

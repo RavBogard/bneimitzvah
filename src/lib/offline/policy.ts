@@ -1,5 +1,5 @@
 import { HUMAN_TRACKS, offlineHumanTrackAvailable, offlineHumanTrackPath } from "../reference-audio/human-tracks";
-import { HUMAN_TRACK_CACHE, HUMAN_TRACK_EXPIRY } from "../reference-audio/human-track-offline";
+import { HUMAN_TRACK_CACHE, HUMAN_TRACK_DOWNLOAD, HUMAN_TRACK_EXPIRY } from "../reference-audio/human-track-offline";
 import { canonicalReadingRef } from "../readings/reading-ref";
 import { SHERMET_SERVICE_ITEMS } from "../reference-audio/shermet-library";
 /**
@@ -223,7 +223,7 @@ export function workerPolicy(input: { build: string; enabled: boolean; shellPage
     shellPages: Object.freeze([...input.shellPages]), shellAssets: [MANIFEST_PATH], shellLimits: SHELL_LIMITS, manifestPath: MANIFEST_PATH,
     staticPath: STATIC_PATH.source, staticUnsafe: STATIC_UNSAFE.source, clipPath: CLIP_PATH.source, packDataPath: PACK_DATA_PATH.source, ownerKey: OWNER_KEY.source,
     ownerOnlyPath: OWNER_ONLY_PATH.source,
-    humanTrackCache: HUMAN_TRACK_CACHE, humanTrackExpiry: HUMAN_TRACK_EXPIRY,
+    humanTrackCache: HUMAN_TRACK_CACHE, humanTrackDownload: HUMAN_TRACK_DOWNLOAD, humanTrackExpiry: HUMAN_TRACK_EXPIRY,
     humanTracks: HUMAN_TRACKS.filter(offlineHumanTrackAvailable).map(offlineHumanTrackPath),
     shermetAudioPath: "^/api/shermet-audio$", shermetDataPath: "^/api/shermet-audio/(?:catalog|timing)$",
     shermetLibraryIds: Object.values(SHERMET_SERVICE_ITEMS),

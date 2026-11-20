@@ -172,7 +172,7 @@ async function rangedAudio(request, hit) {
   return new Response(body.slice(start, end + 1), { status: 206, headers });
 }
 async function humanTrackClip(request, url) {
-  if (request.cache !== "reload" && await caches.has(POLICY.humanTrackCache)) {
+  if (request.headers.get(POLICY.humanTrackDownload) !== "1" && await caches.has(POLICY.humanTrackCache)) {
     const cache = await caches.open(POLICY.humanTrackCache), hit = await cache.match(url.href);
     if (hit && hit.status === 200) {
       const expires = Number(hit.headers.get(POLICY.humanTrackExpiry));

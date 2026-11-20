@@ -2,6 +2,7 @@ import { offlineHumanTrackAvailable, offlineHumanTrackPath, type HumanTrack } fr
 import { shortAudioDigest } from "./short-playback";
 
 export const HUMAN_TRACK_CACHE = "crc-human-recordings-v1";
+export const HUMAN_TRACK_DOWNLOAD = "x-crc-recording-download";
 export const HUMAN_TRACK_EXPIRY = "x-crc-recording-expires";
 export const HUMAN_TRACK_SAVE_CHANGE = "crc-human-recording-save-change";
 const SAVE_WINDOW_MS = 14 * 86_400_000;
@@ -62,7 +63,7 @@ export async function saveHumanTrack(track: HumanTrack, signal: AbortSignal) {
       else if (key.url !== url) used += Number(record.headers.get("content-length")) || 0;
     }
     if (used + track.bytes > SAVE_BUDGET_BYTES) throw new Error("Not enough space");
-    const response = await fetch(url, { credentials: "omit", mode: "same-origin", redirect: "error", cache: "reload", signal });
+    const response = await fetch(url, { credentials: "omit", mode: "same-origin", redirect: "error", cache: "reload", headers: { [HUMAN_TRACK_DOWNLOAD]: "1" }, signal });
     if (response.status !== 200 || response.url !== url || response.headers.get("content-type") !== "audio/mpeg") {
       void response.body?.cancel().catch(() => {});
       throw new Error("Recording unavailable");
