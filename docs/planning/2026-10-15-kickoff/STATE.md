@@ -11,6 +11,8 @@ Updated 2026-11-17. This file is replaced, not appended: it says where the work 
 
 ## In progress
 
+- **Cantor Wendy Shermet recordings, November 20:** Daniel confirmed public streaming on CRC and shared links. Nine full verses were matched, hashed and decoded off-repo, covering Exodus 35:1–6 and Micah 7:18–20. [Plan and source evidence](../2026-11-20-shermet-recordings/PLAN.md). Next coverage work starts with Omaha's verse inventory and performance-specific word timing.
+
 - **Guide release and hold on the Guides page:** built, reviewed twice (adversarial, then a delta pass) and green in CI on the branch `claude/guides-web-release`. It waits for Daniel to apply migration 0058 to production: steps in `docs/planning/2026-11-17-guides-web-release/APPLY.md` on that branch. Then the branch is brought up to main (the migration file byte-identical), CI is run again, and main is fast-forwarded.
 - **Study guides:** every catalog key has a published base guide, origin claude, not yet reviewed. Daniel marks guides reviewed as he reads them. The ones flagged as sensitive for his read: yom-kippur-mincha (Lev 18), achrei-mot, i-samuel-15 (Zachor), ezekiel-37, nasso, behar. Plan: `docs/superpowers/plans/2026-10-28-replacing-the-study-guide-booklet.md`.
 - **Another congregation's own copy:** `DEPLOYING.md` and the fork identity work are merged; the Cowork starter prompt for that congregation's rabbi is ready, and Daniel sends it himself. Plan: `docs/planning/2026-10-30-second-congregation-copy/PLAN.md`.

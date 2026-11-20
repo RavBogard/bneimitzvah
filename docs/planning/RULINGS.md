@@ -51,7 +51,7 @@ Source keys:
 
 - G3: no student hears generated chant until Daniel passes the listening review: at least 95% of review verses on melody and zero "would teach wrong", after G1 (notes within ±50 cents) and G2 (technical checks). No code path serves an unreleased render. 2026-10-15. M ruling 17; C "G3 gate".
 - G3 covers generated chant only. Human recordings play for everyone, signed-out visitors included, with no listening review; bad cuts are fixed as found. 2026-10-22. M "Amended 2026-10-22 (show rather than hide)".
-- The portal plays PocketTorah only. Cantor Finkel's recordings are not played; his licensed, unrestricted package is the source material for the voice work. 2026-10-22. M "Amended 2026-10-22, later". Replaces the Finkel playback of 2026-10-22 earlier.
+- PocketTorah remains the main reference recording. Daniel authorized Cantor Wendy Shermet as a second human recording for CRC, including public streaming and shared reading links, on 2026-11-20. Cantor Finkel's licensed package remains source material for future voice work. [Shermet decision and plan](2026-11-20-shermet-recordings/PLAN.md). For Finkel see M "Amended 2026-10-22, later".
 - The 168 Finkel objects stay in the private Blob store; no deletion without Daniel. 2026-10-22. S "Current return point, 2026-10-21 night" (rulings 10 and the Finkel cut).
 - Once G3 passes, generated chant fills verses with no human recording (human recordings first) and plays for everyone, signed-out visitors included. 2026-10-22. M "Amended 2026-10-22"; S 1.5 rulings (5).
 - Generated chant per trope system, each after its own blind review, with a recording by Daniel or a song leader as fallback; four ranges (bass, tenor, alto, soprano). 2026-10-23 and 2026-10-16. M D-5; PR 58.

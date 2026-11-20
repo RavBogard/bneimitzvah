@@ -1,5 +1,7 @@
 # Beit Mitzvah Portal — mission brief
 
+**Amended 2026-11-20, Cantor Wendy Shermet:** Daniel authorized integration of Shermet's human Torah and haftarah recordings and confirmed permission for CRC public streaming and shared reading links. This amends the PocketTorah-only playback decision. The first release covers two passages. The grant is scoped to CRC. [Implementation plan](../2026-11-20-shermet-recordings/PLAN.md).
+
 Filed 2026-10-15 from the kickoff interview in Cowork. This is the authority document for the project until a spec supersedes a section of it; a spec that changes a ruling here says so with a dated "Amended" note. Daniel's words are binding; everything else is Claude's read, approved by him in three rounds on 2026-10-15.
 
 **Amended 2026-10-16:** Daniel's later rulings 27–59 in [PLAN-REVIEW.md](../2026-10-16-review/PLAN-REVIEW.md#1-rulings-from-this-session-daniel-binding-2026-10-16) are folded in below. Original numbering and dated decisions are retained; that review preserves the earlier wording and interview record. Its section 3 mechanisms remain proposals, subject to Astra's integration corrections and bounded design review. These requirements do not claim completed implementation.
