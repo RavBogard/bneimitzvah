@@ -7,6 +7,7 @@ import type { StudyKind, StudyPage, StudyVerse } from "../workspace/study/api";
 import { FlowingStudyText } from "../workspace/study/annotations";
 import { StudyCredits } from "../workspace/study/credits";
 import { ReadingPlayer, playMainVerseForWord, type ReadingPlayerHandle } from "../workspace/study/reading-player";
+import { useShermetRecordings } from "../workspace/study/use-shermet-recordings";
 import type { ReadingSelection } from "../workspace/study/main-playback";
 import { WordTools, type WordToolsHandle } from "../workspace/study/word-tools";
 import { LiftedLine } from "../workspace/study/lift";
@@ -399,8 +400,9 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   /** The parashah's approved summary (1.9 N7), shown atop Study on the Torah; and whether its outline lines go to the page's sections (the full portion's aliyot, not the triennial reading's). */
   summary?: ApprovedPortionSummary | null; summaryJump?: boolean;
 }) {
-  const source = (sources[index] ?? sources[0]).source, passage = source.passage, kind = passage.kind, listening = source.listening, key = selectorKey(source.selector);
+  const source = (sources[index] ?? sources[0]).source, passage = source.passage, kind = passage.kind, key = selectorKey(source.selector);
   const allVerses = useMemo(() => { try { return expandReadingRanges(passage.ranges, kind, TANAKH_VERSE_COUNTS); } catch { return []; } }, [passage, kind]);
+  const shermetRefs = useShermetRecordings(allVerses), listening = source.listening || shermetRefs.size > 0;
   const choice = useVerseChoice(choose, allVerses, kind), more = useMore(), chapters = useMemo(() => readingChapters(allVerses), [allVerses]);
   const linkedIndex = verse !== null && verse <= passage.verseCount ? verse - 1 : null;
   // What a text page is: one section when the calendar gives aliyot (the text flows inside it), else one of the server's pages.

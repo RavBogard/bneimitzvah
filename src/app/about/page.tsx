@@ -60,7 +60,8 @@ export default function AboutPage() {
         </li>)}</ul>
         <h3>Recordings</h3>
         <p><a href="https://archive.org/details/PockettorahAudioFiles" {...external}>{REFERENCE_ATTRIBUTION.title}</a> · {REFERENCE_ATTRIBUTION.creator} · <a href={REFERENCE_ATTRIBUTION.licenseUrl} {...external}>{REFERENCE_ATTRIBUTION.license}</a> · {REFERENCE_ATTRIBUTION.changes}</p>
-        <p>The melodies are the Standard Reform cantillation of Binder and Avery.</p>
+        <p>PocketTorah uses the Standard Reform cantillation of Binder and Avery.</p>
+        {identity.crc && <p>Selected verses also offer human recordings by <a href="https://www.templeisraelomaha.com/cantors-classroom" {...external}>Cantor Wendy Shermet, Temple Israel, Omaha</a>, using the Binder/Schleifer tradition. These recordings retain their own permissions; the PocketTorah license does not apply. Word timing is not available for these recordings.</p>}
         <h3>Fonts</h3>
         <ul className={styles.credits}>{fonts.map(font => <li key={font.name}><strong>{font.name}</strong><span>{font.notice}, <a href={font.href}>{font.license}</a>.</span></li>)}</ul>
       </section>
