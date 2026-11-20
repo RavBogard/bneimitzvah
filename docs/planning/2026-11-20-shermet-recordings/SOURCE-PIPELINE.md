@@ -6,7 +6,7 @@ November 20, 2026. All source audio, source text, ASR, models and acquisition re
 
 - The collection is frozen under `C:/Users/dsbog/beitmitzvah-media/shermet-collection`. The 247 pages yielded 8,326 rows, 8,154 distinct URLs and 8,153 decodable recordings. Source 416380, labeled Numbers 1:1, returned zero bytes. The browser receiver and downloader have finished.
 - `inventory.json`, `inventory-receipts.jsonl` and `acquisition.json` retain the page hierarchy, original labels, byte hashes, stream details and full-decode outcomes. The local coverage report lists every full-verse gap in CRC’s baseline.
-- The GPU workspace is `C:/private/shermet-alignment`. The primary pass writes `collection-candidates`. A separate pass writes `word-rescues` for eligible holds. Run one large model on the GPU at a time if concurrent processes contend for device memory. Each pass resumes from the recording-specific checkpoints. The 110 distinct curriculum references have priority.
+- The GPU workspace is `C:/private/shermet-alignment`. The primary pass writes `collection-candidates`. A separate pass writes `word-rescues` for eligible holds. Run one large model on the GPU at a time if concurrent processes contend for device memory. Each pass resumes from the recording-specific checkpoints. Both passes completed on November 20 and the workers exited. The release contains 2,118 primary and 2,668 secondary qualifications. The 110 distinct curriculum references received priority.
 - The final ordinary manifest has 7,434 verses. Exact word projections are available for 7,433. II Kings 5:18 contains unsupported source markup. Extra untimed target packs and their checks are described below.
 
 Compact progress:

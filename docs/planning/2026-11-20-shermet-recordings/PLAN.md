@@ -31,3 +31,9 @@ The remaining 119 ordinary verse recordings fall outside the weekly and festival
 ## Playback pace
 
 Daniel selected a faster teaching pace on November 20 after hearing the live recordings. The displayed 1× plays Cantor Shermet at 125% of the recorded tempo, with pitch preserved. Relative rates 0.5×, 0.75× and 1.25× play at 62.5%, 93.75% and 156.25% of the original. Reader highlights and clip boundaries follow the recording’s media clock. The same convention applies to the library, prayer lessons, Learn examples and offline practice. PocketTorah uses its own natural tempo.
+
+## Completed word-timing pass
+
+Every one of the 7,434 ordinary verse recordings was evaluated. The primary alignment qualified 2,118 verses. The independent word-boundary pass qualified another 2,668. The release contains 4,786 timed verses (61,262 words), including 3,770 Torah and 941 haftarah verses within CRC’s 7,475-verse baseline. Every timing was checked against its source digest, normalized Hebrew text digest, word count, and ordered media-clock intervals. The other 2,648 recordings support whole-verse practice. Across the 110 course references, all have complete recordings and 72 have qualified word timings.
+
+Production verification on CRC’s canonical site covered signed-out first-tap playback for Torah and haftarah, a word clip in Numbers 6:26, the blessing before Torah, byte ranges, and a full hash match for the 7,327,802-byte WAV recording. An installed phone test saved a hash-bound recording, then played it with the network off at the faster default.
