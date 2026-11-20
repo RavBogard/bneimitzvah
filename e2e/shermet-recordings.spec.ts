@@ -11,11 +11,17 @@ function syntheticAudio() {
 }
 
 for (const [kind, ref] of [['torah', 'Exodus 35:1'], ['haftarah', 'Micah 7:18']] as const) {
-  test(`public ${kind} Shermet source switches, plays and repeats without PocketTorah`, async ({ page }) => {
+  test(`public ${kind} uses Shermet on the first tap, repeats and switches recordings`, async ({ page }) => {
     // Existing arbitrary-ref reader fixture deliberately reports PocketTorah unavailable.
     await mockVayera(page, { mode: 'none' }, { haftarah: true });
     const audio = syntheticAudio(), requested: string[] = [];
-    await page.route('**/api/shermet-audio/catalog', route => route.fulfill({ json: { refs: [ref] } }));
+    let releaseCatalog!: () => void;
+    const catalogGate = new Promise<void>(resolve => { releaseCatalog = resolve; });
+    await page.route('**/api/shermet-audio/catalog', async route => {
+      await catalogGate;
+      await route.fulfill({ json: { refs: [ref] } });
+    });
+    await page.route('**/api/shermet-audio/timing?*', route => route.fulfill({ status: 404 }));
     await page.route('**/api/shermet-audio?*', route => {
       requested.push(new URL(route.request().url()).searchParams.get('ref')!);
       return route.fulfill({ contentType: 'audio/wav', body: audio });
@@ -34,13 +40,15 @@ for (const [kind, ref] of [['torah', 'Exodus 35:1'], ['haftarah', 'Micah 7:18']]
     await expect(row).toBeVisible();
     const player = page.getByRole('region', { name: 'Reading playback', exact: true });
     const source = player.getByRole('combobox', { name: 'Recording', exact: true });
-    await expect(source).toBeVisible();
     expect(requested).toEqual([]); // Metadata discovery must not prefetch a human recording.
-    await source.selectOption('shermet');
     await row.locator('[data-word-index="0"]').first().click();
+    releaseCatalog();
+    await expect(source).toHaveValue('shermet');
     await expect(player.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
     await expect(player.getByTestId('player-selection')).toHaveAttribute('data-selected-ref', ref);
-    await expect(player.getByRole('combobox', { name: 'Practice', exact: true }).locator('option')).toHaveCount(1);
+    await expect(player.getByRole('combobox', { name: 'Practice', exact: true })).toHaveValue('verse');
+    await player.getByText('Recording credit', { exact: true }).click();
+    await expect(player.getByRole('link', { name: /Cantor Wendy Shermet.*Temple Israel, Omaha/ })).toBeVisible();
     const repeat = player.getByRole('button', { name: 'Repeat', exact: true });
     await repeat.click(); await expect(repeat).toHaveAttribute('aria-pressed', 'true');
     const before = await page.evaluate(() => (window as unknown as { shermetPlays: number }).shermetPlays);
