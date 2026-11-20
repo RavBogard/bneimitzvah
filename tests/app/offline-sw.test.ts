@@ -2,6 +2,8 @@ import { describe, expect, test, vi } from "vitest";
 import vm from "node:vm";
 import { workerSource } from "../../src/lib/offline/worker-source";
 import { CLIP_PATH, DAY_MS, INDEX_KEY, OFFLINE_CACHE, OFFLINE_HEADER, PACK_DATA_PATH, SHELL_LIMITS, SKEW_MS, STATIC_PATH, TORAH_ORIGIN, BEIT_MITZVAH_ORIGIN, WINDOW_MS, workerPolicy } from "../../src/lib/offline/policy";
+import { HUMAN_TRACKS, offlineHumanTrackAvailable, offlineHumanTrackPath } from "../../src/lib/reference-audio/human-tracks";
+import { HUMAN_TRACK_CACHE, HUMAN_TRACK_EXPIRY } from "../../src/lib/reference-audio/human-track-offline";
 import { SHELL_PAGES } from "../../src/lib/offline/shell";
 
 // The service worker in node:vm with a fake self, caches and fetch (1.5 plan §6.1). Synthetic bodies only.
@@ -329,4 +331,28 @@ describe("N24: the beitmitzvah origin (decision 14) works exactly like torah", (
     await (await other.caches.open(OFFLINE_CACHE)).put(INDEX_KEY, new Response(JSON.stringify({ format: 1, owner: B, packs: [ownPack(A)] }), { headers: { "content-type": "application/json" } }));
     await expect(other.request(REF)).rejects.toThrow();
   });
+});
+
+
+test("only exact current catalog copies are available offline, with expiration and Range support", async () => {
+  const track = HUMAN_TRACKS.find(offlineHumanTrackAvailable);
+  expect(track).toBeDefined();
+  const path = offlineHumanTrackPath(track!);
+  const w = await load({ fetch: async () => new Response(null, { status: 503 }) });
+  const cache = await w.caches.open(HUMAN_TRACK_CACHE);
+  const media = (expires: number) => new Response(new Uint8Array([1, 2, 3, 4]), {
+    headers: { "content-type": "audio/mpeg", "content-length": "4", [HUMAN_TRACK_EXPIRY]: String(expires) },
+  });
+  await cache.put(path, media(Date.now() + WINDOW_MS));
+  const retired = path.replace(/=[a-f0-9]{64}$/, "=" + "4".repeat(64));
+  await cache.put(retired, media(Date.now() + WINDOW_MS));
+  expect(await w.request(retired)).toBeNull();
+  const part = await w.request(path, { headers: { range: "bytes=1-2" } });
+  expect(part?.status).toBe(206);
+  expect(part?.headers.get("content-range")).toBe("bytes 1-2/4");
+  expect([...new Uint8Array(await part!.arrayBuffer())]).toEqual([2, 3]);
+  expect((await w.request(path, { cache: "reload" }))?.status).toBe(503);
+  await cache.put(path, media(Date.now() - 1));
+  expect((await w.request(path))?.status).toBe(503);
+  expect(await cache.match(path)).toBeUndefined();
 });

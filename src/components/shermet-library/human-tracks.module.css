@@ -1,0 +1,9 @@
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-block: 0.5rem; }
+.actions button { min-height: 44px; }
+.transport audio { display: block; width: min(100%, 28rem); margin-block: .5rem; }
+.transport audio[hidden] { display: none; }
+.details { margin-block: 1rem .5rem; }
+.details summary { min-height: 44px; display: list-item; align-content: center; color: var(--lake-deep); cursor: pointer; }
+.details p { margin-block: .35rem; }
+.field { display: grid; max-width: 35rem; min-width: 0; gap: .25rem; margin-block: .5rem; }
+.field select { min-height: 44px; width: 100%; }

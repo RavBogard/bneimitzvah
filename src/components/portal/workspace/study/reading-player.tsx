@@ -11,6 +11,9 @@ import type { StudyVerse } from "./api";
 import { createReadingPlayerIntent, readingAudioCurrent, readingPlayerPreview, createReadingPlayerTarget } from "./reading-player-intent";
 import type { ReadingAudioSlot, createReadingAudioCoordinator } from "./reading-audio-coordinator";
 import styles from "./reading-player.module.css";
+import { useIdentity } from "../../../site/identity-context";
+import { humanTracksForVerses } from "../../../../lib/reference-audio/human-tracks";
+import { ReadingCollectionPlayback } from "../../../shermet-library/reading-collection";
 const recordingPreferences = new WeakMap<ReturnType<typeof createReadingAudioCoordinator>, "pockettorah" | "shermet">();
 const speedPreferences = new WeakMap<ReturnType<typeof createReadingAudioCoordinator>, { shermet: number; pockettorah: number }>();
 export type ReadingPlayerHandle = { select(index: number, selection?: ReadingSelection): void; pause(): void; suspend(): void };
@@ -37,6 +40,8 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
   const [sourcePreview, setSourcePreview] = useState<number | null>(null);
   const verseRefs = useMemo(() => verses.map(verse => verse.ref), [verses]);
   const shermetRefs = useShermetRecordings(verseRefs);
+  const crc = useIdentity().crc;
+  const collectionTracks = useMemo(() => crc && audio?.slot !== "lifted" ? humanTracksForVerses(verseRefs) : [], [crc, audio?.slot, verseRefs]);
   const timed = useMemo(() => createShermetTimedAudio(), [scopeKey, verses]);
   useEffect(() => {
     setRecording(audio ? recordingPreferences.get(audio.coordinator) ?? "shermet" : "shermet");
@@ -101,5 +106,6 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
     <p role="status" className={styles.message}>{message}</p>
     {ready && !playback?.speedSupported && <p className={styles.message}>Pitch-preserving speed control isn’t available in this browser.{state?.source === "shermet" && " Playing at the original recorded tempo."}</p>}
     <details className={styles.credit}><summary>Recording credit</summary>{state?.source === "shermet" ? <p><a href="https://www.templeisraelomaha.com/cantors-classroom" target="_blank" rel="noreferrer">Cantor Wendy Shermet · Temple Israel, Omaha</a> · Human recording</p> : <p><a href="https://archive.org/details/PockettorahAudioFiles" target="_blank" rel="noreferrer">{SHORT_SOURCE_ATTRIBUTION.title}</a> · {SHORT_SOURCE_ATTRIBUTION.creator} · <a href={SHORT_SOURCE_ATTRIBUTION.licenseUrl} target="_blank" rel="noreferrer">{SHORT_SOURCE_ATTRIBUTION.license}</a> · {SHORT_SOURCE_ATTRIBUTION.changes}</p>}</details></div>
+    {audio && <ReadingCollectionPlayback tracks={collectionTracks} verseRef={selected?.ref} coordinator={audio.coordinator} enabled={active && enabled} expiresAt={expiresAt} />}
   </section>;
 }

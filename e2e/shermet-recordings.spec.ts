@@ -148,3 +148,44 @@ test('Learn speed menus play Shermet faster and slower without completing practi
   await page.reload(); await hear.click(); await expect(hear).toHaveAttribute('data-state', 'playing');
   await expect.poll(nativeRate).toBe(1);
 });
+
+test("the public reader plays a full collection track on demand and returns to Wendy for a word tap", async ({ page }) => {
+  const ref = "Exodus 35:1";
+  await mockVayera(page, { mode: "none" });
+  await page.route("**/api/shermet-audio/catalog", route => route.fulfill({ json: { refs: [ref] } }));
+  await page.route("**/api/shermet-audio?*", route => route.fulfill({ contentType: "audio/wav", body: syntheticAudio() }));
+  await page.route("https://karaites.org/uploads/**", route => route.fulfill({ contentType: "audio/wav", body: syntheticAudio() }));
+  await page.goto("/read?" + new URLSearchParams({ ref, kind: "torah" }));
+  const reader = page.getByRole("region", { name: "Reading playback", exact: true });
+  const wendy = reader.getByRole("combobox", { name: "Recording", exact: true });
+  await expect(wendy).toHaveValue("shermet");
+  await reader.getByText("Other recorded readings", { exact: true }).click();
+  await reader.getByRole("combobox", { name: "Full reading recording" }).selectOption("karaite-vayakhel-torah");
+  await expect(reader.getByRole("link", { name: "Hazan Rotem Cohen" })).toBeVisible();
+  await expect(reader.getByRole("button", { name: /excerpt/ })).toHaveCount(0);
+  const start = reader.getByRole("button", { name: "Play full recording", exact: true });
+  await start.click();
+  await expect(reader.getByRole("button", { name: "Pause collection recording" })).toBeVisible();
+  await page.locator(`.study-verses [data-verse-ref="${ref}"] [data-word-index="0"]`).first().click();
+  await expect(reader.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  await expect(start).toBeVisible();
+  await expect(wendy).toHaveValue("shermet");
+  await expect(reader.getByTestId("player-selection")).toHaveAttribute("data-selected-ref", ref);
+});
+
+test("both added collections are separately browsable and filterable", async ({ page }) => {
+  await page.goto("/recordings");
+  const collection = page.getByRole("combobox", { name: "Collection", exact: true });
+  await expect(collection).toHaveValue("shermet");
+  const search = page.getByRole("searchbox", { name: "Search recordings", exact: true });
+  const library = page.getByRole("region", { name: "Recording library", exact: true });
+  await collection.selectOption("rotem-cohen");
+  await page.getByRole("combobox", { name: "Category", exact: true }).selectOption("haftarah");
+  await search.fill("bereshit");
+  await expect(library.getByRole("heading", { name: "Hazan Rotem Cohen" })).toBeVisible();
+  await expect(library.getByRole("button", { name: /Listen to .*Bereshit/i })).toBeVisible();
+  await collection.selectOption("josh-finkel");
+  await search.fill("Esther 7:1");
+  await expect(library.getByRole("heading", { name: "Cantor Josh Finkel" })).toBeVisible();
+  await expect(library.getByRole("button", { name: /Listen to Esther 7:1/ }).first()).toBeVisible();
+});

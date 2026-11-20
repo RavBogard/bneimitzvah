@@ -8,6 +8,7 @@ import { FlowingStudyText } from "../workspace/study/annotations";
 import { StudyCredits } from "../workspace/study/credits";
 import { ReadingPlayer, playMainVerseForWord, type ReadingPlayerHandle } from "../workspace/study/reading-player";
 import { useIdentity } from "../../site/identity-context";
+import { humanTracksForVerses } from "../../../lib/reference-audio/human-tracks";
 import { useShermetRecordingAvailability } from "../workspace/study/use-shermet-recordings";
 import type { ReadingSelection } from "../workspace/study/main-playback";
 import { WordTools, type WordToolsHandle } from "../workspace/study/word-tools";
@@ -407,7 +408,8 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   // player's cancellable availability lookup, including Shermet-only verses.
   // A fork without PocketTorah remains text-only.
   const crc = useIdentity().crc, shermet = useShermetRecordingAvailability(allVerses);
-  const listening = source.listening || crc && (shermet.pending || shermet.refs.size > 0);
+  const hasCollections = useMemo(() => crc && humanTracksForVerses(allVerses).length > 0, [crc, allVerses]);
+  const listening = source.listening || crc && (shermet.pending || shermet.refs.size > 0 || hasCollections);
   const choice = useVerseChoice(choose, allVerses, kind), more = useMore(), chapters = useMemo(() => readingChapters(allVerses), [allVerses]);
   const linkedIndex = verse !== null && verse <= passage.verseCount ? verse - 1 : null;
   // What a text page is: one section when the calendar gives aliyot (the text flows inside it), else one of the server's pages.

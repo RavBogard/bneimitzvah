@@ -1,3 +1,5 @@
+import { HUMAN_TRACKS, offlineHumanTrackAvailable, offlineHumanTrackPath } from "../reference-audio/human-tracks";
+import { HUMAN_TRACK_CACHE, HUMAN_TRACK_EXPIRY } from "../reference-audio/human-track-offline";
 import { canonicalReadingRef } from "../readings/reading-ref";
 import { SHERMET_SERVICE_ITEMS } from "../reference-audio/shermet-library";
 /**
@@ -53,7 +55,7 @@ export const HINT_DISMISSED_KEY = "crc.offline.install-dismissed";
 
 /** Static pages the worker keeps as the app shell; a navigation that fails offline falls back to one of them.
  * The Learn to lein lesson pages join them (shell.ts adds one per lesson). */
-export const SHELL_BASE_PAGES: readonly string[] = Object.freeze(["/read", "/offline", "/learn", "/learn/about", "/learn/review",
+export const SHELL_BASE_PAGES: readonly string[] = Object.freeze(["/read", "/offline", "/recordings", "/learn", "/learn/about", "/learn/review",
   // 2.0 SC6 (A4 10): the service course's home, About, Review and Quick ten; shell.ts adds one page per open lesson.
   "/learn/service", "/learn/service/about", "/learn/service/review", "/learn/service/practice/quick-ten"]);
 /** App code: cache-first into the shell cache. */
@@ -221,6 +223,8 @@ export function workerPolicy(input: { build: string; enabled: boolean; shellPage
     shellPages: Object.freeze([...input.shellPages]), shellAssets: [MANIFEST_PATH], shellLimits: SHELL_LIMITS, manifestPath: MANIFEST_PATH,
     staticPath: STATIC_PATH.source, staticUnsafe: STATIC_UNSAFE.source, clipPath: CLIP_PATH.source, packDataPath: PACK_DATA_PATH.source, ownerKey: OWNER_KEY.source,
     ownerOnlyPath: OWNER_ONLY_PATH.source,
+    humanTrackCache: HUMAN_TRACK_CACHE, humanTrackExpiry: HUMAN_TRACK_EXPIRY,
+    humanTracks: HUMAN_TRACKS.filter(offlineHumanTrackAvailable).map(offlineHumanTrackPath),
     shermetAudioPath: "^/api/shermet-audio$", shermetDataPath: "^/api/shermet-audio/(?:catalog|timing)$",
     shermetLibraryIds: Object.values(SHERMET_SERVICE_ITEMS),
     shermetLibraryLessons: Object.keys(SHERMET_SERVICE_ITEMS),

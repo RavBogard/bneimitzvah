@@ -16,6 +16,7 @@ const PACK_DATA_PATH = new RegExp(POLICY.packDataPath);
 const SHERMET_AUDIO_PATH = new RegExp(POLICY.shermetAudioPath || "^/api/shermet-audio$");
 const SHERMET_DATA_PATH = new RegExp(POLICY.shermetDataPath || "^/api/shermet-audio/(?:catalog|timing)$");
 const OWNER_KEY = new RegExp(POLICY.ownerKey);
+const HUMAN_TRACKS = new Set(POLICY.humanTracks || []);
 /** The CRC siddur's evening text (2.0 SC7): served offline only from a pack of the index's own owner, never from a public pack. */
 const OWNER_ONLY_PATH = typeof POLICY.ownerOnlyPath === "string" && POLICY.ownerOnlyPath ? new RegExp(POLICY.ownerOnlyPath) : /^\/api\/public\/evening-text$/;
 const OWN_ORIGIN = self.location.origin;
@@ -144,11 +145,13 @@ async function clip(request, url) {
  * Range responses are never stored and never bypass the pack index or purge. */
 async function shermetClip(request, url) {
   const hit = await fromPack(url);
-  if (!hit) return fetch(request);
+  return hit ? rangedAudio(request, hit) : fetch(request);
+}
+async function rangedAudio(request, hit) {
   if (request.method === "HEAD") return new Response(null, { status: 200, headers: hit.headers });
   const range = request.headers.has("if-range") ? null : request.headers.get("range");
   if (range === null) return hit;
-  const bytes = new Uint8Array(await hit.arrayBuffer()), length = bytes.length;
+  const body = await hit.blob(), length = body.size;
   const match = /^bytes=(\d*)-(\d*)$/i.exec(range.trim());
   let start = 0, end = length - 1, valid = Boolean(match && length && (match[1] || match[2]));
   if (valid && match[1]) {
@@ -166,7 +169,18 @@ async function shermetClip(request, url) {
     return new Response(null, { status: 416, headers });
   }
   headers.set("content-range", `bytes ${start}-${end}/${length}`); headers.set("content-length", String(end - start + 1));
-  return new Response(bytes.slice(start, end + 1), { status: 206, headers });
+  return new Response(body.slice(start, end + 1), { status: 206, headers });
+}
+async function humanTrackClip(request, url) {
+  if (request.cache !== "reload" && await caches.has(POLICY.humanTrackCache)) {
+    const cache = await caches.open(POLICY.humanTrackCache), hit = await cache.match(url.href);
+    if (hit && hit.status === 200) {
+      const expires = Number(hit.headers.get(POLICY.humanTrackExpiry));
+      if (Date.now() < expires && expires <= Date.now() + POLICY.windowMs + POLICY.skewMs) return rangedAudio(request, hit);
+      await cache.delete(url.href);
+    }
+  }
+  return fetch(request);
 }
 async function packData(request, url) {
   try { return await fetch(request); }
@@ -199,6 +213,7 @@ function onFetch(event) {
   const request = event.request;
   let url;
   try { url = new URL(request.url); } catch { return; }
+  if (url.origin === OWN_ORIGIN && ["GET", "HEAD"].includes(request.method) && HUMAN_TRACKS.has(url.pathname + url.search)) return event.respondWith(humanTrackClip(request, url));
   const libraryMedia = /^\?id=(sr_[a-f0-9]{32})&recording=[a-f0-9]{64}$/.exec(url.search);
   if (url.origin === OWN_ORIGIN && ["GET", "HEAD"].includes(request.method) && url.pathname === "/api/shermet-library/media" && libraryMedia && (POLICY.shermetLibraryIds || []).includes(libraryMedia[1])) return event.respondWith(shermetClip(request, url));
   if (url.origin === OWN_ORIGIN && ["GET", "HEAD"].includes(request.method) && SHERMET_AUDIO_PATH.test(url.pathname) && /^\?ref=[A-Za-z0-9+%.-]{1,100}$/.test(url.search)) return event.respondWith(shermetClip(request, url));
