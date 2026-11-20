@@ -13,7 +13,7 @@ Updated 2026-11-20. This file is replaced, not appended: it says where the work 
 
 ## In progress
 
-- **Tutor and learner follow-up, November 20:** Daniel approved intent-based entry, multi-tutor relationships, and an assigned aliyah Practice view without private tutor panels. Work is isolated on the tutor and learner branch. The Shermet stream owns catalog, timing, and tempo. [Changes and release dependencies](../2026-11-20-tutor-and-learner/PLAN.md).
+- **Tutor and learner follow-up, November 20:** Daniel approved intent-based entry, multi-tutor relationships, and an assigned aliyah Practice view without private tutor panels. The `codex/tutor-and-learner-workflows` build at `c6e36ec9` passed all 15 CI jobs, 14 targeted native-browser checks and a built phone-profile offline playback check. The independent access review passed. Production waits for guide migration 0058 and journal reconciliation before applying 0059–0061. [Changes and release dependencies](../2026-11-20-tutor-and-learner/PLAN.md).
 
 - The local GPU is evaluating the remaining Shermet word timings. Qualified rows will publish through the same review and release checks.
 
