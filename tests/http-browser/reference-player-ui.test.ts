@@ -81,6 +81,9 @@ async function page(mobile = false, who: "admin" | "tutor" = "admin", authentica
   const gate = new Promise<void>(yes => { release = yes; }), started = new Promise<void>(yes => { began = yes; });
   await context.route("**/*", async route => {
     const request = route.request(), url = new URL(request.url());
+    // The native transport matrix is pinned to synthetic PocketTorah media.
+    // New public human-source discovery must not introduce live assets.
+    if (url.origin === BROWSER_ORIGIN && url.pathname === "/api/shermet-audio/catalog") return route.fulfill({ json: { refs: [] } });
     if (url.pathname.endsWith("/reference-audio/short/page")) state.pageRequests++;
     if (url.href === archiveUrl || url.origin === BROWSER_ORIGIN && url.pathname === shortPath) {
       state.requests++; const headers = await request.allHeaders(); state.sawCookie ||= Boolean(headers.cookie); state.sawReferer ||= Boolean(headers.referer);

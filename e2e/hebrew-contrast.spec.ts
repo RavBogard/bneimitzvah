@@ -185,7 +185,11 @@ test("D2: the print sheet sets a maqaf phrase whole (Gen 24:30-36)", async ({ pa
 
 for (const [name, width, height, size] of [["Pixel 7 Standard", 412, 915, "standard"], ["iPhone SE Large", 375, 667, "large"]] as const) {
   test(`D7: no verse number of Gen 18 is left at a line end on ${name}`, async ({ page }) => {
+    // Exercise the real 44px number controls as well as flowing Hebrew,
+    // without consulting a live recording catalog or fetching media.
+    await page.route("**/api/shermet-audio/catalog", route => route.fulfill({ json: { refs: Array.from({ length: 14 }, (_, i) => `Genesis 18:${i + 1}`) } }));
     await open(page, gen18, { width, height, size });
+    await expect(page.locator("button[data-verse-number]")).toHaveCount(14);
     const placed = await page.locator("[data-hebrew-ref]").evaluateAll(cells => cells.flatMap(cell => {
       const number = cell.querySelector("sup, button"), first = cell.querySelector('[data-word-index="0"]');
       if (!number || !first) return [];

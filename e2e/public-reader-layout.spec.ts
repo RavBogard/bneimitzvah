@@ -21,6 +21,9 @@ const LATENCY = 120;
 // The week's calendar divisions, for the pages that show the chips (the Torah's aliyot, 1.9 N3): inside the synthetic week, with the maftir repeating the seventh.
 const ALIYOT = [["1", "Genesis 1:1-2:3"], ["2", "Genesis 2:4-19"], ["3", "Genesis 2:20-3:21"], ["4", "Genesis 3:22-4:18"], ["5", "Genesis 4:19-5:24"], ["6", "Genesis 5:25-6:4"], ["7", "Genesis 6:5-8"], ["M", "Genesis 6:5-8"]];
 async function mock(page: Page, latency = LATENCY, aliyot = false) {
+  // Layout and keyboard tests use synthetic text without source audio. Keep
+  // live Shermet metadata out; first-tap voice discovery is tested separately.
+  await page.route("**/api/shermet-audio/catalog", route => route.fulfill({ json: { refs: [] } }));
   await page.route("**/api/public/**", async route => {
     const url = new URL(route.request().url()), q = url.searchParams;
     await new Promise(resolve => setTimeout(resolve, latency));

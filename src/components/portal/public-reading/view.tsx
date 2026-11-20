@@ -8,6 +8,7 @@ import { FlowingStudyText } from "../workspace/study/annotations";
 import { StudyCredits } from "../workspace/study/credits";
 import { ReadingPlayer, playMainVerseForWord, type ReadingPlayerHandle } from "../workspace/study/reading-player";
 import { useIdentity } from "../../site/identity-context";
+import { useShermetRecordingAvailability } from "../workspace/study/use-shermet-recordings";
 import type { ReadingSelection } from "../workspace/study/main-playback";
 import { WordTools, type WordToolsHandle } from "../workspace/study/word-tools";
 import { LiftedLine } from "../workspace/study/lift";
@@ -405,7 +406,8 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   // Mount CRC's transport before discovery: the first gesture must reach the
   // player's cancellable availability lookup, including Shermet-only verses.
   // A fork without PocketTorah remains text-only.
-  const listening = source.listening || useIdentity().crc;
+  const crc = useIdentity().crc, shermet = useShermetRecordingAvailability(allVerses);
+  const listening = source.listening || crc && (shermet.pending || shermet.refs.size > 0);
   const choice = useVerseChoice(choose, allVerses, kind), more = useMore(), chapters = useMemo(() => readingChapters(allVerses), [allVerses]);
   const linkedIndex = verse !== null && verse <= passage.verseCount ? verse - 1 : null;
   // What a text page is: one section when the calendar gives aliyot (the text flows inside it), else one of the server's pages.
@@ -572,12 +574,14 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     if (target >= 0 && target !== win) { pendingJump.current = ref; changeWin(target); }
   });
   useEffect(() => { const ref = pendingJump.current; if (page && ref && page.verses.some(row => row.ref === ref)) { pendingJump.current = null; scrollToVerse(ref); } }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Focus follows the reader into the text (D10, F-SITE 25): to the first verse's own button when verses can be heard, else to the labelled
-  // reading itself. Without this, Start reading or a new text page leaves focus on the control that was pressed, or on nothing.
+  // Keep the passage's declared keyboard entry point stable while Shermet
+  // discovery runs. Early mounting of an optional transport must not replace
+  // the labelled reading container with a newly introduced verse button.
   const focusReading = () => {
     const anchor = textAnchor.current; if (!anchor) return;
     anchor.scrollIntoView({ block: "start" });
-    const target = anchor.querySelector<HTMLElement>(".study-verses [data-verse-ref] button[aria-label^='Hear ']:not([disabled])") ?? anchor.querySelector<HTMLElement>(".study-verses") ?? anchor;
+    const verseButton = source.listening ? anchor.querySelector<HTMLElement>(".study-verses [data-verse-ref] button[aria-label^='Hear ']:not([disabled])") : null;
+    const target = verseButton ?? anchor.querySelector<HTMLElement>(".study-verses") ?? anchor;
     target.focus({ preventScroll: true });
   };
   const start = useRef<() => void>(() => {}); start.current = () => { if (listening && page && !study) hear(0); focusReading(); };

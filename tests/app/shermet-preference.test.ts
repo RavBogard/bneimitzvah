@@ -34,3 +34,12 @@ it("waits for first-tap discovery and cancels a pending selection before it can 
   release(new Set(["Exodus 35:1"])); await first; expect(calls).toEqual([]);
   await player.select(0); expect(calls).toEqual(["shermet"]); player.dispose();
 });
+it("preserves the PocketTorah asset cache between a verse and its word drill", async () => {
+  let pauses = 0, suspends = 0;
+  const state: ReadingPlaybackState = { verse: null, selection: "verse", suspended: false, timingHeld: false, playback: { status: "idle", selection: "verse", repeat: false, speed: 1, speedSupported: false, wordsReady: false, wordCount: 0, retryPlay: false } };
+  const factory = (pocket: boolean) => () => ({ state, async select() {}, async play() {}, pause() { if (pocket) pauses++; }, suspend() { if (pocket) suspends++; }, setRepeat() {}, setSpeed() {}, dispose() {} });
+  const player = createPreferredReadingPlayback({ preference: "shermet", verses: [{ ref: "Exodus 35:1", readingText: "", wordCount: 2 }], available: () => new Set(), canContinue: () => true, load: async () => { throw new Error("Unused"); }, onState() {}, onActiveWord() {} }, { pockettorah: factory(true), shermet: factory(false) });
+  await player.select(0); await player.select(0, 1);
+  expect(pauses).toBe(2); expect(suspends).toBe(0);
+  player.suspend(); expect(suspends).toBe(1); player.dispose();
+});

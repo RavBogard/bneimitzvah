@@ -2,6 +2,8 @@ export const SHERMET_CATEGORIES = { blessing: "Blessings and prayers", lesson: "
 export type ShermetCategory = keyof typeof SHERMET_CATEGORIES;
 export type ShermetLibraryRecording = Readonly<{ sourceId: number; sha256: string; duration: number; bytes: number; mimeType?: "audio/mpeg" | "audio/wav" }>;
 export type ShermetLibraryItem = Readonly<{ id: string; category: ShermetCategory; title: string; label: string; pageUrl: string; ref?: string; kind?: string; recordings: readonly ShermetLibraryRecording[]; status: "available" | "pending" | "missing" }>;
+/** Corrected identity leads whenever the original source label conflicted. */
+export const shermetLibraryTitle = (item: ShermetLibraryItem) => item.category === "source-conflict" ? item.ref ?? "Recording identity unconfirmed" : item.label;
 /** Exact source labels matched to the corresponding CRC prayer lesson. These
  * stable IDs never choose a holiday melody or a similarly named other prayer. */
 export const SHERMET_SERVICE_ITEMS: Readonly<Record<string, string>> = {

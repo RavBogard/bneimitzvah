@@ -19,12 +19,16 @@ export function getShermetRecordingRefs() {
   return work;
 }
 /** Metadata only: no remote audio is downloaded until an explicit play. */
-export function useShermetRecordings(refs: readonly string[]) {
+export function useShermetRecordingAvailability(refs: readonly string[]) {
   const [available, setAvailable] = useState<ReadonlySet<string>>(new Set());
+  const [pending, setPending] = useState(true);
   useEffect(() => {
-    let current = true; setAvailable(new Set());
-    void getShermetRecordingRefs().then(value => { if (current) setAvailable(new Set(refs.filter(ref => value.has(ref)))); }).catch(() => {});
+    let current = true; setAvailable(new Set()); setPending(true);
+    void getShermetRecordingRefs().then(value => { if (current) { setAvailable(new Set(refs.filter(ref => value.has(ref)))); setPending(false); } }).catch(() => { if (current) setPending(false); });
     return () => { current = false; };
   }, [refs]);
-  return available;
+  return { refs: available, pending };
+}
+export function useShermetRecordings(refs: readonly string[]) {
+  return useShermetRecordingAvailability(refs).refs;
 }

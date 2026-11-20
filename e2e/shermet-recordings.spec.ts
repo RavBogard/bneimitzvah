@@ -3,7 +3,7 @@ import { mockVayera } from './aliyot-fixture';
 
 // Synthetic silent PCM only: no human audio or scripture enters the browser fixtures.
 function syntheticAudio() {
-  const frames = 8000 * 4, data = Buffer.alloc(44 + frames * 2);
+  const frames = 8000 * 30, data = Buffer.alloc(44 + frames * 2);
   data.write('RIFF'); data.writeUInt32LE(36 + frames * 2, 4); data.write('WAVE', 8);
   data.write('fmt ', 12); data.writeUInt32LE(16, 16); data.writeUInt16LE(1, 20); data.writeUInt16LE(1, 22);
   data.writeUInt32LE(8000, 24); data.writeUInt32LE(16000, 28); data.writeUInt16LE(2, 32); data.writeUInt16LE(16, 34);
@@ -24,7 +24,11 @@ for (const [kind, ref] of [['torah', 'Exodus 35:1'], ['haftarah', 'Micah 7:18']]
     await page.route('**/api/shermet-audio/timing?*', route => route.fulfill({ status: 404 }));
     await page.route('**/api/shermet-audio?*', route => {
       requested.push(new URL(route.request().url()).searchParams.get('ref')!);
-      return route.fulfill({ contentType: 'audio/wav', body: audio });
+      const range = /^bytes=(\d+)-(\d*)$/.exec(route.request().headers().range ?? '');
+      const first = range ? Number(range[1]) : 0, last = range?.[2] ? Math.min(Number(range[2]), audio.length - 1) : audio.length - 1;
+      const headers: Record<string, string> = { 'accept-ranges': 'bytes', 'content-length': String(last - first + 1) };
+      if (range) headers['content-range'] = `bytes ${first}-${last}/${audio.length}`;
+      return route.fulfill({ status: range ? 206 : 200, contentType: 'audio/wav', headers, body: audio.subarray(first, last + 1) });
     });
     await page.addInitScript(() => {
       const target = window as unknown as { shermetPlays: number; shermetAudio: HTMLMediaElement | null };
@@ -51,6 +55,11 @@ for (const [kind, ref] of [['torah', 'Exodus 35:1'], ['haftarah', 'Micah 7:18']]
     await expect(player.getByRole('link', { name: /Cantor Wendy Shermet.*Temple Israel, Omaha/ })).toBeVisible();
     const repeat = player.getByRole('button', { name: 'Repeat', exact: true });
     await repeat.click(); await expect(repeat).toHaveAttribute('aria-pressed', 'true');
+    // Exercise an actual playing loop even if a loaded runner let the fixture
+    // finish while opening the credit and choosing Repeat.
+    const play = player.getByRole('button', { name: 'Play', exact: true });
+    if (await play.isVisible()) await play.click();
+    await expect(player.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
     const before = await page.evaluate(() => (window as unknown as { shermetPlays: number }).shermetPlays);
     // Seek to the real synthetic media end, exercising its native ended event and replay.
     await page.evaluate(() => { const audio = (window as unknown as { shermetAudio: HTMLMediaElement }).shermetAudio; audio.currentTime = audio.duration - 0.05; });

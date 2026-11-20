@@ -71,6 +71,10 @@ async function installed(options: { course?: boolean } = {}) {
   await context.route("**/*", async route => {
     const request = route.request(), url = new URL(request.url());
     if (url.origin !== BROWSER_ORIGIN || seen.offline) return route.abort("internetdisconnected");
+    // The pack matrix uses synthetic PocketTorah and course assets only.
+    // Keep the live Shermet library out of this hermetic pack/purge fixture.
+    if (url.pathname === "/api/shermet-audio/catalog") return route.fulfill({ json: url.searchParams.get("format") === "manifest" ? { recordings: [] } : { refs: [] } });
+    if (url.pathname === "/api/shermet-library") return route.fulfill({ json: { items: [], nextOffset: null } });
     if (url.pathname.startsWith("/reference-audio/") && (await request.allHeaders()).range) seen.ranges.push(url.pathname);
     const body = shortBodies.get(url.pathname);
     if (url.pathname.startsWith("/reference-audio/short-v1/")) return body ? route.fulfill({ status: 200, headers: { "content-type": "audio/mpeg", "content-length": String(body.length) }, body }) : route.fallback();
@@ -155,7 +159,9 @@ it("A2: a student's own confirmed reading is packed under its owner, and another
     expect(first.owner).toMatch(/^[A-Za-z0-9_-]{43}$/);
     const own = first.packs.find(row => row.descriptor.type === "ref")!, week = first.packs.find(row => row.key.startsWith("week:"))!;
     expect(own.owner).toBe(first.owner);
-    expect(own.assets.every(asset => asset.startsWith("/api/public/") || asset.startsWith("/reference-audio/short-v1/"))).toBe(true);
+    // The only extra asset in this synthetic pack is public source discovery;
+    // private API responses still never enter an owner's reading pack.
+    expect(own.assets.every(asset => asset.startsWith("/api/public/") || asset.startsWith("/reference-audio/short-v1/") || asset === "/api/shermet-audio/catalog")).toBe(true);
     // The private endpoint is never answered by the worker.
     expect(seen.fromWorker.filter(path => path.startsWith("/api/") && !path.startsWith("/api/public/"))).toEqual([]);
     // Another account signs in on this device with no sign-out in between: its session replaces this one's.

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { SHERMET_CATEGORIES, parseShermetLibrary, type ShermetLibraryItem } from "../../lib/reference-audio/shermet-library";
+import { SHERMET_CATEGORIES, parseShermetLibrary, shermetLibraryTitle, type ShermetLibraryItem } from "../../lib/reference-audio/shermet-library";
 import styles from "./library.module.css";
 type Page = { items: readonly ShermetLibraryItem[]; nextOffset: number | null };
 export function ShermetLibrary({ initialCategory = "" }: { initialCategory?: string }) {
@@ -31,8 +31,8 @@ export function ShermetLibrary({ initialCategory = "" }: { initialCategory?: str
     {status === "ready" && page && <div aria-label="Recording library" className={styles.results}>{Object.entries(SHERMET_CATEGORIES).map(([key, label]) => {
       const items = page.items.filter(item => item.category === key);
       return items.length ? <section key={key} aria-labelledby={`category-${key}`}><h2 id={`category-${key}`}>{label}</h2><ul>{items.map(item => <li key={item.id} data-recording-item={item.id}>
-        <h3>{item.label}</h3><p>{item.title}</p><p><a href={item.pageUrl} target="_blank" rel="noreferrer">Source at Temple Israel</a></p>
-        {item.status === "available" && item.recordings.length > 0 ? <div className={styles.actions}>{item.recordings.map((recording, index) => <button key={recording.sha256} type="button" aria-label={`Listen to ${item.label}${item.recordings.length > 1 ? `, recording ${index + 1}` : ""}`} onClick={() => listen(item, recording.sha256)}>{item.recordings.length > 1 ? `Listen to recording ${index + 1}` : "Listen"}</button>)}</div> : <p>{item.status === "pending" ? "Recording not available yet." : "The source recording is unavailable."}</p>}
+        <h3>{shermetLibraryTitle(item)}</h3><p>{item.title}</p>{item.category === "source-conflict" && <p>Omaha’s original label: {item.label}{!item.ref && " · The text identity is unconfirmed."}</p>}<p><a href={item.pageUrl} target="_blank" rel="noreferrer">Source at Temple Israel</a></p>
+        {item.status === "available" && item.recordings.length > 0 ? <div className={styles.actions}>{item.recordings.map((recording, index) => <button key={recording.sha256} type="button" aria-label={`Listen to ${shermetLibraryTitle(item)}${item.recordings.length > 1 ? `, recording ${index + 1}` : ""}`} onClick={() => listen(item, recording.sha256)}>{item.recordings.length > 1 ? `Listen to recording ${index + 1}` : "Listen"}</button>)}</div> : <p>{item.status === "pending" ? "Recording not available yet." : "The source recording is unavailable."}</p>}
       </li>)}</ul></section> : null;
     })}</div>}
     <nav className={styles.pagination} aria-label="Recording pages"><button type="button" disabled={offset === 0 || status !== "ready"} onClick={() => setOffset(Math.max(0, offset - 40))}>Previous recordings</button><button type="button" disabled={page?.nextOffset == null || status !== "ready"} onClick={() => setOffset(page!.nextOffset!)}>More recordings</button></nav>
@@ -49,8 +49,8 @@ export function ShermetLibraryPlayer({ item, sha256 }: { item: ShermetLibraryIte
     document.addEventListener("visibilitychange", stop);
     return () => { selected?.pause(); document.removeEventListener("visibilitychange", stop); };
   }, [item.id, sha256]);
-  return <section className={styles.player} aria-label="Selected recording"><h2>{item.label}</h2><p>Cantor Wendy Shermet · Temple Israel, Omaha</p>
-    <audio key={`${item.id}:${sha256}`} ref={media} controls autoPlay preload="none" aria-label={item.label} src={`/api/shermet-library/media?${new URLSearchParams({ id: item.id, recording: sha256 })}`} onError={() => setError(true)} />
+  return <section className={styles.player} aria-label="Selected recording"><h2>{shermetLibraryTitle(item)}</h2>{item.category === "source-conflict" && <p>Omaha’s original label: {item.label}{!item.ref && " · The text identity is unconfirmed."}</p>}<p>Cantor Wendy Shermet · Temple Israel, Omaha</p>
+    <audio key={`${item.id}:${sha256}`} ref={media} controls autoPlay preload="none" aria-label={shermetLibraryTitle(item)} src={`/api/shermet-library/media?${new URLSearchParams({ id: item.id, recording: sha256 })}`} onError={() => setError(true)} />
     {error && <p role="alert">This recording couldn’t be loaded. Choose another recording or try again.</p>}
   </section>;
 }

@@ -2,6 +2,7 @@ import { expect, test, type BrowserContext, type Page, type Route } from "@playw
 import { syntheticCourseRoutes } from "./learn-synthetic";
 import { finishLesson } from "./learn-drill";
 import { webManifest } from "../src/lib/offline/manifest";
+import { SHERMET_SERVICE_ITEMS } from "../src/lib/reference-audio/shermet-library";
 
 // The built, unconfigured production server on 127.0.0.1 (1.5 plan §6.2): the worker, the icons and the gate.
 test("/sw.js is plain JavaScript revalidated on every check, and the favicon, the Apple icon and every manifest icon are images", async ({ request }) => {
@@ -50,6 +51,10 @@ async function installedApp(context: BrowserContext) {
   await context.route("**/*", async route => {
     const url = new URL(route.request().url());
     if (state.offline || url.hostname !== "127.0.0.1") return route.abort("internetdisconnected");
+    // This installed-app scenario packs synthetic PocketTorah/course data.
+    // Do not let the real server's expanded human library enter its pack.
+    if (url.pathname === "/api/shermet-audio/catalog") return route.fulfill({ json: url.searchParams.get("format") === "manifest" ? { recordings: [] } : { refs: [] } });
+    if (url.pathname === "/api/shermet-library") return route.fulfill({ json: { items: [], nextOffset: null } });
     if (url.pathname.startsWith("/reference-audio/") && (await route.request().allHeaders()).range) state.ranges.push(url.pathname);
     return route.continue();
   });
@@ -77,7 +82,7 @@ test("offline, the installed app opens this week's reading from its shell and a 
   await page.goto("/read");
   await expect(page.getByRole("heading", { level: 1, name: "Synthetic", exact: true })).toBeVisible();
   await saved(page);
-  for (const pack of await packs(page)) expect(pack.assets.every(asset => /^\/(?:api\/public\/(?:reading|text|reference\/short|aliyot|portion-summary)\?|reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$)/.test(asset)), pack.key).toBe(true);
+  for (const pack of await packs(page)) expect(pack.assets.every(asset => asset === "/api/shermet-audio/catalog" || /^\/(?:api\/public\/(?:reading|text|reference\/short|aliyot|portion-summary)\?|reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$)/.test(asset)), pack.key).toBe(true);
   // One controlled visit, so every build file the reader loads is in the shell.
   await page.goto("/read");
   await expect(page.locator(".study-verses").getByRole("heading", { name: "Genesis 12:1", exact: true })).toBeVisible();
@@ -92,7 +97,7 @@ test("offline, the installed app opens this week's reading from its shell and a 
   await page.locator('.study-verses [data-verse-ref="Genesis 12:1"] [data-word-index="0"]').first().click();
   await expect.poll(plays, { timeout: 20_000 }).toBeGreaterThan(before);
   expect(app.state.fromWorker).toEqual(expect.arrayContaining(["/read", "/api/public/reading", "/api/public/text"]));
-  expect(app.state.fromWorker.filter(path => /^\/api\/(?!public\/(?:reading|text|reference\/short|manifest|aliyot|portion-summary)$)/.test(path))).toEqual([]);
+  expect(app.state.fromWorker.filter(path => path !== "/api/shermet-audio/catalog" && /^\/api\/(?!public\/(?:reading|text|reference\/short|manifest|aliyot|portion-summary)$)/.test(path))).toEqual([]);
   expect(app.state.ranges).toEqual([]);
   expect(await page.evaluate(async () => { try { await fetch("/api/session", { credentials: "same-origin" }); return "answered"; } catch { return "failed"; } })).toBe("failed");
 
@@ -188,7 +193,8 @@ test("offline within 14 days, a done service-course lesson's Read, Key words and
   await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
   const service = (await packs(page)).find(row => row.key === "service-course")!;
   expect(service.assets.length).toBeGreaterThanOrEqual(30);
-  expect(service.assets.every(asset => /^\/api\/public\/(?:service-text\?unit=[a-z0-9.-]+%40(?!bm-)[a-z0-9-]+&build=[a-f0-9]+|text\?ref=[^&]+&kind=(?:torah|haftarah)&offset=0)$/.test(asset))).toBe(true);
+  const sourceMetadata = new Set(["/api/shermet-library?course=service", ...Object.keys(SHERMET_SERVICE_ITEMS).map(lesson => `/api/shermet-library?lesson=${lesson}`)]);
+  expect(service.assets.every(asset => sourceMetadata.has(asset) || /^\/api\/public\/(?:service-text\?unit=[a-z0-9.-]+%40(?!bm-)[a-z0-9-]+&build=[a-f0-9]+|text\?ref=[^&]+&kind=(?:torah|haftarah)&offset=0)$/.test(asset))).toBe(true);
   expect((await packs(page)).some(row => row.assets.some(asset => asset.includes("evening-text")))).toBe(false);
 
   // Online: the lesson is done once.
@@ -213,5 +219,5 @@ test("offline within 14 days, a done service-course lesson's Read, Key words and
   await expect(page.locator("[data-lesson='vahavta']").first()).toHaveAttribute("data-state", "done", { timeout: 30_000 });
   // Never the siddur reader (the licensed book), never the evening text, never anything private from the worker.
   expect(asked.filter(url => /siddur\.centralreform\.org|\/api\/public\/evening-text/.test(url))).toEqual([]);
-  expect(app.state.fromWorker.filter(path => /^\/api\/(?!public\/(?:service-text|text|manifest)$)/.test(path))).toEqual([]);
+  expect(app.state.fromWorker.filter(path => path !== "/api/shermet-library" && /^\/api\/(?!public\/(?:service-text|text|manifest)$)/.test(path))).toEqual([]);
 });

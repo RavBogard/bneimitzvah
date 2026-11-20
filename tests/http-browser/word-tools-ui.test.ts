@@ -55,6 +55,10 @@ async function page(mobile = false, who: "admin" | "tutor" | "student" = "admin"
   const gate = new Promise<void>(yes => { release = yes; }), started = new Promise<void>(yes => { began = yes; });
   await context.route("**/*", async route => {
     const request = route.request(), url = new URL(request.url());
+    // This fixture's synthetic Hebrew and audio describe PocketTorah alone.
+    // Never mix in live human recordings/timings for the same canonical refs;
+    // Shermet selection and fallback have their own browser acceptance tests.
+    if (url.origin === BROWSER_ORIGIN && url.pathname === "/api/shermet-audio/catalog") return route.fulfill({ json: { refs: [] } });
     if (url.href === archiveUrl || url.origin === BROWSER_ORIGIN && url.pathname === shortPath) {
       state.requests++; const source = url.href === archiveUrl ? audioBytes : shortBytes; if (url.href === archiveUrl) state.archiveRequests++; else state.shortRequests++; const headers = await request.allHeaders(); state.sawCookie ||= Boolean(headers.cookie); state.sawReferer ||= Boolean(headers.referer);
       if (state.held) { began(); await gate; }

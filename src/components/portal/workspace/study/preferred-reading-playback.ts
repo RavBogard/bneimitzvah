@@ -37,14 +37,18 @@ export function createPreferredReadingPlayback(input: PocketInput & {
       if (closed || !input.canContinue() || !input.verses[index]) return;
       // Stop both before replacing source identity, so old callbacks cannot
       // publish state for the newly selected recording.
-      pocket.suspend(); shermet.suspend(); heard = false;
+      // Pause the current selection while discovering its next source. Keep
+      // same-source decoded assets alive for a verse-to-word transition.
+      active().pause(); heard = false;
       const turn = ++selectionTurn;
       if (input.preference === "shermet" && input.resolveAvailability) {
         try { resolvedAvailability = await input.resolveAvailability(); } catch { resolvedAvailability = input.available(); }
         if (closed || turn !== selectionTurn || !input.canContinue()) return;
       }
       const covered = (resolvedAvailability ?? input.available()).has(input.verses[index].ref);
-      source = input.preference === "shermet" && covered && (selection === "verse" || input.timed) ? "shermet" : "pockettorah";
+      const nextSource = input.preference === "shermet" && covered && (selection === "verse" || input.timed) ? "shermet" : "pockettorah";
+      if (source !== nextSource) active().suspend();
+      source = nextSource;
       fallback = input.preference === "shermet" && source === "pockettorah" ? covered ? "timing" : "missing" : undefined;
       await active().select(index, selection);
     },

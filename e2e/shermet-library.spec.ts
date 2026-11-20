@@ -7,16 +7,21 @@ function wave() {
 test("recording library searches original labels, filters categories, and plays only a chosen available item", async ({ page }) => {
   const available = { id: "sr_" + "a".repeat(32), category: "blessing", title: "Traditional Blessings", label: "Synthetic blessing", pageUrl: "https://www.templeisraelomaha.com/traditional-blessings.html", status: "available", recordings: [{ sourceId: 123456, sha256: "a".repeat(64), duration: 4, bytes: wave().length, mimeType: "audio/wav" }] };
   const pending = { ...available, id: "sr_" + "b".repeat(32), category: "lesson", title: "Torah Trope", label: "Synthetic pending lesson", status: "pending", recordings: [] };
+  const corrected = { ...available, id: "sr_" + "c".repeat(32), category: "source-conflict", title: "Source variants", label: "Genesis 23:20", ref: "Genesis 25:20", kind: "torah" };
   const media: string[] = [];
   await page.route(/\/api\/shermet-library(?:\?.*)?$/, route => {
     const query = new URL(route.request().url()).searchParams;
-    const items = [available, pending].filter(item => (!query.get("category") || query.get("category") === item.category) && (!query.get("q") || item.label.toLowerCase().includes(query.get("q")!.toLowerCase())));
+    const items = [available, pending, corrected].filter(item => (!query.get("category") || query.get("category") === item.category) && (!query.get("q") || item.label.toLowerCase().includes(query.get("q")!.toLowerCase())));
     return route.fulfill({ json: { items, nextOffset: null } });
   });
   await page.route("**/api/shermet-library/media?*", route => { media.push(route.request().url()); return route.fulfill({ contentType: "audio/wav", body: wave() }); });
   await page.goto("/recordings");
   await expect(page.getByRole("heading", { name: "Synthetic blessing", exact: true })).toBeVisible();
   await expect(page.getByText("Recording not available yet.", { exact: true })).toBeVisible(); expect(media).toEqual([]);
+  await expect(page.getByRole("heading", { name: "Genesis 25:20", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Genesis 23:20", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Listen to Genesis 25:20", exact: true })).toBeVisible();
+  await expect(page.getByText("Omaha’s original label: Genesis 23:20", { exact: true })).toBeVisible();
   await page.getByRole("combobox", { name: "Category", exact: true }).selectOption("lesson");
   await expect(page.getByRole("heading", { name: "Synthetic blessing", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^Listen/ })).toHaveCount(0);

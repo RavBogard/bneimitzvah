@@ -98,7 +98,7 @@ export function useVerseColors(verse: StudyVerse, assignment: AssignmentEnding, 
   return useMemo(() => enabled ? colorStudyVerse(verse.ref, verse.hebrew, { kind, confirmed, verses: verses ? verses.split("\n") : [] }) : null, [enabled, verse, kind, confirmed, verses]);
 }
 
-export function StudyHebrew({ verse, colors, id, className = "", activeWord = null, onWordSelect, inline = false, wordAction = "word", toolsAvailable = true, linked = null, atoms = null, layout = null, marks = null }: { verse: StudyVerse; inline?: boolean; colors: Ready | null; id: string; className?: string; activeWord?: number | null;
+export function StudyHebrew({ verse, colors, id, className = "", activeWord = null, onWordSelect, inline = false, wordAction = "word", toolsAvailable = true, linked = null, atoms = null, layout = null, marks = null, prefix }: { prefix?: ReactNode; verse: StudyVerse; inline?: boolean; colors: Ready | null; id: string; className?: string; activeWord?: number | null;
   /** Side-by-side tikkun: the verse as aligned atoms, set in the rows `layout` gives (the same rows as the scroll column). */
   atoms?: readonly StudyAtom[] | null; layout?: TikkunLayout | null;
   /** `element` is the word that was chosen, so a card opened from it can hand focus back. */
@@ -125,6 +125,7 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
   let described = false;
   // G18: the colour of a phrase is never the only sign of where it ends: its last word also carries a bar at its end (left) edge.
   const phraseEnds = useMemo(() => colors ? new Set(phraseGroups(colors).map(group => group.last - 1)) : null, [colors]);
+  let prefixPlaced = false;
   const parts = (pieces: readonly DisplayPart[]) => chained(pieces, pieces.map((part, index) => {
     const word = part.wordIndex === null ? null : colors?.words[part.wordIndex];
     const family = word?.family ? families.get(word.family) : null;
@@ -137,10 +138,15 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
     const tabStop = button && (group ? (group.stop ?? group.first) === wordKey(verse.ref, part.wordIndex!) : part.wordIndex === localStop);
     const phraseId = !family || word?.phrase === null || word?.phrase === undefined ? undefined : `${id}-phrase-${word.phrase}`;
     if (button) described = true;
-    return <span key={index} role={button ? "button" : undefined} tabIndex={button ? tabStop ? 0 : -1 : undefined}
+    const element = <span key={index} role={button ? "button" : undefined} tabIndex={button ? tabStop ? 0 : -1 : undefined}
       data-word-index={part.wordIndex ?? undefined} data-family={family?.id} data-phrase={word?.phrase ?? undefined}
       data-phrase-end={family && part.wordIndex !== null && phraseEnds?.has(part.wordIndex) ? "" : undefined} data-reference-active={active ? "true" : undefined} data-linked={quoted ? "true" : undefined} className={[family ? styles.word : "", active ? referenceStyles.activeWord : "", quoted ? styles.linked : ""].filter(Boolean).join(" ") || undefined} style={family ? { "--phrase-color": phraseFill(family.id), "--w": part.wordIndex } as CSSProperties : undefined}
       aria-describedby={[button ? actionId : undefined, phraseId].filter(Boolean).join(" ") || undefined}>{part.text}{firstPart && part.wordIndex !== null && marks?.has(part.wordIndex) && <sup className="study-lemma-letter" aria-hidden="true" data-copy-skip="" lang="en" dir="ltr">{marks.get(part.wordIndex)}</sup>}</span>;
+    if (prefix && !prefixPlaced && part.wordIndex === 0) {
+      prefixPlaced = true;
+      return <span key={index} className={styles.verseLead}>{prefix}{"\u00a0"}{element}</span>;
+    }
+    return element;
   }));
   // G18: the qere is what is chanted, so it is set full size (and is the tap target); the chip says so, and the ketiv, which the scroll writes, follows small.
   const alternative = (written: string, read: ReactNode) => <><span className="study-read-alternative">{read}</span> <span className="study-read-chip" lang="en" dir="ltr" data-copy-skip="">read<span className="sr-only">. Chant this word (qere). The scroll writes it differently (ketiv).</span></span> <span className="study-ketiv" data-testid="study-ketiv">{maqafChains(written).map((run, at) => run.chain ? <span key={at} className={styles.chain}>{run.text}</span> : run.text)}</span></>;
@@ -168,7 +174,7 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
     const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-word-index]") : null;
     if (!target || !event.currentTarget.contains(target)) return;
     const index = Number(target.dataset.wordIndex); if (Number.isSafeInteger(index) && index >= 0 && projection && index < projection.words.length) onWordSelect(index, event.currentTarget.querySelector<HTMLElement>(`[data-word-index="${index}"][role="button"]`) ?? target);
-  } : undefined} {...(atoms && projection ? { "data-tk-side": "pointed" } : {})}>{atoms && projection ? (layout?.rows ?? [[0, atoms.length] as const]).map(([from, to], line) =>
+  } : undefined} {...(atoms && projection ? { "data-tk-side": "pointed" } : {})}>{prefix && (!projection || projection.words.length === 0) && prefix}{atoms && projection ? (layout?.rows ?? [[0, atoms.length] as const]).map(([from, to], line) =>
     <span key={line} className={`${styles.tkLine} ${layout?.rows ? "" : styles.tkLineOpen}`.trim()} data-tk-line={line}>{atoms.slice(from, to).map((atom, offset) => {
       const gapRun = (at: number) => { const run = projection.runs[at]; return run.kind === "gap" && !trailing(at, projection.runs.length, run.kind) ? <span key={`gap-${at}`}>{gap(run.break)}</span> : null; };
       return <Fragment key={from + offset}><span className={styles.tkAtom} data-tk-atom={from + offset} data-joined={atom.joined ? "" : undefined}>
@@ -297,14 +303,15 @@ function FlowVerse({ verse, assignment, id, onVerse, onNumber, gotIt = false, on
   const host = useRef<HTMLSpanElement>(null), atoms = useMemo(() => tikkun === "beside" && projection ? studyAtoms(projection.runs) : null, [tikkun, projection]);
   const layout = useTikkunLayout(host, atoms, `${prefs.size}|${prefs.colors}`);
   const aligned = atoms !== null && atoms.length > 0;
+  const numberPrefix = <>{state.choosing && choice ? <button type="button" className={`${styles.verseNumber} ${styles.chooseNumber}`} onClick={event => choice.onToggle(verse.ref, event.shiftKey)} aria-pressed={state.picked} aria-label={`Select ${verse.ref}`} lang="en" dir="ltr" data-verse-number title={verse.ref}>{state.picked && <ChoiceCheck />}{number ?? verse.ref}</button>
+      : onNumber ? <><button type="button" className={styles.verseNumber} onClick={event => onNumber(event.currentTarget)} aria-haspopup="dialog" aria-label={`Verse tools · ${verse.ref}`} lang="en" dir="ltr" data-verse-number data-verse-got-it={gotIt || undefined} title={verse.ref}>{gotIt && <span className={styles.gotIt} data-testid="verse-got-it" aria-hidden="true"><ChoiceCheck /></span>}{number ?? verse.ref}</button>{gotIt && <span className="sr-only" lang="en" dir="ltr"> (Got it)</span>}</>
+      : onVerse ? <button type="button" className={styles.verseNumber} onClick={onVerse} aria-label={`Hear ${verse.ref}`} lang="en" dir="ltr" data-verse-number title={verse.ref}>{state.marked && <ChoiceCheck />}{number ?? verse.ref}</button>
+        : <sup title={verse.ref} lang="en" dir="ltr" data-verse-number>{state.marked && <ChoiceCheck />}{number ?? verse.ref}</sup>}{state.marked && <span className="sr-only" lang="en" dir="ltr"> (selected)</span>}</>;
   return <span ref={host} data-verse-ref={verse.ref} data-tk-rows={aligned ? "" : undefined} className={styles.flowVerse} data-verse-picked={state.picked || undefined} data-verse-marked={state.marked || undefined}>
     <span className={styles.flowHebrew} data-hebrew-ref={verse.ref}>
     <span className="sr-only" role="heading" aria-level={4} lang="en" dir="ltr">{verse.ref}</span>
-    {state.choosing && choice ? <button type="button" className={`${styles.verseNumber} ${styles.chooseNumber}`} onClick={event => choice.onToggle(verse.ref, event.shiftKey)} aria-pressed={state.picked} aria-label={`Select ${verse.ref}`} lang="en" dir="ltr" data-verse-number title={verse.ref}>{state.picked && <ChoiceCheck />}{number ?? verse.ref}</button>
-      : onNumber ? <><button type="button" className={styles.verseNumber} onClick={event => onNumber(event.currentTarget)} aria-haspopup="dialog" aria-label={`Verse tools · ${verse.ref}`} lang="en" dir="ltr" data-verse-number data-verse-got-it={gotIt || undefined} title={verse.ref}>{gotIt && <span className={styles.gotIt} data-testid="verse-got-it" aria-hidden="true"><ChoiceCheck /></span>}{number ?? verse.ref}</button>{gotIt && <span className="sr-only" lang="en" dir="ltr"> (Got it)</span>}</>
-      : onVerse ? <button type="button" className={styles.verseNumber} onClick={onVerse} aria-label={`Hear ${verse.ref}`} lang="en" dir="ltr" data-verse-number title={verse.ref}>{state.marked && <ChoiceCheck />}{number ?? verse.ref}</button>
-        : <sup title={verse.ref} lang="en" dir="ltr" data-verse-number>{state.marked && <ChoiceCheck />}{number ?? verse.ref}</sup>}{state.marked && <span className="sr-only" lang="en" dir="ltr"> (selected)</span>}{aligned ? " " : "\u00a0"}
-    {replaced ? <TikkunVerse verse={verse} className={styles.flowTikkunInline} projection={projection} colors={colors} activeWord={activeWord} /> : <StudyHebrew verse={verse} colors={colors} id={id} inline activeWord={activeWord} onWordSelect={state.choosing ? undefined : onWord} wordAction={listening ? "verse" : "tools"} toolsAvailable={toolsAvailable} linked={linked} atoms={aligned ? atoms : null} layout={layout} />}{" "}
+    {(replaced || aligned) && <>{numberPrefix}{aligned ? " " : "\u00a0"}</>}
+    {replaced ? <TikkunVerse verse={verse} className={styles.flowTikkunInline} projection={projection} colors={colors} activeWord={activeWord} /> : <StudyHebrew verse={verse} colors={colors} id={id} prefix={!aligned ? numberPrefix : undefined} inline activeWord={activeWord} onWordSelect={state.choosing ? undefined : onWord} wordAction={listening ? "verse" : "tools"} toolsAvailable={toolsAvailable} linked={linked} atoms={aligned ? atoms : null} layout={layout} />}{" "}
     {verse.hebrew.paragraphAfter && <span className={verse.hebrew.paragraphAfter === "setumah" ? styles.closedGap : styles.openMark} role="img" aria-label={verse.hebrew.paragraphAfter === "setumah" ? "Closed paragraph" : "Open paragraph"}><span className="study-paragraph-mark" lang="he" aria-hidden="true" data-copy-skip="">{PARAGRAPH_LETTER[verse.hebrew.paragraphAfter]}</span></span>}
     {colors && <span className="sr-only" lang="en" dir="ltr">{phraseGroups(colors).map(row => <span key={row.phrase} id={`${id}-phrase-${row.phrase}`}>{row.family.label}, {range(row.first, row.last)}. </span>)}</span>}
     </span>

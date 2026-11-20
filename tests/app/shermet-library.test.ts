@@ -1,11 +1,17 @@
 import { expect, it } from "vitest";
 import { createHash } from "node:crypto";
 import { createShermetLibrary } from "../../src/server/shermet-audio/library";
-import { parseShermetLibrary, SHERMET_SERVICE_ITEMS, type ShermetLibraryItem } from "../../src/lib/reference-audio/shermet-library";
+import { parseShermetLibrary, shermetLibraryTitle, SHERMET_SERVICE_ITEMS, type ShermetLibraryItem } from "../../src/lib/reference-audio/shermet-library";
 const sha = createHash("sha256").update("abc").digest("hex");
 const item: ShermetLibraryItem = { id: "sr_" + "a".repeat(32), title: "Traditional Blessings", label: "Synthetic blessing", category: "blessing", pageUrl: "https://www.templeisraelomaha.com/traditional-blessings.html", status: "available", recordings: [{ sourceId: 123456, sha256: sha, bytes: 3, duration: 1, mimeType: "audio/wav" }] };
 const pending: ShermetLibraryItem = { ...item, id: "sr_" + "b".repeat(32), title: "Torah Trope", label: "Synthetic trope", category: "lesson", recordings: [], status: "pending" };
 const request = (query = "", headers?: HeadersInit, method = "GET") => new Request(`http://localhost/api/shermet-library${query}`, { headers, method });
+it("identifies a conflicting source by corrected reference and never promotes an unresolved original label", () => {
+  const conflict = { ...item, category: "source-conflict" as const, label: "Genesis 23:20", ref: "Genesis 25:20" };
+  expect(shermetLibraryTitle(conflict)).toBe("Genesis 25:20");
+  expect(shermetLibraryTitle({ ...conflict, ref: undefined })).toBe("Recording identity unconfirmed");
+  expect(conflict.label).toBe("Genesis 23:20");
+});
 it("searches and categorizes original labels while keeping pending sources visible and other sites disabled", async () => {
   const library = createShermetLibrary({ enabled: true, items: [item, pending] });
   expect((await library.catalog(request("?category=lesson")).json()).items).toEqual([pending]);

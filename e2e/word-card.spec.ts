@@ -7,6 +7,7 @@ const word = ["אָבָ֑ג", "דֵּ֖ה", "וְזַ֥ח"];
 const verseOf = (ref: string, count = 1) => { const text = `${Array.from({ length: count }, () => word.join(" ")).join(" ")}׃`; return { ref, english: `Synthetic translation ${ref}`, hebrew: { text, readingText: text, paragraphAfter: null, segments: [{ kind: "text", text }] } }; };
 const refs = ["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"];
 async function mock(page: Page, longVerse = 1) {
+  await page.route("**/api/shermet-audio/catalog", route => route.fulfill({ json: { refs: [] } }));
   await page.route("**/api/public/**", route => {
     const url = new URL(route.request().url()), q = url.searchParams;
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });

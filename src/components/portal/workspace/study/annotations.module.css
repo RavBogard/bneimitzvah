@@ -16,6 +16,9 @@
 /* A 44px target (1.9 N4, F5) that leaves the line exactly as it was: the box is 44px square, and the negative margins give back what the text did not need, so the line box is the same height. */
 .verseNumber { display: inline-flex; align-items: center; justify-content: center; min-inline-size: 44px; min-block-size: 44px; margin: -0.875rem -0.5rem; vertical-align: super; font: 600 0.875rem/1 "Bricolage Grotesque", sans-serif; color: var(--lake-deep); background: transparent; border: 0; padding: 0; cursor: pointer; border-radius: var(--radius-control); }
 .verseNumber:hover { background: var(--lake-tint); }
+/* Keep the real 44px verse button with its first pronounced word. An atomic
+ * button can otherwise break away even beside a nonbreaking space. */
+.verseLead { white-space: nowrap; }
 /* Keyboard focus on a word or a verse number: the ring colour of the whole app (lake-deep on light, marigold on dark; at least 3:1 on the page and on every phrase fill),
    with a halo of the surface colour between the ring and the word so the ring never sits on a neighbour's fill. */
 .verseNumber:focus-visible, .playable [data-word-index]:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-surface); }
