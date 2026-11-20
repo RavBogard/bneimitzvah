@@ -50,6 +50,26 @@ node scripts/shermet-publish-timings.mjs C:/private/shermet-alignment/collection
 
 This writes lazy per-book numerical TS shards and `getShermetTiming` in `timing-catalog.ts`. Holds are excluded. The external publication receipt pins the independent audit and projection implementation. Source selection still checks the exact audio hash before a timing can be returned.
 
+### Additive word-boundary rescue
+
+`shermet-word-rescue.py` leaves the original worker and qualified rows untouched. It measures frame energy about each frame's own mean: some real Genesis recordings have a DC offset near −0.023 while quiet-frame variation is only about 0.0005, so uncentered RMS falsely calls the quiet lead/tail voiced. The separate 137 ms inference uses DC-neutral silence and must preserve normalized primary features within 0.0001. Word starts and acoustically extended word ends must agree; movement of an internal phone alone does not reject a stable word. Sustained unassigned voice, confidence problems, source/text mismatches and independent ASR contradictions remain holds. Low phone confidence needs stronger exact-unit, SHA-bound Whisper corroboration.
+
+The worker PID is in `C:/private/shermet-alignment/word-rescue-watch.pid`; logs have the same prefix. Its output is `word-rescues`. Independent real-clip evidence is in `asr-audit/rescue-cohort-current.json`; this derives from the original cohort and pins the newer repeat-limited, DC-filtered decoding receipt for the two initially anomalous transcriptions. Decoder repetition is failed corroboration, not proof of a wrong source label.
+
+Report publication eligibility without changing generated files:
+
+```powershell
+node scripts/shermet-rescue-report.mjs C:/private/shermet-alignment/word-rescues C:/Users/dsbog/beitmitzvah-media/shermet-collection/public-verse-manifest.json C:/private/shermet-alignment/collection-targets/portal-words-current.json C:/private/shermet-alignment/asr-audit/rescue-cohort-current.json C:/Users/dsbog/beitmitzvah-media/shermet-collection/priority-refs.json
+```
+
+The timing publisher accepts two additional arguments, rescue directory and independent rescue audit. Add these to the existing publish command to merge eligible rescues only where no original good timing exists:
+
+```text
+C:/private/shermet-alignment/word-rescues C:/private/shermet-alignment/asr-audit/rescue-cohort-current.json
+```
+
+Deuteronomy 32:1–6 has an untimed linguistic target repair in `extra-packs/Shermet-Deuteronomy32-untimed-phones`. `shermet-phone-targets.mjs` uses the same read-only engine word parser and syllable-phone conversion without requesting an unsupported melody score. Twelve ordinary verses (153 words) matched the original trusted packs' word labels and all phones exactly. No note timeline, melody or generated audio is produced.
+
 ## Resume commands
 
 Do not start a duplicate worker while its PID is running. Source resume:

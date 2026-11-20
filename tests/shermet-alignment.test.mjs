@@ -7,5 +7,6 @@ test('alignment window overlap preserves every native frame once, including shif
   const { env, cleanup } = await isolatedEnv();
   try {
     execFileSync(process.platform === 'win32' ? 'python' : 'python3', ['-B', fileURLToPath(new URL('./shermet_alignment_test.py', import.meta.url))], { env, windowsHide: true, stdio: 'pipe' });
+    execFileSync(process.platform === 'win32' ? 'python' : 'python3', ['-B', fileURLToPath(new URL('./shermet_word_rescue_test.py', import.meta.url))], { env, windowsHide: true, stdio: 'pipe' });
   } finally { await cleanup(); }
 });
