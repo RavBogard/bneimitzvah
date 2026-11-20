@@ -90,13 +90,13 @@ it("moves between the areas of the tab bar, finds a student, and adds one in a s
   for (const name of ["choose a tutor", "invite a parent", "assign the reading"]) await ui(tab.getByTestId("roster-added").getByRole("link", { name, exact: true })).toBeVisible();
   await ui(roster(tab).getByRole("listitem")).toHaveCount(3);
   // Edit opens the same sheet with the student's details; the student kind is a two-way choice.
-  await safe(() => roster(tab).getByRole("button", { name: "Edit details for Synthetic Added", exact: true }).click());
+  await safe(() => roster(tab).getByRole("button", { name: "Details for Synthetic Added", exact: true }).click());
   await ui(sheet(tab).getByRole("heading", { name: "Synthetic Added", exact: true })).toBeFocused();
   await ui(sheet(tab).getByRole("radio", { name: "Child", exact: true })).toBeChecked();
   await safe(() => sheet(tab).getByRole("button", { name: "Close student details", exact: true }).click());
-  await ui(roster(tab).getByRole("button", { name: "Edit details for Synthetic Added", exact: true })).toBeFocused();
+  await ui(roster(tab).getByRole("button", { name: "Details for Synthetic Added", exact: true })).toBeFocused();
   // A changed form asks before closing; an unchanged one (above) closes at once.
-  await safe(() => roster(tab).getByRole("button", { name: "Edit details for Synthetic Added", exact: true }).click());
+  await safe(() => roster(tab).getByRole("button", { name: "Details for Synthetic Added", exact: true }).click());
   await safe(() => sheet(tab).getByLabel("Last name", { exact: true }).fill("Changed"));
   await safe(() => sheet(tab).getByRole("button", { name: "Close student details", exact: true }).click());
   await ui(sheet(tab).getByRole("button", { name: "Keep editing", exact: true })).toBeFocused();
@@ -115,7 +115,7 @@ it("moves between the areas of the tab bar, finds a student, and adds one in a s
   await safe(() => sheet(tab).getByRole("button", { name: "Close student details", exact: true }).click());
   await ui(sheet(tab)).toBeHidden();
   await ui(tab.locator("#workspace-main").getByRole("alert")).toHaveText("We couldn’t confirm whether this saved. Reload the roster to check before trying again.");
-  await ui(add).toBeDisabled(); await ui(roster(tab).getByRole("button", { name: "Edit details for Synthetic Added", exact: true })).toBeDisabled();
+  await ui(add).toBeDisabled(); await ui(roster(tab).getByRole("button", { name: "Details for Synthetic Added", exact: true })).toBeDisabled();
   await tab.unroute("**/api/admin/students"); expect(posts).toBe(1);
   await safe(() => tab.getByRole("button", { name: "Reload roster", exact: true }).first().click());
   await ui(add).toBeEnabled(); await ui(tab.locator("#workspace-main").getByRole("alert")).toHaveCount(0);
@@ -139,7 +139,7 @@ it("opens a student's page with the staff tabs and verse sheet, and links to the
     await ui(tab.getByRole("navigation", { name: "Workspace", exact: true })).toHaveCount(0);
     // Readings for everyone E2: no tabs; Service parts and Lessons follow the text, and every staff action is in Manage.
     expect(await tab.getByRole("tablist", { name: "Student page", exact: true }).count()).toBe(0);
-    await ui(tab.getByRole("button", { name: "Manage", exact: true })).toBeVisible();
+    await ui(tab.getByRole("button", { name: "Manage reading", exact: true })).toBeVisible();
     await capture(tab, "admin-student", false);
     await safe(() => openVerseEditor(tab));
     await ui(tab.getByRole("dialog", { name: /verses|reading/i })).toBeVisible();

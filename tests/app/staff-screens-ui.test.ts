@@ -11,7 +11,7 @@ import { normalizeHebrew } from "../../src/server/study/normalize";
 import { LiftedLine } from "../../src/components/portal/workspace/study/lift";
 import { ExplorationContent } from "../../src/components/portal/workspace/study/exploration-view";
 import { ThisWeekCards } from "../../src/components/portal/workspace/staff/this-week";
-import { ManageSheet, manageRows } from "../../src/components/portal/workspace/staff/manage-sheet";
+import { ManageSheet } from "../../src/components/portal/workspace/staff/manage-sheet";
 import { familyLine, isSunday, linkRequestLine, nextEventLine, readyCount, weekCards, savedSections, statusChips, stillWorkingLine, studentFacts, teachesLine, verseList, waitingForDivisions, waitingLine, type StudentStatus } from "../../src/components/portal/workspace/staff/model";
 import { parseFamily, parseNeeded, parseStatuses } from "../../src/components/portal/workspace/staff/api";
 import { explorationPrepared } from "./exploration-client-helper";
@@ -194,17 +194,18 @@ describe("The Manage sheet (Readings for everyone E3)", () => {
   const student = { id: id(1), firstName: "Synthetic", lastName: "Learner" };
   const reading = (kind: "torah" | "haftarah", needsReview: boolean) => ({ id: id(kind === "torah" ? 2 : 3), kind, revision: 1, ranges: ["Genesis 1:1-3"], verses: [], needsReview, aliyahStarts: null, source: { status: "unknown", fetchedAt: null, date: null, calendar: null, attribution: null }, confirmationDate: null, basis: "custom" });
   const noop = () => {};
-  const actions = { open: true, onClose: noop, setDivisions: noop, changeVerses: noop, printPractice: noop, printDisabled: false, printWholeHref: "/print?ref=Genesis%201%3A1-3", writeNote: noop, refresh: noop, reload: async () => undefined };
+  const actions = { open: true, onClose: noop, editVerses: noop, printPractice: noop, printDisabled: false, printWholeHref: "/print?ref=Genesis%201%3A1-3", writeNote: noop, refresh: noop, reload: async () => undefined };
   const render = (mode: "tutor" | "admin", readings: ReturnType<typeof reading>[]) => renderToStaticMarkup(createElement(ManageSheet, { mode, student, baseline: { student, readings } as never, actions }));
-  it("lists the rows in order, with Set divisions unpunctuated, and the admin's two links last", () => {
-    expect(manageRows("tutor", [], false)).toEqual(["Set divisions", "Change verses", "Print practice sheet", "Print the whole reading", "Print booklet", "Write a lesson note", "Refresh reading"]);
-    expect(manageRows("admin", [], false).slice(-2)).toEqual(["People and access", "All students"]);
-    expect(manageRows("tutor", ["torah", "haftarah"], true).slice(0, 2)).toEqual(["Confirm reading is still right:Torah", "Confirm reading is still right:Haftarah"]);
-    const markup = render("tutor", []);
-    const titles = [...markup.matchAll(/<span class="[^"]*rowTitle[^"]*">([^<]*)<\/span>/g)].map(match => match[1]);
-    expect(titles).toEqual(manageRows("tutor", [], false));
-    expect(markup).toContain(">Manage<");
-    expect(markup).not.toContain("People and access");
+  it("groups the same reading, lesson and print actions for admins and tutors", () => {
+    for (const mode of ["admin", "tutor"] as const) {
+      const markup = render(mode, []);
+      const titles = [...markup.matchAll(/<span class="[^"]*rowTitle[^"]*">([^<]*)<\/span>/g)].map(match => match[1]);
+      expect(titles).toEqual(["Edit verses and aliyot", "Refresh reading", "Add lesson note", "Print practice sheet", "Print the whole reading", "Print booklet"]);
+      for (const group of ["Reading", "Lesson notes", "Print"]) expect(markup).toContain(`aria-label="${group}"`);
+      expect(markup).toContain(">Manage reading<");
+      expect(markup).not.toContain("People and access");
+      expect(markup).not.toContain("All students");
+    }
   });
   it("names each reading that needs review, Torah or Haftarah, only when there are two; a reading that does not need it has no row", () => {
     const both = render("tutor", [reading("torah", true), reading("haftarah", true)]);
@@ -213,10 +214,5 @@ describe("The Manage sheet (Readings for everyone E3)", () => {
     const one = render("tutor", [reading("torah", true)]);
     expect(one.match(/Confirm reading is still right/g)).toHaveLength(1);
     expect(render("tutor", [reading("torah", false)])).not.toContain("Confirm reading is still right");
-  });
-  it("gives an admin the links to this student's People and access and to All students", () => {
-    const markup = render("admin", []);
-    expect(markup).toContain(`href="/workspace/admin/students/${id(1)}/access"`);
-    expect(markup).toContain('href="/workspace/admin/students"');
   });
 });

@@ -13,7 +13,7 @@ export type SheetProps = {
   footer?: ReactNode;
   /** The close button's accessible name. Leave it out only when the footer carries a clearly named close action. */
   closeLabel?: string;
-  /** False while something is saving: Esc, a tap outside and a swipe are ignored. */
+  /** False while something is saving: Escape, backdrop, swipe and the close button are disabled. */
   dismissible?: boolean;
   /** Where focus goes when the sheet closes. Default: whatever had focus when it opened (a word, a row, a button). */
   returnFocusTo?: () => HTMLElement | null | undefined;
@@ -104,7 +104,7 @@ export function Sheet({ open, onClose, title, children, footer, closeLabel, dism
       <span className={styles.handle} aria-hidden="true" />
       <div className={styles.headrow}>
         <h2 id={`${id}-title`} ref={heading} tabIndex={-1} className={styles.title}>{title}</h2>
-        {closeLabel && <button type="button" className={styles.close} aria-label={closeLabel} onClick={onClose}>
+        {closeLabel && <button type="button" className={styles.close} aria-label={closeLabel} disabled={!dismissible} onClick={onClose}>
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>}
       </div>

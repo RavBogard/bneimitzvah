@@ -14,7 +14,7 @@ import { adminArea } from "../shell/tabs";
 import { SiteBar } from "../../site/site-bar";
 import { rememberSignedIn } from "../signed-in-hint";
 import { rolePaths } from "../shell/role-home";
-import { TutorNav } from "../shell/tutor-nav";
+import { StaffNav } from "../shell/staff-nav";
 
 export { rolePaths, statusOf };
 type WorkLifecycle = { pause(): void; clear(): void; settle(): Promise<void>; hasUnsaved(): boolean; reveal(): void };
@@ -111,7 +111,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [shellShown, summary, router]);
   const visibleNotice = isParentPath(pathname) ? practiceMode.notice : "";
   const failure = phase === "signed-out" ? 401 : phase === "access-changed" ? 403 : phase === "unavailable" ? 503 : null;
-  return <div className="portal-shell workspace-shell" data-rail-pending={phase === "checking" && adminArea(pathname) ? "" : undefined}>
+  return <div className="portal-shell workspace-shell" data-rail-pending={phase === "checking" && pathname !== "/mine" && adminArea(pathname) ? "" : undefined}>
     <a className="skip-link" href="#workspace-main">{pathname.startsWith("/mine") ? "Skip to main content" : "Skip to workspace"}</a>
     {shellShown && <TabSkipLink roles={summary!.roles} />}
     <SiteBar signedIn onNavigate={controlledLink} />
@@ -127,7 +127,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         selectChild: practiceMode.selectChild, exitPractice: practiceMode.exitPractice, refresh, serviceAuthorityFailed, registerWork, registerDeparture, guardDeparture, registerReload }}>
         {visibleNotice && <p className="workspace-notice" role="status" data-testid="workspace-notice" data-notice-kind={visibleNotice === PRACTICE_ACCESS_CHANGED ? "practice-access-changed" : undefined}>{visibleNotice}</p>}
         {workNotice && <p className="workspace-notice" role="status">{workNotice}</p>}
-        <TutorNav summary={summary!} epoch={epoch} Link={WorkspaceLink} />{children}
+        <StaffNav summary={summary!} epoch={epoch} Link={WorkspaceLink} />{children}
       </WorkspaceContext.Provider>}
     </main>
     {shellShown && <TabBar roles={summary!.roles} onNavigate={controlledLink} />}
@@ -139,9 +139,20 @@ function arrivedWithinSite() {
   try { const from = document.referrer ? new URL(document.referrer) : null; return !!from && from.origin === window.location.origin && from.pathname !== "/sign-in"; } catch { return false; }
 }
 
-export function WorkspaceLink({ href, children, ...rest }: { href: string; children: ReactNode } & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "onClick">) {
+export function WorkspaceLink({ href, children, onAccepted, fullDocument, prefetch, ...rest }: { href: string; children: ReactNode; onAccepted?: () => void; fullDocument?: boolean; prefetch?: boolean } & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "onClick">) {
   const { guardDeparture } = useWorkspace(), router = useRouter();
-  return <Link {...rest} href={href} onClick={event => { if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); void guardDeparture().then(leave => { if (leave) router.push(href); }); }}>{children}</Link>;
+  const navigate = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    void guardDeparture().then(leave => {
+      if (!leave) return;
+      onAccepted?.();
+      if (fullDocument) window.location.assign(href);
+      else router.push(href);
+    });
+  };
+  return fullDocument ? <a {...rest} href={href} onClick={navigate}>{children}</a>
+    : <Link {...rest} href={href} prefetch={prefetch} onClick={navigate}>{children}</Link>;
 }
 
 export function RequireRole({ role, children }: { role: keyof typeof rolePaths; children: ReactNode }) {

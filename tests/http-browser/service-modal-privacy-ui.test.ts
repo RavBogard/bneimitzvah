@@ -49,7 +49,7 @@ async function choose(tab: Page, part = 1) {
   await safe(() => tab.locator("[data-testid=\"reading-workspace\"]").scrollIntoViewIfNeeded());
 }
 async function prepareReading(tab: Page) {
-  await manage(tab, "Change verses"); await ui(sheet(tab)).toBeVisible();
+  await manage(tab, "Edit verses and aliyot"); await ui(sheet(tab)).toBeVisible();
   await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom"));
   await safe(() => tab.getByText("Advanced references and aliyah boundaries", { exact: true }).click());
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2"));
@@ -106,7 +106,7 @@ it("retains only the rightful service decision during a quiet check, preserving 
   expect(await modalCount(tab)).toBe(1); expect(await sheet(tab).evaluate(node => node.contains(document.activeElement))).toBe(true);
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
   await safe(() => tab.keyboard.press("Escape")); await ui(sheet(tab)).toBeHidden(); expect(await modalCount(tab)).toBe(0);
-  await ui(tab.getByRole("button", { name: "Manage", exact: true })).toBeFocused();
+  await ui(tab.getByRole("button", { name: "Manage reading", exact: true })).toBeFocused();
   await safe(() => toSection(tab, "service"));
   await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked();
   await ui(panel(other).getByRole("checkbox", { name: /Synthetic part 2/ })).toBeChecked(); expect(writes).toEqual({ confirm: 0, note: 0 });

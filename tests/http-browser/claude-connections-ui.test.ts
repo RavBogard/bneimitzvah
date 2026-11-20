@@ -116,7 +116,7 @@ it("shows a student's Maven link in the roster sheet and unlinks it there", asyn
     if (!mobile) await safe(() => tab.setViewportSize({ width: 1440, height: 1000 }));
     await navigate(tab, "/workspace/admin/students?tab=students");
     const sheet = tab.getByRole("dialog");
-    await safe(() => main(tab).getByRole("button", { name: "Edit details for Synthetic Learner", exact: true }).click());
+    await safe(() => main(tab).getByRole("button", { name: "Details for Synthetic Learner", exact: true }).click());
     await ui(sheet.getByRole("heading", { name: "Maven record", exact: true })).toBeVisible();
     await ui(sheet.getByText("SYN000000000000042", { exact: true })).toBeVisible();
     await capture(tab, `roster-maven-link-${mobile ? "mobile" : "desktop"}`);

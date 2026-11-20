@@ -12,7 +12,7 @@ import { familyLine, parentLine, tutorLine, waitingForDivisions, waitingLine } f
  *   display names only, never an address;
  * - for a tutor, the honors status (G12, TP-05): the family is waiting for aliyah divisions. Status only: it is worked out from
  *   the reading the tutor already sees (a Torah reading with no divisions) and the student's kind; honors are never read, so no
- *   honoree name can reach it. The way to set divisions is the Manage sheet's "Set divisions" row;
+ *   honoree name can reach it. The way to set divisions is the "Edit verses and aliyot" action in Manage reading;
  * - for a tutor or an admin, each reading that needs review is named here; "Confirm reading is still right" (AD-05) is a Manage row.
  */
 export function StaffStudentLines({ mode, baseline }: { mode: "tutor" | "admin"; baseline: Assigned }) {

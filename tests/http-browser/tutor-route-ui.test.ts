@@ -124,7 +124,7 @@ it("does not substitute another reading for foreign or unknown routes and reject
   await safe(() => (async () => { await tab.getByRole("banner").getByRole("link", { name: "My Readings", exact: true }).click(); })());
   await safe(() => goChild(tab, fixture.student.id)); await loaded(tab, "Genesis 1:1");
   // A parent's reading has no Manage sheet: the staff actions are not theirs.
-  expect(await tab.getByRole("button", { name: "Manage", exact: true }).count()).toBe(0); expect(await tab.getByRole("link", { name: "Change verses", exact: true }).count()).toBe(0);
+  expect(await tab.getByRole("button", { name: "Manage reading", exact: true }).count()).toBe(0); expect(await tab.getByRole("button", { name: "Edit verses and aliyot", exact: true }).count()).toBe(0);
   await navigate(tab, `/workspace/tutor/${fixture.student.id}`); await ui(tab.getByRole("heading", { name: "Student not found", exact: true })).toBeVisible(); expect(await tab.locator(".study-verses, .verse-work").count()).toBe(0);
   expect((await api(tab, `/api/students/${fixture.student.id}/reading?mode=tutor`)).status).toBe(404);
   await ui(card(tab, sibling.id)).toBeVisible();

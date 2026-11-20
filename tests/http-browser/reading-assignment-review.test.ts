@@ -44,7 +44,7 @@ async function page(role: "admin" | "tutor" = "admin") {
 }
 async function navigate(tab: Page, role = "admin") {
   await safe(() => tab.goto(`/workspace/${role === "admin" ? "admin/students" : "tutor"}/${fixture.student.id}${role === "admin" ? "/reading" : ""}`, { waitUntil: "domcontentloaded" }));
-  await ui(tab.getByRole("button", { name: "Manage", exact: true })).toBeEnabled();
+  await ui(tab.getByRole("button", { name: "Manage reading", exact: true })).toBeEnabled();
 }
 async function open(tab: Page) { await safe(() => openVerseEditor(tab)); await ui(sheet(tab)).toBeVisible(); }
 async function close(tab: Page) { await click(tab, "Close verse editor"); await ui(sheet(tab)).toBeHidden(); }

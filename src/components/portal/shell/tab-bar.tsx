@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useLayoutEffect, useMemo, useState, type MouseEvent, type ReactElement } from "react";
 import type { Role } from "../api";
 import { rememberedRole, rememberRole } from "./role-memory";
-import { adminArea, isTextField, keyboardIsOpen, roleOfPath, shellRole, tabsFor, type ShellTab, type TabIcon } from "./tabs";
+import { adminArea, isTextField, keyboardIsOpen, roleOfPath, staffNavigationRole, tabsFor, type ShellTab, type TabIcon } from "./tabs";
 import styles from "./shell.module.css";
 
 /** The nav's id, so the skip link can land on it. */
@@ -44,13 +44,17 @@ function Tabs({ roles, onNavigate }: TabBarProps) {
   const pathname = usePathname(), search = useSearchParams(), keyboard = useKeyboardOpen();
   const pageRole = roleOfPath(pathname);
   useEffect(() => { if (pageRole) rememberRole(pageRole); }, [pageRole]);
-  const role = shellRole(pathname, roles, pageRole ? null : rememberedRole());
+  const role = staffNavigationRole(pathname, roles, rememberedRole());
   const tabs = useMemo<ShellTab[]>(() => role ? tabsFor({ role, pathname, tab: search.get("tab") }) : [], [role, pathname, search]);
   const [bar, setBar] = useState<HTMLElement | null>(null);
   // The bar's real height (it grows with larger text) is what the page keeps clear at its foot.
   useLayoutEffect(() => {
     if (!bar || typeof ResizeObserver === "undefined") return;
-    const root = document.documentElement, measure = () => root.style.setProperty("--shell-bar-h", `${bar.offsetHeight}px`);
+    const root = document.documentElement;
+    const measure = () => {
+      if (bar.offsetHeight) root.style.setProperty("--shell-bar-h", `${bar.offsetHeight}px`);
+      else root.style.removeProperty("--shell-bar-h");
+    };
     measure();
     const observer = new ResizeObserver(measure); observer.observe(bar);
     return () => { observer.disconnect(); root.style.removeProperty("--shell-bar-h"); };
@@ -65,7 +69,7 @@ function Tabs({ roles, onNavigate }: TabBarProps) {
   </nav>;
 }
 
-/** The bottom tab bar on a phone and the left rail from 1000px: the one way between a signed-in role's areas. Renders nothing for every role but the admin, and for the admin off the admin pages. */
+/** The bottom tab bar on a phone and the left rail from 1000px: the one way between a signed-in role's areas. The admin keeps this navigation on the shelf and across the admin workspace. */
 export function TabBar(props: TabBarProps) {
   return props.roles.length ? <Suspense fallback={null}><Tabs {...props} /></Suspense> : null;
 }
@@ -73,5 +77,5 @@ export function TabBar(props: TabBarProps) {
 /** For a keyboard user: one link from the top of the page to the tabs. Renders with the bar, or not at all. */
 export function TabSkipLink({ roles }: { roles: readonly Role[] }) {
   const pathname = usePathname();
-  return roles.includes("admin") && adminArea(pathname) ? <a className="skip-link" href={`#${TAB_BAR_ID}`}>Skip to workspace tabs</a> : null;
+  return staffNavigationRole(pathname, roles, rememberedRole()) === "admin" && adminArea(pathname) ? <a className={`skip-link ${styles.skip}`} href={`#${TAB_BAR_ID}`}>Skip to workspace tabs</a> : null;
 }

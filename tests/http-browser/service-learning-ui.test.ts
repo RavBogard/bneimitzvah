@@ -272,7 +272,7 @@ it("suspends the reading sheet for a service decision and retains only that righ
   const tab = await page("tutor"); await workspace(tab, "tutor");
   await click(tab, "Choose service parts"); await safe(() => panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ }).check());
   await safe(() => tab.locator("[data-testid=\"reading-workspace\"]").scrollIntoViewIfNeeded());
-  await manage(tab, "Change verses");
+  await manage(tab, "Edit verses and aliyot");
   const sheet = tab.locator("dialog.editor-sheet"), prompt = tab.getByRole("dialog", { name: "Keep this service draft?", exact: true });
   await ui(sheet).toBeVisible();
   await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom"));
@@ -298,7 +298,7 @@ it("suspends the reading sheet for a service decision and retains only that righ
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
   await safe(() => tab.keyboard.press("Escape")); await ui(sheet).toBeHidden();
   expect(await snapshot()).toEqual({ modals: 0, service: false, sheet: false });
-  await ui(tab.getByRole("button", { name: "Manage", exact: true })).toBeFocused();
+  await ui(tab.getByRole("button", { name: "Manage reading", exact: true })).toBeFocused();
   await safe(() => toSection(tab, "service"));
   await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked(); expect(writes).toBe(0);
   await tab.unroute("**/api/session");

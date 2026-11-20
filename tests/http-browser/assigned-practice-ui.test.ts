@@ -62,13 +62,13 @@ const surface = (tab: Page) => tab.locator("[data-assigned-practice]");
 it("opens the tutor's existing aliyah without staff details and restores them on return", async () => {
   const { tab } = await practiceReading("tutor", 1440, 1000);
   await ui(tab.getByTestId("lesson-rail")).toBeVisible();
-  await ui(tab.locator("[data-tutor-nav]")).toBeVisible();
+  await ui(tab.locator("[data-staff-nav]")).toBeVisible();
   await ui(tab.getByTestId("private-pronouns")).toContainText("they/them");
   await tab.locator(".reading-practice-action").click();
   await ui(surface(tab)).toBeVisible();
   await ui(tab.locator("dialog.lift")).toHaveCount(0);
   await ui(tab.getByTestId("lesson-rail")).toHaveCount(0);
-  await ui(tab.locator("[data-tutor-nav]")).toBeHidden();
+  await ui(tab.locator("[data-staff-nav]")).toBeHidden();
   await ui(tab.getByTestId("private-pronouns")).toHaveCount(0);
   await ui(tab.getByTestId("pronouns-editor")).toHaveCount(0);
   await ui(tab.locator(".reading-other-assignments, .study-verse-bar, .guide-place")).toHaveCount(0);

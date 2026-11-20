@@ -34,7 +34,7 @@ async function pendingDeparture(tab: Page, draft: string) {
   const verse = await workPanel(tab); await safe(() => verse.locator("summary").click());
   await safe(() => verse.getByRole("textbox").fill(draft));
   await closeVerseTools(tab); // the page's controls are behind the sheet; closing it loses no text
-  await manage(tab, "Change verses"); await ui(editor(tab)).toBeVisible();
+  await manage(tab, "Edit verses and aliyot"); await ui(editor(tab)).toBeVisible();
   await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom"));
   await safe(() => tab.getByText("Advanced references and aliyah boundaries", { exact: true }).click());
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2"));
@@ -76,12 +76,12 @@ it("retains the sole rightful departure modal during a quiet check without confi
   expect(await editor(tab).evaluate(node => node.contains(document.activeElement))).toBe(true);
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
   await safe(() => tab.keyboard.press("Escape")); await ui(editor(tab)).toBeHidden();
-  await ui(tab.getByRole("button", { name: "Manage", exact: true })).toBeFocused();
+  await ui(tab.getByRole("button", { name: "Manage reading", exact: true })).toBeFocused();
   // The retained unsent note is still there after the guard.
   const notePanel = await workPanel(tab);
   await ui(notePanel.getByRole("textbox")).toHaveValue(draft);
   await closeVerseTools(tab);
-  await manage(tab, "Change verses"); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
+  await manage(tab, "Edit verses and aliyot"); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
   expect(writes).toBe(0); await tab.unroute("**/api/session");
 });
 

@@ -1,5 +1,5 @@
 // 1.9 N10: which tabs a signed-in role has, where each goes, and which one is current. Pure, so it is unit-tested without a browser.
-// Area A: only the admin has a tab bar (four tabs, on admin pages). Students, parents and tutors live on /mine.
+// The admin keeps four tabs through their workspace and on My Readings.
 // The shell role below is still read by the tab bar, More, and the front door and account page (homeRole); it stays until those stop asking.
 import type { Role } from "../api";
 
@@ -27,21 +27,28 @@ export function roleOfPath(pathname: string): ShellRole | null {
     : under(pathname, "/workspace/tutor") ? "tutor" : under(pathname, "/workspace/admin") ? "admin" : null;
 }
 
+export type StaffNavigationRole = Extract<ShellRole, "admin" | "tutor">;
+
+/** The disclosure follows the view, including the canonical family reading routes on the shelf. */
+export function staffNavigationRole(pathname: string, roles: readonly ShellRole[], remembered: ShellRole | null): StaffNavigationRole | null {
+  if (under(pathname, "/mine/child") || under(pathname, "/mine/reading")) return null;
+  const role = roleOfPath(pathname) ?? shellRole(pathname, roles, remembered);
+  return (role === "admin" || role === "tutor") && roles.includes(role) ? role : null;
+}
+
 const MORE_PATHS = ["/workspace/more", "/workspace/email", "/workspace/claude"] as const;
 /** Where "More" lists its destinations. */
 export const MORE_HREF = "/workspace/more";
+export const STUDENTS_HREF = "/workspace/admin/students?tab=students";
 const PEOPLE_PATHS = ["/workspace/admin/invitations", "/workspace/admin/tutors", "/workspace/accounts"] as const;
 const isMore = (path: string) => MORE_PATHS.some(base => under(path, base)) || under(path, "/workspace/admin/settings") || under(path, "/workspace/admin/guide-sharing") || under(path, "/workspace/admin/guides");
 const isPeople = (path: string) => PEOPLE_PATHS.some(base => under(path, base));
 
-/**
- * Whether a page is the admin's own working area, the only place a tab bar shows (Area A: students, parents and tutors live on /mine
- * and have none). The admin's per-student reading page is the one /workspace/admin page that is not (decision 20).
- */
+/** The admin workspace keeps its tabs on the roster, individual readers and the shared shelf. */
 export function adminArea(pathname: string): boolean {
-  if (/^\/workspace\/admin\/students\/[^/]+\/reading\/?$/.test(pathname)) return false;
-  return under(pathname, "/workspace/admin") || isMore(pathname) || isPeople(pathname);
+  return pathname === "/mine" || under(pathname, "/workspace/admin") || isMore(pathname) || isPeople(pathname);
 }
+
 
 export type TabContext = {
   role: ShellRole;
@@ -50,14 +57,14 @@ export type TabContext = {
   tab: string | null;
 };
 
-/** The tabs for a role and whether each is current. Only the admin has any, and only on admin pages; every other case is empty. */
+/** The tabs for a role and whether each is current. The site bar marks My Readings when the shelf is open. */
 export function tabsFor({ role, pathname, tab }: TabContext): ShellTab[] {
   if (role !== "admin" || !adminArea(pathname)) return [];
   const make = (key: string, label: string, href: string, icon: TabIcon, current: boolean): ShellTab => ({ key, label, href, icon, current });
   const roster = pathname === "/workspace/admin/students";
   return [
     make("week", "This week", "/workspace/admin/students", "week", roster && tab !== "students"),
-    make("students", "Students", "/workspace/admin/students?tab=students", "students", roster && tab === "students" || under(pathname, "/workspace/admin/students") && !roster),
+    make("students", "Students", STUDENTS_HREF, "students", roster && tab === "students" || under(pathname, "/workspace/admin/students") && !roster),
     make("people", "People", "/workspace/admin/invitations", "people", isPeople(pathname)),
     make("more", "More", MORE_HREF, "more", isMore(pathname)),
   ];

@@ -43,8 +43,8 @@ export async function openOwnReading(tab: Page) {
 
 /** Opens the Manage sheet (staff) and returns the row with this name. */
 export async function manageRow(tab: Page, name: string) {
-  await tab.getByRole("button", { name: "Manage", exact: true }).click();
-  return tab.getByRole("dialog", { name: "Manage", exact: true }).getByRole("button", { name, exact: true });
+  await tab.getByRole("button", { name: "Manage reading", exact: true }).click();
+  return tab.getByRole("dialog", { name: "Manage reading", exact: true }).getByRole("button", { name, exact: true });
 }
 
 /** Chooses a Manage row by name: the sheet opens, the row is pressed and the sheet closes behind its action. */
@@ -52,10 +52,10 @@ export async function manage(tab: Page, name: string) {
   await (await manageRow(tab, name)).click();
 }
 
-/** The verse editor: through Manage's "Change verses", or the "Assign verses" button a reading with nothing assigned keeps. */
+/** The verse editor: through Manage reading's "Edit verses and aliyot", or the "Assign verses" button a reading with nothing assigned keeps. */
 export async function openVerseEditor(tab: Page) {
   const assign = tab.getByRole("button", { name: "Assign verses", exact: true });
-  if (await assign.count()) await assign.click(); else await manage(tab, "Change verses");
+  if (await assign.count()) await assign.click(); else await manage(tab, "Edit verses and aliyot");
 }
 
 /**
@@ -63,7 +63,7 @@ export async function openVerseEditor(tab: Page) {
  * page itself is reloaded, which asks for everything again as well.
  */
 export async function refreshReading(tab: Page) {
-  if (await tab.getByRole("button", { name: "Manage", exact: true }).count()) await manage(tab, "Refresh reading");
+  if (await tab.getByRole("button", { name: "Manage reading", exact: true }).count()) await manage(tab, "Refresh reading");
   else await tab.reload({ waitUntil: "domcontentloaded" });
 }
 

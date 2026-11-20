@@ -37,7 +37,7 @@ async function page(who: "admin" | "tutor" = "admin", mobile = false) {
 async function click(tab: Page, name: string) { await safe(() => tab.getByRole("button", { name, exact: true }).click()); }
 // The roster lists 25 students a page in server (id) order, and earlier cases here add more than 25, so a named
 // student is found through the roster search, as an admin would, before its row action is used.
-async function editDetails(tab: Page, name: string) { await safe(() => tab.getByRole("searchbox", { name: "Find a student", exact: true }).fill(name)); await click(tab, `Edit details for ${name}`); }
+async function editDetails(tab: Page, name: string) { await safe(() => tab.getByRole("searchbox", { name: "Find a student", exact: true }).fill(name)); await click(tab, `Details for ${name}`); }
 // Row actions are named for the person they change ("Remove Synthetic Tutor from Synthetic"); this finds one by its verb within a card.
 const cards = { Tutors: "people-tutors", Parents: "people-parents", "Student sign-in": "people-students", "Congregation-wide removal": "people-congregation" } as const;
 function action(tab: Page, card: keyof typeof cards, verb: string) { return tab.getByTestId(cards[card]).getByRole("button", { name: new RegExp(`^${verb} `) }); }
@@ -93,7 +93,7 @@ it("creates adults without parent contact, requires the contact for each kind an
   let row = (await api(tab, "/api/admin/students")).data.students.find((row: { lastName: string }) => row.lastName === contact.lastName);
   expect(row.serviceSlot === "unknown" && row.studentKind === "adult" && row.parentEmail === null && row.ownEmail === contact.ownEmail).toBe(true);
   const originalRevision = row.revision;
-  await click(tab, "Edit details for Synthetic AdultContact"); await safe(() => tab.getByRole("radio", { name: "Child", exact: true }).check());
+  await click(tab, "Details for Synthetic AdultContact"); await safe(() => tab.getByRole("radio", { name: "Child", exact: true }).check());
   await safe(()=>tab.getByLabel("Service (needed to suggest the reading)",{exact:true}).selectOption("havdalah"));
   await ui(tab.getByLabel("Parent email", { exact: true })).toHaveJSProperty("required", true);
   await ui(tab.getByLabel("Student email (optional)", { exact: true })).toHaveValue(contact.ownEmail);
@@ -107,7 +107,7 @@ it("creates adults without parent contact, requires the contact for each kind an
   row = (await api(tab, "/api/admin/students")).data.students.find((value: { id: string }) => value.id === row.id);
   expect(row.serviceSlot === "havdalah" && row.studentKind === "child" && row.parentEmail === child.parentEmail && row.ownEmail === contact.ownEmail).toBe(true);
   expect((await api(tab, `/api/admin/students/${row.id}/edit`, { expectedRevision: originalRevision, student: contact })).status).toBe(409);
-  await click(tab, "Edit details for Synthetic AdultContact"); await safe(() => tab.getByRole("radio", { name: "Adult", exact: true }).check());
+  await click(tab, "Details for Synthetic AdultContact"); await safe(() => tab.getByRole("radio", { name: "Adult", exact: true }).check());
   await ui(tab.getByLabel("Parent email (optional)", { exact: true })).toHaveValue(child.parentEmail);
   await click(tab, "Save student"); await ui(tab.getByTestId("roster-message")).toHaveAttribute("data-message-kind", "saved");
   const access = (await api(tab, `/api/admin/students/${row.id}/relationships`)).data;
@@ -230,7 +230,7 @@ it("warns before Disable, marks a ceremony done after the approved confirmation,
   expect(typeof row.ceremonyDoneAt === "string" && row.disabledAt === null).toBe(true);
   await safe(() => list.getByTestId("ceremony-done-undo").click());
   await ui(tab.getByText("Noa is back in the active list. Choose a tutor.", { exact: true })).toBeVisible();
-  await ui(tab.getByRole("button", { name: `Edit details for ${name}`, exact: true })).toBeVisible();
+  await ui(tab.getByRole("button", { name: `Details for ${name}`, exact: true })).toBeVisible();
   await ui(tab.getByTestId("ceremony-done-list")).toHaveCount(0);
   expect((await api(tab, "/api/admin/students")).data.students.find((value: { id: string }) => value.id === id).ceremonyDoneAt).toBeNull();
 });

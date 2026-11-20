@@ -183,6 +183,11 @@ describe("Account is a list: who is signed in, Roles with the current one marked
     expect(student).toMatch(/href="https:\/\/www\.centralreform\.org\/beit-mitzvah\/"[^>]*target="_blank"[^>]*>.*Need help\?/);
     expect(view(["parent"], "parent")).not.toContain("Need help?");
   });
+  test("only an admin account can open the sample-role preview, even if another role is current", () => {
+    expect(view(["admin", "tutor"], "tutor")).toContain('href="/preview"');
+    expect(view(["admin"], "admin")).toContain('href="/preview"');
+    expect(view(["tutor", "parent", "student"], "tutor")).not.toContain('href="/preview"');
+  });
   test("an account with no role asks for one here; a role's account does not unless it has no saved layer", () => {
     expect(view([], null)).toContain("account-request");
     expect(view(["tutor"], "tutor")).not.toContain("account-request");
