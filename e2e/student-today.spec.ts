@@ -75,7 +75,7 @@ test.describe("at 390x844", () => {
     const text = (await dots.textContent()) ?? "";
     expect(text).not.toMatch(/\d/);
     expect(text).toContain("practiced");
-    await expect(card(page).getByText("Days you practiced · a day fills when you open your reading up close", { exact: true })).toBeVisible();
+    await expect(card(page).getByText("Days you practiced · a day fills when you open Practice", { exact: true })).toBeVisible();
   });
 
   test("the latest lesson note is pinned, with Before next time when the tutor wrote one", async ({ page }) => {

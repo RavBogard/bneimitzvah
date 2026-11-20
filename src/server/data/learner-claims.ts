@@ -50,10 +50,10 @@ export async function notALearner<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantI
  * was revoked no longer counts (revokeRoleGrant ends such claims too; this is the belt to that brace), so the learner's line clears
  * and another tutor may claim.
  */
-export async function activeClaimOf<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, learnerMembershipId: string, lock: "share" | "update" = "share") {
+export async function activeClaimOf<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, learnerMembershipId: string, lock: "share" | "update" = "share", tutorGrantId?: string, claimId?: string) {
   const [row] = await tx.select({ claim: s.learnerClaim }).from(s.learnerClaim)
     .innerJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.learnerClaim.tenantId), eq(s.roleGrant.id, s.learnerClaim.tutorGrantId), isNull(s.roleGrant.revokedAt)))
-    .where(and(eq(s.learnerClaim.tenantId, tenantId), eq(s.learnerClaim.learnerMembershipId, learnerMembershipId), isNull(s.learnerClaim.revokedAt))).limit(1).for(lock, { of: s.learnerClaim });
+    .where(and(eq(s.learnerClaim.tenantId, tenantId), eq(s.learnerClaim.learnerMembershipId, learnerMembershipId), tutorGrantId ? eq(s.learnerClaim.tutorGrantId, tutorGrantId) : undefined, claimId ? eq(s.learnerClaim.id, claimId) : undefined, isNull(s.learnerClaim.revokedAt))).orderBy(asc(s.learnerClaim.id)).limit(1).for(lock, { of: s.learnerClaim });
   return row?.claim ?? null;
 }
 
@@ -115,6 +115,6 @@ export async function canView<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: s
   if (links.some(link => link.tutorGrantId === grant.id)) return grant;
   // A1 (tutor and admin walks 2026-10-28): a claim never opens a colleague's, the rabbi's or a parent's shelf, even one made before they were refused.
   if (await notALearner(tx, tenantId, learnerMembershipId)) return null;
-  const claim = await activeClaimOf(tx, tenantId, learnerMembershipId);
+  const claim = await activeClaimOf(tx, tenantId, learnerMembershipId, "share", grant.id);
   return claim && claim.tutorGrantId === grant.id ? grant : null;
 }

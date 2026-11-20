@@ -43,10 +43,10 @@ const shortDate = (date: string) => new Intl.DateTimeFormat("en-US", { weekday: 
 /** The door of a signed-in person: My Readings for every role but the admin (decisions 12 and 22), This week for the admin. */
 export function signedInDoor(role: Role, facts: DoorFacts = {}): SignedInDoor {
   if (role === "admin") return { title: "This week", line: "Needs you, ceremonies and rehearsals.", action: "See this week" };
+  if (role === "tutor") return { title: "My Students", line: facts.nearest ? `Next: ${facts.nearest.name} · Beit Mitzvah, ${shortDate(facts.nearest.ceremony)}` : null, action: "Open My Students" };
   const line = facts.pinned ? `${facts.pinned.name} · Beit Mitzvah, ${shortDate(facts.pinned.ceremony)} · ${facts.pinned.done} of ${facts.pinned.total} verses`
     : role === "parent" && facts.child ? `${facts.child.name} · Beit Mitzvah, ${shortDate(facts.child.ceremony)}`
-      : role === "tutor" && facts.nearest ? `Next: ${facts.nearest.name} · Beit Mitzvah, ${shortDate(facts.nearest.ceremony)}`
-        : facts.count ? `${facts.count} saved ${facts.count === 1 ? "reading" : "readings"}` : null;
+      : facts.count ? `${facts.count} saved ${facts.count === 1 ? "reading" : "readings"}` : null;
   return { title: "Your readings", line, action: "Open My Readings" };
 }
 /** Whether the door leads the home, under the hero: the person keeps a reading or has one pinned (decision 22). */
@@ -72,8 +72,8 @@ export function ThisWeekView({ state, quiet = false }: { state: ThisWeekState;
       {week?.torah && <> · Torah <bdi dir="ltr">{displayRange(week.torah.ranges)}</bdi></>}
       {week?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(week.haftarah.ranges)}</bdi></>}</p>}
     <div className={styles.actions}>
-      <a className={quiet ? "button-hero-secondary" : "button-start"} href={state.next && state.date ? readAddress({ mode: "week", date: state.date, kind: null }) : "/read"}>Lein</a>
-      <a className="button-hero-secondary" href={state.next && state.date ? readAddress({ mode: "week", date: state.date, kind: null }, { study: true }) : "/read?lens=study"}>Study</a>
+      <a className={quiet ? "button-hero-secondary" : "button-start"} href={state.next && state.date ? readAddress({ mode: "week", date: state.date, kind: null }) : "/read"}>Practice a reading</a>
+      <a className="button-hero-secondary" href={state.next && state.date ? readAddress({ mode: "week", date: state.date, kind: null }, { study: true }) : "/read?lens=study"}>Study Torah</a>
       {state.next && <a className="button-hero-secondary" data-testid="this-shabbat-link" href="/read">This Shabbat</a>}
     </div>
   </section>;
@@ -118,7 +118,7 @@ function BeitMitzvahDoor({ account, children, place, next }: { account: FrontDoo
       <p className={styles.doorMore}><a href="/about#accounts">How accounts work</a></p>
     </>}
     {role && door && next}
-    {role && door && <a className={`button-hero-secondary ${styles.doorAction}`} data-testid="door-action" href={rolePaths[role]} aria-describedby="beit-mitzvah-title">{door.action}</a>}
+    {role && door && <a className={`button-hero-secondary ${styles.doorAction}`} data-testid="door-action" href={role === "tutor" ? "/mine#your-students" : rolePaths[role]} aria-describedby="beit-mitzvah-title">{door.action}</a>}
     {task && <div className={styles.task}>{children}</div>}
   </section>;
 }
@@ -178,7 +178,7 @@ export function FrontDoor({ account, children }: { account: FrontDoorAccount; ch
         <section className={styles.door} aria-labelledby="learn-title" data-door="learn">
           <h2 id="learn-title" className={styles.doorTitle}>Learn to lein</h2>
           <p className={styles.doorLine} data-testid="learn-door-line">Hear the phrases, then lein a verse of this week's reading.</p>
-          <a className={`button-hero-secondary ${styles.doorAction}`} href="/learn" aria-describedby="learn-title">Start</a>
+          <a className={`button-hero-secondary ${styles.doorAction}`} href="/learn" aria-describedby="learn-title">Learn to lein</a>
           <p className={styles.doorMore}><a href="/trope-chart">Trope chart</a></p>
         </section>
       </div>

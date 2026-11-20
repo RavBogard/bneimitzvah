@@ -250,7 +250,7 @@ it("stages a cross-page excerpt and cuts, isolates Torah/haftarah drafts, and re
   expect((await api(tab, `/api/students/${fixture.student.id}/reading?mode=admin`)).data).toEqual(before.data);
 });
 
-it("reviews and confirms only cuts with truthful preserved context, retaining saved notes and their earlier-revision history", async () => {
+it("autosaves only cuts with original provenance, retaining saved notes and their earlier-revision history", async () => {
   const tab = await page();
   const [assignment] = await fixture.ownerDb.select().from(s.assignment).where(eq(s.assignment.studentId, fixture.student.id));
   const snapshot = { slotProvenance: 1, serviceSlot: "morning", readingDate: "2026-12-26", confirmationDate: "2026-12-26", needsReview: true,
@@ -266,30 +266,25 @@ it("reviews and confirms only cuts with truthful preserved context, retaining sa
   const requests: Record<string, unknown>[] = [];
   tab.on("request", request => { if (request.method() === "POST" && new URL(request.url()).pathname.endsWith("/reading/prepare")) requests.push(request.postDataJSON()); });
   await openSheet(tab); await click(tab, "Use current assignment");
-  await safe(() => tab.getByLabel("Subsequent aliyah starts", { exact: true }).fill("Genesis 1:3"));
-  await click(tab, "Review assignment");
-  const review = tab.locator(".reading-proposal");
-  await ui(review.getByRole("heading", { name: "Review Torah assignment", exact: true })).toBeVisible();
-  expect(requests.at(-1)).toMatchObject({ kind: "torah", preparationMode: "current-assignment", expectedAssignmentRevision: assignment.revision, aliyahStarts: ["Genesis 1:3"] });
-  expect(requests.at(-1)).not.toHaveProperty("ranges"); expect(requests.at(-1)).not.toHaveProperty("pick");
-  await ui(review).toContainText("References unchanged. Existing confirmation date: 2026-12-26.");
-  await ui(review).toContainText("The reading still needs review with the tutor or rabbi.");
-  await safe(() => review.getByText("Calendar source details", { exact: true }).click());
-  await ui(review).toContainText("Preserved calendar source: unavailable when the assignment was saved.");
-  await ui(review).toContainText("No calendar result was newly checked.");
-  expect((await api(tab, `/api/students/${fixture.student.id}/reading?mode=admin`)).data).toEqual(before.data);
-  await captures(tab, "cut-review", ".reading-editor");
-  // A manual reference edit explicitly leaves cut-only mode; a fresh seed returns to it.
+  // Changing the actual verses still uses a preview and an explicit save.
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2"));
   await click(tab, "Record one aliyah"); await click(tab, "Review assignment");
   await ui(tab.getByRole("button", { name: "Save assignment", exact: true })).toBeEnabled();
   expect(requests.at(-1)).toMatchObject({ ranges: ["Genesis 1:1-2"], aliyahStarts: [] });
   expect(requests.at(-1)).not.toHaveProperty("preparationMode");
+  expect((await api(tab, `/api/students/${fixture.student.id}/reading?mode=admin`)).data).toEqual(before.data);
   await click(tab, "Use current assignment");
-  await safe(() => tab.getByLabel("Subsequent aliyah starts", { exact: true }).fill("Genesis 1:3"));
-  await click(tab, "Review assignment"); await ui(tab.getByRole("button", { name: "Save assignment", exact: true })).toBeEnabled();
-  await click(tab, "Save assignment");
-  await ui(tab.getByText("Saved. The current reading above shows what the student will see.", { exact: true })).toBeVisible();
+  const boundary = tab.getByLabel("Subsequent aliyah starts", { exact: true });
+  const pending = tab.waitForRequest(request => request.method() === "POST"
+    && new URL(request.url()).pathname.endsWith("/reading/prepare")
+    && request.postDataJSON()?.preparationMode === "current-assignment");
+  await safe(() => boundary.fill("Genesis 1:3"));
+  await safe(() => boundary.press("Tab"));
+  const cutOnly = (await pending).postDataJSON();
+  expect(cutOnly).toMatchObject({ kind: "torah", preparationMode: "current-assignment", expectedAssignmentRevision: assignment.revision, aliyahStarts: ["Genesis 1:3"] });
+  expect(cutOnly).not.toHaveProperty("ranges"); expect(cutOnly).not.toHaveProperty("pick");
+  await ui(tab.getByRole("status").getByText("Saved.", { exact: true })).toBeVisible();
+  await captures(tab, "cut-review", ".reading-editor");
   const after = await api(tab, `/api/students/${fixture.student.id}/reading?mode=admin`);
   expect(after.data.readings[0]).toEqual({ ...before.data.readings[0], revision: assignment.revision + 1, aliyahStarts: ["Genesis 1:3"] });
   const [persisted] = await fixture.ownerDb.select().from(s.assignment).where(eq(s.assignment.id, assignment.id));

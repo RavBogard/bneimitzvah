@@ -25,16 +25,16 @@ test("the home is CRC Torah's front door: This week, then the Beit Mitzvah door,
   expect(beit).toBeGreaterThan(week);
   expect(learn).toBeGreaterThan(beit);
   expect(markup).toContain(">This Shabbat</p>");
-  expect(markup).toContain('<a class="button-start" href="/read">Lein</a>');
+  expect(markup).toContain('<a class="button-start" href="/read">Practice a reading</a>');
   // Study opens the same reading in the Study lens.
-  expect(markup).toContain('href="/read?lens=study">Study</a>');
+  expect(markup).toContain('href="/read?lens=study">Study Torah</a>');
   expect(markup).toContain('id="beit-mitzvah-title"');
   expect(markup).toContain(">Your readings</h2>");
   expect(markup).toContain(">Save the readings you’re working on, mark verses, keep notes. Beit Mitzvah students and families find their assigned reading and tutor here too.</p>");
   expect(markup).toContain('id="learn-title"');
   expect(markup).toContain(">Learn to lein</h2>");
   expect(markup).toContain("Hear the phrases, then lein a verse of this week&#x27;s reading.");
-  expect(markup).toMatch(/href="\/learn"[^>]*>Start<\/a>/);
+  expect(markup).toMatch(/href="\/learn"[^>]*>Learn to lein<\/a>/);
   expect(markup).toContain('href="/trope-chart">Trope chart</a>');
   // While access is checked the Beit Mitzvah door says so and holds its height; the sign-in form is not on the home at all.
   expect(markup).toContain('data-door-state="loading"');
@@ -63,8 +63,8 @@ test("while This week loads it shows one quiet skeleton line, and Lein and Study
   const markup = renderToStaticMarkup(createElement(ThisWeekView, { state: { date: "2026-10-24", status: "loading" } }));
   expect(markup.match(/data-skeleton/g)).toHaveLength(1);
   expect(markup).toContain('<span class="sr-only">This week’s reading</span>');
-  expect(markup).toContain('href="/read">Lein</a>');
-  expect(markup).toContain('href="/read?lens=study">Study</a>');
+  expect(markup).toContain('href="/read">Practice a reading</a>');
+  expect(markup).toContain('href="/read?lens=study">Study Torah</a>');
   expect(markup).not.toMatch(/spinner|Loading/i);
 });
 
@@ -74,8 +74,8 @@ test("when the reading call fails, This week says so plainly and Lein and Study 
     expect(markup).toContain('id="this-week-title"');
     expect(markup).toMatch(/<h1 [^>]*id="this-week-title"[^>]*>This week’s reading<\/h1>/);
     expect(markup).not.toContain("data-skeleton");
-    expect(markup).toContain('href="/read">Lein</a>');
-    expect(markup).toContain('href="/read?lens=study">Study</a>');
+    expect(markup).toContain('href="/read">Practice a reading</a>');
+    expect(markup).toContain('href="/read?lens=study">Study Torah</a>');
     expect(markup.includes("Saturday, October 24, 2026")).toBe(date !== null);
   }
 });
@@ -95,8 +95,8 @@ test("on a Saturday the home leads with the next Shabbat: its label, its own add
   expect(markup).toContain(">Next Shabbat</p>");
   expect(markup).not.toContain(">This Shabbat</p>");
   expect(markup).toContain('<time dateTime="2026-10-31">Saturday, October 31, 2026</time>');
-  expect(markup).toContain('href="/read?date=2026-10-31">Lein</a>');
-  expect(markup).toContain('href="/read?date=2026-10-31&amp;lens=study">Study</a>');
+  expect(markup).toContain('href="/read?date=2026-10-31">Practice a reading</a>');
+  expect(markup).toContain('href="/read?date=2026-10-31&amp;lens=study">Study Torah</a>');
   expect(markup).toContain('href="/read">This Shabbat</a>');
   // Any other day: as before, and no second link.
   const plain = renderToStaticMarkup(createElement(ThisWeekView, { state: { date: "2026-10-24", status: "ready", week: week("2026-10-24") } }));
@@ -155,7 +155,7 @@ test("Find a reading sits under the hero and above the doors, with the Coming up
   expect(markup).toContain('data-place="home"');
   expect(markup).toMatch(/<label[^>]*>Find a reading<\/label>/);
   // The hero's Lein and Study stay, and the chips are placeholders until the calendar arrives.
-  expect(markup).toContain('href="/read">Lein</a>');
+  expect(markup).toContain('href="/read">Practice a reading</a>');
   expect(markup).toContain('data-state="loading"');
 });
 
@@ -168,6 +168,6 @@ test("the door names the pinned reading, a parent's first child and a tutor's ne
   expect(frontDoorAccount({ kind: "signed-in", summary: summary(["parent"]), door })).toMatchObject({ child: { name: "Synthetic Child", ceremony: "2027-06-05" }, nearest: { name: "Synthetic Student" }, count: 3 });
   expect(signedInDoor("parent", { child: { name: "Synthetic Child", ceremony: "2027-06-05" }, count: 3 }).line).toBe("Synthetic Child · Beit Mitzvah, Sat, Jun 5, 2027");
   expect(signedInDoor("tutor", { nearest: { name: "Synthetic Student", ceremony: "2027-04-03" }, count: 3 }).line).toBe("Next: Synthetic Student · Beit Mitzvah, Sat, Apr 3, 2027");
-  expect(signedInDoor("tutor", { count: 3 }).line).toBe("3 saved readings");
+  expect(signedInDoor("tutor", { count: 3 }).line).toBeNull();
   expect(markup(["tutor"])).toContain("Next: Synthetic Student · Beit Mitzvah, Sat, Apr 3, 2027");
 });

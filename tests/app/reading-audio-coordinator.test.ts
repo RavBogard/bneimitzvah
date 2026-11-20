@@ -127,3 +127,13 @@ test("release and registration cleanup complete a nested global stop before retu
     stopScope = false; coordinator.dispose();
   }
 });
+
+
+test("spoken examples and chant take exclusive turns and stop together on scope changes", () => {
+  const coordinator = createReadingAudioCoordinator(), stopChant = vi.fn(), stopSpeech = vi.fn();
+  const chant = coordinator.register("assigned", stopChant), speech = coordinator.register("spoken", stopSpeech);
+  const old = chant.claim()!; const spoken = speech.claim()!;
+  expect(chant.isCurrent(old)).toBe(false); expect(speech.isCurrent(spoken)).toBe(true); expect(stopChant).toHaveBeenCalled();
+  chant.claim(); expect(speech.isCurrent(spoken)).toBe(false); expect(stopSpeech).toHaveBeenCalled();
+  coordinator.stopAll(); expect(stopChant).toHaveBeenCalled(); expect(stopSpeech).toHaveBeenCalled();
+});

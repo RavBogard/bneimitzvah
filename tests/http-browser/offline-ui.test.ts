@@ -152,7 +152,7 @@ it("A2: a student's own confirmed reading is packed under its owner, and another
     ref: "Genesis 1:1-3", setByMembershipId: admin.id, proposalSnapshot: { needsReview: false, confirmationDate: "2026-10-01" } }).returning();
   await fixture.ownerDb.insert(s.assignmentVerse).values(["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"].map((verseRef, index) => ({ tenantId: "crc", studentId: fixture.student.id, assignmentId: assignment.id, ordinal: index + 1, verseRef })));
   try {
-    const { tab, seen } = await installed();
+    const { tab, seen, offline } = await installed();
     await signIn(tab, "pg-offline-student@example.test", false);
     await expect.poll(async () => (await pack(tab))?.packs.some(row => row.descriptor.type === "ref" && row.descriptor.ref === "Genesis 1:1-3") ?? false, { timeout: 150_000 }).toBe(true);
     const first = (await pack(tab))!;
@@ -164,6 +164,31 @@ it("A2: a student's own confirmed reading is packed under its owner, and another
     expect(own.assets.every(asset => asset.startsWith("/api/public/") || asset.startsWith("/reference-audio/short-v1/") || asset === "/api/shermet-audio/catalog")).toBe(true);
     // The private endpoint is never answered by the worker.
     expect(seen.fromWorker.filter(path => path.startsWith("/api/") && !path.startsWith("/api/public/"))).toEqual([]);
+    // Practice opens the exact owner-checked reference. Inspect the owner pack with the network disabled here;
+    // Next dev cannot hydrate the worker shell. The built installable test proves exact-ref reopening and native playback.
+    await tab.goto("/mine/reading", { waitUntil: "domcontentloaded" });
+    await tab.getByTestId("dock-up-close").click();
+    const assignedOffline = tab.getByTestId("assigned-practice-offline");
+    await ui(assignedOffline).toBeVisible();
+    const link = assignedOffline.getByTestId("open-offline-passage");
+    await ui(link).toHaveAttribute("href", "/read?ref=Genesis+1%3A1-3&kind=torah");
+    const textPath = own.assets.find(asset => asset.startsWith("/api/public/text?"));
+    const clipPath = own.assets.find(asset => asset.startsWith("/reference-audio/short-v1/"));
+    expect(textPath).toBeDefined(); expect(clipPath).toBeDefined();
+    await offline(true);
+    try {
+      const saved = await tab.evaluate(async ({ text, clip, name }) => {
+        const cache = await caches.open(name);
+        const [page, audio] = await Promise.all([cache.match(new URL(text, location.origin).href), cache.match(new URL(clip, location.origin).href)]);
+        if (!page || !audio) return null;
+        const body = await page.json() as { ref: string; verses: { ref: string }[] }, bytes = await audio.arrayBuffer();
+        const digest = await crypto.subtle.digest("SHA-256", bytes);
+        return { ref: body.ref, verses: body.verses.map(verse => verse.ref), audioBytes: bytes.byteLength,
+          audioDigest: Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, "0")).join("") };
+      }, { text: textPath!, clip: clipPath!, name: OFFLINE_CACHE });
+      const syntheticClip = shortBodies.get(clipPath!)!;
+      expect(saved).toEqual({ ref: "Genesis 1:1-3", verses: ["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"], audioBytes: syntheticClip.length, audioDigest: sha(syntheticClip) });
+    } finally { await offline(false); }
     // Another account signs in on this device with no sign-out in between: its session replaces this one's.
     await fixture.ownerDb.delete(rateLimit);
     expect(await tab.evaluate(async email => (await fetch("/api/auth/sign-in/magic-link", { method: "POST", credentials: "same-origin", cache: "no-store",

@@ -34,9 +34,9 @@ async function studentPage(tab: Page) {
 
 /** Opens Up close at this verse: from the bar under the passage, or on a student's page from the verse's sheet. */
 export async function upClose(tab: Page, ref: string) {
-  if (await studentPage(tab)) await (await openVerseTools(tab, ref)).getByRole("button", { name: `View ${ref} up close`, exact: true }).click();
-  else await tab.getByRole("button", { name: `View ${ref} up close`, exact: true }).click();
-  await ui(tab.locator("dialog.lift")).toBeVisible();
+  if (await studentPage(tab)) await (await openVerseTools(tab, ref)).getByRole("button", { name: `Practice ${ref}`, exact: true }).click();
+  else await tab.getByRole("button", { name: `Practice ${ref}`, exact: true }).click();
+  await ui(tab.locator("[data-assigned-practice]")).toBeVisible();
 }
 
 /** Switches the reading to Study. There a verse's number selects it and the bar under the passage opens its tools without a sound (in Lein a verse number or a word plays the verse). */

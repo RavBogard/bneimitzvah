@@ -14,6 +14,7 @@ import { adminArea } from "../shell/tabs";
 import { SiteBar } from "../../site/site-bar";
 import { rememberSignedIn } from "../signed-in-hint";
 import { rolePaths } from "../shell/role-home";
+import { TutorNav } from "../shell/tutor-nav";
 
 export { rolePaths, statusOf };
 type WorkLifecycle = { pause(): void; clear(): void; settle(): Promise<void>; hasUnsaved(): boolean; reveal(): void };
@@ -126,7 +127,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         selectChild: practiceMode.selectChild, exitPractice: practiceMode.exitPractice, refresh, serviceAuthorityFailed, registerWork, registerDeparture, guardDeparture, registerReload }}>
         {visibleNotice && <p className="workspace-notice" role="status" data-testid="workspace-notice" data-notice-kind={visibleNotice === PRACTICE_ACCESS_CHANGED ? "practice-access-changed" : undefined}>{visibleNotice}</p>}
         {workNotice && <p className="workspace-notice" role="status">{workNotice}</p>}
-        {children}
+        <TutorNav summary={summary!} epoch={epoch} Link={WorkspaceLink} />{children}
       </WorkspaceContext.Provider>}
     </main>
     {shellShown && <TabBar roles={summary!.roles} onNavigate={controlledLink} />}

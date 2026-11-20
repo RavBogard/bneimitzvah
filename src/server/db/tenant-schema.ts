@@ -134,7 +134,7 @@ export const tutorStudent = pgTable("tutor_student", {
 
 /**
  * A tutor's claim on a learner (readings for everyone, Daniel 2026-10-27, decision 15; plan decision 2): any tutor may claim any
- * signed-in person in the congregation, one tutor at a time per learner (the partial unique key), and the learner may undo it.
+ * eligible signed-in person in the congregation, independently per tutor (the partial unique key), and the learner may undo one claim.
  * A claim on a person with a live student identity also writes the tutor_student link the staff tools read, remembered in
  * tutor_link_id so "Not my tutor" and the admin's revoke end both. The tutor grant is a tutor's (tutor_role is checked and
  * carried in the FK). Revocation is whole: revoked_at, who (learner, tutor or admin) and which membership, together or not at all.
@@ -150,7 +150,7 @@ export const learnerClaim = pgTable("learner_claim", {
   foreignKey({ name: "learner_claim_tutor_fk", columns: [t.tenantId, t.tutorGrantId, t.tutorRole], foreignColumns: [roleGrant.tenantId, roleGrant.id, roleGrant.role] }),
   foreignKey({ name: "learner_claim_link_fk", columns: [t.tenantId, t.tutorLinkId], foreignColumns: [tutorStudent.tenantId, tutorStudent.id] }),
   foreignKey({ name: "learner_claim_revoker_fk", columns: [t.tenantId, t.revokedByMembershipId], foreignColumns: [membership.tenantId, membership.id] }),
-  uniqueIndex("learner_claim_active_key").on(t.tenantId, t.learnerMembershipId).where(sql`${t.revokedAt} is null`),
+  uniqueIndex("learner_claim_active_key").on(t.tenantId, t.learnerMembershipId, t.tutorGrantId).where(sql`${t.revokedAt} is null`),
   check("learner_claim_tutor_role", sql`${t.tutorRole} = 'tutor'`),
   check("learner_claim_revoked_by", sql`${t.revokedBy} in ('learner', 'tutor', 'admin')`),
   check("learner_claim_revocation_whole", sql`(${t.revokedAt} is null) = (${t.revokedBy} is null) and (${t.revokedAt} is null) = (${t.revokedByMembershipId} is null)`),

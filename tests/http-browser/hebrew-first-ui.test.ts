@@ -82,24 +82,24 @@ it("opens a tapped word's tools in a sheet without moving the page, and gives fo
   await ui(word).toBeFocused();
 });
 
-it("opens Up close at the first verse not yet Got it, and a verse number opens that verse's sheet with its check", async () => {
+it("opens Practice at the first verse not yet Got it and reopens an explicitly selected verse", async () => {
   const { tab } = await studentReading(390, 844);
-  const upClose = dock(tab).getByTestId("dock-up-close"), lift = tab.locator("dialog.lift");
-  await ui(upClose).toBeEnabled(); await upClose.click();
-  await ui(lift.getByTestId("lift-count")).toHaveAttribute("data-lift-verse", "1");
-  await lift.getByRole("group", { name: "How Genesis 1:1 is going" }).getByRole("button", { name: "Got it" }).click();
-  await ui(lift.getByRole("group", { name: "How Genesis 1:1 is going" }).getByRole("button", { name: "Got it" })).toHaveAttribute("aria-pressed", "true");
-  await lift.getByRole("button", { name: "Close practice view", exact: true }).click(); await ui(lift).toHaveCount(0);
+  const button = dock(tab).getByTestId("dock-up-close"), practice = tab.locator("[data-assigned-practice]");
+  const assigned = tab.getByTestId("assigned-text");
+  await ui(button).toBeEnabled(); await button.click();
+  await ui(practice).toBeVisible(); await ui(assigned).toHaveAttribute("data-practice-ref", "Genesis 1:1");
+  const mark = practice.getByRole("group", { name: "How Genesis 1:1 is going" }).getByRole("button", { name: "Got it" });
+  await mark.click(); await ui(mark).toHaveAttribute("aria-pressed", "true");
+  await practice.getByRole("button", { name: "Back to reading" }).click(); await ui(practice).toHaveCount(0);
   await ui(tab.locator('[data-verse-ref="Genesis 1:1"] [data-testid="verse-got-it"]')).toBeVisible();
-  await upClose.click(); await ui(lift.getByTestId("lift-count")).toHaveAttribute("data-lift-verse", "2");
-  await lift.getByRole("button", { name: "Close practice view", exact: true }).click(); await ui(lift).toHaveCount(0);
-  // The verse's actions are in its sheet, opened from its number; nothing about it waits after the last verse.
+  await button.click(); await ui(assigned).toHaveAttribute("data-practice-ref", "Genesis 1:2");
+  await practice.getByRole("button", { name: "Back to reading" }).click(); await ui(practice).toHaveCount(0);
   await ui(tab.getByTestId("study-verse-bar")).toHaveCount(0);
   await tab.locator('[data-verse-ref="Genesis 1:1"] button[data-verse-number]').click();
   const sheet = tab.getByRole("dialog", { name: "Verse tools · Genesis 1:1", exact: true });
   await ui(sheet.getByTestId("verse-mark")).toHaveAttribute("data-state", "got-it");
-  await sheet.getByTestId("study-verse-actions").getByRole("button").first().click();
-  await ui(lift.getByTestId("lift-count")).toHaveAttribute("data-lift-verse", "1");
+  await sheet.getByRole("button", { name: "Practice Genesis 1:1", exact: true }).click();
+  await ui(practice).toBeVisible(); await ui(assigned).toHaveAttribute("data-practice-ref", "Genesis 1:1");
 });
 
 it("keeps Listen in the dock, disabled while listening is not released, and asks for no audio when it is tapped", async () => {

@@ -6,34 +6,36 @@ import styles from "./shelf.module.css";
 
 /**
  * Find a learner (decision 15): every signed-in learner with a shelf, by name, with "Add to my students" in one tap. Search first (tutor
- * walk 2026-10-28, finding 8): nothing is listed until something is typed. A learner who already has a tutor says so in place of the button
- * (finding 7); the tutor who claimed a learner may remove the claim, as the rabbi may (finding 6).
+ * walk 2026-10-28, finding 8): nothing is listed until something is typed. Other tutors remain visible while this tutor may add an independent
+ * claim; each tutor removes only their own claim and the rabbi selects individual claims.
  */
 export const FIND_STRINGS = Object.freeze({
   title: "Find a learner", claim: "Add to my students", removeClaim: "Remove from my students", noTutor: "No tutor yet", tutor: "Tutor: ", next: "next ", hasTutorShort: "Has a tutor", yours: "Your student",
   claimed: (name: string) => `${name} was added to your students.`, hasTutor: "This learner already has a tutor.", failed: "That didn’t work. Try again.", none: "No learners found.",
 });
-export const learnerShelfHref = (membershipId: string) => `/mine/learner/${encodeURIComponent(membershipId)}`;
+export { learnerShelfHref } from "./student-rows";
+import { learnerShelfHref } from "./student-rows";
 const readings = (n: number) => `${n} ${n === 1 ? "reading" : "readings"}`;
 type Status = Readonly<{ status: "idle" | "loading" | "failed" } | { status: "ready"; rows: readonly Learner[] }>;
 
 /** One row: name · n readings · next date (when there is one) · Tutor: name or No tutor yet, then the claim, Has a tutor or Your student (tutor), and the undo (the claiming tutor, or an admin). */
-export function LearnerRow({ row, tutor, admin, pending, onClaim, onUnclaim }: { row: Learner; tutor: boolean; admin: boolean; pending: boolean; onClaim: () => void; onUnclaim: () => void }) {
-  const mine = row.tutor?.mine === true, opens = mine || admin, removable = row.tutor?.claimed === true && (admin || (tutor && mine));
+export function LearnerRow({ row, tutor, admin, pending, onClaim, onUnclaim }: { row: Learner; tutor: boolean; admin: boolean; pending: boolean; onClaim: () => void; onUnclaim: (claimId?: string) => void }) {
+  const tutors = row.tutors ?? (row.tutor ? [{ ...row.tutor, claimId: null }] : []);
+  const mine = tutors.some(who => who.mine), opens = mine || admin;
   return <li className={styles.learnerRow} data-testid="learner-row" data-learner={row.membershipId}>
     <span className={styles.learnerMain}>
       {opens ? <a className={styles.learnerName} href={learnerShelfHref(row.membershipId)}><bdi dir="auto">{row.name}</bdi></a> : <span className={styles.learnerName}><bdi dir="auto">{row.name}</bdi></span>}
-      <span className={styles.learnerMeta}> · {readings(row.readings)}{row.nearest && <> · {FIND_STRINGS.next}<time dateTime={row.nearest.date}>{longDate(row.nearest.date)}</time></>} · {row.tutor ? <>{FIND_STRINGS.tutor}<bdi dir="auto">{row.tutor.name}</bdi></> : FIND_STRINGS.noTutor}</span>
+      <span className={styles.learnerMeta}> · {readings(row.readings)}{row.nearest && <> · {FIND_STRINGS.next}<time dateTime={row.nearest.date}>{longDate(row.nearest.date)}</time></>} · {tutors.length ? <>{FIND_STRINGS.tutor}{tutors.map((who, index) => <span key={who.claimId ?? index}>{index > 0 && ", "}<bdi dir="auto">{who.name}</bdi></span>)}</> : FIND_STRINGS.noTutor}</span>
     </span>
-    {tutor && !row.tutor && <button type="button" className="button-secondary" disabled={pending} aria-label={`${FIND_STRINGS.claim}: ${row.name}`} onClick={onClaim}>{FIND_STRINGS.claim}</button>}
-    {tutor && row.tutor && !removable && <span className={styles.learnerState} data-testid="learner-state">{mine ? FIND_STRINGS.yours : FIND_STRINGS.hasTutorShort}</span>}
-    {removable && <button type="button" className="button-secondary" disabled={pending} aria-label={`${FIND_STRINGS.removeClaim}: ${row.name}`} onClick={onUnclaim}>{FIND_STRINGS.removeClaim}</button>}
+    {tutor && !mine && <button type="button" className="button-secondary" disabled={pending} aria-label={`${FIND_STRINGS.claim}: ${row.name}`} onClick={onClaim}>{FIND_STRINGS.claim}</button>}
+    {tutor && mine && !tutors.some(who => who.mine && who.claimed) && <span className={styles.learnerState} data-testid="learner-state">{FIND_STRINGS.yours}</span>}
+    {tutors.filter(who => who.claimed && (admin || (tutor && who.mine))).map((who, index) => <button key={who.claimId ?? index} type="button" className="button-secondary" disabled={pending} aria-label={admin ? `Remove tutor ${who.name} from ${row.name}` : `${FIND_STRINGS.removeClaim}: ${row.name}`} onClick={() => onUnclaim(who.claimId ?? undefined)}>{admin ? `Remove tutor: ${who.name}` : FIND_STRINGS.removeClaim}</button>)}
   </li>;
 }
 
 export function FindALearnerView({ query, state, tutor, admin, pending, status, problem, inputId, onQuery, onClaim, onUnclaim }: {
   query: string; state: Status; tutor: boolean; admin: boolean; pending: string | null; status: string | null; problem: string | null; inputId: string;
-  onQuery: (value: string) => void; onClaim: (row: Learner) => void; onUnclaim: (row: Learner) => void;
+  onQuery: (value: string) => void; onClaim: (row: Learner) => void; onUnclaim: (row: Learner, claimId?: string) => void;
 }) {
   return <section className={styles.section} aria-labelledby={`${inputId}-title`} data-testid="mine-find">
     <h2 id={`${inputId}-title`} className={styles.sectionTitle}>{FIND_STRINGS.title}</h2>
@@ -44,7 +46,7 @@ export function FindALearnerView({ query, state, tutor, admin, pending, status, 
     {state.status === "failed" && <p className={styles.findStatus} role="status">{FIND_STRINGS.failed}</p>}
     {state.status === "ready" && state.rows.length === 0 && <p className={styles.findStatus}>{FIND_STRINGS.none}</p>}
     {state.status === "ready" && state.rows.length > 0 && <ul className={styles.learnerList} aria-busy={pending !== null}>
-      {state.rows.map(row => <LearnerRow key={row.membershipId} row={row} tutor={tutor} admin={admin} pending={pending === row.membershipId} onClaim={() => onClaim(row)} onUnclaim={() => onUnclaim(row)} />)}
+      {state.rows.map(row => <LearnerRow key={row.membershipId} row={row} tutor={tutor} admin={admin} pending={pending === row.membershipId} onClaim={() => onClaim(row)} onUnclaim={claimId => onUnclaim(row, claimId)} />)}
     </ul>}
   </section>;
 }
@@ -73,6 +75,6 @@ export function FindALearner({ roles, onChange }: { roles: readonly string[]; on
     finally { gate.current = false; setPending(null); }
   };
   const claim = (row: Learner) => act(row, async () => { const result = await claimLearner(row.membershipId); if (!result.ok) { setProblem(FIND_STRINGS.hasTutor); return null; } return FIND_STRINGS.claimed(row.name); });
-  const unclaim = (row: Learner) => act(row, async () => { await unclaimLearner(row.membershipId); return null; });
+  const unclaim = (row: Learner, claimId?: string) => act(row, async () => { await unclaimLearner(row.membershipId, claimId); return null; });
   return <FindALearnerView query={query} state={state} tutor={tutor} admin={admin} pending={pending} status={status} problem={problem} inputId={inputId} onQuery={setQuery} onClaim={claim} onUnclaim={unclaim} />;
 }

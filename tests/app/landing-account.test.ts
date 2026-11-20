@@ -63,12 +63,13 @@ describe("the root never leaves for the workspace", () => {
 
 describe("the signed-in door", () => {
   test("every role but the admin has Your readings, opening My Readings; the admin keeps This week", () => {
-    for (const role of ["student", "parent", "tutor"] as const) expect(signedInDoor(role)).toEqual({ title: "Your readings", line: null, action: "Open My Readings" });
+    for (const role of ["student", "parent"] as const) expect(signedInDoor(role)).toEqual({ title: "Your readings", line: null, action: "Open My Readings" });
+    expect(signedInDoor("tutor")).toEqual({ title: "My Students", line: null, action: "Open My Students" });
     expect(signedInDoor("admin")).toEqual({ title: "This week", line: "Needs you, ceremonies and rehearsals.", action: "See this week" });
   });
   test("the line is the pinned reading when there is one, else how many are saved, else nothing", () => {
     expect(signedInDoor("student", { pinned: { name: "Noa", ceremony: "2027-05-01", done: 3, total: 12 } }).line).toBe("Noa · Beit Mitzvah, Sat, May 1, 2027 · 3 of 12 verses");
-    expect(signedInDoor("tutor", { count: 3 }).line).toBe("3 saved readings");
+    expect(signedInDoor("tutor", { count: 3 }).line).toBeNull();
     expect(signedInDoor("tutor", { count: 0 }).line).toBeNull();
     expect(signedInDoor("parent", { count: null }).line).toBeNull();
   });
@@ -148,8 +149,8 @@ describe("the signed-out door and the page's one lake pill", () => {
     for (const account of [null, { kind: "sign-in" } as const, { kind: "account", saved: true, roles: ["tutor"], count: null, pinned: null } as const]) {
       const markup = renderToStaticMarkup(createElement(FrontDoor, { account, children: null }));
       expect(markup.match(/button-start/g)).toHaveLength(1);
-      expect(markup).toContain('<a class="button-start" href="/read">Lein</a>');
-      expect(markup).toMatch(/class="button-hero-secondary[^"]*"[^>]*href="\/learn"[^>]*>Start<\/a>/);
+      expect(markup).toContain('<a class="button-start" href="/read">Practice a reading</a>');
+      expect(markup).toMatch(/class="button-hero-secondary[^"]*"[^>]*href="\/learn"[^>]*>Learn to lein<\/a>/);
     }
   });
 });
@@ -196,16 +197,16 @@ describe("wording", () => {
     expect(words(door("signed-out"))).toEqual(["Your readings", out, "Sign in", "How accounts work"]);
     expect(words(door("loading"))).toEqual(["Your readings", out, "One moment while we check your access."]);
     rememberRole("tutor");
-    expect(words(door(["tutor", "student"]))).toEqual(["Your readings", "Open My Readings"]);
-    expect(words(door(["tutor"], 3))).toEqual(["Your readings", "3 saved readings", "Open My Readings"]);
+    expect(words(door(["tutor", "student"]))).toEqual(["My Students", "Open My Students"]);
+    expect(words(door(["tutor"], 3))).toEqual(["My Students", "Open My Students"]);
     rememberRole("student");
-    expect(words(door(["student"], null, { name: "Noa", ceremony: "2027-05-01", done: 3, total: 12 }))).toEqual(["Your readings", "Noa · Beit Mitzvah, Sat, May 1, 2027 · 3 of 12 verses", "Practice up close", "Open My Readings"]);
+    expect(words(door(["student"], null, { name: "Noa", ceremony: "2027-05-01", done: 3, total: 12 }))).toEqual(["Your readings", "Noa · Beit Mitzvah, Sat, May 1, 2027 · 3 of 12 verses", "Practice", "Open My Readings"]);
     expect(words(door(["parent"]))).toEqual(["Your readings", "Open My Readings"]);
     rememberRole("admin");
     expect(words(door(["admin"]))).toEqual(["This week", "Needs you, ceremonies and rehearsals.", "See this week"]);
     rememberRole("student");
     const learn = renderToStaticMarkup(createElement(FrontDoor, { account: null, children: null }));
-    expect(words(learn.slice(learn.indexOf('<h2 id="learn-title"')))).toEqual(["Learn to lein", "Hear the phrases, then lein a verse of this week's reading.", "Start", "Trope chart"]);
+    expect(words(learn.slice(learn.indexOf('<h2 id="learn-title"')))).toEqual(["Learn to lein", "Hear the phrases, then lein a verse of this week's reading.", "Learn to lein", "Trope chart"]);
   });
   test("Account", () => {
     const markup = renderToStaticMarkup(createElement(AccountView, { summary: summary(["tutor"], { approver: true }), current: "tutor", signingOut: false, problem: "", onRole: () => undefined, onSignOut: () => undefined }));

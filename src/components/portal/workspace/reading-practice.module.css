@@ -1,0 +1,10 @@
+.header { position: sticky; top: 0; z-index: 5; background: var(--color-surface); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding-block: 0.75rem; margin-block: 0 1.5rem; }
+.header h1 { margin: 0; }
+.focused { grid-template-columns: minmax(0, 1fr); }
+.focused :global(.staff-main) { min-width: 0; }
+:global([data-assigned-practice]) { --dock-clear: 0px; }
+:global([data-assigned-practice] [hidden]) { display: none; }
+:global(.study-section-start) { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem 1.5rem; margin-block: 1.5rem 1rem; }
+:global(.study-section-start h2) { margin: 0; }
+:global([data-assigned-practice] .reading-passage-layout) { display: block; }
+:global([data-assigned-practice] .study-verses) { scroll-margin-block-start: 5rem; }

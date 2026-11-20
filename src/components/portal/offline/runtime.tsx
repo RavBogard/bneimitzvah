@@ -69,6 +69,14 @@ export function refreshOfflinePacks() {
   // After the pack in progress, never in its place: a second open would cut it short.
   void packingIdle().then(open);
 }
+/** Explicit save from an assigned Practice view, using the same owner check and public-source pack policy as an installed-app open. */
+export async function saveOfflinePacks(): Promise<boolean> {
+  const platform = browserPlatform();
+  if (!ENABLED || !platform.origin || !platform.installed || !packing || navigator.onLine === false) return false;
+  await packingIdle();
+  await open();
+  return true;
+}
 export function startOfflineRuntime() {
   if (started) return; started = true;
   const platform = browserPlatform();

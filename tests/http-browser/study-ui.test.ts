@@ -199,7 +199,7 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   await ui(adminTab.getByRole("link", { name: "CC-BY-SA-4.0", exact: true })).toBeVisible(); await ui(adminTab.getByRole("link", { name: "CC-BY-NC-4.0", exact: true })).toBeVisible();
   expect(await adminTab.getByTestId("study-credits").locator("a").evaluateAll(links => links.every(link => (link as HTMLAnchorElement).protocol === "https:" && /^(www\.sefaria\.org|he\.wikisource\.org|jps\.org|creativecommons\.org)$/.test((link as HTMLAnchorElement).hostname) && link.getAttribute("rel")?.includes("noopener")))).toBe(true);
   await capture(adminTab, "study-admin-partial-desktop");
-  const tutor = await page("tutor"); await navigate(tutor, "/workspace/tutor"); await safe(() => tutor.locator(`a[href="/workspace/tutor/${fixture.student.id}"]`).click()); await loaded(tutor, "Genesis 1:1");
+  const tutor = await page("tutor"); await navigate(tutor, "/workspace/tutor"); await safe(() => tutor.getByTestId("mine-students-list").locator(`a[href="/workspace/tutor/${fixture.student.id}"]`).click()); await loaded(tutor, "Genesis 1:1");
   expect(new URL(tutor.url()).pathname).toBe(`/workspace/tutor/${fixture.student.id}`); // A stable page per student.
   await navigate(tutor, `/workspace/tutor/${crypto.randomUUID()}`); await ui(tutor.getByTestId("student-not-found")).toBeVisible();
   expect(await tutor.getByTestId("study-verses").count()).toBe(0); // A route id outside the tutor's list loads nothing.
@@ -246,14 +246,13 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   expect(await first.getByTestId("study-ketiv").locator("[data-family]").count()).toBe(0);
   await capture(learner, "study-colors-mobile");
   await safe(() => upClose(learner, "Genesis 1:1"));
-  const lifted = learner.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(lifted).toBeVisible();
-  await ui(lifted.getByRole("list", { name: "Phrase families for Genesis 1:1", exact: true })).toContainText("etnachta");
-  await ui(lifted.getByRole("list", { name: "Phrase families for Genesis 1:1", exact: true })).toContainText("Word 1");
-  await ui(lifted.getByTestId("lift-count")).toHaveAttribute("data-lift-verse", "1"); await ui(lifted.getByTestId("lift-count")).toHaveAttribute("data-lift-total", "3");
-  await capture(learner, "study-lift-mobile"); await captureDark(learner, "study-lift-mobile-dark");
-  for (let step = 0; step < 12 && await lifted.getByRole("heading", { name: "Genesis 1:1", exact: true }).count(); step++) await safe(() => lifted.getByRole("button", { name: /^Next (phrase|verse)$/ }).click());
-  await ui(learner.getByRole("dialog", { name: "Genesis 1:2", exact: true })).toBeVisible();
-  await safe(() => learner.getByRole("button", { name: "Close practice view", exact: true }).click()); await ui(learner.getByRole("dialog")).toHaveCount(0);
+  const practice = learner.locator("[data-assigned-practice]"); await ui(practice).toBeVisible();
+  await ui(practice.getByTestId("assigned-text")).toHaveAttribute("data-practice-ref", "Genesis 1:1");
+  expect(await practice.locator('[data-verse-ref="Genesis 1:1"] [data-family="etnachta"]').count()).toBeGreaterThan(0);
+  expect(await practice.locator('[data-verse-ref="Genesis 1:1"] [data-word-index]').evaluateAll(nodes => nodes.map(node => node.getAttribute("data-word-index")).join(","))).toBe(indices);
+  await capture(learner, "study-practice-mobile"); await captureDark(learner, "study-practice-mobile-dark");
+  await safe(() => practice.getByRole("button", { name: "Back to reading" }).click());
+  await ui(practice).toHaveCount(0);
   expect(calls).toBe(beforeColors);
   await click(learner, "Haftarah text"); await loaded(learner, "Isaiah 1:1"); expect(await learner.getByTestId("study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true }).count()).toBe(0);
   await ui(learner.getByRole("button", { name: "Haftarah text", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -305,32 +304,26 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and keeps Start
       await safe(() => tab.getByTestId("study-verses").focus());
       await ui(tab.getByTestId("study-verses")).toBeFocused(); await heldReading(tab);
       await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0); await ui(tab.getByRole("dialog")).toHaveCount(0);
-      // A student opens Up close from the verse's sheet (its number); closing it gives focus back to that number.
-      const closeup = tab.locator('[data-testid="study-verses"] [data-verse-ref="Genesis 1:1"] button[data-verse-number]'); await safe(() => upClose(tab, "Genesis 1:1"));
-      const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
-      await ui(dialog.getByRole("button", { name: "Close practice view", exact: true })).toBeVisible();
-      expect(await dialog.getByTestId("study-hebrew").locator("[data-word-index]").allTextContents()).toEqual(readingWords);
-      expect(await dialog.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
-      await safe(() => tab.screenshot({ path: join(directory, `${size.toLowerCase()}-lift.png`) }));
+      // Practice opens the same reading at the chosen verse and preserves its word order and layout.
+      const verseButton = tab.locator('[data-testid="study-verses"] [data-verse-ref="Genesis 1:1"] button[data-verse-number]');
+      await safe(() => upClose(tab, "Genesis 1:1"));
+      const practice = tab.locator("[data-assigned-practice]"); await ui(practice).toBeVisible();
+      await ui(practice.getByTestId("assigned-text")).toHaveAttribute("data-practice-ref", "Genesis 1:1");
+      expect(await first.locator("[data-word-index]").allTextContents()).toEqual(readingWords);
+      expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await safe(() => tab.screenshot({ path: join(directory, `${size.toLowerCase()}-practice.png`) }));
       if (size === "Huge") {
-        const stage = dialog.getByTestId("lift-stage");
-        expect(await stage.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
-        // Apparatus and the phrase legend follow the Hebrew. Center the actual
-        // final read word inside this stage instead of scrolling past it.
-        await safe(() => stage.evaluate(node => {
-          const words = node.querySelectorAll("[data-word-index]"), word = words[words.length - 1].getBoundingClientRect(), bounds = node.getBoundingClientRect();
-          node.scrollTop += (word.top + word.bottom - bounds.top - bounds.bottom) / 2;
-        }));
-        const finalWord = dialog.locator("[data-word-index]").last(); await ui(finalWord).toBeVisible();
-        const usable = await finalWord.evaluate(node => {
-          const word = node.getBoundingClientRect(), stage = node.closest('[data-testid="lift-stage"]')!.getBoundingClientRect(), dialog = node.closest("dialog")!.getBoundingClientRect();
-          return word.top >= Math.max(stage.top, dialog.top) && word.bottom <= Math.min(stage.bottom, dialog.bottom) + 1
-            && word.left >= Math.max(stage.left, dialog.left) && word.right <= Math.min(stage.right, dialog.right) + 1;
-        });
-        expect(usable, "The final Huge word is reachable inside the scrollable practice stage").toBe(true);
-        await safe(() => tab.screenshot({ path: join(directory, "huge-lift-end.png") }));
+        const finalWord = first.locator("[data-word-index]").last();
+        await safe(() => finalWord.evaluate(node => node.scrollIntoView({ block: "center" })));
+        expect(await finalWord.evaluate(node => {
+          const bounds = node.getBoundingClientRect();
+          return bounds.top >= 0 && bounds.bottom <= innerHeight + 1 && bounds.left >= 0 && bounds.right <= innerWidth + 1;
+        }), "The final Huge word is reachable in the practice passage").toBe(true);
+        await safe(() => tab.screenshot({ path: join(directory, "huge-practice-end.png") }));
       }
-      await safe(() => tab.keyboard.press("Escape")); await ui(dialog).toHaveCount(0); await ui(closeup).toBeFocused(); await heldReading(tab);
+      await safe(() => practice.getByRole("button", { name: "Back to reading" }).click()); await ui(practice).toHaveCount(0);
+      await ui(tab.getByTestId("assigned-text")).toHaveAttribute("data-practice-ref", "Genesis 1:1");
+      await ui(verseButton).toBeFocused(); await heldReading(tab);
     }
   } finally {
     longVerse = false;
@@ -340,18 +333,19 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and keeps Start
   }
 });
 
-it("retains optional close-up during a quiet unchanged access check without requiring it for Start", async () => {
+it("retains Practice during a quiet unchanged access check", async () => {
   const tab = await page("student", true); await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab, "Genesis 1:1");
   await safe(() => tab.getByTestId("study-verses").focus()); await ui(tab.getByTestId("study-verses")).toBeFocused(); await heldReading(tab);
   await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0); await ui(tab.getByRole("dialog")).toHaveCount(0);
-  await safe(() => upClose(tab, "Genesis 1:1")); const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
+  await safe(() => upClose(tab, "Genesis 1:1")); const practice = tab.locator("[data-assigned-practice]"); await ui(practice).toBeVisible();
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route("**/api/session", async route => { const response = await privateRouteFetch(route, tab); if (!response) return; held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
   try {
     await safe(() => comeBack(tab)); await ui.poll(() => held).toBe(true);
-    await ui(tab.locator('[data-workspace-state="checking"]')).toBeHidden(); await ui(dialog).toBeVisible();
+    await ui(tab.locator('[data-workspace-state="checking"]')).toBeHidden(); await ui(practice).toBeVisible();
   } finally { release(); await tab.unroute("**/api/session"); }
-  await loaded(tab, "Genesis 1:1"); await ui(dialog).toBeVisible(); await safe(() => tab.keyboard.press("Escape")); await ui(dialog).toHaveCount(0);
+  await loaded(tab, "Genesis 1:1"); await ui(practice).toBeVisible();
+  await practice.getByRole("button", { name: "Back to reading" }).click(); await ui(practice).toHaveCount(0);
   await safe(() => tab.getByTestId("study-verses").focus()); await ui(tab.getByTestId("study-verses")).toBeFocused(); await heldReading(tab);
   await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0); await ui(tab.getByRole("dialog")).toHaveCount(0);
 });

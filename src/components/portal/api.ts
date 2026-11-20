@@ -125,10 +125,15 @@ export function parseAcceptance(value: unknown) {
 
 // A closed endpoint set prevents callers from turning this helper into an
 // arbitrary fetch/redirect surface. No response diagnostics cross the boundary.
-type Endpoint = "/api/session" | "/api/session/begin" | "/api/session/door" | "/api/auth/sign-in/social" | "/api/auth/google/challenge" | "/api/auth/google/redirect" | "/api/auth/sign-in/magic-link" | "/api/auth/sign-in/code" | "/api/auth/sign-out" | "/api/invitations/pending" | "/api/invitations/accept";
+type Endpoint = "/api/profile/pronouns" | `/api/profile/pronouns?${string}` | "/api/session" | "/api/session/begin" | "/api/session/door" | "/api/auth/sign-in/social" | "/api/auth/google/challenge" | "/api/auth/google/redirect" | "/api/auth/sign-in/magic-link" | "/api/auth/sign-in/code" | "/api/auth/sign-out" | "/api/invitations/pending" | "/api/invitations/accept";
 const endpoints = new Set<string>(["/api/session", "/api/session/begin", "/api/session/door", "/api/auth/sign-in/social", "/api/auth/google/challenge", "/api/auth/google/redirect", "/api/auth/sign-in/magic-link", "/api/auth/sign-in/code", "/api/auth/sign-out", "/api/invitations/pending", "/api/invitations/accept"]);
 export async function requestPortal(endpoint: Endpoint, body?: Record<string, unknown>, signal?: AbortSignal): Promise<unknown> {
-  if (!endpoints.has(endpoint)) return unavailable();
+  // Profile reads deliberately carry a subject query; writes use only the exact
+  // private path. A query can never broaden the helper into another path/origin.
+  const profileEndpoint = typeof endpoint === "string" && (body === undefined
+    ? endpoint.startsWith("/api/profile/pronouns?") && !/[\x00-\x20#\\]/.test(endpoint)
+    : endpoint === "/api/profile/pronouns");
+  if (!endpoints.has(endpoint) && !profileEndpoint) return unavailable();
   const controller = new AbortController(), abort = () => controller.abort();
   if (signal?.aborted) abort();
   signal?.addEventListener("abort", abort, { once: true });

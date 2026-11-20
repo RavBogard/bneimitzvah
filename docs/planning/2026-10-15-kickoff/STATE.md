@@ -13,7 +13,9 @@ Updated 2026-11-20. This file is replaced, not appended: it says where the work 
 
 ## In progress
 
+- **Tutor and learner follow-up, November 20:** Daniel approved intent-based entry, multi-tutor relationships, and an assigned aliyah Practice view without private tutor panels. The `codex/tutor-and-learner-workflows` build at `c6e36ec9` passed all 15 CI jobs, 14 targeted native-browser checks and a built phone-profile offline playback check. The independent access review passed. Production waits for guide migration 0058 and journal reconciliation before applying 0059–0061. [Changes and release dependencies](../2026-11-20-tutor-and-learner/PLAN.md).
 
+- The local GPU is evaluating the remaining Shermet word timings. Qualified rows will publish through the same review and release checks.
 
 - **Guide release and hold on the Guides page:** built, reviewed twice (adversarial, then a delta pass) and green in CI on the branch `claude/guides-web-release`. It waits for Daniel to apply migration 0058 to production: steps in `docs/planning/2026-11-17-guides-web-release/APPLY.md` on that branch. Then the branch is brought up to main (the migration file byte-identical), CI is run again, and main is fast-forwarded.
 - **Study guides:** every catalog key has a published base guide, origin claude, not yet reviewed. Daniel marks guides reviewed as he reads them. The ones flagged as sensitive for his read: yom-kippur-mincha (Lev 18), achrei-mot, i-samuel-15 (Zachor), ezekiel-37, nasso, behar. Plan: `docs/superpowers/plans/2026-10-28-replacing-the-study-guide-booklet.md`.

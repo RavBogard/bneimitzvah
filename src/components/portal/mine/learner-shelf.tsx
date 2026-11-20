@@ -1,4 +1,5 @@
 "use client";
+import { PrivatePronouns } from "../profile/pronouns";
 import { useEffect, useState } from "react";
 import { PageHeader } from "../../ui";
 import { readAddress } from "../public-reading/urls";
@@ -24,6 +25,11 @@ export function LearnerShelfView({ membershipId, learner, state, onRetry }: { me
   const denied = state.status === "ready" && state.readings.state !== "ready";
   return <section className="role-workspace" data-testid="learner-shelf" data-learner={membershipId} aria-busy={state.status === "loading"}>
     <PageHeader title={name} description={learner?.student ? `${learner.student.firstName} ${learner.student.lastName} · ${longDate(learner.student.ceremonyDate)}` : undefined} />
+    {learner && !denied && <PrivatePronouns subject={{ type: "learner", membershipId }} />}
+    {learner?.student && !denied && <nav className="hero-actions" aria-label="Assigned reading actions">
+      <a className="button-secondary" href={`/workspace/tutor/${encodeURIComponent(learner.student.id)}#edit-verses`}>Edit verses and aliyot</a>
+      <a className="button-primary" href={`/workspace/tutor/${encodeURIComponent(learner.student.id)}#practice`}>Practice</a>
+    </nav>}
     <section className={styles.mine} aria-labelledby={denied ? undefined : "learner-readings-title"} data-testid="learner-own">
       {!denied && <h2 id="learner-readings-title" className={styles.mineTitle}>{learner ? learnerReadingsTitle(learner.name) : LEARNER_SHELF_STRINGS.title}</h2>}
       {state.status === "loading" && <p className={styles.mineLine}>Finding the readings.</p>}

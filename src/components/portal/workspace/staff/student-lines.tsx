@@ -1,4 +1,5 @@
 "use client";
+import { PrivatePronouns } from "../../profile/pronouns";
 import { useEffect, useState } from "react";
 import type { Assigned } from "../api";
 import { relationshipApi, type Relationships } from "../relationships/api";
@@ -36,13 +37,15 @@ export function StaffStudentLines({ mode, baseline }: { mode: "tutor" | "admin";
   const waiting = mode === "tutor" && waitingForDivisions(known?.kind, baseline.readings);
   const review = baseline.readings.filter(row => row.needsReview);
   const lines = known ? familyLine(known) : [];
-  if (!lines.length && !waiting && !review.length && !shown) return null;
-  return <div className="staff-lines" data-testid="staff-student-lines">
+  return <>
+    <PrivatePronouns subject={{ type: "student", studentId, mode }} />
+    {(lines.length > 0 || waiting || review.length > 0 || shown) && <div className="staff-lines" data-testid="staff-student-lines">
     {shown && <p data-testid="admin-people-line"><bdi dir="auto">{[tutorLine(shown.tutors.find(row => row.effectiveRead)?.displayName ?? null, shown.tutors.filter(row => row.effectiveRead).length),
       shown.guardians.length || !shown.identities.length ? parentLine(shown.guardians.some(row => row.effectiveRead) ? "joined" : "none") : null].filter(Boolean).join(". ")}</bdi></p>}
     {lines.map(line => <p key={line} data-testid="family-line"><bdi dir="auto">{line}</bdi></p>)}
     {waiting && <p data-testid="honors-status"><bdi dir="auto">{waitingLine(firstName)}</bdi></p>}
     {review.length > 0 && <p className="reading-review-clear" data-testid="reading-review"><span className="roster-chip">Reading needs review</span>
       {baseline.readings.length > 1 && <span>{review.map(reading => reading.kind === "torah" ? "Torah" : "Haftarah").join(" and ")}</span>}</p>}
-  </div>;
+    </div>}
+  </>;
 }

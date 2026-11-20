@@ -15,7 +15,7 @@ import { READINGS_DISCLOSURE } from "../../src/lib/readings/disclosure";
 // Readings for everyone, plan D7: Your students, Find a learner, the Tutor line and a learner's shelf, as pure views and strict parsers.
 // Synthetic people and readings only.
 const M1 = "00000000-0000-4000-8000-000000000011", M2 = "00000000-0000-4000-8000-000000000022", R1 = "00000000-0000-4000-8000-000000000101";
-const learner = (extra: Partial<Learner> = {}): Learner => ({ membershipId: M1, name: "Synthetic Learner", readings: 3, nearest: { name: "Noach", date: "2026-10-24" }, tutor: null, student: null, ...extra });
+const learner = (extra: Partial<Learner> = {}): Learner => ({ membershipId: M1, name: "Synthetic Learner", readings: 3, nearest: { name: "Noach", date: "2026-10-24" }, tutor: null, student: null, ...extra, tutors: extra.tutors ?? (extra.tutor ? [{ ...extra.tutor, claimId: extra.tutor.claimed ? R1 : null }] : []) });
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe("the shelf's learners client", () => {
@@ -25,9 +25,9 @@ describe("the shelf's learners client", () => {
     for (const bad of [{ ok: true }, { ok: true, learners: [{ ...learner(), name: "a@example.test" }] }, { ok: true, learners: [{ ...learner(), extra: 1 }] }, { ok: true, learners: [{ ...learner(), membershipId: "nope" }] },
       { ok: true, learners: [{ ...learner(), readings: -1 }] }, { ok: true, learners: [{ ...learner(), nearest: { name: "X" } }] }, { ok: true, learners: [{ ...learner(), tutor: { name: "T", claimed: "yes", mine: false } }] }])
       expect(() => parseLearners(bad), JSON.stringify(bad)).toThrow(PortalRequestError);
-    expect(parseMyTutor({ ok: true, tutor: null })).toBeNull();
-    expect(parseMyTutor({ ok: true, tutor: { name: "Synthetic Tutor", claimed: true } })).toEqual({ name: "Synthetic Tutor", claimed: true });
-    expect(() => parseMyTutor({ ok: true, tutor: { name: "t@example.test", claimed: true } })).toThrow(PortalRequestError);
+    expect(parseMyTutor({ ok: true, tutors: [] })).toEqual([]);
+    expect(parseMyTutor({ ok: true, tutors: [{ name: "Synthetic Tutor", claimed: true, claimId: R1 }] })).toEqual([{ name: "Synthetic Tutor", claimed: true, claimId: R1 }]);
+    expect(() => parseMyTutor({ ok: true, tutors: [{ name: "t@example.test", claimed: true, claimId: R1 }] })).toThrow(PortalRequestError);
   });
   it("asks same-origin and uncached, searches by prefix, and reads a learner's shelf through the staff routes only", async () => {
     const calls: { url: string; init: RequestInit }[] = [];
@@ -67,10 +67,9 @@ describe("Find a learner", () => {
     expect(markup).toContain("Saturday, October 24, 2026");
     // A learner with no dated reading has no "next" part at all (finding 8).
     expect(markup.split('data-learner="')[2]).not.toContain(FIND_STRINGS.next);
-    expect(markup).toContain(FIND_STRINGS.noTutor); expect(markup).toContain("Tutor: <bdi dir=\"auto\">Synthetic Tutor</bdi>");
+    expect(markup).toContain(FIND_STRINGS.noTutor); expect(markup).toContain("Synthetic Tutor</bdi>");
     // A learner who already has a tutor says so in place of the button (finding 7).
-    expect(markup.match(/aria-label="Add to my students: /g)).toHaveLength(1);
-    expect(markup).toContain('data-testid="learner-state"');
+    expect(markup.match(/aria-label="Add to my students: /g)).toHaveLength(2);
     expect(markup).not.toContain("Remove from my students");
     // Nobody's name is a link until the claim is the viewer's own: the shelf behind it is 404 to anyone else.
     expect(markup).not.toContain(`href="${learnerShelfHref(M1)}"`);
@@ -84,7 +83,7 @@ describe("Find a learner", () => {
     const assigned = view([learner({ tutor: { name: "Synthetic Me", claimed: false, mine: true } })]);
     expect(assigned).not.toContain("Remove from my students"); expect(assigned).not.toContain("Add to my students"); expect(assigned).toContain('data-testid="learner-state"');
     const admin = view([mine, learner({ membershipId: M2, name: "Rabbi's claim", tutor: { name: "Synthetic Tutor", claimed: true, mine: false } })], ["admin"]);
-    expect(admin.match(/Remove from my students: /g)).toHaveLength(2);
+    expect(admin.match(/aria-label="Remove tutor /g)).toHaveLength(2);
     expect(admin).not.toContain("Add to my students");
     expect(admin).toContain(`href="${learnerShelfHref(M2)}"`);
     expect(view([learner({ tutor: { name: "Synthetic Tutor", claimed: false, mine: false } })], ["admin"])).not.toContain("Remove from my students");
@@ -151,13 +150,12 @@ describe("what the site says it records (plan D8)", () => {
 describe("the Tutor line and a learner's shelf", () => {
   it("shows Tutor: name with Not my tutor for a claim only, then Your tutor was removed., and nothing without a tutor", () => {
     const view = (state: Parameters<typeof MyTutorView>[0]["state"]) => renderToStaticMarkup(createElement(MyTutorView, { state, pending: false, notice: null, onRemove: () => {} }));
-    const claimed = view({ status: "ready", tutor: { name: "Synthetic Tutor", claimed: true } });
+    const claimed = view({ status: "ready", tutors: [{ name: "Synthetic Tutor", claimed: true, claimId: R1 }] });
     expect(claimed).toContain("Tutor: <bdi dir=\"auto\">Synthetic Tutor</bdi>");
     expect(claimed).toContain(`>${MY_TUTOR_STRINGS.undo}</button>`);
-    const assigned = view({ status: "ready", tutor: { name: "Synthetic Tutor", claimed: false } });
+    const assigned = view({ status: "ready", tutors: [{ name: "Synthetic Tutor", claimed: false, claimId: null }] });
     expect(assigned).toContain("Tutor: "); expect(assigned).not.toContain(MY_TUTOR_STRINGS.undo);
-    expect(view({ status: "removed" })).toContain('role="status"'); expect(view({ status: "removed" })).toContain("Your tutor was removed.");
-    expect(view({ status: "ready", tutor: null })).toBe(""); expect(view({ status: "hidden" })).toBe(""); expect(view({ status: "loading" })).toBe("");
+    expect(view({ status: "ready", tutors: [] })).toBe(""); expect(view({ status: "hidden" })).toBe(""); expect(view({ status: "loading" })).toBe("");
   });
   it("a learner's shelf is the same Also working on list, read-only, each row opening the reading in the learner view", () => {
     const reading = parseSavedReading({ id: R1, name: "Noach", date: "2026-10-24", kind: "torah", ranges: "Genesis 6:9-11:32", verseCount: 153, revision: 1, createdAt: "2026-10-22T00:00:00.000Z", updatedAt: "2026-10-22T00:00:00.000Z" })!;

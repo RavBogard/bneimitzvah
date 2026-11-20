@@ -36,5 +36,5 @@ test("the public reading is open to signed-out visitors, never asks for a sessio
   expect(robotsText).toMatch(/^Disallow: \/$/im);
   const home = await page.goto("/");
   expect(home?.headers()["x-robots-tag"]).toBe("noindex, nofollow");
-  await expect(page.getByRole("link", { name: "Lein", exact: true })).toHaveAttribute("href", "/read");
+  await expect(page.getByRole("link", { name: "Practice a reading", exact: true })).toHaveAttribute("href", "/read");
 });

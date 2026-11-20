@@ -18,10 +18,10 @@ import { NAMELESS_LEARNER } from "../../lib/learner-name";
 
 /**
  * Readings for everyone (Daniel, 2026-10-27, decision 15; plan decisions 2 and 6, task D5). Any tutor may see every signed-in
- * person in the congregation and claim any of them as a student, one tutor at a time; the learner may undo the claim; the rabbi
+ * person in the congregation and claim any of them as a student, independently for each tutor; the learner may undo the claim; the rabbi
  * (an admin) may undo it too, here or from the student's access page. A claim on a person with a live student identity also
  * writes the tutor_student link every staff tool reads, and ends it again with the claim. A rabbi's own assignment is not a
- * claim: the learner is told so (409) rather than allowed to end it.
+ * claim: no learner removal selector is offered for it.
  */
 type Request = AccessRequest & { method?: string };
 const failed = <C extends string>(code: C) => ({ ok: false as const, code });
@@ -31,6 +31,17 @@ const LIMIT = 50;
 const CONTROLS = /[\x00-\x1f\x7f-\x9f\u2028\u2029]/;
 function learnerOf(supplied: unknown) {
   const value = closedObject(supplied, ["learner"]).learner;
+  if (typeof value !== "string" || !UUID.test(value.toLowerCase())) throw new HttpBoundaryError();
+  return value.toLowerCase();
+}
+function claimSelection(supplied: unknown) {
+  const row = closedObject(supplied, ["learner"], ["claim"]);
+  const learner = learnerOf({ learner: row.learner });
+  if (row.claim !== undefined && (typeof row.claim !== "string" || !UUID.test(row.claim.toLowerCase()))) throw new HttpBoundaryError();
+  return { learner, claimId: typeof row.claim === "string" ? row.claim.toLowerCase() : undefined };
+}
+function claimIdentifier(supplied: unknown) {
+  const value = closedObject(supplied, ["claim"]).claim;
   if (typeof value !== "string" || !UUID.test(value.toLowerCase())) throw new HttpBoundaryError();
   return value.toLowerCase();
 }
@@ -60,11 +71,6 @@ export function createLearnersService<Q extends PgQueryResultHKT>(input: { acces
       return action(tx, { tutor: tutor ? actorOf(identity, identity.membership, tutor, "tutor") : null, admin: admin ? actorOf(identity, identity.membership, admin, "admin") : null });
     });
   }
-  /** The learner's tutor, from the claim (undoable) or, for a linked student, the first tutor link (the rabbi's assignment). */
-  async function tutorOf(tx: AccessTransaction<Q>, tenantId: string, learnerMembershipId: string) {
-    const tutor = await data.tutorOfLearner(tx, tenantId, learnerMembershipId);
-    return tutor ? Object.freeze({ ...tutor, name: displayName(tutor.name, "Tutor") }) : null;
-  }
   /** Ends a claim as a tutor or admin: the link it made goes first, through the one tutor-revocation write, whose hook ends the claim and audits it; a claim with no live link is ended here. */
   async function endClaim(tx: AccessTransaction<Q>, actor: Actor, claim: { id: string; tutorLinkId: string | null }) {
     if (claim.tutorLinkId) {
@@ -91,17 +97,17 @@ export function createLearnersService<Q extends PgQueryResultHKT>(input: { acces
         const rows = await data.listLearners(tx, identity.tenantId, { exceptMembershipId: identity.membership.id, tutorGrantId: grant.id, q, after, limit: LIMIT });
         const learners = [];
         for (const row of rows) {
-          const tutor = await tutorOf(tx, identity.tenantId, row.membershipId), student = await data.liveStudentOf(tx, identity.tenantId, row.membershipId), shelf = shelves.get(row.membershipId);
+          const tutors = (await data.tutorsOfLearner(tx, identity.tenantId, row.membershipId)).map(tutor => ({ name: displayName(tutor.name, "Tutor"), claimed: tutor.claimed, mine: tutor.grantId === grant.id, claimId: tutor.claimId }));
+          const tutor = tutors.find(tutor => tutor.mine) ?? tutors[0] ?? null, student = await data.liveStudentOf(tx, identity.tenantId, row.membershipId), shelf = shelves.get(row.membershipId);
           learners.push(Object.freeze({ membershipId: row.membershipId, name: displayName(row.name, NAMELESS_LEARNER), readings: shelf?.readings ?? 0, nearest: shelf?.nearest ?? null,
-            tutor: tutor ? Object.freeze({ name: tutor.name, claimed: tutor.claimed, mine: tutor.grantId === grant.id }) : null,
+            tutor: tutor ? Object.freeze({ name: tutor.name, claimed: tutor.claimed, mine: tutor.mine }) : null, tutors,
             student: student ? Object.freeze({ id: student.id, firstName: student.firstName, lastName: student.lastName, ceremonyDate: student.ceremonyDate }) : null }));
         }
         return { ok: true as const, learners: Object.freeze(learners) };
       });
     },
     /**
-     * Claim as my student: a tutor's act (an admin without a tutor grant cannot). One tutor at a time: another tutor's live claim
-     * or tutor link is 409 has-tutor (the rabbi reassigns on the access page). The same tutor claiming again, or claiming someone
+     * Claim as my student: a tutor's act (an admin without a tutor grant cannot). Other tutors' claims and assignments are preserved. The same tutor claiming again, or claiming someone
      * the rabbi already assigned them, changes nothing. A learner with a live student identity gets the tutor link too, unless
      * the ceremony is done; a disabled, missing or other-congregation learner, a staff member or a parent (notALearner) and oneself, are 404.
      */
@@ -118,10 +124,9 @@ export function createLearnersService<Q extends PgQueryResultHKT>(input: { acces
         const assigned = (await assignedLinksOf(tx, actor.tenantId, learner)).some(link => link.tutorGrantId === actor.roleGrantId);
         if (!assigned && await notALearner(tx, actor.tenantId, learner)) throw new AccessDenied(404);
         await data.lockLearnerClaims(tx, actor.tenantId, learner);
-        const existing = await activeClaimOf(tx, actor.tenantId, learner, "update");
-        if (existing) return existing.tutorGrantId === actor.roleGrantId ? { ok: true as const, learner, created: false } : failed("has-tutor");
+        const existing = await activeClaimOf(tx, actor.tenantId, learner, "update", actor.roleGrantId);
+        if (existing) return { ok: true as const, learner, created: false };
         const links = await liveTutorLinksOf(tx, actor.tenantId, learner);
-        if (links.some(link => link.tutorGrantId !== actor.roleGrantId)) return failed("has-tutor");
         if (links.some(link => link.tutorGrantId === actor.roleGrantId)) return { ok: true as const, learner, created: false };
         const student = await data.liveStudentOf(tx, actor.tenantId, learner);
         let tutorLinkId: string | null = null;
@@ -137,10 +142,13 @@ export function createLearnersService<Q extends PgQueryResultHKT>(input: { acces
     },
     /** Remove claim: the claiming tutor, or an admin. Another tutor's claim is 404 to a tutor who does not hold it. */
     async unclaim(request: Request, supplied: unknown) {
-      const learner = learnerOf(supplied);
+      const { learner, claimId } = claimSelection(supplied);
       return withStaffWriter(request, async (tx, actors) => {
         await data.lockLearnerClaims(tx, (actors.tutor ?? actors.admin)!.tenantId, learner);
-        const claim = await activeClaimOf(tx, (actors.tutor ?? actors.admin)!.tenantId, learner, "update");
+        const tenantId = (actors.tutor ?? actors.admin)!.tenantId;
+        // An omitted selector is the tutor's own claim only. Admins select an individual claim explicitly.
+        if (!claimId && !actors.tutor) throw new AccessDenied(404);
+        const claim = await activeClaimOf(tx, tenantId, learner, "update", claimId && actors.admin ? undefined : actors.tutor?.roleGrantId, claimId);
         if (!claim) throw new AccessDenied(404);
         const actor = actors.tutor && claim.tutorGrantId === actors.tutor.roleGrantId ? actors.tutor : actors.admin;
         if (!actor) throw new AccessDenied(404);
@@ -152,23 +160,26 @@ export function createLearnersService<Q extends PgQueryResultHKT>(input: { acces
     async myTutor(request: Request) {
       return input.access.withVerifiedIdentity(request, { intent: "read" }, async (tx, identity) => {
         if (!identity.membership) throw new AccessDenied(403);
-        const tutor = await tutorOf(tx, identity.tenantId, identity.membership.id);
-        return { ok: true as const, tutor: tutor ? { name: tutor.name, claimed: tutor.claimed } : null };
+        const tutors = await data.tutorsOfLearner(tx, identity.tenantId, identity.membership.id);
+        return { ok: true as const,
+          tutor: tutors[0] ? { name: displayName(tutors[0].name, "Tutor"), claimed: tutors[0].claimed } : null,
+          tutors: tutors.map(tutor => ({ name: displayName(tutor.name, "Tutor"), claimed: tutor.claimed, claimId: tutor.claimId })) };
       });
     },
     /**
      * Not my tutor: the learner ends the claim (revoked_by learner) and the tutor link it made. A rabbi's assignment is not a
-     * claim: 409 assigned. The audit row carries the learner's own grant when they hold one; a membership with no grant leaves
+     * claim: only a live claim ID can be removed. The audit row carries the learner's own grant when they hold one; a membership with no grant leaves
      * the claim row itself as the record (audit rows need a grant).
      */
-    async removeMyTutor(request: Request) {
+    async removeMyTutor(request: Request, supplied: unknown) {
+      const claimId = claimIdentifier(supplied);
       return input.access.withVerifiedIdentity(request, { intent: "authority-write", mutation: true }, async (tx, identity) => {
         if (!identity.membership) throw new AccessDenied(403);
         requireCookieMutation(request, identity.origin);
         const me = identity.membership.id;
         await data.lockLearnerClaims(tx, identity.tenantId, me);
-        const claim = await activeClaimOf(tx, identity.tenantId, me, "update");
-        if (!claim) { if ((await liveTutorLinksOf(tx, identity.tenantId, me)).length) return failed("assigned"); throw new AccessDenied(404); }
+        const claim = await activeClaimOf(tx, identity.tenantId, me, "update", undefined, claimId);
+        if (!claim) throw new AccessDenied(404);
         if (!await data.revokeClaim(tx, identity.tenantId, claim.id, "learner", me)) throw new AccessDenied(404);
         const grant = await data.anyLiveGrant(tx, identity.tenantId, me);
         const actor: Actor | null = grant ? Object.freeze({ tenantId: identity.tenantId, origin: identity.origin, userId: identity.userId, authSessionId: identity.authSessionId, membershipId: me,

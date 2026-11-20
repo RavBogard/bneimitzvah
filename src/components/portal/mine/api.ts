@@ -8,17 +8,18 @@ import { parseSavedList, parseSavedPage, type SavedList, type SavedPage } from "
  * is a plain failure. Same-origin, uncached, never redirected.
  */
 export type LearnerTutor = Readonly<{ name: string; claimed: boolean; mine: boolean }>;
+export type TutorRelationship = LearnerTutor & Readonly<{ claimId: string | null }>;
 export type LearnerStudent = Readonly<{ id: string; firstName: string; lastName: string; ceremonyDate: string }>;
-export type Learner = Readonly<{ membershipId: string; name: string; readings: number; nearest: Readonly<{ name: string; date: string }> | null; tutor: LearnerTutor | null; student: LearnerStudent | null }>;
-export type MyTutor = Readonly<{ name: string; claimed: boolean }>;
+export type Learner = Readonly<{ membershipId: string; name: string; readings: number; nearest: Readonly<{ name: string; date: string }> | null; tutor: LearnerTutor | null; tutors?: readonly TutorRelationship[]; student: LearnerStudent | null }>;
+export type MyTutor = Readonly<{ name: string; claimed: boolean; claimId: string | null }>;
 export type ClaimResult = Readonly<{ ok: true } | { ok: false; code: "has-tutor" }>;
 export type RemoveTutorResult = Readonly<{ ok: true } | { ok: false; code: "assigned" }>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const CONTROLS = /[\x00-\x1f\x7f-\x9f]/;
 const bad = (): never => { throw new PortalRequestError(503); };
-function object(value: unknown, keys: readonly string[]): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value) || keys.some(key => !Object.hasOwn(value, key)) || Object.keys(value).some(key => !keys.includes(key))) return bad();
+function object(value: unknown, keys: readonly string[], optional: readonly string[] = []): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value) || keys.some(key => !Object.hasOwn(value, key)) || Object.keys(value).some(key => ![...keys, ...optional].includes(key))) return bad();
   return value as Record<string, unknown>;
 }
 const text = (value: unknown, max: number) => typeof value === "string" && value.length > 0 && Array.from(value).length <= max && !CONTROLS.test(value) && !value.includes("@") ? value : bad();
@@ -44,20 +45,23 @@ export function parseLearners(value: unknown): readonly Learner[] {
   const row = object(value, ["ok", "learners"]);
   if (row.ok !== true || !Array.isArray(row.learners) || row.learners.length > 50) return bad();
   return row.learners.map(raw => {
-    const item = object(raw, ["membershipId", "name", "readings", "nearest", "tutor", "student"]);
+    const item = object(raw, ["membershipId", "name", "readings", "nearest", "tutor", "tutors", "student"]);
     const nearest = item.nearest === null ? null : (() => { const next = object(item.nearest, ["name", "date"]); return Object.freeze({ name: text(next.name, 80), date: day(next.date) }); })();
     const tutor = item.tutor === null ? null : (() => { const who = object(item.tutor, ["name", "claimed", "mine"]); if (typeof who.claimed !== "boolean" || typeof who.mine !== "boolean") return bad(); return Object.freeze({ name: text(who.name, 160), claimed: who.claimed, mine: who.mine }); })();
+    if (!Array.isArray(item.tutors)) return bad();
+    const tutors = item.tutors.map(raw => { const who = object(raw, ["name", "claimed", "mine", "claimId"]); if (typeof who.claimed !== "boolean" || typeof who.mine !== "boolean" || who.claimed !== (who.claimId !== null)) return bad(); return Object.freeze({ name: text(who.name, 160), claimed: who.claimed, mine: who.mine, claimId: who.claimId === null ? null : id(who.claimId) }); });
     const student = item.student === null ? null : (() => { const s = object(item.student, ["id", "firstName", "lastName", "ceremonyDate"]); return Object.freeze({ id: id(s.id), firstName: text(s.firstName, 100), lastName: text(s.lastName, 100), ceremonyDate: day(s.ceremonyDate) }); })();
-    return Object.freeze({ membershipId: id(item.membershipId), name: text(item.name, 160), readings: count(item.readings), nearest, tutor, student });
+    return Object.freeze({ membershipId: id(item.membershipId), name: text(item.name, 160), readings: count(item.readings), nearest, tutor, tutors, student });
   });
 }
-export function parseMyTutor(value: unknown): MyTutor | null {
-  const row = object(value, ["ok", "tutor"]);
-  if (row.ok !== true) return bad();
-  if (row.tutor === null) return null;
-  const who = object(row.tutor, ["name", "claimed"]);
-  if (typeof who.claimed !== "boolean") return bad();
-  return Object.freeze({ name: text(who.name, 160), claimed: who.claimed });
+export function parseMyTutor(value: unknown): readonly MyTutor[] {
+  const row = object(value, ["ok", "tutors"], ["tutor"]);
+  if (row.ok !== true || !Array.isArray(row.tutors)) return bad();
+  return row.tutors.map(raw => {
+    const who = object(raw, ["name", "claimed", "claimId"]);
+    if (typeof who.claimed !== "boolean" || who.claimed !== (who.claimId !== null)) return bad();
+    return Object.freeze({ name: text(who.name, 160), claimed: who.claimed, claimId: who.claimId === null ? null : id(who.claimId) });
+  });
 }
 
 /** Find a learner: the directory, by a name prefix; at most fifty, the server's name order. */
@@ -88,18 +92,18 @@ export async function claimLearner(membershipId: string): Promise<ClaimResult> {
   object(value, ["ok", "learner", "created"]);
   return { ok: true };
 }
-export async function unclaimLearner(membershipId: string): Promise<void> {
-  const { status, value } = await call("/api/learners/unclaim", { learner: id(membershipId) });
+export async function unclaimLearner(membershipId: string, claimId?: string): Promise<void> {
+  const { status, value } = await call("/api/learners/unclaim", { learner: id(membershipId), ...(claimId ? { claim: id(claimId) } : {}) });
   if (status !== 200) return refused(status);
   object(value, ["ok", "learner"]);
 }
 /** The person's own tutor line: from a claim (undoable) or the rabbi's assignment; null with neither. */
-export async function fetchMyTutor(signal?: AbortSignal): Promise<MyTutor | null> {
+export async function fetchMyTutor(signal?: AbortSignal): Promise<readonly MyTutor[]> {
   const { status, value } = await call("/api/mine/tutor", undefined, signal);
   return status === 200 ? parseMyTutor(value) : refused(status);
 }
-export async function removeMyTutor(): Promise<RemoveTutorResult> {
-  const { status, value } = await call("/api/mine/tutor/remove", {});
+export async function removeMyTutor(claimId: string): Promise<RemoveTutorResult> {
+  const { status, value } = await call("/api/mine/tutor/remove", { claim: id(claimId) });
   if (status === 409) { const row = object(value, ["ok", "code"]); return row.ok === false && row.code === "assigned" ? { ok: false, code: "assigned" } : bad(); }
   if (status !== 200) return refused(status);
   object(value, ["ok"]);
