@@ -49,7 +49,8 @@
 .item:last-child, .item:last-child > .row { border-end-start-radius: var(--radius-object); border-end-end-radius: var(--radius-object); }
 .row { display: flex; align-items: center; gap: 0.875rem; width: 100%; min-height: 56px; margin: 0; padding: 0.75rem 1rem; border: 0; border-radius: 0; background: transparent; color: inherit; font: inherit; text-align: start; text-decoration: none; }
 a.row, button.row { cursor: pointer; transition: background-color 160ms var(--ease-settle); }
-a.row:hover, button.row:hover { background: var(--color-hover); color: inherit; }
+a.row:hover:not([aria-disabled]), button.row:hover:not([aria-disabled]) { background: var(--color-hover); color: inherit; }
+.row[aria-disabled] { color: var(--color-muted); cursor: default; }
 .rowMain { flex: 1; min-width: 0; }
 .rowTitle { display: block; font-size: var(--text-body); font-weight: var(--weight-semibold); line-height: 1.35; overflow-wrap: anywhere; }
 .rowMeta { display: block; margin-top: 0.125rem; color: var(--color-muted); font-size: var(--text-callout); line-height: 1.4; overflow-wrap: anywhere; }

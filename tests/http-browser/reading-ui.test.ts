@@ -237,7 +237,7 @@ it("keeps the tutor sheet visible through prepare, confirm and local reload wait
   finally { explicitReload.release(); }
   await ui(sheet.getByText("Showing what is saved now. Review the assignment again to make a change.", { exact: true })).toBeVisible(); await explicitReload.remove();
   await ui(close).toBeEnabled(); await ui(sheet).toHaveAttribute("closedby", "closerequest"); await safe(() => tab.keyboard.press("Escape")); await ui(sheet).toBeHidden();
-  await ui(tab.getByRole("button", { name: "Manage", exact: true })).toBeFocused();
+  await ui(tab.getByRole("button", { name: "Manage reading", exact: true })).toBeFocused();
   await openEditor(tab); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:8-9"); await closeEditor(tab);
 });
 

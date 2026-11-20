@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { adminArea, keyboardIsOpen, roleOfPath, shellRole, tabsFor, type ShellRole } from "../../src/components/portal/shell/tabs";
+import { adminArea, keyboardIsOpen, roleOfPath, shellRole, staffNavigationRole, tabsFor, type ShellRole } from "../../src/components/portal/shell/tabs";
 
-// Area A: only the admin has a tab bar, and only on admin pages. Browser-measured checks are in e2e/tab-bar.spec.ts.
+// Browser layout checks are in e2e/tab-bar.spec.ts.
 const labels = (role: ShellRole, pathname: string, tab: string | null = null) => tabsFor({ role, pathname, tab }).map(item => item.label);
 const current = (role: ShellRole, pathname: string, tab: string | null = null) => tabsFor({ role, pathname, tab }).filter(item => item.current).map(item => item.label);
 
@@ -14,10 +14,10 @@ describe("the admin's four tabs", () => {
     for (const role of ["student", "parent", "tutor"] as const) for (const path of ["/mine", "/read", "/account", "/workspace/tutor/abc", "/workspace/admin/students", "/workspace/more"]) expect(tabsFor({ role, pathname: path, tab: null }), `${role} ${path}`).toEqual([]);
     for (const item of tabsFor({ role: "admin", pathname: "/workspace/admin/students", tab: null })) expect(item.href).not.toMatch(/^\/(read|trope-chart|print)/);
   });
-  it("show on the admin's pages only (decision 20)", () => {
-    expect(tabsFor({ role: "admin", pathname: "/mine", tab: null })).toEqual([]);
+  it("stay across the admin workspace and the shared shelf", () => {
+    expect(labels("admin", "/mine")).toEqual(labels("admin", "/workspace/admin/students"));
     expect(tabsFor({ role: "admin", pathname: "/workspace/tutor/abc", tab: null })).toEqual([]);
-    expect(tabsFor({ role: "admin", pathname: "/workspace/admin/students/abc/reading", tab: null })).toEqual([]);
+    expect(labels("admin", "/workspace/admin/students/abc/reading")).toEqual(labels("admin", "/workspace/admin/students"));
     expect(adminArea("/workspace/admin/students/abc/access")).toBe(true);
     expect(adminArea("/workspace/accounts")).toBe(true);
   });
@@ -27,6 +27,8 @@ describe("which tab is current", () => {
   it("is one tab on every admin page the shell knows", () => {
     expect(current("admin", "/workspace/admin/students")).toEqual(["This week"]);
     expect(current("admin", "/workspace/admin/students", "students")).toEqual(["Students"]);
+    expect(current("admin", "/mine")).toEqual([]);
+    expect(current("admin", "/workspace/admin/students/abc/reading")).toEqual(["Students"]);
     expect(current("admin", "/workspace/admin/students/abc/access")).toEqual(["Students"]);
     for (const path of ["/workspace/admin/invitations", "/workspace/admin/tutors", "/workspace/accounts"]) expect(current("admin", path)).toEqual(["People"]);
     for (const path of ["/workspace/more", "/workspace/admin/settings", "/workspace/admin/guides", "/workspace/email", "/workspace/claude"]) expect(current("admin", path)).toEqual(["More"]);
@@ -46,6 +48,21 @@ describe("the role whose tabs a page shows", () => {
     expect(shellRole("/account", [], "admin")).toBeNull();
     expect(roleOfPath("/workspace/more")).toBeNull();
     expect(roleOfPath("/workspace/admin/people")).toBe("admin");
+  });
+});
+
+describe("staff navigation on shared and role-specific routes", () => {
+  it("uses the held staff role and suppresses the disclosure in family and learner views", () => {
+    const roles: ShellRole[] = ["admin", "tutor", "parent", "student"];
+    expect(staffNavigationRole("/mine", roles, null)).toBe("admin");
+    expect(staffNavigationRole("/mine", roles, "tutor")).toBe("tutor");
+    expect(staffNavigationRole("/mine", roles, "parent")).toBeNull();
+    expect(staffNavigationRole("/workspace/tutor/abc", roles, "admin")).toBe("tutor");
+    expect(staffNavigationRole("/workspace/admin/students/abc/reading", roles, "tutor")).toBe("admin");
+    expect(staffNavigationRole("/workspace/admin/students/abc/reading", ["tutor"], "tutor")).toBeNull();
+    for (const path of ["/mine/child/abc", "/mine/reading", "/workspace/student", "/workspace/parent", "/workspace/practice/abc"]) {
+      expect(staffNavigationRole(path, roles, "admin"), path).toBeNull();
+    }
   });
 });
 

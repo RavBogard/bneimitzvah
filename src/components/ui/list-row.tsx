@@ -17,23 +17,29 @@ export type ListRowProps = {
   href?: string;
   /** A link row that leaves the site opens in a new tab and sends no referrer. */
   external?: boolean;
+  /** Opens the link in this tab with a fresh document. */
+  fullDocument?: boolean;
   /** A link row that does something as it goes (the role Account remembers). Runs before the link is followed. */
   onNavigate?: () => void;
   /** The row is a button. Give neither and the row is plain text. */
   onClick?: () => void;
+  /** Retains the row while an in-flight action prevents activating it. */
+  disabled?: boolean;
 };
 
 /** One row, at least 56px tall. A link or button row is one 44px-plus target across its full width, with a chevron. */
-export function ListRow({ title, meta, trailing, href, external, onNavigate, onClick }: ListRowProps) {
+export function ListRow({ title, meta, trailing, href, external, fullDocument, onNavigate, onClick, disabled }: ListRowProps) {
   const inner = <>
     <span className={styles.rowMain}><span className={styles.rowTitle}>{title}</span>{meta && <span className={styles.rowMeta}>{meta}</span>}</span>
     {trailing && <span className={styles.rowTrailing}>{trailing}</span>}
-    {(href || onClick) && <svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" /></svg>}
+    {!disabled && (href || onClick) && <svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" /></svg>}
   </>;
   return <li className={styles.item}>
-    {href && external ? <a href={href} className={styles.row} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">{inner}</a>
+    {href && disabled ? <a className={styles.row} role="link" aria-disabled="true">{inner}</a>
+      : href && external ? <a href={href} className={styles.row} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">{inner}</a>
+      : href && fullDocument ? <a href={href} className={styles.row} onClick={onNavigate}>{inner}</a>
       : href ? <Link href={href} className={styles.row} onClick={onNavigate}>{inner}</Link>
-      : onClick ? <button type="button" className={styles.row} onClick={onClick}>{inner}</button>
+      : onClick ? <button type="button" className={styles.row} aria-disabled={disabled || undefined} onClick={disabled ? undefined : onClick}>{inner}</button>
         : <div className={styles.row}>{inner}</div>}
   </li>;
 }

@@ -38,6 +38,7 @@ export function AccountView({ summary, current, signingOut, problem, onRole, onS
     </section>}
     {roles.length > 0 && <section className="account-section">
       <List label="Your account">
+        {roles.includes("admin") && <ListRow title="View as" meta="Explore other roles with sample data" href="/preview" fullDocument />}
         {(!student || emailOffered === true) && <ListRow title="Email settings" meta="choose which portal emails you get" href="/workspace/email" />}
         {roles.includes("admin") && <ListRow title="Congregation settings" meta="the congregation’s name, dates and options" href="/workspace/admin/settings" />}
         {staff && <ListRow title="Claude connections" meta="see and end Claude’s access to the portal" href="/workspace/claude" />}

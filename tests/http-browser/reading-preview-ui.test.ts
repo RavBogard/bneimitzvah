@@ -183,7 +183,7 @@ it("retains a bound preview through unchanged quiet verification, fences explici
   try {
     await click(tab, "Preview custom references"); await ui.poll(() => heldRefresh).toBe(true);
     const reloaded = tab.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${fixture.student.id}/reading` && response.status() === 200);
-    await tab.getByRole("button", { name: "Manage", exact: true }).evaluate(button => (button as HTMLButtonElement).click()); await tab.getByRole("dialog", { name: "Manage", exact: true }).getByRole("button", { name: "Refresh reading", exact: true }).click(); await reloaded;
+    await tab.getByRole("button", { name: "Manage reading", exact: true }).evaluate(button => (button as HTMLButtonElement).click()); await tab.getByRole("dialog", { name: "Manage reading", exact: true }).getByRole("button", { name: "Refresh reading", exact: true }).click(); await reloaded;
     await ui(panel(tab).locator(".study-verses")).toHaveCount(0);
     releaseRefresh(); await ui.poll(() => deliveredRefresh).toBe(true); await ui(panel(tab).locator(".study-verses")).toHaveCount(0);
     await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");

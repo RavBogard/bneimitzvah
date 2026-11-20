@@ -124,8 +124,8 @@ it("creates and edits a real roster record, blocks stale409 overwrite and leaves
   await safe(() => tab.getByRole("button", { name: "Add student", exact: true }).click());
   for (const [label, value] of [["First name", "Synthetic"], ["Last name", "Workspace"], ["Ceremony date", "2027-01-02"], ["Parent email", "workspace-parent@example.test"]]) await safe(() => tab.getByLabel(label, { exact: true }).fill(value));
   await safe(() => tab.getByRole("button", { name: "Save student", exact: true }).click());
-  await ui(tab.getByRole("button", { name: "Edit details for Synthetic Workspace", exact: true })).toBeVisible();
-  await safe(() => tab.getByRole("button", { name: "Edit details for Synthetic Workspace", exact: true }).click());
+  await ui(tab.getByRole("button", { name: "Details for Synthetic Workspace", exact: true })).toBeVisible();
+  await safe(() => tab.getByRole("button", { name: "Details for Synthetic Workspace", exact: true }).click());
   await safe(() => tab.getByLabel("First name", { exact: true }).fill("Draft retained"));
   const current = (await api(tab, "/api/admin/students")).data.students.find((row: { lastName: string }) => row.lastName === "Workspace");
   expect(Boolean(current)).toBe(true);
@@ -135,7 +135,7 @@ it("creates and edits a real roster record, blocks stale409 overwrite and leaves
   await safe(() => tab.getByRole("dialog").getByRole("button", { name: "Reload roster", exact: true }).click());
   await ui(tab.getByText("Someone changed this student since you opened it. Nothing was overwritten. Reload the roster to see the current details.", { exact: true })).toBeHidden();
   await ui(tab.getByRole("dialog")).toBeHidden();
-  await safe(() => tab.getByRole("button", { name: "Edit details for Synthetic Workspace", exact: true }).click());
+  await safe(() => tab.getByRole("button", { name: "Details for Synthetic Workspace", exact: true }).click());
   await safe(() => tab.getByLabel("First name", { exact: true }).fill("Synthetic revised"));
   let release!: () => void, mutations = 0; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route("**/api/admin/students/*/edit", async route => { mutations++; const response = await route.fetch(); await gate; await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' }); await response.dispose(); });
@@ -147,9 +147,9 @@ it("creates and edits a real roster record, blocks stale409 overwrite and leaves
   // Either outcome message is honest here (the write may have landed); both block saving until a reload.
   await ui(tab.getByRole("dialog").getByRole("alert")).toHaveText(/^(We couldn’t confirm whether this saved|This student changed while you were away)/);
   await safe(() => tab.getByRole("dialog").getByRole("button", { name: "Reload roster", exact: true }).click());
-  await ui(tab.getByRole("button", { name: "Edit details for Synthetic revised Workspace", exact: true })).toBeVisible();
+  await ui(tab.getByRole("button", { name: "Details for Synthetic revised Workspace", exact: true })).toBeVisible();
   expect(await tab.getByText(/Your draft is kept here but can’t be saved/).count()).toBe(0);
-  await safe(() => tab.getByRole("button", { name: "Edit details for Synthetic revised Workspace", exact: true }).click());
+  await safe(() => tab.getByRole("button", { name: "Details for Synthetic revised Workspace", exact: true }).click());
   await safe(() => tab.getByRole("button", { name: "Disable student", exact: true }).click());
   await safe(() => tab.getByRole("button", { name: "Confirm disable", exact: true }).click());
   const rows = tab.getByRole("list", { name: "Students", exact: true }).getByRole("listitem");

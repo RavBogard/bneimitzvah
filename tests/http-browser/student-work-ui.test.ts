@@ -258,7 +258,13 @@ it("guards controlled leave and quiet retained reading, discards on request, and
   try {
   const tab = await page("admin"); await staff(tab); const panel = await tools(tab, "Genesis 1:4"), leave = () => tab.getByRole("link", { name: "All students", exact: true });
   await safe(() => panel.getByRole("textbox").fill("Synthetic departure edit")); await closeVerseTools(tab); // the page's links sit behind the sheet; closing it loses no text
-  await safe(() => leave().click()); await ui(tab.getByRole("dialog")).toBeVisible(); await ui(tab.getByRole("dialog").getByRole("button", { name: "Keep working", exact: true })).toBeFocused(); await click(tab, "Keep working"); await ui(leave()).toBeFocused(); await tools(tab, "Genesis 1:4"); await ui(panel.getByRole("textbox")).toHaveValue("Synthetic departure edit");
+  const staffNav = tab.getByRole("navigation", { name: "Staff navigation", exact: true });
+  await safe(() => staffNav.getByText("My Students", { exact: true }).click());
+  const rosterLink = staffNav.getByRole("link", { name: "See all students", exact: true });
+  await safe(() => rosterLink.click()); await ui(tab.getByRole("dialog")).toBeVisible(); await ui(tab.getByRole("dialog").getByRole("button", { name: "Keep working", exact: true })).toBeFocused();
+  await click(tab, "Keep working"); await ui(rosterLink).toBeFocused(); await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/workspace/admin/students/${fixture.student.id}/reading`);
+  await safe(() => tab.keyboard.press("Escape")); await ui(staffNav.getByText("My Students", { exact: true })).toBeFocused();
+  await tools(tab, "Genesis 1:4"); await ui(panel.getByRole("textbox")).toHaveValue("Synthetic departure edit");
   const staged = await tools(tab, "Genesis 1:4"); await safe(() => staged.getByRole("textbox").fill("Synthetic queued behind metadata barrier"));
   phase = "quiet-session-retention";
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; }); await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });

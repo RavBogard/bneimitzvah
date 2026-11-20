@@ -49,7 +49,7 @@ import { StaffStudentLines } from "./staff/student-lines";
 import { NeedsWork } from "./staff/needs-work";
 import { TutorPracticeDays, TutorPracticeScope } from "./staff/practice";
 import { LiftNote } from "./staff/lift-note";
-import { ManageSheet } from "./staff/manage-sheet";
+import { MANAGE_STRINGS, ManageSheet } from "./staff/manage-sheet";
 import { ReaderTitle, type Pill } from "../public-reading/reader-title";
 import { ReadingFoot } from "../public-reading/reading-foot";
 import { readingChapters } from "./study/reading-place-model";
@@ -365,7 +365,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   const closeSheet = () => { if (!editorBusy) setSheetOpen(false); };
   useEffect(() => {
     if (sheetOpen || !sheetOrigin.current) return;
-    // "Assign verses" becomes "Change verses" once a reading is confirmed.
+    // The confirmed reading uses the editor action in Manage reading.
     const origin = sheetOrigin.current.isConnected ? sheetOrigin.current : document.querySelector<HTMLElement>("[data-pill=\"manage\"]");
     origin?.focus(); sheetOrigin.current = null;
   }, [sheetOpen]);
@@ -454,7 +454,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
     : <>{slotLine && <p className="hero-who"><ServiceSlotName student={student} services={congregation.services} /></p>}<RehearsalDates student={student} /></>);
   // The sheet only moves to a verse (it never changes the assignment), so everyone's pill and sheet say so (project review 2026-11-16).
   const pillByKey = { change: { key: "change", label: "Go to verse", icon: "chevron", haspopup: "dialog", expanded: changeOpen, onClick: () => setChangeOpen(true) },
-    manage: { key: "manage", label: "Manage", icon: "sliders", haspopup: "dialog", expanded: manageOpen, onClick: () => setManageOpen(true) } } satisfies Record<"change" | "manage", Pill>;
+    manage: { key: "manage", label: MANAGE_STRINGS.title, icon: "sliders", haspopup: "dialog", expanded: manageOpen, onClick: () => setManageOpen(true) } } satisfies Record<"change" | "manage", Pill>;
   // The parent's page keeps the text folded under "See Noa's reading", so it has no Go to verse.
   const pills: Pill[] = mode === "parent" ? [] : titlePillKeys(staff).map(key => pillByKey[key]);
   const childName = student?.firstName ?? firstName ?? "";
@@ -572,7 +572,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
           <option value="" disabled>Choose</option>{chapters.map(row => <option key={row.key} value={row.key}>{row.label}</option>)}</select></label>}</div>
     </Sheet>}
     {!practiceOpen && student && staff && (mode === "tutor" || mode === "admin") && <ManageSheet mode={mode} student={student} baseline={authorizedReading ?? null}
-      actions={{ open: manageOpen, onClose: () => setManageOpen(false), setDivisions: openEditor, changeVerses: openEditor, printPractice: openPrint, printDisabled: printDisabled || readings.length === 0,
+      actions={{ open: manageOpen, onClose: () => setManageOpen(false), editVerses: openEditor, printPractice: openPrint, printDisabled: printDisabled || readings.length === 0,
         printWholeHref: printSheetHref, writeNote, refresh, reload: load }} />}
     {printing && authorizedReading && selectedReading && <PracticeSheet baseline={authorizedReading} initialKind={selectedReading.kind} onClose={() => setPrinting(false)}
       authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} />}
