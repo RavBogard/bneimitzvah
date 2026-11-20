@@ -98,6 +98,7 @@ test("in Lein on a phone a tap on a word opens its card and brings it into view"
   const tools = page.getByRole("region", { name: "Word tools", exact: true });
   await expect(tools.getByRole("button", { name: "Word tools", exact: true })).toHaveAttribute("aria-expanded", "true");
   await expect(tools.getByRole("heading", { level: 4 })).toBeInViewport({ ratio: 1 });
+  await expect(page.getByText("Other recorded readings", { exact: true })).toBeVisible();
 });
 
 test("on a small phone Practice up close sets a long verse so all of it shows on the stage", async ({ page }, info) => {

@@ -8,6 +8,7 @@ import { FlowingStudyText } from "../workspace/study/annotations";
 import { StudyCredits } from "../workspace/study/credits";
 import { ReadingPlayer, playMainVerseForWord, type ReadingPlayerHandle } from "../workspace/study/reading-player";
 import { useIdentity } from "../../site/identity-context";
+import { ReadingCollectionPlayback } from "../../shermet-library/reading-collection";
 import { humanTracksForVerses } from "../../../lib/reference-audio/human-tracks";
 import { useShermetRecordingAvailability } from "../workspace/study/use-shermet-recordings";
 import type { ReadingSelection } from "../workspace/study/main-playback";
@@ -408,8 +409,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   // player's cancellable availability lookup, including Shermet-only verses.
   // A fork without PocketTorah remains text-only.
   const crc = useIdentity().crc, shermet = useShermetRecordingAvailability(allVerses);
-  const hasCollections = useMemo(() => crc && humanTracksForVerses(allVerses).length > 0, [crc, allVerses]);
-  const listening = source.listening || crc && (shermet.pending || shermet.refs.size > 0 || hasCollections);
+  const listening = source.listening || crc && (shermet.pending || shermet.refs.size > 0);
   const choice = useVerseChoice(choose, allVerses, kind), more = useMore(), chapters = useMemo(() => readingChapters(allVerses), [allVerses]);
   const linkedIndex = verse !== null && verse <= passage.verseCount ? verse - 1 : null;
   // What a text page is: one section when the calendar gives aliyot (the text flows inside it), else one of the server's pages.
@@ -506,6 +506,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     return () => { live = false; };
   }, [source, key, kind, passage, sections, windows, range, nextWin, textKey, retry, audio]);
   const page = text?.key === textKey ? text.page : undefined, preview = text?.key === textKey ? text.preview ?? null : null;
+  const standaloneTracks = useMemo(() => crc && !listening && page ? humanTracksForVerses(page.verses.map(verse => verse.ref)) : [], [crc, listening, page]);
   // Print's labels ("Aliyah 4", "Maftir") above the verse where a section begins on this page, in either lens.
   const labels = useMemo(() => page && sections.length ? labelsIn(sections, range.section, page.offset, page.offset + page.verses.length) : NO_LABELS, [page, sections, range.section]);
   const linkedOnPage = page && linkedIndex !== null && linkedIndex >= page.offset && linkedIndex < page.offset + page.verses.length ? linkedIndex - page.offset : null;
@@ -689,6 +690,9 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
               if (target >= 0 && target !== win) { pendingPlace.current = { key: keyOf(windows[target]), ref, wordIndex }; changeWin(target); }
             }}
             takePlace={() => { const place = pendingPlace.current; pendingPlace.current = null; return place && place.key === scopeKey ? { ref: place.ref, wordIndex: place.wordIndex } : null; }} />
+          {!study && standaloneTracks.length > 0 && <ReadingCollectionPlayback key={`collection:${scopeKey}`}
+            tracks={standaloneTracks} verseRef={focus === null ? undefined : page.verses[focus]?.ref}
+            coordinator={audio} slot="proposed-collection" enabled={!lift} />}
           {/* While the drill is on, Rashi (whose English carries a translation) is closed away; ending it shows Rashi as it was. */}
           {!study && <div hidden={Boolean(drillVerse)}><VerseRashi key={focus !== null ? page.verses[focus]?.ref : "none"} verse={focus !== null ? page.verses[focus] ?? null : null} state={focus !== null && page.verses[focus] ? rashi.lookup.forVerse(page.verses[focus].ref) : { status: "none" }} link={leinLink} retry={rashi.retry} /></div>}
           {!study && verseExtra && focus !== null && page.verses[focus] && verseExtra(page.verses[focus].ref)}

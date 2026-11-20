@@ -28,7 +28,7 @@ export function ReadingCollectionPlayback({ tracks, verseRef, coordinator, slot,
     {track && <>
       <HumanTrackCoverage track={track} />
       <HumanTrackCredit track={track} />
-      <p>Play the full source recording below. Taps in the Hebrew still use the verse player.</p>
+      <p>The full recording may cover more than the verses on this page.</p>
       <HumanTrackPlayback key={track.id} track={track} clip={cut && verseRef ? { ...cut, ref: verseRef } : null} audio={{ coordinator, slot }} enabled={enabled && open} expiresAt={expiresAt} />
       <HumanTrackSave key={track.id} track={track} />
     </>}
