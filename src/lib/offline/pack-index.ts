@@ -41,9 +41,13 @@ export function packingStarted(): AbortController { running?.abort(); running = 
 export function trackPacking<T>(promise: Promise<T>): Promise<T> { work = promise; void promise.finally(() => { if (work === promise) work = null; }).catch(() => {}); return promise; }
 
 const cacheStorage = (): CacheStorage | null => { try { return typeof caches === "undefined" ? null : caches; } catch { return null; } };
+// CacheStorage.match can read one named cache without reopening it after a purge.
+const packCacheReader = (storage: CacheStorage): Pick<Cache, "match"> => ({
+  match: (request, options) => storage.match(request, { ...options, cacheName: OFFLINE_CACHE }),
+});
 export const assetKey = (url: string) => { const parsed = new URL(url); return parsed.pathname + parsed.search; };
 
-export async function readIndex(cache: Cache): Promise<PackIndex> {
+export async function readIndex(cache: Pick<Cache, "match">): Promise<PackIndex> {
   try { const response = await cache.match(INDEX_KEY); return response ? parsePackIndex(await response.json()) : EMPTY_INDEX; } catch { return EMPTY_INDEX; }
 }
 export async function writeIndex(cache: Cache, index: PackIndex) {
@@ -70,7 +74,7 @@ export async function sweep(cache: Cache, now: number, keep: (pack: Pack) => boo
 }
 
 /** Saved, partly saved (an asset was evicted) or nothing, from what the cache actually holds. */
-export async function inspectPack(cache: Cache, pack: Pack | undefined, now: number, origin = location.origin): Promise<PackState> {
+export async function inspectPack(cache: Pick<Cache, "match">, pack: Pack | undefined, now: number, origin = location.origin): Promise<PackState> {
   if (!pack || !packLive(pack, now)) return null;
   for (const asset of pack.assets) if (!await cache.match(new URL(asset, origin).href, { ignoreVary: true })) return "partial";
   return "saved";
@@ -83,7 +87,7 @@ export async function refreshOfflineState(now = Date.now(), weekKey?: string) {
       setOfflineState({ week: state.week === "no-space" ? "no-space" : null, course: state.course === "no-space" ? "no-space" : null, service: state.service === "no-space" ? "no-space" : null, savedUntil: null });
       return;
     }
-    const cache = await storage.open(OFFLINE_CACHE), index = await readIndex(cache);
+    const cache = packCacheReader(storage), index = await readIndex(cache);
     const week = index.packs.find(pack => pack.descriptor.type === "week" && (!weekKey || pack.key === weekKey)), course = index.packs.find(pack => pack.descriptor.type === "course");
     const service = index.packs.find(pack => pack.descriptor.type === "service");
     const [weekState, courseState, serviceState] = await Promise.all([inspectPack(cache, week, now), inspectPack(cache, course, now), inspectPack(cache, service, now)]);
@@ -96,7 +100,7 @@ export async function refreshOfflineState(now = Date.now(), weekKey?: string) {
 /** The saved packs, for /offline. */
 export async function savedPacks(now = Date.now()): Promise<readonly Pack[]> {
   const storage = cacheStorage(); if (!storage) return [];
-  try { return storage && await storage.has(OFFLINE_CACHE) ? (await readIndex(await storage.open(OFFLINE_CACHE))).packs.filter(pack => packLive(pack, now)) : []; } catch { return []; }
+  try { return (await readIndex(packCacheReader(storage))).packs.filter(pack => packLive(pack, now)); } catch { return []; }
 }
 
 /**

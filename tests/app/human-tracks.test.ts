@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({}));
 import { createHumanTrackMedia, publishedKaraiteMedia } from "../../src/server/human-tracks/media";
 import { HUMAN_TRACKS, humanTrackCoverage, humanTrackCut, humanTracksForVerses, karaiteTrackSource, offlineHumanTrackAvailable, offlineHumanTrackPath, type HumanTrack } from "../../src/lib/reference-audio/human-tracks";
 

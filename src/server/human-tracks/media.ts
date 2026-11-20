@@ -1,9 +1,10 @@
 import { humanTrackById, humanTrackPlayable, karaiteTrackSource, type HumanTrack } from "../../lib/reference-audio/human-tracks";
 
 export type TrackMedia = { body: ReadableStream<Uint8Array> | null; headers: Pick<Headers, "get" | "has"> };
+import { privateHeaders } from "../http/responses";
+
 const mime = "audio/mpeg";
-const base = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
-const missing = () => new Response(null, { status: 404, headers: base });
+const missing = () => new Response(null, { status: 404, headers: privateHeaders() });
 
 /** Only the CRC public catalog names objects. Request parameters never become a URL or a blob key. */
 export function createHumanTrackMedia(input: {
@@ -20,7 +21,9 @@ export function createHumanTrackMedia(input: {
     const raw = request.headers.get("range");
     const range = head || request.headers.has("if-range") ? null : raw;
     if (range && !validRequestRange(range, track.bytes)) {
-      return new Response(null, { status: 416, headers: { ...base, ...(track.bytes ? { "Content-Range": "bytes */" + track.bytes } : {}) } });
+      const headers = privateHeaders();
+      if (track.bytes) headers.set("Content-Range", "bytes */" + track.bytes);
+      return new Response(null, { status: 416, headers });
     }
     try {
       const media = await input.upstream(track, { range, head, signal: AbortSignal.any([request.signal, AbortSignal.timeout(120_000)]) });
@@ -36,7 +39,8 @@ export function createHumanTrackMedia(input: {
           !contentRange && track.bytes && length !== track.bytes) {
         cancel(); return missing();
       }
-      const headers = new Headers({ ...base, "Content-Type": mime, "Content-Length": String(length) });
+      const headers = privateHeaders();
+      headers.set("Content-Type", mime); headers.set("Content-Length", String(length));
       if (part || source.get("accept-ranges") === "bytes") headers.set("Accept-Ranges", "bytes");
       if (part) headers.set("Content-Range", contentRange!);
       if (head) cancel();

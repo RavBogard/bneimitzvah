@@ -24,6 +24,7 @@ class FakeCaches {
   constructor(readonly origin: string) {}
   async open(name: string) { let cache = this.stores.get(name); if (!cache) { cache = new FakeCache(this.origin); this.stores.set(name, cache); } return cache; }
   async has(name: string) { return this.stores.has(name); }
+  async match(input: RequestInfo, options: MultiCacheQueryOptions) { return this.stores.get(options.cacheName!)?.match(input, options); }
   async delete(name: string) { return this.stores.delete(name); }
   async keys() { return [...this.stores.keys()]; }
 }
@@ -68,6 +69,18 @@ async function seed(caches: FakeCaches, packs: unknown[], extra: Record<string, 
   await cache.put(CLIP, new Response(new Uint8Array([1, 2, 3]), { headers: { "content-type": "audio/mpeg", link: "<https://creativecommons.org/licenses/by-sa/3.0/>; rel=license" } }));
   for (const [path, response] of Object.entries(extra)) await cache.put(path, response);
 }
+
+test("a pack read cannot reopen the cache during a sign-out purge", async () => {
+  const w = await load();
+  await seed(w.caches, [pack(Date.now(), [CLIP])]);
+  const open = vi.spyOn(w.caches, "open");
+  const cached = await w.request(CLIP);
+  expect(cached?.status).toBe(200);
+  expect(open).not.toHaveBeenCalled();
+  await w.caches.delete(OFFLINE_CACHE);
+  await expect(w.request(CLIP)).rejects.toThrow("offline");
+  expect(await w.caches.has(OFFLINE_CACHE)).toBe(false);
+});
 
 describe("the worker's constants", () => {
   test("come from policy.ts through the /sw.js header, so the page and the worker cannot drift", async () => {

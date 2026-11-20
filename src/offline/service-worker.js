@@ -128,8 +128,8 @@ async function activate() {
 /** A packed asset, only while some live pack lists it; marked so the page can say it is offline. */
 async function fromPack(url) {
   // Never reopen (and so recreate) a pack cache a purge deleted.
-  if (!await caches.has(POLICY.offlineCache)) return null;
-  const cache = await caches.open(POLICY.offlineCache), index = await readIndex(cache), key = url.pathname + url.search, now = Date.now();
+  const cache = { match: (request, options) => caches.match(request, { ...options, cacheName: POLICY.offlineCache }) };
+  const index = await readIndex(cache), key = url.pathname + url.search, now = Date.now();
   const ownerOnly = OWNER_ONLY_PATH.test(url.pathname);
   if (!index || !index.packs.some(pack => live(pack, now) && pack.assets.includes(key) && (!ownerOnly || (index.owner !== null && pack.owner === index.owner)))) return null;
   const hit = await cache.match(url.href, { ignoreVary: true });

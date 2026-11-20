@@ -35,7 +35,7 @@ class FakeCache {
   async delete(input: RequestInfo) { return this.entries.delete(new URL(typeof input === "string" ? input : input.url, origin).href); }
   async keys() { return [...this.entries.keys()].map(url => new Request(url)); }
 }
-class FakeCaches { stores = new Map<string, FakeCache>(); async open(name: string) { if (!this.stores.has(name)) this.stores.set(name, new FakeCache()); return this.stores.get(name)!; } async has(name: string) { return this.stores.has(name); } async delete(name: string) { return this.stores.delete(name); } async keys() { return [...this.stores.keys()]; } }
+class FakeCaches { stores = new Map<string, FakeCache>(); async open(name: string) { if (!this.stores.has(name)) this.stores.set(name, new FakeCache()); return this.stores.get(name)!; } async has(name: string) { return this.stores.has(name); } async match(input: RequestInfo, options: MultiCacheQueryOptions) { return this.stores.get(options.cacheName!)?.match(input); } async delete(name: string) { return this.stores.delete(name); } async keys() { return [...this.stores.keys()]; } }
 
 async function harness(options: { pocketTorah?: boolean; shermet?: boolean; origin?: string; parashah?: string; portionSummary?: PublicRuntime["portionSummary"] } = {}) {
   const base = options.origin ?? origin;

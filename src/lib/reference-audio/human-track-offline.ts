@@ -24,6 +24,29 @@ export async function removeSavedHumanTrack(track: HumanTrack) {
   window.dispatchEvent(new Event(HUMAN_TRACK_SAVE_CHANGE));
 }
 
+/** Some browser fetch paths omit Content-Length even for a verified full recording. */
+async function readRecording(response: Response, length: number, signal: AbortSignal) {
+  const declared = response.headers.get("content-length");
+  if (declared !== null && Number(declared) !== length || !response.body) throw new Error("Recording unavailable");
+  const reader = response.body.getReader(), bytes = new Uint8Array(length);
+  let offset = 0;
+  try {
+    for (;;) {
+      signal.throwIfAborted();
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      if (offset + chunk.value.byteLength > length) throw new Error("Recording changed");
+      bytes.set(chunk.value, offset);
+      offset += chunk.value.byteLength;
+    }
+    if (offset !== length) throw new Error("Recording changed");
+    return bytes;
+  } finally {
+    void reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+}
+
 export async function saveHumanTrack(track: HumanTrack, signal: AbortSignal) {
   if (!offlineHumanTrackAvailable(track) || !supportsHumanTrackSave()) throw new Error("Offline recordings unavailable");
   const path = offlineHumanTrackPath(track), url = new URL(path, location.origin).href;
@@ -40,10 +63,12 @@ export async function saveHumanTrack(track: HumanTrack, signal: AbortSignal) {
     }
     if (used + track.bytes > SAVE_BUDGET_BYTES) throw new Error("Not enough space");
     const response = await fetch(url, { credentials: "omit", mode: "same-origin", redirect: "error", cache: "reload", signal });
-    if (response.status !== 200 || response.url !== url || response.headers.get("content-type") !== "audio/mpeg"
-      || Number(response.headers.get("content-length")) !== track.bytes) throw new Error("Recording unavailable");
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.byteLength !== track.bytes || await shortAudioDigest(bytes) !== track.sha256) throw new Error("Recording changed");
+    if (response.status !== 200 || response.url !== url || response.headers.get("content-type") !== "audio/mpeg") {
+      void response.body?.cancel().catch(() => {});
+      throw new Error("Recording unavailable");
+    }
+    const bytes = await readRecording(response, track.bytes, signal);
+    if (await shortAudioDigest(bytes) !== track.sha256) throw new Error("Recording changed");
     signal.throwIfAborted();
     const headers = { "Content-Type": "audio/mpeg", "Content-Length": String(track.bytes), "Accept-Ranges": "bytes",
       [HUMAN_TRACK_EXPIRY]: String(Date.now() + SAVE_WINDOW_MS) };
