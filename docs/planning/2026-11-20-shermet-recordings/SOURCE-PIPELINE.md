@@ -2,12 +2,12 @@
 
 November 20, 2026. All source audio, source text, ASR, models and acquisition receipts remain outside Git. The checked-in files contain public labels, references, numeric IDs, hashes, byte lengths and verified timing intervals only.
 
-## Running work
+## Source inventory and local processing
 
-- Source root: `C:/Users/dsbog/beitmitzvah-media/shermet-collection`. The browser inventory covers 247 pages, 8,326 rows and 8,154 distinct official media URLs. `inventory.json` and append-only `inventory-receipts.jsonl` preserve the observed first-party hierarchy and row labels. The receiver remains on loopback port 43121.
-- Four downloader workers start at most four CDN requests per second. Each original is hashed, probed and fully decoded; MP3 and PCM WAV retain their original bytes and actual MIME. `acquisition-watch.pid`, `acquisition-watch.log`, `acquisition-watch-errors.log` and `watcher-state.json` identify the running process and loaded script digest. Checkpoints are atomic. Refusals trigger host backoff; malformed/empty audio stays held. Source 416380 returned zero bytes; source 430626 returned a transient HTTP 504 when last checked.
-- GPU root: `C:/private/shermet-alignment`. `alignment-watch.pid` identifies the resident CUDA worker; `alignment-watch.log` and `alignment-watch-errors.log` hold progress. It reloads the growing public manifest, targets and projections, prioritizes the 110 distinct course references, and checkpoints each source/ref/hash. It continues without this chat being active.
-- `extra-packs/target-build-receipts.json`: 37 additional chapter groups built; Deuteronomy 32 remains held by the existing untimed-pack tool. Current projection generated 7,420 of 7,422 requested references; holds are II Kings 5:18 unsupported markup and the invalid printed Leviticus 17:17 reference. The latter remains navigable under its source label rather than becoming a default.
+- The collection is frozen under `C:/Users/dsbog/beitmitzvah-media/shermet-collection`. The 247 pages yielded 8,326 rows, 8,154 distinct URLs and 8,153 decodable recordings. Source 416380, labeled Numbers 1:1, returned zero bytes. The browser receiver and downloader have finished.
+- `inventory.json`, `inventory-receipts.jsonl` and `acquisition.json` retain the page hierarchy, original labels, byte hashes, stream details and full-decode outcomes. The local coverage report lists every full-verse gap in CRC’s baseline.
+- The GPU workspace is `C:/private/shermet-alignment`. The primary pass writes `collection-candidates`. A separate pass writes `word-rescues` for eligible holds. Run one large model on the GPU at a time if concurrent processes contend for device memory. Each pass resumes from the recording-specific checkpoints. The 110 distinct curriculum references have priority.
+- The final ordinary manifest has 7,434 verses. Exact word projections are available for 7,433. II Kings 5:18 contains unsupported source markup. Extra untimed target packs and their checks are described below.
 
 Compact progress:
 
@@ -54,7 +54,7 @@ This writes lazy per-book numerical TS shards and `getShermetTiming` in `timing-
 
 `shermet-word-rescue.py` leaves the original worker and qualified rows untouched. It measures frame energy about each frame's own mean: some real Genesis recordings have a DC offset near −0.023 while quiet-frame variation is only about 0.0005, so uncentered RMS falsely calls the quiet lead/tail voiced. The separate 137 ms inference uses DC-neutral silence and must preserve normalized primary features within 0.0001. Word starts and acoustically extended word ends must agree; movement of an internal phone alone does not reject a stable word. Sustained unassigned voice, confidence problems, source/text mismatches and independent ASR contradictions remain holds. Low phone confidence needs stronger exact-unit, SHA-bound Whisper corroboration.
 
-The worker PID is in `C:/private/shermet-alignment/word-rescue-watch.pid`; logs have the same prefix. Its output is `word-rescues`. Independent real-clip evidence is in `asr-audit/rescue-cohort-current.json`; this derives from the original cohort and pins the newer repeat-limited, DC-filtered decoding receipt for the two initially anomalous transcriptions. Decoder repetition is failed corroboration, not proof of a wrong source label.
+The last launched rescue worker PID is in `C:/private/shermet-alignment/word-rescue-watch.pid`. Logs have the same prefix. Its output is `word-rescues`. Independent real-clip evidence is in `asr-audit/rescue-cohort-current.json`; this derives from the original cohort and pins the newer repeat-limited, DC-filtered decoding receipt for the two initially anomalous transcriptions. Decoder repetition is failed corroboration, not proof of a wrong source label.
 
 Report publication eligibility without changing generated files:
 
