@@ -58,7 +58,7 @@ Source keys:
 - All voice work happens in 2.5. 2026-10-23. M "Amended 2026-10-23, roadmap".
 - Sung practice uses Adonai/Elohim. 2026-10-16. M "Trope and audio".
 - 2.0 has no melody link and no prayer audio; Daniel records the prayers in 2.1. 2026-10-24. M "Amended 2026-10-24 (G0)". Replaces ruling 51 (prayer audio links to CRC Music).
-- The 18 special and festival haftarot with no recording stay text-only; no upload feature. 2026-10-22. M "Amended 2026-10-22".
+- Special and festival haftarot use text alone wherever a reference recording is unavailable. The Shermet pilot adds Micah 7:18–20 for Shabbat Shuvah. The earlier decision against a general upload feature still applies. 2026-10-22 and 2026-11-20. [Shermet plan](2026-11-20-shermet-recordings/PLAN.md).
 - Student recordings are dropped ("I don't think this is really a useful thing for us"); the code was removed on 2026-11-16 and the table stays. 2026-10-22 and 2026-11-16. S "Daniel, 2026-10-22 (1.5 planning)"; RV S2. "Hear yourself": revisit with 2.5 (P19 decision 6).
 - Learn's tap exercises: a tap answers while the question is open and plays nothing; once answered, any word opens its word card. 2026-10-23. M "Popup rulings".
 - Tapping a word in the main reading plays its whole verse with word highlighting (Lein). 2026-10-18. M "Amended 2026-10-18 (verse-first playback)".
