@@ -6,7 +6,83 @@ import { SHERMET_PILOT_RECORDINGS } from "./pilot-metadata";
 import { isCrcEnvironment } from "../../lib/site/identity";
 
 const MAX_AUDIO = 20 * 1024 * 1024;
+const MAX_CACHED_BYTES = 32 * 1024 * 1024;
+const MAX_CACHED_RECORDINGS = 9;
 const headers = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
+type PublicEntry = (typeof SHERMET_PILOT_RECORDINGS)[number];
+type PublicCache = { bytes: Map<string, Buffer>; pending: Map<string, Promise<Buffer | null>>; size: number };
+// The runtime creates a handler per request. Share only verified public bytes
+// across those handlers, with independent test fetchers in weakly held caches.
+const publicCaches = new WeakMap<typeof fetch, PublicCache>();
+async function publicRecording(entry: PublicEntry, fetcher: typeof fetch): Promise<Buffer | null> {
+  let cache = publicCaches.get(fetcher);
+  if (!cache) {
+    cache = { bytes: new Map(), pending: new Map(), size: 0 };
+    publicCaches.set(fetcher, cache);
+  }
+  const key = `${entry.sourceId}:${entry.sha256}`;
+  const ready = cache.bytes.get(key);
+  if (ready) {
+    cache.bytes.delete(key); cache.bytes.set(key, ready);
+    return ready;
+  }
+  const pending = cache.pending.get(key);
+  if (pending) return pending;
+  if (cache.pending.size >= MAX_CACHED_RECORDINGS) return null;
+  const selectedCache = cache;
+  const work = (async () => {
+    try {
+      const response = await fetcher(`https://images.shulcloud.com/14396/${entry.sourceId}.mp3`, {
+        signal: AbortSignal.timeout(15000), redirect: "error", credentials: "omit", cache: "no-store",
+      });
+      if (!response.ok || !response.body || Number(response.headers.get("content-length")) > MAX_AUDIO) {
+        await response.body?.cancel();
+        return null;
+      }
+      const reader = response.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let length = 0;
+      try {
+        while (true) {
+          const result = await reader.read();
+          if (result.done) break;
+          length += result.value.length;
+          if (length > MAX_AUDIO) {
+            await reader.cancel();
+            return null;
+          }
+          chunks.push(result.value);
+        }
+      } finally { reader.releaseLock(); }
+      const bytes = Buffer.concat(chunks);
+      if (!bytes.length || createHash("sha256").update(bytes).digest("hex") !== entry.sha256) return null;
+      while (selectedCache.bytes.size >= MAX_CACHED_RECORDINGS || selectedCache.size + bytes.length > MAX_CACHED_BYTES) {
+        const oldest = selectedCache.bytes.keys().next().value;
+        if (oldest === undefined) break;
+        selectedCache.size -= selectedCache.bytes.get(oldest)!.length;
+        selectedCache.bytes.delete(oldest);
+      }
+      selectedCache.bytes.set(key, bytes); selectedCache.size += bytes.length;
+      return bytes;
+    } catch { return null; }
+  })();
+  cache.pending.set(key, work);
+  try { return await work; }
+  finally { cache.pending.delete(key); }
+}
+
+/** A single inclusive byte range; null means malformed or unsatisfiable. */
+function byteRange(value: string, length: number): { start: number; end: number } | null {
+  const match = /^bytes=(\d*)-(\d*)$/i.exec(value.trim());
+  if (!match || !length || !match[1] && !match[2]) return null;
+  if (!match[1]) {
+    const suffix = Number(match[2]);
+    return Number.isSafeInteger(suffix) && suffix > 0 ? { start: Math.max(0, length - suffix), end: length - 1 } : null;
+  }
+  const start = Number(match[1]), end = match[2] ? Number(match[2]) : length - 1;
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start >= length || start > end) return null;
+  return { start, end: Math.min(end, length - 1) };
+}
 export function runtimeShermetAudio(env: Readonly<Record<string, string | undefined>> = process.env) {
   const crc = isCrcEnvironment(env);
   const local = crc && env.NODE_ENV !== "production" && env.PORTAL_ENVIRONMENT !== "production" ? env.SHERMET_AUDIO_DIR : undefined;
@@ -54,30 +130,7 @@ export function createShermetAudio(directory: string | undefined, publicEnabled 
       }
       const entry = publicEntries.find(entry => entry.ref === ref);
       if (!entry || !singleVerse(entry.ref, entry.kind) || !/^[a-f0-9]{64}$/.test(entry.sha256) || !Number.isSafeInteger(entry.sourceId) || entry.sourceId <= 0) return null;
-      const response = await fetcher(`https://images.shulcloud.com/14396/${entry.sourceId}.mp3`, {
-        signal: AbortSignal.timeout(15000), redirect: "error", credentials: "omit", cache: "no-store",
-      });
-      if (!response.ok || !response.body || Number(response.headers.get("content-length")) > MAX_AUDIO) {
-        await response.body?.cancel();
-        return null;
-      }
-      const reader = response.body.getReader();
-      const chunks: Uint8Array[] = [];
-      let length = 0;
-      try {
-        while (true) {
-          const result = await reader.read();
-          if (result.done) break;
-          length += result.value.length;
-          if (length > MAX_AUDIO) {
-            await reader.cancel();
-            return null;
-          }
-          chunks.push(result.value);
-        }
-      } finally { reader.releaseLock(); }
-      const bytes = Buffer.concat(chunks);
-      return bytes.length > 0 && createHash("sha256").update(bytes).digest("hex") === entry.sha256 ? bytes : null;
+      return await publicRecording(entry, fetcher);
     } catch { return null; }
   }
   return {
@@ -96,7 +149,17 @@ export function createShermetAudio(directory: string | undefined, publicEnabled 
       const refs = new URL(request.url).searchParams.getAll("ref");
       const bytes = refs.length === 1 ? await recording(refs[0]) : null;
       if (!bytes) return new Response(null, { status: 404, headers });
-      return new Response(request.method === "HEAD" ? null : new Uint8Array(bytes), { headers: { ...headers, "Content-Type": "audio/mpeg", "Content-Length": String(bytes.length) } });
+      const mediaHeaders = { ...headers, "Content-Type": "audio/mpeg", "Accept-Ranges": "bytes" };
+      // HEAD describes the complete GET representation. If-Range without a
+      // matching validator also requires the complete representation.
+      const rangeHeader = request.method === "GET" && !request.headers.has("if-range") ? request.headers.get("range") : null;
+      if (rangeHeader !== null) {
+        const range = byteRange(rangeHeader, bytes.length);
+        if (!range) return new Response(null, { status: 416, headers: { ...mediaHeaders, "Content-Range": `bytes */${bytes.length}`, "Content-Length": "0" } });
+        const body = bytes.subarray(range.start, range.end + 1);
+        return new Response(new Uint8Array(body), { status: 206, headers: { ...mediaHeaders, "Content-Length": String(body.length), "Content-Range": `bytes ${range.start}-${range.end}/${bytes.length}` } });
+      }
+      return new Response(request.method === "HEAD" ? null : new Uint8Array(bytes), { headers: { ...mediaHeaders, "Content-Length": String(bytes.length) } });
     },
   };
 }
