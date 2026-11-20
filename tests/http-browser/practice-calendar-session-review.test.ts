@@ -124,7 +124,7 @@ it("keeps calendar 403 and 404 local but makes a direct POST 401 globally termin
     await tab.route(eventPath(tab), route => route.fulfill({ status, contentType: "application/json", body: "{}" }));
     await upCloseFromDock(tab); await ui(week(tab)).toHaveCount(0); await ui(tab.locator(studyVerses)).toBeVisible();
     expect(await tab.locator(signedOutState).count()).toBe(0);
-    await click(tab, "Close practice view"); await pageFetchesSettled(tab); expect(seen.sessions).toEqual([]); // local: no session read
+    await click(tab, "Back to reading"); await pageFetchesSettled(tab); expect(seen.sessions).toEqual([]); // local: no session read
     await tab.unroute(eventPath(tab));const expectedServiceReads=selectedReads(tab).length+1;
     await refreshReading(tab); await ready(tab,expectedServiceReads); await pageFetchesSettled(tab); seen.sessions.length = 0;
   }
@@ -138,7 +138,7 @@ it("ignores a held old calendar 401 after a real role and child-context replacem
   const hold = async (route: Route) => { held = true; try { await gate; await route.fulfill({ status: 401, contentType: "application/json", body: "{}" }).catch(() => undefined); } finally { complete(); } };
   await tab.route(eventPath(tab), hold);
   try {
-    await upCloseFromDock(tab); await ui.poll(() => held).toBe(true); await click(tab, "Close practice view");
+    await upCloseFromDock(tab); await ui.poll(() => held).toBe(true); await click(tab, "Back to reading");
     await switchRole(tab, "Parent"); await goChild(tab, sibling.id);
     await click(tab, "Practice with Synthetic"); await ready(tab,1,sibling.id,"child-practice"); await ui(tab.locator(`${studyVerses} [data-verse-ref="Genesis 2:1"]`)).toBeVisible();
   } finally { release(); }
@@ -150,7 +150,7 @@ it("ignores a held old calendar 401 after a real role and child-context replacem
   await fixture.ownerDb.update(s.guardian).set({ revokedAt: new Date(), revision: 2 }).where(eq(s.guardian.studentId, sibling.id));
   await comeBack(tab); await ui(tab.getByTestId("practice-bar-title")).toBeVisible();
   const denied = tab.waitForResponse(response => new URL(response.url()).pathname.startsWith(`/api/students/${sibling.id}/progress`) && response.request().method() === "POST");
-  await upCloseFromDock(tab); await safe(() => tab.locator("dialog.lift").getByRole("group", { name: /^How / }).getByRole("button", { name: "Got it", exact: true }).click());
+  await upCloseFromDock(tab); await safe(() => tab.locator("[data-assigned-practice]").getByRole("group", { name: /^How / }).getByRole("button", { name: "Got it", exact: true }).click());
   expect([403, 404]).toContain((await denied).status());
   await ui(tab.getByTestId("mine-children")).toBeVisible(); expect(await tab.locator(`[data-testid="practice-bar-title"], ${studyVerses}, [data-word-index]`).count()).toBe(0);
   expect(seen.events.every(method => method === "POST")).toBe(true); await tab.context().close();

@@ -166,7 +166,7 @@ it("fences delayed Torah suggestions on kind changes and closed editor lifetimes
   } finally { release(); await tab.unroute("**/reading/prepare"); }
 });
 
-it("initializes ordered multiple ranges without flattening them and confirms a cut-only review with original provenance", async () => {
+it("preserves separate ranges and the original provenance while autosaving an aliyah boundary", async () => {
   const tab = await page(), ranges = ["Genesis 1:1-2", "Genesis 2:1-2"];
   const prepared = await api(tab, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "admin", kind: "torah", ranges });
   expect(prepared.status).toBe(200); expect(prepared.data.status).toBe("prepared");
@@ -178,14 +178,16 @@ it("initializes ordered multiple ranges without flattening them and confirms a c
   await ui(sheet(tab).getByRole("group", { name: "Passage 2", exact: true }).getByRole("combobox", { name: "Start chapter", exact: true })).toHaveValue("2");
   await safe(() => sheet(tab).getByText("Advanced references and aliyah boundaries", { exact: true }).click());
   await ui(sheet(tab).getByLabel("Custom verse ranges", { exact: true })).toHaveValue(ranges.join("\n"));
-  await safe(() => sheet(tab).getByLabel("Subsequent aliyah starts", { exact: true }).fill("Genesis 2:1"));
-  let request: Record<string, unknown> | undefined;
-  tab.on("request", value => { if (new URL(value.url()).pathname.endsWith("/reading/prepare")) request = value.postDataJSON(); });
-  await click(tab, "Review assignment"); await ui(sheet(tab).locator(".reading-preserved-context")).toBeVisible();
+  const boundary = sheet(tab).getByLabel("Subsequent aliyah starts", { exact: true });
+  await safe(() => boundary.fill("Genesis 2:1"));
+  const preparedRequest = tab.waitForRequest(value =>
+    new URL(value.url()).pathname.endsWith("/reading/prepare") && value.postDataJSON()?.preparationMode === "current-assignment",
+  );
+  await safe(() => boundary.press("Tab"));
+  const request = (await preparedRequest).postDataJSON();
   expect(request).toMatchObject({ preparationMode: "current-assignment", expectedAssignmentRevision: before.revision, aliyahStarts: ["Genesis 2:1"] });
   expect(request).not.toHaveProperty("ranges"); expect(request).not.toHaveProperty("pick");
-  await click(tab, "Save assignment");
-  await ui(sheet(tab).getByText("Saved. The current reading above shows what the student will see.", { exact: true })).toBeVisible();
+  await ui(sheet(tab).getByRole("status").getByText("Saved.", { exact: true })).toBeVisible();
   const after = (await api(tab, readPath())).data.readings[0];
   expect(after).toEqual({ ...before, revision: before.revision + 1, aliyahStarts: ["Genesis 2:1"] });
 });

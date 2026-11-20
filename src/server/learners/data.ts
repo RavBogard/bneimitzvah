@@ -4,7 +4,7 @@ import { studentCeremonyDone } from "../db/ceremony-done-schema";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
 import * as s from "../db/index";
-import { activeClaimOf, liveTutorLinksOf } from "../data/learner-claims";
+import { liveTutorLinksOf } from "../data/learner-claims";
 
 /**
  * The learner directory's people queries and the claim writes (readings for everyone, plan D5). The visibility rule and the
@@ -84,7 +84,7 @@ export async function grantHolder<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantI
   return row ?? null;
 }
 
-/** One learner's claims change one at a time, so one tutor at a time holds and a second claim is a clean 409, never a unique-key error. */
+/** Serialize a learner's claim changes so same-tutor repeats are idempotent and different tutors remain independent. */
 export async function lockLearnerClaims<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, learnerMembershipId: string) {
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`portal-learner-claim:${tenantId}:${learnerMembershipId}`}, 0))`);
 }
@@ -127,18 +127,25 @@ export async function auditClaim<Q extends PgQueryResultHKT>(tx: Tx<Q>, actor: R
 }
 
 /**
- * The learner's tutor, from the claim (undoable) or, for a linked student, the first tutor link (the rabbi's assignment). A revoked grant or a
+ * Every learner tutor, from independent self-claims and the rabbi's assignments, deduplicated by live tutor grant. A revoked grant or a
  * disabled membership is nobody's tutor (as on the staff screens). The name is raw; the caller applies displayName. Shared by the learner's own
  * tutor line and the study booklet's cover.
  */
-export async function tutorOfLearner<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, learnerMembershipId: string) {
-  // The claim's grant is live (activeClaimOf checks); a link's tutor grant may not be.
-  const claim = await activeClaimOf(tx, tenantId, learnerMembershipId);
-  const candidates = claim ? [claim.tutorGrantId] : (await liveTutorLinksOf(tx, tenantId, learnerMembershipId)).map(link => link.tutorGrantId);
-  for (const grantId of candidates) {
+export async function tutorsOfLearner<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, learnerMembershipId: string) {
+  const claims = await tx.select().from(s.learnerClaim)
+    .where(and(eq(s.learnerClaim.tenantId, tenantId), eq(s.learnerClaim.learnerMembershipId, learnerMembershipId), isNull(s.learnerClaim.revokedAt))).orderBy(asc(s.learnerClaim.id));
+  const links = await liveTutorLinksOf(tx, tenantId, learnerMembershipId);
+  const grants = [...new Set([...claims.map(claim => claim.tutorGrantId), ...links.map(link => link.tutorGrantId)])];
+  const tutors = [];
+  for (const grantId of grants) {
     const holder = await grantHolder(tx, tenantId, grantId);
     if (!holder || holder.revokedAt || holder.disabledAt) continue;
-    return Object.freeze({ grantId, name: holder.name, claimed: claim !== null, claimId: claim?.id ?? null });
+    const claim = claims.find(row => row.tutorGrantId === grantId);
+    tutors.push(Object.freeze({ grantId, name: holder.name, claimed: !!claim, claimId: claim?.id ?? null }));
   }
-  return null;
+  return tutors;
+}
+/** Legacy booklet cover projection; the directory and learner controls use every tutor. */
+export async function tutorOfLearner<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, learnerMembershipId: string) {
+  return (await tutorsOfLearner(tx, tenantId, learnerMembershipId))[0] ?? null;
 }

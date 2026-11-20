@@ -48,7 +48,7 @@ async function workspace(tab: Page, role: "student" | "tutor" | "parent" | "admi
 }
 async function lessonsTab(tab: Page) { await safe(() => toSection(tab, "lessons")); await ui(lessons(tab).getByRole("button", { name: "Add lesson note", exact: true })).toBeEnabled(); }
 async function openFirstVerse(tab: Page) { const ref = await tab.locator(".study-verses [data-verse-ref]").first().getAttribute("data-verse-ref"); expect(ref).toBeTruthy(); await safe(() => upClose(tab, ref!)); }
-async function firstMark(tab: Page, state: string) { await openFirstVerse(tab); await safe(() => tab.locator("dialog.lift").getByRole("group", { name: /^How / }).getByRole("button", { name: state, exact: true }).click()); }
+async function firstMark(tab: Page, state: string) { await openFirstVerse(tab); await safe(() => tab.locator("[data-assigned-practice]").getByRole("group", { name: /^How / }).getByRole("button", { name: state, exact: true }).click()); }
 async function markStatus(tab: Page, mode = "student") {
   const r = await api(tab, `/api/students/${fixture.student.id}/reading?mode=${mode}`); expect(r.status).toBe(200); const a = r.data.readings.find((x: { kind: string }) => x.kind === "torah");
   return api(tab, `/api/students/${fixture.student.id}/progress?${new URLSearchParams({ mode, kind: "torah", assignmentId: a.id, assignmentRevision: String(a.revision), offset: "0" })}`);
@@ -211,16 +211,16 @@ it("reconciles a held successful mark across same-scope refresh and rejects its 
 it("keeps overlapping parent views read-only and fences held child progress after a real child switch", async () => {
   const tab = await page("tutor"); await workspace(tab, "parent");
   const assigned = await api(tab, `/api/students/${fixture.student.id}/reading?mode=parent`); expect(assigned.status).toBe(200); const currentRef = assigned.data.readings.find((x: { kind: string }) => x.kind === "torah").verses[0]; await loaded(tab, currentRef);
-  await openFirstVerse(tab); await ui(tab.locator("dialog.lift .lift-progress button")).toHaveCount(0); await safe(() => tab.keyboard.press("Escape"));
+  await openFirstVerse(tab); await ui(tab.locator("[data-assigned-practice] .lift-progress button")).toHaveCount(0); await safe(() => tab.keyboard.press("Escape"));
   await click(tab, "Practice with Synthetic"); await tab.waitForURL(/\/workspace\/practice\//, { timeout: 60_000 }); await loaded(tab, currentRef); await firstMark(tab, "Still working");
-  await ui(tab.locator("dialog.lift").getByRole("button", { name: "Still working", exact: true })).not.toHaveAttribute("aria-disabled", "true");
-  await safe(() => tab.locator("dialog.lift").getByRole("button", { name: "Got it", exact: true }).click());
-  await ui(tab.locator("dialog.lift").getByRole("button", { name: "Got it", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await ui(tab.locator("dialog.lift").getByRole("button", { name: "Solid", exact: true })).toHaveCount(0); await safe(() => tab.keyboard.press("Escape"));
+  await ui(tab.locator("[data-assigned-practice]").getByRole("button", { name: "Still working", exact: true })).not.toHaveAttribute("aria-disabled", "true");
+  await safe(() => tab.locator("[data-assigned-practice]").getByRole("button", { name: "Got it", exact: true }).click());
+  await ui(tab.locator("[data-assigned-practice]").getByRole("button", { name: "Got it", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await ui(tab.locator("[data-assigned-practice]").getByRole("button", { name: "Solid", exact: true })).toHaveCount(0); await safe(() => tab.keyboard.press("Escape"));
   // E2: the practice page has no Refresh reading button, so the held old-child progress read is not started here; the switch itself is what is checked.
   await click(tab, "Switch to Synthetic Sibling"); await loaded(tab, "Genesis 3:1");
   await ui(tab.locator(".hero-marked")).toHaveCount(0); expect(await tab.locator(".study-verse-bar .verse-mark").count()).toBe(0);
-  await openFirstVerse(tab); await ui(tab.locator("dialog.lift .lift-ref")).toHaveText("Genesis 3:1"); await ui(tab.locator("dialog.lift").getByRole("button", { name: "Got it", exact: true })).toHaveAttribute("aria-pressed", "false"); await safe(() => tab.keyboard.press("Escape"));
+  await openFirstVerse(tab); await ui(tab.locator("[data-assigned-practice]").getByTestId("practice-selected-verse")).toHaveText("Genesis 3:1"); await ui(tab.locator("[data-assigned-practice]").getByRole("button", { name: "Got it", exact: true })).toHaveAttribute("aria-pressed", "false"); await safe(() => tab.keyboard.press("Escape"));
   await ui(lessons(tab).getByRole("button", { name: "Add lesson note", exact: true })).toHaveCount(0);
 });
 

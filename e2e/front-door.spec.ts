@@ -31,8 +31,8 @@ test("on a Saturday the home leads with next Shabbat: its parashah and date, Lei
   await expect(page.getByTestId("this-shabbat-link")).toBeVisible(); // the link back to the day's own reading
   await expect(page.getByRole("heading", { level: 1, name: "Noach", exact: true })).toBeVisible();
   await expect(page.locator("time")).toHaveAttribute("datetime", "2026-10-31");
-  await expect(page.getByRole("link", { name: "Lein", exact: true })).toHaveAttribute("href", "/read?date=2026-10-31");
-  await expect(page.getByRole("link", { name: "Study", exact: true })).toHaveAttribute("href", "/read?date=2026-10-31&lens=study");
+  await expect(page.getByRole("link", { name: "Practice a reading", exact: true })).toHaveAttribute("href", "/read?date=2026-10-31");
+  await expect(page.getByRole("link", { name: "Study Torah", exact: true })).toHaveAttribute("href", "/read?date=2026-10-31&lens=study");
   await expect(page.getByTestId("this-shabbat-link")).toHaveAttribute("href", "/read");
 });
 
@@ -45,8 +45,8 @@ test("the home is a front door to This week, Find a reading, Beit Mitzvah and Le
   await expect(page.getByTestId("site-brand")).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name: "Noach", exact: true })).toBeVisible();
   await expect(page.getByTestId("week-ranges")).toHaveText(/Torah Genesis 6:9–11:32 · Haftarah Isaiah 54:1–55:5$/);
-  await expect(page.getByRole("link", { name: "Lein", exact: true })).toHaveAttribute("href", "/read");
-  await expect(page.getByRole("link", { name: "Study", exact: true })).toHaveAttribute("href", "/read?lens=study");
+  await expect(page.getByRole("link", { name: "Practice a reading", exact: true })).toHaveAttribute("href", "/read");
+  await expect(page.getByRole("link", { name: "Study Torah", exact: true })).toHaveAttribute("href", "/read?lens=study");
   // Find a reading: the field, the date button, four Coming up chips and the link to every reading.
   await expect(page.getByRole("combobox", { name: "Find a reading" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Pick a date", exact: true })).toBeVisible();
@@ -61,10 +61,10 @@ test("the home is a front door to This week, Find a reading, Beit Mitzvah and Le
   await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveCount(0);
   await expect(page.getByLabel("Email address")).toHaveCount(0);
   await expect(page.locator('[data-door="learn"]')).toBeVisible();
-  await expect(page.getByRole("link", { name: "Start", exact: true })).toHaveAttribute("href", "/learn");
+  await expect(page.getByRole("link", { name: "Learn to lein", exact: true })).toHaveAttribute("href", "/learn");
   await expect(page.getByTestId("learn-door-line")).toHaveText("Hear the phrases, then lein a verse of this week's reading.");
   await expect(page.getByRole("link", { name: "Trope chart", exact: true })).toHaveAttribute("href", "/trope-chart");
-  for (const [name, scope] of [["Lein", page], ["Study", page], ["Start", page], ["Sign in", beit], ["How accounts work", beit]] as const) {
+  for (const [name, scope] of [["Practice a reading", page], ["Study Torah", page], ["Learn to lein", page], ["Sign in", beit], ["How accounts work", beit]] as const) {
     const box = await scope.getByRole("link", { name, exact: true }).boundingBox();
     expect(box && box.height >= 44 && box.width >= 44, `${name} is at least 44px`).toBe(true);
   }
@@ -103,7 +103,7 @@ test("a failed reading call still shows This week's reading with working Lein an
   await expect(page.locator('[data-door="beit-mitzvah"]').getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
   // /read later tidies its own address, so check the navigation the link made rather than the final URL.
   const opened = page.waitForRequest(request => request.isNavigationRequest() && new URL(request.url()).pathname === "/read" && new URL(request.url()).search === "?lens=study");
-  await page.getByRole("link", { name: "Study", exact: true }).click();
+  await page.getByRole("link", { name: "Study Torah", exact: true }).click();
   await opened;
 });
 
@@ -114,7 +114,7 @@ test("a single-role student at the root sees the front door, not the workspace, 
   await expect(door).toHaveAttribute("data-door-role", "student");
   expect(new URL(page.url()).pathname).toBe("/");
   await expect(door.getByTestId("door-action")).toHaveAttribute("href", "/mine");
-  await expect(page.getByRole("link", { name: "Lein", exact: true })).toHaveAttribute("href", "/read");
+  await expect(page.getByRole("link", { name: "Practice a reading", exact: true })).toHaveAttribute("href", "/read");
   await door.getByTestId("door-action").click();
   await expect(page).toHaveURL(/\/mine$/);
 });
@@ -175,5 +175,5 @@ test("the invitation page stays a plain invitation page with no doors", async ({
   await expect(page.getByTestId("entry-introduction")).toHaveAttribute("data-entry-mode", "invitation");
   await expect(page.locator('[data-testid="entry-task"][data-entry-state="invalid-invitation"]')).toBeVisible();
   await expect(page.locator("[data-door]")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Lein", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Practice a reading", exact: true })).toHaveCount(0);
 });

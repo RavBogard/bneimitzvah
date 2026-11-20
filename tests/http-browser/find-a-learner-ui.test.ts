@@ -51,7 +51,7 @@ beforeAll(async () => {
 }, 240_000);
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await isolation?.cleanup(); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
 
-it("searches first, never lists a colleague, offers no Add for a learner with a tutor, and refreshes Your students after a claim and its removal", async () => {
+it("searches first, never lists a colleague, offers Add for a learner with another tutor, and refreshes Your students after a claim and its removal", async () => {
   const tab = await tutorPage();
   await safe(() => tab.goto("/mine", { waitUntil: "domcontentloaded" }));
   const find = tab.getByTestId("mine-find"), students = tab.getByTestId("mine-students"), rows = find.getByTestId("learner-row");
@@ -64,8 +64,7 @@ it("searches first, never lists a colleague, offers no Add for a learner with a 
   await ui(row(people.avi)).toBeVisible(); await ui(row(people.gil)).toBeVisible();
   await ui(row(people.colleague)).toHaveCount(0);
   // Gil has a tutor: no Add button, a plain state instead.
-  await ui(row(people.gil).getByRole("button")).toHaveCount(0);
-  await ui(row(people.gil).getByTestId("learner-state")).toBeVisible();
+  await ui(row(people.gil).getByRole("button", { name: "Add to my students: Synthetic Gil", exact: true })).toBeEnabled();
   // Claim Avi: Your students shows Avi without a reload, and the row offers the tutor's own undo.
   await ui(studentLink(people.avi)).toHaveCount(0);
   await safe(() => row(people.avi).getByRole("button", { name: "Add to my students: Synthetic Avi", exact: true }).click());

@@ -1,13 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Chip, List, ListRow } from "../../ui";
-import { workspaceApi, type Student } from "../workspace/api";
+import { workspaceApi } from "../workspace/api";
 import { fetchLessons } from "../workspace/lessons/api";
 import { statusOf, useWorkspace } from "../workspace/provider";
 import { ceremonyCountdown, nextDate } from "../workspace/reading";
 import { TutorCardLine } from "../workspace/staff/practice";
 import { fetchLearners, type Learner } from "./api";
-import { learnerShelfHref } from "./find-a-learner";
+import { studentRows, type StudentRow } from "./student-rows";
+export { studentRows, type StudentRow } from "./student-rows";
 import styles from "./shelf.module.css";
 
 /**
@@ -16,22 +17,11 @@ import styles from "./shelf.module.css";
  * leads as a chip, then the date, then the practice line (days practiced, last lesson, verses still working), then the latest note.
  */
 export const YOUR_STUDENTS_STRINGS = Object.freeze({ title: "Your students", open: "Open", failed: "Your students didn’t load.", none: "No students yet." });
-export type StudentRow = Readonly<{ key: string; name: string; ceremonyDate: string | null; note: string | null; href: string; studentId?: string; rehearsal1?: string | null; rehearsal2?: string | null }>;
+
 type State = Readonly<{ status: "loading" } | { status: "ready"; rows: readonly StudentRow[] } | { status: "failed" }>;
 
 /** The first line of a lesson note, for the row's second line. */
 export const firstLine = (text: string | null | undefined) => { const line = (text ?? "").split(/\r?\n/).map(part => part.trim()).find(Boolean); return line ? Array.from(line).slice(0, 160).join("") : null; };
-/** Dated students by ceremony, earliest first; then the claimed learners with no student record, by name. Linked students are not listed twice. */
-export function studentRows(students: readonly Student[], learners: readonly Learner[], notes: ReadonlyMap<string, string | null> = new Map()): StudentRow[] {
-  const dated = [...students].sort((a, b) => a.ceremonyDate.localeCompare(b.ceremonyDate) || a.id.localeCompare(b.id))
-    .map(student => ({ key: `student:${student.id}`, name: `${student.firstName} ${student.lastName}`, ceremonyDate: student.ceremonyDate, note: notes.get(student.id) ?? null, href: `/workspace/tutor/${encodeURIComponent(student.id)}`,
-      studentId: student.id, rehearsal1: student.rehearsal1 ?? null, rehearsal2: student.rehearsal2 ?? null }));
-  const known = new Set(students.map(student => student.id));
-  const claimed = learners.filter(row => row.tutor?.mine && !(row.student && known.has(row.student.id))).sort((a, b) => a.name.localeCompare(b.name))
-    .map(row => ({ key: `learner:${row.membershipId}`, name: row.name, // With no student record, the date is the learner's nearest saved reading (tutor walk 2026-10-28, finding 10).
-      ceremonyDate: row.student?.ceremonyDate ?? row.nearest?.date ?? null, note: null, href: learnerShelfHref(row.membershipId) }));
-  return [...dated, ...claimed];
-}
 /** The row's lines: the next date (a chip within two weeks), the practice line for a student, then the latest note's first line. */
 export function StudentRowMeta({ row, now }: { row: StudentRow; now?: Date }) {
   const ceremony = row.ceremonyDate ? ceremonyCountdown(row.ceremonyDate, now) : null;
@@ -48,7 +38,7 @@ export function StudentRowMeta({ row, now }: { row: StudentRow; now?: Date }) {
 }
 
 export function YourStudentsView({ state, onRetry }: { state: State; onRetry: () => void }) {
-  return <section className={styles.section} aria-label={YOUR_STUDENTS_STRINGS.title} aria-busy={state.status === "loading"} data-testid="mine-students">
+  return <section id="your-students" className={styles.section} aria-label={YOUR_STUDENTS_STRINGS.title} aria-busy={state.status === "loading"} data-testid="mine-students">
     <h2 className={styles.sectionTitle}>{YOUR_STUDENTS_STRINGS.title}</h2>
     {state.status === "failed" && <><p className={styles.findStatus} role="status">{YOUR_STUDENTS_STRINGS.failed}</p><button type="button" className="button-secondary" onClick={onRetry}>Try again</button></>}
     {state.status === "ready" && state.rows.length === 0 && <p className={styles.findStatus}>{YOUR_STUDENTS_STRINGS.none}</p>}

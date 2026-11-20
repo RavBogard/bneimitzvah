@@ -1,4 +1,5 @@
 "use client";
+import { PrivatePronouns } from "../../profile/pronouns";
 import { useEffect, useState } from "react";
 import type { Assigned } from "../api";
 import { relationshipApi, type Relationships } from "../relationships/api";
@@ -36,8 +37,8 @@ export function StaffStudentLines({ mode, baseline }: { mode: "tutor" | "admin";
   const waiting = mode === "tutor" && waitingForDivisions(known?.kind, baseline.readings);
   const review = baseline.readings.filter(row => row.needsReview);
   const lines = known ? familyLine(known) : [];
-  if (!lines.length && !waiting && !review.length && !shown) return null;
   return <div className="staff-lines" data-testid="staff-student-lines">
+    <PrivatePronouns subject={{ type: "student", studentId, mode }} />
     {shown && <p data-testid="admin-people-line"><bdi dir="auto">{[tutorLine(shown.tutors.find(row => row.effectiveRead)?.displayName ?? null, shown.tutors.filter(row => row.effectiveRead).length),
       shown.guardians.length || !shown.identities.length ? parentLine(shown.guardians.some(row => row.effectiveRead) ? "joined" : "none") : null].filter(Boolean).join(". ")}</bdi></p>}
     {lines.map(line => <p key={line} data-testid="family-line"><bdi dir="auto">{line}</bdi></p>)}

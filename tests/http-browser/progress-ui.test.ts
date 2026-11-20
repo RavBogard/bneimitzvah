@@ -40,10 +40,12 @@ async function workspace(tab: Page, role: "tutor" | "student") {
   await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", level: 4, exact: true })).toBeVisible();
 }
 async function openPractice(tab: Page) { await safe(() => upClose(tab, "Genesis 1:1")); }
-const lift = (tab: Page) => tab.locator("dialog.lift");
+const lift = (tab: Page) => tab.locator("[data-assigned-practice]");
 async function liftTo(tab: Page, ref: string) {
-  for (let step = 0; step < 12 && (await lift(tab).locator(".lift-ref").textContent()) !== ref; step++) await safe(() => lift(tab).locator(".lift-step-next").click());
-  await ui(lift(tab).locator(".lift-ref")).toHaveText(ref);
+  await safe(() => tab.locator(`[data-testid="study-verses"] [data-verse-ref="${ref}"] [data-word-index]`).first().click());
+  const wordSheet = tab.getByRole("dialog", { name: "Word tools", exact: true });
+  if (await wordSheet.count()) await safe(() => tab.keyboard.press("Escape"));
+  await ui(lift(tab).getByTestId("practice-selected-verse")).toHaveText(ref);
 }
 async function mark(tab: Page, group: string, name: string) {
   const button = lift(tab).getByRole("group", { name: group }).getByRole("button", { name, exact: true });
@@ -85,7 +87,7 @@ it("lets a student mark verses in practice and a tutor assess them, keeping the 
   const student = await page("student", true); await workspace(student, "student");
   await ui(student.locator(".verse-mark")).toHaveCount(0);
   await openPractice(student);
-  await ui(lift(student).locator(".lift-ref")).toHaveText("Genesis 1:1");
+  await ui(lift(student).getByTestId("practice-selected-verse")).toHaveText("Genesis 1:1");
   await ui(await mark(student, "How Genesis 1:1 is going", "Got it")).toHaveAttribute("aria-pressed", "true");
   await liftTo(student, "Genesis 1:2");
   await ui(await mark(student, "How Genesis 1:2 is going", "Still working")).toHaveAttribute("aria-pressed", "true");

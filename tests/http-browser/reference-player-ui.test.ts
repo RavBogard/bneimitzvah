@@ -229,14 +229,17 @@ it("held student and child practice read directly, keep word tools and open opti
       expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0);
       await word(tab, 1, 1).click(); const tools = tab.getByRole("button", { name: "Word tools", exact: true }); await ui(tools).toHaveAttribute("aria-expanded", "true");
       await ui(tab.getByRole("region", { name: "Word tools", exact: true })).toBeVisible(); await ui(tab.getByText("· Word 2 of 2", { exact: false })).toBeVisible(); await ui(tab.getByRole("button", { name: "Hear this word", exact: true })).toHaveCount(0);
-      // A student's word tools open in a sheet over the text (Hebrew first); Esc closes it. Up close is the dock's first item.
+      // The optional Practice view uses the same held reader and still permits self-checking.
       await tab.keyboard.press("Escape"); await ui(tab.getByRole("dialog")).toHaveCount(0);
-      await tab.getByRole("button", { name: "Up close", exact: true }).click();
-      const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
-      await ui(dialog.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0);
-      const working = dialog.getByRole("button", { name: "Still working", exact: true }); if (await working.getAttribute("aria-pressed") !== "true") await working.click(); await ui(working).toHaveAttribute("aria-pressed", "true");
+      const openPractice = tab.getByTestId("dock-up-close"), practice = tab.locator("[data-assigned-practice]");
+      await openPractice.click(); await ui(practice).toBeVisible();
+      await ui(practice.getByTestId("assigned-text")).toHaveAttribute("data-practice-ref", "Genesis 1:1");
+      await ui(practice.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0);
+      const working = practice.getByRole("button", { name: "Still working", exact: true });
+      if (await working.getAttribute("aria-pressed") !== "true") await working.click();
+      await ui(working).toHaveAttribute("aria-pressed", "true");
       expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0); expect(await native(tab)).toMatchObject({ count: 0, allClean: true });
-      await dialog.getByRole("button", { name: "Close practice view", exact: true }).click(); await ui(tab.getByRole("button", { name: "Up close", exact: true })).toBeFocused();
+      await practice.getByRole("button", { name: "Back to reading" }).click(); await ui(openPractice).toBeFocused();
       const directory = process.env.HELD_LISTENING_UI_CAPTURE_DIR;
       if (directory) {
         const target = resolve(directory); if (!target.startsWith(resolve(".local-logs") + sep)) throw Error("Held listening capture directory refused");
@@ -247,9 +250,9 @@ it("held student and child practice read directly, keep word tools and open opti
       await tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await goChild(tab, fixture.student.id);
       await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(reading).toBeVisible();
       await reading.focus(); await ui(reading).toBeFocused();
-      await tab.getByRole("button", { name: "Up close", exact: true }).click(); await ui(tab.getByRole("dialog", { name: "Genesis 1:1", exact: true })).toBeVisible();
+      await tab.getByTestId("dock-up-close").click(); await ui(practice).toBeVisible();
       expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0); expect(await native(tab)).toMatchObject({ count: 0, allClean: true });
-      await tab.getByRole("dialog").getByRole("button", { name: "Close practice view", exact: true }).click();
+      await practice.getByRole("button", { name: "Back to reading" }).click();
       expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     }
     const directory = process.env.HELD_LISTENING_UI_CAPTURE_DIR; if (directory) await writeFile(join(resolve(directory), "manifest.json"), JSON.stringify({ synthetic: true, images: captures }, null, 2) + "\n", { flag: "wx" });
@@ -265,7 +268,8 @@ it("held tutor text takes focus after the Service parts section and practice sta
     await ui(tab.getByRole("button", { name: "Start reading", exact: true })).toHaveCount(0);
     await tab.locator(".study-verses").focus(); await ui(tab.locator(".study-verses")).toBeFocused();
     await ui(tab.getByRole("dialog")).toHaveCount(0); expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0); expect(await native(tab)).toMatchObject({ count: 0, allClean: true });
-    await tab.getByRole("button", { name: "Practice up close", exact: true }).click(); await ui(tab.getByRole("dialog", { name: "Genesis 1:1", exact: true })).toBeVisible();
+    await tab.getByRole("button", { name: "Practice", exact: true }).click();
+    await ui(tab.locator("[data-assigned-practice]").getByTestId("assigned-text")).toHaveAttribute("data-practice-ref", "Genesis 1:1");
     expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0); expect(await native(tab)).toMatchObject({ count: 0, allClean: true });
   } finally { setListeningRelease(true); }
 });
@@ -426,42 +430,19 @@ it("plays main verses without word timing but refuses explicit untimed word dril
 });
 
 
-it("true per-verse Lift is inert on navigation, uses current whole Verse and explicit Word without Archive", async () => {
-  const { tab, state, owner: mainOwner } = await page();
-  await tab.getByRole("button", { name: "Practice up close", exact: true }).click();
-  const optional = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(optional).toBeVisible();
-  const optionalOwner = await settledOwner(tab);
+it("keeps one playback owner for the assigned reader and Practice, with explicit verse and word play", async () => {
+  const { tab, state, owner } = await page();
+  const practice = tab.locator("[data-assigned-practice]");
+  await tab.getByRole("button", { name: "Practice", exact: true }).click(); await ui(practice).toBeVisible();
+  await sameOwner(tab, owner);
   expect(state.requests).toBe(0); expect(await native(tab)).toMatchObject({ paused: true, src: null, mediaBlobs: 0 });
-  await optional.getByRole("button", { name: "Close practice view", exact: true }).click();
-  expect(await native(tab)).toMatchObject({ count: optionalOwner.count, allClean: true }); expect(state.requests).toBe(0);
-  await word(tab, 1, 0).click();
-  // Closing Lift disposes its later Audio; the retained main controller owns the
-  // original ordinal. Probe it explicitly without relaxing the latest-owner oracle.
-  await expect.poll(() => tab.evaluate(ordinal => {
-    const w = window as TrackedWindow, audio = w.referenceAudios[ordinal - 1];
-    return { count: w.referenceAudios.length, ordinal: audio ? w.referenceAudios.indexOf(audio) + 1 : 0,
-      kind: audio?.src ? w.referenceBlobKinds[audio.src] : undefined, ready: (audio?.readyState ?? 0) >= 2, paused: audio?.paused,
-      active: w.referenceAudios.filter(media => !media.paused && Boolean(media.getAttribute("src"))).length,
-      othersClean: w.referenceAudios.every(media => media === audio || media.paused && !media.getAttribute("src")) };
-  }, mainOwner.ordinal), POLL_OPTIONS).toEqual({ count: optionalOwner.count, ordinal: mainOwner.ordinal, kind: "verse", ready: true, paused: false, active: 1, othersClean: true });
-  await ui(player(tab).getByRole("button", { name: "Pause", exact: true })).toBeVisible();
-  await tab.getByRole("button", { name: "View Genesis 1:1 up close", exact: true }).click();
-  const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }), modalPlayer = dialog.getByRole("region", { name: "Reading playback", exact: true });
-  await ui(dialog).toBeVisible(); await ui(modalPlayer).toContainText("Genesis 1:1");
-  const modalOwner = await settledOwner(tab), before = state.shortRequests;
-  expect(await native(tab)).toMatchObject({ paused: true, src: null, retiredClean: true });
-  await modalPlayer.getByRole("button", { name: "Play", exact: true }).click(); await playing(tab); expect(state.shortRequests).toBe(before + 1);
-  await modalPlayer.getByRole("button", { name: "Pause", exact: true }).click();
+  await practice.getByTestId("play-section-start").click(); await playing(tab); await sameOwner(tab, owner);
+  await player(tab).getByRole("button", { name: "Pause", exact: true }).click();
   const halfway = 0.5; await tab.evaluate(value => { window.referenceAudios.at(-1)!.currentTime = value; }, halfway);
-  await modalPlayer.getByRole("button", { name: "Play", exact: true }).click(); await playing(tab); expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(halfway);
-  await modalPlayer.getByLabel("Practice", { exact: true }).selectOption("1"); await playing(tab); expect(Math.round((await native(tab)).duration! * 24000)).toBe(48000);
-  // Visual teaching chunks are not audio phrases; each step only stops sound.
-  for (let step = 0; step < 2 && await dialog.getByRole("button", { name: "Next phrase", exact: true }).count(); step++) await dialog.getByRole("button", { name: "Next phrase", exact: true }).click();
-  await dialog.getByRole("button", { name: "Next verse", exact: true }).click();
-  const nextDialog = tab.getByRole("dialog", { name: "Genesis 1:2", exact: true }); await ui(nextDialog).toBeVisible();
-  const nextPlayer = nextDialog.getByRole("region", { name: "Reading playback", exact: true }); await ui(nextPlayer).toContainText("Genesis 1:2"); await ui(nextPlayer.getByLabel("Practice", { exact: true })).toHaveValue("verse");
-  await sameOwner(tab, modalOwner); expect(await native(tab)).toMatchObject({ paused: true, src: null });
-  await nextPlayer.getByRole("button", { name: "Play", exact: true }).click(); await playing(tab); await sameOwner(tab, modalOwner);
-  await nextDialog.getByRole("button", { name: "Close practice view", exact: true }).click();
-  await ui(tab.getByRole("dialog")).toHaveCount(0); expect(await native(tab)).toMatchObject({ allClean: true }); expect(state.archiveRequests).toBe(0);
+  await player(tab).getByRole("button", { name: "Play", exact: true }).click(); await playing(tab);
+  expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(halfway);
+  await player(tab).getByLabel("Practice", { exact: true }).selectOption("1"); await playing(tab);
+  expect(Math.round((await native(tab)).duration! * 24000)).toBe(48000);
+  await practice.getByRole("button", { name: "Back to reading" }).click(); await ui(practice).toHaveCount(0);
+  await sameOwner(tab, owner); expect(state.archiveRequests).toBe(0);
 });

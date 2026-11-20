@@ -216,3 +216,14 @@ test("persistent reading cache stores and serves a multi-range haftarah (Shemot,
       expect(await cacheDenied(()=>cache.set(key,bad))).toBe(true);
   }
 });
+
+
+test("the private spoken store is enabled only in Production and unrelated store configuration is ignored elsewhere", () => {
+  for (const BLOB_STORE_ID of ["unrelated-invalid", "store_Synthetic0001"]) {
+    expect(loadRuntimeConfig({ ...env(), BLOB_STORE_ID }).tutorSpoken).toBeUndefined();
+    expect(loadRuntimeConfig({ ...env(), PORTAL_ENVIRONMENT: "preview", BETTER_AUTH_URL: "https://synthetic-preview.example.test", BLOB_STORE_ID }).tutorSpoken).toBeUndefined();
+  }
+  const production = { ...env(), PORTAL_ENVIRONMENT: "production", PORTAL_DEPLOYMENT: "production", BETTER_AUTH_URL: "https://torah.centralreform.org", BLOB_STORE_ID: "store_Synthetic0001" };
+  expect(loadRuntimeConfig(production).tutorSpoken).toEqual({ storeId: "store_Synthetic0001" });
+  expect(() => loadRuntimeConfig({ ...production, BLOB_STORE_ID: "invalid" })).toThrow();
+});

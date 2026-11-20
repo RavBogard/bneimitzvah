@@ -71,9 +71,9 @@ describe("Find a learner", () => {
     // The rabbi (admin) and the other tutor are staff, never learners (tutor walk A1).
     expect(list.json.learners.map((row: { name: string }) => row.name)).toEqual(["A learner (no name yet)", "Synthetic Bare"]);
     expect(JSON.stringify(list.json)).not.toContain("@");
-    expect(learnerOf(list, t.extra.bare.membershipId)).toEqual({ membershipId: t.extra.bare.membershipId, name: "Synthetic Bare", readings: 3, nearest: { name: "Lech Lecha", date: "2099-10-31" }, tutor: null, student: null });
+    expect(learnerOf(list, t.extra.bare.membershipId)).toEqual({ membershipId: t.extra.bare.membershipId, name: "Synthetic Bare", readings: 3, nearest: { name: "Lech Lecha", date: "2099-10-31" }, tutor: null, tutors: [], student: null });
     // The fixture's learner is students[0]'s student, assigned to multi by the rabbi: that tutor shows, unclaimed, and is "mine" to multi.
-    expect(learnerOf(list, t.f.learnerMember.id)).toEqual({ membershipId: t.f.learnerMember.id, name: "A learner (no name yet)", readings: 1, nearest: null, tutor: { name: "Synthetic Tutor", claimed: false, mine: true },
+    expect(learnerOf(list, t.f.learnerMember.id)).toEqual({ membershipId: t.f.learnerMember.id, name: "A learner (no name yet)", readings: 1, nearest: null, tutor: { name: "Synthetic Tutor", claimed: false, mine: true }, tutors: [{ name: "Synthetic Tutor", claimed: false, mine: true, claimId: null }],
       student: { id: t.f.students[0].id, firstName: "Synthetic", lastName: "Sibling A", ceremonyDate: "2027-01-02" } });
     expect(learnerOf(await t.call("/api/learners", "second"), t.f.learnerMember.id)).toMatchObject({ tutor: { name: "Synthetic Tutor", claimed: false, mine: false } });
     // The rabbi lists too (never "mine": an admin without a tutor grant claims nothing); the prefix search is case-insensitive; the cursor continues.
@@ -103,18 +103,59 @@ describe("Add to my students and its undo", () => {
     expect((await t.audits("learner.claim")).map(row => [row.mode, row.roleGrantId, row.actorMembershipId, row.targetType, row.targetId])).toEqual([["tutor", t.extra.second.grantId, t.extra.second.membershipId, "learner_claim", claim.id]]);
     expect(await t.f.owner(async () => (await t.f.db.select().from(s.tutorStudent)).length)).toBe(1);
     // The learner sees the tutor, undoable; the directory shows the claim.
-    expect((await t.call("/api/mine/tutor", "bare")).json).toEqual({ ok: true, tutor: { name: "Synthetic Second", claimed: true } });
+    expect((await t.call("/api/mine/tutor", "bare")).json).toEqual({ ok: true, tutor: { name: "Synthetic Second", claimed: true }, tutors: [{ name: "Synthetic Second", claimed: true, claimId: claim.id }] });
     expect(learnerOf(await t.call("/api/learners", "second"), t.extra.bare.membershipId)).toMatchObject({ tutor: { name: "Synthetic Second", claimed: true, mine: true } });
     expect(learnerOf(await t.call("/api/learners", "multi"), t.extra.bare.membershipId)).toMatchObject({ tutor: { name: "Synthetic Second", claimed: true, mine: false } });
-    // A second tutor is refused; the same tutor again changes nothing.
-    expect(await t.call("/api/learners/claim", "multi", { learner: t.extra.bare.membershipId })).toEqual({ status: 409, json: { ok: false, code: "has-tutor" } });
-    expect((await t.call("/api/learners/claim", "second", { learner: t.extra.bare.membershipId })).json).toEqual({ ok: true, learner: t.extra.bare.membershipId, created: false });
-    expect(await t.claims()).toHaveLength(1);
-    expect(await t.audits("learner.claim")).toHaveLength(1);
-    // Claiming someone the rabbi already assigned to this tutor changes nothing either; another tutor is refused.
-    expect((await t.call("/api/learners/claim", "multi", { learner: t.f.learnerMember.id })).json).toEqual({ ok: true, learner: t.f.learnerMember.id, created: false });
-    expect((await t.call("/api/learners/claim", "second", { learner: t.f.learnerMember.id })).status).toBe(409);
-    expect(await t.claims()).toHaveLength(1);
+    // Each tutor claims independently; repeating a claim is idempotent.
+    expect((await t.call("/api/learners/claim", "multi", { learner: t.extra.bare.membershipId })).json).toMatchObject({ ok: true, created: true });
+    expect((await t.call("/api/learners/claim", "second", { learner: t.extra.bare.membershipId })).json).toMatchObject({ ok: true, created: false });
+    expect(await t.claims()).toHaveLength(2);
+    expect(await t.audits("learner.claim")).toHaveLength(2);
+    expect((await t.call("/api/mine/tutor", "bare")).json.tutors).toHaveLength(2);
+    expect(learnerOf(await t.call("/api/learners", "multi"), t.extra.bare.membershipId)).toMatchObject({ tutor: { mine: true } });
+    // Existing admin assignments stay, and a different tutor may also claim.
+    expect((await t.call("/api/learners/claim", "multi", { learner: t.f.learnerMember.id })).json).toMatchObject({ created: false });
+    expect((await t.call("/api/learners/claim", "second", { learner: t.f.learnerMember.id })).status).toBe(200);
+    expect(await t.claims()).toHaveLength(3);
+  });
+
+  it("removes each self-claim independently, refuses other tutors' selectors, and preserves the admin assignment and learning history", async () => {
+    const t = await setup(), learner = t.f.learnerMember.id;
+    await t.save("learner", "Preserved reading", null);
+    const before = await t.f.owner(() => t.f.db.select().from(s.tutorStudent).where(eq(s.tutorStudent.id, t.f.tutorLink.id)));
+    expect((await t.call("/api/learners/claim", "second", { learner })).status).toBe(200);
+    const [claim] = await t.claims();
+    const tutors = (await t.call("/api/mine/tutor", "learner")).json.tutors;
+    expect(tutors).toHaveLength(2);
+    expect(tutors).toEqual(expect.arrayContaining([{ name: "Synthetic Tutor", claimed: false, claimId: null }, { name: "Synthetic Second", claimed: true, claimId: claim.id }]));
+    expect((await t.call("/api/learners/unclaim", "multi", { learner, claim: claim.id })).status).toBe(404);
+    expect((await t.call("/api/mine/tutor/remove", "bare", { claim: claim.id })).status).toBe(404);
+    expect((await t.call("/api/mine/tutor/remove", "learner", { claim: claim.id })).status).toBe(200);
+    expect((await t.call(`/api/saved/learner/readings?learner=${learner}`, "second")).status).toBe(404);
+    expect((await t.call(`/api/saved/learner/readings?learner=${learner}`, "multi")).status).toBe(200);
+    expect((await t.call("/api/saved/readings", "learner")).json.readings).toHaveLength(1);
+    expect(await t.f.owner(() => t.f.db.select().from(s.tutorStudent).where(eq(s.tutorStudent.id, t.f.tutorLink.id)))).toEqual(before);
+  });
+
+  it("keeps concurrent tutor claims independent and idempotent, and requires an individual admin selector", async () => {
+    const t = await setup(), learner = t.extra.bare.membershipId;
+    await t.linkBare();
+    await t.save("bare", "Preserved reading", null);
+    const results = await Promise.all([t.call("/api/learners/claim", "second", { learner }), t.call("/api/learners/claim", "multi", { learner }), t.call("/api/learners/claim", "second", { learner })]);
+    expect(results.every(result => result.status === 200)).toBe(true);
+    expect(results.filter(result => result.json.created)).toHaveLength(2);
+    const claims = await t.claims(), second = claims.find(row => row.tutorGrantId === t.extra.second.grantId)!, multi = claims.find(row => row.tutorGrantId === t.f.tutorGrant.id)!;
+    expect(claims).toHaveLength(2);
+    expect((await t.links(t.f.students[2].id)).filter(link => !link.revokedAt)).toHaveLength(2);
+    for (const who of ["multi", "second"] as const) expect((await t.call(`/api/saved/learner/readings?learner=${learner}`, who)).status).toBe(200);
+    expect((await t.call("/api/learners/unclaim", "admin", { learner })).status).toBe(404);
+    expect((await t.call("/api/learners/unclaim", "admin", { learner, claim: second.id })).status).toBe(200);
+    expect((await t.call(`/api/saved/learner/readings?learner=${learner}`, "second")).status).toBe(404);
+    expect((await t.call(`/api/saved/learner/readings?learner=${learner}`, "multi")).status).toBe(200);
+    expect((await t.links(t.f.students[2].id)).find(link => link.id === multi.tutorLinkId)!.revokedAt).toBeNull();
+    expect((await t.call("/api/mine/tutor", "bare")).json.tutors).toEqual([{ name: "Synthetic Tutor", claimed: true, claimId: multi.id }]);
+    expect((await t.call("/api/learners/unclaim", "multi", { learner })).status).toBe(200);
+    expect((await t.call("/api/saved/readings", "bare")).json.readings).toHaveLength(1);
   });
 
   it("claims a linked student with the tutor link as well, so the staff tools see the tutor; the learner's undo ends both and the tutor's read is 404 while the learner's own list still works", async () => {
@@ -133,7 +174,7 @@ describe("Add to my students and its undo", () => {
     const reading = (await t.call(`/api/saved/learner/readings?learner=${t.extra.bare.membershipId}`, "second")).json.readings[0];
     expect(reading.name).toBe("Mine");
     expect((await t.call(`/api/saved/learner/reading?learner=${t.extra.bare.membershipId}&id=${reading.id}`, "second")).status).toBe(200);
-    expect((await t.call("/api/mine/tutor/remove", "bare", {})).json).toEqual({ ok: true });
+    expect((await t.call("/api/mine/tutor/remove", "bare", { claim: claim.id })).json).toEqual({ ok: true });
     expect((await t.claims())[0]).toMatchObject({ revokedBy: "learner", revokedByMembershipId: t.extra.bare.membershipId });
     expect((await t.claims())[0].revokedAt).not.toBeNull();
     expect((await t.links(t.f.students[2].id))[0].revokedAt).not.toBeNull();
@@ -145,12 +186,12 @@ describe("Add to my students and its undo", () => {
     expect((await t.call(`/api/saved/learner/page?learner=${t.extra.bare.membershipId}&id=${reading.id}&offset=0`, "second")).status).toBe(404);
     expect((await t.call("/api/saved/readings", "bare")).json.readings.map((row: { name: string }) => row.name)).toEqual(["Mine"]);
     expect((await t.call(`/api/saved/reading?id=${reading.id}`, "bare")).status).toBe(200);
-    expect((await t.call("/api/mine/tutor", "bare")).json).toEqual({ ok: true, tutor: null });
+    expect((await t.call("/api/mine/tutor", "bare")).json).toEqual({ ok: true, tutor: null, tutors: [] });
     expect((await t.call(`/api/admin/students/${t.f.students[2].id}/relationships`, "admin")).json.tutors).toEqual([]);
     // Nothing left to undo: 404. A rabbi's assignment is not a claim: 409, and the tutor line stays.
-    expect((await t.call("/api/mine/tutor/remove", "bare", {})).status).toBe(404);
-    expect((await t.call("/api/mine/tutor", "learner")).json).toEqual({ ok: true, tutor: { name: "Synthetic Tutor", claimed: false } });
-    expect(await t.call("/api/mine/tutor/remove", "learner", {})).toEqual({ status: 409, json: { ok: false, code: "assigned" } });
+    expect((await t.call("/api/mine/tutor/remove", "bare", { claim: claim.id })).status).toBe(404);
+    expect((await t.call("/api/mine/tutor", "learner")).json).toEqual({ ok: true, tutor: { name: "Synthetic Tutor", claimed: false }, tutors: [{ name: "Synthetic Tutor", claimed: false, claimId: null }] });
+    expect((await t.call("/api/mine/tutor/remove", "learner", { claim: t.f.tutorLink.id })).status).toBe(404);
     expect(await t.f.owner(async () => (await t.f.db.select().from(s.tutorStudent).where(eq(s.tutorStudent.id, t.f.tutorLink.id)))[0].revokedAt)).toBeNull();
   });
 
@@ -159,7 +200,7 @@ describe("Add to my students and its undo", () => {
     const claim = () => t.call("/api/learners/claim", "second", { learner: t.extra.bare.membershipId });
     expect((await claim()).status).toBe(200);
     expect((await t.call("/api/learners/unclaim", "multi", { learner: t.extra.bare.membershipId })).status).toBe(404);
-    expect((await t.call("/api/learners/unclaim", "admin", { learner: t.extra.bare.membershipId })).json).toEqual({ ok: true, learner: t.extra.bare.membershipId });
+    expect((await t.call("/api/learners/unclaim", "admin", { learner: t.extra.bare.membershipId, claim: (await t.claims()).find(row => !row.revokedAt)!.id })).json).toEqual({ ok: true, learner: t.extra.bare.membershipId });
     expect((await t.claims()).at(-1)).toMatchObject({ revokedBy: "admin", revokedByMembershipId: t.f.adminMember.id });
     expect((await t.audits("learner.unclaim")).map(row => [row.mode, row.roleGrantId])).toEqual([["admin", t.f.adminGrant.id]]);
     expect((await claim()).json.created).toBe(true);
@@ -173,7 +214,7 @@ describe("Add to my students and its undo", () => {
     expect((await t.call(`/api/admin/students/${t.f.students[2].id}/relationships/tutors/${link.id}/revoke`, "admin", { expectedState: "active" })).status).toBe(200);
     expect((await t.claims()).at(-1)).toMatchObject({ tutorLinkId: link.id, revokedBy: "admin", revokedByMembershipId: t.f.adminMember.id });
     expect((await t.audits("learner.unclaim")).map(row => row.mode)).toEqual(["admin", "tutor", "admin"]);
-    expect((await t.call("/api/mine/tutor", "bare")).json).toEqual({ ok: true, tutor: null });
+    expect((await t.call("/api/mine/tutor", "bare")).json).toEqual({ ok: true, tutor: null, tutors: [] });
     // Claimed again, the tutor's own removal ends the link through the one tutor-revocation write, audited as the tutor's.
     expect((await claim()).json.created).toBe(true);
     expect((await t.call("/api/learners/unclaim", "second", { learner: t.extra.bare.membershipId })).status).toBe(200);
@@ -184,12 +225,12 @@ describe("Add to my students and its undo", () => {
   it("revoking a tutor's grant on the access page ends the claims it holds, as the admin's act: the learner's tutor is gone and another tutor may claim", async () => {
     const t = await setup();
     expect((await t.call("/api/learners/claim", "second", { learner: t.extra.bare.membershipId })).json.created).toBe(true);
-    expect((await t.call("/api/mine/tutor", "bare")).json.tutor).toEqual({ name: "Synthetic Second", claimed: true });
+    expect((await t.call("/api/mine/tutor", "bare")).json.tutors).toMatchObject([{ name: "Synthetic Second", claimed: true }]);
     expect((await t.call(`/api/admin/grants/${t.extra.second.grantId}/revoke`, "admin", { expectedRevision: 1, expectedState: "active" })).status).toBe(200);
     expect((await t.claims())[0]).toMatchObject({ revokedBy: "admin", revokedByMembershipId: t.f.adminMember.id });
     expect((await t.claims())[0].revokedAt).not.toBeNull();
     expect((await t.audits("learner.unclaim")).map(row => [row.mode, row.roleGrantId, row.actorMembershipId])).toEqual([["admin", t.f.adminGrant.id, t.f.adminMember.id]]);
-    expect((await t.call("/api/mine/tutor", "bare")).json).toEqual({ ok: true, tutor: null });
+    expect((await t.call("/api/mine/tutor", "bare")).json).toEqual({ ok: true, tutor: null, tutors: [] });
     expect(learnerOf(await t.call("/api/learners", "multi"), t.extra.bare.membershipId)).toMatchObject({ tutor: null });
     expect((await t.call("/api/learners/claim", "multi", { learner: t.extra.bare.membershipId })).json).toEqual({ ok: true, learner: t.extra.bare.membershipId, created: true });
     // Belt and braces: a live claim row whose grant is revoked behind the service's back counts for nothing either.
@@ -197,7 +238,7 @@ describe("Add to my students and its undo", () => {
     const [regrant] = await t.f.owner(() => t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: t.extra.second.membershipId, role: "tutor" }).returning());
     await t.f.owner(() => t.f.db.insert(s.learnerClaim).values({ tenantId: "crc", learnerMembershipId: t.extra.bare.membershipId, tutorGrantId: regrant.id }));
     await t.f.owner(() => t.f.db.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, regrant.id)));
-    expect((await t.call("/api/mine/tutor", "bare")).json).toEqual({ ok: true, tutor: null });
+    expect((await t.call("/api/mine/tutor", "bare")).json).toEqual({ ok: true, tutor: null, tutors: [] });
     expect(learnerOf(await t.call("/api/learners", "multi"), t.extra.bare.membershipId)).toMatchObject({ tutor: null });
     expect((await t.call(`/api/saved/learner/readings?learner=${t.extra.bare.membershipId}`, "second")).status).toBe(404);
   });
@@ -221,8 +262,8 @@ describe("Add to my students and its undo", () => {
     const [grant] = await t.f.owner(() => t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: t.extra.second.membershipId, role: "tutor" }).returning());
     expect(grant.id).not.toBe(t.extra.second.grantId);
     const results = await Promise.all([t.call("/api/learners/claim", "second", body), t.call("/api/learners/claim", "multi", body)]);
-    expect(results.map(result => result.status).sort()).toEqual([200, 409]);
-    expect((await t.claims()).filter(row => row.revokedAt === null)).toHaveLength(1);
+    expect(results.map(result => result.status).sort()).toEqual([200, 200]);
+    expect((await t.claims()).filter(row => row.revokedAt === null)).toHaveLength(2);
   });
 
   it("registers its routes with their methods, refuses others and unknown query keys, and serves everything private", async () => {

@@ -107,7 +107,7 @@ describe("who may open a student's booklet", () => {
     await t.f.owner(() => t.f.db.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, staff.id)));
     expect((await t.booklet("claimer", sibling.id)).status).toBe(200);
     // The learner ends the claim ("Not my tutor"): its link ends with it, and the tutor's booklet is 404.
-    expect((await t.send("/api/mine/tutor/remove", "bare", { body: {} })).json).toEqual({ ok: true });
+    expect((await t.send("/api/mine/tutor/remove", "bare", { body: { claim: ((await t.send("/api/mine/tutor", "bare")).json.tutors as { claimId: string }[])[0].claimId } })).json).toEqual({ ok: true });
     expect((await t.booklet("claimer", sibling.id)).status).toBe(404);
     // The parent still opens it; the learner too.
     expect((await t.booklet("multi", sibling.id)).json).toMatchObject({ mode: "parent" });

@@ -217,15 +217,17 @@ it("held proposed reading remains readable without reference metadata and option
     const tab = await page(); let metadata = 0, bodies = 0;
     tab.on("request", request => { const path = new URL(request.url()).pathname; if (path.endsWith("/reading/explore/reference/short/page") || path.endsWith("/reference-audio/short/page")) metadata++; if (shortBodies.has(path)) bodies++; });
     await tutor(tab); await position(tab, 1, 100, 146);
-    await ui(tab.getByRole("button", { name: /^Hear/ })).toHaveCount(0); await ui(tab.getByRole("button", { name: "Practice up close", exact: true })).toHaveCount(0);
+    await ui(tab.getByRole("button", { name: /^Hear/ })).toHaveCount(0); await ui(tab.getByRole("button", { name: "Practice", exact: true })).toHaveCount(0);
     // E2: no Start reading button; the portion's text takes focus where a reader puts it.
     await ui(tab.getByRole("button", { name: "Start reading", exact: true })).toHaveCount(0); await portion(tab).getByTestId("study-verses").focus(); await ui(portion(tab).getByTestId("study-verses")).toBeFocused();
     await ui(tab.getByRole("dialog")).toHaveCount(0); expect(metadata).toBe(0); expect(bodies).toBe(0); expect(await tab.evaluate(() => window.explorationAudios.length)).toBe(0);
     await assign("haftarah"); await refreshReading(tab);
-    const practice = tab.getByRole("button", { name: "Practice assigned Haftarah up close", exact: true }); await ui(practice).toBeEnabled(); await practice.click();
-    await ui(tab.getByRole("dialog", { name: "Isaiah 1:1", exact: true })).toBeVisible(); await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0);
+    const practice = tab.getByRole("button", { name: "Practice assigned Haftarah", exact: true }); await ui(practice).toBeEnabled(); await practice.click();
+    const assigned = tab.locator("[data-assigned-practice]");
+    await ui(assigned.getByTestId("assigned-text")).toHaveAttribute("data-practice-ref", "Isaiah 1:1");
+    await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0);
     expect(metadata).toBe(0); expect(bodies).toBe(0); expect(await tab.evaluate(() => window.explorationAudios.length)).toBe(0);
-    await tab.getByRole("dialog").getByRole("button", { name: "Close practice view", exact: true }).click();
+    await assigned.getByRole("button", { name: "Back to reading" }).click();
   } finally { setListeningRelease(true); }
 });
 
@@ -394,7 +396,7 @@ async function shortMetadata(tab: Page, offset = 0, expected = 100) {
     }
   };
 }
-it("keeps proposed Torah, assigned Haftarah and true Lift exclusive in all six directed hearing transitions", async () => {
+it("keeps proposed Torah and assigned Haftarah playback exclusive through Practice transitions", async () => {
   await assign("haftarah"); const tab = await page(); let archiveRequests = 0, assignedTorah = 0; const bodies = new Set<string>();
   tab.on("request", request => { const url = new URL(request.url()); if (url.hostname === "archive.org") archiveRequests++;
     if (shortBodies.has(url.pathname)) bodies.add(url.pathname);
@@ -403,20 +405,24 @@ it("keeps proposed Torah, assigned Haftarah and true Lift exclusive in all six d
   const proposed = portion(tab).getByRole("region", { name: "Reading playback", exact: true });
   // Both readings are on the page together; how they are stacked is layout, and each hearing below proves its own player works.
   await ui(portion(tab)).toBeVisible(); await ui(tab.getByTestId("assigned-haftarah-heading")).toBeVisible(); await ui(tab.getByTestId("assigned-text")).toBeVisible();
-  // Modal must close before an underlying main slot can receive an actual click.
-  for (const slot of ["proposed", "assigned", "lifted", "proposed", "lifted", "assigned", "proposed"] as const) {
-    if (slot !== "lifted" && await tab.getByRole("dialog").count()) {
-      await tab.getByRole("dialog").getByRole("button", { name: "Close practice view", exact: true }).click();
-      await ui(tab.getByRole("dialog")).toHaveCount(0); expect(await audioState(tab)).toMatchObject({ active: 0, clean: true });
+  const practice = tab.locator("[data-assigned-practice]");
+  for (const slot of ["proposed", "assigned", "practice", "proposed", "practice", "assigned", "proposed"] as const) {
+    if (slot !== "practice" && await practice.count()) {
+      await practice.getByRole("button", { name: "Back to reading" }).click();
+      await ui(practice).toHaveCount(0);
     }
-    if (slot === "proposed") { await portion(tab).getByRole("button", { name: "Hear Genesis 1:1", exact: true }).click(); await heard(tab, proposed); }
-    else if (slot === "assigned") { await tab.getByRole("button", { name: "Hear Haftarah", exact: true }).click();
-      await heard(tab, tab.getByTestId("assigned-text").getByRole("region", { name: "Reading playback", exact: true })); }
-    else {
-      await tab.getByRole("button", { name: "View Isaiah 1:1 up close", exact: true }).click();
-      const dialog = tab.getByRole("dialog", { name: "Isaiah 1:1", exact: true }); await ui(dialog).toBeVisible();
-      expect(await audioState(tab)).toMatchObject({ active: 0, clean: true });
-      const player = dialog.getByRole("region", { name: "Reading playback", exact: true }); await player.getByRole("button", { name: "Play", exact: true }).click(); await heard(tab, player);
+    if (slot === "proposed") {
+      await portion(tab).getByRole("button", { name: "Hear Genesis 1:1", exact: true }).click();
+      await heard(tab, proposed);
+    } else if (slot === "assigned") {
+      await tab.getByRole("button", { name: "Hear Haftarah", exact: true }).click();
+      await heard(tab, tab.getByTestId("assigned-text").getByRole("region", { name: "Reading playback", exact: true }));
+    } else {
+      await tab.getByRole("button", { name: "Practice Isaiah 1:1", exact: true }).click();
+      await ui(practice).toBeVisible();
+      const player = practice.getByRole("region", { name: "Reading playback", exact: true });
+      await practice.getByTestId("play-section-start").click();
+      await heard(tab, player);
     }
   }
   expect(bodies.size).toBe(2); expect(archiveRequests).toBe(0); expect(assignedTorah).toBe(0);

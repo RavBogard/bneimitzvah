@@ -69,6 +69,8 @@ Source keys:
 - Anything about a student, family, tutor note, assignment or date is visible only to that family and staff. 2026-10-22. M "Amended 2026-10-22".
 - Accounts are open to anyone; anyone who signs in gets their own shelf of readings with no approval and no age gate, children under 13 included. 2026-10-27. RN decisions 5 to 8; S "Return point, 2026-10-27". Replaces "I'll approve requests" (2026-10-22) for the shelf; see "Unclear".
 - Readings are not private content: any tutor may see every signed-in learner's readings and claim them as a student. 2026-10-27. RN decisions 15 and 16.
+- An eligible signed-in learner may have several tutors. Tutor self-claims are independent. Daniel's approval on 2026-11-20 is recorded in the [tutor and learner plan](2026-11-20-tutor-and-learner/PLAN.md).
+- Assigned Practice opens the same aliyah reader used in the tutor workspace. The Practice surface omits private lesson notes and tutor practice history. 2026-11-20. [Tutor and learner plan](2026-11-20-tutor-and-learner/PLAN.md).
 - A member's own notes and drafts are private to that member, staff included; My notes and My translation left the reader, stored rows reachable only by their owner. 2026-10-22 and 2026-10-23. M "Current 1.0 scope" and "Friday preparation direction".
 - Owner-authorized Claude access reaches only a person's own saved readings; staff never reach another person's work. 2026-10-23. M "Friday preparation direction".
 - Practice: the assigned tutor sees which verses were practised each day and which marks changed, plus Learn's "Can hear" line and most-confused pair; parents see counts only; the student is told what the tutor sees; no durations or scores; nothing across students. 2026-10-24. P19 decision 7. Widens ruling 45 (PR 45).

@@ -1,5 +1,8 @@
 "use client";
 
+import styles from "./reading-practice.module.css";
+import { PronounsEditor } from "../profile/pronouns";
+import { AssignedPracticeOffline } from "../offline/assigned-practice";
 import { useIdentity } from "../../site/identity-context";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { type Assigned, type Reading, type ReadingMode, type Student } from "./api";
@@ -9,6 +12,7 @@ import { printAddress, refFromVerses } from "../../../lib/print/print-address";
 import type { DeparturePurpose } from "./departure-guards";
 import { icons } from "./study/lift";
 import { ReadingEditor } from "./reading-editor";
+import { TutorSpoken } from "./study/tutor-spoken";
 import { AssignedStudyText, type StudyReload } from "./study/view";
 import { ProposedTorahText } from "./study/exploration-view";
 import { createReadingAudioCoordinator } from "./study/reading-audio-coordinator";
@@ -293,6 +297,41 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   const practicingMode = mode === "student" || mode === "child-practice", practicing = practicingMode && Boolean(student) && readings.length > 0 && !exploring;
   // Tutors and admins teach from the same Song session reading, and keep the staff assignment details.
   const staff = mode === "tutor" || mode === "admin", song = learner || staff, editorId = `${serviceId}-editor`;
+  const [practiceOpen, setPracticeOpen] = useState(false);
+  const practiceOrigin = useRef<{ element: HTMLElement | null; target: "dock" | "hero" | "verse" }>({ element: null, target: "verse" });
+  const enterPractice = () => {
+    const expected = authorizedReading;
+    const element = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    practiceOrigin.current = { element, target: element?.matches('[data-testid="dock-up-close"]') ? "dock" : element?.matches(".reading-practice-action") ? "hero" : "verse" };
+    void guardDeparture().then(leave => {
+      if (leave && expected && actionScope.current.reading === expected) { setManageOpen(false); setSheetOpen(false); setChangeOpen(false); setPracticeOpen(true); }
+    });
+  };
+  const closePractice = () => {
+    const passage = readingPanel.current?.querySelector<HTMLElement>("[data-practice-ref]")?.dataset.practiceRef;
+    setPracticeOpen(false);
+    requestAnimationFrame(() => {
+      const verse = passage ? readingPanel.current?.querySelector<HTMLElement>(`[data-verse-ref="${CSS.escape(passage)}"]`) : null;
+      verse?.scrollIntoView({ block: "center" });
+      const origin = practiceOrigin.current;
+      // The dock unmounts in Practice. Restore its intent to the new, scoped
+      // control rather than retaining a disconnected DOM node.
+      const trigger = origin.target === "dock" ? readingPanel.current?.querySelector<HTMLElement>('[data-testid="dock-up-close"]')
+        : origin.target === "hero" && origin.element?.isConnected ? origin.element : null;
+      const target = trigger ?? verse?.querySelector<HTMLElement>("button[data-verse-number], button[data-word-index]")
+        ?? (origin.element?.isConnected ? origin.element : null);
+      target?.focus({ preventScroll: true });
+    });
+  };
+  useEffect(() => { if (!authorizedReading || (current?.error !== undefined && [401, 403, 404].includes(current.error))) setPracticeOpen(false); }, [authorizedReading, current?.error]);
+  useEffect(() => {
+    if (!practiceOpen) return;
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.defaultPrevented && !document.querySelector("dialog[open], [popover]:popover-open")) { event.preventDefault(); closePractice(); }
+    };
+    document.addEventListener("keydown", escape);
+    return () => document.removeEventListener("keydown", escape);
+  }, [practiceOpen]); // eslint-disable-line react-hooks/exhaustive-deps
   const lift = useRef<((index: number) => void) | null>(null);
   const textStart = useRef<(() => void) | null>(null);
   const practice = useRef<((index: number | ((refs: readonly string[]) => number)) => void) | null>(null), readingPanel = useRef<HTMLDivElement | null>(null);
@@ -378,6 +417,13 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   // The pinned card's next step (/mine/reading#up-close…) opens Up close at the verse it names (student gaps A3).
   const upClose = useRef<((kind: StudyKind, ref: string) => boolean) | null>(null);
   useUpCloseAddress(mode === "student" && practicing && practiceReady && !current?.loading, upClose, openPractice);
+  const initialIntentHandled = useRef(false);
+  useEffect(() => {
+    if (initialIntentHandled.current || !practiceReady || current?.loading) return;
+    initialIntentHandled.current = true;
+    if (window.location.hash === "#practice") openPractice();
+    if (window.location.hash === "#edit-verses" && staff) openEditor();
+  }, [practiceReady, current?.loading]); // eslint-disable-line react-hooks/exhaustive-deps
   // The printable practice sheet reads through the same authorized study loader as the page.
   const [printing, setPrinting] = useState(false);
   useLayoutEffect(() => { if (!authorizedReading) setPrinting(false); }, [authorizedReading]);
@@ -388,7 +434,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   const printSheetHref = printSheetRef && selectedReading ? printAddress({ mode: "ref", ref: printSheetRef, kind: selectedReading.kind }) : null;
   // Curated discussions are public, asked for by the passage's own canonical ref and nothing about the reader (the same as the print link above).
   const discussionPassage = student && authorizedReading && !exploring && selectedReading && printSheetRef ? { ref: printSheetRef, kind: selectedReading.kind } : null;
-  const practiceAction = mode !== "parent" && readings.length > 0 && <button type="button" className="button-hero-secondary reading-practice-action" disabled={!practiceReady || current?.loading} onClick={openPractice}>{exploring ? "Practice assigned Haftarah up close" : "Practice up close"}</button>;
+  const practiceAction = mode !== "parent" && readings.length > 0 && <button type="button" className="button-hero-secondary reading-practice-action" disabled={!practiceReady || current?.loading} onClick={openPractice}>{exploring ? "Practice assigned Haftarah" : "Practice"}</button>;
   const countdown = student ? ceremonyCountdown(student.ceremonyDate) : null, marked = useProgressSummary(progress, selectedReading?.kind);
   // Staff see a rehearsal or Beit Mitzvah two weeks away or less first on the title line (tutor walk 2026-10-28, finding 2).
   const staffNext = staff && student ? nextDate(student) : null, staffChip = staffNext?.chip ? <><Chip tone="attention">{staffNext.chip}</Chip> </> : null;
@@ -443,23 +489,24 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   // that use it, never this panel (and never its playback). Nothing is asked for anyone else, or while the gate is closed.
   // Staff (tutor walk 2026-10-28, whole-screen rethink): the text and Service parts on the left, and a lesson rail on the right that stays in view,
   // with the lesson card over the Lessons list. Narrower, the card sits under the title and the Lessons follow Service parts, as before.
-  const card = staff && student && authorizedReading ? <LessonCard baseline={authorizedReading} latest={lessonCard?.key === key ? lessonCard.latest : null} ready={lessonCard?.key === key && lessonCard.ready}
+  const card = !practiceOpen && staff && student && authorizedReading ? <LessonCard baseline={authorizedReading} latest={lessonCard?.key === key ? lessonCard.latest : null} ready={lessonCard?.key === key && lessonCard.ready}
     addButton={!wide} onAdd={origin => lessons.current?.add?.(origin)} calendar={calendar} onMarked={() => progress.refresh()} /> : null;
   const body = <>
     {/* 1.9 N16 re-measure (CLS): while the reading loads it keeps a screen of room, so what follows it never jumps into view and out again. */}
     {current?.loading && <div className="reading-loading-space reading-loading" data-testid="reading-loading"><p role="status">{learner ? "Loading the reading…" : "Checking the current assignment, text and saved work…"}</p>
-      <div className="reading-skeleton" aria-hidden="true"><span /><span /><span /><span /><span /></div></div>}<div className="reading-workspace reading-with-work" data-testid="reading-workspace" hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
+      <div className="reading-skeleton" aria-hidden="true"><span /><span /><span /><span /><span /></div></div>}<div className="reading-workspace reading-with-work" data-testid="reading-workspace" data-assigned-practice={practiceOpen ? "" : undefined} hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
     <section aria-label="Assigned reading">
+      {practiceOpen && <header className={styles.header}><h1>Practice</h1><button type="button" className="button-secondary" data-testid="close-assigned-practice" onClick={closePractice}>Back to reading</button></header>}
       {!student ? <div className={`workspace-state${current?.error ? "" : " reading-loading-space"}`} aria-live="polite"><StateHeading>{current?.error ? "Reading unavailable" : "Loading the assigned reading"}</StateHeading>
         <p>{current?.error === 404 || current?.error === 403 ? "This reading is no longer available in the selected role. Choose another available student." : current?.error && mode === "parent" && childName ? <><bdi dir="auto">{childName}</bdi>’s reading didn’t load.</> : current?.error ? "We couldn’t load the confirmed assignment. No previous student’s reading is being shown." : "Checking the selected student and confirmed references."}</p>
         {current?.error && <button className="button-secondary" onClick={() => setRetry(value => value + 1)}>{mode === "parent" ? "Try again" : "Reload reading"}</button>}</div> : <>
-      {song ? <><header className={`reading-hero${learner ? " reading-current-assignment" : ""}`} aria-labelledby="reading-heading">
+      {song ? <><header hidden={practiceOpen} className={`reading-hero${learner ? " reading-current-assignment" : ""}`} aria-labelledby="reading-heading">
         {/* A parent's sitting mirrors the student's Hebrew-first page (parent walk 2026-10-28, finding 1): under the one-line bar, the tutor's ask, then one
             line of what the tutor sees, then the date and Go to verse (the child's name is the bar's, so its heading here is for screen readers only). */}
         {shownAsk && <ClampedAsk text={shownAsk} />}
         {mode === "child-practice" && <ChildPracticeDisclosure name={student.firstName} place="child-practice" />}
         <ReaderTitle name={titleName(student)} headingId="reading-heading" level={mode === "child-practice" ? 2 : 1} line={titleLine} pills={pills} note={titleNote} hideName={mode === "child-practice"} />
-        {staff && authorizedReading && <StaffStudentLines mode={mode} baseline={authorizedReading} />}
+        {!practiceOpen && staff && authorizedReading && <StaffStudentLines mode={mode} baseline={authorizedReading} />}
         {exploring || readings.length === 0 ? staff ? <StaffNextSteps mode={mode === "admin" ? "admin" : "tutor"} student={student} torahOnly={readings.length > 0} onAssign={openSheet} practiceAction={practiceAction} />
           : <div className="reading-empty"><h2 className="hero-reference hero-reference-empty">{exploring ? "Explore the full Torah portion" : "No reading has been assigned yet"}</h2><p className="hero-meta">{exploring ? "Read the portion while you and your tutor choose your verses." : "Your tutor or rabbi will add your verses here."}</p>
           {practiceAction && <div className="hero-actions">{practiceAction}</div>}</div> : <>
@@ -471,7 +518,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
       {/* The parent's page is a This week page (the whole-screen rethink): the card with Practice with the child, then Lesson notes and Service parts as
           rows that open in place, then Family honors, and last the text behind "See Noa's reading". */}
       {mode === "parent" && <ParentStudySummary store={parentSummary} baseline={authorizedReading ?? null} scope={parentScope} notice={congregation.consentNotice} action={practiceWith} readProgress={readProgress} refused={refreshSession} />}
-      {!learner && readings.length > 0 && <AssignmentContext row={selectedReading} current staff={staff} />}
+      {!practiceOpen && !learner && readings.length > 0 && <AssignmentContext row={selectedReading} current staff={staff} />}
       </> : <>
       <h2 id="reading-heading"><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>
       <div className="reading-student-context"><p className="reading-date">Ceremony date: <time dateTime={student.ceremonyDate}>{student.ceremonyDate}</time></p>
@@ -481,25 +528,28 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
       {readings.length === 0 ? <div className="reading-empty"><h3>No reading has been assigned yet</h3><p>Your tutor or rabbi will confirm the verses here.</p></div>
         : <AssignmentContext row={selectedReading} current staff={staff} />}</>}</>}
       {/* The rows stay mounted whether or not the reading has loaded, as the plan's parts always were, so their reloads run with the page's. */}
+      {!practiceOpen && mode === "parent" && student && <PronounsEditor key={student.id} subject={{ type: "student", mode: "parent", studentId: student.id }} name={student.firstName} />}
       {mode === "parent" && parts}{mode === "parent" && student && afterSummary}
-      {readingFold(tabPanel("reading", <>{student && authorizedReading && !exploring && selectedReading && mode === "admin" && <GuideStatusLine kind={selectedReading.kind} readingKey={selectedReading.readingKey ?? null} />}{student && authorizedReading && !exploring && selectedReading && <LensOnly lens="lein"><div className={`guide-place guide-place-wide`}><GuideCard store={guide} kind={selectedReading.kind} firstName={student.firstName} learner={learner} /></div></LensOnly>}<VersePanelScope passage={discussionPassage}><div className="reading-passage-layout" ref={readingPanel}>{student && song && <ReadingToolbar practice={practicing ? { onUpClose: practiceReady && !current?.loading ? openPractice : undefined, listenReason: LISTENING_OFF } : undefined} listeningEnabled={listeningEnabled} tikkunAvailable={exploring || selectedReading?.kind === "torah"} worksCorpus={exploring || selectedReading?.kind !== "haftarah" ? "torah" : "neviim"} onHear={(exploring ? proposedHearReady : hearReady) && !current?.loading ? startReading : undefined} />}
+      {readingFold(tabPanel("reading", <>{!practiceOpen && student && authorizedReading && !exploring && selectedReading && mode === "admin" && <GuideStatusLine kind={selectedReading.kind} readingKey={selectedReading.readingKey ?? null} />}{!practiceOpen && student && authorizedReading && !exploring && selectedReading && <LensOnly lens="lein"><div className={`guide-place guide-place-wide`}><GuideCard store={guide} kind={selectedReading.kind} firstName={student.firstName} learner={learner} /></div></LensOnly>}<VersePanelScope passage={discussionPassage}><div className="reading-passage-layout" ref={readingPanel}>{!practiceOpen && student && song && <ReadingToolbar practice={practicing ? { onUpClose: practiceReady && !current?.loading ? openPractice : undefined, listenReason: LISTENING_OFF } : undefined} listeningEnabled={listeningEnabled} tikkunAvailable={exploring || selectedReading?.kind === "torah"} worksCorpus={exploring || selectedReading?.kind !== "haftarah" ? "torah" : "neviim"} onHear={(exploring ? proposedHearReady : hearReady) && !current?.loading ? startReading : undefined} />}
         {authorizedReading && !listeningEnabled && (!practicing || mode === "student") && <p className="field-help">{readings.length ? mode === "parent" ? LISTENING_OFF_PARENT : LISTENING_OFF : "Listening isn’t available yet. You can keep reading the Torah portion."}</p>}
-        <ProposedTorahText audio={audio} hearHandle={proposedHear} onReadingReady={setProposedReady} onHearReady={setProposedHearReady} baseline={current?.loading ? null : current?.value ?? null} reloadMetadata={load} authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} />
-        {exploring && readings.length > 0 && <header><h3 data-testid="assigned-haftarah-heading">Assigned Haftarah</h3><p className="reading-reference">{displayRange(readings[0].ranges)}</p>
+        <div hidden={practiceOpen}><ProposedTorahText audio={audio} hearHandle={proposedHear} onReadingReady={setProposedReady} onHearReady={setProposedHearReady} baseline={current?.loading ? null : current?.value ?? null} reloadMetadata={load} authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} /></div>
+        {!practiceOpen && exploring && readings.length > 0 && <header><h3 data-testid="assigned-haftarah-heading">Assigned Haftarah</h3><p className="reading-reference">{displayRange(readings[0].ranges)}</p>
           {listeningEnabled && <LensOnly lens="lein"><button type="button" className="button-secondary" disabled={!hearReady || current?.loading} onClick={() => lift.current?.(0)}>Hear Haftarah</button></LensOnly>}</header>}
-        <AssignedStudyText audio={audio} stopAudio={audio.stopAll} baseline={current?.value ?? null} register={registerStudy} reloadMetadata={load} authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} onKindChange={setSelectedKind}
-        guardDeparture={guardReading} renderGuide={(kind, verseRef) => <GuideVerseNotes store={guide} kind={kind} verseRef={verseRef} />} guide={guide}
-        renderIntro={kind => <AboutCard store={student && authorizedReading && !exploring ? guide : undefined} kind={kind} readingKey={readings.find(row => row.kind === kind)?.readingKey} />} renderWork={(kind, verseRef) => <VerseTools coordinator={work} kind={kind} verseRef={verseRef} />} renderActiveWork={() => work.active && <VerseTools coordinator={work} kind={work.active.kind} verseRef={work.active.ref} />}
-        onPage={async (kind, offset, signal) => { await work.loadPage(kind, offset, signal); }} onPrint={learner && !printDisabled ? openPrint : undefined} printSheetHref={learner ? printSheetHref ?? undefined : undefined} learner={learner} practicing={practicing} gotIt={practicing ? (kind, verseRef) => isGotIt(progress, kind, verseRef) : undefined} songSession={song} liftHandle={lift} practiceHandle={practice} upCloseHandle={upClose} textStartHandle={textStart} verseLookupHandle={verseLookup} onPracticeReady={setPracticeReady} onHearReady={setHearReady} onService={() => toSection(SECTION_IDS.service)}
-        onShown={(kind, offset, length) => progress.ensure(kind, offset, length)} renderMark={(kind, verseRef) => <VerseMark store={progress} kind={kind} verseRef={verseRef} />} renderLiftControls={(kind, verseRef) => <><LiftProgress store={progress} kind={kind} verseRef={verseRef} listening={listeningEnabled} childName={mode === "child-practice" ? student?.firstName : undefined} />{mode === "student" && <PrepareVerseLink kind={kind} verseRef={verseRef} />}{staff && student && <LiftNote key={`${kind}:${verseRef}`} coordinator={work} kind={kind} verseRef={verseRef} firstName={student.firstName} />}</>} onVisit={(kind, verseRef) => calendar.visitVerse(kind, verseRef)} /></div></VersePanelScope>
+        <AssignedStudyText onOpenPractice={enterPractice} practiceSurface={practiceOpen} audio={audio} stopAudio={audio.stopAll} baseline={current?.value ?? null} register={registerStudy} reloadMetadata={load} authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} onKindChange={setSelectedKind}
+        guardDeparture={guardReading} renderGuide={practiceOpen ? undefined : (kind, verseRef) => <GuideVerseNotes store={guide} kind={kind} verseRef={verseRef} />} guide={guide}
+        renderSectionControls={section => section.kind === "torah" && (section.mode === "student" || section.mode === "tutor" || section.mode === "admin") ? <TutorSpoken key={`${section.assignmentId}:${section.startVerse}:${section.practiceSurface}`} studentId={section.studentId} mode={section.mode} assignmentId={section.assignmentId} assignmentRevision={section.assignmentRevision} startVerse={section.startVerse} audio={audio} allowManagement={!section.practiceSurface && staff} /> : null}
+        renderIntro={kind => <AboutCard store={student && authorizedReading && !exploring ? guide : undefined} kind={kind} readingKey={readings.find(row => row.kind === kind)?.readingKey} />} renderWork={practiceOpen ? undefined : (kind, verseRef) => <VerseTools coordinator={work} kind={kind} verseRef={verseRef} />} renderActiveWork={practiceOpen ? undefined : () => work.active && <VerseTools coordinator={work} kind={work.active.kind} verseRef={work.active.ref} />}
+        onPage={async (kind, offset, signal) => { await work.loadPage(kind, offset, signal); }} onPrint={learner && !printDisabled ? openPrint : undefined} printSheetHref={learner ? printSheetHref ?? undefined : undefined} learner={learner || practiceOpen} practicing={practicing} gotIt={practicing ? (kind, verseRef) => isGotIt(progress, kind, verseRef) : undefined} songSession={song} liftHandle={lift} practiceHandle={practice} upCloseHandle={upClose} textStartHandle={textStart} verseLookupHandle={verseLookup} onPracticeReady={setPracticeReady} onHearReady={setHearReady} onService={practiceOpen ? undefined : () => toSection(SECTION_IDS.service)}
+        onShown={(kind, offset, length) => progress.ensure(kind, offset, length)} renderMark={(kind, verseRef) => <VerseMark store={progress} kind={kind} verseRef={verseRef} />} renderLiftControls={(kind, verseRef) => <><LiftProgress store={progress} kind={kind} verseRef={verseRef} listening={listeningEnabled} childName={mode === "child-practice" ? student?.firstName : undefined} />{mode === "student" && <PrepareVerseLink kind={kind} verseRef={verseRef} />}{!practiceOpen && staff && student && <LiftNote key={`${kind}:${verseRef}`} coordinator={work} kind={kind} verseRef={verseRef} firstName={student.firstName} />}</>} onVisit={(kind, verseRef) => calendar.visitVerse(kind, verseRef)} /></div></VersePanelScope>
       {/* A parent's sitting keeps the week's dots, the feedback for the sitting, right after the text, so the Hebrew comes first (finding 1). */}
-      {mode === "child-practice" && <PracticeDays calendar={calendar} />}
-      {student && authorizedReading && !exploring && selectedReading && <LensOnly lens="lein"><div className={`guide-place guide-place-narrow`}><GuideCard store={guide} kind={selectedReading.kind} firstName={student.firstName} learner={learner} /></div></LensOnly>}
-      {work.notice && <p className="field-help" role="status">{work.notice}</p>}
-      {authorizedReading && !practicingMode && guideLink}
-      {!learner && otherReadings.length > 0 && <details className="reading-other-assignments"><summary>Other confirmed reading details</summary>{otherReadings.map(row => <AssignmentContext key={row.id} row={row} staff={staff} />)}</details>}
+      {practiceOpen && mode === "student" && selectedReading && <AssignedPracticeOffline key={`${selectedReading.kind}:${selectedReading.id}:${selectedReading.revision}`} reading={selectedReading} />}
+      {!practiceOpen && mode === "child-practice" && <PracticeDays calendar={calendar} />}
+      {!practiceOpen && student && authorizedReading && !exploring && selectedReading && <LensOnly lens="lein"><div className={`guide-place guide-place-narrow`}><GuideCard store={guide} kind={selectedReading.kind} firstName={student.firstName} learner={learner} /></div></LensOnly>}
+      {!practiceOpen && work.notice && <p className="field-help" role="status">{work.notice}</p>}
+      {!practiceOpen && authorizedReading && !practicingMode && guideLink}
+      {!practiceOpen && !learner && otherReadings.length > 0 && <details className="reading-other-assignments"><summary>Other confirmed reading details</summary>{otherReadings.map(row => <AssignmentContext key={row.id} row={row} staff={staff} />)}</details>}
       {/* The parent's text already ends in Trope chart and Print practice sheet, and its rows sit above it: one foot row, not two (finding 16). */}
-      {student && song && authorizedReading && mode !== "parent" && <ReadingFoot printLast print={printSheetHref ?? undefined} lead={practicingMode ? undefined : <><a href={`#${SECTION_IDS.service}`}>Service parts</a><a href={`#${SECTION_IDS.lessons}`}>Lessons</a></>} more={mode === "student" ? <StudentFootLinks readings={readings} /> : undefined} />}</>))}
+      {!practiceOpen && student && song && authorizedReading && mode !== "parent" && <ReadingFoot printLast print={printSheetHref ?? undefined} lead={practicingMode ? undefined : <><a href={`#${SECTION_IDS.service}`}>Service parts</a><a href={`#${SECTION_IDS.lessons}`}>Lessons</a></>} more={mode === "student" ? <StudentFootLinks readings={readings} /> : undefined} />}</>))}
     </section>
     {student && !song && <aside className="reading-tools" aria-labelledby="tools-heading"><h2 id="tools-heading">Practice tools</h2>
       <p>The confirmed assignment appears here. Use the review form below to propose and confirm changes.</p>
@@ -510,18 +560,18 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   </div>
   </>;
   return <TutorPracticeScope mode={mode} studentId={studentId}><ReadingPrefsScope studentId={studentId} englishOnWide={!staff}><StudyLensScope storageKey={staff ? LENS_STORAGE.staff : null}><DepartureReview coordinator={work} />
-    {staff ? <div className="staff-layout" data-testid="staff-layout"><div className="staff-main">{body}{serviceBlock}</div>
-      <div className="lesson-rail" data-testid="lesson-rail">{wide && card}{lessonsBlock}</div></div> : body}{editor && (staff ? <dialog ref={sheet} id={editorId} className="editor-sheet" aria-labelledby="reading-editor-title" closedby={editorBusy ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); closeSheet(); }}>
+    {staff ? <div className={`staff-layout${practiceOpen ? ` ${styles.focused}` : ""}`} data-testid="staff-layout"><div className="staff-main">{body}{!practiceOpen && serviceBlock}</div>
+      {!practiceOpen && <div className="lesson-rail" data-testid="lesson-rail">{wide && card}{lessonsBlock}</div>}</div> : body}{!practiceOpen && editor && (staff ? <dialog ref={sheet} id={editorId} className="editor-sheet" aria-labelledby="reading-editor-title" closedby={editorBusy ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); closeSheet(); }}>
       <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close verse editor" disabled={editorBusy} onClick={closeSheet}>{icons.close}</button></div>{editor}
     </dialog> : <div id={editorId} className="reading-editor-anchor">{editor}</div>)}
-    {plan(<>{student && practicingMode && authorizedReading && <div className="reading-plan-dates">{slotLine && <p className="hero-slot" data-testid="plan-service">{slotLine}</p>}<RehearsalDates student={student} />{guideLink}</div>}
+    {!practiceOpen && plan(<>{student && practicingMode && authorizedReading && <div className="reading-plan-dates">{slotLine && <p className="hero-slot" data-testid="plan-service">{slotLine}</p>}<RehearsalDates student={student} />{guideLink}</div>}
     {mode !== "parent" && !staff && parts}</>)}
     {student && song && <Sheet open={changeOpen} onClose={() => setChangeOpen(false)} title="Go to verse" closeLabel="Close">
       <div data-change-sheet="">{chapters.length > 0 && <label className="reading-go-to"><span>Go to verse</span>
         <select aria-label="Go to verse" value="" onChange={event => { const next = chapters.find(row => row.key === event.target.value); if (next) goToVerse(next.first); }}>
           <option value="" disabled>Choose</option>{chapters.map(row => <option key={row.key} value={row.key}>{row.label}</option>)}</select></label>}</div>
     </Sheet>}
-    {student && staff && (mode === "tutor" || mode === "admin") && <ManageSheet mode={mode} student={student} baseline={authorizedReading ?? null}
+    {!practiceOpen && student && staff && (mode === "tutor" || mode === "admin") && <ManageSheet mode={mode} student={student} baseline={authorizedReading ?? null}
       actions={{ open: manageOpen, onClose: () => setManageOpen(false), setDivisions: openEditor, changeVerses: openEditor, printPractice: openPrint, printDisabled: printDisabled || readings.length === 0,
         printWholeHref: printSheetHref, writeNote, refresh, reload: load }} />}
     {printing && authorizedReading && selectedReading && <PracticeSheet baseline={authorizedReading} initialKind={selectedReading.kind} onClose={() => setPrinting(false)}

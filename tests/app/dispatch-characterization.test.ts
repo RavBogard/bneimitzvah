@@ -82,6 +82,10 @@ const owned: [string, string[]][] = [
   ["/api/learn/progress", ["GET"]], ["/api/learn/progress/put", ["POST"]], ["/api/learn/progress/merge", ["POST"]],
   ["/api/learn/service/progress", ["GET"]], ["/api/learn/service/progress/put", ["POST"]], ["/api/learn/service/progress/merge", ["POST"]], ["/api/learn/service/path", ["GET"]],
   [`/api/students/${S}/service-finished`, ["GET"]], [`/api/students/${S}/practice-visibility`, ["GET"]],
+  // Private optional profile and tutor-spoken aliyah routes (2026-11-20).
+  ["/api/profile/pronouns", ["GET", "POST"]],
+  [`/api/students/${S}/tutor-spoken`, ["GET", "POST", "DELETE"]],
+  [`/api/students/${S}/tutor-spoken/audio`, ["GET"]],
   // staff
   ["/api/admin/student-status", ["GET"]], ["/api/admin/tutor-students", ["GET"]], [`/api/admin/tutors/${L}/hand-over`, ["POST"]],
   [`/api/students/${S}/family`, ["GET"]], [`/api/students/${S}/reading/reconfirm`, ["POST"]],

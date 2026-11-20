@@ -30,3 +30,6 @@ export * from "./verse-review-schema";
 export * from "./service-part-finished-schema";
 export * from "./ceremony-done-schema";
 export * from "./tutor-invite-hold-schema";
+export * from "./tutor-spoken-schema";
+
+export * from "./pronouns-schema";

@@ -65,7 +65,7 @@ export function ReadingToolbar({ onHear, listeningEnabled = false, tikkunAvailab
   if (practice) {
     const listenWhy = `${id}-listen-why`, textMenu = `${id}-text`, englishOn = englishHidden && !study ? false : study ? lens.english : prefs.translation;
     return <nav ref={nav} className="reading-toolbar" aria-label="Reading tools" data-practice="" data-lens={study ? "study" : "lein"} data-hidden={keyboard ? "" : undefined}>
-      <button type="button" className="toolbar-item toolbar-item-primary" data-testid="dock-up-close" disabled={!practice.onUpClose} onClick={practice.onUpClose}>{icons.closeup}<span>Up close</span></button>
+      <button type="button" className="toolbar-item toolbar-item-primary" data-testid="dock-up-close" disabled={!practice.onUpClose} onClick={practice.onUpClose}>{icons.closeup}<span>Practice</span></button>
       {listeningEnabled ? <button type="button" className="toolbar-item" data-testid="dock-listen" disabled={!onHear} onClick={onHear}>{icons.hear}<span>Listen</span></button>
         : <>{/* aria-disabled, not disabled, so it stays focusable and its tap shows why; the popover is the only thing it opens. */}
           <button type="button" className="toolbar-item" data-testid="dock-listen" aria-disabled="true" aria-describedby={listenWhy} popoverTarget={`${listenWhy}-tip`}>{icons.hear}<span>Listen</span></button>

@@ -11,6 +11,7 @@ import { expandReadingRanges } from "../../../lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 import { ReadingPassageSelect } from "./reading-passage-select";
 import { ReadingDivisions } from "./reading-divisions";
+import { canAutosaveDivisions, divisionsSaved } from "./aliyah-autosave";
 import styles from "./reading-selection.module.css";
 import { serviceSlotName, serviceSlotTime } from "./service-slot";
 import { useCongregation } from "./settings/links";
@@ -21,7 +22,7 @@ import type { ServiceSettings } from "./settings/api";
  * reading panel drops the editor, its draft and the reading at once, exactly as for a refused read.
  */
 export function ReadingEditor({ mode, baseline, reload, onBusy, active: open, denied }: { mode: StaffMode; baseline: Assigned | null; reload(): Promise<Assigned>; onBusy?(busy: boolean): void; active: boolean; denied?(status: number): void }) {
-  const { guardDeparture, summary, epoch, refresh } = useWorkspace(), active = open;
+  const { guardDeparture, registerDeparture, summary, epoch, refresh } = useWorkspace(), active = open;
   const congregation = useCongregation(active);
   const [kind, setKind] = useState<ReadingKind>("torah"), [drafts,setDrafts]=useState<Record<ReadingKind,ReadingDraft>>(()=>({torah:emptyReadingDraft(),haftarah:emptyReadingDraft()}));
   const draft=drafts[kind],{method,custom}=draft,currentAssignment=baseline?.readings.find(row=>row.kind===kind);
@@ -34,6 +35,7 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open, de
   const seeded = useRef(new Set<ReadingKind>());
   const [calendar, setCalendar] = useState<{ key: string; proposal: NeedsSelection | null; loading: boolean; failed: boolean }>({ key: "", proposal: null, loading: false, failed: false });
   const [calendarRetry, setCalendarRetry] = useState(0);
+  const [divisionRetry, setDivisionRetry] = useState(false);
   const suggestionGeneration = useRef(0);
   const visible = useRef(active); visible.current = active;
   // Opening the editor reads suggestions only. It never stages a helper or exposes
@@ -64,6 +66,7 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open, de
   // Publish the close guard before paint/keyboard interaction, including the
   // first Escape immediately after prepare, confirm or reload starts.
   useLayoutEffect(() => { onBusy?.(pending !== null); }, [pending, onBusy]);
+  useEffect(() => registerDeparture(async () => !gate.current), [registerDeparture]);
   useEffect(() => {
     generation.current++; setReview(null);
     if (review && lastKey.current !== null && key !== lastKey.current) setMessage("The saved reading is being checked or has changed. Your choices are kept; review the assignment again before saving.");
@@ -81,10 +84,47 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open, de
   try{if(method==="custom" && custom.trim())draftVerses=expandReadingRanges(customReadingRanges(custom),kind,TANAKH_VERSE_COUNTS);
     if(kind==="torah"){cuts=draftCuts(draft)??currentAssignment?.aliyahStarts??null;if(draftVerses.length)aliyahStarts(kind,cuts,draftVerses);}
   }catch{cutIssue=kind==="torah" && draftVerses.length>0;}
+  async function saveDivisions(next: string[]) {
+    if (gate.current || !active || !baseline || !key || blocked || !canAutosaveDivisions(draft, currentAssignment, draftVerses, next)) return;
+    if (JSON.stringify(next) === JSON.stringify(currentAssignment!.aliyahStarts)) return;
+    const before = currentAssignment!, expectedKey = key;
+    gate.current = true; const turn = ++generation.current;
+    setPending("prepare"); setReview(null); setMessage("Saving aliyah divisions…"); setDivisionRetry(false);
+    let confirming = false;
+    try {
+      const proposal = await workspaceApi.prepareReading(mode, baseline, "torah", { preparationMode: "current-assignment", expectedAssignmentRevision: before.revision, aliyahStarts: next });
+      if (!alive.current || turn !== generation.current || keyRef.current !== expectedKey) return;
+      if (proposal.status !== "prepared" || proposal.preparationMode !== "current-assignment" || JSON.stringify(proposal.aliyahStarts) !== JSON.stringify(next)) {
+        setBlocked(true); setMessage("The saved reading changed. Check what is saved now before changing the divisions."); return;
+      }
+      confirming = true; setPending("confirm");
+      const receipt = await workspaceApi.confirmReading(mode, baseline.student.id, proposal.binding);
+      if (!alive.current) return;
+      if (turn !== generation.current || keyRef.current !== expectedKey) { setBlocked(true); setMessage("Check what saved before changing the divisions again."); return; }
+      const current = await reload();
+      if (!alive.current) return;
+      const saved = divisionsSaved(current, before, next, receipt);
+      if (!saved) { setBlocked(true); setMessage("The reading changed while the divisions were saving. Check what is saved now; your choices are kept."); return; }
+      setDrafts(previous => ({ ...previous, torah: currentReadingDraft(saved) })); setMessage("Saved.");
+    } catch (error) {
+      if (!alive.current) return;
+      const status = statusOf(error);
+      if ([401, 404].includes(status) && denied) { denied(status); return; }
+      if (confirming || status === 409 || status === 403) {
+        setBlocked(true);
+        setMessage(confirming ? "We could not confirm what saved. Your division choices are kept. Check what is saved now before trying again; nothing will be sent twice automatically." : "The reading or your access changed. Your division choices are kept. Check what is saved now before trying again.");
+      } else { setDivisionRetry(true); setMessage("The divisions could not be saved. Your choices are kept; try again when connected."); }
+    } finally { gate.current = false; if (alive.current) setPending(null); }
+  }
+  function changeDivisions(next: string[]) {
+    if (gate.current) return;
+    updateDraft({ cuts: next.join("\n"), cutsEdited: true });
+    void saveDivisions(next);
+  }
   function toggleCut(ref:string){
     if(kind!=="torah" || draftVerses.indexOf(ref)<=0 || cutIssue)return;
     const starts=cuts??[],next=starts.includes(ref)?starts.filter(value=>value!==ref):[...starts,ref].sort((a,b)=>draftVerses.indexOf(a)-draftVerses.indexOf(b));
-    updateDraft({cuts:next.join("\n"),cutsEdited:true});
+    changeDivisions(next);
   }
   async function prepare(pick?: string) {
     if (gate.current || !active || !baseline || !key || blocked || currentDraftStale) return;
@@ -186,15 +226,15 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open, de
       {method === "custom" && draft.current && <p className="field-help">This is the saved reading. Change the verses above, or adjust only its aliyah divisions.</p>}
       {currentDraftStale && <p className="request-error" role="status">The saved reading changed after you started. Your choices are kept. Choose Use current assignment under Advanced to start from the latest reading, or change the verses to replace it.</p>}
       {kind === "torah" && method === "custom" && <ReadingDivisions verses={draftVerses} starts={divisionStarts} edited={draft.cutsEdited} issue={cutIssue} disabled={pending !== null}
-        onChange={next => updateDraft({cuts:next.join("\n"),cutsEdited:true})} />}
+        onChange={changeDivisions} />}
       <details className={styles.disclosure}><summary>Advanced references and aliyah boundaries</summary>
       <button type="button" className="button-text" disabled={!currentAssignment || pending!==null || blocked} onClick={useCurrent}>Use current assignment</button>
       {method === "custom" && <div className="reading-custom"><label htmlFor="reading-ranges">Custom verse ranges</label><textarea id="reading-ranges" value={custom} maxLength={3232} rows={4} disabled={pending !== null} aria-describedby="reading-ranges-help" onChange={event => updateDraft({custom:event.target.value,current:null})} /><p id="reading-ranges-help" className="field-help">One reference per line, up to 32 ranges and 1,000 verses. For example: {kind === "torah" ? "Genesis 1:1-3" : "Isaiah 1:1-2"}. Multiple ranges stay intact until you edit them.</p></div>}
       {kind==="torah" && <fieldset className="reading-cuts"><legend>Student Torah aliyah starts</legend>
         <p className="field-help">The first assigned verse starts aliyah 1 when boundaries are recorded. Enter the first verse of each subsequent aliyah in selection order, one per line. Calendar boundaries are only a guide.</p>
-        <label htmlFor="reading-cuts">Subsequent aliyah starts</label><textarea id="reading-cuts" rows={3} maxLength={100899} value={draft.cuts} disabled={pending!==null} onChange={event=>updateDraft({cuts:event.target.value,cutsEdited:true})} aria-describedby="reading-cuts-help" />
+        <label htmlFor="reading-cuts">Subsequent aliyah starts</label><textarea id="reading-cuts" rows={3} maxLength={100899} value={draft.cuts} disabled={pending!==null} onChange={event=>updateDraft({cuts:event.target.value,cutsEdited:true})} onBlur={() => { try { const next = draftCuts(draft); if (next) void saveDivisions(next); } catch { /* Invalid drafts remain available to correct. */ } }} aria-describedby="reading-cuts-help" />
         <p id="reading-cuts-help" className="field-help">{draft.cutsEdited?draft.cuts.trim()?"These draft boundaries will be included in the review.":"This draft explicitly records one aliyah.":"No boundary changes entered. Existing boundaries are preserved only if valid for these references; an unrecorded assignment stays unrecorded."}</p>
-        <button type="button" className="button-text" disabled={pending!==null} onClick={()=>updateDraft({cuts:"",cutsEdited:true})}>Record one aliyah</button>
+        <button type="button" className="button-text" disabled={pending!==null} onClick={()=>changeDivisions([])}>Record one aliyah</button>
       </fieldset>}
       </details>
       <button className="button-primary" disabled={!baseline || pending !== null || blocked || currentDraftStale || method === "calendar" && !calendarChoices.some(choice => choice.pick === draft.calendarPick)}>{pending === "prepare" ? "Preparing review…" : "Review assignment"}</button>
@@ -205,6 +245,7 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open, de
       draftVerses={draftVerses} cutStarts={cuts} onToggleCut={toggleCut} cutIssue={cutIssue} />
     </details>
     {pending === "confirm" && <p role="status">Saving the assignment…</p>}
+    {divisionRetry && !blocked && <button type="button" className="button-secondary" disabled={pending !== null} onClick={() => { try { const next = draftCuts(draft); if (next) void saveDivisions(next); } catch { /* Keep the draft for correction. */ } }}>Retry saving divisions</button>}
     {message && <p className={blocked ? "request-error" : "field-help"} role={blocked ? "alert" : "status"}>{message}</p>}
     {blocked && <button className="button-secondary" disabled={pending !== null} onClick={() => void reloadCurrent()}>{pending === "reload" ? "Checking what saved…" : "Check what saved"}</button>}
     {proposal && <section className={`reading-proposal ${styles.review}`} aria-labelledby="reading-review-title">

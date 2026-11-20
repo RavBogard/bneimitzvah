@@ -1,4 +1,5 @@
 "use client";
+import { OwnPronounsSettings } from "./profile/pronouns";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { parseSession, PortalRequestError, requestPortal, roleNames, roleTasks, type Role, type SessionSummary } from "./api";
@@ -114,6 +115,7 @@ export function AccountPage() {
     <main id="account-main" className="workspace-main account-main" aria-busy={state.kind === "loading"}>
       {state.kind === "loading" ? <><PageHeader title="Account" /><p role="status">One moment while we check your access.</p></>
         : <AccountView summary={state.summary} current={current} signingOut={signingOut} problem={problem} emailOffered={emailOffered} onRole={role => { rememberRole(role); setCurrent(role); }} onSignOut={() => void signOut()} />}
+      {state.kind === "ready" && <OwnPronounsSettings key={state.summary.sessionBinding} student={state.summary.roles.includes("student")} />}
     </main>
     {state.kind === "ready" && <TabBar roles={roles} />}
   </div>;

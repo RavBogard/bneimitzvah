@@ -8,6 +8,7 @@ export type RuntimeConfig = Readonly<{
   deployment: DeploymentScope; origin: string; databaseUrl: string; authSecret: string;
   google?: Readonly<{ clientId: string; clientSecret: string }>;
   mail: Readonly<{ apiKey: string; from: string }>;
+  tutorSpoken?: Readonly<{ storeId: string }>;
   referenceAudio?: Readonly<{ catalogSha256: string; storeId: string; studentRelease: boolean }>;
   serviceMusic?: Readonly<{ url: string; token: string }>;
   serviceCronSecret?:string;
@@ -55,6 +56,11 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
       if (!clean(env.GOOGLE_CLIENT_ID) || !clean(env.GOOGLE_CLIENT_SECRET) || env.GOOGLE_CLIENT_ID.length > 512 || env.GOOGLE_CLIENT_SECRET.length > 512) throw new Unavailable("config/google");
       google = Object.freeze({ clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET });
     }
+    let tutorSpoken: RuntimeConfig["tutorSpoken"];
+    if (environment === "production" && env.BLOB_STORE_ID !== undefined) {
+      if (!/^store_[A-Za-z0-9]{8,64}$/.test(env.BLOB_STORE_ID)) throw new Unavailable("config/tutor-spoken-store");
+      tutorSpoken = Object.freeze({ storeId: env.BLOB_STORE_ID });
+    }
     let referenceAudio: RuntimeConfig["referenceAudio"];
     const catalogSha256 = env.REFERENCE_AUDIO_CATALOG_SHA256, release = env.REFERENCE_AUDIO_STUDENT_RELEASE;
     if (release !== undefined && release !== "true" && release !== "false") throw new Unavailable("config/reference-audio-release");
@@ -73,7 +79,7 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
     if (env.PORTAL_MUSIC_DETAILS_ENABLED !== undefined && env.PORTAL_MUSIC_DETAILS_ENABLED !== "true" && env.PORTAL_MUSIC_DETAILS_ENABLED !== "false") throw new Unavailable("config/music-details-flag");
     if(env.CRON_SECRET!==undefined && (!clean(env.CRON_SECRET) || env.CRON_SECRET.length<32 || env.CRON_SECRET.length>512 || env.CRON_SECRET===serviceMusic?.token || env.CRON_SECRET===env.BETTER_AUTH_SECRET))throw new Unavailable("config/cron-secret");
     return Object.freeze({ deployment: Object.freeze({ environment, deployment: env.PORTAL_DEPLOYMENT }), origin: origin.origin,
-      databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google, referenceAudio, serviceMusic, serviceCronSecret:env.CRON_SECRET, mcpEnabled: env.PORTAL_MCP_ENABLED === "true",
+      databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google, referenceAudio, tutorSpoken, serviceMusic, serviceCronSecret:env.CRON_SECRET, mcpEnabled: env.PORTAL_MCP_ENABLED === "true",
       musicDetailsEnabled: env.PORTAL_MUSIC_DETAILS_ENABLED === "true",
       notificationsEnabled: env.PORTAL_NOTIFICATIONS_ENABLED === "true",
       mail: Object.freeze({ apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM }) });

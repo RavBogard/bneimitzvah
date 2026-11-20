@@ -11,6 +11,8 @@ Updated 2026-11-17. This file is replaced, not appended: it says where the work 
 
 ## In progress
 
+- **Tutor and learner follow-up, November 20:** Daniel approved intent-based entry, multi-tutor relationships, and an assigned aliyah Practice view without private tutor panels. Work is isolated on the tutor and learner branch. The Shermet stream owns catalog, timing, and tempo. [Changes and release dependencies](../2026-11-20-tutor-and-learner/PLAN.md).
+
 - **Cantor Wendy Shermet recordings, November 20.** Daniel approved public CRC streaming, shared links and offline practice. The integration branch now exposes all 8,153 recoverable public media files. Matching performances cover 5,774 of 5,846 Torah verses and 1,541 of 1,629 haftarah verses in CRC’s baseline, 97.86% overall. An additional library has 778 prayer, trope, Megillot, holiday and alternate-source entries. Performance-specific GPU word alignment and release verification are in progress. [Implementation and source evidence](../2026-11-20-shermet-recordings/PLAN.md).
 
 - **Guide release and hold on the Guides page:** built, reviewed twice (adversarial, then a delta pass) and green in CI on the branch `claude/guides-web-release`. It waits for Daniel to apply migration 0058 to production: steps in `docs/planning/2026-11-17-guides-web-release/APPLY.md` on that branch. Then the branch is brought up to main (the migration file byte-identical), CI is run again, and main is fast-forwarded.

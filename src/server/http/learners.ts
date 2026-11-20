@@ -2,7 +2,7 @@ import "server-only";
 import type { HttpRuntime } from "../runtime/composition";
 import { readJsonBody } from "./body";
 import { requireCookieMutation } from "./mutations";
-import { closedObject, uniqueQuery } from "./query";
+import { uniqueQuery } from "./query";
 import { errorResponse, privateJson, type JsonValue } from "./responses";
 
 /**
@@ -32,7 +32,7 @@ export async function handleLearnersRequest(request: Request, runtime: HttpRunti
       uniqueQuery(request.url, []);
       requireCookieMutation(request, runtime.origin);
       const body = await readJsonBody(request);
-      if (path === "/api/mine/tutor/remove") { closedObject(body, []); result = await learners.removeMyTutor(request); }
+      if (path === "/api/mine/tutor/remove") { result = await learners.removeMyTutor(request, body); }
       else result = path === "/api/learners/claim" ? await learners.claim(request, body) : await learners.unclaim(request, body);
     }
     return privateJson(result as unknown as JsonValue, result.ok ? 200 : 409);
