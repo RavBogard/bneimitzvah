@@ -21,7 +21,18 @@ const publicPage = value => { try { const u = new URL(value); return u.protocol 
 const short = (value, max = 300) => typeof value === 'string' && value.length <= max && !/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value);
 async function readJson(path, fallback) { try { return JSON.parse(await readFile(path, 'utf8')); } catch (error) { if (error.code === 'ENOENT') return fallback; throw error; } }
 let saveSequence = 0;
-async function saveJson(path, value) { const temporary = `${path}.${process.pid}.${saveSequence++}.tmp`; await writeFile(temporary, JSON.stringify(value, null, 2) + '\n'); await rename(temporary, path); }
+async function saveJson(path, value) {
+  const temporary = `${path}.${process.pid}.${saveSequence++}.tmp`;
+  await writeFile(temporary, JSON.stringify(value, null, 2) + '\n');
+  // Windows readers can briefly hold the destination open during an atomic replacement.
+  for (let attempt = 0; ; attempt++) {
+    try { await rename(temporary, path); return; }
+    catch (error) {
+      if (attempt >= 9 || !['EPERM', 'EACCES', 'EBUSY'].includes(error.code)) throw error;
+      await new Promise(resolve => setTimeout(resolve, Math.min(1000, 25 * 2 ** attempt)));
+    }
+  }
+}
 async function outputRoot(directory) {
   if (!directory || await insideGitWorkingTree(directory)) throw new Error('Collection output must be outside every Git working tree');
   const root = resolve(directory); await mkdir(root, { recursive: true }); return root;
