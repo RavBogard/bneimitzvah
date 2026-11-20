@@ -1,4 +1,5 @@
 "use client";
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { browserPlatform } from "../../../lib/offline/platform";
 import { CACHE_FAMILY, MANIFEST_PATH, REOPEN_MS } from "../../../lib/offline/policy";
@@ -12,6 +13,8 @@ import { packingIdle, refreshOfflineState, setOfflineState } from "../../../lib/
  * first asking the private /api/offline/packs whose own readings this device keeps (A2).
  */
 const ENABLED = process.env.PORTAL_OFFLINE_ENABLED !== "false";
+const isPreviewPath = (path: string) => path.replace(/\/$/, "") === "/preview";
+const inRolePreview = () => isPreviewPath(window.location.pathname);
 
 /** Chromium's deferred install prompt (Android, desktop); iOS has none. */
 type InstallPrompt = Event & { prompt(): Promise<void>; userChoice?: Promise<{ outcome: string }> };
@@ -48,13 +51,15 @@ async function disable() {
   try { for (const key of await caches.keys()) if (key.startsWith(CACHE_FAMILY)) await caches.delete(key); } catch { /* No caches. */ }
 }
 async function open() {
+  if (inRolePreview()) return;
   await refreshOfflineState();
   if (navigator.onLine === false) return;
   try {
     const { askOwner, openOffline } = await import("../../../lib/offline/packer");
     const locks = (navigator as Navigator & { locks?: Parameters<typeof openOffline>[0]["locks"] }).locks ?? null;
     const io = { origin: location.origin, fetch: ((input, init) => fetch(input, init)) as typeof fetch };
-    await openOffline({ ...io, caches, now: () => Date.now(), locks, owner: signal => askOwner(io, signal),
+    if (inRolePreview()) return;
+    await openOffline({ ...io, caches, now: () => Date.now(), locks, owner: signal => inRolePreview() ? Promise.resolve({ state: "unknown" }) : askOwner(io, signal),
       estimate: async () => navigator.storage?.estimate ? navigator.storage.estimate() : {} });
   } catch { await refreshOfflineState(); }
 }
@@ -78,7 +83,8 @@ export async function saveOfflinePacks(): Promise<boolean> {
   return true;
 }
 export function startOfflineRuntime() {
-  if (started) return; started = true;
+  if (started || inRolePreview()) return;
+  started = true;
   const platform = browserPlatform();
   if (!platform.origin) return;
   link("manifest", MANIFEST_PATH);
@@ -89,13 +95,13 @@ export function startOfflineRuntime() {
   void (async () => {
     try { await navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }); } catch { return; }
     void navigator.serviceWorker.ready.then(() => setOfflineState({ shell: true }), () => {});
-    await keepPersisted();
+    if (!inRolePreview()) await keepPersisted();
     packing = true;
     await open();
     let hiddenAt = 0;
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState !== "visible") { hiddenAt = Date.now(); return; }
-      if (hiddenAt && Date.now() - hiddenAt >= REOPEN_MS) { hiddenAt = 0; void keepPersisted().then(open); }
+      if (hiddenAt && Date.now() - hiddenAt >= REOPEN_MS && !inRolePreview()) { hiddenAt = 0; void keepPersisted().then(open); }
     });
     let online: ReturnType<typeof setTimeout> | undefined;
     window.addEventListener("online", () => { clearTimeout(online); online = setTimeout(() => { void open(); }, 5000); });
@@ -103,6 +109,8 @@ export function startOfflineRuntime() {
 }
 
 export function OfflineRuntime() {
-  useEffect(() => { startOfflineRuntime(); }, []);
+  const pathname = usePathname();
+  const preview = pathname ? isPreviewPath(pathname) : false;
+  useEffect(() => { if (!preview) startOfflineRuntime(); }, [preview]);
   return null;
 }

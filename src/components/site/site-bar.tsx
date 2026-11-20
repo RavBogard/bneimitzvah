@@ -16,6 +16,7 @@ import { signedInHint } from "../portal/signed-in-hint";
  */
 export type SiteBarMode = "site" | "minimal";
 export type SiteLink = "read" | "learn" | "mine";
+type SiteDestination = "/" | "/read" | "/learn" | "/mine" | "/sign-in" | "/account";
 
 const under = (path: string, base: string) => path === base || path.startsWith(`${base}/`);
 /** Which site link is the current page: Read on /read*, Learn on /learn* and the trope chart, My Readings on /mine*; nothing elsewhere (Account is reached from the shelf). */
@@ -70,21 +71,32 @@ export function SiteBar(props: SiteBarProps) {
   return <SiteBarView {...props} pathname={props.pathname !== undefined ? props.pathname : path} signedIn={props.signedIn ?? hint} />;
 }
 
-export function SiteBarView({ mode = "site", signedIn = false, back, onNavigate, productName, className, pathname }: SiteBarProps & { signedIn: boolean }) {
+type PreviewLinks = Readonly<{ href: string; navigate(destination: SiteDestination): void }>;
+
+export function SiteBarView({ mode = "site", signedIn = false, back, onNavigate, productName, className, pathname, previewLinks }: SiteBarProps & { signedIn: boolean; previewLinks?: PreviewLinks }) {
   const current = currentSiteLink(pathname);
   const identity = useIdentity(), name = productName ?? identity.productName;
-  const link = (key: SiteLink, href: string, children: ReactNode, extra = "", label?: string) => <a className={`site-bar-link${extra}`} href={href} aria-label={label} aria-current={current === key ? "page" : undefined} onClick={onNavigate ? event => onNavigate(event, href) : undefined}>{children}</a>;
+  const destination = (href: SiteDestination) => ({
+    href: previewLinks?.href ?? href,
+    onClick: previewLinks ? (event: MouseEvent<HTMLAnchorElement>) => {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      previewLinks.navigate(href);
+    } : onNavigate ? (event: MouseEvent<HTMLAnchorElement>) => onNavigate(event, href) : undefined,
+  });
+  const link = (key: SiteLink, href: SiteDestination, children: ReactNode, extra = "", label?: string) => <a className={`site-bar-link${extra}`} {...destination(href)} aria-label={label} aria-current={current === key ? "page" : undefined}>{children}</a>;
   return <header className={`portal-header app-bar site-bar${className ? ` ${className}` : ""}`} data-site-bar={mode}>
-    <div className="portal-brand-group"><a className="portal-brand" data-testid="site-brand" href="/" onClick={onNavigate ? event => onNavigate(event, "/") : undefined}><BrandMark />{mode === "site" && signedIn ? <span className="site-bar-name">{name}</span> : name}</a><BetaMark /></div>
+    <div className="portal-brand-group"><a className="portal-brand" data-testid="site-brand" {...destination("/")}><BrandMark />{mode === "site" && signedIn ? <span className="site-bar-name">{name}</span> : name}</a><BetaMark /></div>
     {mode === "site" && <nav className="site-bar-nav" aria-label="Site">
       {link("read", "/read", <span className="site-bar-text">Read</span>)}
       {link("learn", "/learn", <span className="site-bar-text">Learn</span>)}
       {/* The right side keeps one width whichever it shows, so the swap moves nothing. */}
       <span className="site-bar-end" data-signed-in={signedIn ? "" : undefined}>
         {signedIn ? link("mine", "/mine", <><BookmarkIcon /><span className="site-bar-text site-bar-mine-text">My Readings</span></>, " site-bar-mine", "My Readings")
-          : <ReturnSignInLink className="site-bar-link" back={back}><span className="site-bar-text">Sign in</span></ReturnSignInLink>}
+          : previewLinks ? <a className="site-bar-link" {...destination("/sign-in")}><span className="site-bar-text">Sign in</span></a>
+            : <ReturnSignInLink className="site-bar-link" back={back}><span className="site-bar-text">Sign in</span></ReturnSignInLink>}
         {/* The Account control: a round person button in the top right of every signed-in page (the session has no name to take an initial from). */}
-        {signedIn && <a className="site-bar-account" data-testid="account-button" href="/account" aria-label="Account" aria-current={pathname === "/account" ? "page" : undefined} onClick={onNavigate ? event => onNavigate(event, "/account") : undefined}><PersonIcon /></a>}
+        {signedIn && <a className="site-bar-account" data-testid="account-button" {...destination("/account")} aria-label="Account" aria-current={pathname === "/account" ? "page" : undefined}><PersonIcon /></a>}
       </span>
     </nav>}
   </header>;
