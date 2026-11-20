@@ -3,6 +3,7 @@ import type { PhraseAudio, PhraseClip, PhraseRequest } from "../../lib/learn/phr
 
 /** One media element per course page. Word outlines follow its clock, never elapsed wall time. */
 export type PlayerState = Readonly<{ id: string | null; status: "idle" | "loading" | "playing" | "paused" | "error"; seconds: number; part: number;
+  source?: "shermet" | "pockettorah";
   current?: Readonly<{ ref: string; kind: PhraseRequest["kind"]; word: number }> | null }>;
 const IDLE: PlayerState = Object.freeze({ id: null, status: "idle", seconds: 0, part: 0 });
 export const PLAY_GAP_MS = 450;
@@ -34,7 +35,7 @@ export function createClipPlayer(audio: PhraseAudio, make: () => HTMLAudioElemen
       const word = sounding && !node.paused && !node.ended && !node.seeking && Number.isFinite(at)
         ? clip.words.find(row => row.start <= at && at < row.end)?.word ?? null : null;
       if (state.status !== status || (state.current?.word ?? null) !== word || state.id !== id || state.part !== part) {
-        publish({ id, status, seconds: clip.seconds / rate, part, current: word === null ? null : { ref: request.ref, kind: request.kind, word } });
+        publish({ id, status, seconds: clip.seconds / rate, part, source: clip.source ?? "pockettorah", current: word === null ? null : { ref: request.ref, kind: request.kind, word } });
       }
     };
     const tick = () => { frame = null; sample(); if (!settled && typeof requestAnimationFrame === "function") frame = requestAnimationFrame(tick); };

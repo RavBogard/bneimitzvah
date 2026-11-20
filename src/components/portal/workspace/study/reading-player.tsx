@@ -6,10 +6,12 @@ import type { ReferenceShortResolution } from "../../../../lib/reference-audio/s
 import type { ReadingPlaybackState, ReadingSelection } from "./main-playback";
 import { createPreferredReadingPlayback } from "./preferred-reading-playback";
 import { useShermetRecordings } from "./use-shermet-recordings";
+import { createShermetTimedAudio } from "../../../../lib/reference-audio/shermet-timed-audio";
 import type { StudyVerse } from "./api";
 import { createReadingPlayerIntent, readingAudioCurrent, readingPlayerPreview, createReadingPlayerTarget } from "./reading-player-intent";
 import type { ReadingAudioSlot, createReadingAudioCoordinator } from "./reading-audio-coordinator";
 import styles from "./reading-player.module.css";
+const recordingPreferences = new WeakMap<ReturnType<typeof createReadingAudioCoordinator>, "pockettorah" | "shermet">();
 export type ReadingPlayerHandle = { select(index: number, selection?: ReadingSelection): void; pause(): void; suspend(): void };
 /** Main-text activation chooses the verse; grammar retains the tapped word.
  * Explicit Practice/WordTools drills continue to use numeric selections. */
@@ -30,12 +32,13 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
   onActiveWord(value: { verse: number; index: number } | null): void;
 }) {
   const id = useId(), owner = useRef<ReturnType<typeof createPreferredReadingPlayback> | null>(null);
-  const [recording, setRecording] = useState<"pockettorah" | "shermet">("shermet");
+  const [recording, setRecording] = useState<"pockettorah" | "shermet">(() => audio ? recordingPreferences.get(audio.coordinator) ?? "shermet" : "shermet");
   const [sourcePreview, setSourcePreview] = useState<number | null>(null);
   const verseRefs = useMemo(() => verses.map(verse => verse.ref), [verses]);
   const shermetRefs = useShermetRecordings(verseRefs);
+  const timed = useMemo(() => createShermetTimedAudio(), [scopeKey, verses]);
   useEffect(() => {
-    setRecording("shermet");
+    setRecording(audio ? recordingPreferences.get(audio.coordinator) ?? "shermet" : "shermet");
   }, [scopeKey, verses]);
   const callbacks = useRef({ load, onActiveWord, active, enabled, expiresAt, target, shermetRefs }); callbacks.current = { load, onActiveWord, active, enabled, expiresAt, target, shermetRefs };
   const targetOwner = useRef<ReturnType<typeof createReadingPlayerTarget> | null>(null);
@@ -51,7 +54,9 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
       canContinue: () => current && callbacks.current.active && callbacks.current.enabled && readingAudioCurrent(callbacks.current.expiresAt) && Boolean(owned?.isCurrent()) && targetCurrent(),
       onState: (value: ReadingPlaybackState) => { if (current) setState(value); }, onActiveWord: (value: { verse: number; index: number } | null) => { if (current && (value === null || owned?.isCurrent() && targetCurrent())) callbacks.current.onActiveWord(value); },
     };
-    const playback = createPreferredReadingPlayback({ ...common, preference: recording, available: () => callbacks.current.shermetRefs, verses: verses.map(verse => { const projection = projectStudyVerse(verse.ref, verse.hebrew); return { ref: verse.ref, readingText: verse.hebrew.readingText, wordCount: projection.status === "ready" ? projection.projection.words.length : 0 }; }),
+    const playback = createPreferredReadingPlayback({ ...common, preference: recording, available: () => callbacks.current.shermetRefs,
+      timed: { timing: (index, signal) => timed.timing(verses[index].ref, verses[index].hebrew, signal), clip: (index, word, signal) => timed.clip(verses[index].ref, verses[index].hebrew, word, word, signal) },
+      verses: verses.map(verse => { const projection = projectStudyVerse(verse.ref, verse.hebrew); return { ref: verse.ref, readingText: verse.hebrew.readingText, wordCount: projection.status === "ready" ? projection.projection.words.length : 0 }; }),
       load: async (index, signal) => { if (!owned?.isCurrent()) throw new Error("Reading intent replaced"); const result = await callbacks.current.load(index, signal); if (!owned?.isCurrent()) throw new Error("Reading intent replaced"); return result; },
     });
     owned = createReadingPlayerIntent({ coordinator: audio.coordinator, slot: audio.slot, playback,
@@ -80,13 +85,13 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
     : held ? "Word timing isn’t available for this recording. Choose Whole verse to listen."
       : loading ? "Loading recording…" : playback?.status === "unavailable" ? "A recording isn’t available for this selection."
         : playback?.status === "error" ? "The recording couldn’t be loaded. Try again." : playback?.retryPlay ? "Your browser needs another tap. Press Play to hear your selection."
-          : state?.suspended ? "Playback paused. Tap the reading or press Play when you’re ready." : state?.source === "shermet" ? "Cantor Wendy Shermet’s recording plays a whole verse. Repeat keeps the current verse. Word timing isn’t available for this recording." : `Tapping the reading plays a whole verse. ${wordTools ? "Practice and Word tools offer" : "Practice offers"} word drills. Repeat keeps the current selection.`;
+          : state?.suspended ? "Playback paused. Tap the reading or press Play when you’re ready." : state?.source === "shermet" ? playback?.wordsReady ? "Cantor Wendy Shermet’s recording follows the words. Repeat keeps the current selection." : "Cantor Wendy Shermet’s recording plays a whole verse. Repeat keeps the current verse. Word timing isn’t available for this recording." : `Tapping the reading plays a whole verse. ${wordTools ? "Practice and Word tools offer" : "Practice offers"} word drills. Repeat keeps the current selection.`;
   // The transport (what is chosen, Play or Pause, Repeat) stays in reach while the reader scrolls the passage; the rest of the player keeps its place after the text.
   return <section className={styles.player} aria-label="Reading playback">
     <div className={styles.top} data-player-transport=""><p className={styles.selection} data-testid="player-selection" data-selected-ref={selected?.ref} data-selected-part={selected ? String(preview.selection) : undefined}>{selected ? <><bdi>{selected.ref}</bdi> · {preview.selection === "verse" ? "Whole verse" : `Word ${(preview.selection as number) + 1}`}</> : idleLabel}</p>
       <div className={styles.controls}><button type="button" disabled={!audio || !actionable || !selected || loading || held} onClick={() => playback?.status === "playing" ? intent.current?.pause() : play()}>{playback?.status === "playing" ? "Pause" : playback?.status === "error" ? "Try again" : "Play"}</button>
         <button type="button" disabled={!audio || !actionable || !ready || held} aria-pressed={playback?.repeat ?? false} onClick={() => intent.current?.setRepeat(!playback?.repeat)}>Repeat</button></div></div>
-    <div className={styles.panel}><div className={styles.options}>{shermetRefs.size > 0 && <div className={styles.field}><label htmlFor={`${id}-recording`}>Recording</label><select id={`${id}-recording`} value={recording} onChange={event => { intent.current?.suspend(); setSourcePreview(preview.index); setRecording(event.target.value === "shermet" ? "shermet" : "pockettorah"); }}><option value="pockettorah">PocketTorah</option><option value="shermet">Cantor Wendy Shermet first</option></select></div>}<div className={styles.field}><label htmlFor={`${id}-selection`}>Practice</label><select id={`${id}-selection`} disabled={!audio || !actionable || !selected} value={String(preview.selection)} onChange={event => { if (preview.index !== null) choose(preview.index, event.target.value === "verse" ? "verse" : Number(event.target.value)); }}>
+    <div className={styles.panel}><div className={styles.options}>{shermetRefs.size > 0 && <div className={styles.field}><label htmlFor={`${id}-recording`}>Recording</label><select id={`${id}-recording`} value={recording} onChange={event => { intent.current?.suspend(); setSourcePreview(preview.index); const preference = event.target.value === "shermet" ? "shermet" : "pockettorah"; if (audio) recordingPreferences.set(audio.coordinator, preference); setRecording(preference); }}><option value="pockettorah">PocketTorah</option><option value="shermet">Cantor Wendy Shermet first</option></select></div>}<div className={styles.field}><label htmlFor={`${id}-selection`}>Practice</label><select id={`${id}-selection`} disabled={!audio || !actionable || !selected} value={String(preview.selection)} onChange={event => { if (preview.index !== null) choose(preview.index, event.target.value === "verse" ? "verse" : Number(event.target.value)); }}>
       <option value="verse">Whole verse</option>{words?.status === "ready" && words.projection.words.map(word => <option key={word.index} value={word.index}>Word {word.index + 1}: {word.text}</option>)}
     </select></div><div className={styles.field}><label htmlFor={`${id}-speed`}>Speed</label><select id={`${id}-speed`} disabled={!audio || !actionable || !ready || !playback?.speedSupported} value={playback?.speed ?? 1} onChange={event => intent.current?.setSpeed(Number(event.target.value))}>{[0.5,0.75,1,1.25].map(speed => <option key={speed} value={speed}>{speed}×</option>)}</select></div></div>
     <p role="status" className={styles.message}>{state?.fallback ? `PocketTorah supplies this selection${state.fallback === "timing" ? " because Shermet word timing is unavailable" : state.fallback === "failed" ? " because the Shermet recording could not load" : " because no Shermet recording is available"}. ` : ""}{message}</p>

@@ -4,6 +4,7 @@ import { createReferenceTimeline, referenceWordLoop, type ReferenceTimeline } fr
 import { shortSourceRange, type ShortReferenceSource } from "../reference-audio/short-source";
 import { decodeShortReferenceAudio, downloadShortReferenceAudio, shortAudioDigest, shortWordWav, validateShortDecodedAudio, type ShortDecodedAudio } from "../reference-audio/short-playback";
 import type { Melody } from "./course";
+import { createShermetTimedAudio } from "../reference-audio/shermet-timed-audio";
 
 /**
  * The course's one cut (plan, slice 1 step 2): a range of engine units of one verse, played from the
@@ -17,7 +18,7 @@ export type PhraseRequest = Readonly<{ ref: string; kind: Melody; words: readonl
 export type LoadedVerse = Readonly<{ ref: string; kind: Melody; hebrew: HebrewSource; short: ReferenceShortResolution | null }>;
 /** Canonical reading-word intervals, in the cut WAV's media seconds. */
 export type PhraseWord = Readonly<{ word: number; start: number; end: number }>;
-export type PhraseClip = Readonly<{ blob: Blob; frames: number; sampleRate: number; seconds: number; key: string; words: readonly PhraseWord[] }>;
+export type PhraseClip = Readonly<{ blob: Blob; frames: number; sampleRate: number; seconds: number; key: string; words: readonly PhraseWord[]; source?: "shermet" | "pockettorah" }>;
 export class PhraseUnavailable extends Error { constructor() { super("Phrase recording unavailable"); } }
 const unavailable = (): never => { throw new PhraseUnavailable(); };
 
@@ -27,6 +28,8 @@ export type PhraseAudioIo = Readonly<{
   load(ref: string, kind: Melody, signal: AbortSignal): Promise<LoadedVerse>;
   origin?: string; fetch?: typeof fetch; digest?: typeof shortAudioDigest;
   decode?(bytes: Uint8Array<ArrayBuffer>, source: ShortReferenceSource): Promise<ShortDecodedAudio>;
+  preferShermet?: boolean;
+  decodeShermet?: NonNullable<Parameters<typeof createShermetTimedAudio>[0]>["decode"];
 }>;
 export const PHRASE_CACHE = Object.freeze({ decoded: 12, clips: 48 });
 
@@ -41,6 +44,7 @@ function lru<V>(limit: number) {
 
 /** One per page: a cache of timelines, bytes, decoded verses and cut clips. */
 export function createPhraseAudio(io: PhraseAudioIo) {
+  const shermet = io.preferShermet ? createShermetTimedAudio({ fetch: io.fetch, digest: io.digest, decode: io.decodeShermet }) : null;
   const timed = new Map<string, Promise<Timed>>(), bytes = new Map<string, Promise<Uint8Array<ArrayBuffer>>>();
   const decoded = lru<Promise<ShortDecodedAudio>>(PHRASE_CACHE.decoded), clips = lru<PhraseClip>(PHRASE_CACHE.clips);
   const forget = <V>(map: { delete(key: string): void }, key: string, work: Promise<V>) => { void work.catch(() => map.delete(key)); return work; };
@@ -84,11 +88,19 @@ export function createPhraseAudio(io: PhraseAudioIo) {
   return Object.freeze({
     /** Can this verse be cut by word? Resolves false rather than throwing. */
     async wordReady(ref: string, kind: Melody, signal: AbortSignal): Promise<boolean> {
+      if (shermet) try { const verse = await io.load(ref, kind, signal); if (await shermet.timing(ref, verse.hebrew, signal)) return true; } catch { if (signal.aborted) return false; }
       try { await timing(ref, kind, signal); return true; } catch { return false; }
     },
     async phraseClip(request: PhraseRequest, signal: AbortSignal): Promise<PhraseClip> {
       const { ref, kind, words } = request;
       if (!Number.isSafeInteger(words[0]) || !Number.isSafeInteger(words[1]) || words[0] < 0 || words[1] < words[0]) return unavailable();
+      if (shermet) try {
+        const verse = await io.load(ref, kind, signal), projection = projectStudyVerse(ref, verse.hebrew);
+        if (projection.status === "ready") {
+          const units = projection.projection.tokens.filter(token => token.words.length), first = units[words[0]], last = units[words[1]];
+          if (first && last) { const clip = await shermet.clip(ref, verse.hebrew, first.words[0], last.words.at(-1)!, signal); if (clip) return clip; }
+        }
+      } catch { if (signal.aborted) return unavailable(); }
       const data = await timing(ref, kind, signal), first = data.units[words[0]], last = data.units[words[1]];
       if (!first || !last) return unavailable();
       const a = referenceWordLoop(data.timeline, first[0]), b = referenceWordLoop(data.timeline, last[1]);
@@ -108,7 +120,7 @@ export function createPhraseAudio(io: PhraseAudioIo) {
       const clip = Object.freeze({ blob, frames, sampleRate: data.source.sampleRate, seconds: frames / data.source.sampleRate, key, words: Object.freeze(timedWords) });
       clips.set(key, clip); return clip;
     },
-    clear() { timed.clear(); bytes.clear(); decoded.clear(); clips.clear(); },
+    clear() { timed.clear(); bytes.clear(); decoded.clear(); clips.clear(); shermet?.clear(); },
   });
 }
 export type PhraseAudio = ReturnType<typeof createPhraseAudio>;

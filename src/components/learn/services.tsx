@@ -14,7 +14,7 @@ const Context = createContext<Services | null>(null);
 export function LearnServices({ children }: { children: ReactNode }) {
   const ref = useRef<Services | null>(null);
   if (!ref.current) {
-    const loader = createVerseLoader(), audio = createPhraseAudio({ load: loader.load });
+    const loader = createVerseLoader(), audio = createPhraseAudio({ load: loader.load, preferShermet: true });
     ref.current = Object.freeze({ loader, audio, player: createClipPlayer(audio) });
   }
   const services = ref.current;
@@ -23,7 +23,12 @@ export function LearnServices({ children }: { children: ReactNode }) {
     document.addEventListener("visibilitychange", hide); window.addEventListener("pagehide", leave);
     return () => { document.removeEventListener("visibilitychange", hide); window.removeEventListener("pagehide", leave); services.player.stop(); };
   }, [services]);
-  return <Context.Provider value={services}><WordCardScope>{children}</WordCardScope></Context.Provider>;
+  return <Context.Provider value={services}><WordCardScope>{children}<LearnRecordingCredit /></WordCardScope></Context.Provider>;
+}
+function LearnRecordingCredit() {
+  const state = usePlayerState();
+  if (!state.source || !["playing", "paused"].includes(state.status)) return null;
+  return <p aria-live="polite">{state.source === "shermet" ? <><a href="https://www.templeisraelomaha.com/cantors-classroom" target="_blank" rel="noreferrer">Cantor Wendy Shermet · Temple Israel, Omaha</a> · Binder/Schleifer</> : <><a href="https://archive.org/details/PockettorahAudioFiles" target="_blank" rel="noreferrer">PocketTorah</a> · <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noreferrer">CC BY-SA 3.0</a>. Shermet timing is unavailable for this selection.</>}</p>;
 }
 export function useLearnServices(): Services {
   const value = useContext(Context); if (!value) throw new Error("Learn services missing");

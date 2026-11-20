@@ -51,6 +51,9 @@ afterAll(async () => {
   if (directory) await rm(directory, { recursive: true, force: true });
 }, 120000);
 
+// These three routes expose public human recordings/metadata, with no session
+// or personal data. Keep every other non-public API request forbidden.
+const publicApi = (path: string) => path.startsWith("/api/public/") || ["/api/shermet-audio", "/api/shermet-audio/catalog", "/api/shermet-audio/timing"].includes(path);
 async function visitor(mobile: boolean) {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 }, serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
   const seen = { api: [] as string[], cookie: false, privateApi: false };
@@ -62,7 +65,7 @@ async function visitor(mobile: boolean) {
     const request = route.request(), url = new URL(request.url());
     if ((await request.allHeaders()).cookie) seen.cookie = true;
     if (url.origin !== BROWSER_ORIGIN) return route.abort();
-    if (url.pathname.startsWith("/api/")) { seen.api.push(url.pathname); if (!url.pathname.startsWith("/api/public/")) seen.privateApi = true; }
+    if (url.pathname.startsWith("/api/")) { seen.api.push(url.pathname); if (!publicApi(url.pathname)) seen.privateApi = true; }
     const body = shortBodies.get(url.pathname);
     if (url.pathname.startsWith("/reference-audio/short-v1/")) return body ? route.fulfill({ status: 200, headers: { "content-type": "audio/mpeg", "content-length": String(body.length), "cache-control": "no-store" }, body }) : route.abort();
     return route.continue();
@@ -240,7 +243,7 @@ it("the translate drill, signed out, in Lein only: hides every verse's English a
     await tab.getByRole("region", { name: "Translate drill on Genesis 1:2", exact: true }).getByRole("button", { name: "End drill", exact: true }).click();
     await ui(english).toHaveCount(shown);
     // Nothing was written: no request beyond the public reading's own, no storage, the English choice untouched.
-    expect(seen.api.slice(api).every(path => path.startsWith("/api/public/"))).toBe(true);
+    expect(seen.api.slice(api).every(publicApi)).toBe(true);
     expect(await tab.evaluate(() => JSON.stringify(Object.entries(localStorage).sort()))).toBe(stored);
     expect(await tab.evaluate(() => sessionStorage.length)).toBe(0);
     // Study has no drill, and a visitor has no Yours row or stars.

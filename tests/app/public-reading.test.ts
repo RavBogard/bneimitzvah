@@ -200,7 +200,9 @@ test("generated chant is never served publicly: PocketTorah's catalog is the onl
   for (const file of files) {
     const source = readFileSync(file, "utf8");
     const imports = [...source.matchAll(/(?:import|from)\s*\(?\s*["']([^"']+)["']/g)].map(match => match[1]);
-    expect(imports.filter(name => /trope\/|render|synth|speech2sing|soulx|generat|finkel|recording/i.test(name)), file).toEqual([]);
+    // This metadata-only human-recording discovery hook is deliberately public;
+    // the generated-chant import prohibition still applies to every other import.
+    expect(imports.filter(name => name !== "../workspace/study/use-shermet-recordings" && /trope\/|render|synth|speech2sing|soulx|generat|finkel|recording/i.test(name)), file).toEqual([]);
   }
 });
 
