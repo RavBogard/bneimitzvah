@@ -13749,180 +13749,6 @@
       "status": "available"
     },
     {
-      "id": "sr_2b94e35ec564df8eaa7c0c89d8d72b19",
-      "category": "source-conflict",
-      "title": "Vayakheil (Exodus 35:1-38:20)",
-      "label": "Vayakheil Exodus 35:31",
-      "pageUrl": "https://www.templeisraelomaha.com/vayakheil-exodus",
-      "ref": "Exodus 35:31",
-      "kind": "torah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
-      "id": "sr_31c2512888f4032a48b16b6cc9f6c579",
-      "category": "source-conflict",
-      "title": "Vayakheil (Exodus 35:1-38:20)",
-      "label": "Vayakheil Exodus 36:31",
-      "pageUrl": "https://www.templeisraelomaha.com/vayakheil-exodus",
-      "ref": "Exodus 36:31",
-      "kind": "torah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
-      "id": "sr_9d51502f200400812fd167320fca45f8",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 26",
-      "label": "Deuteronomy 26:16",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-26.html",
-      "ref": "Deuteronomy 26:16",
-      "kind": "torah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
-      "id": "sr_ec7b44c558dfc14153b9f3d01fd1e5a1",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 32",
-      "label": "Deuteronomy 32:16",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-32.html",
-      "ref": "Deuteronomy 32:16",
-      "kind": "torah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
-      "id": "sr_e259340f6460165dfd4e80fc03c395f1",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 32",
-      "label": "Deuteronomy 32:29",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-32.html",
-      "ref": "Deuteronomy 32:29",
-      "kind": "torah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
-      "id": "sr_650910bbfb350e4d49ada082a2d6140f",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 32",
-      "label": "Deuteronomy 32:39",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-32.html",
-      "ref": "Deuteronomy 32:39",
-      "kind": "torah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
-      "id": "sr_015ec04cf843ce4eb6bac1fba3108034",
-      "category": "source-conflict",
-      "title": "Jeremiah 8:13-9:23",
-      "label": "Jeremiah 9:1",
-      "pageUrl": "https://www.templeisraelomaha.com/jeremiah-813-923.html",
-      "ref": "Jeremiah 9:1",
-      "kind": "haftarah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
-      "id": "sr_78b1916bdc2de49659d00225a852363d",
-      "category": "source-conflict",
-      "title": "Jeremiah 8:13-9:23",
-      "label": "Jeremiah 9:2",
-      "pageUrl": "https://www.templeisraelomaha.com/jeremiah-813-923.html",
-      "ref": "Jeremiah 9:2",
-      "kind": "haftarah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
-      "id": "sr_8efaf8fade910da357d742c684e8d9d0",
-      "category": "source-conflict",
-      "title": "Jeremiah 8:13-9:23",
-      "label": "Jeremiah 9:7",
-      "pageUrl": "https://www.templeisraelomaha.com/jeremiah-813-923.html",
-      "ref": "Jeremiah 9:7",
-      "kind": "haftarah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
-      "id": "sr_c1e32830cccba0624fd52a7311ca1fae",
-      "category": "source-conflict",
-      "title": "Jeremiah 8:13-9:23",
-      "label": "Jeremiah 9:8",
-      "pageUrl": "https://www.templeisraelomaha.com/jeremiah-813-923.html",
-      "ref": "Jeremiah 9:8",
-      "kind": "haftarah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
-      "id": "sr_bdab4abc5017983d3a9e6974fb58c23b",
-      "category": "source-conflict",
-      "title": "Leviticus Ch 17",
-      "label": "Leviticus 17:7",
-      "pageUrl": "https://www.templeisraelomaha.com/leviticus-ch-17.html",
-      "ref": "Leviticus 17:7",
-      "kind": "torah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
-      "id": "sr_3c59a3a8243cbc0daefab9a901f04400",
-      "category": "source-conflict",
-      "title": "Leviticus Ch 17",
-      "label": "Leviticus 17:17",
-      "pageUrl": "https://www.templeisraelomaha.com/leviticus-ch-17.html",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
-      "id": "sr_cf7356bd7c48b9fa8fa105c7be5f348a",
-      "category": "source-conflict",
-      "title": "Leviticus Ch 23",
-      "label": "Emor Leviticus 23:7",
-      "pageUrl": "https://www.templeisraelomaha.com/leviticus-ch-23.html",
-      "ref": "Leviticus 23:7",
-      "kind": "torah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
-      "id": "sr_0bd58701a2e6de025fc7815022aabbea",
-      "category": "source-conflict",
-      "title": "Leviticus Ch 24",
-      "label": "Emor Leviticus 24:7",
-      "pageUrl": "https://www.templeisraelomaha.com/leviticus-ch-24.html",
-      "ref": "Leviticus 24:7",
-      "kind": "torah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
-      "id": "sr_ce69f4d91c7498f4fb94ea38a0a54af9",
-      "category": "source-conflict",
-      "title": "Leviticus Ch 27",
-      "label": "Leviticus 27:30",
-      "pageUrl": "https://www.templeisraelomaha.com/leviticus-ch-27.html",
-      "ref": "Leviticus 27:30",
-      "kind": "torah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
-      "id": "sr_37722f14c5e3c6b7b66c2fcee12de3ec",
-      "category": "source-conflict",
-      "title": "Leviticus Ch 27",
-      "label": "Leviticus 27:31",
-      "pageUrl": "https://www.templeisraelomaha.com/leviticus-ch-27.html",
-      "ref": "Leviticus 27:31",
-      "kind": "torah",
-      "recordings": [],
-      "status": "pending"
-    },
-    {
       "id": "sr_303317e40b9e2a2e256f329ef490cc00",
       "category": "source-conflict",
       "title": "Isaiah 42:5-43:10",
@@ -13949,8 +13775,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/isaiah-additions.html",
       "ref": "Isaiah 42:12",
       "kind": "haftarah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 423764,
+          "sha256": "624b0e57c5b1b95556d927e149d81c482b89b7ac14ae8bc91ce379f674798826",
+          "duration": 12.704438,
+          "bytes": 203688,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_d9db5d6b096facc4fb5ceebaba19c9d5",
@@ -13979,8 +13813,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/isaiah-additions.html",
       "ref": "Isaiah 43:10",
       "kind": "haftarah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 423743,
+          "sha256": "211da632a72c1c5a1754d2f217b8fe4fbf00b057b3f5d475d424f114a7dcfe22",
+          "duration": 33.22775,
+          "bytes": 532061,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_e351f0f30958d4ea4f96ce448d5bf4dc",
@@ -14009,8 +13851,16 @@
       "pageUrl": "https://www.templeisraelomaha.com/isaiah-541-101.html",
       "ref": "Isaiah 54:10",
       "kind": "haftarah",
-      "recordings": [],
-      "status": "pending"
+      "recordings": [
+        {
+          "sourceId": 423608,
+          "sha256": "278ddb1684219e461eb11eb29c48042abaf03bc890ecd1ceb30e2fe6f75389d9",
+          "duration": 30.228438,
+          "bytes": 484072,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_58095c145491d43512c461b55ed3ca72",
@@ -14075,6 +13925,8 @@
       "title": "Genesis Ch 23",
       "label": "Genesis 23:20",
       "pageUrl": "https://www.templeisraelomaha.com/genesis-ch-23.html",
+      "ref": "Genesis 24:19",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 433885,
@@ -14092,6 +13944,8 @@
       "title": "Genesis Ch 33",
       "label": "Genesis 33:18",
       "pageUrl": "https://www.templeisraelomaha.com/genesis-ch-33.html",
+      "ref": "Genesis 33:17",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 434542,
@@ -14109,6 +13963,8 @@
       "title": "Genesis Ch 42",
       "label": "Genesis 42:29",
       "pageUrl": "https://www.templeisraelomaha.com/genesis-ch-42.html",
+      "ref": "Genesis 42:28",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 439136,
@@ -14126,6 +13982,8 @@
       "title": "Genesis Ch 47",
       "label": "Genesis 47:8",
       "pageUrl": "https://www.templeisraelomaha.com/genesis-ch-47.html",
+      "ref": "Genesis 45:8",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 439224,
@@ -14143,6 +14001,8 @@
       "title": "B’midbar (Numbers 1:1-4:20)",
       "label": "B’midbar Numbers 3:21",
       "pageUrl": "https://www.templeisraelomaha.com/bmidbar-numbers",
+      "ref": "Numbers 3:20",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 416487,
@@ -14160,6 +14020,8 @@
       "title": "Naso (Numbers 4:21-7:89)",
       "label": "Naso Numbers 7:83",
       "pageUrl": "https://www.templeisraelomaha.com/naso-numbers",
+      "ref": "Numbers 7:82",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 417127,
@@ -14177,6 +14039,8 @@
       "title": "B’haalot’cha (Numbers 8:1-12:16)",
       "label": "B’haalot’cha Exodus 9:4",
       "pageUrl": "https://www.templeisraelomaha.com/bhaalotcha-numbers-81-1216.html",
+      "ref": "Numbers 9:5",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 417308,
@@ -14194,6 +14058,8 @@
       "title": "B’haalot’cha (Numbers 8:1-12:16)",
       "label": "B’haalot’cha Exodus 10:27",
       "pageUrl": "https://www.templeisraelomaha.com/bhaalotcha-numbers-81-1216.html",
+      "ref": "Numbers 10:26",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 417351,
@@ -14211,6 +14077,8 @@
       "title": "Sh’lach L’cha (Numbers 13:1-15:41)",
       "label": "Sh'lach L'cha Numbers 15:36",
       "pageUrl": "https://www.templeisraelomaha.com/shlach-lcha-numbers-131-1541.html",
+      "ref": "Numbers 15:25",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 426642,
@@ -14228,6 +14096,8 @@
       "title": "Korach (Numbers 16:1-18:32)",
       "label": "Korach Numbers 18:31",
       "pageUrl": "https://www.templeisraelomaha.com/korach-numbers-161-1832.html",
+      "ref": "Numbers 18:30",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 426762,
@@ -14245,6 +14115,8 @@
       "title": "Numbers Ch 28",
       "label": "Pinchas Numbers 28:7",
       "pageUrl": "https://www.templeisraelomaha.com/numbers-ch-28.html",
+      "ref": "Numbers 28:8",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 427159,
@@ -14262,6 +14134,8 @@
       "title": "Mas’ei (Numbers 35)",
       "label": "Mas'ei Numbers 35:24",
       "pageUrl": "https://www.templeisraelomaha.com/masei-numbers-35.html",
+      "ref": "Numbers 34:24",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 427410,
@@ -14279,6 +14153,8 @@
       "title": "Isaiah 66:1-13; 23",
       "label": "Isaiah 66:3",
       "pageUrl": "https://www.templeisraelomaha.com/isaiah-661-13-23.html",
+      "ref": "Isaiah 63:3",
+      "kind": "haftarah",
       "recordings": [
         {
           "sourceId": 432767,
@@ -14296,6 +14172,8 @@
       "title": "Bo (Exodus 10:1-13:16)",
       "label": "Bo Exodus 10:6",
       "pageUrl": "https://www.templeisraelomaha.com/bo-exodus",
+      "ref": "Genesis 10:6",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 418296,
@@ -14313,6 +14191,8 @@
       "title": "Bo (Exodus 10:1-13:16)",
       "label": "Bo Exodus 10:22",
       "pageUrl": "https://www.templeisraelomaha.com/bo-exodus",
+      "ref": "Exodus 10:20",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 413332,
@@ -14330,6 +14210,8 @@
       "title": "Isaiah 6:1-7:6; 9:5-6",
       "label": "Isaiah 6:12",
       "pageUrl": "https://www.templeisraelomaha.com/isaiah-61-76-95-6.html",
+      "ref": "Isaiah 6:11",
+      "kind": "haftarah",
       "recordings": [
         {
           "sourceId": 432908,
@@ -14347,6 +14229,8 @@
       "title": "Mishpatim (Exodus 21:1-24:18)",
       "label": "Mishpatim Exodus 23:22",
       "pageUrl": "https://www.templeisraelomaha.com/mishpatim-exodus",
+      "ref": "Exodus 22:22",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 413668,
@@ -14364,6 +14248,8 @@
       "title": "Ki Tisa (Exodus 30:11-34:35)",
       "label": "Ki Tisa Exodus 30:31",
       "pageUrl": "https://www.templeisraelomaha.com/ki-tisa-exodus",
+      "ref": "Exodus 30:30",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 414098,
@@ -14381,6 +14267,8 @@
       "title": "Ki Tisa (Exodus 30:11-34:35)",
       "label": "Ki Tisa Exodus 31:14",
       "pageUrl": "https://www.templeisraelomaha.com/ki-tisa-exodus",
+      "ref": "Exodus 32:14",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 414138,
@@ -14398,6 +14286,8 @@
       "title": "Ki Tisa (Exodus 30:11-34:35)",
       "label": "Ki Tisa Exodus 33:16",
       "pageUrl": "https://www.templeisraelomaha.com/ki-tisa-exodus",
+      "ref": "Exodus 30:16",
+      "kind": "torah",
       "recordings": [
         {
           "sourceId": 414084,
@@ -14410,154 +14300,23 @@
       "status": "available"
     },
     {
-      "id": "sr_05393217591f1a59de39370998ff89a7",
+      "id": "sr_31c2512888f4032a48b16b6cc9f6c579",
       "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:5",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
-    },
-    {
-      "id": "sr_e14bdb2a34713a7487c3b48b68198520",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:6",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
-    },
-    {
-      "id": "sr_d206a1906b69845479f77c86d24ebebc",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:8",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
-    },
-    {
-      "id": "sr_60923cebe11a61697a297e75c4f7d30b",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:9",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
-    },
-    {
-      "id": "sr_d5b7b8ca4cbcdc3b01438b9e4f699b55",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:10",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
-    },
-    {
-      "id": "sr_05f3dcda8f4a4ec78a69e8e56c374bc4",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:11",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
-    },
-    {
-      "id": "sr_452a74f3ae348d374cc0f702277f517a",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:12",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
-    },
-    {
-      "id": "sr_42b3d4c422a0017bfb0cf2a694866358",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:13",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
-    },
-    {
-      "id": "sr_d2596e9cfb02bd436c610363440e34c6",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:14",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
-    },
-    {
-      "id": "sr_4e43fee243e245816ffb5a598ad7d152",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:15",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
-    },
-    {
-      "id": "sr_d0090a78e48b8d60f86737def3ff6e12",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:16",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
-    },
-    {
-      "id": "sr_f30c2f086500fb065fcf5aab713af5ba",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:17",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
-    },
-    {
-      "id": "sr_631776cc2e955d6df33556bff60e190e",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:18",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
-    },
-    {
-      "id": "sr_58f2dee6305401998c7ae97f5f98c6f0",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:19",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
-    },
-    {
-      "id": "sr_cc6938204d0c7e26dc480fd008a91035",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:20",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
+      "title": "Vayakheil (Exodus 35:1-38:20)",
+      "label": "Vayakheil Exodus 36:31",
+      "pageUrl": "https://www.templeisraelomaha.com/vayakheil-exodus",
+      "ref": "Exodus 35:31",
+      "kind": "torah",
+      "recordings": [
+        {
+          "sourceId": 419866,
+          "sha256": "31d47100af4051c0f4c99330afd299ee333d70822824022220fc0f376410abe9",
+          "duration": 17.716688,
+          "bytes": 283884,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_beddc04ab1fd60c87b18ccb4a59bda7f",
@@ -14565,59 +14324,94 @@
       "title": "Deuteronomy Ch 23",
       "label": "Ki Teitzei Exodus 23:21",
       "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
+      "ref": "Deuteronomy 23:22",
+      "kind": "torah",
+      "recordings": [
+        {
+          "sourceId": 420024,
+          "sha256": "d1a8571051a2d82aa9ae102de8e5cc79f40691c6b1d77acfc2f91213c7a3d3e5",
+          "duration": 25.743063,
+          "bytes": 412306,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
-      "id": "sr_0c75140acbeec22fb4ee8d6e925e4952",
+      "id": "sr_ec7b44c558dfc14153b9f3d01fd1e5a1",
       "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:22",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
+      "title": "Deuteronomy Ch 32",
+      "label": "Deuteronomy 32:16",
+      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-32.html",
+      "ref": "Deuteronomy 26:16",
+      "kind": "torah",
+      "recordings": [
+        {
+          "sourceId": 432348,
+          "sha256": "9bde1ba7a7eec3422a2f433f12cd310f6b7b085a0405ed86ed77267a1aeded1b",
+          "duration": 32.538625,
+          "bytes": 521035,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
-      "id": "sr_616ce7e5a7834584654258b718ebe4ef",
+      "id": "sr_650910bbfb350e4d49ada082a2d6140f",
       "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:23",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
+      "title": "Deuteronomy Ch 32",
+      "label": "Deuteronomy 32:39",
+      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-32.html",
+      "ref": "Deuteronomy 32:29",
+      "kind": "torah",
+      "recordings": [
+        {
+          "sourceId": 432584,
+          "sha256": "b514dd9b2767caa5f8753e15f517fac217ddfc8ccfcfebcc4f49913dc7007965",
+          "duration": 11.926688,
+          "bytes": 191244,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
-      "id": "sr_b6b83e530deab36dabfdacae7ab9dcd5",
+      "id": "sr_015ec04cf843ce4eb6bac1fba3108034",
       "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:24",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
+      "title": "Jeremiah 8:13-9:23",
+      "label": "Jeremiah 9:1",
+      "pageUrl": "https://www.templeisraelomaha.com/jeremiah-813-923.html",
+      "ref": "Jeremiah 9:2",
+      "kind": "haftarah",
+      "recordings": [
+        {
+          "sourceId": 440673,
+          "sha256": "1d809eb8dcd289468b9e22dc8bd86e9be6d6b71f0673ed617fd313c029d87aa7",
+          "duration": 32.531125,
+          "bytes": 520915,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
-      "id": "sr_756dd50c2b00429642fc8b71ac54cb66",
+      "id": "sr_c1e32830cccba0624fd52a7311ca1fae",
       "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:25",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
-    },
-    {
-      "id": "sr_cb65de3dfa76ef1fb9d4ae3abc61eb12",
-      "category": "source-conflict",
-      "title": "Deuteronomy Ch 23",
-      "label": "Ki Teitzei Exodus 23:26",
-      "pageUrl": "https://www.templeisraelomaha.com/deuteronomy-ch-23.html",
-      "recordings": [],
-      "status": "pending",
-      "reason": "book-mismatch"
+      "title": "Jeremiah 8:13-9:23",
+      "label": "Jeremiah 9:8",
+      "pageUrl": "https://www.templeisraelomaha.com/jeremiah-813-923.html",
+      "ref": "Jeremiah 9:7",
+      "kind": "haftarah",
+      "recordings": [
+        {
+          "sourceId": 440678,
+          "sha256": "630685f424962541802f685b57c935a472dec3272e36cc74bf111d8a9c1cf05d",
+          "duration": 24.141938,
+          "bytes": 386688,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
     },
     {
       "id": "sr_4d3d9748effcc3be162821ca9bee7723",
@@ -14625,12 +14419,71 @@
       "title": "Isaiah 43:21-44:23",
       "label": "Isaiah 44:3",
       "pageUrl": "https://www.templeisraelomaha.com/isaiah-4321-4423.html",
+      "ref": "Isaiah 43:3",
+      "kind": "haftarah",
       "recordings": [
         {
           "sourceId": 423780,
           "sha256": "6461ea6779cf7c95937adb175774ddc1319aa617159d8cf93105745c35abcda0",
           "duration": 25.03725,
           "bytes": 401013,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_3c59a3a8243cbc0daefab9a901f04400",
+      "category": "source-conflict",
+      "title": "Leviticus Ch 17",
+      "label": "Leviticus 17:17",
+      "pageUrl": "https://www.templeisraelomaha.com/leviticus-ch-17.html",
+      "ref": "Leviticus 17:7",
+      "kind": "torah",
+      "recordings": [
+        {
+          "sourceId": 446199,
+          "sha256": "a5ab15f3a55c4dd85e55891ed315ca9c9fb9fbe9c19297d77bcd9de4400a42bd",
+          "duration": 25.928313,
+          "bytes": 415270,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_0bd58701a2e6de025fc7815022aabbea",
+      "category": "source-conflict",
+      "title": "Leviticus Ch 24",
+      "label": "Emor Leviticus 24:7",
+      "pageUrl": "https://www.templeisraelomaha.com/leviticus-ch-24.html",
+      "ref": "Leviticus 23:7",
+      "kind": "torah",
+      "recordings": [
+        {
+          "sourceId": 438972,
+          "sha256": "7d4050e9affbbd2443704ac439baa7f9fae46f5140e63fbc22cbafaa9f89f6a7",
+          "duration": 14.116875,
+          "bytes": 226287,
+          "mimeType": "audio/mpeg"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "sr_37722f14c5e3c6b7b66c2fcee12de3ec",
+      "category": "source-conflict",
+      "title": "Leviticus Ch 27",
+      "label": "Leviticus 27:31",
+      "pageUrl": "https://www.templeisraelomaha.com/leviticus-ch-27.html",
+      "ref": "Leviticus 27:30",
+      "kind": "torah",
+      "recordings": [
+        {
+          "sourceId": 440510,
+          "sha256": "f872f54d5cdcf65af35f7354d490928f28629e9dce9d68e750315e6915bef7ec",
+          "duration": 19.02,
+          "bytes": 304737,
           "mimeType": "audio/mpeg"
         }
       ],

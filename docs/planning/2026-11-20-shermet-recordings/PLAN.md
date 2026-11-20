@@ -15,3 +15,15 @@ On November 20, 2026, Daniel selected Cantor Wendy Shermet of Temple Israel, Oma
 The public site yielded 247 catalog pages, 8,326 playable rows and 8,154 distinct media URLs. The Chanukah blessings and Jeremiah 31:1–19 listings display titles or verse labels without a player or media link. One special Samuel page requires sign-in. Recordings on other public pages can still match overlapping references. Inventory and acquisition receipts are outside Git in the local shermet-collection media directory.
 
 The first 20 decoded recordings cover Genesis 1:1, 1:27–30 and 22:1–4, Exodus 35:1–6, Numbers 6:26–27 and Micah 7:18–20. Credited full-verse exercises independently identify several of these files. [Genesis opening](https://voices.sefaria.org/sheets/415562) · [Exodus exercises](https://voices.sefaria.org/sheets/386127) · [Micah recordings](https://www.templeisraelomaha.com/micah-718-20.html)
+
+## Verified collection
+
+CRC can play all 8,153 distinct source files that returned decodable audio. The published Numbers 1:1 file is empty. The reader maps 7,434 ordinary verses. The library contains 778 entries for other performances and source labels. Some performances appear in both. The union of published source IDs and SHA-256 digests matches the acquisition receipts.
+
+| Reading | Matched CRC verses | CRC baseline | Coverage |
+|---|---:|---:|---:|
+| Torah | 5,774 | 5,846 | 98.77% |
+| Haftarah | 1,541 | 1,629 | 94.60% |
+| Combined | 7,315 | 7,475 | 97.86% |
+
+The remaining 119 ordinary verse recordings fall outside the weekly and festival baseline and can be used for custom readings. The local coverage report lists every remaining full-verse gap. Source identity checks include original page/row evidence, canonical verse bounds and independent comparisons of the sung Hebrew wherever a file was assigned to different biblical texts.

@@ -1388,9 +1388,9 @@ export const SHERMET_PILOT_RECORDINGS: readonly ShermetRecording[] = [
   {
     "kind": "haftarah",
     "ref": "Isaiah 42:12",
-    "sourceId": 423763,
-    "sha256": "83b959a239de0f3f4e8d1c58883124d872e2c2b69327efe637abfe9273482e3f",
-    "bytes": 187896,
+    "sourceId": 423764,
+    "sha256": "624b0e57c5b1b95556d927e149d81c482b89b7ac14ae8bc91ce379f674798826",
+    "bytes": 203688,
     "mimeType": "audio/mpeg"
   },
   {
@@ -2876,9 +2876,9 @@ export const SHERMET_PILOT_RECORDINGS: readonly ShermetRecording[] = [
   {
     "kind": "haftarah",
     "ref": "Isaiah 54:10",
-    "sourceId": 431438,
-    "sha256": "d95f84b38c72a233a0b943d916ea0a533139f74dc9a8895179fc23c0dc53e9f2",
-    "bytes": 432722,
+    "sourceId": 423608,
+    "sha256": "278ddb1684219e461eb11eb29c48042abaf03bc890ecd1ceb30e2fe6f75389d9",
+    "bytes": 484072,
     "mimeType": "audio/mpeg"
   },
   {
@@ -36579,10 +36579,242 @@ export const SHERMET_PILOT_RECORDINGS: readonly ShermetRecording[] = [
   },
   {
     "kind": "haftarah",
-    "ref": "Isaiah 63:3",
-    "sourceId": 432767,
-    "sha256": "5f49db529a3a564c1b9a52417419ca0f34c6d8d044f696a3828948833ba376bf",
-    "bytes": 568942,
+    "ref": "I Kings 18:10",
+    "sourceId": 433717,
+    "sha256": "26e384ac9be7886148dbc6927e5880fe605f70bebf656cc4eced982e7262c4d8",
+    "bytes": 580336,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:11",
+    "sourceId": 433718,
+    "sha256": "ad70cd2a72d76c469cb68ffb9e1416c7fe2ad6ae8422f1b7c804470fbcdb84a4",
+    "bytes": 227964,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:12",
+    "sourceId": 433722,
+    "sha256": "22fea89c68c81805ce30c145a2b238e7b6a52677bcdaa1a61f3106e48c7a6fd3",
+    "bytes": 692257,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:13",
+    "sourceId": 433720,
+    "sha256": "2de35d3429e020cd2c99403e9c2d72638abae8ab381e5c1fb4a49e987d7be479",
+    "bytes": 677719,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:14",
+    "sourceId": 433721,
+    "sha256": "7891b4825daad34d28acf92abb568fbd01c3226cfcffe977b487d9ca5c517cc7",
+    "bytes": 287421,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:15",
+    "sourceId": 433719,
+    "sha256": "62d4fe9909fdd894c73ee677f34905f5ef185ccbd1c1cf0c1f173a9a5e66c020",
+    "bytes": 315823,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:16",
+    "sourceId": 433723,
+    "sha256": "c511e6c0e20772024a9c816658c9db0f21add951cab1820a72fea9d0f02aa8ef",
+    "bytes": 299847,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:17",
+    "sourceId": 433724,
+    "sha256": "5119624fa1a054e498d90c95557fb4c1ece8282520428e0f8f88fc61b83b2a9c",
+    "bytes": 287232,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:18",
+    "sourceId": 433726,
+    "sha256": "1d240e61036a60ccd04a7c4d76dc976c25b3356b80a05b19ed431cef6f943abe",
+    "bytes": 408889,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:19",
+    "sourceId": 433728,
+    "sha256": "53a2f67c1407ffe8dae592e05a5c3e3e551fd5a5eb4688d8723672f4e7aba2e3",
+    "bytes": 661878,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:20",
+    "sourceId": 433725,
+    "sha256": "bfa48db89d42aed9a98c398af48e8a2efa6b34989d343813fc832ea32f84ac5c",
+    "bytes": 251916,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:21",
+    "sourceId": 433727,
+    "sha256": "696bbd9072b3eb00aac3a78eaca835ab14595549cbf1d8b6cccb2d9e81dde3cd",
+    "bytes": 679245,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:22",
+    "sourceId": 433729,
+    "sha256": "55a501448a7f3b8ecb6d7f486f9a34562f6c829628055ec190d9d7013c4d50de",
+    "bytes": 410962,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:23",
+    "sourceId": 433570,
+    "sha256": "f7878a30eeadde4d041a50aab43bed901b1ca3bb21ff47d773577bad0d0e8e2d",
+    "bytes": 855420,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:24",
+    "sourceId": 433569,
+    "sha256": "ee03488c6ea69a161e7b6d160f7f7ebcb1f6deef502cf86b907b57d13f6cdc85",
+    "bytes": 538907,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:25",
+    "sourceId": 433566,
+    "sha256": "6c72f30b4f98a212a4d81ad11b7e933c28d90e1b338df1a932f2bfeb1a92be8c",
+    "bytes": 599469,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:26",
+    "sourceId": 433568,
+    "sha256": "923b773fe0e69fb633c4adba7e32e41e442a2d10756c2af82ea9e6b811303ef7",
+    "bytes": 648791,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:27",
+    "sourceId": 433567,
+    "sha256": "23d0e1f887bbd8e88cbbc282a07944008ddc6fa67c952b525341fcd5cec16119",
+    "bytes": 634691,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:28",
+    "sourceId": 433565,
+    "sha256": "4810e573e691fe1f181ad4819724113d8c1a3a95604604fc1e064c26e1c1a890",
+    "bytes": 333685,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:29",
+    "sourceId": 433571,
+    "sha256": "17e57919d4df74617b45ec1ef64e3a4682d60f1a811e8158f3db151384c2b8c0",
+    "bytes": 341666,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:30",
+    "sourceId": 433573,
+    "sha256": "9792f11fdcbb58a36572eeb53ac2e1343a1aa1202d1ebbdea116ca8f7f600153",
+    "bytes": 357925,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:31",
+    "sourceId": 433574,
+    "sha256": "669e27f0f1611a04b75e1e96aaff15337c1ad27d204db6d1fe74aebb38dd9269",
+    "bytes": 453661,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:32",
+    "sourceId": 433575,
+    "sha256": "6d936ba92ea1125ea709bc5c770a5853fb8ed0da5621b0e20a7598ba61b92b7b",
+    "bytes": 405925,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:33",
+    "sourceId": 433572,
+    "sha256": "bb022466aeb42698c40ca03062ace88aeca2774c31e78ae4ec7a9f353e267aa3",
+    "bytes": 247180,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:34",
+    "sourceId": 433576,
+    "sha256": "7106a82429a5bfceadb762e909b04a76df943208afb43f20e62dd0585ee1f74c",
+    "bytes": 420259,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:35",
+    "sourceId": 433577,
+    "sha256": "583548ff268792c0df5c0c746fc38b49538debe4c6b7efebbf9697943b1344a7",
+    "bytes": 226264,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:36",
+    "sourceId": 433581,
+    "sha256": "ec164ca156a3c2ced4878266760b893df138713bafa03226d3eb50fbd0ded375",
+    "bytes": 812327,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:37",
+    "sourceId": 433579,
+    "sha256": "9ce22d749ae3e788c4b35da08a9c784374e4a0c4c8bfd492322aa5add5635534",
+    "bytes": 399384,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:38",
+    "sourceId": 433580,
+    "sha256": "227c73be3f21eb6fd5c8a81cdf2b004f39dc0ef678b8fd95441ebf97bdc9d31e",
+    "bytes": 407260,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 18:39",
+    "sourceId": 433578,
+    "sha256": "aba3b17caa59f6454630e5c07a5bca4f7e8d49cf0af07ca5e122355e0f899c8c",
+    "bytes": 354108,
     "mimeType": "audio/mpeg"
   },
   {
@@ -36631,6 +36863,22614 @@ export const SHERMET_PILOT_RECORDINGS: readonly ShermetRecording[] = [
     "sourceId": 419841,
     "sha256": "ff7997cbd31a1092d4629c44ccecc1e96acf7f5d710d76639f22ccdb668715e3",
     "bytes": 176857,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:7",
+    "sourceId": 419842,
+    "sha256": "3d54eee2e259e9e5590aa0e18df967f3bee5dcb5997c111b0329c94a882784a2",
+    "bytes": 200901,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:8",
+    "sourceId": 419844,
+    "sha256": "f7c72b359d1bfe4ea38dd31bb765d0f176309c460fb61926dde629e3885ffc3e",
+    "bytes": 210407,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:9",
+    "sourceId": 419846,
+    "sha256": "7a626b347637c61eb05c8f393415349e63aabb9b80f33e2a57cd5883c9563a66",
+    "bytes": 165810,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:10",
+    "sourceId": 419845,
+    "sha256": "179743cf5c21138f982fb28c74794fd8ba7c335db3f8ded15dd26b92fe1e1b7c",
+    "bytes": 248828,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:11",
+    "sourceId": 419849,
+    "sha256": "a270b9843ffa43b2065e03a9a6be4094d470c80b9fef81c63224c2b92b9f9da3",
+    "bytes": 347887,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:12",
+    "sourceId": 419847,
+    "sha256": "b3a1f4ba3d35937ef9bb98352dfe7597063f60f8d9cab5073d3b6e746637c19d",
+    "bytes": 203714,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:13",
+    "sourceId": 419848,
+    "sha256": "340189903ec61c6f92ada04cf08a04e344ece1b201e1ad97b2b015a1e529badc",
+    "bytes": 199562,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:14",
+    "sourceId": 419850,
+    "sha256": "ed9649e4c1635996af425b0a04f755c9a59c43084b51a155b1c98f6299423dbe",
+    "bytes": 255624,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:15",
+    "sourceId": 419854,
+    "sha256": "bbeedaa98f6d22562ec9dcdc052be0f6b0e9eac19e1c0262ac1fcc2c5894c373",
+    "bytes": 323694,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:16",
+    "sourceId": 419851,
+    "sha256": "3f91153dd22d3ec61ba91a4a031580ebeb432d61d0cacc64b7a51df1be737fc3",
+    "bytes": 345032,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:17",
+    "sourceId": 419852,
+    "sha256": "600b13734f874f9d207ad7bc1c29d04183d52b0eb84224f6d61ec198a6f34866",
+    "bytes": 315808,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:18",
+    "sourceId": 419853,
+    "sha256": "9d4abf58822994008356d1aa2a645f57f8b208fd82ae67b7dc355914f4c3bc8d",
+    "bytes": 199580,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:19",
+    "sourceId": 419855,
+    "sha256": "59ba5febc96d3f1f11c5ebf62736645ed0b6d4070f54fe1236e3d55f81620004",
+    "bytes": 306481,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:20",
+    "sourceId": 639295,
+    "sha256": "a17081b31fa0dfb465f3720811c9f5ad5ad25f022fc7f1121501761f1e962cfe",
+    "bytes": 165648,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:21",
+    "sourceId": 419857,
+    "sha256": "e1cf005be2a612ef02d514a1ff387bfe930bac8e130119ccb9b584e9f97d9d07",
+    "bytes": 655454,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:22",
+    "sourceId": 419858,
+    "sha256": "ab324af253043da0304442fe0a828ccb4555af19b3247954693aecc38e0958bf",
+    "bytes": 695142,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:23",
+    "sourceId": 419860,
+    "sha256": "b4cfef42675e8381f066b6c6ca4391909c2f914c7f17c8e2ce153282a88a69a5",
+    "bytes": 445613,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:24",
+    "sourceId": 419862,
+    "sha256": "2ade0a2a4a27c9c173eaba4a379a5b253b998d0ca701f23548c125e1e7d32ce1",
+    "bytes": 559348,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:25",
+    "sourceId": 419861,
+    "sha256": "f2c96f12ff2bd3c1e4ca7cd73e5a9b2deede86563a28000eb36ae8f6db49ef89",
+    "bytes": 412285,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:26",
+    "sourceId": 419859,
+    "sha256": "c9a879b2df11b02a94b434e14e16bcab9e60d5a84ed581411fc395389dced12d",
+    "bytes": 302940,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:27",
+    "sourceId": 419863,
+    "sha256": "550427223af7ffdbbefde9c1f0e10f74bf750d2d6467d84eb0b4ea4a11b85f2f",
+    "bytes": 226281,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:28",
+    "sourceId": 419864,
+    "sha256": "e2ce1a76dfae5e3c28e688b21673803a28dd636f6d380dafb779305c6d274d48",
+    "bytes": 269676,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:29",
+    "sourceId": 419868,
+    "sha256": "029ca5d77d9d8381cafef5184a96c98395429fe90a8830cf2cfc7f89e90207b7",
+    "bytes": 586762,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:30",
+    "sourceId": 419865,
+    "sha256": "998b13c18fc4e5b947f0f4f4949c8c3ce0b5a5bc4811ae5400ae4ca025785310",
+    "bytes": 389683,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:31",
+    "sourceId": 419866,
+    "sha256": "31d47100af4051c0f4c99330afd299ee333d70822824022220fc0f376410abe9",
+    "bytes": 283884,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:32",
+    "sourceId": 419867,
+    "sha256": "5c8572f3224dd589ddcf72630b673724b4e8ad3d0d571ff5ac86c7793072f4a2",
+    "bytes": 271392,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:33",
+    "sourceId": 419869,
+    "sha256": "a7d291450cc7f7c58e02b5b659a4162ee4a63c950814eedbab89b833e36187b6",
+    "bytes": 253754,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:34",
+    "sourceId": 419870,
+    "sha256": "25fff206a2d98b7a7f40dd1a6a706e1e100c1c4306f7a48339bc96aed7531ce8",
+    "bytes": 293874,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 35:35",
+    "sourceId": 419871,
+    "sha256": "18a00a9da89584a1454857dcd9de20d42ab819cb074e6ddbce2db1fbbfbc0f7f",
+    "bytes": 730830,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:1",
+    "sourceId": 419872,
+    "sha256": "97b23bb45e83bc5209e9d998d094e093420c6359979449f8497ef1c0054f24e4",
+    "bytes": 682731,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:2",
+    "sourceId": 419873,
+    "sha256": "326c718acab0c2b3880900494fdb143d89edb24f404546bba30f43ef66041510",
+    "bytes": 645920,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:3",
+    "sourceId": 419875,
+    "sha256": "018e22ad9803d4714ba3098ef965574323868a43bd39c176ad39584fced28080",
+    "bytes": 711450,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:4",
+    "sourceId": 419874,
+    "sha256": "2c4fd71ff306c4b587a74d1c7cebdd7b6cbc59e89142d0ba9aca730d8cf71e17",
+    "bytes": 391407,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:5",
+    "sourceId": 419876,
+    "sha256": "1efa1221cd79b8dab49e3f80e8d8347cffc5286e212506ba1d086c769f2ed1db",
+    "bytes": 365786,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:6",
+    "sourceId": 419877,
+    "sha256": "2c96cb942199e00e98ead97f6eaf177bbf52729c8a02d109da506e0dc71acec5",
+    "bytes": 485887,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:7",
+    "sourceId": 419878,
+    "sha256": "ea2747c4edde50651051740d384f79a84995c2e2cd5ea3b882815ca791ed4cde",
+    "bytes": 306511,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:8",
+    "sourceId": 419879,
+    "sha256": "5b3d97732a9d4665737e9f065d5e715b3ad327006219a0db574369460879d601",
+    "bytes": 583198,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:9",
+    "sourceId": 419881,
+    "sha256": "3deb09ee8a934a8a5b752b0024db1e07def5c8b133c19c8df3324fbe5a33ebd3",
+    "bytes": 453724,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:10",
+    "sourceId": 419880,
+    "sha256": "4c1a4e97b6e41a43db39d9bac97011b7a4aabc627a5140d687173a469629bb07",
+    "bytes": 317844,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:11",
+    "sourceId": 419882,
+    "sha256": "ebd73b2fbcd308c438a5158f1ae00b9c457c448c4e85bdc2e0cb801cc82d5458",
+    "bytes": 548475,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:12",
+    "sourceId": 419883,
+    "sha256": "147d077935ebbc888ffaf790481c6ec4f0b62c0cead4c3d81b7b268e2389fd9e",
+    "bytes": 592879,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:13",
+    "sourceId": 419884,
+    "sha256": "13d7e3d89ff86579f0dbce4b4c28a74f3089ca42deffa6f1ba4716a4a2c03733",
+    "bytes": 411050,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:14",
+    "sourceId": 419885,
+    "sha256": "6470031ba23114e0d6d50085f5f25a090f100bbd1f1c847ba5a5372ab0560fa2",
+    "bytes": 290258,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:15",
+    "sourceId": 419886,
+    "sha256": "1e787a6f38b2da563854a872d52cd40a448891c11b6a35b322c5f5e84f21b635",
+    "bytes": 452412,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:16",
+    "sourceId": 419887,
+    "sha256": "cc833211249f3bfe03d67c905497d7ebfa74f881aa5a745c93fcd9b8a626f145",
+    "bytes": 239329,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:17",
+    "sourceId": 419888,
+    "sha256": "11bf6be8072a76e40c0d49fe353e9b39946bf78d37e72346a0b63909a8668940",
+    "bytes": 532284,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:18",
+    "sourceId": 419889,
+    "sha256": "a6f3c5b5147dd2b069744e052dd8e7829e353202d8896e8058abf98158e4e1e0",
+    "bytes": 251783,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:19",
+    "sourceId": 419890,
+    "sha256": "1ad8a5c598edca4bc8237e55e23f41475ca66e3215303d6e447a73256c638c13",
+    "bytes": 315781,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:20",
+    "sourceId": 419891,
+    "sha256": "4bb54dd7a7827abc4ac5f491d371f3807acd5e1a85adf2231e79152dc518eb92",
+    "bytes": 195811,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:21",
+    "sourceId": 419894,
+    "sha256": "2f2b33bd856840e24d66329b4d2fd1f6b8288f90a323c67d94c45ff5fb3dd347",
+    "bytes": 299608,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:22",
+    "sourceId": 419893,
+    "sha256": "d302d0199ec3064a1b1efb05b28b2e3e4c77115e0a262239cfdfc3dd84c72cec",
+    "bytes": 370525,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:23",
+    "sourceId": 419892,
+    "sha256": "046bd6839b19e5016ddbdfb1d2d5bd8dc3f5ef5a66419aa96f49915ae3124f9e",
+    "bytes": 267658,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:24",
+    "sourceId": 419896,
+    "sha256": "0e49fe8b6a31d7a8968485c007e35b27457fae3777a2291b9ae7a236620134c5",
+    "bytes": 625068,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:25",
+    "sourceId": 419895,
+    "sha256": "dcc1348386f382c02e9218ba2962da3df2704fd3c6e2882fa120fd67306e460a",
+    "bytes": 258366,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:26",
+    "sourceId": 419897,
+    "sha256": "4e6f9aa2a0e8cab405151f615098e6dbadc2fc10bff6d1d17a91f3ad54db8647",
+    "bytes": 408947,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:27",
+    "sourceId": 419898,
+    "sha256": "17599b4a6ef276e239f46209e63b90a6d96a29a5ecef892b0434678f5627c3ae",
+    "bytes": 195759,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:28",
+    "sourceId": 419899,
+    "sha256": "5afc5378b238b4dcf0f1670ea80980a0bb2594839c2b3d0ee61bb78ebd4b0722",
+    "bytes": 216607,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:29",
+    "sourceId": 419900,
+    "sha256": "29f3dbd0278b431c46bf1489695ef21402430f064d5b3a817687e593bbf675c2",
+    "bytes": 503462,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:30",
+    "sourceId": 419901,
+    "sha256": "efa4f59497213f22d7954548ba9e95d513280334209bcd2431822c8cb752343a",
+    "bytes": 439487,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:32",
+    "sourceId": 419903,
+    "sha256": "e3888eb98f507de87a537ad48b676ede39722c2592ea21437bd79b2de34460b9",
+    "bytes": 391496,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:33",
+    "sourceId": 419904,
+    "sha256": "26b9dd6d62e0c91c4ffa92cff240c582fb972b9b4bb4706b37ef9706270ca54e",
+    "bytes": 297930,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:34",
+    "sourceId": 419905,
+    "sha256": "cd1571196f65156e4b7825aedeccc70486326f4b9b8ac22fd964b0ab20aeb2d7",
+    "bytes": 368875,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:35",
+    "sourceId": 419906,
+    "sha256": "d25bd8b8c1793f571f5b5b2b719c8f0935ae45b860ab860013771c9d375e06b0",
+    "bytes": 444443,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:36",
+    "sourceId": 419908,
+    "sha256": "d3059a6a715e637b3c3664786f871c85a8029146f9324c135b8a54b5f4f1b620",
+    "bytes": 431251,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:37",
+    "sourceId": 419907,
+    "sha256": "9645f95e37665160c10eafab1609cc12dc2074f94201c2d139ca5f53065a0237",
+    "bytes": 363866,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 36:38",
+    "sourceId": 419909,
+    "sha256": "8a9cf026332f2d98ae100b8aa8e19550ed6a8cb5760769e582b663580bb34b71",
+    "bytes": 397607,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:1",
+    "sourceId": 419910,
+    "sha256": "669c9217768e4a43b9fdea297018f2f77ded8ffe3142bfd30f5245cf296dd4e3",
+    "bytes": 458718,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:2",
+    "sourceId": 419911,
+    "sha256": "94ed733902a20be1be4c36e48d3f42ae19acbb6e15933c31141ce867048b3bf1",
+    "bytes": 296857,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:3",
+    "sourceId": 419914,
+    "sha256": "62d7fe6398d1129849dd842d2c6b264fdaa6ef0e6aeb16a9dc87b5c25c80ff49",
+    "bytes": 495495,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:4",
+    "sourceId": 419912,
+    "sha256": "170ae1b52b1e1a678b3a162575eeca58bc4734cb619d020b7de0229f0996b841",
+    "bytes": 184934,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:5",
+    "sourceId": 419913,
+    "sha256": "275639ccb55b7450994458dfbeabc200f075a9e35d92de6a118a50d41f118549",
+    "bytes": 288805,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:6",
+    "sourceId": 419915,
+    "sha256": "1bcbd6246d5e148dd516fdb1d7795fb96fb0a5563d36a177cf10d52374ca2440",
+    "bytes": 290282,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:7",
+    "sourceId": 419916,
+    "sha256": "5b4febb10eadead413483be309df34f081e41577a9ea7c1ad77f7897b01392ed",
+    "bytes": 298230,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:8",
+    "sourceId": 419917,
+    "sha256": "bd2da77d4987bb8efaad932fc893edfeae193bba5556cc75a1ff276d525e1ef5",
+    "bytes": 371728,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:9",
+    "sourceId": 419918,
+    "sha256": "b65bd82aff58e6344b256d1bb4b93a2227552757520916a5a93aa2e90819a814",
+    "bytes": 514574,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:10",
+    "sourceId": 419919,
+    "sha256": "6469846c2803d2d455213168f745503498b1cb9d653f5d9492412bd3c8d6dab1",
+    "bytes": 306537,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:11",
+    "sourceId": 419921,
+    "sha256": "35b888ca760bff5cf8d07c13160732d0d9bda3a478f5d71ca978536f88d75cc0",
+    "bytes": 238034,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:12",
+    "sourceId": 419920,
+    "sha256": "f476289bcfd57c7c9655da917cf17bff56b8a85a79d11ef393bb9596ab4f9dec",
+    "bytes": 317795,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:13",
+    "sourceId": 419922,
+    "sha256": "69e2dbffcc42dcf96f50ed39809c2e0469a46e5d0e00636075b75b1193bf4f28",
+    "bytes": 375548,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:14",
+    "sourceId": 419923,
+    "sha256": "3684086ef3105d15db5bbf1daaf6997058b0f3be90f0e03aa06c6ff523dce64a",
+    "bytes": 271315,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:15",
+    "sourceId": 419924,
+    "sha256": "b221cc52f9be7ff443aedfd484161f43f43bae03925938e75246186967f5e2fb",
+    "bytes": 264635,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:16",
+    "sourceId": 419925,
+    "sha256": "b3da276a548356f5225581d506a0a4ab34a15e6b48575566f49e04887d15bc38",
+    "bytes": 556386,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:17",
+    "sourceId": 419926,
+    "sha256": "50c56a424a8043fe57139e96dec4bae6d056a8dfef9a46635fdfca5d262ce9c3",
+    "bytes": 493738,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:18",
+    "sourceId": 419927,
+    "sha256": "322bff66e443b0475a859d89807348771580a5f56081d56ded04d39d2fdaf772",
+    "bytes": 496633,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:19",
+    "sourceId": 419928,
+    "sha256": "49bfd81f592fbdea92839a50361b6aa8c8b7543ef0688e7da2c88232f46cf93a",
+    "bytes": 695176,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:20",
+    "sourceId": 419929,
+    "sha256": "a3441464ab50e0168f498ba89597bd85ff2c8d6d155f45f9e999f01744feb115",
+    "bytes": 234156,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:21",
+    "sourceId": 419931,
+    "sha256": "14a3a0c7d4b2cd538301cf7999f95b1370a65494b4d0badd6e98a437c39d507e",
+    "bytes": 661835,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:22",
+    "sourceId": 419930,
+    "sha256": "d5dda8b158ed90b4ebc43c4ee78f0b321d3fd60a1c4ab36c964e4367228cb0b2",
+    "bytes": 261746,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:23",
+    "sourceId": 419932,
+    "sha256": "2b2f21e812db153fa1906b630c52ecfd89dcd7ef32a745d7a82430f3e9b1ce74",
+    "bytes": 258527,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:24",
+    "sourceId": 419933,
+    "sha256": "8a57d0dae0c5a5a68781268a3752dee65b31d4a33a45f35089f888a97e50ca04",
+    "bytes": 226281,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:25",
+    "sourceId": 419934,
+    "sha256": "6d26c2b874b65e08710b44f63348b03bf63ec318c813cbb807b39d8f03125b7e",
+    "bytes": 493856,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:26",
+    "sourceId": 419935,
+    "sha256": "81fb4bc1a6a72ad45efff42b6aec4a6d04d0756ff96d7ba89705d1d02cd6ed6b",
+    "bytes": 418908,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:27",
+    "sourceId": 419938,
+    "sha256": "1904044d16fec8f1b5ec806c9958947fc05963a90978e225e9c22ebaef59577d",
+    "bytes": 540132,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:28",
+    "sourceId": 419936,
+    "sha256": "64e9ef7512e9b0f221f158d6843667607c3bfc9173c7aa8326ab93259b4e7374",
+    "bytes": 197907,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 37:29",
+    "sourceId": 419937,
+    "sha256": "0c97493b1e0fd060708175b9f8c1314eed52f05dd9d410e4f9d08639d239a81c",
+    "bytes": 295206,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:1",
+    "sourceId": 419939,
+    "sha256": "6686dbd7e637f9203f60783c31170f6c3f49becdde54a09210bd159b094d98c2",
+    "bytes": 429767,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:2",
+    "sourceId": 419940,
+    "sha256": "a49bd0f17f458946864a32d34f957a8be308c5ccaf4bdfc801b0542d7562fbc4",
+    "bytes": 322416,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:3",
+    "sourceId": 419941,
+    "sha256": "5698ed5b949fd9bfccca684e70fadc6d57faa425de1b539ac352b91fdc3b835e",
+    "bytes": 440690,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:4",
+    "sourceId": 419942,
+    "sha256": "7f73c86e4ad23e39dd0d7d5022db3983deb984a2b4716c4e287443878509afdd",
+    "bytes": 368826,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:5",
+    "sourceId": 419944,
+    "sha256": "e1efd3496c2ea9bbd8182b358aaf4c134155b75aa0cb63f9c95d86ad1bd8d5cd",
+    "bytes": 325752,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:6",
+    "sourceId": 419943,
+    "sha256": "fd75ca932d52e51be307103f453494857304796b698a46f6538de3d8a4af4c96",
+    "bytes": 197866,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:7",
+    "sourceId": 419945,
+    "sha256": "dc4200b6112b40ab8f077eec6ec8deb083b0476119e53ab162b1c5d13089aa77",
+    "bytes": 367192,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:8",
+    "sourceId": 419946,
+    "sha256": "be7e68425151501e3f4b395e27bc6eb780ba4c35fd3b6a842a43e3589bea982b",
+    "bytes": 412246,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:9",
+    "sourceId": 419947,
+    "sha256": "9d7987324d5876398bd87e1c27a0a68764ba7ae646744b734caad51f45703ed3",
+    "bytes": 388394,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:10",
+    "sourceId": 419948,
+    "sha256": "2740fc1278380bcd21d58d28318ac20a21030551680a52b74a4cd81a621f52d6",
+    "bytes": 317921,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:11",
+    "sourceId": 419830,
+    "sha256": "1dad0dcbeca3804979e9f0e60bc899303615f1c236f6ee0a416193b0872f353e",
+    "bytes": 436408,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:12",
+    "sourceId": 419832,
+    "sha256": "0d495798b1a0706de5a5f2155c483e96de4d43a634da963ac105f6756b303510",
+    "bytes": 472830,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:13",
+    "sourceId": 419828,
+    "sha256": "be6481a7d3b9f55dbe0d19afe06e2da4534bb014080ba0390e343464c849b04c",
+    "bytes": 176991,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:14",
+    "sourceId": 419829,
+    "sha256": "0f11e45ff79291c05812b9e57b2012995d528fe40f87796cd441038838484029",
+    "bytes": 296987,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:15",
+    "sourceId": 419831,
+    "sha256": "04e81ccd21c11de3c3de2f2d94e47cbfb3f55d4f3ac2f80999237f5aaa5885c0",
+    "bytes": 448796,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:16",
+    "sourceId": 419827,
+    "sha256": "c75dec9d670541b2f0c87b9c2693296ec4c7aff0ff9582db3860740d1b213b6f",
+    "bytes": 175359,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:17",
+    "sourceId": 419837,
+    "sha256": "509487e301c61319ef4cbf377b06785a94eda8c25072dc676f63a36e7ee351fa",
+    "bytes": 532150,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:18",
+    "sourceId": 419833,
+    "sha256": "169182734b068fb7b8fc1d1a58a1d8ae275e50e413e4e9cdb7614c8de6df31ff",
+    "bytes": 600780,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:19",
+    "sourceId": 419836,
+    "sha256": "cd9777c4c87de2c7e588ae1e09df06a1a03b24c6a1b03a2ccdb9ec2923e4e0e4",
+    "bytes": 415198,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:20",
+    "sourceId": 419835,
+    "sha256": "ed175b39b0b5f05e940fc059dc739bc1216a861c4af62f471fc496be61f6e702",
+    "bytes": 245906,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 7:40",
+    "sourceId": 433660,
+    "sha256": "f9997a4e34b9078e8dd1c5bced0b37d32a9354d227b2e5788370351be3ba4306",
+    "bytes": 463200,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 7:41",
+    "sourceId": 433661,
+    "sha256": "edb21c2ac8dd7dbc3c399e89879e7840cc735981984a412c4c25b6a131d27117",
+    "bytes": 524381,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 7:42",
+    "sourceId": 433662,
+    "sha256": "c161435e59d4f49d847a9f38e126efe6866bbd160d5a75a4ab9db75f5302b737",
+    "bytes": 482805,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 7:43",
+    "sourceId": 433663,
+    "sha256": "87341979e56ac703f369c7e3c8f100839556df9627899fa0e8d241d7c2620a9e",
+    "bytes": 199638,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 7:44",
+    "sourceId": 433664,
+    "sha256": "db18e8fb4436edb570e691a4fc7d1a7ca1a91037bb91293b601f040f88914b6e",
+    "bytes": 186175,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 7:45",
+    "sourceId": 433666,
+    "sha256": "887953201d57f9df69a183bb94a1fdc3ef881c66c30ca946d4e08d5020970db6",
+    "bytes": 498797,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 7:46",
+    "sourceId": 433665,
+    "sha256": "c7cb4293725ed3a21d28e1db74599d318dee69ec8d31257cfd010f18e869a491",
+    "bytes": 306583,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 7:47",
+    "sourceId": 433667,
+    "sha256": "8b3192b5369f63dee18fde409e514cf1d4f8dfffd14f6d8fe2aa602e3d7cdd9d",
+    "bytes": 267646,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 7:48",
+    "sourceId": 433668,
+    "sha256": "23ee09b37f7d204fc97314e6ed57c15d1416f514141452c7b45f82beeb6e4bb2",
+    "bytes": 450661,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 7:49",
+    "sourceId": 433669,
+    "sha256": "e44bad87443f4039735a11bcb42a01fd4353b11c1ba71e3b56ae486fd6bc7bc0",
+    "bytes": 503431,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 7:50",
+    "sourceId": 433670,
+    "sha256": "c8ce2d737794c242d67b9e8d0792581f8a66f54c61a2a929517573d40fa8fa2b",
+    "bytes": 792976,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:21",
+    "sourceId": 419742,
+    "sha256": "22b9ed6a84c79affd8b022c0a2562aa113cfe029af30031925d917d39894fd25",
+    "bytes": 381795,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:22",
+    "sourceId": 419743,
+    "sha256": "83ceec50cd22fb740e123a884df73804333bc000e239a7c89f9a287b01728fcc",
+    "bytes": 333677,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:23",
+    "sourceId": 419744,
+    "sha256": "56a2ae536264598ff06323dc08c4955c6472fd49096c73d1bd6674dc62897e11",
+    "bytes": 485841,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:24",
+    "sourceId": 419747,
+    "sha256": "30ffed56497882b7a22f1922dba80607a5f6ebd4d66de47331ff0bebc6d58480",
+    "bytes": 538810,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:25",
+    "sourceId": 419746,
+    "sha256": "c840accb24d3b3287700b030e5cbeaee25aa59a3c2d7adf7950c2e9e52f48385",
+    "bytes": 394764,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:26",
+    "sourceId": 419748,
+    "sha256": "4bb91e19d54e0bc70439303c2919ded3ca3fd5d2f5a92125d86b5773f767068f",
+    "bytes": 579061,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:27",
+    "sourceId": 419751,
+    "sha256": "c7f5d978dca961e6f20f470bc705964c49d47509c902e3ba6633ec68f9c77372",
+    "bytes": 506728,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:28",
+    "sourceId": 419750,
+    "sha256": "09a0acc5a31e5370b6be67bd4d160a24a37b303160bc00d5787b9dcb494b1b05",
+    "bytes": 357982,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:29",
+    "sourceId": 419749,
+    "sha256": "26089d77fd5df1f073bfb61a19e0fe85ead9f0ea5f668c74492c935d53d9680b",
+    "bytes": 210404,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:30",
+    "sourceId": 419752,
+    "sha256": "6ec4b4e80ec94fc07f98d000ff952ce1abcf090d1b1e22fa91259b528ebc01b6",
+    "bytes": 421959,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 38:31",
+    "sourceId": 419753,
+    "sha256": "fe2d5adff27055fb60ddd9eba9e8e018107b50d26baed822e4386f4c5be03b3d",
+    "bytes": 381772,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:1",
+    "sourceId": 419754,
+    "sha256": "dab7651d18d5e8053431e871c45fd5f8048f820417a18f03a69988e87e5bff57",
+    "bytes": 527284,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:2",
+    "sourceId": 419755,
+    "sha256": "08687407827ee32a7ebefad7abbed8fbba36230c1809617d46b87fa7857ef7e9",
+    "bytes": 267708,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:3",
+    "sourceId": 419757,
+    "sha256": "c34ac62f75bd0676b8738a492ce5fa6b5bd55901aadcb6d5dc4cecbf89e4b9ab",
+    "bytes": 543539,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:4",
+    "sourceId": 419756,
+    "sha256": "1b605eba699cb1da6a6cd8be9437d966733f3cfd0610bd1d816f9ab707845bb0",
+    "bytes": 189812,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:5",
+    "sourceId": 419759,
+    "sha256": "cc9daacafbcd77b0a26b363a5eb482fa6acd5a86f98c5d787895fd0042f851da",
+    "bytes": 564460,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:6",
+    "sourceId": 419758,
+    "sha256": "cf983ed4883a093bdf2517b53f4d86d6f03bc1e2b422f22134e02712d363ebb5",
+    "bytes": 349968,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:7",
+    "sourceId": 419760,
+    "sha256": "ae42751ea700f7e581d56c1b7b3119de4a1dfb218249427ae26fec86df750eb0",
+    "bytes": 339718,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:8",
+    "sourceId": 419765,
+    "sha256": "871e3db45feab015c4de4597e023643d7626cb33c1e884a2ee0a3f9e61e8b9c3",
+    "bytes": 394607,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:9",
+    "sourceId": 419763,
+    "sha256": "4dc8c362c34575bbd112ba43a3c2804bfb21f81bb618f659a2504acaca79ba26",
+    "bytes": 301908,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:10",
+    "sourceId": 419761,
+    "sha256": "2c610558d592e859a5e3ac1614ca64ce41257d7d29d5a82d9b368b1e81ef0187",
+    "bytes": 309942,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:11",
+    "sourceId": 419762,
+    "sha256": "3bc46ce3a72de252774a06001407fa8e5b06bde3e3aee494590afebe04ef5dc0",
+    "bytes": 163943,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:12",
+    "sourceId": 419764,
+    "sha256": "b1cc7f86cb55295a11e8ad90d76539e605f75fb0926cf79bc28f394989a938d2",
+    "bytes": 164019,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:13",
+    "sourceId": 419766,
+    "sha256": "f93a5151c2aa29d6eae9467b4acfc44c50efea28cc9a7809944e9ab9603e7011",
+    "bytes": 312716,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:14",
+    "sourceId": 419769,
+    "sha256": "28bceef4a85bb32651f7ce74fa1d1c33acea45d366e35b0ab8f9fa8c34fbe404",
+    "bytes": 440748,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:15",
+    "sourceId": 419767,
+    "sha256": "13d6ed5bb29c6749aa5fc7ffc36514b5a5e0bd7f829fac9d4943c9593637f097",
+    "bytes": 261787,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:16",
+    "sourceId": 419768,
+    "sha256": "655f54373e2616de91677fdd685571ad7052cf7cb456dceb954c595c9ed27319",
+    "bytes": 386799,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:17",
+    "sourceId": 419770,
+    "sha256": "80611877fbb9c84e9051b18a6d8ea804f4eadf0157109cbefd4b1518cd490336",
+    "bytes": 253873,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:18",
+    "sourceId": 419771,
+    "sha256": "1afc9891794675c1b1e97f24dcf6ef6e55d5b35f549564c7cadefaba84676034",
+    "bytes": 386694,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:19",
+    "sourceId": 419772,
+    "sha256": "9ff675f6cec540ea7166ef6968b2f3416fcaaf9764a8105abf69815d53b78279",
+    "bytes": 444516,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:20",
+    "sourceId": 419775,
+    "sha256": "489fae4f34a4136b5db3fc16520280a7bc8cac48e277816d776ff293259b0fd0",
+    "bytes": 559267,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:21",
+    "sourceId": 419776,
+    "sha256": "34bbcaad220e69da550e6ca444568800c3acea80c48514f33741a983280cea63",
+    "bytes": 620396,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:22",
+    "sourceId": 419773,
+    "sha256": "2b3a3a13b04ca21a5e13af9d422ac94863da93d902ca672e167fa6466c23276c",
+    "bytes": 199464,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:23",
+    "sourceId": 419774,
+    "sha256": "d00ce60a204cf0b72cc91bca1e18f5d28c29407130c540caba891786cf249695",
+    "bytes": 274358,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:24",
+    "sourceId": 419777,
+    "sha256": "aa7ea7ae4d6a07964f3266c8b39f7858882ae7f16af41d2be56d98f19efa83b9",
+    "bytes": 285424,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:25",
+    "sourceId": 419778,
+    "sha256": "221e185529947c03ac95dd64e6473af10582d60a48ad32893d3f500217cc1ac2",
+    "bytes": 423131,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:26",
+    "sourceId": 419779,
+    "sha256": "22b8b4696c8957c284cace15d1d54b856fe91ee13212e990e898d39ec679ca18",
+    "bytes": 363822,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:27",
+    "sourceId": 419780,
+    "sha256": "f042eb108c80909ede6ad1806f587569d765c458e961b8ab352e3f90fba307de",
+    "bytes": 235826,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:28",
+    "sourceId": 419781,
+    "sha256": "00667737a482cd77cc0e16ed6e150877a2c8b7f10e822fc4bf724b555bc87424",
+    "bytes": 297923,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:29",
+    "sourceId": 419782,
+    "sha256": "758563ac37b3dd0fa92b253013a1bea58c0ac8cfd7ba5bac52359171aee74e70",
+    "bytes": 402490,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:30",
+    "sourceId": 419783,
+    "sha256": "88bbe648f2bbec416032e8fb254db9735d29848c5a67da055caee2a3bbb5ff3a",
+    "bytes": 381811,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:31",
+    "sourceId": 419784,
+    "sha256": "8977ddd20cd9400c93eabf0e86a71bb25cb58d78411a200f9b0ab4c7b361e4dc",
+    "bytes": 333727,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:32",
+    "sourceId": 419785,
+    "sha256": "e518ef3d59db5e533c5e2574f3c5cabcbfb74e6b96dbce72eef4142a1d1809d3",
+    "bytes": 500398,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:33",
+    "sourceId": 419786,
+    "sha256": "5d45e71d95ed071fd23dd4e368d626b066beb62f959886e1adcb0fcc01cbb73c",
+    "bytes": 351283,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:34",
+    "sourceId": 419787,
+    "sha256": "5fccbe4484d967f9208a9a0aad17d293b68e2436efe0ddd37ddd9d3bf6f63569",
+    "bytes": 336975,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:35",
+    "sourceId": 419788,
+    "sha256": "e74f31317bce1b4bfa713b4f35484e53462e517d71cadff5b85cdb3fe3e09a9e",
+    "bytes": 170329,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:36",
+    "sourceId": 419789,
+    "sha256": "f79032a96f27884d1515c171db748ba39495b1e9e54dea7172c062a56ef656cc",
+    "bytes": 162403,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:37",
+    "sourceId": 419790,
+    "sha256": "3cff82f9dd10c9b2644f13c3944cedf045152b93fd96682c8d1dee3a68a3a121",
+    "bytes": 330387,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:38",
+    "sourceId": 419793,
+    "sha256": "d0323661704a818b2ec4042200377aa76014ad1e324d602c5bc79ea169a483ca",
+    "bytes": 363813,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:39",
+    "sourceId": 419791,
+    "sha256": "e0648f8f9bf815085ea0d2a44495e769f1722c95f84c4179d64a0976f6a746dd",
+    "bytes": 350054,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:40",
+    "sourceId": 419792,
+    "sha256": "acde14a86699352682cb4d446bb062aa5d4b816e7ef7d2c1aa06fa503880a860",
+    "bytes": 560698,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:41",
+    "sourceId": 419794,
+    "sha256": "51f95097de3d4fa65ca03809e883b75bbe2a45314bf0369673f757ab02382cf4",
+    "bytes": 323413,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:42",
+    "sourceId": 419795,
+    "sha256": "bc0232b637a4607af7133b08c8d01d8ef624a16d8388d7e6920ce6c481ccb6fb",
+    "bytes": 290300,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 39:43",
+    "sourceId": 419796,
+    "sha256": "6ef90e8d83c2f240f6068db5dd0dc16ea5cb43198f140bc7696d08123f0a8ce9",
+    "bytes": 397641,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:1",
+    "sourceId": 419797,
+    "sha256": "03cdc75e75d0162228790f5d362b36d6d4d910e362aa0fe9aaea6b3c3c4084c3",
+    "bytes": 93862,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:2",
+    "sourceId": 419798,
+    "sha256": "e9190f3cceeb3de35b5a4686f579babdb9de7f46b1fe970b4a502670a794189b",
+    "bytes": 235948,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:3",
+    "sourceId": 419799,
+    "sha256": "c5d7652ef40fc8be865fbbeb9f4d59eaa12c2fe639f31be27199fb7aca23b627",
+    "bytes": 256691,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:4",
+    "sourceId": 419801,
+    "sha256": "49b6aa3de7fe6283e4854b47857fd434503b3d741ebfad5a13b21dd6d365034e",
+    "bytes": 306601,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:5",
+    "sourceId": 419800,
+    "sha256": "0ada9a3f20af4f308653b0a56de71e8713dec3eb00fa27ef8f052d42789c9733",
+    "bytes": 347971,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:6",
+    "sourceId": 419802,
+    "sha256": "f63598a954adc1e6e9ab6de335d295524d4cf1dc3d5d1d92d07209a077369cf6",
+    "bytes": 261960,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:7",
+    "sourceId": 419803,
+    "sha256": "1c727f6c30416582c31c8658eb8edd6a3e9d447333afb7026dac4940f34f1a91",
+    "bytes": 261886,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:8",
+    "sourceId": 419804,
+    "sha256": "6e7e42b8d0154b6a01d1568811ba02013c148b7b89d7d2c742f9e0613db5a0dc",
+    "bytes": 239268,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:9",
+    "sourceId": 419806,
+    "sha256": "f306648ba1ecf8086f6973cbf8afa6e1ef8b8c9164afb3ca0a4aecdc73066eed",
+    "bytes": 373933,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:10",
+    "sourceId": 419807,
+    "sha256": "a66286ec22c1705d34ab1182ca064b8d8cb73d4a67d49b92dc490e293d8cb6cf",
+    "bytes": 328732,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:11",
+    "sourceId": 419805,
+    "sha256": "21537aadaf4088568946f4ce9adb0bf5c0b17175008e795ae0c920eb30ea2010",
+    "bytes": 174038,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:12",
+    "sourceId": 419809,
+    "sha256": "0a29edf0d05efbab9bb70b67c9d119d3ee87265568098abb7952530fff194cc4",
+    "bytes": 274270,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:13",
+    "sourceId": 419808,
+    "sha256": "66a508571cd6f2ce9e68e5e24a80100bc9bac4acd7fe7dcebdec2129fb8f20c1",
+    "bytes": 306630,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:14",
+    "sourceId": 419810,
+    "sha256": "198eb032440eb890ed21991f344242d12c78c3cae78ef5e5a144a2980259c4d8",
+    "bytes": 168772,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:15",
+    "sourceId": 419812,
+    "sha256": "9437d5080e2c51b74e767f7ed6fd24d811fb16cf295f426acecb884fe8098c14",
+    "bytes": 517804,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:16",
+    "sourceId": 419811,
+    "sha256": "d6e4fadb3b7bd4913bf97c3ee0929f7f4e45d3c7dc5f32295f97f7a30829ef07",
+    "bytes": 287216,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:17",
+    "sourceId": 419813,
+    "sha256": "2572ed680bc5a5c3a4e7414df57f09997a4facc2a60e1c35d9edc918e04bcff0",
+    "bytes": 291910,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:18",
+    "sourceId": 419814,
+    "sha256": "273639d7a77a029e7ef3ccc8367d11481a00787d9e7afbfc9d4ed01273c09431",
+    "bytes": 391316,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:19",
+    "sourceId": 419815,
+    "sha256": "48bf5da69238f428965446e90e8bcd7129318a33d9ed69955509bb5a367f33fa",
+    "bytes": 432953,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:20",
+    "sourceId": 419816,
+    "sha256": "a1395f27766c379ceed43349a6ec70af5bbfa260796d1f4c0d12d5777a93e76e",
+    "bytes": 431724,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:21",
+    "sourceId": 419818,
+    "sha256": "1e5bf8e5dc152dbb09e42400b10e4e8ba82d1bd81cbca1c845592abcf110d78b",
+    "bytes": 471191,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:22",
+    "sourceId": 419817,
+    "sha256": "04bace877db9bc7d413d08c0c1efd2c8e4178d824be7654d906a019d0ea6a4f8",
+    "bytes": 297062,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:23",
+    "sourceId": 419819,
+    "sha256": "ab794d2e40f243bf14d746ca91b910f31f76ef5bfe445afbd0365430225311ad",
+    "bytes": 285682,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:24",
+    "sourceId": 419820,
+    "sha256": "674f6c6549b545e0d7e1fb20ae7e57eefa98a344bb67df7bfa9304ae1cf7dec2",
+    "bytes": 289085,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:25",
+    "sourceId": 419821,
+    "sha256": "bc3c4eda2b3bd46d79be2e95ffec6b98d2db1461f002ea576a4c35fc0e9b4035",
+    "bytes": 210534,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:26",
+    "sourceId": 419822,
+    "sha256": "483644c0bf9a2cce439c0cbc26c9ac0ab2a1587b50c8a173d006bd09181abcff",
+    "bytes": 211585,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:27",
+    "sourceId": 419823,
+    "sha256": "aa74961b3d6aa854da97fc3f37150c99407401375515649eb84db06bbc60a3a0",
+    "bytes": 218231,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:28",
+    "sourceId": 419824,
+    "sha256": "4877b7f89ae2b2b1dcd0b9e3ba30b91be16a4572e640e00a981640ad1118906e",
+    "bytes": 138517,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:29",
+    "sourceId": 419738,
+    "sha256": "be270c907e991ca5b370f97d8089add8abf2cfd801910f32e1c0179dd2c3a1d6",
+    "bytes": 410902,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:30",
+    "sourceId": 419735,
+    "sha256": "0b7de8844b85b3f74d18c6dce6a8614486e86f72f0029486dbef88eee2aa8271",
+    "bytes": 295231,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:31",
+    "sourceId": 419734,
+    "sha256": "47339fd60e6c371a84a58e7a56d08e69c5fe87dc12501578ed9b1641a27a586b",
+    "bytes": 238991,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:32",
+    "sourceId": 419736,
+    "sha256": "58c9517292de5c4ebfd2a0692c45f08364d1943ec185b4561b8021a266bce535",
+    "bytes": 341682,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:33",
+    "sourceId": 419737,
+    "sha256": "76c52e7aba0d0ab63c1ebc0660e9d8280cc7407f8e6eea7f359a37ca87b7c745",
+    "bytes": 381764,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:34",
+    "sourceId": 419733,
+    "sha256": "1a4d36603782924853627fa2db61e418ca1da2d68459b7c0ba219786f4de785a",
+    "bytes": 213670,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:35",
+    "sourceId": 419739,
+    "sha256": "57fbe49d5fb5b9b3d2e1f03b8b00984560670abfa10796617c9087db67a711e4",
+    "bytes": 336928,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:36",
+    "sourceId": 419740,
+    "sha256": "2a77f009373b15662bfc2d6ce592459788bf7f8cb9b6ac709270e3a41b7b2fd6",
+    "bytes": 231320,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:37",
+    "sourceId": 419741,
+    "sha256": "b1a1644daa4be941be4d35e89b62c4d4fccdad976412f947e31915a4e3bbec6c",
+    "bytes": 194526,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Exodus 40:38",
+    "sourceId": 419745,
+    "sha256": "767599fbac55c67c8f951afefe7c4a1974ec2f4cb66eaebed415241cafca2ac3",
+    "bytes": 380662,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 7:51",
+    "sourceId": 433671,
+    "sha256": "66b877e99f75368a30b9c67d5977dbad08f9a0c4f5049a70541de085fafdffdd",
+    "bytes": 600862,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:1",
+    "sourceId": 433673,
+    "sha256": "24adb6724483f3ee4b94eec1a068d9456ca6a9e014bacff837ae1a2177491ff7",
+    "bytes": 740383,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:2",
+    "sourceId": 433672,
+    "sha256": "2d5993c79b3618d0895efef90da0108712c03f2ccc647c922aa0b7a7da16cc4e",
+    "bytes": 345065,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:3",
+    "sourceId": 433674,
+    "sha256": "16e9e2fd5226dd772224020f16d93226f4c957e26e0a1c74127d2f23749a1b6d",
+    "bytes": 211602,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:4",
+    "sourceId": 433675,
+    "sha256": "1b7e114667ab454acf795353f485aa658874d104607ec17738320b6aa53f3508",
+    "bytes": 388560,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:5",
+    "sourceId": 433676,
+    "sha256": "0a92e37cabea032404b8c799af539c2161d1252cdeff80dc44c9df2b5e981ba3",
+    "bytes": 479247,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:6",
+    "sourceId": 433679,
+    "sha256": "396156885c355cad1cd7756b1c966bdf618796b7a866603b9e878c2025cfa716",
+    "bytes": 396298,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:7",
+    "sourceId": 433677,
+    "sha256": "48ac883946a67ab69561ec78a390ed28de76d482fe8b3bdf92bb194cb23c78e4",
+    "bytes": 346215,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:8",
+    "sourceId": 433678,
+    "sha256": "e53b202cfbd9f46fc900a7b61f88ef407382ec8a1febd7c98b72ee6646e6c57b",
+    "bytes": 482888,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:9",
+    "sourceId": 433680,
+    "sha256": "41ccea0fe8717a0bdbbcdc4366ea1d90967771125fa9a54c9639e192b0b6ce47",
+    "bytes": 487582,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:10",
+    "sourceId": 433681,
+    "sha256": "3cd2b5aca6778b56140738242608ce44f7d5765daab3d77c73b1e32b96c4a737",
+    "bytes": 227959,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:11",
+    "sourceId": 433682,
+    "sha256": "07667ae6409b5e86a6e1221c686babd1dedd00dfbb871ca719d0655981a8d74a",
+    "bytes": 311179,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:12",
+    "sourceId": 433683,
+    "sha256": "7375eaf67783cc57b69f6ae81ea42a448d45626b8d6fb93f03d9383ac9ee488f",
+    "bytes": 195673,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:13",
+    "sourceId": 433684,
+    "sha256": "fdb611c44d3feb67a3ed24bcf2c2e7c8d0b6853474569ea8ee40ef922e18a85a",
+    "bytes": 240868,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:14",
+    "sourceId": 433685,
+    "sha256": "3e965a47c2f19ed0601cbbb1ed134cfe9c0f080f96cb4e44c2c603683f085fe0",
+    "bytes": 287273,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:15",
+    "sourceId": 433686,
+    "sha256": "cbfde9c511847ab82a37ce54b381b8d181cdf6721779f1f71b7a93b215db0070",
+    "bytes": 368866,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:16",
+    "sourceId": 433687,
+    "sha256": "c7d75849a56817e92692671df31aa816a68ef8c5db68bbc5e8d6aa26f377c785",
+    "bytes": 671515,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:17",
+    "sourceId": 433688,
+    "sha256": "cd2548c3095381b219efb178546ced670a1a3d6b799400d5fa44266fc494dfa0",
+    "bytes": 267730,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:18",
+    "sourceId": 433689,
+    "sha256": "837805290c183666a5b3d2b31971803ab8048d9744b21ef7210004fc234ba661",
+    "bytes": 450716,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:19",
+    "sourceId": 433690,
+    "sha256": "8819452c17763394a3711a64222bf696f5a9c94638bb66da74c50f5384c46715",
+    "bytes": 306449,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:20",
+    "sourceId": 433692,
+    "sha256": "12ac1842af31d86792b9663ddaa0480491613e1b27d55fe1e9cd322320b4463d",
+    "bytes": 716117,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:21",
+    "sourceId": 433691,
+    "sha256": "9a369f2a603a5d26e9132585d4ec90680bf7feda69383e90375cdd8b1fe98861",
+    "bytes": 386897,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:1",
+    "sourceId": 430301,
+    "sha256": "f70cad18b6dd66158bedcee32c9d4ea1a6d5c8b0a2cfb2c30911e1899a96fcda",
+    "bytes": 586865,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:2",
+    "sourceId": 430299,
+    "sha256": "7e04e24c07a539641cf4820ebff24ea3479f1ea3af46c5639ce9c92dd985ab2d",
+    "bytes": 251527,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:3",
+    "sourceId": 430303,
+    "sha256": "cb5cc99b2c289f33a5c922c595258912493a342287debca80d658c1d3783eb7f",
+    "bytes": 530869,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:4",
+    "sourceId": 430302,
+    "sha256": "225913c74d7cd045cbef382f853737277b3f0bde9285bdd36b87c9ee8a7de3ff",
+    "bytes": 517987,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:5",
+    "sourceId": 430304,
+    "sha256": "193795e4ad96691fb1fab18d3b0317bbce5cffb5342d1dcb5ed3e53d6dd5e0be",
+    "bytes": 303139,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:6",
+    "sourceId": 430305,
+    "sha256": "f036ee594d6f8c63e5ffbd7f8c3269ee2c3e94f8d231a7f79734ffcc530dc39d",
+    "bytes": 279369,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:7",
+    "sourceId": 430306,
+    "sha256": "36cfb41526c116acc67e44f23146c3e7d926feb3df60c358579cc742a7ea754e",
+    "bytes": 650843,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:8",
+    "sourceId": 430308,
+    "sha256": "464a5f76e7203bbc642dcb7af8c640529b974e4eb34af8de182a7b9005734027",
+    "bytes": 594886,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:9",
+    "sourceId": 430307,
+    "sha256": "0046856926dd0752cc74719a950e6a9a10996ccc23467cb1a130a56934136636",
+    "bytes": 240834,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:10",
+    "sourceId": 430309,
+    "sha256": "c060a395108e7d1ec31d38b1ffa560059b2a0eedf792bb3aac33711f408e4d79",
+    "bytes": 277697,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:11",
+    "sourceId": 430311,
+    "sha256": "2982ab4df0d2e11a2d2fc87ac9ad89fceed8854fde4f0e98ac40061975776984",
+    "bytes": 396273,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:12",
+    "sourceId": 430298,
+    "sha256": "d46d4ab3ea9a62c6eda7175559758da762ef2d9ff316e060668078da2576c519",
+    "bytes": 242162,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:13",
+    "sourceId": 430310,
+    "sha256": "a2f134341e2cbd98925fdd9456d9ac8d36fcbdce6c408185956543353767974c",
+    "bytes": 365794,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:14",
+    "sourceId": 430312,
+    "sha256": "ab0490389fb4d752e8b77dd24c7e4212425bde8c297193b36d354ccc92fd0cd7",
+    "bytes": 237922,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:15",
+    "sourceId": 430313,
+    "sha256": "55407f023e548f387f57199d4d13841acaf9fc6adda4f151f183052cd7b3479b",
+    "bytes": 656831,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:16",
+    "sourceId": 430314,
+    "sha256": "80a05fda8ea18f6672d408f5fa1b37328cfd2be688e09432173506998cce10e1",
+    "bytes": 408912,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:17",
+    "sourceId": 430316,
+    "sha256": "f5de7be0db7cf594b091468757be692d4db7c0a015609e3600a156d44ad38e98",
+    "bytes": 599484,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:18",
+    "sourceId": 430315,
+    "sha256": "f5f60eaebfb268a5ffa0d76a530f4e9c09105b51037dfc4a7d4eb63fa25df0a1",
+    "bytes": 234374,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:19",
+    "sourceId": 430317,
+    "sha256": "79d7cc20e5639a4da938efaa26eee8354ee72421071880ba29cfcf8699a07ff7",
+    "bytes": 732403,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:20",
+    "sourceId": 430318,
+    "sha256": "3ddf4a54f9b53c3561caab836500e81ffcf79cf0320d9b78a9ab555a4ffc120c",
+    "bytes": 221682,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:21",
+    "sourceId": 430319,
+    "sha256": "ddc3fb891d6b8eb5b881ca37e65084b882145f6d42b5da226d87fe8ef5908447",
+    "bytes": 524222,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:22",
+    "sourceId": 430321,
+    "sha256": "62c6a40e5f64e8d82e1348f35593263eded8e0b6e4ee767c92771952bd645e6f",
+    "bytes": 612550,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:23",
+    "sourceId": 430320,
+    "sha256": "222e60fe9ec5b40e7d0fefdf5ce1a63000501f1b31ddb67f49303b3994e34049",
+    "bytes": 285541,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:24",
+    "sourceId": 430322,
+    "sha256": "5a3da4cbdf708fb333e08273e2ed831ce4f1568cc43d80f570ede2c7d470e769",
+    "bytes": 258442,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:25",
+    "sourceId": 430323,
+    "sha256": "12b93db7a986899dd41a19bd89ad97bde42a230adeadb57ccde6304db97558dc",
+    "bytes": 439517,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:26",
+    "sourceId": 430324,
+    "sha256": "169fd0b9e2a5d3ab16a0bd1232627697cd0be472474515aa7ebdbbd0ac7e141b",
+    "bytes": 221678,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:27",
+    "sourceId": 430325,
+    "sha256": "be22576c8c9cc94cb9c31f23349427e14bc9dccb7b90f0a542924c4eabc78c37",
+    "bytes": 434793,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:28",
+    "sourceId": 430327,
+    "sha256": "379f7599c224b3195d15c5130e03318c897fb8387f56a2e6a6640a978427a98e",
+    "bytes": 592909,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:29",
+    "sourceId": 430326,
+    "sha256": "9698c83e0f8a665f09f670e4bc82d0cae2bf3bced03ee43231ce63b9be8fee52",
+    "bytes": 182073,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:30",
+    "sourceId": 430328,
+    "sha256": "147e2adff52ed7906c17a7a6bbf30bda4622d71a9512533c976face11e6aea16",
+    "bytes": 400923,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:31",
+    "sourceId": 430330,
+    "sha256": "3de633938033a157ac7acf9b8140e56ff56e98d12c42372435616596ea2f5119",
+    "bytes": 453722,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:32",
+    "sourceId": 430329,
+    "sha256": "2613688f15dfaadec7dd93e8da8db927e9eaa93135824c705e69d342e62d04b7",
+    "bytes": 210428,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:33",
+    "sourceId": 430331,
+    "sha256": "ac10632295f9df8970d5599381e475b4d35f4c70a8b887e16bae02614728f6ef",
+    "bytes": 519252,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:34",
+    "sourceId": 430332,
+    "sha256": "d0c3ee5b497e82f7c59aee606b9489148b308a0490b378c6388c0021a81b9f93",
+    "bytes": 195521,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:35",
+    "sourceId": 430333,
+    "sha256": "23be4cf40d34a2f0b12216bc2c7bfab1f518fad4659960e5e05b9ec8e746163f",
+    "bytes": 376678,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:36",
+    "sourceId": 430334,
+    "sha256": "6cba819da422c645a47ae4f094c86fd4e5c40cf454d778956c16f6b05811da56",
+    "bytes": 479131,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:37",
+    "sourceId": 430335,
+    "sha256": "25234dadc5f39c24995606f1aa64a0ef8ab067ba48ecfb0af1c351b8169e684f",
+    "bytes": 229998,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:38",
+    "sourceId": 430336,
+    "sha256": "77db940f606707107e70e5073028b440440c67c78b35add430b2dab395a14711",
+    "bytes": 346285,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:39",
+    "sourceId": 430337,
+    "sha256": "1acdb1d488661ebbeb64fb92bbf88aa9d3493426f09af914f78ff2a6757187b8",
+    "bytes": 567284,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:40",
+    "sourceId": 430338,
+    "sha256": "52371e01a5c51468ec74791b38a87438543f803c32a598f13f6bac9e1226dcf3",
+    "bytes": 213785,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:41",
+    "sourceId": 430341,
+    "sha256": "1cac69c6ed5bb33a3103b9c305e41d1a61949898050944f342ddf29d85563b92",
+    "bytes": 668372,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:42",
+    "sourceId": 430339,
+    "sha256": "227c972f99f9f94acd20e186b87faffbe0aa7a660313eb6cca25ffe5ef3e7fcd",
+    "bytes": 456922,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:43",
+    "sourceId": 430340,
+    "sha256": "b85d4d65ba9d3fc1b4ae16a5065a5c3bb0dc87ed2b4262fd097e9ab23395bde7",
+    "bytes": 303259,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:44",
+    "sourceId": 430344,
+    "sha256": "d267bb90497d6bd59558d56393740238045eb564553a79458503f68143f96505",
+    "bytes": 445806,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:45",
+    "sourceId": 430342,
+    "sha256": "7f903de3d89e1e25ff37ac089455c16f90c4878e8bfbcf716b11eaa2d1985e29",
+    "bytes": 298291,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 1:46",
+    "sourceId": 430343,
+    "sha256": "4d2e3adf9a392e8d611861a7a8b914088152a8d1a466bbf0fea87d79a72ac0a4",
+    "bytes": 219956,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:1",
+    "sourceId": 430345,
+    "sha256": "35c81fd0c0476ea0f1fabbff5c233cd8c0ce493cfc7b45786bc7085667291660",
+    "bytes": 384700,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:2",
+    "sourceId": 430347,
+    "sha256": "df94c4f021cb5a1581907d88a463a60511fdc2867832d03c2b1570d781564754",
+    "bytes": 93980,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:3",
+    "sourceId": 430346,
+    "sha256": "82f5d1534294fe982fd120669830bbdf26b92e7c2c527363b0997a3497b78b54",
+    "bytes": 211665,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:4",
+    "sourceId": 430348,
+    "sha256": "d37719b96929a892323b1f9c96ede56f3e23258247e297a9baeae9fcff412968",
+    "bytes": 462029,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:5",
+    "sourceId": 430349,
+    "sha256": "d373023ffd52600feef4763ea51310899f159b75a1a5980fc3f2e672d4faaef6",
+    "bytes": 469980,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:6",
+    "sourceId": 430350,
+    "sha256": "45df14c33ad433192b818a38cbe4cff0b74572a0fa6dc2632a73e3e2a03aa9fe",
+    "bytes": 397646,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:7",
+    "sourceId": 430351,
+    "sha256": "b4b84f5fdaede3ae52e952a45d75d3e2c341504b75a848189331ed46843d2cce",
+    "bytes": 648906,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:8",
+    "sourceId": 430352,
+    "sha256": "e20cb4f19f431084900cc65232d15a11e490df8e00a9a2fef52916dfa7ca49ce",
+    "bytes": 533839,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:9",
+    "sourceId": 430353,
+    "sha256": "645fe191433101c3ca8e0ccf98a4b2ad0d5998f62956225f15b20894f1a8e5d1",
+    "bytes": 541871,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:10",
+    "sourceId": 430354,
+    "sha256": "c5e0c1f37a3ef7de0838af73a4771efa4009d3868abde3b36ae5b1b27c222d09",
+    "bytes": 281088,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:11",
+    "sourceId": 430355,
+    "sha256": "87cfebeea935cd683a1a453db0d1bb98b0792be22413b98580744e40a835619b",
+    "bytes": 294004,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:12",
+    "sourceId": 430356,
+    "sha256": "82a9b5baa89bdb4e5572ae5a72a650adcd1868b9da7fad3396b50c006e76c2f9",
+    "bytes": 658749,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:13",
+    "sourceId": 430357,
+    "sha256": "7538500170c703cdd46f55f026cbcfc9caeebc2a72b1f28641acef9bdaae8a02",
+    "bytes": 295199,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:14",
+    "sourceId": 430359,
+    "sha256": "067ef49d0780656a15c4f86bc1a8a12dae62c2589051b8fcb701e09f42bafef9",
+    "bytes": 690615,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:15",
+    "sourceId": 430358,
+    "sha256": "13b061fa01afe31855242c2015dc87e180f5394075f9bfd7905b46e73cd77e6a",
+    "bytes": 248763,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:16",
+    "sourceId": 430360,
+    "sha256": "b83de79da0e64d4ae6cbd5967fec861efeea987d85fbf5f0a9723a2622fcef69",
+    "bytes": 235728,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:17",
+    "sourceId": 430361,
+    "sha256": "ada481efe2ca06ee0f157f2b107cc7844f1831695611200c5ef3bb46e4fe69fa",
+    "bytes": 93612,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:18",
+    "sourceId": 430362,
+    "sha256": "7f5ea23d2b065c8c0b37faae99af3a6f2963d62e296a5840ff4a045df7f2775b",
+    "bytes": 160654,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:19",
+    "sourceId": 430363,
+    "sha256": "592eed0056fdb243e37707accf4515e70f46498d80410c3c6dcd6eb361146493",
+    "bytes": 531101,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:20",
+    "sourceId": 430364,
+    "sha256": "4b811da34df88794569e173ae6221a8ab4fa3938805337d1a24697d0912d77e2",
+    "bytes": 340035,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:21",
+    "sourceId": 430365,
+    "sha256": "3f86c1cffc5606d175a4c16ca0b587d2ef2170960839b57d524a123c2ecae92c",
+    "bytes": 354213,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:22",
+    "sourceId": 430366,
+    "sha256": "98abaa1b3f153bac4a7bf56e303a095f615a1beb31a2e857fc80551d7dcbab32",
+    "bytes": 439395,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:23",
+    "sourceId": 430367,
+    "sha256": "03b3343bc7a310ab010f06ce6f406c1efa5dcdecd12583d791a6617008c9ebdd",
+    "bytes": 357907,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:24",
+    "sourceId": 430368,
+    "sha256": "8a3fdfb70db1e30d40044765994ec0b134f5cac46c0032d375d31b7b136f2905",
+    "bytes": 621605,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:25",
+    "sourceId": 430369,
+    "sha256": "e7bd07c47755c32e5eb894d0da8c64d1684b25453e8316189544a73d9d778358",
+    "bytes": 513053,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:26",
+    "sourceId": 430370,
+    "sha256": "a08fab6d48c7ab001e38eda19b79ce91a6ccd6ae74aa57bfa2092b76f0d4704b",
+    "bytes": 253761,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:27",
+    "sourceId": 430371,
+    "sha256": "ad6f8ebf7e867242a25d0388689d7ccfe87296d29bae4953c856f2861f830731",
+    "bytes": 250515,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:28",
+    "sourceId": 430372,
+    "sha256": "7ee0ed6eff644299520b9ac4a385d4636265e862c97df1b6fa51103419bee00b",
+    "bytes": 389702,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:29",
+    "sourceId": 430373,
+    "sha256": "037a5d255533ec14bd12bb75ac90c564c315cb83a6038758474533f7eee8deeb",
+    "bytes": 490834,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:30",
+    "sourceId": 430376,
+    "sha256": "690ab96deeb617f55e3f017ee3bba19f0c2542302c87dabf73fb55857beae43f",
+    "bytes": 570594,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:31",
+    "sourceId": 430374,
+    "sha256": "f18f0bb44f8096262581ee3e7f888867b2b78c9164184b99649138eb94e53f83",
+    "bytes": 355918,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:32",
+    "sourceId": 430375,
+    "sha256": "2d798ff5fcf9f909c5f86a2322cde77aefec97d75ef6b230473f0cdf57f4300f",
+    "bytes": 248854,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:33",
+    "sourceId": 430377,
+    "sha256": "95da66a45ba3bfbf6836a6302b478597a2ef3cfc1660ddc3a5e07ed63107071d",
+    "bytes": 282261,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:34",
+    "sourceId": 430378,
+    "sha256": "9cb30a8f8aac99b429fcd1a9a8f25b07fac0b5fb6f896b5d1d1d730fdbec8b68",
+    "bytes": 368869,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:35",
+    "sourceId": 430379,
+    "sha256": "3899f93c6b667068018d13402a6f9cc85490d79fa4af90305d5ebfed846569d4",
+    "bytes": 248886,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:36",
+    "sourceId": 430380,
+    "sha256": "99f27e59ab1da6b8607cb190c319d79a321a8be287139e80acdec7bbb9654a31",
+    "bytes": 597877,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 2:37",
+    "sourceId": 430381,
+    "sha256": "a081292c6fe5ef199adfa4e287c32e20e20ded41a4c02ef10252582c317999ef",
+    "bytes": 388487,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:1",
+    "sourceId": 430383,
+    "sha256": "7f2c80781ccad9d1534d91b35b5a5634b686326ff4c7e810629eb52462cf3943",
+    "bytes": 412278,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:2",
+    "sourceId": 430382,
+    "sha256": "98c4c191d50122b2e3d74ec7b6c106f17b8904437d61e636b7497dec924ab2ff",
+    "bytes": 540125,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:3",
+    "sourceId": 430384,
+    "sha256": "f93560314446a513e8eaa23693ac9a7a4af00c55c7d2a686621bcbeb29b4484f",
+    "bytes": 474903,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:4",
+    "sourceId": 430385,
+    "sha256": "88a92d95780279f5f2effcc15abc2accc10fb92e5d36cec581c622bd5a1dec0e",
+    "bytes": 463380,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:5",
+    "sourceId": 430387,
+    "sha256": "99214ad9d445530b14e86ff1102694a7772b2d86491ddc0d01dec2dd935809e0",
+    "bytes": 381786,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:6",
+    "sourceId": 430386,
+    "sha256": "a7f85381b792f47a33fc57e80462d3abc4da266790654bdf9b74374a0ea08a67",
+    "bytes": 346219,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:7",
+    "sourceId": 430388,
+    "sha256": "124b58f5c45bdb20c763f4718e7a737b6fe00b3c44969d291463fc446e92cf69",
+    "bytes": 176948,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:8",
+    "sourceId": 430389,
+    "sha256": "f0908161b93dfedf9cd8ea3a3142880881eb6f7edb7bce9ca76d8275e1082c06",
+    "bytes": 408924,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:9",
+    "sourceId": 430390,
+    "sha256": "2fe052921374aa76ab77b08347016bed7c789f200aaa7ef2eb0692ad48470f7a",
+    "bytes": 225096,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:10",
+    "sourceId": 430391,
+    "sha256": "a1252fbd1120bef5bed1a2aa6a4fb6d0c614681593c067bfa0a162fb50fcceef",
+    "bytes": 378776,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:11",
+    "sourceId": 430392,
+    "sha256": "3b6b2b89a332c5cc37e523a2afb781feece11833b28dcc8a2522e7e612907ed6",
+    "bytes": 692267,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:12",
+    "sourceId": 430396,
+    "sha256": "67188d8e3af05d330e3a71d51905dbc0638070a38825c2732f29426d377820ce",
+    "bytes": 509781,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:13",
+    "sourceId": 430394,
+    "sha256": "7f3f9e6787a0c01318911063cc79f3516d63432cf92f458133e5a7ddbbc8ce54",
+    "bytes": 498616,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:14",
+    "sourceId": 430395,
+    "sha256": "53504a308783ae04d019eba29238fb882bf8a845928bf69536c2366eef500702",
+    "bytes": 512947,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:15",
+    "sourceId": 430393,
+    "sha256": "2fd35aceb4c99d4eb89b3bf52ca9e928be3d90925d7c89b9d23ffbc60fdbf04a",
+    "bytes": 101794,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:16",
+    "sourceId": 430295,
+    "sha256": "8af62b65be63dc281f4f7ed33dfa7eeff0a4cd81f0350cd55f6f29676bfac3c5",
+    "bytes": 413882,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:17",
+    "sourceId": 430292,
+    "sha256": "dba03bf42139209dad83a465a3bee7740295ff0196a6af7a270e035965015e7b",
+    "bytes": 420176,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:18",
+    "sourceId": 430294,
+    "sha256": "0f0840b5bf370f566cfe1a7b34733590d80f9f25db22309af482bbbfa878a4aa",
+    "bytes": 527245,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:19",
+    "sourceId": 430293,
+    "sha256": "764049670365fd35f99a93babb820ee059aa6c59481fbacab3dc257bb1df12b5",
+    "bytes": 437844,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:20",
+    "sourceId": 430297,
+    "sha256": "85c83da1cfc8541443b782fc8b129db923b6decbcb0e772643b64a38b2193412",
+    "bytes": 676337,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:21",
+    "sourceId": 430296,
+    "sha256": "4dd400f76f308039fc71967f41f5928223625d7d50e9b0c8eeb7f20f7bb0b7fa",
+    "bytes": 634519,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:22",
+    "sourceId": 430300,
+    "sha256": "96ff37b05714e0f40e125785b447e121a2c12929f2a7a2e380b4e0a04be8eb08",
+    "bytes": 243799,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:23",
+    "sourceId": 430418,
+    "sha256": "3fdba2a7ab90a95f3ed1393449afd6760f9a35903699bee6df95bf666e617512",
+    "bytes": 155604,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:24",
+    "sourceId": 430419,
+    "sha256": "86a304093d9f9bb33259ab260f8e830c47ce2af5578d5540ceb556e1a61af5f4",
+    "bytes": 564415,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:25",
+    "sourceId": 430420,
+    "sha256": "acc8b25f53fe867969e91952f047aa2aa48431d26492ecb724772d22f7683bd7",
+    "bytes": 330277,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:26",
+    "sourceId": 430421,
+    "sha256": "b7039b50c25eb65f1c29d403d5b8a423f4d915a3fa40c8a5bd59c70d58272870",
+    "bytes": 431431,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:27",
+    "sourceId": 430422,
+    "sha256": "9effe2ae5f7e5bf1141fae19b4949792ec5805d8cbd50a861b59a335773c3a9a",
+    "bytes": 472770,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:28",
+    "sourceId": 430423,
+    "sha256": "a0dbdc60493d7b8f91c4fe2b04a0500839bb0a1cc6f0a876a913289fcf15a4c7",
+    "bytes": 410934,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 3:29",
+    "sourceId": 430424,
+    "sha256": "be1f184c8a3c0ea312c57453db031816f1571b7939b00c609515bf5ed20de396",
+    "bytes": 152730,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:1",
+    "sourceId": 432871,
+    "sha256": "793596e7a60135c168a142561d2489964466b430b16cb8be01489b38a19e26db",
+    "bytes": 492478,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:2",
+    "sourceId": 432872,
+    "sha256": "85cfdb9d1d9ab678657df9fb800ccb4e7e896965567e60fdda76e077d4702fd7",
+    "bytes": 357933,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:3",
+    "sourceId": 432874,
+    "sha256": "c945a921ac0f516cec4179e2e32726edfae3c8049f9a38e8297e829a61b1580e",
+    "bytes": 312742,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:4",
+    "sourceId": 432873,
+    "sha256": "abe431d2400cfee218d423391e82f8026cc1a0ae7258e13309eb7831ee0bdd17",
+    "bytes": 544930,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:5",
+    "sourceId": 432875,
+    "sha256": "476cc1bd63d4ed353c054834f23f731aa2a8ac705b2091d1b65d90e02dfb7eb7",
+    "bytes": 340027,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:6",
+    "sourceId": 432876,
+    "sha256": "ff2ff3410cd16b3c0c365a4c9139a220018fd9665406e444ecc5b7d6ac64024b",
+    "bytes": 423079,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:7",
+    "sourceId": 432877,
+    "sha256": "22ccc82cbcdc50c352195e1ec2435dd5bcd225f306019914535f24fa4092cbf3",
+    "bytes": 434781,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:8",
+    "sourceId": 432878,
+    "sha256": "1758161501719f11f191cd193609c5e777efbc67a7cdb5e125841fa95beac256",
+    "bytes": 298218,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:9",
+    "sourceId": 432879,
+    "sha256": "f81edc0fdfcec0a85730962bf0ee6930d5488bd3327e8ee24b1ec0895a8fe84d",
+    "bytes": 328775,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:10",
+    "sourceId": 432880,
+    "sha256": "b39a5f0ccd9295d2ce334cb498307691f6c6ce944a57947b553c834bc0a11b60",
+    "bytes": 261902,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:11",
+    "sourceId": 432882,
+    "sha256": "240881c078c44dd9a715672ce5d3de1929201822d258aa60874daea16f8175e9",
+    "bytes": 472874,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:12",
+    "sourceId": 432881,
+    "sha256": "37d6fe0abc46ce83e497175789d20a062f6998324bbb618bfaebf43d48110716",
+    "bytes": 306597,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:13",
+    "sourceId": 432883,
+    "sha256": "324ce356c35860cf2f55bf73cb33ce810ad336cf00b22dad4dfe3b6a0911b43d",
+    "bytes": 437670,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:14",
+    "sourceId": 432884,
+    "sha256": "b2e4a47e15792f8d2c6b46135b5759070e72c46abb57614f0357624bf95c902f",
+    "bytes": 314475,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:15",
+    "sourceId": 432885,
+    "sha256": "5c69dbe659aacfea37adb34e61745d9d02ce51348ed5e7e623711398f6a03bb8",
+    "bytes": 384720,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:16",
+    "sourceId": 432886,
+    "sha256": "83d35d9ed2f3ebc5ed59472c1531503f5ccc46553f327a6b999d169e771e5da6",
+    "bytes": 304822,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:17",
+    "sourceId": 432887,
+    "sha256": "dfb4d98837b18eccc3e0f354740390b6c1d192d4390ecb50ce5b8eb134b9953e",
+    "bytes": 290303,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:18",
+    "sourceId": 432889,
+    "sha256": "3b35a3cb1231d9e7bae637c7e67655a3f347a7786e0fb0dcc7e7a4ff3e4e7988",
+    "bytes": 487545,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:19",
+    "sourceId": 432888,
+    "sha256": "1dfffcf2787255bdcd9f2f98a419254abb3d176cca4774df6ccd60e6347666ee",
+    "bytes": 171994,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:20",
+    "sourceId": 432890,
+    "sha256": "26f0a2de3ff473d049dca0b69d14d81c737c1e386de20b4e59b96a5da78c5721",
+    "bytes": 256537,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:21",
+    "sourceId": 432892,
+    "sha256": "cb5eaf1c37afd0553dc7b272c671f7c56c5b62fc6391b87725e44096d76e850d",
+    "bytes": 416982,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:22",
+    "sourceId": 432891,
+    "sha256": "10ea1bb4c37af2e52500f4cd289eaa31aa85cfe84a1ffb055bcc65c8627f5d2c",
+    "bytes": 177967,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:23",
+    "sourceId": 432895,
+    "sha256": "652845fe37297fb03ca7e2d9b90f09bd7c9fb3b67c76e18117198ef386edbd22",
+    "bytes": 543306,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:24",
+    "sourceId": 432894,
+    "sha256": "2af878dba663d80532cbe991118f36966fc2a2367a09a5a4c39b6e91d7c07f0e",
+    "bytes": 453732,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:25",
+    "sourceId": 432893,
+    "sha256": "f2cbc9ca7ee7abe61d71b73590ee1071c66ed9c212f1470335dceb93fe9c7458",
+    "bytes": 314506,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:26",
+    "sourceId": 432896,
+    "sha256": "22d5b8c90718349ab3896c5c2c321fe53d66c16fb0dc9bab627cbfd169ce714b",
+    "bytes": 517848,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 1:27",
+    "sourceId": 432898,
+    "sha256": "8854e8293cee78636c14e2357df284cbb4f664f075cd4f19d40e62b4f65468c3",
+    "bytes": 243909,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:1",
+    "sourceId": 430425,
+    "sha256": "ac5c5d48db7a618423895750b249cd878132ec4b682d798d2ad3a943541fc635",
+    "bytes": 604506,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:2",
+    "sourceId": 430428,
+    "sha256": "3a6ce04efabc2bb6fcb94308cb52ff87ac33b011a7a023d0e758fa675a2ee871",
+    "bytes": 442864,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:3",
+    "sourceId": 430426,
+    "sha256": "dca6d8e7d732e5e5c16da9552be9f2e4d97f7b81c053ce1f07c5fc24d0b4efde",
+    "bytes": 467053,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:4",
+    "sourceId": 430427,
+    "sha256": "8c696b5bc8fae6247d4f4f6503a280eaceca7b4f5cad5a07d74779a7f66a6ef8",
+    "bytes": 199529,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:5",
+    "sourceId": 430429,
+    "sha256": "9f8a418e544230f69d83de985b4c3274e3ef7ce2dff3c967d5fa04295e60e967",
+    "bytes": 493783,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:6",
+    "sourceId": 430430,
+    "sha256": "ba958e84a3bb95d189caa9e5fa92b15241ecae9bd1d29f415196f12c1761aad2",
+    "bytes": 602888,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:7",
+    "sourceId": 430431,
+    "sha256": "ea3f4e383c62205c0268dbafa285e39078020b58c635ac141121e787756bbf18",
+    "bytes": 304816,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:8",
+    "sourceId": 430432,
+    "sha256": "e53474b974bd8abc1cc8f8cda4257cf4aa40ae05274a7113132297d975940a83",
+    "bytes": 375468,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:9",
+    "sourceId": 430433,
+    "sha256": "a67e69fef8309e44fac08dd69a71c58901a23fcbda8a5f30735176ae81876ae2",
+    "bytes": 648875,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:10",
+    "sourceId": 430434,
+    "sha256": "8710f6e89dc3b87a88feb40da4d5b518f7187505411903d7a7287730f5a42ce7",
+    "bytes": 818862,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:11",
+    "sourceId": 430435,
+    "sha256": "9bfa473288ed5b4df580fd1871a97bb8bfd7cf1166733cedb9f06621ffabf411",
+    "bytes": 375388,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:12",
+    "sourceId": 430436,
+    "sha256": "89293754bb145d30e4d1e4c2bf2ee6c1bde86e1f1a11056581cd5e620e0e98dd",
+    "bytes": 423030,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:13",
+    "sourceId": 430437,
+    "sha256": "f91d2ce2644a0f3d60a8908411bffdc5d787cb693941213092a26c7f66704e60",
+    "bytes": 375511,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:14",
+    "sourceId": 430441,
+    "sha256": "e5e2740e61041088f8cac9b4acb26f60c394e155b612370e7c127a7c509c08dd",
+    "bytes": 512940,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:15",
+    "sourceId": 430438,
+    "sha256": "cc6cb027743b680f92c979194570bf6ff88fe97b6ee1ad9d50d2e59b32a7269f",
+    "bytes": 400919,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:16",
+    "sourceId": 430439,
+    "sha256": "3fc956b053241c7f8fd9c50d651a83adab8d6e7bf665f5b6d521d2a853630e84",
+    "bytes": 290280,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:17",
+    "sourceId": 430440,
+    "sha256": "563ce5a7f3626786ab00d7b04bd19b2c0153ed5136ff6fc7ebf1e8afa685d487",
+    "bytes": 315784,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:18",
+    "sourceId": 430442,
+    "sha256": "7674144cfeb500f68175084f7ea7ded2a02aeec118739b04a01f4de0e70128a9",
+    "bytes": 267656,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:19",
+    "sourceId": 430443,
+    "sha256": "dca6d630e534ad64c5ea011879259e2f08481bb4b82d6ddfd265755386a558e8",
+    "bytes": 818906,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:20",
+    "sourceId": 430445,
+    "sha256": "397ec2b475a8934165b206ceaa67c8de7570cfed574f9cd81b63d97adcfaa8f4",
+    "bytes": 354111,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:21",
+    "sourceId": 430444,
+    "sha256": "03e58566662376a86c5492d4ee4462de765074ab15d9c5e9f09ba93aad0297ba",
+    "bytes": 474954,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:22",
+    "sourceId": 430446,
+    "sha256": "8e74d99466cf610080ff1c4ffc34daf78ff24244702aa363b757a3cb8d400e8c",
+    "bytes": 352877,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:23",
+    "sourceId": 430448,
+    "sha256": "d613a67b51bf19245f2c98032bf56e330ee7e155216001d596e872d74c2790a0",
+    "bytes": 480891,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:24",
+    "sourceId": 430447,
+    "sha256": "7f7cb5c0aaaf60c83a10befb9ea782cbf586c68f552ffd7272c685d956420dfc",
+    "bytes": 191079,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:25",
+    "sourceId": 430449,
+    "sha256": "64e5f1829c0f71586cf0ae66c04272ee847146808c13332e20b32c20ef9f68e3",
+    "bytes": 488745,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:26",
+    "sourceId": 430453,
+    "sha256": "549fc125afedab752ab6b617df8317ff6dec354bba1fba8b11f333643f801504",
+    "bytes": 655518,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:27",
+    "sourceId": 430450,
+    "sha256": "3d91e1873aaaa92cd1e428742c6831499245c3ca21f832238b9380b7db7aab9e",
+    "bytes": 407212,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:28",
+    "sourceId": 430451,
+    "sha256": "e1e5a3c176aa63311d95a67808583f45b27db40035c92fd6ceb29ecb41debbc4",
+    "bytes": 411000,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:29",
+    "sourceId": 430452,
+    "sha256": "2b2e2e81d5cb583f9286d331962650c2025778ec10d92e68bf9a8a2e2282e8b3",
+    "bytes": 311050,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:30",
+    "sourceId": 430454,
+    "sha256": "db4b3c3c622351d6625994c635792eb2e156930f5dc19ad6a4d982d070bc3741",
+    "bytes": 394748,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:31",
+    "sourceId": 430455,
+    "sha256": "462d8bcb989f6967271881ed5c7ebede37f40acf419f1fbbc6d8b1fe47a770d3",
+    "bytes": 370423,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:32",
+    "sourceId": 430457,
+    "sha256": "363155f07848ddc0aaa86e6406a9f7a805f1d8d651335784ee7b4cca485edd54",
+    "bytes": 650723,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:33",
+    "sourceId": 430456,
+    "sha256": "5e6c9aeeb23fb993c62d13c74a8dd19b62c98ed6c927819778ef411235129f44",
+    "bytes": 301732,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:34",
+    "sourceId": 430460,
+    "sha256": "0ca1e3b2d85762550242292ef76ddd1668e43a5688b115f9f731b6fc732c3858",
+    "bytes": 885902,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:35",
+    "sourceId": 430458,
+    "sha256": "3ae2225c2a9ab5452e7bda1c13b03535948b4e6c3b4f1666952e8a3ed7206d64",
+    "bytes": 219994,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:36",
+    "sourceId": 430459,
+    "sha256": "89d55d51fbfc83552cd1b3218e4288197274810da3bb986f48d68e6cd6e29ef9",
+    "bytes": 380521,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:37",
+    "sourceId": 430461,
+    "sha256": "e862eed3135d9c5bd00731a2bb8b6e836d4aa86f37c465a2e42f14544d9d083c",
+    "bytes": 415010,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:38",
+    "sourceId": 430463,
+    "sha256": "32edfc46045cd30d06a3dab63e38fefadc3aca6557c92c2616ab50031da7f2c6",
+    "bytes": 437880,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:39",
+    "sourceId": 430462,
+    "sha256": "eba6409780ea1067bd6f24e2070de6d86d3fb0f938de7278ddd1a6deed0302e9",
+    "bytes": 418936,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:40",
+    "sourceId": 430465,
+    "sha256": "6c7ba09af10649c9b79fab1ea66287267dd022bc8489d96d1e513a7ff6d4183a",
+    "bytes": 653745,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:41",
+    "sourceId": 430464,
+    "sha256": "ba061e2f1f8b122a44b55e5d98b23efd6aaef3ebd4c503a9b8ef8dee0eec5301",
+    "bytes": 238045,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:42",
+    "sourceId": 430466,
+    "sha256": "d3dcda234e75357257511834993a08ce9d34b8ce919dd3eb827de8fe456c22a2",
+    "bytes": 580221,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:43",
+    "sourceId": 430467,
+    "sha256": "8e82a564d02c21e79b71855285d328678adcdb5ab45dbcdeec9df4c87d8e45a5",
+    "bytes": 381797,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:44",
+    "sourceId": 430468,
+    "sha256": "4bf3bf389a54cb4dde0bb1c9e41842bfc75640806329c4b0941af578f480140f",
+    "bytes": 171859,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:45",
+    "sourceId": 430469,
+    "sha256": "296191843e05534eabb3b39108082432745e43efbceedecd45f8ca288cb5cb4e",
+    "bytes": 303163,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:46",
+    "sourceId": 430470,
+    "sha256": "b81b94412855b474fae8496bde9311298c7750489e90e43d30de42d0b42989df",
+    "bytes": 493831,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:47",
+    "sourceId": 430472,
+    "sha256": "dc75b29b2cf97b371cd5242659cbed4ffd7b3961f13560129ecbc9152cbed9dd",
+    "bytes": 357887,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:48",
+    "sourceId": 430471,
+    "sha256": "eda6dbbef7742acd269f2536d024b6c2ee9604a9bf94124805ca3a2ea92ceb6c",
+    "bytes": 283878,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 4:49",
+    "sourceId": 430473,
+    "sha256": "9c875032b726158845c9e1e4546cdf8e998d01c151e29e922e907e44d817205f",
+    "bytes": 287305,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:1",
+    "sourceId": 430477,
+    "sha256": "9612de57d12e366dce830e7a450d823361fe1d594ca4301cb246cbc31a611d67",
+    "bytes": 575311,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:2",
+    "sourceId": 430474,
+    "sha256": "b3e4945a313bb3f8dd4f3223866214972003152e9d207d747df7c1e8688b4c73",
+    "bytes": 191220,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:3",
+    "sourceId": 430476,
+    "sha256": "e6c03557885e5f379b27b0cc7c854ca94d275b66e229e21807dcf869dabb0320",
+    "bytes": 333859,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:4",
+    "sourceId": 430475,
+    "sha256": "3d47dc2d2b3823a18af85593325421c172d44f9b6cb3a7fdb0dbfbaf69d98140",
+    "bytes": 233974,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:5",
+    "sourceId": 430478,
+    "sha256": "17a98d98c1fb8a1f8591e5cbc6d677f9e01750b2a2496cf605d989c2d943e315",
+    "bytes": 436426,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:6",
+    "sourceId": 430479,
+    "sha256": "3609c316630e399a78d79319641df69053999fd3a726e3004ab2a2e7c7ef137d",
+    "bytes": 284010,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:7",
+    "sourceId": 430480,
+    "sha256": "946b877aaf58e70b5c55a16453318375f2f1dc4325bfabee5690000722e257a6",
+    "bytes": 192921,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:8",
+    "sourceId": 430483,
+    "sha256": "59e82d9ee9a303f2c904966579e7d62ac2c1f375c1f9a2324050e97ff1ffc885",
+    "bytes": 568943,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:9",
+    "sourceId": 430484,
+    "sha256": "5cbf9e09fc608f07d87c2ca935ddf9ef9879e247f51b87d64f8851d5e053f0fa",
+    "bytes": 548323,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:10",
+    "sourceId": 430481,
+    "sha256": "0e2a3b6fd8094200d820af6d6634aa60f7bd5c1dccba0fc7f1411599d12f6f3d",
+    "bytes": 202411,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:11",
+    "sourceId": 430482,
+    "sha256": "cf62ad238e3f8ba3b3cd2b89e496c6c1bbb6b4cf977b3a0229aca1cb607eee65",
+    "bytes": 347797,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:12",
+    "sourceId": 430485,
+    "sha256": "58744a7fe4a8c0c6f7456afaa73d2a5a7086666689398c6626a34d0c86664cba",
+    "bytes": 290226,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:13",
+    "sourceId": 430486,
+    "sha256": "c0fa14240f683e1b39c3dd3773438f4163aef7248938195a93754f21d55fcb37",
+    "bytes": 183280,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:14",
+    "sourceId": 430490,
+    "sha256": "8cc93117258864427a859c494c7915f36206fc842d8bef42854792131877e315",
+    "bytes": 892402,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:15",
+    "sourceId": 430489,
+    "sha256": "159032977fe7affbf089d7eef06b1cc5c265df628d403d338637ce20279d99d4",
+    "bytes": 615505,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:16",
+    "sourceId": 430488,
+    "sha256": "de82c1fb7111f4d60b209089bb9b74421f8f37a9f255108ac41fa8b713cf157f",
+    "bytes": 495508,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:17",
+    "sourceId": 430487,
+    "sha256": "fa0bb896c2167ee402b823afcd5e5181cd9cc0f56c9a016569df6d585778c6db",
+    "bytes": 317840,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:18",
+    "sourceId": 430491,
+    "sha256": "c17605b7bd469363cc86e1f7083092a6db084ecc20babde018c818d3327c4ff8",
+    "bytes": 442584,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:19",
+    "sourceId": 430492,
+    "sha256": "586fec538a572d51902982491631c31f49b4205777f1a02ca65dafc93d31792f",
+    "bytes": 620158,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:20",
+    "sourceId": 430493,
+    "sha256": "73279f6e553ee81630514336f0e7e589f75cdeb63aac7dc32c12fffc86aa7643",
+    "bytes": 420089,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:21",
+    "sourceId": 430494,
+    "sha256": "2c38b117fc7f7e538aedae6d41eaa76c37ab970a8439b46fe6e1a66fe6ba4700",
+    "bytes": 557673,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:22",
+    "sourceId": 430497,
+    "sha256": "1ec00431cbca47224b2639a8eb039a1973f57c0a2d1872d7ec2f98e770fd7943",
+    "bytes": 500466,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:23",
+    "sourceId": 430495,
+    "sha256": "436fde3b4c692ab82582a808c1377ec5e4ac3359e59008ee42f27c3179c71a3e",
+    "bytes": 420246,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:24",
+    "sourceId": 430498,
+    "sha256": "23c279a9c4892a1f886c024143857a164ef50379581ea8942dbf06665e5d751c",
+    "bytes": 562893,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:25",
+    "sourceId": 430496,
+    "sha256": "7833d36b7fafd1185b9e535c8411fe67fed9be96a63ed29ed6063d4171ead942",
+    "bytes": 559390,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:26",
+    "sourceId": 430499,
+    "sha256": "15cbc43ee6472f1d916b06005298f9dde60d09592b6ad20667bd14fd10b24904",
+    "bytes": 480866,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:27",
+    "sourceId": 430500,
+    "sha256": "ebd98d6bc4615e72cdec65b6d28d103703977fc3418274ce27cd7a1aa15062cd",
+    "bytes": 175290,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:28",
+    "sourceId": 430501,
+    "sha256": "2d3ca348f25ce31fb773f3f0cf9ce01bf21ba633c38694131dbcc805c2bb4341",
+    "bytes": 594904,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:29",
+    "sourceId": 430502,
+    "sha256": "a76a0acb5474e90d7ddee3a5ff01efc7463c2dfcce97aeedd4b842f4b758aaef",
+    "bytes": 271403,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 5:30",
+    "sourceId": 430504,
+    "sha256": "00db72e72509b014c26b57de87f06330654aa6acf983756cc0e8004a6a2ffbcb",
+    "bytes": 453707,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:1",
+    "sourceId": 430503,
+    "sha256": "13de994fc47cf3075cd038c891bb7cc8c0b7433b4838088aae404e2158d148ca",
+    "bytes": 458594,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:2",
+    "sourceId": 430505,
+    "sha256": "9c77fadd6ad4bd345ccba40d1c0bd9dbf54de4386c261ceac3068a79181a6b57",
+    "bytes": 581748,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:3",
+    "sourceId": 430506,
+    "sha256": "74f23568dcdb2752f58ea7baab798523ea515d95c873f81cb019cd714de0709e",
+    "bytes": 500400,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:4",
+    "sourceId": 430507,
+    "sha256": "87a1c12b978ef45555a118005998d2678106799837f9837d0e10c91818e7dd00",
+    "bytes": 165757,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:5",
+    "sourceId": 430508,
+    "sha256": "ba7f30f3aadec558ebc732847573972bcf8aa3510d910bc79099a07d2eae3304",
+    "bytes": 225113,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:6",
+    "sourceId": 430509,
+    "sha256": "a8c0f4a61f8ec1b6e2690fb57f0e446e1a9cb0df82243e58b88beaac0686314e",
+    "bytes": 233106,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:7",
+    "sourceId": 430511,
+    "sha256": "50f84e1ecff937268be9a20e9593ab7154c40201f563e3d251696cefe00bf727",
+    "bytes": 312830,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:8",
+    "sourceId": 430510,
+    "sha256": "55230099a8558633b6f6299ab31cece03668a4f1b484844940741c5cee8bcafa",
+    "bytes": 164043,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:9",
+    "sourceId": 430512,
+    "sha256": "8bdf34becb5ee3154c3716113cddeb8cf19317bc3bb2f8feabe23e4218f42c45",
+    "bytes": 143571,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:10",
+    "sourceId": 430513,
+    "sha256": "39c6021045b95e7e9c01e52c189e9f492758998f1968011dc47ed062c31ef5f7",
+    "bytes": 625069,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:11",
+    "sourceId": 430514,
+    "sha256": "829f3ccc1397d2a10c3fca9ea79b14c5a9f1d0b7e8814e59f33a19d3c1bd9dff",
+    "bytes": 556378,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:12",
+    "sourceId": 430515,
+    "sha256": "d5c4ecfa46143439200ac89c5264e25623de91796a6e46f679a11a80ed3dd796",
+    "bytes": 290186,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:13",
+    "sourceId": 430516,
+    "sha256": "4fe5d01abbe9aecad95a02a55de233c2baacb53e48f726f787ce62ce7ad9c913",
+    "bytes": 258465,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:14",
+    "sourceId": 430517,
+    "sha256": "a38b62a3dbf524c63acab7478d10be438ae82cd93592652a341cd2482f46bc48",
+    "bytes": 243736,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:15",
+    "sourceId": 430518,
+    "sha256": "b4161dc217bda09c0902a0f2f1951fa8d1de5664893a86eed5fe7e94a355ae13",
+    "bytes": 455392,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:16",
+    "sourceId": 430519,
+    "sha256": "44eda4fbc0577fbb4d9615a513654fb62b43f9156700c1738e4780eef0363a5a",
+    "bytes": 205785,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:17",
+    "sourceId": 430398,
+    "sha256": "00c1c5cca7e2b352f2620a2148308878aa5dc546aca552f027ae109d4f05f904",
+    "bytes": 298270,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:18",
+    "sourceId": 430402,
+    "sha256": "4ede355472a864fd278d0c6a0e26abd756b9f112cb3a7268e2162fbc436b6edf",
+    "bytes": 468170,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:19",
+    "sourceId": 430403,
+    "sha256": "4f79fcfc3bcea8eb095b39a1426fc68972b343f6f84c2ed4156a98f3d4c81f87",
+    "bytes": 191201,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:20",
+    "sourceId": 430400,
+    "sha256": "1b344b5fddf694088fb533d1701d321b26035f9c200199292ae5da08bb082e0f",
+    "bytes": 383400,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:21",
+    "sourceId": 430399,
+    "sha256": "eb94e7fc544f863b0a0d7d6e7271c71db25c551e8e026dac052b699913967955",
+    "bytes": 325710,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:22",
+    "sourceId": 430401,
+    "sha256": "5871baf1d96a8648f78831e27476c64a9cc9023e7249ace984b3d71f6cfcc713",
+    "bytes": 415229,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:23",
+    "sourceId": 430404,
+    "sha256": "7e89c65ed4d97b23499ce6f8e7732b92a20d77144b36605a88441fafc3c8d735",
+    "bytes": 301865,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:24",
+    "sourceId": 430408,
+    "sha256": "0f6861721e12d2ade97d0ed26056ef2a20014d5dc5a911940900df545a51798d",
+    "bytes": 408932,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 6:25",
+    "sourceId": 430406,
+    "sha256": "ad0fa2a7822405c36140d2a5e08654bcab4677d44fceac4489df6a34dd3b99fd",
+    "bytes": 347955,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:1",
+    "sourceId": 430409,
+    "sha256": "86a872179b9234fd1f799c6103fbb60881f16681609bc8b7bdc7b41d1ff1c2b4",
+    "bytes": 831468,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:2",
+    "sourceId": 430407,
+    "sha256": "1b464f9ad2901d029ba4b4e57f84cfc78c6dc45f2cde5eb9914aa2890af6badc",
+    "bytes": 416872,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:3",
+    "sourceId": 430405,
+    "sha256": "7e8e0ea0c869d05210986a7d670adaf24717411e019d6e88ff4738db463f3366",
+    "bytes": 258414,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:4",
+    "sourceId": 430410,
+    "sha256": "f94b4ad013b3a43e59fa21d185854e4401ab752b4f4f3481bf9530c7be7cb7b3",
+    "bytes": 346281,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:5",
+    "sourceId": 430412,
+    "sha256": "7f8ee6e28f19d78d7c78e0417b01f778d47f111812ae15716fc574f85b2e9010",
+    "bytes": 453636,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:6",
+    "sourceId": 430414,
+    "sha256": "6b629504d04721ce34bc8b209b98c90a4d2f08cc5da84c6e67c75f7156661dde",
+    "bytes": 509729,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:7",
+    "sourceId": 430413,
+    "sha256": "ea4aeef4459677b79c8520c298390cd7885708dfecd5e1696e4478ee5920b6bb",
+    "bytes": 375429,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:8",
+    "sourceId": 430411,
+    "sha256": "54b5085c9dc5052403a0140b7bdcb66ae6e07388771d17acf7800366a348b38a",
+    "bytes": 599522,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:9",
+    "sourceId": 430415,
+    "sha256": "10522a730bc11f02cdfb957a1060b13e77fd84ea399ba3dcf0344428c5b9d7b4",
+    "bytes": 495389,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:10",
+    "sourceId": 430416,
+    "sha256": "f85978d621a2775bd0993acf1efad10d0f9bce1b4ddb21f8fad56e39c841def7",
+    "bytes": 370548,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:11",
+    "sourceId": 430417,
+    "sha256": "df9b2c65181c427dcf74445c916b4814feaccec85c6418a16ee8d78ab76a53a9",
+    "bytes": 344986,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:12",
+    "sourceId": 430529,
+    "sha256": "839cdff99b039523a29363192ca9caf7cdd5b271e3a9b3a6f0998f8301dd37c5",
+    "bytes": 568953,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:13",
+    "sourceId": 430531,
+    "sha256": "b542a5f455deb7a7bf13799e63b7d18006368169f05b50f830535b3574be8d41",
+    "bytes": 768807,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:14",
+    "sourceId": 430530,
+    "sha256": "0025d782bf0f26b5ee5c92e1c71c473247246a27102bb6ff978fb0bb6b345dee",
+    "bytes": 274465,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:15",
+    "sourceId": 430533,
+    "sha256": "04e268c9f8057feeab14d190759da40847984bd92054269f54a9cb0c884c4b77",
+    "bytes": 469754,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:16",
+    "sourceId": 430534,
+    "sha256": "23ca60bb9a3f343959b5d14d620d060e49d964e94c9c6f34f25ab20541a6efee",
+    "bytes": 447390,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:17",
+    "sourceId": 430535,
+    "sha256": "e60c87c860d21fd25e0c5ccd87406235e994b20e3b47890481d0cab72f45d90e",
+    "bytes": 302002,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:18",
+    "sourceId": 430536,
+    "sha256": "4d4a30c5df3514ce6ed3a0337b2c135ec408e3ea335eafe051b37ca1415e0598",
+    "bytes": 322492,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:19",
+    "sourceId": 430539,
+    "sha256": "95214241793e870b792262537f0974bb010b985ffe954cceba4f5f51a17ec49d",
+    "bytes": 700395,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:20",
+    "sourceId": 430537,
+    "sha256": "65863a3dea36ddaf7d325a8156ea891d1c6aa274647c83ffbd8f6f9244b5d1b7",
+    "bytes": 365927,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:21",
+    "sourceId": 430538,
+    "sha256": "8f222b8bda6900fbe1af66baae8adac0ce77109ecc4197fe4d09b499bf91c6f7",
+    "bytes": 235820,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:22",
+    "sourceId": 430540,
+    "sha256": "1e56a36b17fac94b9bba5c072651c1d68d8c4fe3e43400054e8a8f4dd7dd0aaf",
+    "bytes": 464984,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:23",
+    "sourceId": 430541,
+    "sha256": "8294f6dfd1d0a17e25e9ba2e55febd05974cab94bae6402756da98809117db73",
+    "bytes": 276102,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:24",
+    "sourceId": 430542,
+    "sha256": "7e715df360519b345617cc42b014bc4a6db2718ad15a5e87b1c0ce2814c0104c",
+    "bytes": 440727,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:25",
+    "sourceId": 430543,
+    "sha256": "bcffc36ade1d7f5c5c6d87f0dfbc28cb5a9505089f469c63e641b5d37cc3ce91",
+    "bytes": 504772,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 7:26",
+    "sourceId": 430544,
+    "sha256": "6dac48cfe7f19d15ee1be76cc93060caebb40a4453a2f62ebe7ebd862d16360f",
+    "bytes": 456912,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:1",
+    "sourceId": 432651,
+    "sha256": "affd8e2cc20cf4887a506f1a806aff2a46d057004ae036891e45bc9cf22ac7b5",
+    "bytes": 154338,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:2",
+    "sourceId": 432657,
+    "sha256": "3701589e3e76ec5329f4e2348c30af423cff5d03549613c84e9ae95744486487",
+    "bytes": 487314,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:3",
+    "sourceId": 432653,
+    "sha256": "618ecca36490673b5f19a1198db5fdcd57d06e858728f7da9d31ddf816fab1be",
+    "bytes": 309829,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:4",
+    "sourceId": 432654,
+    "sha256": "3f4c5612cd7d2463052bf5cc239cc59b8563a3570fefde98767e9198c754f440",
+    "bytes": 317836,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:5",
+    "sourceId": 432656,
+    "sha256": "9b899a5d5c09c2f62c91a3c63a54e5c1ba33fa5f0f9b0ee96b55efd9842100e5",
+    "bytes": 242080,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:6",
+    "sourceId": 432655,
+    "sha256": "4a776c8db35e4250f68542fa0c8e6f64002698b34e47efb487f289c0ff201e73",
+    "bytes": 322416,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:7",
+    "sourceId": 432658,
+    "sha256": "0f93dad52d4540a77d41f27f3dee9b4c190332a5b8145c70914181cf0e1cf24d",
+    "bytes": 304770,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:8",
+    "sourceId": 432659,
+    "sha256": "2226b47d5cffcd93afedc0b8b214b531f62292242ce592709d568f63b08b1d69",
+    "bytes": 192782,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:9",
+    "sourceId": 432661,
+    "sha256": "7a72f9c25e5f6c2ac9b64ce93596826575a966d3bdeccbc3ad2bb92ad432d727",
+    "bytes": 546658,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:10",
+    "sourceId": 432660,
+    "sha256": "1f1e07cd61cf1595980000c764b6c2b89cc955b563d6c494277ed2aca985415a",
+    "bytes": 343386,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:11",
+    "sourceId": 432662,
+    "sha256": "792cd65324ce08eee6bab77dc064f10156f4d548748d033af043946431858946",
+    "bytes": 299835,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:12",
+    "sourceId": 432663,
+    "sha256": "88ee0dba89f025e9bc95c68e29a500de8f3e376e74b9a6ad620787fa869ce8e7",
+    "bytes": 480899,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:13",
+    "sourceId": 432664,
+    "sha256": "e761cba16ef9cddf0978db0e5f530309d515e4f950e4e106cae85f2c504c179f",
+    "bytes": 179881,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:14",
+    "sourceId": 432665,
+    "sha256": "88d8a0bd0264f276a9623c9e7fdcc139e5f28dc1fac2c8a4d15b14b79dfd555b",
+    "bytes": 347870,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:15",
+    "sourceId": 432666,
+    "sha256": "5f9d6d464c4546e5cbc7146fabb51875e6556dbfda3b463541611cb1e6ae80b4",
+    "bytes": 298213,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:16",
+    "sourceId": 432668,
+    "sha256": "234709a532edd32cb5dc2a1590d3745bd9f3ef553b9b6f23587ca79f220b9959",
+    "bytes": 237904,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:17",
+    "sourceId": 432667,
+    "sha256": "6aeac7e02fb8a8224f1b9170c02f77ccb9e0fd8733d984f9fdb15a542097ba77",
+    "bytes": 223415,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:18",
+    "sourceId": 432669,
+    "sha256": "8fba1110fcb65a900c444727d66b671bd653653a288ea46ef59170a29dbd2d3a",
+    "bytes": 208847,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:19",
+    "sourceId": 432670,
+    "sha256": "fd7b50b4c05c6e3a4ba5bcb880712de12508e5beed2734b9449fb1d78f7393bd",
+    "bytes": 285630,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:20",
+    "sourceId": 432671,
+    "sha256": "8ce0d40f42172e0cb816c482dc4c01c41b0572e734d05dae74c2183aa7659e0d",
+    "bytes": 333636,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:21",
+    "sourceId": 432643,
+    "sha256": "3e2282b615487e5c0a28a82eae3d38eac46d54351c69f164328fae1e8bd62855",
+    "bytes": 346150,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:22",
+    "sourceId": 432644,
+    "sha256": "0a029fe7c550bf194d809b8f1518125e6b9226e383622da6c0f1085dbad7ebf7",
+    "bytes": 354206,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:23",
+    "sourceId": 432642,
+    "sha256": "6ca1f2e124ebea99c8e0206c5e9c4f8d208afb4123c97dca7d8b2273e87a5697",
+    "bytes": 225072,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:24",
+    "sourceId": 432645,
+    "sha256": "ea65bd2ae260a9ff9312e9cc6060d5c738d3a70f3a91d21d35c7cf026aba4966",
+    "bytes": 452325,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:25",
+    "sourceId": 432641,
+    "sha256": "4ed04ca4f37661f809b25c519bae8e4366420d0ec157f6ac87968b657d4988a4",
+    "bytes": 167180,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 40:26",
+    "sourceId": 432646,
+    "sha256": "1b69017a7ee9fa5304fa7e2880e6b604b9728c47437130173f4db857849ef566",
+    "bytes": 500465,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:1",
+    "sourceId": 430545,
+    "sha256": "8969c82ed78e78fa4aa5ac88a70dd100dee34a7266230c7b7f60bc6dea706487",
+    "bytes": 513030,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:2",
+    "sourceId": 430546,
+    "sha256": "d1ce9664f170e12193d7bf4b2e39b0604ff94009e473802a400b1ce030c433ad",
+    "bytes": 692398,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:3",
+    "sourceId": 430548,
+    "sha256": "5c229f07cf58048d4e9c4d16aa4cf84e4949dc99e9309c15c25392903583fe80",
+    "bytes": 748242,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:4",
+    "sourceId": 430547,
+    "sha256": "59bc87f95a991c5ed29dbf71535271ae052e8e7b8aa557b1f287d09100d63791",
+    "bytes": 299782,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:5",
+    "sourceId": 430549,
+    "sha256": "94e45d300438df317eed52118cdf2aea9a7e5eee239d1d09a07c8c858c0c0b7a",
+    "bytes": 320753,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:6",
+    "sourceId": 430550,
+    "sha256": "7bbcf7673bddc27bbe9d585716be324d8dc493bc2bd4b1c625611c7dc7affc52",
+    "bytes": 253772,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:7",
+    "sourceId": 430551,
+    "sha256": "a6650393b998a8e6140ab3011a7d3f6a2032ac3306a8bed15fd45d87a3296a3d",
+    "bytes": 421772,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:8",
+    "sourceId": 430552,
+    "sha256": "e50a419f06550d2a5bda650b8617474aa4066d11e36c7bc52b80049fa1afe0f2",
+    "bytes": 248815,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:9",
+    "sourceId": 430553,
+    "sha256": "07b4d7ca033d681a75d05d1dc92b26a6a720ee2dfad713ba650657292862c696",
+    "bytes": 492446,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:10",
+    "sourceId": 430555,
+    "sha256": "3ce4970c29aec95554d03a67660a76da276f2cad0239f90348daf3fff89005d1",
+    "bytes": 280946,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:11",
+    "sourceId": 430554,
+    "sha256": "47c7a5e652b3a8afb56508501d9a935abb60da9becb79dfbc24e752537489514",
+    "bytes": 392650,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:12",
+    "sourceId": 430556,
+    "sha256": "94f8490352c8e0eac3a4039058aaaa21bbb1b43cc4ec99550b7bea081319fae7",
+    "bytes": 215402,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:13",
+    "sourceId": 430557,
+    "sha256": "7e915b785d6727caf37498a34983cfd6c7880720eb12da8c1625bfa4eee005ef",
+    "bytes": 279384,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:14",
+    "sourceId": 430558,
+    "sha256": "ae78b2a1203fd7b7a7030af5d580e96a2c92ed64a19808c07ae8849dc1d58c01",
+    "bytes": 295130,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:15",
+    "sourceId": 430559,
+    "sha256": "246000e7ead1c9eb3c5b031a2162257d9ad7f025eee3f61a743526138963aca0",
+    "bytes": 493821,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:16",
+    "sourceId": 430561,
+    "sha256": "09c43a8f30e026278c619bbdbc4b491404b106b4d08b94c37bcd8ec19b70ab93",
+    "bytes": 432821,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:17",
+    "sourceId": 430560,
+    "sha256": "a0bf04e9007d20bfc52d235c55327b879c0183117e9a3db5bc46eecea9570249",
+    "bytes": 248835,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:18",
+    "sourceId": 430562,
+    "sha256": "44528966e84a6fb01915835d513ca7f3d918e8b0ad051675673bf52d8428a39e",
+    "bytes": 458569,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:19",
+    "sourceId": 430563,
+    "sha256": "f39a663e445f32fd277c5273c6f777975c49e137bbcd084cabae65fd1b939277",
+    "bytes": 535090,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 8:20",
+    "sourceId": 430564,
+    "sha256": "43b2b83a0577bcdf927a83db8b7ed73affcbfac85599bdd4fd20beef4f6ee5b7",
+    "bytes": 344967,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:1",
+    "sourceId": 430565,
+    "sha256": "44b8065c399ca73125b777a3429fd8f84408bd4226b31c7e05be0becc6577751",
+    "bytes": 466900,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:2",
+    "sourceId": 430567,
+    "sha256": "c5657c662da0beb1befee92ac004a23ea9ec52d2741d1db962f2ad395e7b02a0",
+    "bytes": 343324,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:3",
+    "sourceId": 430566,
+    "sha256": "05bfdb3ca10c0a671f86a726bfc2d601141a774019166a623e50593d9320ac43",
+    "bytes": 599399,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:4",
+    "sourceId": 430568,
+    "sha256": "7dbceb7b82b9afc908358dde67cb77473520157b795b10ec30a5d3302fe21782",
+    "bytes": 647143,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:5",
+    "sourceId": 430569,
+    "sha256": "7ae88d43a44fd7512f1654f4162d5736a18df679fdeaa0a05e8610eaa85b47bd",
+    "bytes": 832664,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:6",
+    "sourceId": 430570,
+    "sha256": "92e18dfbf8c3e2a6dd7da3213b18ea4454eb1670fd5cab563eec422696478b86",
+    "bytes": 532146,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:7",
+    "sourceId": 430572,
+    "sha256": "7c4a3fe6e0b4c8e05cf6bae87b9835334a1c42cb8aeb22ca3e438ee38240e1e3",
+    "bytes": 583141,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:8",
+    "sourceId": 430571,
+    "sha256": "2dbdcceb7c5b237b0504c4d01d2c3e4bdc686d12993e18ac1cf9d1082d6ac6f8",
+    "bytes": 250440,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:9",
+    "sourceId": 430573,
+    "sha256": "814743fb5dbec129db328dba11d067d1ff294f69ed1dbd9f7190e1d287b216e9",
+    "bytes": 676376,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:10",
+    "sourceId": 430574,
+    "sha256": "118ad29161c3b10543f20b91c40117394307ac496521535b1781f2e454e8d5ee",
+    "bytes": 594698,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:11",
+    "sourceId": 430575,
+    "sha256": "6cc640f604d8596a8dc867ac5c084ef7e3f4073c7215978b4b6dbab8c0b5594e",
+    "bytes": 375558,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:12",
+    "sourceId": 430577,
+    "sha256": "8f2c90878bc1006883dc430dd65eddf52326c2bf143dce540f62dd3b97ecd144",
+    "bytes": 509529,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:13",
+    "sourceId": 430576,
+    "sha256": "d3018a26e9e7b31408f05c190e0710ae31f97c97ee14124adb16e326e90ef161",
+    "bytes": 224834,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:14",
+    "sourceId": 430578,
+    "sha256": "b0241952365b8cb38426ae859cfff9802eb4b3e3c2c9b190fb235aa8189180b6",
+    "bytes": 383188,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:15",
+    "sourceId": 430579,
+    "sha256": "a32540d00c6be246eabaf528b0d981e80c0fad4240255904330b4a3348ff51dd",
+    "bytes": 309948,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:16",
+    "sourceId": 430580,
+    "sha256": "96bb4efa910e5e4d72f8449065fa1b5881511c409e826143e24e2ec6e70a14d6",
+    "bytes": 422932,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:17",
+    "sourceId": 430581,
+    "sha256": "42153e9a3872c742f8407131287f0f5c80905d2b8d708670a875b6e0c0695132",
+    "bytes": 277653,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:18",
+    "sourceId": 430583,
+    "sha256": "0bad6559c4395264b9692220ea1c8ff40438febb429f4fe64ea1fbe48f3b2397",
+    "bytes": 612228,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:19",
+    "sourceId": 430584,
+    "sha256": "1b0147e367abac5279cf40a0b8fbf4d56fdf8b0e8b031c4c27944e38eb904a05",
+    "bytes": 455315,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:20",
+    "sourceId": 430582,
+    "sha256": "6c1a0b86f43d2c761f556fa4062910a8603189379b7dd5aa4a9e475103a09f1e",
+    "bytes": 333704,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:21",
+    "sourceId": 430585,
+    "sha256": "9df701ca0cf3a6eac04c8b04f6ef231e8d8aa6a4f8a4a0229ede16ae3dba66ad",
+    "bytes": 724240,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:22",
+    "sourceId": 430586,
+    "sha256": "39380e3fbe444d25eb879aae313e7ba80bee4819d80ff71eee007266820eb4a3",
+    "bytes": 263489,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:23",
+    "sourceId": 430589,
+    "sha256": "156dd3cdb3d87570d1777faae464450f9fabce9501a392b8476a5e1d1e61921e",
+    "bytes": 632988,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:24",
+    "sourceId": 430587,
+    "sha256": "06a83d478465517d68771d2252bf236f3b2e298eed08dd98c58b07b8766df1c2",
+    "bytes": 163790,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:25",
+    "sourceId": 430588,
+    "sha256": "eacd0f0232e5706bd03b74e2b76d5616d23ce51057e5b622955f5017b4176f27",
+    "bytes": 396364,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:26",
+    "sourceId": 430591,
+    "sha256": "458328a42d1fde51f7ecb58015d2ae79e741ece9e3681549f23c52b91d937f1b",
+    "bytes": 484152,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:27",
+    "sourceId": 430590,
+    "sha256": "d4c749d0a0534f92f108d0d6e0c2c7508571b85b228de2abbaecfa40b0afcda5",
+    "bytes": 359271,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:28",
+    "sourceId": 430593,
+    "sha256": "eb0d549f139cfc137eb7f0b1330608ddff96317a9e9bb0f0b1db18109ae232b2",
+    "bytes": 586871,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 9:29",
+    "sourceId": 430592,
+    "sha256": "75bf55fb85d2694ce1809a59d280829499336a67e4fe604ac36e541e4db859fe",
+    "bytes": 312803,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:1",
+    "sourceId": 430595,
+    "sha256": "5bdec48b1945d7d0dc5b087ec01964b7a4cd0f30677a1690c83df4e13bd21213",
+    "bytes": 461912,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:2",
+    "sourceId": 430594,
+    "sha256": "918dfe14b42051b7a1a14386456afedaf9f01453715cac9939ff981296847707",
+    "bytes": 357738,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:3",
+    "sourceId": 430596,
+    "sha256": "dfbde551f625b7867bb62c92854990f35890cdff101e5ddfc212242350f0739c",
+    "bytes": 335258,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:4",
+    "sourceId": 430597,
+    "sha256": "33973e47a1aa17c589eb8d298861868082c931808c8f199899d11ce9dc8fcc48",
+    "bytes": 518019,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:5",
+    "sourceId": 430598,
+    "sha256": "2bccf7c03aa263a38a3c4de5bea2501d64902dc9a93191094bba36452de681df",
+    "bytes": 386670,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:6",
+    "sourceId": 430599,
+    "sha256": "0e29a0bcbde60df325145a619bab69950ccbe690513a779a214e5cef0af0084e",
+    "bytes": 427081,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:7",
+    "sourceId": 430600,
+    "sha256": "015642715d57e8a033c76f8f26bf48fa5af5f947c05d429a0e277c1c179d87fb",
+    "bytes": 263227,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:8",
+    "sourceId": 430601,
+    "sha256": "a6688d888afb79ff93729397c26ab53cfd63ed5e11e6d0c53f4764b1afeb7243",
+    "bytes": 463246,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:9",
+    "sourceId": 430603,
+    "sha256": "2bb4586b90259faa6d490c52fd817673ce3a9d11e60bde9cb39fd591894a62c2",
+    "bytes": 381752,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:10",
+    "sourceId": 430602,
+    "sha256": "105545fc4c92f1a5eead7cc3fb2818eff569ef2ba595c3f9b22f78fd5b63d3b2",
+    "bytes": 530847,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:11",
+    "sourceId": 430604,
+    "sha256": "b3334af8ba517d954f855034b78518e1730aedb2d92a54c428d032983896a8ee",
+    "bytes": 380385,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:12",
+    "sourceId": 430605,
+    "sha256": "e494eb37cef10df3c3351a740f7352c148a0de92ae4377dedce870d61b953919",
+    "bytes": 636229,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:13",
+    "sourceId": 430606,
+    "sha256": "f10e21635de0dd427733ddeb22c90d825d3a9b05e71bd19ee60615fe3e6f6ff2",
+    "bytes": 296824,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:14",
+    "sourceId": 430607,
+    "sha256": "173f5550a1af084cf3d39b0e2d12f058df873fc66c83f4e2c120ef3e342ce3c5",
+    "bytes": 234180,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:15",
+    "sourceId": 430608,
+    "sha256": "1ebbe52a2640096da3aec2be0de0ec6d9c60fdd06e2a4a0e2dcf835c3dfb96a4",
+    "bytes": 415281,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:16",
+    "sourceId": 430609,
+    "sha256": "ebf7ea8e7e4ff056a107fe1f4a7a518a2c4a4a97846b1efcf5c2697000056b12",
+    "bytes": 242207,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:17",
+    "sourceId": 430610,
+    "sha256": "3db8ef4e8d66a42e5a0070304e6b530ccd3d662763927e4713ad66bba8943ad2",
+    "bytes": 464953,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:18",
+    "sourceId": 430611,
+    "sha256": "5685d3ff4e888b65dc5ba485a7c101ff63233bf77d4c5300f36a102b76e51f09",
+    "bytes": 272698,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:19",
+    "sourceId": 430612,
+    "sha256": "f3d0a86ca7c88e0bdaa0794f96df29c74ac216cbac11be70e76375953195fb03",
+    "bytes": 171881,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:20",
+    "sourceId": 430613,
+    "sha256": "4951249cfda42b8e37b63e80f934814b5e605c001ca41c06b0bb3be6580a4644",
+    "bytes": 298129,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:21",
+    "sourceId": 430614,
+    "sha256": "a01014d2259402621148ad81132d7312e09012fe3a1fee5636c898d2d72001d4",
+    "bytes": 373747,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 10:22",
+    "sourceId": 430615,
+    "sha256": "63f5d901336bac3f2b2763ffd762200645e2d520bafea16b3977004f8245a7e5",
+    "bytes": 363859,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:1",
+    "sourceId": 430616,
+    "sha256": "912dfa62e3c6cad51806c22e8557c19e90f71a63946297a0bbcc8ec92346ee61",
+    "bytes": 335301,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:2",
+    "sourceId": 430617,
+    "sha256": "4125a05ae4081874a275d61763cb360c549e495546e053cfd7dcd56c2383d361",
+    "bytes": 567319,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:3",
+    "sourceId": 430618,
+    "sha256": "adccd0022b711c37fd38d5235b66e72fb87008ede2eb393593b1750cec51ad3d",
+    "bytes": 266436,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:4",
+    "sourceId": 430619,
+    "sha256": "64ba76590dad984e82f25ba390eba6f317729da8bb108b7523c60730237c71e0",
+    "bytes": 543308,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:5",
+    "sourceId": 430620,
+    "sha256": "f69735d5c9063c4e751bfa1fb33833a8ca3e63bc6374661f35b44010cb665f72",
+    "bytes": 226298,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:6",
+    "sourceId": 430621,
+    "sha256": "d222f03850ba4b3dcdf2257cc43fc9a66e1c21251966c76208fd256022703fe2",
+    "bytes": 680828,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:7",
+    "sourceId": 430622,
+    "sha256": "a0d343677b4d5f4c09fdb07bd82233d1e98f5802653784366762b8f21cc398a0",
+    "bytes": 215452,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:8",
+    "sourceId": 430623,
+    "sha256": "41212756097739eda544e32a7001a2ed37f88d8c73de3659c1db92d8961a6e74",
+    "bytes": 469862,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:9",
+    "sourceId": 430624,
+    "sha256": "5a3c44b84dd4cdd250970e8f8a4849f749ed4402d658a8481161469d65587012",
+    "bytes": 432679,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:10",
+    "sourceId": 430625,
+    "sha256": "3970a29ec7f184e172e9d7390d8ddb72e81a395192a9af2f2a8cae451ce7b189",
+    "bytes": 533840,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:11",
+    "sourceId": 430626,
+    "sha256": "2a5f9d6fe46ccd0bebc2f9a7b7e639281d0c8db6836a848752d2b193c11c9b3c",
+    "bytes": 338297,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:12",
+    "sourceId": 430627,
+    "sha256": "fd7463f18e567ace21957b386c70d665e8700dd277b9a973101318e31dd81e82",
+    "bytes": 404207,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:13",
+    "sourceId": 430629,
+    "sha256": "2be3237916ff868611f6a3d7eb4f727b101c70530344aa5bac8528cb38283a82",
+    "bytes": 498853,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:14",
+    "sourceId": 430628,
+    "sha256": "506cc340ea7715ee66ee3e1baaec006b7b969d8856f21fd8104114b299d27d9d",
+    "bytes": 322461,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:15",
+    "sourceId": 430630,
+    "sha256": "e2acbed07800e4576d1af7dc107524eb4d9fc8629102faf1387e1af676f1f162",
+    "bytes": 237982,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:16",
+    "sourceId": 430522,
+    "sha256": "53da5ce2b00cd445ca2bc79278233869687fc622465cbc4d7c825e0fb10e8d5e",
+    "bytes": 338067,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:17",
+    "sourceId": 430525,
+    "sha256": "a4e0732b2a9259c3e4e6347bc401b8becc5fe69d0ca2f66302613ea71d8d8311",
+    "bytes": 573970,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:18",
+    "sourceId": 430523,
+    "sha256": "77657e9e2f2c96651e3bc424d2518a2aa108d60ecb7feb043debdbf0fffbd893",
+    "bytes": 365803,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:19",
+    "sourceId": 430521,
+    "sha256": "9cefef46bca47730ad7c7bbe9615fb6738f6a3cf91ab49101503082a2b974e44",
+    "bytes": 347958,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:20",
+    "sourceId": 430520,
+    "sha256": "68e361ce265610034e6121d40e0212972c04b880110815a16a9231b636aab194",
+    "bytes": 151389,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:21",
+    "sourceId": 430524,
+    "sha256": "42ae91db2dc9915ad1f06c9cb67839d49301b088dcc23710e3cb3e23ef069325",
+    "bytes": 400989,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:22",
+    "sourceId": 430526,
+    "sha256": "e79e0ecb40406eec06834e277782fc68746a531f50d457b47a38757e3d38b7bb",
+    "bytes": 572377,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:23",
+    "sourceId": 430527,
+    "sha256": "0c63acbf2cbd876b72ae69a12a2196f7f5ed8765bb2cd0b2cf97d85175f91f75",
+    "bytes": 303297,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:24",
+    "sourceId": 430532,
+    "sha256": "73a4809bc1eb2ba28c078cc59ee6957d7e0504993626551a23953891483cb24c",
+    "bytes": 564393,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:25",
+    "sourceId": 430528,
+    "sha256": "c2fa7aef40748cf9e799c23049847b3b2f88fa47013a18236c73d13e4033de14",
+    "bytes": 520865,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:26",
+    "sourceId": 430641,
+    "sha256": "a9ebfac34e7a0830942b535f910138065c4fe1e3eeb17fa84839f4bbca98d538",
+    "bytes": 211717,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:27",
+    "sourceId": 430643,
+    "sha256": "4480ad390d07f69610282433bdbb2c916b7502a824adac5048858485d0e3adfe",
+    "bytes": 306579,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:28",
+    "sourceId": 430645,
+    "sha256": "6e287c97d18065a38a2e56993971612e79f7d58f5f528c3ca9079c941a71d31e",
+    "bytes": 528917,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:29",
+    "sourceId": 430646,
+    "sha256": "5d1363b85e3afda629a651d439466b2a30c2abf56f119882d8e09717868261b4",
+    "bytes": 490633,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:30",
+    "sourceId": 430648,
+    "sha256": "d961aa0cadcc6bf56092d0bba4bca4edc6296a0587766066bda5adebb4bc42ad",
+    "bytes": 517948,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:31",
+    "sourceId": 430649,
+    "sha256": "a2b7d9723ff704b33a7fcf30f2bd85fedb8b0b3a637ddc79981151ed5ca02b3f",
+    "bytes": 420150,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 11:32",
+    "sourceId": 430647,
+    "sha256": "0e2356a3bc30d69d8924a27dee9d949da0c67601082ba613d3ead5a4957c6d3e",
+    "bytes": 272604,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 49:14",
+    "sourceId": 432686,
+    "sha256": "173aba6c58c7d2268821b1406c50aa93586777ab983162370920e974bb7d13fd",
+    "bytes": 202488,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 49:15",
+    "sourceId": 432688,
+    "sha256": "205e6868f885a77404252a234bdcb42aab637377d29caf6cda6cf56a4a679421",
+    "bytes": 312828,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 49:16",
+    "sourceId": 432687,
+    "sha256": "e94141fc04c7e09707c2ab25eb8e5d5a5604bd582db5d36cbd2a9cf24856eae5",
+    "bytes": 230045,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 49:17",
+    "sourceId": 432689,
+    "sha256": "9605b83a904d2a3fbd832cd0ac6df5474a2e693d57c300625ebfae2949291d6b",
+    "bytes": 230056,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 49:18",
+    "sourceId": 432690,
+    "sha256": "badd8dc7af8086b600abca44c212f64e1e0be9da77d06d2540f876874d9828a4",
+    "bytes": 460274,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 49:19",
+    "sourceId": 432692,
+    "sha256": "b46819644db10b627dd1916d79803a2cdd55c1d3e51e8368743e5dd3e74a4848",
+    "bytes": 452453,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 49:20",
+    "sourceId": 432691,
+    "sha256": "12e0b58046b38fa02ff8edc6f503e4b1260facf972e6b2ed0a70e19e95e85ca9",
+    "bytes": 303100,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 49:21",
+    "sourceId": 432695,
+    "sha256": "7da77639a0f6646e6f6a9f4bdf282839dd771c3488ed97bd945f3f05c4cc2f52",
+    "bytes": 591195,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 49:22",
+    "sourceId": 432693,
+    "sha256": "a83eff89969c838175799261b5b918fe458b3b71f6f73248d9bcbf4eb7225518",
+    "bytes": 527209,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 49:23",
+    "sourceId": 432694,
+    "sha256": "1cff76f7a4a9557a38c6ace3328d885401d7c88c7d1dbeac6b35385fc5d33763",
+    "bytes": 722791,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 49:24",
+    "sourceId": 432696,
+    "sha256": "f92fde95bb43b83a3519718d90fd04c2aeaa0b3542a1091ff86d0b31e02ab854",
+    "bytes": 205882,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 49:25",
+    "sourceId": 432697,
+    "sha256": "5cdea563e626dcafb94045ede53510f477ea48b5dfea00052290daf5890a818c",
+    "bytes": 514672,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 49:26",
+    "sourceId": 432698,
+    "sha256": "39bdf8dc975779a56df87813e3427c20a4e93fd3e5c2825739e89d9834f9a46e",
+    "bytes": 564415,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 50:1",
+    "sourceId": 432702,
+    "sha256": "d8e1224fc2c4ae98d8cb462a43bd8b550fec8ff45686aa664c993ac27c69bd3e",
+    "bytes": 799112,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 50:2",
+    "sourceId": 432701,
+    "sha256": "d5ba4cc82e0d7ccb7cf81f248f7e3448caea5910f249c55c0fff01c9d1797b04",
+    "bytes": 900468,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 50:3",
+    "sourceId": 432699,
+    "sha256": "d6908653b8cc25a28b2ca652a047cbaf7c27c9a882472ba30b1a478620c52118",
+    "bytes": 168933,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 50:4",
+    "sourceId": 432700,
+    "sha256": "54815f0bc2c95b8f83b8b1c3e929fdec7e6972791b80a2c26d4509cf37a6361e",
+    "bytes": 583223,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 50:5",
+    "sourceId": 432703,
+    "sha256": "00a6f1fc4b8300a8db54b4c8bdf7da29077b78b554f241669c4cdf437350fab1",
+    "bytes": 293964,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 50:6",
+    "sourceId": 432704,
+    "sha256": "96d666043ac72c4b506629e6316aef69f5ec4e3cb4e3771539428f9882a9c04a",
+    "bytes": 339962,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 50:7",
+    "sourceId": 432707,
+    "sha256": "931f270e8f163ef615f1f2e6f914a66c67e91ef009db0f5c3a5b17a4a90e3f96",
+    "bytes": 392614,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 50:8",
+    "sourceId": 432705,
+    "sha256": "2ee76a180c43089913423881ddd2f77f328d56e3ef011082a2145cc223a34d53",
+    "bytes": 304891,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 50:9",
+    "sourceId": 432706,
+    "sha256": "776229126aeb57b563ff6076aa6dce7dfc9fb16cda4f90b5fc25fac242010c65",
+    "bytes": 338303,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 50:10",
+    "sourceId": 432709,
+    "sha256": "f2c7c2b26bfe1731d6dc734f362753cef90d3896d1206650ab38afdd5d64d966",
+    "bytes": 501885,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 50:11",
+    "sourceId": 432708,
+    "sha256": "fef5333c0bc19f557a05a3940d951670441b0729b4ba9523cc09c3fdaf4dd6e8",
+    "bytes": 564442,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 51:1",
+    "sourceId": 432710,
+    "sha256": "a4f14fedeeed48a1ac2992c8aae7c11d9f7ed9893fcbc0c400461b911894703d",
+    "bytes": 383492,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 51:2",
+    "sourceId": 432676,
+    "sha256": "07055ec39e12a3c881e2399066c6ebdbd2eaee5d9acd4a0d6bd948bf8df71ddc",
+    "bytes": 371718,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 51:3",
+    "sourceId": 432677,
+    "sha256": "eb3ddbbd3258ce1edf374d3870e6588b71cafb49b459f2b5c78f8f8fc603b974",
+    "bytes": 552680,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:1",
+    "sourceId": 430650,
+    "sha256": "d433f5e68b7638ccec4d94c14c26547ed66785c56de8516d444c5006c58282f1",
+    "bytes": 612409,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:2",
+    "sourceId": 430651,
+    "sha256": "7dd06a8a7b9779b9509e457b7f808102f69069cf03c99c9d326b2e719cc1ce93",
+    "bytes": 650980,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:3",
+    "sourceId": 430656,
+    "sha256": "a0630168eb09349ebac928347d4e6046681604f1316bf5912408f12a55e5350f",
+    "bytes": 541815,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:4",
+    "sourceId": 430652,
+    "sha256": "cb04015300d1a855ff497cec5403c9e299251c872b11df207f527ca35afec416",
+    "bytes": 130314,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:5",
+    "sourceId": 430654,
+    "sha256": "37a7d17a1a317950f539641279ba48a1cc18b101875574639badcdad4ca9c267",
+    "bytes": 424772,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:6",
+    "sourceId": 430657,
+    "sha256": "a9aa067236ff3f9772ddca32c90acd55abaa910bf27500ba06f59582ade69b3d",
+    "bytes": 482986,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:7",
+    "sourceId": 430655,
+    "sha256": "51ee8e8051aada671dfaad02445f37a0dfdf9d3fa216c1e01eba46940a6653d3",
+    "bytes": 418991,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:8",
+    "sourceId": 430653,
+    "sha256": "e4730563a96e4128dd91876756aa137a2147def1e94bcc3a10018cd1362019cb",
+    "bytes": 317806,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:9",
+    "sourceId": 430658,
+    "sha256": "bc0176f06bea1d9231d53364583308253d6e9686680f6485f561c8ed2f814207",
+    "bytes": 261801,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:10",
+    "sourceId": 430660,
+    "sha256": "0652a2ab49d4b50ef04f60ce87916b9072859d3e60b8889d03420a0a7f23e312",
+    "bytes": 478028,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:11",
+    "sourceId": 430665,
+    "sha256": "13c964207e7f27ca42b78abd5bb7da7793bc09031de8945cbf01474ae326d438",
+    "bytes": 806458,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:12",
+    "sourceId": 430663,
+    "sha256": "16afd916f6e380d3edfdffa7c2487e607e2a22cef28dd446a2c661ab98b5416d",
+    "bytes": 608874,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:13",
+    "sourceId": 430659,
+    "sha256": "48991e1219df1550293947f7884d54e0ee176e538bd2d24cb8d65edd5b0dd977",
+    "bytes": 221638,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:14",
+    "sourceId": 430661,
+    "sha256": "e26720aab6ef8717e2ca7af93408b473dc18a982b53d1e45319c7911a06092d3",
+    "bytes": 450739,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:15",
+    "sourceId": 430662,
+    "sha256": "5c547022aeeeecf25ae4331655e085cd8ce88b7ec80b37f0066b24a1a38fbf9b",
+    "bytes": 623397,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:16",
+    "sourceId": 430664,
+    "sha256": "8f6602a8cbdacd5ac5447e55bb9ea6683b0fdeeb3233ef270db9abf59127c30a",
+    "bytes": 194486,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:17",
+    "sourceId": 430666,
+    "sha256": "dd7db26ef8fec69a52d0ab91a391b088dfbb72c0ff0484f52d1dc2fef5025a4c",
+    "bytes": 580269,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:18",
+    "sourceId": 430672,
+    "sha256": "21960ba9df430a22c27a703902dfed376274f45c62b5c90ee31db820d354e105",
+    "bytes": 758038,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:19",
+    "sourceId": 430667,
+    "sha256": "9e99ef56a68e8dd94f721abbf8efa507df28647663f0e1126b91c5dabdfd844b",
+    "bytes": 223488,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:20",
+    "sourceId": 430671,
+    "sha256": "8e3eb15798e39dbd59c1ed12e67c17162559d760a540a441a544be0ba5d3f0c8",
+    "bytes": 533856,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:21",
+    "sourceId": 430673,
+    "sha256": "b5b414b413f3bb3ffb98bd01aca29e3b2a9f72cb0952152a8b52402a5d809e33",
+    "bytes": 732552,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:22",
+    "sourceId": 430670,
+    "sha256": "8871c78e6b8f0c572b1d7a52498fe910d5482f1b29957a6ffd58b1e8738988b5",
+    "bytes": 378895,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:23",
+    "sourceId": 430669,
+    "sha256": "99d2494903341534b232f8301911aebdcd67aa817d6c035dd77da64a2a238a0a",
+    "bytes": 315709,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:24",
+    "sourceId": 430668,
+    "sha256": "638f3f652c3aa66b8ee155bee17134161f8a71698a55c48a09951e7a044946a0",
+    "bytes": 170165,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:25",
+    "sourceId": 430676,
+    "sha256": "f2d12bc0392a58eee8da54dfc7b8a917c0ff041336308f4391dcb2d793400576",
+    "bytes": 295173,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:26",
+    "sourceId": 430674,
+    "sha256": "81ff838fb5a96061e15d8ec25d91c8293f15fe3b90d09756e09dd535979bc1d8",
+    "bytes": 320675,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:27",
+    "sourceId": 430678,
+    "sha256": "6aed1a5e08702f1927545ea7b93d6049b175ee252eebe5cec0df14ff722ae14a",
+    "bytes": 471163,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:28",
+    "sourceId": 430679,
+    "sha256": "ead44adc282a9455828cc4bdafa2b3497c273246e0493c4873332c9d1e5fce32",
+    "bytes": 543506,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:29",
+    "sourceId": 430675,
+    "sha256": "f100897a35ffb2a399e7b69ce614402c96cd75d61d0e9c9371b9b3cc79996b89",
+    "bytes": 453572,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 12:30",
+    "sourceId": 430677,
+    "sha256": "5acd282c65aa8c7861a3209c5b76fc3c064868cd130a9128454a50653c57c288",
+    "bytes": 626570,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:1",
+    "sourceId": 430681,
+    "sha256": "c137366dd906bba1d402fe2cfa7daa8d76e8df98e085f0f4e21e1821fdd8abb8",
+    "bytes": 344897,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:2",
+    "sourceId": 430680,
+    "sha256": "7bf868bd08adaa80e4dd38e69259e6959a74e1dc6fc7327172ff864aa1a42461",
+    "bytes": 317765,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:3",
+    "sourceId": 430683,
+    "sha256": "1979f1c439e3ebc8e8f07845bdf27946ba23160701267bdd8614803151a47e11",
+    "bytes": 419007,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:4",
+    "sourceId": 430684,
+    "sha256": "c684b56b9a036a5cbb23d593d5a71ff1723e2aa060c5a0fc4a8737b1f4b5c5ed",
+    "bytes": 634707,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:5",
+    "sourceId": 430685,
+    "sha256": "fca5a14a69cf4cdbd37114ecc616e41896f3fa24e151aa206cd264d49dbbdae8",
+    "bytes": 437702,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:6",
+    "sourceId": 430691,
+    "sha256": "1c7816d97d2c319f88e6c358677f4e7360cb9b100370e9f76ea9f02affa3a56c",
+    "bytes": 918075,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:7",
+    "sourceId": 430690,
+    "sha256": "b2b1a4ad6261168d25fe20bf7fdb03293e1816179b6998ed929c1e832e443146",
+    "bytes": 863254,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:8",
+    "sourceId": 430688,
+    "sha256": "7b15e1fca4483cb0324b4a33ad349a2d20a2b8a75d9d598c1f5536541cce66be",
+    "bytes": 421904,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:9",
+    "sourceId": 430686,
+    "sha256": "d652a5480b6924a46c7644c8e24f83d5e99906ec4aaffba96dd4d416163f331b",
+    "bytes": 297047,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:10",
+    "sourceId": 430689,
+    "sha256": "e85dde4b0a5565fb3d092bf90ad723c8b48379f161f6a5c22b21b44545327c88",
+    "bytes": 317841,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:11",
+    "sourceId": 430687,
+    "sha256": "90fa6d6754fc4f97cde727d2e9f194f172f11819e0b780b5af011eca36719939",
+    "bytes": 394627,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:12",
+    "sourceId": 430692,
+    "sha256": "7d6bf9d1df55bf4bc6541f7362ad5cc01c75d60e2e9b1e43d8615883acd5cb92",
+    "bytes": 330355,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:13",
+    "sourceId": 430694,
+    "sha256": "000cfedc85ff161232dc7b143fb22462f199e6142d7ecb4f8e6f691847758f1b",
+    "bytes": 319424,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:14",
+    "sourceId": 430696,
+    "sha256": "192ef953d0e79c3c388a255e5011b88ce01c4913693827ac78bd37ac6c3a045d",
+    "bytes": 508278,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:15",
+    "sourceId": 430695,
+    "sha256": "1c0f6b4caab1343b0462f9f5c83b3b6d9d6deb4d1425f2ce254be7c4f820e4c0",
+    "bytes": 436435,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:16",
+    "sourceId": 430693,
+    "sha256": "a18a6e8b2c9cf6c881d66a3926716662f4722cf0ba9079b979980569258828ba",
+    "bytes": 370511,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:17",
+    "sourceId": 430697,
+    "sha256": "b782b2bc7c6669d813723b56fce391901476ff9e59943c6f117761223c4f9bdf",
+    "bytes": 500497,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:18",
+    "sourceId": 430703,
+    "sha256": "b2790a57aea9f60fdb29de46112767deb681eb5f73b1f28525440db43a110a23",
+    "bytes": 528833,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 13:19",
+    "sourceId": 430702,
+    "sha256": "4e75b06bbe65879ec1aad8b5a0d60d42e55184f86be70f56af39fce33c7d869b",
+    "bytes": 418929,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:1",
+    "sourceId": 430700,
+    "sha256": "89f218726922dc05e8b56fd5d2dfd5b81cb8f1235da9b94414983becf8f533ec",
+    "bytes": 319422,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:2",
+    "sourceId": 430701,
+    "sha256": "c3ce8edf8fe8d8d59a1af7a1dc6361d502d0ea57324a3bd969d9d0a4b4d42632",
+    "bytes": 439380,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:3",
+    "sourceId": 430698,
+    "sha256": "5e0fe46892195d37148c54383035f3e693e0acb8082f01f077af1f3032e4bd39",
+    "bytes": 109561,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:4",
+    "sourceId": 430699,
+    "sha256": "a7e0620c74829f9831a9fef76bc038cab12c0c5688439570aebf9993139fa82e",
+    "bytes": 243857,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:5",
+    "sourceId": 430704,
+    "sha256": "ddbd3abfcbb16dffc9d50b416adb83cb28f20389e7df70a07162b0c3d14b4d77",
+    "bytes": 223430,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:6",
+    "sourceId": 430705,
+    "sha256": "71042829624cfff74745fe13292482a88f2870f19dd5457a88951e180eb826cc",
+    "bytes": 343227,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:7",
+    "sourceId": 430710,
+    "sha256": "f3bb04cd1094ff39e57dfe0e12120f62d26d5aa9709e018f03e09bfca357f999",
+    "bytes": 626618,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:8",
+    "sourceId": 430708,
+    "sha256": "4e3c3216d9fbf091f21aeac71d663a336483570716911e06bbb38ddb77a360da",
+    "bytes": 389706,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:9",
+    "sourceId": 430707,
+    "sha256": "ba6cad5f1a7bb67292fd1e4b941935413ffd8e425a641d557f700a27ad9265d7",
+    "bytes": 263364,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:10",
+    "sourceId": 430709,
+    "sha256": "285490362100321e03b4ff58280152fa0c9d4b47e92b6011c4b05e621cfe42cb",
+    "bytes": 223344,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:11",
+    "sourceId": 430706,
+    "sha256": "2ea2e152fb1932edf8b542dd067d0f16fd2b85cb6a943641a2e7a9c56d766c0c",
+    "bytes": 98383,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:12",
+    "sourceId": 430712,
+    "sha256": "ddbe64e883bbf441f4b02f828a240a52a78b33cd8e8698e49cc1b185a81408d5",
+    "bytes": 238087,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:13",
+    "sourceId": 430711,
+    "sha256": "72ac616bc024d808c61b8fb939257b08661b0ce01681a6dbf015d5622009d467",
+    "bytes": 147458,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:14",
+    "sourceId": 430713,
+    "sha256": "b763d04b438fa0452d1f87f0b4b63afbcdeb8b690b3e119af108acabf4a8a260",
+    "bytes": 93681,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:15",
+    "sourceId": 430715,
+    "sha256": "91bfcf981374fc234fb387630adeb154f4055a06f190dfa3822569c182e7e08e",
+    "bytes": 233969,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:16",
+    "sourceId": 430714,
+    "sha256": "1b8d5f405f3dee259dec3922bb7937cae7916c030929a1749f5f13d752e02229",
+    "bytes": 130195,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:17",
+    "sourceId": 430716,
+    "sha256": "b227b20feafe6b89e4d886755db4c0ce214142128adc0497beb73216dce6acb9",
+    "bytes": 141905,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:18",
+    "sourceId": 430717,
+    "sha256": "a4a203dae2eb3cce4d11e301cf31c2688a141371aa1998476fcd5c07358af77e",
+    "bytes": 232927,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:19",
+    "sourceId": 430719,
+    "sha256": "d4a7f7d4aa9b26df826c38ddb637138c6aa209bf8278b2e5ece83f50cc5b31e9",
+    "bytes": 176870,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:20",
+    "sourceId": 430718,
+    "sha256": "82d65f1bb69cd4715112c5e1a718567c65bc6c63538edee040821cadfbdabcae",
+    "bytes": 96653,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:21",
+    "sourceId": 430721,
+    "sha256": "d6ba450cf01c446953e6de1236a7696feecd8deebe2a20eacdcfb54b7d919969",
+    "bytes": 620358,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:22",
+    "sourceId": 430720,
+    "sha256": "68d5a9e2384eac6994aceef64ae785c24419389a56aa2a7eecf135acd40aef2c",
+    "bytes": 248884,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:23",
+    "sourceId": 430722,
+    "sha256": "f542d4959821617b5b72ca3deadcfc8532e8ac769669d37379dd4eaf35772fa1",
+    "bytes": 688892,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:24",
+    "sourceId": 430725,
+    "sha256": "a3b0bd30e0f867de83129b2afd3af6d9b9cc5e1ea01e2ac463cc530dbaccc151",
+    "bytes": 538946,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:25",
+    "sourceId": 430723,
+    "sha256": "7915bf30dccf33cd03527c6348a040f568d18e567184770149b3dde47e1a991b",
+    "bytes": 371601,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:26",
+    "sourceId": 430727,
+    "sha256": "5ea2c1348d383f78abecf384990095592e4210bc1a27c1bd8f178592059fca50",
+    "bytes": 730676,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:27",
+    "sourceId": 430724,
+    "sha256": "030e1c1f390489ef4abc3b07161b778780fc37955907fa3ceab410fe7d7aa07e",
+    "bytes": 295379,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:28",
+    "sourceId": 430726,
+    "sha256": "f886cc11c9c03a7f050d16c3d638e222cfc0493554c5c8302c65958c6ceaed50",
+    "bytes": 351352,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 14:29",
+    "sourceId": 430733,
+    "sha256": "3e61b52cb513c89b6758e4a574c36f8c4aeb2b55dc28747c60c8714f880b8cde",
+    "bytes": 728851,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:1",
+    "sourceId": 430728,
+    "sha256": "74326e1aca40137e8477607a03053a8f9cfbd37a83f3e8ff34e5ff464db121cb",
+    "bytes": 113086,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:2",
+    "sourceId": 430730,
+    "sha256": "1c34566f723f12b9da5f6acac71bcc5ac887ecc9673f00d3ebfc28f13c1bdfc2",
+    "bytes": 440896,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:3",
+    "sourceId": 430729,
+    "sha256": "fafbe47109d7a8967c1254fef5ae08b8a8828bb652a63b47535a4d22799c7edb",
+    "bytes": 239304,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:4",
+    "sourceId": 430731,
+    "sha256": "b8bd68b958253c28ebb2c53ad8a70701c688b51879b6b20ed11bef4f1e8c5b92",
+    "bytes": 444490,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:5",
+    "sourceId": 430732,
+    "sha256": "8cc6292e766af594d55a1cbfe82b3b937ba367856dc7756fae09df72a461686a",
+    "bytes": 378721,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:6",
+    "sourceId": 430734,
+    "sha256": "0f4df0aa824bcd39833c2614aa4e13b5cc5ab9fbcaf4e5232e9bb992f2c87259",
+    "bytes": 496711,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:7",
+    "sourceId": 430737,
+    "sha256": "80b6b8308e942411734301aa401e77e98821709ca75166b2dc0a1c8a780da54a",
+    "bytes": 623215,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:8",
+    "sourceId": 430735,
+    "sha256": "37733853a372fad05e83c7b3381175a21613ab3666c52b6ff9037cf753f85fa5",
+    "bytes": 336992,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:9",
+    "sourceId": 430739,
+    "sha256": "c5b95ee3798e8437dbd0e92b08742c9dad33523bfd73130e676364831cfea8be",
+    "bytes": 762872,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:10",
+    "sourceId": 430736,
+    "sha256": "ad80b4e38b7dc96679ccf613057f22cbbbc7eaf7dbf21f1daba4ff0b730c8516",
+    "bytes": 512959,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:11",
+    "sourceId": 430738,
+    "sha256": "f465832935038f8d53e5c07863a42cdfb65694ad54d7fd699bebaadb27de9b98",
+    "bytes": 538834,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:12",
+    "sourceId": 430740,
+    "sha256": "0a9be7352bda6d00b5daf22e47b81802f370beb504bfad7cc757a569d552f26c",
+    "bytes": 452278,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:13",
+    "sourceId": 430741,
+    "sha256": "8b23b5f80af5f68cfa14da57c00edc795d9f70c34bbfd715f3f5672984ef25b0",
+    "bytes": 184852,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:14",
+    "sourceId": 430744,
+    "sha256": "8a9540a7de219e9713b2e8e1b84abd019914aba8602049360788b74b3f09416a",
+    "bytes": 375423,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:15",
+    "sourceId": 430745,
+    "sha256": "58a20a94c272f46b3f45dee166ca62f8715147b93dea4053d12936c5fe18ed0c",
+    "bytes": 431644,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:16",
+    "sourceId": 430742,
+    "sha256": "eb144b1a9d8c80c9d0630c5a6dcb16e846691d27a44cf009b1d7de6409445c44",
+    "bytes": 309803,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:17",
+    "sourceId": 430743,
+    "sha256": "85c37fddc1e34b18cfa5c98d9dd86808f8f9dad8bd5fed2866d293c194e13d69",
+    "bytes": 367187,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:18",
+    "sourceId": 430746,
+    "sha256": "72551e901319f91b155b59dd57786b48532e4f92968291a11a68a96a468b6c9b",
+    "bytes": 567410,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:19",
+    "sourceId": 430751,
+    "sha256": "15c5cc4597ea24252ea93030ee85fdebee44082cdaab609a5b3ab10be391f9d3",
+    "bytes": 536809,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:20",
+    "sourceId": 430747,
+    "sha256": "adb20da52b5ec53e127c0262c2eb743f03b7ad2366d3bcffc1aa5c22f72fade6",
+    "bytes": 287262,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:21",
+    "sourceId": 430750,
+    "sha256": "7ad444ba7995527a41e571f5719e54e887acd060e1d1ebb77cf22d5ab39c8e2e",
+    "bytes": 333635,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:22",
+    "sourceId": 430748,
+    "sha256": "36c56705d0324f3f35f06811fbceba26afebdae9c596c83cf599cab128bf35ea",
+    "bytes": 241912,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 15:23",
+    "sourceId": 430749,
+    "sha256": "ab66064c9a20bf0db2e92ae593170ec1d172d01d300b4298218b09d9e19fe540",
+    "bytes": 184925,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:1",
+    "sourceId": 430753,
+    "sha256": "f58009e933d22742b469bd87dbc28dfaad8d6a4378efc7594a56e3b8da47e6bb",
+    "bytes": 439450,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:2",
+    "sourceId": 430752,
+    "sha256": "256bda883796bd2f6ea2f60611138c23140a8be509d2c53560ec5d4127e6c1b4",
+    "bytes": 296962,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:3",
+    "sourceId": 430756,
+    "sha256": "a9dc12b146e353632172906624822762c241018425d903a89c33c4d6a9f955f1",
+    "bytes": 620405,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:4",
+    "sourceId": 430754,
+    "sha256": "95e1015fcebc35154d93838b7d283cd279d87c83d5a9c47d5fd259a89bb90a64",
+    "bytes": 402551,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:5",
+    "sourceId": 430755,
+    "sha256": "affe5dcdc634c19d7292b9d4c36b69dd6f628819b55175f5601b3d23a42c135f",
+    "bytes": 248816,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:6",
+    "sourceId": 430632,
+    "sha256": "d922bd9abd37d9b0b458b10b8647ca8e73af9385cbc9ac92287824dd49d94b46",
+    "bytes": 488638,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:7",
+    "sourceId": 430635,
+    "sha256": "5941a875d1a8e6bb09c6a21855c198bbe2f1ad74a53aaa318f022760fb4aa811",
+    "bytes": 408895,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:8",
+    "sourceId": 430631,
+    "sha256": "c4d7e413690c0a4f98396fd97f539f20c23a2fa58b884c8066082b2a8d42a343",
+    "bytes": 271475,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:9",
+    "sourceId": 430633,
+    "sha256": "a4902095756d1373638c30cde902e2197649afc86943cccec375dadc9e69f9df",
+    "bytes": 307801,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:10",
+    "sourceId": 430634,
+    "sha256": "15ce4ca85ba6eaa977aedfe12a8099c1d1bc84135cc60c019dc51ab2cd2e429d",
+    "bytes": 339969,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:11",
+    "sourceId": 430636,
+    "sha256": "c5fd14b7e8a2e62960005475f426604725f228666fe9a2bcea91e0964dcd5e24",
+    "bytes": 767548,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:12",
+    "sourceId": 430637,
+    "sha256": "c298b2ab5bda36b19b002aa3dd8738e5fa4beb541a55c0a8353210236ff5c39f",
+    "bytes": 240998,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:13",
+    "sourceId": 430640,
+    "sha256": "8a7a181ab2fd6ab8276b0678c57c87b58d1528096eae46f4e47a1d694b348ea8",
+    "bytes": 272723,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:14",
+    "sourceId": 430638,
+    "sha256": "adfb15b66f2d140ba663a6f8e56be55ece218b1fb52bbde552f11d0bec0fb1ec",
+    "bytes": 415103,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:15",
+    "sourceId": 430644,
+    "sha256": "35e459c82b327168fb44b94b7bc9f26f48563f82c2feb9efdc703c90b2711442",
+    "bytes": 531157,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:16",
+    "sourceId": 430639,
+    "sha256": "f138e50cd4559880f03265914625214ef39a6546ab84bc06cf9f085b8afeac24",
+    "bytes": 695295,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:17",
+    "sourceId": 430642,
+    "sha256": "8dbb7029a4dddfd3820f33e9f4527cc52001cd6ce0d832803fc0b72e9cb36cea",
+    "bytes": 255363,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:18",
+    "sourceId": 432236,
+    "sha256": "70cd949d98f63152b6dafa45f110830f7cd6b868c334ba1be0ac7ec63f993a3c",
+    "bytes": 394633,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:19",
+    "sourceId": 432235,
+    "sha256": "0a39b05a922b89c776e6db8091f93b36e2594c209a3719f588174f664ac32768",
+    "bytes": 401105,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:20",
+    "sourceId": 432234,
+    "sha256": "d0984941ac9b7cbfa4a62329069cec6c35363cc446ea84f7a32f4f004868a47c",
+    "bytes": 279314,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:21",
+    "sourceId": 432239,
+    "sha256": "42543a6ea0884734c00d53e17c3858a1620a4f5cd2bdcab1846dc68127986966",
+    "bytes": 293933,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 16:22",
+    "sourceId": 432240,
+    "sha256": "839dbdba771eba32b32eec70970c69d674777c297a8c9a81a0f32799b9abf293",
+    "bytes": 168993,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:1",
+    "sourceId": 432243,
+    "sha256": "f16695f14c243bbf1e9ad9c0d25ef1c51404a2b14f7611a708d126598b16fb63",
+    "bytes": 421940,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:2",
+    "sourceId": 432244,
+    "sha256": "e2d4256042f18c47cbca20753a77dbac884ca1b06c6aad1d0b1304bab421db20",
+    "bytes": 517928,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:3",
+    "sourceId": 432242,
+    "sha256": "d7c21b9260d7b59f64002d44b211cd013476af409405731f69472c3481ca5499",
+    "bytes": 470063,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:4",
+    "sourceId": 432241,
+    "sha256": "3d0d6935e5a80339d84023be23d4018aab998391c38d2eca138d8e56a4a3b596",
+    "bytes": 365844,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:5",
+    "sourceId": 432245,
+    "sha256": "56911ce1405606922beb5985f514ccef3eb17841cbe4bc686f3101eae5221ff9",
+    "bytes": 648998,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:6",
+    "sourceId": 432246,
+    "sha256": "1a53a0b9c33a11a51ce0448ed765b4d23f369a82420437ea05993894470e6ebb",
+    "bytes": 336945,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:7",
+    "sourceId": 432247,
+    "sha256": "c82170c15cc9903f95e6457fc122da57cecd3cb2ab31276f92371a3cba4ab551",
+    "bytes": 373770,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:8",
+    "sourceId": 432249,
+    "sha256": "724d675761341b9688774123460bdb5a2a6268f3027f5a3c2daaecdc24871b54",
+    "bytes": 645813,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:9",
+    "sourceId": 432248,
+    "sha256": "4c25cc1192e90159a3d9eefebfaaab6d216cde8346c689c91bdfa9c9ef6364ee",
+    "bytes": 392683,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:10",
+    "sourceId": 432250,
+    "sha256": "b746df68be37b893bd139aadbadc9681bf2a0805c64dc598cb61bb50e34b1a8f",
+    "bytes": 431431,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:11",
+    "sourceId": 432251,
+    "sha256": "58c10551fca6a67b863a34780f993343f31d8bf3ea10a5d5fd7da383e257e8a8",
+    "bytes": 444614,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:12",
+    "sourceId": 432252,
+    "sha256": "a74ebafd316eac1f6c360f268dc7eb1e0366fb0d355d9e88c02ab291a08fc67d",
+    "bytes": 570807,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:13",
+    "sourceId": 432253,
+    "sha256": "d36f2b3ce79a81dc00c18cfc85e27efa9ce66bc679a5ad06a108e264fca699c6",
+    "bytes": 185043,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:14",
+    "sourceId": 432254,
+    "sha256": "883b1588779cfcba0f25d0508fc26c619f8f3ff3ff0f762aafadb7c6da13d5be",
+    "bytes": 469918,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:15",
+    "sourceId": 432256,
+    "sha256": "1b15b2de0dd7639398e94faa4cb1754f3efd29f3242c771043d276e80a9609ef",
+    "bytes": 562791,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:16",
+    "sourceId": 432255,
+    "sha256": "bf94e218c10d178a384fc951251b29c7a4245e69adec55b49c3ae3145fa3d92a",
+    "bytes": 474987,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:17",
+    "sourceId": 432257,
+    "sha256": "18d8e1b8d629adff4ae8cd1cf648e8e1bb270b6b6a8e23819b0702c2b053fb95",
+    "bytes": 251801,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:18",
+    "sourceId": 432258,
+    "sha256": "fe4ab1a4a698eb12818abc440d1faa6968a910d8916c4fab33f0de37c99aa1bb",
+    "bytes": 396356,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:19",
+    "sourceId": 432259,
+    "sha256": "0912400054dd1b1c06a96f91cd38b0186f4428daf6594b87a853e38f38c2bb41",
+    "bytes": 552704,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 17:20",
+    "sourceId": 432260,
+    "sha256": "a0f08db2d080c23270fcdaa070e34ffa268578941fcb15bc03166580ddcf9e99",
+    "bytes": 468234,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:1",
+    "sourceId": 432261,
+    "sha256": "f8871dad587fafe6c155308bde7010978efa713aa98d11af7c50115468554ea4",
+    "bytes": 432754,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:2",
+    "sourceId": 432262,
+    "sha256": "5c93b9201a702d990ee00df36cfb8f4f6e0cac85fb32cbd1254e9ae6b9386677",
+    "bytes": 242074,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:3",
+    "sourceId": 432263,
+    "sha256": "389b062e32fadbac353585cb31b3d32883a14fb3c7511611ec0fe7746f55b1c6",
+    "bytes": 525978,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:4",
+    "sourceId": 432264,
+    "sha256": "2307578f3856875dea5b597bab763875ee561c820d131b7f74c056ca7f7c94fa",
+    "bytes": 285686,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:5",
+    "sourceId": 432265,
+    "sha256": "77d0cf61ec9ed99f5ab87c6265aecec1396270af9cbf3d96ddfbe8100875c400",
+    "bytes": 354204,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:6",
+    "sourceId": 432266,
+    "sha256": "2d506edcd13bcf5c4f630f526a676bacd123eba1fdaa02c28072de17a0f76675",
+    "bytes": 400994,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:7",
+    "sourceId": 432267,
+    "sha256": "57d3b5f0ff44640d0329135c250ac40d96d3f3dc40b42ddd83c4dc5d6c94ae8f",
+    "bytes": 255543,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:8",
+    "sourceId": 432268,
+    "sha256": "8d4e689e4b8497b36dd3d36943c155eea4017ff59442ae8bac5a4e6d40e49382",
+    "bytes": 180112,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:9",
+    "sourceId": 432269,
+    "sha256": "b3e8053a6d7b8f8170b100cfe169796b93f70ed00e08c1d4ea6f8f264e3a4a78",
+    "bytes": 323411,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:10",
+    "sourceId": 432270,
+    "sha256": "94d2ff526680f0f41f1d472f0a9222e6107569872bebb25decba718445678ea8",
+    "bytes": 319520,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:11",
+    "sourceId": 432271,
+    "sha256": "8e65883f99dce4007ce7804dc9baf63384af877822086341fa6b0e8a87468a86",
+    "bytes": 239261,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:12",
+    "sourceId": 432272,
+    "sha256": "f047b5b4cdb9f5edf84712532a0f4280689243382666b95468517c2e8a4d1da9",
+    "bytes": 328881,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:13",
+    "sourceId": 432273,
+    "sha256": "618964f6e2d99f8bd928eeb8d72897a53bb2b69f7a8e388aaf2399b85c442073",
+    "bytes": 114326,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:14",
+    "sourceId": 432274,
+    "sha256": "3202a53473e9a62d77ec2c76bec8562008a8996da716e8386cb26cb64a656a2e",
+    "bytes": 442885,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:15",
+    "sourceId": 432275,
+    "sha256": "e6329c9966813d247b3cdc9c913a20ebb53a2f27df52ebbf0e4d702d1132ddce",
+    "bytes": 266356,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:16",
+    "sourceId": 432276,
+    "sha256": "8c07efd7a3c1cdb967fd1909740951d2c4c14e593f90305862aea0aad05209d7",
+    "bytes": 572171,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:17",
+    "sourceId": 432277,
+    "sha256": "9fa7c42d763942a58cedf648ff3b544f5ffaf25df99c74e0efe98cd1b521b964",
+    "bytes": 155699,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:18",
+    "sourceId": 432278,
+    "sha256": "42a0ff2ade5e6db306b2050669f467e8ee82c269e2133f8f461ae3cf39a0d230",
+    "bytes": 368867,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:19",
+    "sourceId": 432279,
+    "sha256": "5dc39097e1aac93e4452e2d7fcf1a79e0af9253f33e04727a63c5f6fdd5125f4",
+    "bytes": 287413,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:20",
+    "sourceId": 432280,
+    "sha256": "6277e83f20e7108f1a25d9c592c2e96924a0e032a76390778dd19b65df69f819",
+    "bytes": 556297,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:21",
+    "sourceId": 432281,
+    "sha256": "6699226f87a412cbada7d0535be533a093dcdd3499ba83762a06be63a93c0429",
+    "bytes": 250521,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 18:22",
+    "sourceId": 432282,
+    "sha256": "90b5920553d8cca089f898263385aa048f6f5072bced2ec53dc802617b04028b",
+    "bytes": 487432,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:1",
+    "sourceId": 432283,
+    "sha256": "91acfadf5502a38022ce4f8b1f77bffd44c0bfa1e2c1fb4fedbb617a015ab83a",
+    "bytes": 450732,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:2",
+    "sourceId": 432284,
+    "sha256": "2333b2a1439c32213196b030691d5dc095c27ea08fb0ee7a1cdc91626aed4f78",
+    "bytes": 283847,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:3",
+    "sourceId": 432285,
+    "sha256": "6840261adbfa10f67520fdcc001718824608d6cf1acbb3bc942d608899ccba95",
+    "bytes": 442907,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:4",
+    "sourceId": 432286,
+    "sha256": "5301673b2a4e081afd44a0fa5e47d39690d244ebc19dd4e0eb4a7d22a9e1d85d",
+    "bytes": 406055,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:5",
+    "sourceId": 432287,
+    "sha256": "14b787fde8a940b844f7a19435340d3b8f5cb9b5dcbc3c23eac4d3dd3bdf44c8",
+    "bytes": 703089,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:6",
+    "sourceId": 432289,
+    "sha256": "7f85dbb0bcb1bae695df7b628a563e94b3b27ef51f1b120d7adb0265b8912916",
+    "bytes": 668404,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:7",
+    "sourceId": 432288,
+    "sha256": "1d01e6a3b1b3c5e2f1d83d424c8874588709876ee57456d534c19f303d22210a",
+    "bytes": 184898,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:8",
+    "sourceId": 432290,
+    "sha256": "c2eb7b387552e6eddf0e74f70184e26c3ba24a1d36a8ed78119032d275f39824",
+    "bytes": 408980,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:9",
+    "sourceId": 432291,
+    "sha256": "b2f3d96ff1b76e7f8603c2eaecf399e3ec7f18d7b8156de0d4896f3228b71c36",
+    "bytes": 687302,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:10",
+    "sourceId": 432292,
+    "sha256": "04986d5fbae1f52b48d27f7c3165d9fae3cb3a413b3f1fe26fd650dc2ba95def",
+    "bytes": 314343,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:11",
+    "sourceId": 432293,
+    "sha256": "3cc80b50ffff01f5891339f22f677e743b7f4aaa1ee8192afbdcb0679a34d7de",
+    "bytes": 384718,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:12",
+    "sourceId": 432295,
+    "sha256": "801bab414f70ffec010511ce155f37369155180bd8450393ad59430a0594e959",
+    "bytes": 293999,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:13",
+    "sourceId": 432294,
+    "sha256": "8ab4578c318ff8c34982aa3cc7a1db60b949ab1e58fd0a375e69e155f2aff833",
+    "bytes": 242248,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:14",
+    "sourceId": 432296,
+    "sha256": "3a96c1d2890fb8bae799d6d1750e3e26dbf478f16f7e763f679761575d8a2127",
+    "bytes": 415226,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:15",
+    "sourceId": 432297,
+    "sha256": "ef82178c64287ae3082194a38f625b2b4cc381f3318f96fba2a52e9df59a7c42",
+    "bytes": 524249,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:16",
+    "sourceId": 432298,
+    "sha256": "68b1f049395e2082c16ccf7a6cfd6421351bc928ca5fd95fa123716971a2d22a",
+    "bytes": 167388,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:17",
+    "sourceId": 432300,
+    "sha256": "483aa68a3de67023cf35e38f2bc29bb4714423faea73d6cddec6f9da781e949f",
+    "bytes": 365860,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:18",
+    "sourceId": 432299,
+    "sha256": "975e4ae19df11e048acd77874014f5007dc9c37f1260bdece82b89658a0bd36d",
+    "bytes": 245976,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:19",
+    "sourceId": 432301,
+    "sha256": "1472b8cec5377554c3435f6431dd456c018214388115c61dbc3bc2ab49d1f284",
+    "bytes": 239371,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:20",
+    "sourceId": 432302,
+    "sha256": "3d82c542bafc3d4f1739bc6407e917172840291afc353aade7769eeb832c9417",
+    "bytes": 347927,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 19:21",
+    "sourceId": 432303,
+    "sha256": "e899980304cf98f47f94967294c3325a87dfae66a2a53e9772fd8b0e85c6e508",
+    "bytes": 314552,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:1",
+    "sourceId": 432304,
+    "sha256": "91c71081233edd43a851c8bc3694df4db0820ad1f70d7701bd2ab1a52eb1bc0b",
+    "bytes": 503387,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:2",
+    "sourceId": 432306,
+    "sha256": "20baddcc55cf6164d2beccf500c05867bd2b83bffd01104577b218ed53ddd744",
+    "bytes": 269693,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:3",
+    "sourceId": 432307,
+    "sha256": "c58cf6f6b01fab277d64a3e04b7b6b9aa03197aa42efa4eecdccbbe5dcf4e628",
+    "bytes": 520817,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:4",
+    "sourceId": 432305,
+    "sha256": "83039f6f1d4f4f028f6282362c7753b0f02db0aa8270c8387b4bad6758d9f5e4",
+    "bytes": 271405,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:5",
+    "sourceId": 432309,
+    "sha256": "68a030fddac7ee251879ef507422388c828dc30033e4acf181cb11961dbc3cc1",
+    "bytes": 532406,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:6",
+    "sourceId": 432308,
+    "sha256": "c0b6e6c13495fe0d1a2ab8b8634e20422ce57fea3f3f5199ae26531cd480d09e",
+    "bytes": 380391,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:7",
+    "sourceId": 432310,
+    "sha256": "bb4a9f9f4428ee13095708c56a947a2ed97827a94f57d5ae2a7944b421ec4025",
+    "bytes": 368779,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:8",
+    "sourceId": 432313,
+    "sha256": "f7502785d10b8421c6d33e8e1b9df7606be59a1f6313b3aee05662096c220be4",
+    "bytes": 498575,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:9",
+    "sourceId": 432311,
+    "sha256": "c171b3b7b3a77f4d2185b871e904b3bcaafb6ff82f923c0716b8233b46b863e3",
+    "bytes": 299951,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:10",
+    "sourceId": 432312,
+    "sha256": "0384d35a2b1d350da9d1ce963b1f30f5fe43c4c0f71ccd9440d2b035f9621a50",
+    "bytes": 189811,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:11",
+    "sourceId": 432314,
+    "sha256": "50eb620c4a5d5a4f314a3003440b2499d4328509351765f5095697c8870d12eb",
+    "bytes": 414085,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:12",
+    "sourceId": 432315,
+    "sha256": "b279c44e136d145de5fcd40bee95ca0f8ab1394132bb1db0244c08a67dac592d",
+    "bytes": 223288,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:13",
+    "sourceId": 432316,
+    "sha256": "d432c574b7a8ff9255b1f1b38f21e48ba177ee387162d30f5436ce28813c6641",
+    "bytes": 245889,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:14",
+    "sourceId": 432318,
+    "sha256": "7482aa24824d249d4c153235353cbb2b59e3f8e8d402a6c0a39f032ab017cbf1",
+    "bytes": 544823,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:15",
+    "sourceId": 432317,
+    "sha256": "6a96db2eac1683aa34d2ac2cd9be3079a82f2a5df198c5c513d484509b31ea86",
+    "bytes": 292035,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:16",
+    "sourceId": 432319,
+    "sha256": "5aef964ba28e250b20fd3c46e30ef38dfda7e2aa70f8c1fff19eefc23d080ae7",
+    "bytes": 314295,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:17",
+    "sourceId": 432320,
+    "sha256": "e1f12b74997f0d5c66f25f90358fd316e629d59a585de7ed4e6443c7350c6a33",
+    "bytes": 400809,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:18",
+    "sourceId": 432321,
+    "sha256": "f7097f2fcc5e25e40b553ce0e0db5ee474e01010eed74a4d4cb43af393e9e4b1",
+    "bytes": 357904,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:19",
+    "sourceId": 432322,
+    "sha256": "c62c6f1fc7d6680385fd78e604011ed8efee8cd94a5aa97be941929191b67507",
+    "bytes": 700381,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 20:20",
+    "sourceId": 432323,
+    "sha256": "ded2c2836121e43389fd7c136a1f13431d98fdf1294b8c2c93f7b6faa0a159c0",
+    "bytes": 528886,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:1",
+    "sourceId": 432229,
+    "sha256": "7c5c00ad9f96ea003d9862a5c6d7e39fc5fd20c8912ee89a2c09a41ebb4d50e1",
+    "bytes": 375406,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:2",
+    "sourceId": 432227,
+    "sha256": "717880bb85ed82f8f0cd8719ffa9c40211c89a77c87f6e0c71d6698e2e1106d6",
+    "bytes": 256776,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:3",
+    "sourceId": 432231,
+    "sha256": "11fe330c441c24d5c34f279d03cc0f060fbcc9bc37975460095730ba33449cfb",
+    "bytes": 508386,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:4",
+    "sourceId": 432232,
+    "sha256": "f3936b09ec15f5da919a4241393392ff919eab5ed15671724e051bd17b6dd8a5",
+    "bytes": 492658,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:5",
+    "sourceId": 432230,
+    "sha256": "5c4e6fa4c39f6afa018c742e2e5d0b3687306c49fe702b56c4d8a6b363bae7d7",
+    "bytes": 488719,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:6",
+    "sourceId": 432228,
+    "sha256": "21e83d4d3cc5e9d319b992309792627145b3d6cdeb2175219a894d2b9e47acb1",
+    "bytes": 373725,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:7",
+    "sourceId": 432233,
+    "sha256": "23ad70b5e6b87c385d8e5d2a8ab7e79c2d462ad9d7c51965bd3e2b2f7034a34c",
+    "bytes": 276244,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:8",
+    "sourceId": 432237,
+    "sha256": "16f5b95cc375d18bd4f7fc0cd0a014d69eb2ce095cd2a597e44186671a2df421",
+    "bytes": 407091,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:9",
+    "sourceId": 432238,
+    "sha256": "cfef9dbda57a6884d1310d5b6addd4dcb30325f5464a23abd51eca8b25e2fae7",
+    "bytes": 280946,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:10",
+    "sourceId": 419958,
+    "sha256": "7fabf0fee6246bbdbc1fd65001ffa01453dec1530d6301b359f86e63ee9bc4f3",
+    "bytes": 295333,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:11",
+    "sourceId": 419962,
+    "sha256": "f2ae32e255e55c11dd23ae18288e97039e0780341b2c3850625d11fd8b189cdf",
+    "bytes": 261811,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:12",
+    "sourceId": 419957,
+    "sha256": "7f8b408340b00e6f363d8843bc880324bec4c28bd3bf6e538e48fd5c556714ee",
+    "bytes": 259711,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:13",
+    "sourceId": 419961,
+    "sha256": "a3b0db0f0da7e28c577f6157fbfce8d10736b1232883946dad169a18a39daa06",
+    "bytes": 527263,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:14",
+    "sourceId": 419963,
+    "sha256": "3138b07663fc890111901ab845b862c13940bf5cd133f11f7dd89effd84f9d47",
+    "bytes": 448779,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:15",
+    "sourceId": 419964,
+    "sha256": "d218727ef8a32717a8ee02bab28eb0cbcb7a94e13984b4ad25b02d2aa844d76d",
+    "bytes": 484188,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:16",
+    "sourceId": 419965,
+    "sha256": "6030c0bd4dae8ddb4c4d1aae8bb8bdb09ed24551b89db0cc55d86702099efe05",
+    "bytes": 410939,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:17",
+    "sourceId": 419967,
+    "sha256": "57fac8c0caef92a05636a23c354307951bc28157d1c7168c25fe0a7bc5649db7",
+    "bytes": 426828,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:18",
+    "sourceId": 419966,
+    "sha256": "b601e1f0e17f0950dd85aeef184ca939d17fee6f2a165dbeefb1cdd61e4f7af0",
+    "bytes": 392696,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:19",
+    "sourceId": 419968,
+    "sha256": "0d30e9530eb2f4dab08b6c1cf7670aa18df721177e830f9b4fca60944e5b4dda",
+    "bytes": 274100,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:20",
+    "sourceId": 419969,
+    "sha256": "21e3392e3adfeaf29431a05170e77d7535ad78eb77d8d864326e9f6041e81557",
+    "bytes": 339844,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:21",
+    "sourceId": 419970,
+    "sha256": "a74cee6d6ea11483b92d03cbbb5171aebe3e42adc1d5dd7b7a0b7653344ba477",
+    "bytes": 373874,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:22",
+    "sourceId": 419971,
+    "sha256": "e8957f63e8cda56953a7767b9f0af3fb37b09d30bc51d83cde6a3eadd13f2ffb",
+    "bytes": 274343,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 21:23",
+    "sourceId": 419973,
+    "sha256": "4d7ab9d7dbacb3752505547e04c00deb1112cfd1b5c35a9f3b43656c005efab0",
+    "bytes": 536812,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 51:12",
+    "sourceId": 432674,
+    "sha256": "ba4c8e350f87a7d5d152254279a87c9b910da06f5d1a76c94e2a5d68669044c5",
+    "bytes": 371774,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 51:13",
+    "sourceId": 432675,
+    "sha256": "afaa39e1fe8d6c62b9e5bb82a592d2fd09c3e7cfcd33ce53d6616720d97eeffe",
+    "bytes": 645914,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 51:14",
+    "sourceId": 432672,
+    "sha256": "6a15213a52c56e5ac0f5d3d7912d1183a025a76d9cbe514a65607fc3783858a2",
+    "bytes": 256914,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 51:15",
+    "sourceId": 432673,
+    "sha256": "1c78aa1df3a25eacaa6b031afaa1758c6de67c75530b0d34db7159db4c86dd80",
+    "bytes": 323804,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 51:16",
+    "sourceId": 432678,
+    "sha256": "412c29641845ce70817834be39ef50ecd5fbe1ebccef0de4e3ebac77419255a6",
+    "bytes": 391477,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 51:17",
+    "sourceId": 432680,
+    "sha256": "4e56805f3067d799d80658717000d3b5b81adfc7e448edffa41dc31177706546",
+    "bytes": 549855,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 51:18",
+    "sourceId": 432679,
+    "sha256": "7909abf21c0e2ed50d87634f6feb627cf9f47530c624ee69ba3f4364b7368689",
+    "bytes": 306603,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 51:19",
+    "sourceId": 432682,
+    "sha256": "635e487390dec5639273549202557c427d61bcbbb8fb481dc0799373845949ee",
+    "bytes": 371477,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 51:20",
+    "sourceId": 432683,
+    "sha256": "f199dd06e1ba571bd83a004b9c7d6ec68572fe34c6ec2548fbaa3c82b2aa1c95",
+    "bytes": 392683,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 51:21",
+    "sourceId": 432681,
+    "sha256": "a418dbfe1316d84a61e89b1ca268f91a54b4ec14f07aab2725d7de8e6df529d6",
+    "bytes": 220023,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 51:22",
+    "sourceId": 432684,
+    "sha256": "2c24b281815436198ed3637df549618c47a0f908b34d0c6c8b7d50c0ef94a151",
+    "bytes": 564416,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 51:23",
+    "sourceId": 432685,
+    "sha256": "ba42ec912445a23a1f7f5c80c81f39e6635b3939542bc880db8be6c57ce7df8a",
+    "bytes": 405835,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 52:1",
+    "sourceId": 438767,
+    "sha256": "49032af66d0d071255b7b6ac2eb5d4dc4c6818303ef96986c2b345b3d790e621",
+    "bytes": 586955,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 52:2",
+    "sourceId": 438766,
+    "sha256": "c6d99afaf16479c40a6910dcb42f1b806df654fb2115590de9c5bfca61820191",
+    "bytes": 363834,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 52:3",
+    "sourceId": 438764,
+    "sha256": "89ae0ba5dbbdf03c472944bebc69357b9741deb18bfc593b3ab45b10c1f0a74b",
+    "bytes": 251844,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 52:4",
+    "sourceId": 438760,
+    "sha256": "0b5e174e3f6ba047802ffe0a1063d39d1b7c94b54bfee3063824717e9ba46553",
+    "bytes": 432736,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 52:5",
+    "sourceId": 438759,
+    "sha256": "aef15b02bc9fbca0f0f14884451876e9c6bf83387e3333d2691ac35b30fa38b7",
+    "bytes": 416880,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 52:6",
+    "sourceId": 702557,
+    "sha256": "63f021ff5e03d007c9decccb3f1ce9d62b73f4472454bb7f3e98eb3608a07308",
+    "bytes": 317750,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 52:7",
+    "sourceId": 438761,
+    "sha256": "2ce8ae6188f64e8cb07c87324f918c96f86a843508638a05c9b206b6050b7986",
+    "bytes": 455224,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 52:8",
+    "sourceId": 438758,
+    "sha256": "6da329ff98b84cef4d962351b06f0940c34374948ee2e3235b8037d6eead874b",
+    "bytes": 357928,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 52:9",
+    "sourceId": 438757,
+    "sha256": "8b62732cb955538dc07c978e745e7d9777d338f8b144a254cf085390eb9e1bfd",
+    "bytes": 298166,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 52:10",
+    "sourceId": 438762,
+    "sha256": "906f332ad1bc877454e33247135ffb81504b227048db09a2de55497da3d62e31",
+    "bytes": 355950,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 52:11",
+    "sourceId": 438763,
+    "sha256": "092f78c2fc7ef2ea13b1fc7c5a0d3988ac2847356918cf31f2e147b772511a48",
+    "bytes": 357828,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 52:12",
+    "sourceId": 438765,
+    "sha256": "915abd063e13d4a977ec3f3e964843828a784ae84273e442c73d494540e20038",
+    "bytes": 371784,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:1",
+    "sourceId": 419972,
+    "sha256": "f93bfef6045783baa9538372b60736fb16d77478d2834c2386980e78d248dac5",
+    "bytes": 325764,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:2",
+    "sourceId": 419974,
+    "sha256": "c5c910112831b0e3f58767c9e212a6baa041bbdb25ea4819ffabcb1171f2ce00",
+    "bytes": 458636,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:3",
+    "sourceId": 419975,
+    "sha256": "dd991b2bfcc9eac3bd90ca5b8a04d4f12fd828fe0b6f0f1af2587c3e4af26eb4",
+    "bytes": 533972,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:4",
+    "sourceId": 419976,
+    "sha256": "4fa126da3d47bc4a57434044f7d43e78f72344269e9089840eefd18e70611377",
+    "bytes": 349984,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:5",
+    "sourceId": 419977,
+    "sha256": "fc229a544f104ed26cc5a1f5b932dee7072a42339143d812e878abd70052e48e",
+    "bytes": 362423,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:6",
+    "sourceId": 419979,
+    "sha256": "77f45abc0007ab077348c1b42bcde760c9f27faa8403be29aa07c7b84ff2bc88",
+    "bytes": 692373,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:7",
+    "sourceId": 419978,
+    "sha256": "3e2f56b42432026f9da9adc7f7a6f9c785128ea2998f410947e583433a6e22fc",
+    "bytes": 288766,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:8",
+    "sourceId": 419980,
+    "sha256": "1a1dac945c9d9b71e21e175bf237d3744255b0f04f93a53152acd4c8c06be90c",
+    "bytes": 351273,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:9",
+    "sourceId": 419982,
+    "sha256": "0920cf795dfc4916046e46be49f2802d867456f7e7f7026705b88aec25549d0a",
+    "bytes": 328671,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:10",
+    "sourceId": 419981,
+    "sha256": "46b6862de30bff879f90695bff926a953efeaa83dda777d0c8a666a36da36a61",
+    "bytes": 125904,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:11",
+    "sourceId": 419983,
+    "sha256": "846ea4ddccfed48642fa81bc94465a4fc9aaba7821ef02566e723b6f37047c6a",
+    "bytes": 160640,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:12",
+    "sourceId": 419984,
+    "sha256": "8004e706d5d0ed7e6e7bb6bc76c0963fe4854625fc40a82605733c22ebceff10",
+    "bytes": 234159,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:13",
+    "sourceId": 419985,
+    "sha256": "6275c35e925cd8b1a686332e1930b80f87d69883f51e0ec594bb1d6f91ad9ad9",
+    "bytes": 171925,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:14",
+    "sourceId": 419986,
+    "sha256": "76a2e4a8b9e2ed7816a9996f5174188d86a5d7685ec697dbb1ee2394d87fb0b0",
+    "bytes": 455367,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:15",
+    "sourceId": 419987,
+    "sha256": "1f14d9757cd0a8ba66994aeab00f0e2d15650bfd4b536e488c9c5e1978d9b2ec",
+    "bytes": 378804,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:16",
+    "sourceId": 419988,
+    "sha256": "7a31c5aea34f2f0dc34457ba98d9828b6f4c2b117e86cc182502fcc308fcc80c",
+    "bytes": 368795,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:17",
+    "sourceId": 419990,
+    "sha256": "506e1d3657ac7573960c4f62aff2ed05e6930ef2892b6963b44ffff65cd01fde",
+    "bytes": 492577,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:18",
+    "sourceId": 419989,
+    "sha256": "3c1d48f4b6d093729bc6f7eb499ad599fc3ddec506fabd91ec4a3d31f4a253fd",
+    "bytes": 194630,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:19",
+    "sourceId": 419991,
+    "sha256": "0693c9fceac551621c1ddb9be593685ba6bb2cd2c6c9c406937a1146d41cc25f",
+    "bytes": 501659,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:20",
+    "sourceId": 419992,
+    "sha256": "676484e36daf27177da8629c6ac58e88ef867d74cdb1372b54750de2bb6e07c0",
+    "bytes": 203700,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:21",
+    "sourceId": 419994,
+    "sha256": "2731731be336fecc4d082ef9a565cfd56d4802459c73831090e06eb0f443c0e6",
+    "bytes": 532254,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:22",
+    "sourceId": 419993,
+    "sha256": "25660afed41184ff008725c0203aaeeda854905ee6a6d0103c1677808ba8d00f",
+    "bytes": 464889,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:23",
+    "sourceId": 419995,
+    "sha256": "8332a1ef0fc079e7583a8a77f436752adc7453d57d37d505ebd18edf6ddf5fb1",
+    "bytes": 284048,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:24",
+    "sourceId": 419997,
+    "sha256": "4127028baf17c5aebae4dfa7b2baad0f7a3e4354c309c048e899f62ba5f61860",
+    "bytes": 722830,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:25",
+    "sourceId": 419998,
+    "sha256": "fc572304672faee185c0e68e82486fdff8fbf223bbc7306ae8a778978f42f5f5",
+    "bytes": 458657,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:26",
+    "sourceId": 419999,
+    "sha256": "15e8fb609cc4409a045b4deeeb7a954e340897e3ed160c63dcaaa2b7e2a0fba7",
+    "bytes": 474935,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:27",
+    "sourceId": 420000,
+    "sha256": "eb89a45339f8a453db7c88af7e289c6eb0f6f0efc2006af8e02daaa138ea690c",
+    "bytes": 261841,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:28",
+    "sourceId": 420001,
+    "sha256": "60b957be80f241c5e628683f1bb1ffe7ce44d5fa1f9ae745d743b556cdfc0e76",
+    "bytes": 322514,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 22:29",
+    "sourceId": 420003,
+    "sha256": "fb03016351778f07f6d2a0ea9d21b4b0289214a5c9e40c54311d92c45f1e8b0a",
+    "bytes": 513019,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:1",
+    "sourceId": 420002,
+    "sha256": "c31374e7986f019cc19bf87154100a5fd4b0c3c0d0b904d8b5b3c134d49a3be8",
+    "bytes": 195815,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:2",
+    "sourceId": 420004,
+    "sha256": "b6267d7a4a8b76a6d3e4b852fd0f92710ef727a4b217e164f3b54d3b0bb827c0",
+    "bytes": 216682,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:3",
+    "sourceId": 420005,
+    "sha256": "3a3bc22570ec180feccb415f00875377feb80025fe37873d5c9f8d4e5b155ed4",
+    "bytes": 276039,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:4",
+    "sourceId": 420006,
+    "sha256": "94653f51e116466c8a2f84a2cc44e83e788754ce7cdef1cc22e2eea18a4c8fc8",
+    "bytes": 360860,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:5",
+    "sourceId": 420008,
+    "sha256": "d0d1475d91017ea680ecec0cf75f35272ba4f20f86543cb1ba4ea59bef723441",
+    "bytes": 589973,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:6",
+    "sourceId": 420009,
+    "sha256": "71175b4ea1a5c12c6d5d0d686a94d1aca4c3eb575196ec748a85bf796e6970bf",
+    "bytes": 498724,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:8",
+    "sourceId": 420010,
+    "sha256": "9b84c13573a222bcdd64f33fde43c63b49b86dbb068a320d8c67acbc90d43086",
+    "bytes": 327490,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:9",
+    "sourceId": 420011,
+    "sha256": "e60d52b0adc6e2b54c13f71afb65ba6eceeebff003dafad2ceca2076dc903206",
+    "bytes": 243869,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:10",
+    "sourceId": 420012,
+    "sha256": "92780bfbcb311adfe4e8e79a1fa4d2efb19e7da22025a50fe5c06214af6c9d53",
+    "bytes": 215331,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:11",
+    "sourceId": 420013,
+    "sha256": "a4c46f4aa87f234b94cd30f3be809c652ab249394633e322eb773a1e3a83f0d6",
+    "bytes": 381757,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:12",
+    "sourceId": 420014,
+    "sha256": "bfeb9dfc32815dd3743ffd2093e3c288aecc0e551cc89ff91258fe34f2514a28",
+    "bytes": 272826,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:13",
+    "sourceId": 420016,
+    "sha256": "554e88b7c9a8059944d0be0b62217e1f17f8cf9cd8d4a20b6e382dcc04afd7c7",
+    "bytes": 210272,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:14",
+    "sourceId": 420015,
+    "sha256": "2a63bb6d9912ce26dc7fe91d4b3f80c16c8e62df632885c4f42f65a15a44a337",
+    "bytes": 394543,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:15",
+    "sourceId": 420017,
+    "sha256": "372c182f95c41d12c8924d9419228f1a7203414a909c01db5ca0fcb7de15c748",
+    "bytes": 591215,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:16",
+    "sourceId": 420018,
+    "sha256": "2c67df2919989302d7d951d7509dc5987ddcb05dd7996d6e20b3204535ba1221",
+    "bytes": 243790,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:17",
+    "sourceId": 420019,
+    "sha256": "4d4f2bd82832633691328d92dfe621577f57a48db907c24ffec6c4d1bdd00258",
+    "bytes": 366013,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:18",
+    "sourceId": 420020,
+    "sha256": "682239636f2c84d5d3046c20a7d320a77ba039fc0f446d288f4af7d252d9bb0c",
+    "bytes": 225124,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:19",
+    "sourceId": 420021,
+    "sha256": "e8c2a338d01055cf40d1283632a4598483533f32595d2e902b9ec35894ad6b36",
+    "bytes": 426811,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:20",
+    "sourceId": 420022,
+    "sha256": "15fe2e422cb50c5d1eaed71052585fce4dfbd8961ddbb18c5b86954f7755778c",
+    "bytes": 319451,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:22",
+    "sourceId": 420024,
+    "sha256": "d1a8571051a2d82aa9ae102de8e5cc79f40691c6b1d77acfc2f91213c7a3d3e5",
+    "bytes": 412306,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:23",
+    "sourceId": 420025,
+    "sha256": "e22ffedb99cd90a3166fb7a15e10dd2692b1a61fae91b58d0c6c8854c49896be",
+    "bytes": 154379,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:24",
+    "sourceId": 420027,
+    "sha256": "320ed1c03fe0983d136a6cd8659b60d6547a240bf8ee896e12790f66ce13d1bf",
+    "bytes": 328733,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:25",
+    "sourceId": 420026,
+    "sha256": "29ee91f6f31b1473a3c4d2de694a094d40bfcf847ade247919d1caaf062f8f33",
+    "bytes": 354165,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 23:26",
+    "sourceId": 420028,
+    "sha256": "3fc6ae8c5c34cf412014c76a973717bb1019b3c191bef535df62f57cf6b110b8",
+    "bytes": 370432,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:1",
+    "sourceId": 420030,
+    "sha256": "1b168cc68f0136c5ad44276c9d7c187b381c49ce4a6839eff37a72cb1c2c757e",
+    "bytes": 607354,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:2",
+    "sourceId": 420029,
+    "sha256": "874491cf9a6b86ff121e3cd7cbf197352d4620c2420e78d96543918f7b2e8a9d",
+    "bytes": 179962,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:3",
+    "sourceId": 420031,
+    "sha256": "883894cd7a602fc64ed724b57b36e99d1a7eaa0338022d8a89e42e74abd6fa10",
+    "bytes": 546774,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:4",
+    "sourceId": 420032,
+    "sha256": "f0252480db568764cab5608edd99e476ee7f80a0b7704e0b4f38b4a56ef84060",
+    "bytes": 742101,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:5",
+    "sourceId": 420033,
+    "sha256": "e5d11f463a87d8c89dcb4aea7a7b4002125ae132a12d9e842da204c6e9008a0e",
+    "bytes": 496623,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:6",
+    "sourceId": 420034,
+    "sha256": "f7ab7a66631d091664d62e95e4cb203ca9e2e922f5929bf7a11fea4614b70ee6",
+    "bytes": 181876,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:7",
+    "sourceId": 420035,
+    "sha256": "e84a8b7022f955242e6ad1d2060cdd854774eed432483bb9b9abc9f5839ab768",
+    "bytes": 477547,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:8",
+    "sourceId": 420036,
+    "sha256": "b768a9ccd6fa18148d824b6073a9f88c6a2a14e1c7c151d6ec82bcefe9b4c48e",
+    "bytes": 452553,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:9",
+    "sourceId": 420037,
+    "sha256": "b7fd53547fbcb1b17f438863d9071ccff8e9e9dc8d90fac1c6dd0705a36b343c",
+    "bytes": 271335,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:10",
+    "sourceId": 420038,
+    "sha256": "ac476c6570830ee63397080adf56e73ed4ff58b8b22c31f5037195369c69f211",
+    "bytes": 255594,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:11",
+    "sourceId": 420039,
+    "sha256": "2c90866d57813935ae44988f24b3092045b977c5c3ff2ebcb974e481de4d9d43",
+    "bytes": 337024,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:12",
+    "sourceId": 420040,
+    "sha256": "c99ba60fb35e516d03895610743c313044bec528f538ec6fc94338fa9bfd2c1a",
+    "bytes": 146499,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:13",
+    "sourceId": 420041,
+    "sha256": "d3becc8a21ec66c210b662a8073f4e0f6b6e4ec2d941f9a850205839cc4e6290",
+    "bytes": 437589,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:14",
+    "sourceId": 420042,
+    "sha256": "5e89497dc2fef98dace98487027a3579897e520ca5d68dffba2d0653ec83c911",
+    "bytes": 325758,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:15",
+    "sourceId": 420043,
+    "sha256": "79f6398f427b726861ca8bd2cc5af41e1da3ec493952a554a9352b19d60a74f3",
+    "bytes": 519255,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:16",
+    "sourceId": 420044,
+    "sha256": "9368563401e3287d073e90197880627ea0add842656d48b462a01b9ad9506e33",
+    "bytes": 234261,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:17",
+    "sourceId": 420045,
+    "sha256": "c3e253d594819965feb1a1e5a3b6ae38df6fa93479fd17cfaea663536a12808f",
+    "bytes": 225038,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:18",
+    "sourceId": 420046,
+    "sha256": "5b0d5d9b80542811b933662e008ba894acf9c60168ce8fde0d6e3e4dd3a1c02a",
+    "bytes": 426807,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:19",
+    "sourceId": 420049,
+    "sha256": "598a7cd7ed0293b4b7aec6527fd770621c36210e4434db44c88718afb9cbcd53",
+    "bytes": 655487,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:20",
+    "sourceId": 420047,
+    "sha256": "c6a15e14d91d9db0a54bb429aa7a7adc6ac30baa4edada988c979090a19e9f80",
+    "bytes": 269832,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:21",
+    "sourceId": 420048,
+    "sha256": "948bc71bc61fa05a8cd5893dc686cdfd27303310b027c174222fb76ad085109d",
+    "bytes": 258390,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 24:22",
+    "sourceId": 420050,
+    "sha256": "897fbfdde7ab854526c2d44b6fe2465b42022e39d5893362acac7eb03842439c",
+    "bytes": 312864,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:1",
+    "sourceId": 420051,
+    "sha256": "f22446024c79e2e2bb2f4272a086353f1b1a46f8cdb6ed492ec22c108a307431",
+    "bytes": 331769,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:2",
+    "sourceId": 420052,
+    "sha256": "25982920900cfd17b9d58033cf52e41b84219b71c60162978e095e52c3566a67",
+    "bytes": 339951,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:3",
+    "sourceId": 420053,
+    "sha256": "aa0ca5d6bbce1285639a0e6d4eb6cee3d9b9c13259d165f03ce7aece0123edea",
+    "bytes": 349937,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:4",
+    "sourceId": 420054,
+    "sha256": "e1c9c9177b5f7e9e8afcf45caec659ed2487f4b8257d89dbf083b4dfe0c810a2",
+    "bytes": 98489,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:5",
+    "sourceId": 420055,
+    "sha256": "7efc841074b3fad15109a556d14a529da5232282eb6af325f2c0b43e1eee206e",
+    "bytes": 549770,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:6",
+    "sourceId": 420056,
+    "sha256": "4849260bccd623270da379fd553a5b8d2d8df1c4fca9797df714b6443c39fce4",
+    "bytes": 352860,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:7",
+    "sourceId": 420057,
+    "sha256": "bcbea782f15d26be4527b2b5e8404ba792adc8f8e8bdd752a792b75600e969c2",
+    "bytes": 596062,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:8",
+    "sourceId": 420058,
+    "sha256": "7dc988986725f48e14043d2798d8017a0d1c2179d07b5adfe57e95304b64f86c",
+    "bytes": 279349,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:9",
+    "sourceId": 420060,
+    "sha256": "836a008c3cd9451ef0e5205f9a7a8ddbd14b6ac81bfe5d5947eaec8080997272",
+    "bytes": 581853,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:10",
+    "sourceId": 420059,
+    "sha256": "64f6658b362a0827551c4ab030f67266f5443f40441ce26e4ea6b879472b4f2a",
+    "bytes": 165752,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:11",
+    "sourceId": 420061,
+    "sha256": "c05b8c28632e62445fdf48c438f9ff3a94f2d0970984efe49d082103f836b9f4",
+    "bytes": 447330,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:12",
+    "sourceId": 419951,
+    "sha256": "c373cc35c1ddea1bb78226a50d397b2294b1663b55c7728ec33b5f9e34023332",
+    "bytes": 167098,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:13",
+    "sourceId": 419952,
+    "sha256": "e54a877d068f21de309aec760cfbd59106966810d08c1fb145178612d75f63bb",
+    "bytes": 215463,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:14",
+    "sourceId": 419953,
+    "sha256": "1dcae678983111741cd4dd893edd6064e8d604cd96e3d66bcac8bb9adccedd03",
+    "bytes": 208754,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:15",
+    "sourceId": 419956,
+    "sha256": "77391577431b30f1deac6214ee880ff954a72f993f1859e5ad486214d4f73cdb",
+    "bytes": 476309,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:16",
+    "sourceId": 419954,
+    "sha256": "5a17350388794af422854d09d3b5a97f92c0605384877e1c036515add2bb14ef",
+    "bytes": 239277,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:17",
+    "sourceId": 419955,
+    "sha256": "2707761d4a11a31e888e19de5afe8557dcc2ee96d3f05eb088d091157bec7ab1",
+    "bytes": 256541,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:18",
+    "sourceId": 419959,
+    "sha256": "ffafc42271178bbff806efb5e37248e0216f3f0d80b7489fd374b3dba47ea4ba",
+    "bytes": 383466,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 25:19",
+    "sourceId": 419960,
+    "sha256": "07abe89cb456f4591d51eb1b87b9613d6a0faa343b09705c0dd0da5befdab96a",
+    "bytes": 799278,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:1",
+    "sourceId": 432334,
+    "sha256": "6b0f4f75d35c99e88906acb82a09eff051ac4eaa52c91c3f950dbda9dc9b5754",
+    "bytes": 312760,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:2",
+    "sourceId": 432335,
+    "sha256": "8749de154810063a60d33b14a5536ad3bbf9fc68b3b120c8750bf1d8b45fdb86",
+    "bytes": 700296,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:3",
+    "sourceId": 432332,
+    "sha256": "55e0933e3c5d80a33df93d8c0d80ade818890c6abfa22bd63f48189ff78db950",
+    "bytes": 554825,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:4",
+    "sourceId": 432336,
+    "sha256": "016296b64e81c96d97f4b5e4f3dc89714b4f03409cb2937391a509860fd26342",
+    "bytes": 323420,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:5",
+    "sourceId": 432339,
+    "sha256": "01ec99c3750ca5f7aa7c9471d838411a15d7ac821999c449d8904677332a34d8",
+    "bytes": 534904,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:6",
+    "sourceId": 432338,
+    "sha256": "1ca63d9953b6a0d6f098bb6814fb110e6b887c0cff8179d5e699f31b3a3064c6",
+    "bytes": 256540,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:7",
+    "sourceId": 432337,
+    "sha256": "e751a35bb2bcff04baa8b922ba4de8ffbf2e2f43639ee3add965b5d555c3a958",
+    "bytes": 430595,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:8",
+    "sourceId": 432341,
+    "sha256": "38770a63d312e9aaf53e25a4a64bbde4259a190cf0c8c4acf0faea8dfbb1c68e",
+    "bytes": 339873,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:9",
+    "sourceId": 432340,
+    "sha256": "b1e0712afedbc6fd19fd415231ef08e0e9614b9fca63e6f3e949eb92b13885b9",
+    "bytes": 307811,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:10",
+    "sourceId": 432342,
+    "sha256": "8fae9f0faafa61b1983fc29714e04b77153dd6623c28147cacd0a8514f013edb",
+    "bytes": 493829,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:11",
+    "sourceId": 432343,
+    "sha256": "6253a27b018441724772220cb17cdbad54e7281c3bafed2a1a53718cbecf6333",
+    "bytes": 402608,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:12",
+    "sourceId": 432344,
+    "sha256": "c7a803cecee43b80e8ca3a4c5783084b55d8ef9aec71b9e520f16c47f1ede257",
+    "bytes": 629911,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:13",
+    "sourceId": 432347,
+    "sha256": "ed15b3f21c925749eea36af5aed00d81cde3e616d0d3c298a342f49102f7af2d",
+    "bytes": 737079,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:14",
+    "sourceId": 432345,
+    "sha256": "5f744e60c18538f02dc81afda1933b86cab440b252ecbd3427d072bea1dc8eda",
+    "bytes": 543492,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:15",
+    "sourceId": 432346,
+    "sha256": "12290d3e0bbd6fab03dc2bc995d17c2a980ac9f47099dad0757ab57989e5b664",
+    "bytes": 592876,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:16",
+    "sourceId": 432348,
+    "sha256": "9bde1ba7a7eec3422a2f433f12cd310f6b7b085a0405ed86ed77267a1aeded1b",
+    "bytes": 521035,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:17",
+    "sourceId": 432349,
+    "sha256": "7f2d527852d3efae555122fd384c18fb993a862b2f61d29c561a7ecb54052cab",
+    "bytes": 492431,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:18",
+    "sourceId": 432350,
+    "sha256": "c2878e09464f66fad19cb0f12752a06c790914ad0ba7d5ce5b8df25b9ae67e1c",
+    "bytes": 376635,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 26:19",
+    "sourceId": 432352,
+    "sha256": "b60a50b1f0d4d96b589cdc4cfbb563e2d4504a544d6d343962d6d5cdc80138b8",
+    "bytes": 474973,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:1",
+    "sourceId": 432351,
+    "sha256": "36ce35641d01fb6304b022107910ca539383994d752b4ad8d272ae93cc65778b",
+    "bytes": 355893,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:2",
+    "sourceId": 432353,
+    "sha256": "abc35abc1745166ce2e4d78ca037fa1794952b8eea544247a9f463cf4df0a567",
+    "bytes": 562777,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:3",
+    "sourceId": 432354,
+    "sha256": "2b1c04ccd55ac4670e6e2e3bcf27aec679fcb798989983a44937e2f9ac4582c2",
+    "bytes": 807196,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:4",
+    "sourceId": 432355,
+    "sha256": "8b18c00cd9e4e289276545230d740f0f754f43efe49716269b95affc729b95c8",
+    "bytes": 544779,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:5",
+    "sourceId": 432356,
+    "sha256": "6a671a6a22e757b849c73be3006b0eac20af4ee23f09c5e182d0770a882bde93",
+    "bytes": 291920,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:6",
+    "sourceId": 432357,
+    "sha256": "d6b143f6c50ecd893f9b458e189082fba032596826293873f882b35e1a100b3b",
+    "bytes": 307808,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:7",
+    "sourceId": 432359,
+    "sha256": "5108555562624a5e5d7bc0dfbfbb89f988923d8ffdafcf8dfc13eeaf213c3b33",
+    "bytes": 250578,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:8",
+    "sourceId": 432358,
+    "sha256": "ee6207e3e17f19f818b34fcfe33c45dea7b2e4e27cdf3c30b13670ea92092599",
+    "bytes": 269637,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:9",
+    "sourceId": 432360,
+    "sha256": "68afb2979fe1ff69a8cc503bffceed0f45ecfc008b4ac633fe74be34785009fa",
+    "bytes": 442762,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:10",
+    "sourceId": 432362,
+    "sha256": "8a005f702c612b5176e453f0af1a77b2fcd83f0b31d122a282b2e891d89808b0",
+    "bytes": 371759,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:11",
+    "sourceId": 432361,
+    "sha256": "a4dd3cc4fa3995507897e9fcc82fcd1dc787861329880ef78f11e6a4a2bd7331",
+    "bytes": 149694,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:12",
+    "sourceId": 432363,
+    "sha256": "0475fd566c009e3255ab773e7e9644e5b925bb93b900574dcde6ec14702764fa",
+    "bytes": 524313,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:13",
+    "sourceId": 432365,
+    "sha256": "b5df6a29a2b037afd97208455776eff15623aecc3e5f70771163a544e6ec9cb1",
+    "bytes": 328431,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:14",
+    "sourceId": 432364,
+    "sha256": "4fdac1b9049870bf79c7a8333040f34260968a06c77712aa695df9098d97b457",
+    "bytes": 218275,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:15",
+    "sourceId": 432368,
+    "sha256": "71f19fd998e00cfd332bb45b2feb3326be2983e73fd1fbc05c82c6d59314cf40",
+    "bytes": 575321,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:16",
+    "sourceId": 432366,
+    "sha256": "79b6d40cdc35c4b5689ae39c3180425b15543e8cda946bd4958d632698a7b951",
+    "bytes": 203695,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:17",
+    "sourceId": 432367,
+    "sha256": "b66f14f029bc0624442fb2b97da0c2347cbf2ef43b4a121a8a315acd4f70f2a3",
+    "bytes": 215355,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:18",
+    "sourceId": 432369,
+    "sha256": "131b99a0f79bdf9729edcf325133815bf05e52b35d6eecdbf7c17640b9597cc6",
+    "bytes": 237954,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:19",
+    "sourceId": 432370,
+    "sha256": "6cdcaf2c2e7ea419dac58adbbf27a3cd4d192d9681041e6381879e98059d07d4",
+    "bytes": 256844,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:20",
+    "sourceId": 432371,
+    "sha256": "c7f31a8a1245aa54b24c1b00cbfb28ff367af19ae1b2961c0b8758188067b485",
+    "bytes": 293948,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:21",
+    "sourceId": 432372,
+    "sha256": "243c53614b923c5376453e049db8ccfa30c80a2d7b351e8ceb6e972fb6c3d529",
+    "bytes": 221814,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:22",
+    "sourceId": 432373,
+    "sha256": "03610a5c3d1c4d36e32874c6d9e37f8eeb64123a52ac4c14ed2e3f89b1230672",
+    "bytes": 264728,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:23",
+    "sourceId": 432376,
+    "sha256": "0d58c58958b75e3ca09b360b34423e22071da382e1a733863ab463c70eefe1a5",
+    "bytes": 223428,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:24",
+    "sourceId": 432374,
+    "sha256": "cf1f24c3abc08c8159a5365a786b58aa4d1c56180a91eb6033d85f3fb3a20e50",
+    "bytes": 207561,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:25",
+    "sourceId": 432375,
+    "sha256": "1b549adeb16e1d748b7ceb498f3aaa8d96c7a7b4c72131d0399575500e59158c",
+    "bytes": 261908,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 27:26",
+    "sourceId": 432377,
+    "sha256": "7ed50df672cab3b93ce35e44c5557872bd76649604feb9497509b366bda7673c",
+    "bytes": 323603,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:1",
+    "sourceId": 432379,
+    "sha256": "a5b37fa1477741784e50ad00f584959e1368e03a09b0fa4160e2eca159861adc",
+    "bytes": 583331,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:2",
+    "sourceId": 432378,
+    "sha256": "a48f9d76266cc5bb830f4ad8e258e1135cd24b47d30ffa9645cf14343047ddca",
+    "bytes": 317811,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:3",
+    "sourceId": 432380,
+    "sha256": "80da3f787cad285c3c20c6cf8be3d012c0f01b22158f21ed53552032b9016dbf",
+    "bytes": 170299,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:4",
+    "sourceId": 432382,
+    "sha256": "d64c5a5968002f8a6a509f203a34dca4c4e86af505bf9580183e9f3f5280802b",
+    "bytes": 347918,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:5",
+    "sourceId": 432381,
+    "sha256": "b8e6cb40f6ea56ecac6c51e279ce5c4a169422de55bfed72b1d76f20d0e0745a",
+    "bytes": 118144,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:6",
+    "sourceId": 432383,
+    "sha256": "93b98f690c706f15f61a1c0e2c8139e1360dbcd12df658736f5ffbec5da01b82",
+    "bytes": 186230,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:7",
+    "sourceId": 432385,
+    "sha256": "ef22eba7fa03dcc29063f501538cf131bee98b29012fa3c576d5e4a42aad977a",
+    "bytes": 439382,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:8",
+    "sourceId": 432384,
+    "sha256": "0b9ca34b9faff511d99716b81ee89edd4524fb6827bb2b314086553d36d49f48",
+    "bytes": 468323,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:9",
+    "sourceId": 432386,
+    "sha256": "ff30b9bc4b2c443cf99e26abcee36bc21c420a4989f44db857dfa6d4174e6385",
+    "bytes": 413934,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:10",
+    "sourceId": 432387,
+    "sha256": "b229f021018a8fa9fc75fe009a9b4883a4f67c3d6521fd90a485c0eb637d5bf5",
+    "bytes": 289109,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:11",
+    "sourceId": 432388,
+    "sha256": "ca71ddac46e2949100d4137cd4517e4cfdf2bdb67e5faa1eca0870f296515f5b",
+    "bytes": 552838,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:12",
+    "sourceId": 432390,
+    "sha256": "0b8f161e9ed7058e63288c1551303d2dec30a0bc7f503ca686d49afee6823280",
+    "bytes": 648799,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:13",
+    "sourceId": 432389,
+    "sha256": "5a02dc9f29b815ed4c3236394ffe52c35357caf30d2061f9472dd12cd469d7ee",
+    "bytes": 664470,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:14",
+    "sourceId": 432391,
+    "sha256": "23835d7f5c49f5b8d22851bab406c0178084d325b707a63a20fdf995834a86cb",
+    "bytes": 501793,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:15",
+    "sourceId": 432393,
+    "sha256": "2a2e21080ee33dd898f38bccfa2ca26100115ae7e927d7ec5e8663b57967dfad",
+    "bytes": 594864,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:16",
+    "sourceId": 432392,
+    "sha256": "ba30086e19b1905ae0240a11d9d16d9d842d9cdd1fd49ae04bb2767a8f75dc93",
+    "bytes": 146458,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:17",
+    "sourceId": 432394,
+    "sha256": "40010d49a3ad8a7979a8b5644796a57f3a35679af4bf3515109348e11d3e4171",
+    "bytes": 131861,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:18",
+    "sourceId": 432396,
+    "sha256": "4e049417c533c2dbf6bf89a4b80cfff02736d2f263425326b580e208e3abf353",
+    "bytes": 259846,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:19",
+    "sourceId": 432395,
+    "sha256": "525ea6dc38699756dbfd6e534b3a6d9275096f4a190d6295b6626e3eab2da61d",
+    "bytes": 175305,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:20",
+    "sourceId": 432397,
+    "sha256": "a9c49cedc758079e87f163eaafaceba272a312f43ffee3148942082d5d91def1",
+    "bytes": 690635,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:21",
+    "sourceId": 432398,
+    "sha256": "725d92f75325a28f4a591eb066672971611452c02da911f838b15f1d6261266e",
+    "bytes": 405988,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:22",
+    "sourceId": 432399,
+    "sha256": "5e14d90b2579bc114bf4ac233387292fd7a1a567974cf34c3fc7ee1cfdd6b36b",
+    "bytes": 546738,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:23",
+    "sourceId": 432400,
+    "sha256": "e50c30bcd14136c2cd1d0fe49d91c99667c2b8e9cf91e191271acf59ef8cc116",
+    "bytes": 281022,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:24",
+    "sourceId": 432402,
+    "sha256": "5747f6ca17e650bb9f6ac0f3adbadd9d4ba90b3553c36324f5c8bb2ebdd52823",
+    "bytes": 371807,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:25",
+    "sourceId": 432403,
+    "sha256": "db7e29c2fcdf40dd9d52fe36ccac4a29af0d09c388d2feb2c20cf50cd84bc1fd",
+    "bytes": 549668,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:26",
+    "sourceId": 432401,
+    "sha256": "20469fd65ae264bc7f451c5a7a4ad40f9ca96d2b4bac9c06f89c3bb01d9bac2e",
+    "bytes": 302050,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:27",
+    "sourceId": 432404,
+    "sha256": "5cb2aa87d40585de3e02b64c685df61c0dec6e9a05452da11874ae1a9ce5713f",
+    "bytes": 320750,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:28",
+    "sourceId": 432405,
+    "sha256": "dfa04276a091a0a1304d2300defefa095de4000d51758405aedb38d4dbacf70c",
+    "bytes": 225008,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:29",
+    "sourceId": 432406,
+    "sha256": "48532d02de6ed8d323affd23b64643556d7603de1566a8b23f4c6085be4dc38f",
+    "bytes": 644163,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:30",
+    "sourceId": 432407,
+    "sha256": "0b0c13e80f7d50dedf298a3288f233f47fc3e401418f5637411be32d481f15a4",
+    "bytes": 394786,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:31",
+    "sourceId": 432410,
+    "sha256": "5bfa2375e344d8ef7d77b6293989a44e66b273954886d1b46022e6de8e9c2da2",
+    "bytes": 549815,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:32",
+    "sourceId": 432408,
+    "sha256": "0e55e8e55b312dcb29fabb10c503d3cca77f19369e540f0b2c757cdfbd6fa820",
+    "bytes": 365703,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:33",
+    "sourceId": 432411,
+    "sha256": "05eaa79ee4c84ebe136ca0415dbd45091ab9d978acd5e0a2faf2f4b153702b63",
+    "bytes": 424758,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:34",
+    "sourceId": 432409,
+    "sha256": "fd51d772a2fe099ff786914b0ad45db5db6c866145a17eacb316d3e01b7501ba",
+    "bytes": 176997,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:35",
+    "sourceId": 432412,
+    "sha256": "db3d5eedec60e3c4aad0ad44aeb3ef70419314a00dc97686e6f9011e90bdeff8",
+    "bytes": 452424,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:36",
+    "sourceId": 432417,
+    "sha256": "0674c84396eef0a37a0611bd599e3442146a69c77dc266e458a9d0682698d9bb",
+    "bytes": 600752,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:37",
+    "sourceId": 432413,
+    "sha256": "97952dc219b40b730795071310b76973aeea9b2c939ba4c7288f90e2d7008c35",
+    "bytes": 293963,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:38",
+    "sourceId": 432414,
+    "sha256": "0b704339dfdb37540d6b0f5dba4876e7cf0fe49322bcbba99ce255f06107470a",
+    "bytes": 258443,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:39",
+    "sourceId": 432415,
+    "sha256": "6140dad7e1b9b1b8f127a1fbc5aadb2b0fd1e58d2a42a0b4322d3d706f553bf3",
+    "bytes": 311058,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:40",
+    "sourceId": 432416,
+    "sha256": "4379c5ca9205fc59c1b5016fab6d5810bc04f65977f4e80bf6fc3bbbdcf7d4b4",
+    "bytes": 277758,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:41",
+    "sourceId": 432418,
+    "sha256": "ad36a1d83006eb09d5e628f0e0a416713d74ebefa3115f8fd69f713ed54c1613",
+    "bytes": 228104,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:42",
+    "sourceId": 432419,
+    "sha256": "d32f832618bb8b0a5d9f10248162bce771d8f52a2d5bf22f2a167f8efc0e74bb",
+    "bytes": 211405,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:43",
+    "sourceId": 432421,
+    "sha256": "029ed1c79476ec71cd804fa1d8cc045cf247e18cd5120e364c0de398468e7727",
+    "bytes": 297031,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:44",
+    "sourceId": 432420,
+    "sha256": "b20f3a5c9872a78a1646972fa1bceb2316e75e71ea1e6758dabb87dca9612323",
+    "bytes": 290276,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:45",
+    "sourceId": 432423,
+    "sha256": "a618f04c49b6cad07452b60e407bdafc58b6d10fb5ae20faa954342d4b53a454",
+    "bytes": 557848,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:46",
+    "sourceId": 432422,
+    "sha256": "2ea65396fbcbf195a8ce530b049a31a545cd6f8f14966b79bd51152958d1b73b",
+    "bytes": 197859,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:47",
+    "sourceId": 432424,
+    "sha256": "1f963168ecec6cce4547bd50c875bbd3188867dfd046422bddb3eafc6220f187",
+    "bytes": 317828,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:48",
+    "sourceId": 432425,
+    "sha256": "77b118982f523253a113ef8fcb5caebb03bffba925bd467868b40d08050bfc0c",
+    "bytes": 634655,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:49",
+    "sourceId": 432426,
+    "sha256": "37cc03a852017bcdb2d9a9042b250674a281d76b39e0765d7c789c9ee87f92f7",
+    "bytes": 428276,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:50",
+    "sourceId": 432427,
+    "sha256": "f5994f5ae9cd9632db83e33ff94efed4b0e7289e985eb9abc823b821af057cf5",
+    "bytes": 255492,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:51",
+    "sourceId": 432429,
+    "sha256": "cd509870b88d97cf796091040e005dc472422318181e7dba2b3aa2fc21ab481a",
+    "bytes": 608823,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:52",
+    "sourceId": 432428,
+    "sha256": "5e86af95cea31770d4149209226217dd0852a225fd6a71883707776c415bd692",
+    "bytes": 688985,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:53",
+    "sourceId": 432430,
+    "sha256": "92ad221c98f5f5d66384b87f80b583f3cff35e45e0a21bbc0e43972fbf69251b",
+    "bytes": 439453,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:54",
+    "sourceId": 432431,
+    "sha256": "ad18fc746bcdda42837cfca661f62a60fbd49fc63e62f29356a0a062d385106a",
+    "bytes": 400894,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:55",
+    "sourceId": 432432,
+    "sha256": "b8f99dea6def326e993f3653881db60c057a4ac928d6e98bd0f2888018e9004d",
+    "bytes": 544881,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:56",
+    "sourceId": 432433,
+    "sha256": "012390476652f343210f2b76edbd87610bdcb224208adc6bb4f39b98316490ac",
+    "bytes": 551337,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:57",
+    "sourceId": 432434,
+    "sha256": "508272f0a1d5d81bc8edab2d078745e5965dec25c2b92a83da3fee25a9788ec9",
+    "bytes": 656530,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:58",
+    "sourceId": 432435,
+    "sha256": "7717f7fdad835c9ea90bc0463520a93e42daed0ff843c177e1933331074003ab",
+    "bytes": 532435,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:59",
+    "sourceId": 432436,
+    "sha256": "05e54f0593b3ace25a72621c18b5eede9f81b028f9efa6c80e1a5434bd18caf7",
+    "bytes": 405766,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:60",
+    "sourceId": 432437,
+    "sha256": "97619e9054f447898f6d61a07fcc2996211a3cd05b04267a680ce005b0687405",
+    "bytes": 328430,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:61",
+    "sourceId": 432438,
+    "sha256": "a3c198c976dc6ee42b1a37950d57d8485e4a863567157761c9ec6466417865de",
+    "bytes": 363685,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:62",
+    "sourceId": 432439,
+    "sha256": "83d771da8079cd9f4cf68acd07b1ad1bec5563a3cde3e37b2bd386ecde693474",
+    "bytes": 373849,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:63",
+    "sourceId": 432440,
+    "sha256": "33c17a204cb275a8e783994debaf0faa1dae49da72a36fb70926aeb773ac0ec7",
+    "bytes": 724507,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:64",
+    "sourceId": 432441,
+    "sha256": "81bb1798f2012f462a97121fdc7d4dd79966e715cdc8e04d302968ec429010f8",
+    "bytes": 512896,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:65",
+    "sourceId": 432442,
+    "sha256": "d0bbbbd53ab9e5f110ef755368298b4d5b4b987ac6da28777f5ea79bdfcce2d5",
+    "bytes": 504711,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:66",
+    "sourceId": 432443,
+    "sha256": "f16438ae063833e63712b40f370e846ef8987d51c58c6c2741da7e58fa605a65",
+    "bytes": 352867,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:67",
+    "sourceId": 432444,
+    "sha256": "436f3ca1d6c33bd16e8f34feb3b7610077a11ee417ddf0a17b44ccc5f4bf9e11",
+    "bytes": 476102,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:68",
+    "sourceId": 432445,
+    "sha256": "42291c34aafd2cfcdbdef2d15ceaed7b29c9fe40a4f9cd9d920752e5a1e1cc9a",
+    "bytes": 663431,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 28:69",
+    "sourceId": 432328,
+    "sha256": "f0c0a7b6e3d63579d9be077d66bcec2aa892b5233e82f37b23c3842797398cca",
+    "bytes": 506728,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:1",
+    "sourceId": 432329,
+    "sha256": "4a78e33cc93720e99bb93e4175d54b4eb0272f2061bdce1832983409170be44e",
+    "bytes": 527342,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:2",
+    "sourceId": 432324,
+    "sha256": "a11d1b5356030abe4cea2f30962a193b6e2d45c334d44c9fbf185df0a6f7d739",
+    "bytes": 274172,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:3",
+    "sourceId": 432325,
+    "sha256": "5f984a7c5785f0583c05212d7f4ef2a9b64891ddf0d29f50b735b442ba129a64",
+    "bytes": 314495,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:4",
+    "sourceId": 432327,
+    "sha256": "d40025b421616209b98da80bb95d8893a3d27626d404a18a2aec8a3ec5765568",
+    "bytes": 404301,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:5",
+    "sourceId": 432326,
+    "sha256": "4799a775c268e2c9f57b188c6773b09583195b316ff78aec820ec855d666974d",
+    "bytes": 351215,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:6",
+    "sourceId": 432333,
+    "sha256": "069e1ac91450af193d338fe0016d52c2426da2ac5ecc01f36dd79673745f68ae",
+    "bytes": 450686,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:7",
+    "sourceId": 432331,
+    "sha256": "e334a714e51fba0d9e34646b97e3e6ab7d7052598321dc6110471a69b495dbf3",
+    "bytes": 340142,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:8",
+    "sourceId": 432330,
+    "sha256": "cd6d86a0b4c73fef3272ccb02e3eb021cb44356f4fb264bed6af61c8f62748e6",
+    "bytes": 338368,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:9",
+    "sourceId": 432457,
+    "sha256": "c31ff3aaec1a1b7ebbc17d374e6b5a7e497bf2eba3eade367a8c77589c16780a",
+    "bytes": 386784,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:10",
+    "sourceId": 432455,
+    "sha256": "a246efe332edeb247c87cbe9dc58e5c9dc5014681d3a222fcda776daa6bd9b4a",
+    "bytes": 311011,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:11",
+    "sourceId": 432453,
+    "sha256": "2e1e3284da1d0a21a1d8ebe5a4751f23571727074dc278cc43ed25bf6b021504",
+    "bytes": 307918,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:12",
+    "sourceId": 432454,
+    "sha256": "e2c39279b970f4a277c6858b6fa8903fcdf95aa514e2ec5135aa8ce3b78f1eae",
+    "bytes": 514599,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:13",
+    "sourceId": 432452,
+    "sha256": "bf6f83853b56f11c32084c853194c2718d5378ecf7d082134ac25656c20eab8a",
+    "bytes": 258627,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:14",
+    "sourceId": 432456,
+    "sha256": "1dbd8eedf288ff63ff3d3392081e8a1fc4de4d333f9132765f0709a5f39c6e99",
+    "bytes": 429738,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:15",
+    "sourceId": 432458,
+    "sha256": "8073ed5524943f9a606e55df1f73587ad3744b6e2aeddf3d12be4a487959307c",
+    "bytes": 354206,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:16",
+    "sourceId": 432459,
+    "sha256": "7311861a04f747f54b1f79f13853bd8c16ddb2b13d537717c1c888ad30fe715f",
+    "bytes": 311149,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:17",
+    "sourceId": 432461,
+    "sha256": "ebc7f01a62c832647e5474ba09fa980453581c3d457de695437d461214e75def",
+    "bytes": 794698,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:18",
+    "sourceId": 432460,
+    "sha256": "d59b90777c4fc05d957cc910d645cd8411b171aea95a1f58b09f2bc8d374801a",
+    "bytes": 612302,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:19",
+    "sourceId": 432463,
+    "sha256": "4ec6225546a0db40a10ccf421e83ec08fe0911e3a84f4106a3ec0ab739267575",
+    "bytes": 687301,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:20",
+    "sourceId": 432462,
+    "sha256": "c0cb3051ae5d857066c497ede2a834c380cad8b9737c1647750c7bdff5c06640",
+    "bytes": 365822,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:21",
+    "sourceId": 432464,
+    "sha256": "b9c3ee5446d3f778aeab3eda677c8a901666a4e0f123ebe2b69054cb243d252d",
+    "bytes": 756365,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:22",
+    "sourceId": 432466,
+    "sha256": "b984fecaa21832fafcf4b2fdf028d12b0dda274880a9b3c419fe0ae255d9031a",
+    "bytes": 701835,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:23",
+    "sourceId": 432465,
+    "sha256": "fe7192d6585abafa54ecdfa9a3716b0b8de84b7b8a84a58865a9157828840eeb",
+    "bytes": 362526,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:24",
+    "sourceId": 432467,
+    "sha256": "25dddc412b5b0eda5771915cf0f15289f0fd9d2045d204522c19db2ffba3df0e",
+    "bytes": 381792,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:25",
+    "sourceId": 432468,
+    "sha256": "bf708463b2d8425d4a927a6e12cd4880a1142b0b7764e941962a5c4358efcf62",
+    "bytes": 350001,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:26",
+    "sourceId": 432469,
+    "sha256": "78dcc6aeac2e0fca97b2b4dabb70d34a4a3c6fe521abefc5399fea3c6b4d5db0",
+    "bytes": 294047,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:27",
+    "sourceId": 432470,
+    "sha256": "67601962fb723e95f164692f60ac8a83f93d14478550655e0e4c9d9c633695b9",
+    "bytes": 367031,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 29:28",
+    "sourceId": 432472,
+    "sha256": "cba635ba0fa86f4a0606746e0939112ed364d65d22171ab6a574fcfd3b0097bf",
+    "bytes": 404130,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:1",
+    "sourceId": 432728,
+    "sha256": "d014f1d4851f8a5011c2a300b44fc346053c781e66bf07dc81eead693cd30c61",
+    "bytes": 216427,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:2",
+    "sourceId": 432730,
+    "sha256": "67afd9f30c8f191950f44570b02f79ee5377a86dde1c1262dfa849df841edfbd",
+    "bytes": 341622,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:3",
+    "sourceId": 432731,
+    "sha256": "071b2bcf481374bcbff368266842363c55ae4ddc77586a3c03b9f2fc022c6dff",
+    "bytes": 215426,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:4",
+    "sourceId": 432732,
+    "sha256": "9b2824c3675fd9bd2a870f9c742226a6de84fcd18f9ff84773ad27c3bb3503a8",
+    "bytes": 376751,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:5",
+    "sourceId": 432733,
+    "sha256": "4b5a940a9b593b4f22589af7a41d1e7736396921d5505fc0d97aa29ac4957b2f",
+    "bytes": 370399,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:6",
+    "sourceId": 432735,
+    "sha256": "191a76275dd9c11d762b62e94ba1c5e8ebe926e2ed42a6fddb938f18e71ffcda",
+    "bytes": 464894,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:7",
+    "sourceId": 432734,
+    "sha256": "64ba658b794acf98558a756c57bc06fba838e4fd36419832ed1abde143af7b93",
+    "bytes": 386728,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:8",
+    "sourceId": 432736,
+    "sha256": "1c1ff38e7d514e73828b55dab9728360ea38fa63cb42c9de09cc7f716ea39943",
+    "bytes": 219980,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:9",
+    "sourceId": 432737,
+    "sha256": "e877a1c9209f9a58ee75ed7056ed2cfd77ef9fe092fba37ed2503b9ba0dbfa33",
+    "bytes": 623499,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:10",
+    "sourceId": 432738,
+    "sha256": "1a9c7660c7b65c13ae0b07814b4a41ca1797e7c556c73d2c557238c590c73032",
+    "bytes": 370438,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:11",
+    "sourceId": 432739,
+    "sha256": "f28ab43811321549d120e855db96f0dc5d3279e380ec56250daaa8f50355b214",
+    "bytes": 381768,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:12",
+    "sourceId": 432740,
+    "sha256": "3525c71bda6cbbf978e00078d8d67308e5366aa6375f96ac40389b96273d4eea",
+    "bytes": 304618,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:13",
+    "sourceId": 432741,
+    "sha256": "34e2b5c60e054a5989fa46f22eb00d489dff48cfbee3ada06b7155033c0aecfa",
+    "bytes": 410959,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:14",
+    "sourceId": 432742,
+    "sha256": "5c26aa625aae4a24038229f25c5165e754a50f725c4d3ffa3a51512d7247a629",
+    "bytes": 517798,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:15",
+    "sourceId": 432743,
+    "sha256": "0fcc901b64952bdf69e8514d838e2e697527a426b951dee2042bd7ed9f5f9e7d",
+    "bytes": 333641,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:16",
+    "sourceId": 432744,
+    "sha256": "ea82114077de020df102e74ce59fda52637be8af9ee2764cb5186e3d7ba85689",
+    "bytes": 424775,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:17",
+    "sourceId": 432748,
+    "sha256": "930e5ef2400187b507ac538b266f2e96239acac0880b4bae5e0d4a1e6ee12ce8",
+    "bytes": 642872,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:18",
+    "sourceId": 432745,
+    "sha256": "ca7b8e021a0ff9444f2e5ffb35133c430fbdb04cb0e8b018ab68a712d8d6acb8",
+    "bytes": 370452,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:19",
+    "sourceId": 432747,
+    "sha256": "5363f69742f2f006919a23de17a7fc3fee2b2f4cd8996677fbadef9d080a096d",
+    "bytes": 466907,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:20",
+    "sourceId": 432746,
+    "sha256": "fa8385f1a9f0f477bb868ed7a34bb1b22dd07a790d15bb6f169eb3d5a02a3155",
+    "bytes": 394720,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:21",
+    "sourceId": 432749,
+    "sha256": "f147bf30792ec0f71d5fd59a82b78507e1e6c41b78e79edc0d95c087f79b3ad5",
+    "bytes": 338212,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 60:22",
+    "sourceId": 432750,
+    "sha256": "f5483c5f520f8458fa9d15445847575e42540564f67ec5fa7d56ab8adb438e27",
+    "bytes": 315730,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:1",
+    "sourceId": 432471,
+    "sha256": "417b126085eccb0a12f840ca2b9fc5785838c72e58364ac8da5ba470a95c1ea6",
+    "bytes": 114208,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:2",
+    "sourceId": 432473,
+    "sha256": "68774ce4f5d6a9c0c5607bf5e4ef8b3d0b4710e1db705b13d7a24c7b85be605b",
+    "bytes": 421913,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:3",
+    "sourceId": 432474,
+    "sha256": "e9c201bcee621b0cc02c62a3ec2216dcf08bb1bb21388b5ca1f9a0ef92042b82",
+    "bytes": 501749,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:4",
+    "sourceId": 432475,
+    "sha256": "e9c9749f127166f802970b7cbb53b36a772327033441c3c91a2cf7c0acb0ab0a",
+    "bytes": 341664,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:5",
+    "sourceId": 432476,
+    "sha256": "a677d659337cf042ca00ba7462a01cf6b1262725f843a383ab51e70a81b45d93",
+    "bytes": 408902,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:6",
+    "sourceId": 432477,
+    "sha256": "637beafc537319b85e0f124a7824a1d7a3021c29b35ba1f5155e13bb3392e898",
+    "bytes": 456935,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:7",
+    "sourceId": 432478,
+    "sha256": "196be988b265f3907a1a939e670cb5c229cc55645866f3e5f39099208f35a91e",
+    "bytes": 294066,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:8",
+    "sourceId": 432479,
+    "sha256": "99bbad7061243f24598d39ade011781e89eefeaf02f8b61c6c1c0b07dbf9bddd",
+    "bytes": 346148,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:9",
+    "sourceId": 432480,
+    "sha256": "3511d94c091a16b70d3c2c6b0954da6faa011c6d3e225f7f8d63d9bfc604c3a9",
+    "bytes": 736814,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:10",
+    "sourceId": 432481,
+    "sha256": "ffa35e915b3c6870a7583b585cd8bbb190b75055e374f8a46f239ad7891e93d3",
+    "bytes": 503549,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:11",
+    "sourceId": 432482,
+    "sha256": "6a078bff4d7bf53abc62ab139ca5a6c495494cd29804d426b00dafd1d040df74",
+    "bytes": 332028,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:12",
+    "sourceId": 432483,
+    "sha256": "e6d5cb8ac3364c217b32b23a20a84c6b5a1bc12a6088e363eabfb7b5dbc61bc6",
+    "bytes": 354247,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:13",
+    "sourceId": 432485,
+    "sha256": "621160d09ee177a774bfdd101ae18654ff6013555835458761ce49ba93ea0b3a",
+    "bytes": 391440,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:14",
+    "sourceId": 432484,
+    "sha256": "102dc2bf1f5d674915fc04b205b797c80e32ecca7459bad64416c6f36675417a",
+    "bytes": 229961,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:15",
+    "sourceId": 432486,
+    "sha256": "0c4e95a7a3ff83c09689618864c185e2a2b4bdb4d96c11305e47a6fc2f29d4be",
+    "bytes": 267412,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:16",
+    "sourceId": 432487,
+    "sha256": "b8c353feba4fc25e084f386a7e836b06f16ab1cad105a5278e81a70bc69422e5",
+    "bytes": 752898,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:17",
+    "sourceId": 432488,
+    "sha256": "8564a9fc0763490abecf8e888a6ff0ad393b3299b0a2c93c54878c2bc348e279",
+    "bytes": 315823,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:18",
+    "sourceId": 432489,
+    "sha256": "0e3bd253057c719b2d88dfc96909d032612cfc01f3779e6ca81a38ccd8c6ba2a",
+    "bytes": 442778,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:19",
+    "sourceId": 432490,
+    "sha256": "3a125b542289f3e64fba6c1e5d0553dcd6b5bff5dd8995b75ab6fb58b6e13516",
+    "bytes": 504609,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 30:20",
+    "sourceId": 432491,
+    "sha256": "148ef8fb1c5c71f4fe3d1f424af3a2aa84a3602497258d352cb72798b8a6723a",
+    "bytes": 701925,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:1",
+    "sourceId": 432492,
+    "sha256": "432de1b1640414ce7c688e3a99dee8a2effd575235b8156671d5e7e1cde9e3d7",
+    "bytes": 213739,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:2",
+    "sourceId": 432493,
+    "sha256": "8e5eee08485e2c631cce12cbd1b5abfbb962f0d960cf3e339d7011a81c0a0bf7",
+    "bytes": 492488,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:3",
+    "sourceId": 432494,
+    "sha256": "4c8e17975b8b8d59525b3161064a41da0957883f6e6ce747e7479052f2b28d6c",
+    "bytes": 600729,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:4",
+    "sourceId": 432495,
+    "sha256": "a16e323e3291049379b26f92713b7624efd53c486c85540c8e0dc5ad53fca1dc",
+    "bytes": 343258,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:5",
+    "sourceId": 432496,
+    "sha256": "ba0562de2e490b0c38802d9baee9bcf0968b4d1b84da67ec976e9d651d9dc0a8",
+    "bytes": 277817,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:6",
+    "sourceId": 432497,
+    "sha256": "9089d2064dac3297c503c4dfd0e15401921b28b2a04bc62e854b855141a73f4e",
+    "bytes": 471141,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:7",
+    "sourceId": 432498,
+    "sha256": "5ba8a26f89f7aa881a860375013ca1c9ea50cb6f205874452d8026650f237e73",
+    "bytes": 732349,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:8",
+    "sourceId": 432499,
+    "sha256": "7e9eb34a81eed3157bbe334606d3ba8cc64ee8f3cbdc0e8f61ed4b8cd8bfc4a8",
+    "bytes": 437660,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:9",
+    "sourceId": 432500,
+    "sha256": "748a33994c7c8d6eed68fa9b485bb48d88a7f30b1b349c97a6d65cd114c557fb",
+    "bytes": 460405,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:10",
+    "sourceId": 432501,
+    "sha256": "7d5522eec2f047cd97cd252b43d172475f2668480cc6fc094318c3f021122086",
+    "bytes": 347946,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:11",
+    "sourceId": 432502,
+    "sha256": "63973768ff9610c76d9996cab5aab9a2d12113c7606ecc3f02b0d5c2a4c0fe13",
+    "bytes": 450728,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:12",
+    "sourceId": 432503,
+    "sha256": "82830fdf906b6a148205f484f535c33f41d09d76e41913992687de1ec1c49483",
+    "bytes": 608859,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:13",
+    "sourceId": 432504,
+    "sha256": "ccf17d76282a1aa8900a216f5f0ec4f9ff95076882d065bb5066e762194bba8e",
+    "bytes": 589996,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:14",
+    "sourceId": 432505,
+    "sha256": "08508a7aa5bf6f088fdb9ee020ebbea0b357c543a0d595dc7868d52ee09cd079",
+    "bytes": 629841,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:15",
+    "sourceId": 432506,
+    "sha256": "8672d81b3e287ec5eede67f1cdd24ad253f314a5870bd8b66eb6714a96120f03",
+    "bytes": 320889,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:16",
+    "sourceId": 432509,
+    "sha256": "9a16897c6cefa3b6ddcf6561a380c25d80d1666deae2f17074eb514648bac0e7",
+    "bytes": 754933,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:17",
+    "sourceId": 432510,
+    "sha256": "67dbc93b52d3c77c1f223d2e23055fac1e599b825d3621371ec99c1fc68834f6",
+    "bytes": 791296,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:18",
+    "sourceId": 432508,
+    "sha256": "f3b8c0a20e32d5a136419e3473e24073be57a149f65ddd21131ac9419d1bbd48",
+    "bytes": 400981,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:19",
+    "sourceId": 432511,
+    "sha256": "e14e56d04e75ce1d59c215a3b809f80281c1a7b402b5bb52e7a554915dc1c22d",
+    "bytes": 511384,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:20",
+    "sourceId": 432513,
+    "sha256": "9922f406261cf7266f579e4527c9de70c33f6cc815467d22b0bdd2542792d16e",
+    "bytes": 631258,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:21",
+    "sourceId": 432512,
+    "sha256": "0cae29687a6105f12db9fe6045ae6103453fcc634fdbdba6ab5f789c31fc8db6",
+    "bytes": 903340,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:22",
+    "sourceId": 432514,
+    "sha256": "a3fba2acfbc3acce90baf377c1a25665da1a42a9abc44f0d0e72c6e99e344d05",
+    "bytes": 272710,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:23",
+    "sourceId": 432515,
+    "sha256": "d2fd22a980d5a57a24e9d13e969c25eae50ad897388c5d1fa188626d77bc6386",
+    "bytes": 530951,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:24",
+    "sourceId": 432516,
+    "sha256": "afda6e395b10d36896f5a70cab274ba00f500241acec5b32b9b5eda8924e17a5",
+    "bytes": 306512,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:25",
+    "sourceId": 432446,
+    "sha256": "bdc41f6b62996c7cadcf0c9f897abd27bd84a026764796a84f751cd599703312",
+    "bytes": 195755,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:26",
+    "sourceId": 432448,
+    "sha256": "64e127a34590839c9c3d73df5aaeec51b4c65855fae31b733c29752abf8d6359",
+    "bytes": 407299,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:27",
+    "sourceId": 432450,
+    "sha256": "cd571b86c6c6fd2b65ba2e86c6aa6e1982a35cedc34bbba42a2848f64648991c",
+    "bytes": 569156,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:28",
+    "sourceId": 432449,
+    "sha256": "f065e0ea6dff08787a5d072cc41a32932946414a6c042788ba81bde7d8794d1b",
+    "bytes": 477896,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:29",
+    "sourceId": 432451,
+    "sha256": "4477933dba44cba3572a175d358800bce19d8735015585b8df122cb0e7ecc33a",
+    "bytes": 693971,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 31:30",
+    "sourceId": 432447,
+    "sha256": "8b1aaf189bcf27590a2b9cda2d1be83dbecc308f2d7c5be2f6b8b1384ee13974",
+    "bytes": 298193,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 61:10",
+    "sourceId": 432751,
+    "sha256": "c77346508750325906a563d03f2d977dcefa1e857daf66ae01055b03d64b5584",
+    "bytes": 556346,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 61:11",
+    "sourceId": 432752,
+    "sha256": "ea10df8ea2696104e7767676184a5f2e18a6e76c9e91728bbce4f3b83e24a602",
+    "bytes": 495384,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 62:1",
+    "sourceId": 432754,
+    "sha256": "b9c7f367a228123a050ddce36f58187f1e95e3de94bcd6897a47913f35e060b8",
+    "bytes": 384744,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 62:2",
+    "sourceId": 432753,
+    "sha256": "ff4f574b4a334716303110efac533dafcb6fd64a338ca4ddc9d26b8a5fd64d41",
+    "bytes": 399339,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 62:3",
+    "sourceId": 432755,
+    "sha256": "51c5bd74b655a022a42d9086ca74b15c8690d4a0e4ea77e62d2be3af6b98fbc3",
+    "bytes": 279432,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 62:4",
+    "sourceId": 432756,
+    "sha256": "19c7ef4f8c79ea7ab7c0c6aec2874b61bd438e9ac45c8e1918da24eb522d9766",
+    "bytes": 569018,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 62:5",
+    "sourceId": 432757,
+    "sha256": "38ea91832a762c48046d26d821da821591065b01ceb2f2c1fd340b97d1e16f6a",
+    "bytes": 304788,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 62:6",
+    "sourceId": 432759,
+    "sha256": "20f15a5e7319f4d10ce3c0a76af48a5e81e1eefb6177e596cc41a1c9f8112f5c",
+    "bytes": 455295,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 62:7",
+    "sourceId": 432758,
+    "sha256": "217853faf07855c172801c60d829c42797bdf55e1830a5f57693d9af8c984359",
+    "bytes": 317719,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 62:8",
+    "sourceId": 432761,
+    "sha256": "380142e6eeb5cad81d73dad24903463ad816b2ec79a8210a0c4bb2a11c52c6dc",
+    "bytes": 539979,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 62:9",
+    "sourceId": 432760,
+    "sha256": "a2a910e5478be566ccf197255c84768af03eec1dedad1f5f48fe3665f7e82c62",
+    "bytes": 279451,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 62:10",
+    "sourceId": 432762,
+    "sha256": "008d2905a76e6f248c4d4934984205037833a4bba00aa597509ec522c086e4eb",
+    "bytes": 404397,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 62:11",
+    "sourceId": 432764,
+    "sha256": "79362221f971b214d66c2a881ad3e9ec4dfca91bc01e64d62dc896190c5375b5",
+    "bytes": 427983,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 62:12",
+    "sourceId": 432763,
+    "sha256": "686499e90d7b18c5f0b32e6c378625bd37f5234275b5c27aa64a25481b89d4e1",
+    "bytes": 307671,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 63:1",
+    "sourceId": 432766,
+    "sha256": "35606acf9060fee92b807da6da258d85ef3a9dc9fc5d69dcfa54a4e5cd4cab4f",
+    "bytes": 490911,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 63:2",
+    "sourceId": 432765,
+    "sha256": "56e1f58031646c89e36d99d3e5197ccec8e4a3702c1f2418ae552d8d0ab1f043",
+    "bytes": 216417,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 63:3",
+    "sourceId": 432767,
+    "sha256": "5f49db529a3a564c1b9a52417419ca0f34c6d8d044f696a3828948833ba376bf",
+    "bytes": 568942,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 63:4",
+    "sourceId": 432768,
+    "sha256": "17d4c93334134f5c01d2681738520ebe2da5ac172fd8bebe0be69d25c05d3c75",
+    "bytes": 194642,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 63:5",
+    "sourceId": 432769,
+    "sha256": "7b836876c5d4eda222d902ccc66bfcae3e77f250b88f75ff8ef345a8d72fc4d2",
+    "bytes": 386751,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 63:6",
+    "sourceId": 432770,
+    "sha256": "209770d7e4106a6de94c8373be7c61ad0f08cf9545d42c67ea642df93cbb8799",
+    "bytes": 263262,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 63:7",
+    "sourceId": 432771,
+    "sha256": "a0083a945d3d6cf8374f0c44414fc40d6dd0cf3fc9cece62636da82918f05e3a",
+    "bytes": 508368,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 63:8",
+    "sourceId": 432772,
+    "sha256": "a3309e7a6499bef4f1e622c38310f73254af78620b58a96ae79a1e1d42872d97",
+    "bytes": 259663,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 63:9",
+    "sourceId": 432773,
+    "sha256": "4ece0965645d45d29cacc0297b103ad677300bd2597b0f559c4a251e5a50c615",
+    "bytes": 479335,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:1",
+    "sourceId": 432556,
+    "sha256": "8f6e983da2560170d28ad0b39c485ba0f5614866896e4b77cff069f67fb7020b",
+    "bytes": 195789,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:2",
+    "sourceId": 432557,
+    "sha256": "cfb103ee85b1cdc6ace91fdf2e37bf890984cbbc370058cdfad6fad947010b95",
+    "bytes": 351365,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:3",
+    "sourceId": 432558,
+    "sha256": "5dfc17e7ef89fb3cb53c874ebc951d5e0c53901bc32f4d15768195c01c87204d",
+    "bytes": 191134,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:4",
+    "sourceId": 432559,
+    "sha256": "8e31b121b146f5bc87762f52f26267271ab246a80212c815380e67f032b9928a",
+    "bytes": 335498,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:5",
+    "sourceId": 432562,
+    "sha256": "6768333d893ced937d7281a176190557d272175a9d036f6369463392e4ce0270",
+    "bytes": 215567,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:6",
+    "sourceId": 432560,
+    "sha256": "4a6d4a4c779f2f5713f0f76f69884f32d2345f31a81200274ad95f05e60f9e78",
+    "bytes": 355925,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:7",
+    "sourceId": 432561,
+    "sha256": "af036b2fcbbb970d6300c527d71866afdfd68c9629eca658083deea04c5e52dd",
+    "bytes": 335390,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:8",
+    "sourceId": 432564,
+    "sha256": "91cb188d6e06f3367fbca7db75db15c814c285d072f829a8e5554b668a44aa74",
+    "bytes": 306411,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:9",
+    "sourceId": 432565,
+    "sha256": "f9d5f194d0a094a7654a4f45eb965d4d2f8ff05aa8cf27953caf98deb08f5307",
+    "bytes": 211739,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:10",
+    "sourceId": 432563,
+    "sha256": "fa5eb1570b6059307821514fa60c9d595a8f9ff58169a97c67be3d4fe5b7ba23",
+    "bytes": 352911,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:11",
+    "sourceId": 432566,
+    "sha256": "72d4cde338039ccedaaa81ab1629b517d1e600b0fa3d1be1fa743784619b7cbe",
+    "bytes": 388337,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:12",
+    "sourceId": 432567,
+    "sha256": "442c81a3767b7cabb0b7150775ebc0beff90c2f1b2c15c011af4b0c0252d9028",
+    "bytes": 175251,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:13",
+    "sourceId": 432568,
+    "sha256": "00ffaaa3e570f8b3cea2cf9c5d188d097cbd303beb01f3ffd39be2c38de78b5a",
+    "bytes": 396277,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:14",
+    "sourceId": 432571,
+    "sha256": "d15ae6ee71cc931f69aef1b7a618e8f91cb5a53bd6bc273f43c8f55343c15abf",
+    "bytes": 468190,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:15",
+    "sourceId": 432569,
+    "sha256": "76ccb7bdefd4374c0c12af2976fb3aa734f5d6ad30e473d63272bc379fdb9d6d",
+    "bytes": 386713,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:17",
+    "sourceId": 432572,
+    "sha256": "f6448fff954611ef814ddb40d1379f57fd717e73b843f3a9f96b6ec8e67e145e",
+    "bytes": 380399,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:18",
+    "sourceId": 432573,
+    "sha256": "1cc3cbf793e7900559a9b2281b6827ff44fa542cf51aecbd2ba1ce4700369f02",
+    "bytes": 210443,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:19",
+    "sourceId": 432574,
+    "sha256": "8e0d0442b523ac65991ab5f842b3b6a1ca1af42f7bb0e57e4a60368fb85854e5",
+    "bytes": 216669,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:20",
+    "sourceId": 432575,
+    "sha256": "6a1347aac1f30c9e1506d3c49524a05485a4b1d468650506e2eb3b77bcbc084c",
+    "bytes": 407171,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:21",
+    "sourceId": 432577,
+    "sha256": "f540dd374cb95145a952522c5c216572dafb5cc4cfe0855dac803654f77c444b",
+    "bytes": 347834,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:22",
+    "sourceId": 432576,
+    "sha256": "40ab47764dc124ad89ca40e098cc147457ab3d762baa00ae3a90350a33a86789",
+    "bytes": 408958,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:23",
+    "sourceId": 432578,
+    "sha256": "d2175e48e9f8d113e7f34047e6b79b443454a91321948ac594130471277e528f",
+    "bytes": 168891,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:24",
+    "sourceId": 432579,
+    "sha256": "f6c3388f74af5be335e34aeb634f1e4a12c42421c8cd2a80d4a292746810b9e5",
+    "bytes": 380560,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:25",
+    "sourceId": 432580,
+    "sha256": "6f5dfc4120916e67f32fc8f98ca077748a181905bf723553d594235b88df3991",
+    "bytes": 333699,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:26",
+    "sourceId": 432581,
+    "sha256": "a1bdbbd4b9f5bd91d4d42282997a7aedd04f299d0b205904238b1aa41ad5e6a3",
+    "bytes": 178239,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:27",
+    "sourceId": 432582,
+    "sha256": "063ff29a05e9c92f367fa39272894b896b89d4782700e18317de9a2731584a3a",
+    "bytes": 384648,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:28",
+    "sourceId": 432583,
+    "sha256": "ecfd2908784e28a5ac691947fa3ed4f2c9ab968c5c5b4cd58b15f44865ce615a",
+    "bytes": 203463,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:29",
+    "sourceId": 432584,
+    "sha256": "b514dd9b2767caa5f8753e15f517fac217ddfc8ccfcfebcc4f49913dc7007965",
+    "bytes": 191244,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:30",
+    "sourceId": 432586,
+    "sha256": "ce85a01bf16bc1f70b40b87d462624b733172648e521979f15f60f459a806601",
+    "bytes": 386786,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:31",
+    "sourceId": 432585,
+    "sha256": "e67d6e3adf72c66f6373da8a14bae68784473f6412bcd6405005667d949b3d3d",
+    "bytes": 207478,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:32",
+    "sourceId": 432587,
+    "sha256": "3c8f08bd4d14b44cde2c0aab2c54ca3b5d9fb09d0b5899a2631662ef144269df",
+    "bytes": 360847,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:33",
+    "sourceId": 432588,
+    "sha256": "9532baebc88d56e219ab5e27a295578f2304bf75dc575f45653663a56b5ed9de",
+    "bytes": 191250,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:34",
+    "sourceId": 432589,
+    "sha256": "eabe771545e00d44ff6de227c181e625944bfb3354ba12f3ec8f79c1fcc3924e",
+    "bytes": 165445,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:35",
+    "sourceId": 432590,
+    "sha256": "caa486419654f7861ae4730f096a415437fe9f974108b11ca45ebdcef05bb530",
+    "bytes": 341392,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:36",
+    "sourceId": 432591,
+    "sha256": "31c8eda5aa59cb7424b32951c754c93c99ef2f30e31ede36ef9bbf5b11d5f16f",
+    "bytes": 357994,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:37",
+    "sourceId": 432592,
+    "sha256": "394bcc93f0abbd68359a7a34ca10ba472959b5d957f7f38188264a0a1f085134",
+    "bytes": 199631,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:38",
+    "sourceId": 432593,
+    "sha256": "98fed11c8e1c15dad8545ff270c0fff571927284656a797577fca9035ab340e6",
+    "bytes": 410852,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:40",
+    "sourceId": 432596,
+    "sha256": "c8cf597877be54a6ec9105a45b489e6428899a153f417ad07f3c036accbf248c",
+    "bytes": 226251,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:41",
+    "sourceId": 432595,
+    "sha256": "256106dba40cb2a2c58a4fccfff7f5f97fb1d181e452b7879d581c41c8b73b06",
+    "bytes": 365698,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:42",
+    "sourceId": 432597,
+    "sha256": "b13d690d3d087384d6a39ba88a17e56011a13178a52f5b97578cd7d71269844f",
+    "bytes": 336991,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:43",
+    "sourceId": 432598,
+    "sha256": "709f3891dd4e7fbd1bedecc6bb29fb1aa0804c424f0da24379e473dc4ad5e24b",
+    "bytes": 336991,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:44",
+    "sourceId": 432599,
+    "sha256": "0ea3207944b9dc2168a03ff0513ba3efb8b44ba69389f891efc6fc7be23cbe1b",
+    "bytes": 311198,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:45",
+    "sourceId": 432548,
+    "sha256": "88712c9e35da33c97db458d744f01c207de5ccbcae69a8501b44ce352c330cd4",
+    "bytes": 219995,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:46",
+    "sourceId": 432551,
+    "sha256": "d3fe1fa31e3dc0189b2e6969c92c97e1721b3848074060bf0419eea41ed0c9b8",
+    "bytes": 525923,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:47",
+    "sourceId": 432549,
+    "sha256": "6e3fbb48348ae0fbc43b7c46122caf46ac3954ca1d31fcffbd33dcef0fc17944",
+    "bytes": 557688,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:48",
+    "sourceId": 432547,
+    "sha256": "76ccb871671783ec69edaedf6f6440adf681780ed0a40453994e84c2d6634b6e",
+    "bytes": 191235,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:49",
+    "sourceId": 432552,
+    "sha256": "c28edf4025b58ae1e0fd3c996b6188ce7140dbbe84045573e594c8c14dc0bb4d",
+    "bytes": 588212,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:50",
+    "sourceId": 432550,
+    "sha256": "c556887f324127ae70b27ec522f57d2eaebc0f25e412060fb7a1750f8a49d8e2",
+    "bytes": 476161,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 32:51",
+    "sourceId": 432554,
+    "sha256": "e88afc048abc5df393cbb57d46d00b461a0b2a82e803407f72c090892abce0bd",
+    "bytes": 506672,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:1",
+    "sourceId": 433014,
+    "sha256": "1c94c7f5f786cf0d34b7673d9081e5afdb8251f6409b55ae31c9ee3f881c4ac0",
+    "bytes": 379046,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:2",
+    "sourceId": 433012,
+    "sha256": "61f766077a5c6193768f8e7cf08952472a2e7a9e9bfc6636ca8e092538646b6a",
+    "bytes": 215347,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:3",
+    "sourceId": 433016,
+    "sha256": "879f117b295f2638f7bdffcd5de632b8d325d84f05e86278474dae758ed4af98",
+    "bytes": 460230,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:4",
+    "sourceId": 433015,
+    "sha256": "2e53887fbc2bf10ea51daef09af42471c5c58310d59d3ac3c3bee7202d7baa22",
+    "bytes": 194542,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:5",
+    "sourceId": 433017,
+    "sha256": "fac369225be62ccf0926c8d988587a03ccfca1951b57f781b2f017cbb106891e",
+    "bytes": 241915,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:6",
+    "sourceId": 433018,
+    "sha256": "81bf0a46a7773c1f0398ce811a24410c7bd779d489522f6b264cde11c8aa9997",
+    "bytes": 184903,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:7",
+    "sourceId": 433020,
+    "sha256": "4aab0925453cde9fcdda14c21136fa864a410e41c9a0d52107645cbc3e9b33cc",
+    "bytes": 354326,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:8",
+    "sourceId": 433019,
+    "sha256": "7e7fa403c6d9914aa0a2ca5bef7d8dcf06f64954d0360ae7a5e1181002380f0d",
+    "bytes": 287409,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:9",
+    "sourceId": 433021,
+    "sha256": "4bb4b076945458dbdec07e9ba1d2b9242237eadecc9b5fc3c08f5c2f42300d81",
+    "bytes": 258661,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:10",
+    "sourceId": 433022,
+    "sha256": "c65dfb77dca12c09aba9c71660d8b70721c396cca92be4802c3fd78a3567f5bf",
+    "bytes": 178235,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:11",
+    "sourceId": 433023,
+    "sha256": "2788f5b93ba9b7e27478579c08af50eeeb50a2c939e79870349fe00362498223",
+    "bytes": 200904,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:12",
+    "sourceId": 433025,
+    "sha256": "3299a4f2e01ed02301226851c61ec17d538938245ceaf9b498c54781772e4bee",
+    "bytes": 228005,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:13",
+    "sourceId": 433024,
+    "sha256": "5fb8749c1d8536baa1e79dd19633ee5289b144094b293472bb3f7337a719143f",
+    "bytes": 152723,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:14",
+    "sourceId": 433026,
+    "sha256": "e17967daadc09c1ef3f45956c294e3794e72a6f92cd973ca68622cad971cf9c6",
+    "bytes": 155398,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:15",
+    "sourceId": 433027,
+    "sha256": "41d366307df211084e59b5457e0b0fe4e72b41f2524b973ea99553e04ffca7d8",
+    "bytes": 164053,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:16",
+    "sourceId": 433028,
+    "sha256": "7dae8ddb6f0fd9aa2640f8365296f0e5fd3f6befc2d14f917e6960569cfa8adf",
+    "bytes": 360870,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:17",
+    "sourceId": 433029,
+    "sha256": "6669d408eff47957370b48981bf116770d92f13754a6d488c77d67c4e8733034",
+    "bytes": 176920,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:18",
+    "sourceId": 433031,
+    "sha256": "73c3007aea5116f8fcadbcb0848b4f424cdd6006aa49bd93448a8f668eb588cb",
+    "bytes": 234257,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:19",
+    "sourceId": 433030,
+    "sha256": "efa41c8ed22c7d2423be6cabf22796885514c2739bf7906420cf1cd9a07c09be",
+    "bytes": 195782,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:20",
+    "sourceId": 433032,
+    "sha256": "11d7afd2068d17520abb7aaf05e7b9c348ff9d2fdfa69160e37ce6cf8797792d",
+    "bytes": 174038,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:21",
+    "sourceId": 433033,
+    "sha256": "3e03653dba55d1428f6a10a4d1f88c40caaf15f55a34798068cab84b20924bd0",
+    "bytes": 197996,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:22",
+    "sourceId": 433035,
+    "sha256": "c2b1bba741946113ce6507a6e16f620b3a468067de5b5caad51c6226b5538ece",
+    "bytes": 192868,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:23",
+    "sourceId": 433034,
+    "sha256": "3952ad8c0091b9fea6a2666979d0d7eb7cc56f70454e02cc47724cb47258ff82",
+    "bytes": 195519,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:24",
+    "sourceId": 433037,
+    "sha256": "a5c0cc9c4fc01eeddca05b87eab753a5a0e9c1a244133d8f221822633df3bd32",
+    "bytes": 170210,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:25",
+    "sourceId": 433036,
+    "sha256": "0ac630e8a60a3429f563fa055a4ecd71245a49049ea300f66dcd8921535ba61e",
+    "bytes": 215447,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:26",
+    "sourceId": 433038,
+    "sha256": "463acfa9d40509b7a5f382ee69cb00edbf8079d34be10d90787635ab8138ea2d",
+    "bytes": 181902,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:27",
+    "sourceId": 433039,
+    "sha256": "1710067ae2fae9a0ca026f28d4107cd5d0b3736fe589c0bda1468520ea399112",
+    "bytes": 164076,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:28",
+    "sourceId": 433040,
+    "sha256": "e9dbad2bdd306cf8fcbbe47bdc9f53b5ff5b7316297dbc4722341e31b6daee02",
+    "bytes": 173951,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:29",
+    "sourceId": 433041,
+    "sha256": "cdbe95869c4faf9d48c342a687e1820a18a9dd0d9962462f2c66bd9ef0253314",
+    "bytes": 165791,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:30",
+    "sourceId": 433044,
+    "sha256": "d89105da9ecfa015eec394f53ec99d52f0ea8e6cbb06998a721d519b69734f9a",
+    "bytes": 223407,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:31",
+    "sourceId": 433042,
+    "sha256": "027d50e563435a9eb508cb4c23f8f4c7abaa268be5c6592850890c7ef057b215",
+    "bytes": 303340,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:32",
+    "sourceId": 433046,
+    "sha256": "4d8145ceafc5ee45b6d81c6da8a984551dd414e168600a5cdd362a4073c95b4b",
+    "bytes": 207545,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:33",
+    "sourceId": 433043,
+    "sha256": "f64cfd0500b2c8792a6e1505c3c5a31e79bef2a57aba6d1ac0fce6293c2f1130",
+    "bytes": 203607,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:34",
+    "sourceId": 433045,
+    "sha256": "249df28839c1e319124936f5edd7c05115dcf2962459ac87c90b9bd955941632",
+    "bytes": 207411,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:35",
+    "sourceId": 433047,
+    "sha256": "0dc293c8b4caa0ed890f5c68dce56fd64741b913a1f3107f2eb8eddc0044e1a6",
+    "bytes": 248941,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:36",
+    "sourceId": 432997,
+    "sha256": "351f90b723231b3a81b04e84902e1ceaa969ecb70fb83becf1785ebb839f8a3c",
+    "bytes": 185082,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:37",
+    "sourceId": 432998,
+    "sha256": "6212540ac7dea9f9d0c222954705112a165f35b65c174286c3750ba4cec95637",
+    "bytes": 197928,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:38",
+    "sourceId": 432999,
+    "sha256": "2d789df837fe521e026e6d247f8766adf918ea71e0cf4c0d8931a5fa9738cda4",
+    "bytes": 190058,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:39",
+    "sourceId": 433000,
+    "sha256": "6ae39b114ee525ff36064e37941fa4c200ede3407a4a183bc5084b664c818bbe",
+    "bytes": 216803,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:40",
+    "sourceId": 433001,
+    "sha256": "e082d75b8df59ec87db2ff0f5a762a8e726264521bf108e57b6342fa37666359",
+    "bytes": 195839,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:41",
+    "sourceId": 433002,
+    "sha256": "0b77a24d76dfe4c1db3f00ae2f6f15f43e4a27fe6005d8795b7db988eb9128b9",
+    "bytes": 216417,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:42",
+    "sourceId": 433003,
+    "sha256": "2c5628097322b56ad4d6d63136dcea50ce52a52666b70a3cc6ba5a0aa0768d70",
+    "bytes": 146616,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:43",
+    "sourceId": 433006,
+    "sha256": "63ec80caeaa1a4b5f5d20bcdd6d00788de04ebb2c3e8d5ff1ab51fc40b0f80a0",
+    "bytes": 248921,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:44",
+    "sourceId": 433007,
+    "sha256": "3611b0a99f2a1bc3b02e39d065bdcc8fda16940d34973d36b9840250ffd213df",
+    "bytes": 302004,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:45",
+    "sourceId": 433004,
+    "sha256": "acf43c889085e2a57a545314453b39bdb33dedb3365849fa8da7128a4e6e93e3",
+    "bytes": 218263,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:46",
+    "sourceId": 433008,
+    "sha256": "7ce912f912102efa3cd264f87cb1be41f895adddbad73762ee2723878acb7671",
+    "bytes": 223350,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:47",
+    "sourceId": 433005,
+    "sha256": "fe5dec32c6c9f815189dce67be29d832f702bb29270359ed5a65b99247ec3938",
+    "bytes": 216739,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:48",
+    "sourceId": 433009,
+    "sha256": "7727a56599658cdb2cd3727435f09d8e96e11c5593be29302df9e9eb38d91568",
+    "bytes": 235927,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:49",
+    "sourceId": 433010,
+    "sha256": "68ed532da23fb37c8f83accbf3b0c1e988128afee14d99652de8bdcd8e4fea10",
+    "bytes": 296861,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:50",
+    "sourceId": 433013,
+    "sha256": "450f8d011ed94b8b489ab44d486f85dee93b2cadffc454cecc2b91d5bbbc2cc8",
+    "bytes": 223289,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 22:51",
+    "sourceId": 433011,
+    "sha256": "1acad798c96c2da5a86b668129ccda11677fdc980fcb51872ea954ee23ef76a6",
+    "bytes": 312802,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joel 2:15",
+    "sourceId": 439037,
+    "sha256": "bf9c7aeeabac1762f775c1fdaa52e206f4ec1f11adf60d75c4f6148ed55e4121",
+    "bytes": 189937,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joel 2:16",
+    "sourceId": 439039,
+    "sha256": "c33a92c647e64c3b3f7e1f7bdfb9469e259de698b8b03908d468b3aebc53c49c",
+    "bytes": 460136,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joel 2:17",
+    "sourceId": 439040,
+    "sha256": "92aac165176004d547320318831fae244250f60c427ea7b0d481994a01b980e9",
+    "bytes": 742159,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joel 2:18",
+    "sourceId": 439030,
+    "sha256": "e6974ba3f46ffcef4fc51b3996277f469e664ef3325a4dbd84036a30922e088e",
+    "bytes": 162428,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joel 2:19",
+    "sourceId": 439032,
+    "sha256": "50f3ca4583688973af14d0aafda1205861d307ce2f7ea3a1ab2d7cfaa0b9d317",
+    "bytes": 565585,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joel 2:20",
+    "sourceId": 439033,
+    "sha256": "ec2037f3bea0ee5d482d3820da240b849f4d0e38ee262e0ee410b21dcca0b8f2",
+    "bytes": 780661,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joel 2:21",
+    "sourceId": 439028,
+    "sha256": "f805e0e7e0e24e8b70f9f4a7b3603b89bddac08b654d99bd95c0e8b84ae74fe5",
+    "bytes": 233072,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joel 2:22",
+    "sourceId": 439029,
+    "sha256": "e1f7797c7bfcc808dc9c4035b53b0f0affd1088b5a99988aa898a65207bd391a",
+    "bytes": 410839,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joel 2:23",
+    "sourceId": 439031,
+    "sha256": "65d1a0d7e9d9b0bacf0a0f67f14ea73756282e9aeffddcef7f2a7088282acc09",
+    "bytes": 536796,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joel 2:24",
+    "sourceId": 439034,
+    "sha256": "a63fce14bd0cee7660b999a3bd3b27b2bf5b821d2ab46cf8e83c2ede7d26feba",
+    "bytes": 259469,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joel 2:25",
+    "sourceId": 439035,
+    "sha256": "55b56bb6bd4d919ebc5e1cc6f8f4070fd3c403318849bddb6cc1803c9519f0cd",
+    "bytes": 429854,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joel 2:26",
+    "sourceId": 439036,
+    "sha256": "a5eb5c3a98c07c5d6a170f7b4328424b5cf634382df9dc66abbad7a55645c8a4",
+    "bytes": 469911,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joel 2:27",
+    "sourceId": 439038,
+    "sha256": "15f3b71e3086025f7d3769fd368678d6a54412ee5b5dfc29eac4f219b11f4823",
+    "bytes": 432712,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:1",
+    "sourceId": 432618,
+    "sha256": "f59ded0f2f98b3696c1f10e6da00046f6bfce0172d604afb2be86e1e92347dca",
+    "bytes": 282311,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:2",
+    "sourceId": 432619,
+    "sha256": "a7d86d1ab124fea726737ac30c7b0dac58157e59d75ad70e7ba82220c553598c",
+    "bytes": 514693,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:3",
+    "sourceId": 432622,
+    "sha256": "8bb0dd5d88f468932c67f5c89388518d0419955bb7c7a8a4449a362e4c47f559",
+    "bytes": 337127,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:4",
+    "sourceId": 432623,
+    "sha256": "78b16fcffc77cf92f86bdc6a695cf84477d7aec997e178b7fd7b2ba44c11ee28",
+    "bytes": 184862,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:5",
+    "sourceId": 432620,
+    "sha256": "c3f63d1b082d374dbb9c272e182a76c97048e344ded9846ea5d1be6be107fb9c",
+    "bytes": 261772,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:6",
+    "sourceId": 432621,
+    "sha256": "b0bd2267d7851cf9ce7946d9bd536899ecef9a581d881c74292a4be45b2bafee",
+    "bytes": 187808,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:7",
+    "sourceId": 432624,
+    "sha256": "4420fc317232cc7a3da7198b9ca99aed57d862ca5d179bf72fb3bbf9222d5843",
+    "bytes": 408998,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:8",
+    "sourceId": 432625,
+    "sha256": "d33f6f788ab091543fe273f17ce337e4d97c1b7f0a810de7b76395e8ac10a86e",
+    "bytes": 344981,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:9",
+    "sourceId": 432626,
+    "sha256": "9c144717dd1d2588f67e013af42f8a31e94b59c811b8efe2ffece173d99f7d17",
+    "bytes": 490927,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:10",
+    "sourceId": 432627,
+    "sha256": "35e8accbee3744174aed33763cea0278ce46aaa532041f3777da9bfd1c55b2d6",
+    "bytes": 348129,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:11",
+    "sourceId": 432628,
+    "sha256": "f19c70357929f8a555f41f6b356f8667047cebcfb3c120b4abf733696c659e14",
+    "bytes": 362538,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:12",
+    "sourceId": 432629,
+    "sha256": "74fb1ed3051d982ce98b4b3d1b25fb24c2e0ca4eaec3ade80f12b3af8cbfafda",
+    "bytes": 376636,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:13",
+    "sourceId": 432630,
+    "sha256": "cc9425dd5861c4186191f04fba0a2506192ed8316f887f9d0f981a91b653147e",
+    "bytes": 314393,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:14",
+    "sourceId": 432631,
+    "sha256": "355addf3b3b00faf303a95b89076e08a2e5407ccd0500e43f43600d8ce837305",
+    "bytes": 202464,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:15",
+    "sourceId": 432632,
+    "sha256": "48c1ab11e1513b2a1ba363e163af500a36ffab50be9ad3d672b5dea548af376e",
+    "bytes": 167370,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:16",
+    "sourceId": 432633,
+    "sha256": "24c49e2aa714629eba37a60019684e53c12448587b9a5a5893180ce9c812dd39",
+    "bytes": 388430,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:17",
+    "sourceId": 432634,
+    "sha256": "9f21241c04cf56ccdbd1321068535fd690e3f368df147865cbf4c5b5db4ad5e1",
+    "bytes": 493807,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:18",
+    "sourceId": 432635,
+    "sha256": "239b526d9b7b9320ad9e58af85e3a8b3535404bde9748a1d535abf6d806f54d2",
+    "bytes": 261968,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:19",
+    "sourceId": 432636,
+    "sha256": "45dd97294eefe9559434197e567a8b881c98be656752a2e8b4d1b962fa60b4bf",
+    "bytes": 346181,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:20",
+    "sourceId": 432637,
+    "sha256": "a0db1c18191e0748bdb6c36ad473c5fa1446bff87b716c6e78cf13ebad84e1db",
+    "bytes": 279367,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:21",
+    "sourceId": 432638,
+    "sha256": "b743547e137a61c1c1d0a44a5b43f7a965e3077031761afd94c9e75627d0a8a8",
+    "bytes": 401026,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:22",
+    "sourceId": 432639,
+    "sha256": "2deb4193688778b097c85748b1a35a9990adf1c027ae7ddd16514d9553eca264",
+    "bytes": 213764,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:23",
+    "sourceId": 432640,
+    "sha256": "e9110f2a80e1360f1d314ca3fb34a50d510fdcb4c5b16bd624ba74dce1c3f6ca",
+    "bytes": 301969,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:24",
+    "sourceId": 432602,
+    "sha256": "a3be5abdec72f754f33c8c544416b048cb131dc434bc8da30276e4af7070ebd7",
+    "bytes": 301992,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:25",
+    "sourceId": 432600,
+    "sha256": "c875e1c8df262e4dae1c60825a90ef603ab43f021c7a36097e0c71056046b1e7",
+    "bytes": 182005,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:26",
+    "sourceId": 432601,
+    "sha256": "0d0340793c971d52132d34c7071985bd1077887adcb5bfc82a0208b8c5bb1db8",
+    "bytes": 245871,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:27",
+    "sourceId": 432604,
+    "sha256": "694ec24e8b29ec1cb38f1e6b342166dc8735f89c4cd865a8845f47ab1ac4903a",
+    "bytes": 365835,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:28",
+    "sourceId": 432603,
+    "sha256": "31f5ef5873af7f916aa914cb26a4f3019a3c882a12232764114a308c7914ee12",
+    "bytes": 351242,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 33:29",
+    "sourceId": 432605,
+    "sha256": "9f3f207a2b949011f740f90909f8e3675770fe80eef3783cbc407b43c13c63d9",
+    "bytes": 580269,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 34:1",
+    "sourceId": 432606,
+    "sha256": "0994f11ce4b709a0b8f301b8f6b88c83e26b1cd45098aa40d17e203fbcf31b97",
+    "bytes": 495635,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 34:2",
+    "sourceId": 432607,
+    "sha256": "481a132d2fd8f056aa1d90884ab38e6ce39c3ddbb8334cf6e20aaf4fee954fc9",
+    "bytes": 337132,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 34:3",
+    "sourceId": 432611,
+    "sha256": "09fb236c285ce88af126e8b86ca573a93d610d1c011dfac3373907b9acf17e68",
+    "bytes": 259768,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 34:4",
+    "sourceId": 432610,
+    "sha256": "a752073f2548813b66dd5ce8323fea443a44d252d47d77d32dd0d09e0c92d28c",
+    "bytes": 535162,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 34:5",
+    "sourceId": 432608,
+    "sha256": "8c040f0f69bde424873361868efa06ea5a478974853be190df2ba70423de71e5",
+    "bytes": 223463,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 34:6",
+    "sourceId": 432609,
+    "sha256": "bfbf19ff2a6be909789c2892cdf5904a45942b1c431b2ded9620f5c18bfa93df",
+    "bytes": 338347,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 34:7",
+    "sourceId": 432612,
+    "sha256": "29ba9d4b007a0327d1bfaa1e7556f324d0bef69825107316743f4281b679bf84",
+    "bytes": 314495,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 34:8",
+    "sourceId": 432613,
+    "sha256": "403b5afe8d694c09b088d24f8f02b752eabaa4355a4e781afb9b4b5b3ccea01d",
+    "bytes": 397733,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 34:9",
+    "sourceId": 432616,
+    "sha256": "397f5e861119f3e4e430092dc999295202d8bc21310ece7b23b61be1ba41f0fd",
+    "bytes": 521002,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 34:10",
+    "sourceId": 432617,
+    "sha256": "8131a93864ef5633f85ce8a1ebb555ab54c73e03350db79dab65fd32c722e30c",
+    "bytes": 304881,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 34:11",
+    "sourceId": 432615,
+    "sha256": "c4b4d40363a022f6c9b7354289826cb64930c7777cfa2bc1a5587c7a6a6be88d",
+    "bytes": 360977,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Deuteronomy 34:12",
+    "sourceId": 432614,
+    "sha256": "31ccd4bf9f4240f2759920e4760bfe152badb46e8ec77b30baff5dc331d1b48e",
+    "bytes": 304801,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:1",
+    "sourceId": 433104,
+    "sha256": "8712403dfca00a882035c873c7b349d48288f78b13b2b0cecd758457de83f8c1",
+    "bytes": 373745,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:2",
+    "sourceId": 433105,
+    "sha256": "e8ffeae57f7baea02f7ffbc2225d0b0f85daf7e1b28b8ff44968a3feedd1c910",
+    "bytes": 564363,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:3",
+    "sourceId": 433106,
+    "sha256": "ecb34169e201a48eba02fd3e6620e980960c4edd2e57a8b5bf4698f231e728d7",
+    "bytes": 366882,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:4",
+    "sourceId": 433108,
+    "sha256": "0ced04c68978f3642db64c86473dab627c1908e8f65fc9f6de6ae34f6dc0eaa7",
+    "bytes": 535222,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:5",
+    "sourceId": 433107,
+    "sha256": "9fe0498f5a87383bf3ea20fa6e06587c0ded7b53751a887cffbc4e62f798a6df",
+    "bytes": 383509,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:6",
+    "sourceId": 433051,
+    "sha256": "c2108cc8908d009eb518fae054c677ae0ca5e7753535fe693c41485ec36a94f1",
+    "bytes": 399354,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:7",
+    "sourceId": 433052,
+    "sha256": "0f23fe444fb06a5cfd4eb43b75b352d7566fcbc63a1f6db1a0c70b13f7331851",
+    "bytes": 615329,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:8",
+    "sourceId": 433050,
+    "sha256": "74aa2dbf0e4620eb62d120efdc3e34a924700917f8d14f74a4f38d9366271757",
+    "bytes": 663543,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:9",
+    "sourceId": 433049,
+    "sha256": "b0bd48a288fe4d3f6467f06e8d64c33518afb006075daf8ab406404f7d24edf4",
+    "bytes": 380585,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:10",
+    "sourceId": 433048,
+    "sha256": "11957906094715fe96b6b0f3f833d482dade708e38b859e9de9e3303c7fce3f6",
+    "bytes": 159344,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:11",
+    "sourceId": 433053,
+    "sha256": "7e89711374b28d79dfd8d21a980e7a467d93ebbb2918edee41b81507d2ea1cdc",
+    "bytes": 788578,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:12",
+    "sourceId": 433054,
+    "sha256": "daf2da517a1584483e56ddb8546ef1345b4516538a8b7101b0015757532bcf17",
+    "bytes": 264489,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:13",
+    "sourceId": 433055,
+    "sha256": "39a7e0c7f8d2878410f21cd7bf87a13dd78cdfe219c95954c45dd231c6fee4e0",
+    "bytes": 437881,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:14",
+    "sourceId": 433057,
+    "sha256": "1c3b3a839befd14e67b857aa604d85dd40599688ac52d3dcfed96a79fac88324",
+    "bytes": 711669,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:15",
+    "sourceId": 433060,
+    "sha256": "e5bc685a060757396e6c553ea2cb71a71a1871ede69776425af52270b1385b96",
+    "bytes": 924246,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:16",
+    "sourceId": 433056,
+    "sha256": "17bb1fb6d7a088ce10245fe2f666ec2e1ba195c6ba30bc58e64c2673c419edca",
+    "bytes": 327459,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:17",
+    "sourceId": 433058,
+    "sha256": "62a93cafe655e67cd1e87b1c795143ead52796570ef79b3a49c252e880603ff1",
+    "bytes": 396513,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 1:18",
+    "sourceId": 433059,
+    "sha256": "da140ba5a7cb5723c9fa930cfbe0269e534d288b4205bb82671009fe41d7957c",
+    "bytes": 423119,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:2",
+    "sourceId": 433469,
+    "sha256": "7f5808cee0d1ea710d9e2f66ccff2f5c522e12e7dac5a10a419b55ee10458285",
+    "bytes": 397469,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:3",
+    "sourceId": 433471,
+    "sha256": "b340669369410d1be7454e16a237ffda44c02d1740c4f5b064b3bb09581e7f17",
+    "bytes": 658647,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:4",
+    "sourceId": 433472,
+    "sha256": "e7dccabaeb99dcac9aad8bebbbbea4e28d487bac5512cb923c38f4711f7603b8",
+    "bytes": 347846,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:5",
+    "sourceId": 433473,
+    "sha256": "75cd92cf3db9c6ff675f57f2533039859c0a0c449fb4c09515fddc9b283ee0c3",
+    "bytes": 177968,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:6",
+    "sourceId": 433474,
+    "sha256": "088e39c34bd3275ea646a821fe03fe0eb0b29404ea5fb1c5ad27ce70c5d53505",
+    "bytes": 696936,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:7",
+    "sourceId": 433475,
+    "sha256": "3a8495a06341ae658d3f57a64a3052e3a76dcfbb6b239ee2ca2ce2ef627afef8",
+    "bytes": 266388,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:8",
+    "sourceId": 433476,
+    "sha256": "b43b1c427f46163170675fa7cc1dda4590dfb2b13fe85222798afa46740bacd2",
+    "bytes": 253897,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:9",
+    "sourceId": 433477,
+    "sha256": "42d02f7bc6ac95119cc0b99f56ffa8b4c883062cea1277f8944542abc07024f0",
+    "bytes": 655525,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:10",
+    "sourceId": 433478,
+    "sha256": "b0217926c4bcc2775e37451eccc82b7bacdf2de4f54a07b9c26a0aa4e376d6f3",
+    "bytes": 128806,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:11",
+    "sourceId": 433479,
+    "sha256": "2e949c6aebbf4b747455adaaf787556ce5bb085173cbb6721bce85b5fee82bdd",
+    "bytes": 431386,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:12",
+    "sourceId": 433480,
+    "sha256": "0519e7bf7b0ffec6faeb3139578df9b743c4cf36f1306c89b5b61e15d4bb5c11",
+    "bytes": 559335,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:13",
+    "sourceId": 433481,
+    "sha256": "ad97ce0539bfa984492e06de9681d9f69d6daa13308ae9119f4ff74a20cd5ec6",
+    "bytes": 352907,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:14",
+    "sourceId": 433482,
+    "sha256": "9252889d50fa6d8d1d3f739fb823e24e1fc5c118debd2b23b013401651206879",
+    "bytes": 306515,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:15",
+    "sourceId": 433483,
+    "sha256": "fcad988b5b2abab5134d6e91b4fdafeb43362bda6eb45bb670ea155b86d279f2",
+    "bytes": 480871,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:16",
+    "sourceId": 433484,
+    "sha256": "5952cedaa660946fd261544bd8809b81fcadb80b0e1e58105a78539bd81293eb",
+    "bytes": 400975,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:17",
+    "sourceId": 433485,
+    "sha256": "4640c824fcc7ae1b71722130f1964f387986088cac8a28c2795aff91e30b48ec",
+    "bytes": 450607,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:18",
+    "sourceId": 433486,
+    "sha256": "7d2f73434e55de897689f328450c93c6abdaa0227ee9d839af284d343c7e12fb",
+    "bytes": 479021,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:19",
+    "sourceId": 433487,
+    "sha256": "f5f907aca6aa97af69593aabca6104789ba9940bc4bd7bb57dd9f48e9e7ff3d3",
+    "bytes": 269716,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:20",
+    "sourceId": 433488,
+    "sha256": "a58fe5244045fa421ae38d13bf6074f5d3577065adb2f01e8a634ed149de2552",
+    "bytes": 570704,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:21",
+    "sourceId": 433489,
+    "sha256": "3785b169ff482f75706d2681fde3d2a3204cc29379422bab70a123d5b028ed60",
+    "bytes": 315644,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:22",
+    "sourceId": 433490,
+    "sha256": "64913ad555bc7bfac1ea5099fa4d597afa366aa5b7ddf47128fdfd58fcd960b2",
+    "bytes": 442607,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:23",
+    "sourceId": 433491,
+    "sha256": "57ed96fb14f87d1da3ee4a2f27bfe0b63d1ecbc7a6a178f55a12a6d21049c7f3",
+    "bytes": 394672,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:24",
+    "sourceId": 433493,
+    "sha256": "67d8942b38430d52d27963b1861f52c47583eb14e9fe59ace070456e084962a8",
+    "bytes": 330557,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:25",
+    "sourceId": 433492,
+    "sha256": "87a7fffee75aff658cbbe384a2cdfe59d2f8f51335efa41984bfc57f1d6bf8f0",
+    "bytes": 256741,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:26",
+    "sourceId": 433496,
+    "sha256": "86c073594289ef08978256e32f36fef2a29a493c5afea5b9c648444a96ef5696",
+    "bytes": 381790,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:27",
+    "sourceId": 433494,
+    "sha256": "5c40e2171657f4013994f321cd796c3ab1503698cdeed74408de0a58de68a2e2",
+    "bytes": 197688,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:28",
+    "sourceId": 433495,
+    "sha256": "39e3e5a5fe3401b89e28ad92bd5501063f68ab791cd5aa68e73c2c1a9029fb9a",
+    "bytes": 399307,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:29",
+    "sourceId": 433497,
+    "sha256": "56d06042c6c40aed010743c6cbe9c368275a33ef245b369cf7cd1df4ca8eba36",
+    "bytes": 319359,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:30",
+    "sourceId": 433499,
+    "sha256": "794cd73536b6eb56e807a00286314ebb212ba50a0dfbbf98d56e5a0c85b6ee7b",
+    "bytes": 407286,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:31",
+    "sourceId": 433498,
+    "sha256": "97296d705648e0ae2a655a915c273967262cb549445d84b341d279041473e958",
+    "bytes": 192889,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:32",
+    "sourceId": 433500,
+    "sha256": "02e4dce4ac00abd1a52f7d5681d6aa0aa937b89433762cc034649412c47438ce",
+    "bytes": 453632,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:33",
+    "sourceId": 433501,
+    "sha256": "027805bdb24751dec90b9e731f6913efa27044c528fa8a5aaadad2ea9a61f1bb",
+    "bytes": 432657,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 15:34",
+    "sourceId": 433502,
+    "sha256": "01b412f9848e63b5de3c1cd8ea2b4d10c53981e116f630a994bc2a25a33cdea0",
+    "bytes": 258417,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:16",
+    "sourceId": 446428,
+    "sha256": "c6e2c56e6a59352f099ebd6228ac772d9c22b2418b983fbd2b5f6fb36a9a0856",
+    "bytes": 106364,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:17",
+    "sourceId": 446429,
+    "sha256": "f5dee300c9900e41130e42a8982cf9a95146e3f77c740ae7ae0c53149c47b447",
+    "bytes": 424697,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:18",
+    "sourceId": 446430,
+    "sha256": "d339292d0f66867e4437ae65b7519d448de8f84b85d4225b6d95d118caf2f210",
+    "bytes": 266154,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:19",
+    "sourceId": 446432,
+    "sha256": "7994548b4b971e4c2fd05bfcffd0aa2b50e7ada4ad07de8cc51b0860b88a979f",
+    "bytes": 282327,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:20",
+    "sourceId": 446431,
+    "sha256": "def44c7846ed380b0b25c0f7da8e97239d34a6b00c1e501dd510922f3d977292",
+    "bytes": 396271,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:21",
+    "sourceId": 446433,
+    "sha256": "223570bbe62345743cdc434fc7b9b451cc21b1a5d60c3e6e2ef6e48b5d89fb54",
+    "bytes": 274263,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:22",
+    "sourceId": 446434,
+    "sha256": "d3d157cdbb3d8a4136fb3cd1cd418a09f50152cf3d85f88956a7443b7c107ca2",
+    "bytes": 546742,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:23",
+    "sourceId": 446435,
+    "sha256": "7cdc119376225190a8b75ce8ca37fe1ea15e1667f84f049f82099d253d3d9871",
+    "bytes": 546808,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:24",
+    "sourceId": 446436,
+    "sha256": "166dd23b8f149d4e462d3bc79eccd78a9bb632081389384cf2f56b147570a67f",
+    "bytes": 287220,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:25",
+    "sourceId": 446437,
+    "sha256": "b6f89e0a41ab58c077675d05871f4febb70b801b6c15ad57193cc3395d22dc34",
+    "bytes": 346246,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:26",
+    "sourceId": 446438,
+    "sha256": "cb27182b356da2c84431a6092f5a2d22ffe56e185fc8b3e4b564313ae09e7b66",
+    "bytes": 434719,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:27",
+    "sourceId": 446415,
+    "sha256": "56390fb13b9c7148998df69729abbd0334c9a0c2834eb5f669885be7f42ea747",
+    "bytes": 341599,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:28",
+    "sourceId": 446416,
+    "sha256": "4add38cdf94d4db486d2a0f837447a46a10c3c2ae8f782b9b7fb4a196d4513ff",
+    "bytes": 331932,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:29",
+    "sourceId": 446419,
+    "sha256": "3b2b9671bc8ef09f862783a0e394fe0cb8f616523449ccacbbdb2ba332c7cef7",
+    "bytes": 323647,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:30",
+    "sourceId": 446417,
+    "sha256": "e9b0ecdd8988a4d262d1a39af9f7ffe4547645327df96b8e01df33b396a15154",
+    "bytes": 397649,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:31",
+    "sourceId": 446418,
+    "sha256": "8748548ed60af286c766dcce4719666fa1bfded05ac6142a33ca1dfc26501c6c",
+    "bytes": 439414,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:32",
+    "sourceId": 446420,
+    "sha256": "08929809b23c1fbe5bcef179f65bf4cd6527751edf3b7ad0774ac2d16d31c651",
+    "bytes": 431485,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:33",
+    "sourceId": 446422,
+    "sha256": "76ec39a7d7388d0b513b2122a7bcf6a19dd51ddda7bed8650a91a3fb5dc18727",
+    "bytes": 379025,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:34",
+    "sourceId": 446421,
+    "sha256": "08fdfa59e2aa90ea95243119c5096e562ddfb87b6bb1c09c5e5b5d76d7d58e90",
+    "bytes": 259806,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:35",
+    "sourceId": 446423,
+    "sha256": "27c70aa1a670e9c85baba51420cbf39719661bf355971efa2f2276fe19fe2772",
+    "bytes": 439466,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:36",
+    "sourceId": 446425,
+    "sha256": "a946be08ee27c68b22bac2e2b206db024c93cb664d2479b615a628d08d6d61ca",
+    "bytes": 597781,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:37",
+    "sourceId": 446424,
+    "sha256": "cd7675fc4c6f39a536e12315b7c44d66ff2f4d021cb29ad7343a50c9e654ee08",
+    "bytes": 360840,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 36:38",
+    "sourceId": 446427,
+    "sha256": "50032f806a63e861b956dbaf2f887d62f4b514299e6e8f52865c03e706b88b31",
+    "bytes": 484121,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 37:1",
+    "sourceId": 440714,
+    "sha256": "a91931dc3caf9834b40112932f04bff9b2f4ce87529831f6116c7f4ae8162f16",
+    "bytes": 368765,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 37:2",
+    "sourceId": 440713,
+    "sha256": "3bdc7ef529ef32b937636439d78a7c32b97fe4541d9020be6ad66122853430ce",
+    "bytes": 359016,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 37:3",
+    "sourceId": 440717,
+    "sha256": "eb08df705936e2b2d6e6fa7d3fc21221b9b10168431d59cae22166590343e83f",
+    "bytes": 367052,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 37:4",
+    "sourceId": 440715,
+    "sha256": "da8a1f29239bebb50ef3cd54ac6541768af64a04ba9d80afb9f2da6fce1a264e",
+    "bytes": 376696,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 37:5",
+    "sourceId": 440716,
+    "sha256": "6553354c955878339a7b7365d482d8c3245eade925824a3a891eec0423b371f6",
+    "bytes": 330122,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 37:6",
+    "sourceId": 440718,
+    "sha256": "165b61d0a6d24ca04ca2c8fa4a60447436015b7a59508d532401c00983c182ae",
+    "bytes": 548456,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 37:7",
+    "sourceId": 440719,
+    "sha256": "af52299967f54c95bacd360fa9dd5d70da4463cd64891561240d08543c525e65",
+    "bytes": 365777,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 37:8",
+    "sourceId": 440720,
+    "sha256": "51581cc11d53103dbd773ddea127d66aeee4226930e9f0d83661fde94ccf4245",
+    "bytes": 400942,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 37:9",
+    "sourceId": 440722,
+    "sha256": "4388a5d25e6987141908366191bbeb1c299a0c5f1f62a779a92366f00b3b57ad",
+    "bytes": 674496,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 37:10",
+    "sourceId": 440721,
+    "sha256": "e699bc4efae541cea925165ef759deef534549afd9658a530cb42f3347ccea65",
+    "bytes": 452339,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 37:11",
+    "sourceId": 440723,
+    "sha256": "33c576341f4d100e44318f65c815939f6f8ca81fb0c95b5bb15857fd13d34b5c",
+    "bytes": 541648,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 37:12",
+    "sourceId": 440724,
+    "sha256": "1a2770ec6ec390c270ccb29fa699003b09d2f5086ca88e3ad8bd5be79e56be90",
+    "bytes": 732389,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 37:13",
+    "sourceId": 440725,
+    "sha256": "f04388b380b212b46518bf48359ba2e40f4293d545bd62464103f737f965e2c4",
+    "bytes": 370467,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 37:14",
+    "sourceId": 440700,
+    "sha256": "eea65dc3f585b72bdfbfe2e5228cd771d08d74aacf9c45a589eb2927b412d591",
+    "bytes": 450557,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 45:16",
+    "sourceId": 441964,
+    "sha256": "86d631b7c3127cf183faaee32713507d037d2d7207ecfd18164401f0d056398f",
+    "bytes": 247164,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 45:17",
+    "sourceId": 441969,
+    "sha256": "f10e30707f91bfaa4172a171efc5a552d28bffa378458da007a65da72b71e185",
+    "bytes": 748134,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 45:18",
+    "sourceId": 441966,
+    "sha256": "89d1b0d7ce049ef022c48eefb4b2ddc0404b5bc2aef73a260cf14e34a105bf83",
+    "bytes": 335317,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 45:19",
+    "sourceId": 441968,
+    "sha256": "217e1de6c479e073ef2564c87f62c2102ea5c37f68e1cda7427b307f0ed1da76",
+    "bytes": 514702,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 45:20",
+    "sourceId": 441965,
+    "sha256": "46decdfdc45ee73f14c70c0437382becdd3c7f1eb321d5d16723aa76119fd8a8",
+    "bytes": 290364,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 45:21",
+    "sourceId": 440793,
+    "sha256": "0eea5cc62267fec78a61684075b7d4c07ecb4b037c0080e9681ed7b80b9ca3f8",
+    "bytes": 384266,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 45:22",
+    "sourceId": 440791,
+    "sha256": "1d5a75ee46d2f25de3d053cb4c7829eb66eb93d3f37b19e7df3291dca61bbd28",
+    "bytes": 276051,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 45:23",
+    "sourceId": 440794,
+    "sha256": "54dec3c72dfd3067124d2e36915b480c2b94ff5aca3557d9efd79aa9083acad8",
+    "bytes": 570703,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 45:24",
+    "sourceId": 440792,
+    "sha256": "c30c863ca739a9df6cfd6a8edfd4d85339f5b5f0cf61f51e2f986ffd82ea5110",
+    "bytes": 284060,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 45:25",
+    "sourceId": 440790,
+    "sha256": "ffabd50e9de2ca33be3ad91b45c94ec4274a93f2ae40fa93f1536c4c3bc0c848",
+    "bytes": 484289,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:4",
+    "sourceId": 439441,
+    "sha256": "252bbf8c2e338d28e8a924c119920b259cb0d1198e91bb48a31bc1ea061c9e79",
+    "bytes": 285696,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:5",
+    "sourceId": 439443,
+    "sha256": "49b7df56d06cecb0acf2ae71651acecc8ae292df037cc0156c631fbc0a3efefb",
+    "bytes": 757915,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:6",
+    "sourceId": 439442,
+    "sha256": "87ede2e478978f0e40778a99fd946ada41175457c3e846ca6e692762479abfae",
+    "bytes": 240896,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:7",
+    "sourceId": 439444,
+    "sha256": "32c0afd29d0967bb88cef4369f6fe5d1d8901d656bb03c282779d35f6b753652",
+    "bytes": 448744,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:8",
+    "sourceId": 439445,
+    "sha256": "0df8951ad481765dcae9d3dbb8dabafdea1099cdf900c9e2b7f2b9d4f84a9570",
+    "bytes": 389684,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:9",
+    "sourceId": 439446,
+    "sha256": "a79e78c65b5c47ccee066bbe6fc3b64140e39bc0c96df24b6785d8629c30764c",
+    "bytes": 231322,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:10",
+    "sourceId": 439447,
+    "sha256": "47451e197f1d0f878677afb046cf576bb1af4a0e640cfe080a94d9151b1afd88",
+    "bytes": 709794,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:11",
+    "sourceId": 439449,
+    "sha256": "f9c2275021a838b5afe3927572d2d19ed358cced7caa361d50f0862c15cf67ab",
+    "bytes": 392700,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:12",
+    "sourceId": 439448,
+    "sha256": "a9246163d80a44026f16c32231b7548b0d7c9c9b1766131af1e7f41118c22be8",
+    "bytes": 288961,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:13",
+    "sourceId": 439450,
+    "sha256": "96036ed74f0f3a6881b5e6d71aeca603c46f9c45bc3454a4569ba43ecd3d3e78",
+    "bytes": 263458,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:14",
+    "sourceId": 439451,
+    "sha256": "d24e2376b9360f62c80efe080696f0095025fcb12b15b39888680eb6365c5466",
+    "bytes": 448689,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:15",
+    "sourceId": 439452,
+    "sha256": "9c6f4a3cfa8d7aa3d4bdddc8e802e60e2e7a9616235102099dea48c24229f0aa",
+    "bytes": 388492,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:16",
+    "sourceId": 439453,
+    "sha256": "fb0e49e0c368403db1f586e7e2d198510c688f96756d7faad4b75b1026c0d49b",
+    "bytes": 519293,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:17",
+    "sourceId": 439455,
+    "sha256": "fd0944fa5617c25cca33e6c7fd55b914dfe923fcf58af7efd5fd9f29ba8d32ee",
+    "bytes": 511223,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:18",
+    "sourceId": 439454,
+    "sha256": "ec5173d0d732eb1c3e24127e3a3ee9ce11346dfe45c9b305aaa55cab1c50ea5a",
+    "bytes": 290168,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:19",
+    "sourceId": 439457,
+    "sha256": "ae79977b600e0fc18f5b2439418ee89c8f6be6ee48ecaa02e616bbf53998cf5f",
+    "bytes": 652124,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:20",
+    "sourceId": 439456,
+    "sha256": "95942a39126b9b956e95556c176e43422d99f0d7bc31c8a9484a3312a8f52f98",
+    "bytes": 384751,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:21",
+    "sourceId": 439458,
+    "sha256": "84e342d91e6f1a42de46d3b35c0e99e9897c96a229abbfa3c4c037072d84559c",
+    "bytes": 392684,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:22",
+    "sourceId": 439459,
+    "sha256": "15c9eb459d46d2ef9862ad61282b23a5bcc7149679581aed07f4459393496ce0",
+    "bytes": 375474,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:23",
+    "sourceId": 439461,
+    "sha256": "6b77e3c24dfe081c73e1ff8f02437908833c1c4f13a7a76faa2bcbee49b3969b",
+    "bytes": 373793,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Malachi 3:24",
+    "sourceId": 439460,
+    "sha256": "192934aef56094e95c9003e69a99d6bed961d9c660a98c4a57872d3c144727bb",
+    "bytes": 317849,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 10:32",
+    "sourceId": 432918,
+    "sha256": "25a596a441ace13de993748b7c19bfdfc977cedde6e84256c9a8efe713ab24bc",
+    "bytes": 293951,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 10:33",
+    "sourceId": 432919,
+    "sha256": "827f05a7a069cb9612a9257618dc892f7b3aa1a8ae5d0da3f2e6d7dd2feccdc7",
+    "bytes": 388367,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 11:1",
+    "sourceId": 432920,
+    "sha256": "a55b267a5850db4549b3fdbaef5aab58d8e892923f2399554eaacd1b9bef45f9",
+    "bytes": 239241,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 11:2",
+    "sourceId": 432921,
+    "sha256": "adfc248b2b85ba73bb2b9eebba551e5f13d6f2420878ee9fa583ea7e9fcd154c",
+    "bytes": 380425,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 11:3",
+    "sourceId": 432922,
+    "sha256": "cd5753cd43b16ac13d30f4f382b400081d936f926fc7a74cff54c02c52db78b3",
+    "bytes": 293981,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 11:4",
+    "sourceId": 432924,
+    "sha256": "48424518be0a2c18ee79f27caa4b1cf6f0db871937e341c7ac374d8e7abffd3e",
+    "bytes": 426910,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 11:5",
+    "sourceId": 432923,
+    "sha256": "d8b4e21927ab10f08fa9fb098251df63faa2c5b7db0c78f300b869f440e4bf28",
+    "bytes": 210452,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 11:6",
+    "sourceId": 432925,
+    "sha256": "6398eb51e3b58ef77df8f6366d123efb3d4d05c0838ac736e9c9940df1df4dd3",
+    "bytes": 391406,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 11:7",
+    "sourceId": 432926,
+    "sha256": "8db91da11cfbd8ce9d20205df3c0f4facc5acda5a091fd53f4ffbfa1cc2b0ac5",
+    "bytes": 315747,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 11:8",
+    "sourceId": 432927,
+    "sha256": "7c3ae0bf6bb069e99361c68feb32d8a5f80380643c2598dfff2a9173c67efa4d",
+    "bytes": 314365,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 11:9",
+    "sourceId": 432928,
+    "sha256": "881783d948f0b9ac2d1e1dc69ba7e7dc576eb678bc334742d803036448273956",
+    "bytes": 365816,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 11:10",
+    "sourceId": 432929,
+    "sha256": "26321dfc839028f39fcad76ba738ddff2b2785a6320e5c09bbd0228008f1f42b",
+    "bytes": 434807,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 11:11",
+    "sourceId": 432933,
+    "sha256": "9cab8a6dad713c677c704ca9ba2a5b8f1a584a60fdba4332795c06929cfca59e",
+    "bytes": 810804,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 11:12",
+    "sourceId": 432930,
+    "sha256": "5197d9b5d1e4c75436b9432f6088f5217a4fa5340be578d2518307a6541e6c5a",
+    "bytes": 307834,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 11:13",
+    "sourceId": 432931,
+    "sha256": "755efd00ca912605ed9ff47b367805333841759aab7f872bc6caca93fe794bf9",
+    "bytes": 405896,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 11:14",
+    "sourceId": 432932,
+    "sha256": "7f1ddc943c50f24a2f05cdbbd73b6a7ba175e6168c18f4f4fd0863385fe4e9f3",
+    "bytes": 405987,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 11:15",
+    "sourceId": 432934,
+    "sha256": "0bb517b86424c8723f69c9acdac200bc0cc55e51139adc4d52f4eee0d8d6dfd2",
+    "bytes": 520904,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 11:16",
+    "sourceId": 432935,
+    "sha256": "4a31dc9327301d6bccf88c778b79a15487d0aa4591eafb6fdd40765130a5d025",
+    "bytes": 368831,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 12:1",
+    "sourceId": 432936,
+    "sha256": "66141045d5e6904beb8ec4d607a2d89bafd395e5bc54e11180fcc72c7ab3803a",
+    "bytes": 328754,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 12:2",
+    "sourceId": 432938,
+    "sha256": "fb30c6e2a44a8b56bc432dd3476ba92f6ebd01b6ea99b5e6ff97671e86142710",
+    "bytes": 360615,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 12:3",
+    "sourceId": 432937,
+    "sha256": "0b05eda4bbf580fe1b25820225c361a49631c57c44c4580984821cc7d14bb25c",
+    "bytes": 179765,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 12:4",
+    "sourceId": 432940,
+    "sha256": "b5917d317f38afee0303f56ceee067f3a1cc13bed9a8cece1d5f9ca753cdd0b5",
+    "bytes": 453624,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 12:5",
+    "sourceId": 432939,
+    "sha256": "744eeaa3efbed5416e8901ef11c2d5fb56e9c0c97f6cdb975f4dd580846885c6",
+    "bytes": 237943,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 12:6",
+    "sourceId": 432941,
+    "sha256": "ba9a1b026b6fbf95f20360e49c9a16badbe9cc75963d3bfd1ecda5d68b4b17c0",
+    "bytes": 248680,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 42:1",
+    "sourceId": 423752,
+    "sha256": "052aeda10322f4fb263e94e5459f624c86e85a9fabc2828917c505d0368116f4",
+    "bytes": 319373,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 42:2",
+    "sourceId": 423754,
+    "sha256": "ddad92cd7a53c1c7817f75122dff49b298b7fd57ecb9773b2ce425d4387a1e13",
+    "bytes": 187865,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 42:3",
+    "sourceId": 423755,
+    "sha256": "2b0190c9f3b9edb30c8c914368634fe109e330bcc5ae73f361272479fca9c977",
+    "bytes": 293926,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 42:4",
+    "sourceId": 423753,
+    "sha256": "21cd3ffc4dc0f3093add99c2a58a1806b52baf1742144308ba08a0cfa94f63a7",
+    "bytes": 328586,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 43:11",
+    "sourceId": 423738,
+    "sha256": "6cfcb207daa2521273dca0412656b3f10f6dff589ded0e210ad03de5687d0c84",
+    "bytes": 186118,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 43:12",
+    "sourceId": 423741,
+    "sha256": "bfc4452ffb654844561b918d18cb03ebe0437aacbce237758bc014c37e4955ef",
+    "bytes": 355914,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 43:13",
+    "sourceId": 423740,
+    "sha256": "c82febb068bb8a870025306f7ba037fe9f1f90470e391e799ea76c7b62a6b7a0",
+    "bytes": 248867,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 43:14",
+    "sourceId": 423742,
+    "sha256": "696199f1e4cd221978da77bfc6c13f64c9d3b90d1cb2394e3ac70767bac6153e",
+    "bytes": 476229,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 43:15",
+    "sourceId": 423739,
+    "sha256": "056d3715d56b38c8dc483456ae2fdf0c791babfe51627d97d06bf43ac5dff12b",
+    "bytes": 203784,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 66:14",
+    "sourceId": 432715,
+    "sha256": "cb67c96e5e9123b0b8cbac810d3727fa20097839663e143e4ef0eaa3141ccaf3",
+    "bytes": 375384,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 66:15",
+    "sourceId": 432714,
+    "sha256": "769c439ef387da8fe10d12231db204a8e784a5ae5974bb3d61d79d7abe78db54",
+    "bytes": 370355,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 66:16",
+    "sourceId": 432719,
+    "sha256": "d9d9b96709bfdb8136dc4e791b3ea220dc1075a4d6a574c301879db34f82f83b",
+    "bytes": 251692,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 66:17",
+    "sourceId": 432720,
+    "sha256": "7437c0ee2207125c1cf618814b2844c7c3dac30458d6f04d8b250f0a3b493ea6",
+    "bytes": 525849,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 66:18",
+    "sourceId": 432721,
+    "sha256": "5d38e5aa61f49446272bada8d564e5b235690bee04455daf7436e71e99072926",
+    "bytes": 428153,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 66:19",
+    "sourceId": 432722,
+    "sha256": "244c597343b971cb69ce8569fd48e0e8b564e7b6177714a99839104fd2ddc8da",
+    "bytes": 820097,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 66:20",
+    "sourceId": 432724,
+    "sha256": "1277980fdbe7a5d90d312ee7906ac5c89a740fd2fd0ed5b73622f7f90b1e3dc2",
+    "bytes": 967204,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 66:21",
+    "sourceId": 432723,
+    "sha256": "843813f056600c82e9bf0f5648fb98ea5fbf84012323b182a16df82d752ff57d",
+    "bytes": 163748,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 66:22",
+    "sourceId": 432725,
+    "sha256": "e46a6551abd35c6b05fbecca19b3568705e2b1ef6cca5cb78878b0f671b57407",
+    "bytes": 530873,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 66:24",
+    "sourceId": 432729,
+    "sha256": "43f2b15f03415a6135113c0e0c1a22d3ac2c889aae8da9904e27d1922161c5e2",
+    "bytes": 516331,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:18",
+    "sourceId": 433503,
+    "sha256": "8060186986c50891ab15310685d47e8e14c2040a776fa4ccb7bf0afbe7a006c6",
+    "bytes": 277675,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:19",
+    "sourceId": 433504,
+    "sha256": "cf9f195e1f241ec3815f474344d180f739700cb5f23041980bc9e1a73d82a2e4",
+    "bytes": 437773,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:20",
+    "sourceId": 433505,
+    "sha256": "25ab801c92ed5e17cbd326ec4408ef0193e34c2b03d5a3682ca4623c8c151278",
+    "bytes": 255564,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:21",
+    "sourceId": 433508,
+    "sha256": "be920b58bb4d19e51ad5a2d8a36bc41beb7a1bea8de67add062c4155da4cc77d",
+    "bytes": 682672,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:22",
+    "sourceId": 433507,
+    "sha256": "defd0a060c1c85c331f0efb541cfaa2d967ac6687f07d9c78de94ae8a3745d7e",
+    "bytes": 325565,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:23",
+    "sourceId": 433506,
+    "sha256": "0f79b58022ebb89407f94907aad29204226776ec93e187fba097fe3b320dec2e",
+    "bytes": 298171,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:24",
+    "sourceId": 433509,
+    "sha256": "a7512387f6a028012e2fb6f538dabe3ec35fa708d0df07b8944725f19e66a342",
+    "bytes": 307813,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:25",
+    "sourceId": 433510,
+    "sha256": "10614239606fb86d20bd782de5bde0e14d8fb6ab9296c813dc709df776b7d1eb",
+    "bytes": 594847,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:26",
+    "sourceId": 433511,
+    "sha256": "6abcd6a0cdbfd5087c149a08054a8883cb108c747e4f1d0b5ea86c72a829824c",
+    "bytes": 347913,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:27",
+    "sourceId": 433513,
+    "sha256": "c6d79330f15683b2e1442314c89845597aec2d10f3269953b824b02b2258e37a",
+    "bytes": 618496,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:28",
+    "sourceId": 433512,
+    "sha256": "790f81ded81b71fc0c12e6e1b4772c7b90633bd3b1975eac329a7e1a79ba58a5",
+    "bytes": 303213,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:29",
+    "sourceId": 433515,
+    "sha256": "be67d63b602f31b4e5d961c1713a0c8a104c64b71c481827cb3b565fb450f4ba",
+    "bytes": 834733,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:30",
+    "sourceId": 433514,
+    "sha256": "1f5899d9523878225c48930170e8ae7ce36c22c81721e7ddfe8842d0a402e828",
+    "bytes": 549732,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:31",
+    "sourceId": 433516,
+    "sha256": "83dde897662707a02dd17c3af5d7e69da5495b0ab7cb66d8745197a0053e31ee",
+    "bytes": 495224,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:32",
+    "sourceId": 433517,
+    "sha256": "67014c4f4462175eb20cc087dce60853b990e27d17a112c06cf45bb317d5a619",
+    "bytes": 291727,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:33",
+    "sourceId": 433518,
+    "sha256": "6bf6cd30b4137caa2366aa00dbe90ef440366fca93f3de5837638da5e133d37f",
+    "bytes": 431477,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:34",
+    "sourceId": 433520,
+    "sha256": "1e6a9b894eed29847ccd989fb4e0f07485e63c5faa2f0d0f3a303b664e35e63a",
+    "bytes": 453641,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:35",
+    "sourceId": 433519,
+    "sha256": "5284f8357a769621701237a6cf1345a4d3d3d1700efa60a70cb26b9e51abcd50",
+    "bytes": 288861,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:36",
+    "sourceId": 433403,
+    "sha256": "e535589df2cb068e39a8385679d1e8253b4ede96544bb0940a5b75de8fb6840c",
+    "bytes": 439430,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:37",
+    "sourceId": 433402,
+    "sha256": "8c0d4430b8b97331f9392a9977cf253df8d52b467d216dcf2d0558c2ee1b670b",
+    "bytes": 442805,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:38",
+    "sourceId": 433404,
+    "sha256": "a07a43d0150651d1c4f13972955a7e075d194cafd1c823d4d4c3aab2f45abc26",
+    "bytes": 445509,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:39",
+    "sourceId": 433400,
+    "sha256": "1d58a6eb194eb4a0a30d37876acc29d1555d874fe7297e4ea959068da3b324e4",
+    "bytes": 230070,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:40",
+    "sourceId": 433401,
+    "sha256": "aba6197b618473b2d8e9cc292929b71217c17ddd31863357058da23a89e3b9af",
+    "bytes": 301875,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:41",
+    "sourceId": 433405,
+    "sha256": "76d69403a576015f20a76c8fc24d9f843d4b2fc7bd742c4a6f83392be99f80ae",
+    "bytes": 650956,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Samuel 20:42",
+    "sourceId": 433408,
+    "sha256": "18b29e510c171e2ca689ea2202ef852df16681192c2d5f389f372541af1e0d6f",
+    "bytes": 748321,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:1",
+    "sourceId": 446525,
+    "sha256": "b06a797ce5ac52b6bb6e10578a40961c9abcdf41db605a35896f5a23c62923af",
+    "bytes": 187861,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:2",
+    "sourceId": 446526,
+    "sha256": "0a694a2ffa525cfcd3ca149b013155d1522ffa3bc3201a0f1aed34ef41fb874d",
+    "bytes": 727321,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:3",
+    "sourceId": 446527,
+    "sha256": "ca22fe0b7886ef0f1bd7081424e8ccd9b2c240f212f9e32b99265c73fe15b317",
+    "bytes": 276066,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:4",
+    "sourceId": 446531,
+    "sha256": "07459362b8f10d754728e9092706b5003725664d29d8271c582e40c7b96bb709",
+    "bytes": 831405,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:5",
+    "sourceId": 446529,
+    "sha256": "0d1b2a0f52f0359cab14259845cf9b6d93e383f913cc4b87f9c9282dc8189319",
+    "bytes": 604329,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:6",
+    "sourceId": 446530,
+    "sha256": "a3af151d334ce86f7391508ecf2600a671e5ddc62d4c32ebb46ebb7616de0339",
+    "bytes": 234198,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:7",
+    "sourceId": 446512,
+    "sha256": "67786ce77ed2520cf24e519b82d75a1a390c2ef5e61d210df620bac33045c02e",
+    "bytes": 328694,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:8",
+    "sourceId": 446514,
+    "sha256": "c132a4ab1925d667e6794777406229ab2bdfdd427a5168c63343e757d68130cb",
+    "bytes": 552599,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:9",
+    "sourceId": 446513,
+    "sha256": "081700cf96f1f211c469101555561e60256df1b6446cc38d8021141db8559ea5",
+    "bytes": 331958,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:10",
+    "sourceId": 446516,
+    "sha256": "4c40a25806ef883fbfed377169b24e74a6eb1ab9c8898dc095476a2ff4773e60",
+    "bytes": 756170,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:11",
+    "sourceId": 446511,
+    "sha256": "a9ce65dc1b3b49ae75d7c6156728a87df3918a1d207b6dde62fd052a585a5dda",
+    "bytes": 243592,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:12",
+    "sourceId": 446515,
+    "sha256": "2f0adb1600b79ca85ccd5bd40590846b1162fda71a51ffb62e0021fc87fc38f1",
+    "bytes": 746680,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:13",
+    "sourceId": 446518,
+    "sha256": "cfde37c438df48beaada9b2453b28ae04a7b3918297eb76cd05ab0db3a841f63",
+    "bytes": 482838,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:14",
+    "sourceId": 446517,
+    "sha256": "1f5a2e24dd176e289cba8c46e9a020f5606a6cebd1e6e7714e2c47173ccd962e",
+    "bytes": 455305,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:15",
+    "sourceId": 446519,
+    "sha256": "13a5604439050384dd1d6524ec382ce651c6dfa48de2af7fc38fbdb8ae420010",
+    "bytes": 485756,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:16",
+    "sourceId": 446521,
+    "sha256": "2a8fa3e30d611ddc5db8e2f8453c1cabe166556c10ae15d15b571e9ec4278bc7",
+    "bytes": 592836,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:17",
+    "sourceId": 446520,
+    "sha256": "f0cb7a7124ed09fc3096206aac550738915f7b54af63b2762dce0fd88b8bb984",
+    "bytes": 474886,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:18",
+    "sourceId": 446524,
+    "sha256": "db3f099b93fcc3ccdd7de033b36cc1a1a38b322caf412af00e930afbda174888",
+    "bytes": 556448,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:19",
+    "sourceId": 446522,
+    "sha256": "f5e4aa3a4c8e3c88027a3cbc8089b278e1b5f96c67b843dde5b4d99f665036eb",
+    "bytes": 327354,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:20",
+    "sourceId": 446523,
+    "sha256": "dcd0afd4ca41ec6981ce4a935e547debbe5be54ce856228e5c9b29ab10c48c9e",
+    "bytes": 439336,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Zechariah 14:21",
+    "sourceId": 446528,
+    "sha256": "9676d0dfc59afbe24687aef49b0868fd9c5837c2151c7e49c856a336f023c944",
+    "bytes": 727362,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:54",
+    "sourceId": 433693,
+    "sha256": "f6e86446ba2ffed6b8946632b339f8aff8d52251c8036bb778d6b768014af3b5",
+    "bytes": 620411,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:55",
+    "sourceId": 433694,
+    "sha256": "690e3bf105a657ecff8ca5b28f2dc65a705df9409edd4688f40b9442c8111b23",
+    "bytes": 253771,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:56",
+    "sourceId": 433696,
+    "sha256": "48991eeaa755bfd0eae9e13b12a0ddae0ed7dbe391aa139b7892918f81da2741",
+    "bytes": 570661,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:57",
+    "sourceId": 433695,
+    "sha256": "678c1068bad319d2efa2a8694367a2f71af1cfd1db0dab6b8bd3b769c11a76ad",
+    "bytes": 56936,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:58",
+    "sourceId": 433697,
+    "sha256": "cda1289acfebff0e05ece4bfa6a3000e0c1955295e23c830e763e6941689a77f",
+    "bytes": 344991,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:59",
+    "sourceId": 433698,
+    "sha256": "7b0b656edbc038c5854b652a2f7a35d7f8a0fcb84ebb262e4d4274c0ae60b280",
+    "bytes": 616406,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:60",
+    "sourceId": 433699,
+    "sha256": "e0106b613a4f8d0f933e574390acdce5b429da56e21ed80d95d61c3072e6fe21",
+    "bytes": 287291,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:61",
+    "sourceId": 433700,
+    "sha256": "30e94d037c9d4ef58663fb9506b5853fa60fc9544f58c1ff3187995795a8882a",
+    "bytes": 339984,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:62",
+    "sourceId": 433701,
+    "sha256": "69631506624f6e55198820d81e2e3a0b775f727256d552d470a1274e7dbcf4f2",
+    "bytes": 203534,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:63",
+    "sourceId": 433702,
+    "sha256": "683f3a5bf387e61a90ccb14b27ed5285ec44aa8fabdfd76ff9894e19eb8bc72c",
+    "bytes": 684246,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:64",
+    "sourceId": 433703,
+    "sha256": "6a470ea0ec75b95da3535b79180faac82142f54bdde62ecd31c5e39dad1853ce",
+    "bytes": 911313,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:65",
+    "sourceId": 433704,
+    "sha256": "6d6c1839c72325547490ac5e34f737fe93d67d85cb377ff703fd81058a34b62a",
+    "bytes": 722703,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 8:66",
+    "sourceId": 433707,
+    "sha256": "6645b7434d81178b14fff3cb6d2454a9dac1f3e3760ad2b94fa40788d3b973ff",
+    "bytes": 637789,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "I Kings 9:1",
+    "sourceId": 433706,
+    "sha256": "a33ea5e240e09fccda781d659b586ce4db880792ab6d77c4d4db2a5242962e93",
+    "bytes": 389840,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 23:1",
+    "sourceId": 446486,
+    "sha256": "5ab7e7b16bcb5f4e33855f4743a07d3a8d6d5647c8e3976c69b7fc79330841b2",
+    "bytes": 221617,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 23:2",
+    "sourceId": 446489,
+    "sha256": "d25f3c2f224704a2b8dbf59fd2c67bdcc7973b720437f6e969bc8025e8999c82",
+    "bytes": 808735,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 23:3",
+    "sourceId": 446490,
+    "sha256": "16c4b990e8a843a8069b033548c96a74a64747ec74990dc5a57b842375d856c2",
+    "bytes": 1013785,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 23:4",
+    "sourceId": 446482,
+    "sha256": "4b87edbd0431f1b6beb7b786f8a8f0d67ce3eab42bf9946b1354bfd4418181fe",
+    "bytes": 1066719,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 23:5",
+    "sourceId": 446478,
+    "sha256": "135e3a49c4dcea9794a6522240ca7715103bb4febd053e8086eda9c92ab08cdf",
+    "bytes": 648876,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 23:6",
+    "sourceId": 446481,
+    "sha256": "818ed8bc0398309b709bc9f6c806dc4cd6b7156afb9f53e3bd5d29a47f0391e9",
+    "bytes": 612224,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 23:7",
+    "sourceId": 446477,
+    "sha256": "09c5ba49e80586f371647aeabbeb11d259b35303030a508754f55ed2e2527d75",
+    "bytes": 388270,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 23:8",
+    "sourceId": 446480,
+    "sha256": "6f81a9e86dd1d4530b45fd6811b400234e0a1b5a186a7e8aae2812c0fabf3f33",
+    "bytes": 834753,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 23:9",
+    "sourceId": 446479,
+    "sha256": "c99c7db3a4125ac94072f7bed81d27efd427de13dc13d7c09b168f3edd6d0a08",
+    "bytes": 373802,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 23:21",
+    "sourceId": 446483,
+    "sha256": "fd46e1fae17f82e8e1865d9cdd713e31044fab8f490af159a43433ce34c7d649",
+    "bytes": 396282,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 23:22",
+    "sourceId": 446484,
+    "sha256": "7f8d2a62fb2eee8c73bab0fcc336fb1af03153701332805e5cc47af59cba97a8",
+    "bytes": 479219,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 23:23",
+    "sourceId": 446488,
+    "sha256": "ffa20a1fb6cfbd2ced0bba930a3d4f51e6b3a317186d5cead644f06d62be5ca0",
+    "bytes": 399208,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 23:24",
+    "sourceId": 446485,
+    "sha256": "d2839fce77023c0fe90d73dcb40dd0e04dab02aaa8f68ca5e1e101a89983763e",
+    "bytes": 936819,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 23:25",
+    "sourceId": 446487,
+    "sha256": "7bb9e203d1ab3294597eb0bdbd8f6e5c66e82a9b8af74bb82f7abadd72b8ab31",
+    "bytes": 533850,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 38:18",
+    "sourceId": 446451,
+    "sha256": "82fc8e1ef8bcd0b7fda33706a4ede2c2f1997219d805c2af38a9c873c6b7e83e",
+    "bytes": 402626,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 38:19",
+    "sourceId": 446453,
+    "sha256": "a24464901d693496ef6f4130b4fd041d6f8413e46ac8a75d5feffee3b1dce64c",
+    "bytes": 368750,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 38:20",
+    "sourceId": 446456,
+    "sha256": "8975269a6326a05e7a8b0fd244209ffbfe9d0adf5b774b2c05b243ea33b387a5",
+    "bytes": 853622,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 38:21",
+    "sourceId": 446454,
+    "sha256": "6f9a13e27cd40421e445e85ec9571844a933a3aa94afd03e93333d3eb3e6c78b",
+    "bytes": 288911,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 38:22",
+    "sourceId": 446455,
+    "sha256": "20b685435f126ba8a5e1845fed253e9573cad2031911655d18294e6beeeecab8",
+    "bytes": 514637,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 38:23",
+    "sourceId": 446459,
+    "sha256": "5ca9ff71dde5bbd9885c9608767330cad69ae1a396af848cf843aaa34609b928",
+    "bytes": 293990,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 39:1",
+    "sourceId": 446457,
+    "sha256": "7c075ad9b67afb6d212cd1ad71dc3e8cec40965648d02648ff26eb618e42319c",
+    "bytes": 434724,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 39:2",
+    "sourceId": 446458,
+    "sha256": "72700ea21f840585dccd18964a2f4ad44828ab102c69196839caa5bd035905ee",
+    "bytes": 303188,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 39:3",
+    "sourceId": 446460,
+    "sha256": "2c3b7d95216da46f675ee0440220d2f7162a1aba8eae8cae9a4768c70ac6bc50",
+    "bytes": 261721,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 39:4",
+    "sourceId": 446461,
+    "sha256": "91852a12ca4149c4f406b899af19ea48e7b336b6cce607596ef2fc6cca9e6e62",
+    "bytes": 472624,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 39:5",
+    "sourceId": 446439,
+    "sha256": "d2bdb13f1f00334691a1c37c7b767756f410d7f5bb4cb95f5d44f8bf4b6eb08e",
+    "bytes": 231093,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 39:6",
+    "sourceId": 446440,
+    "sha256": "354a7de21de908c91de159722a544a460290c4baf677c3d07638904d7b573e09",
+    "bytes": 258335,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 39:7",
+    "sourceId": 446442,
+    "sha256": "c2403b23ef150b28155cfa96f8c40c56ce05761a254fcc1501d9354967981016",
+    "bytes": 460319,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 39:8",
+    "sourceId": 446441,
+    "sha256": "3a4e4e86118e2d951daf8930cdd2324072a792bc3d05cc2a0b0cf7ba86a7eb6b",
+    "bytes": 256624,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 39:9",
+    "sourceId": 446444,
+    "sha256": "0a27ef6413657e3c77d6890d07756956e0690f514b13a6bf148cf26f784f4d91",
+    "bytes": 671317,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 39:10",
+    "sourceId": 446446,
+    "sha256": "99eb6ac53492bacf71456c40a6f422d831dc912cb34e405d17c1bc0e4f4d99b4",
+    "bytes": 567338,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 39:11",
+    "sourceId": 446450,
+    "sha256": "a571ba8e8e769dc1d551b3099476514e8793b9070d2de82e64c01c80de1fcf59",
+    "bytes": 813743,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 39:12",
+    "sourceId": 446448,
+    "sha256": "dcdcd5ca4d3f9ec981d2473315b02ab0d408c3df5bb912c4d7215d798dcedfa2",
+    "bytes": 231371,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 39:13",
+    "sourceId": 446447,
+    "sha256": "b2aeab9e461ed1de2d57282a8d9efaafdbc8e76a59b945529207703bc9e50cac",
+    "bytes": 311104,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 39:14",
+    "sourceId": 446449,
+    "sha256": "a4fa410893322842ac0fdd5a215fde9e326acb91466c7bf74c49e88b4400315c",
+    "bytes": 479085,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 39:15",
+    "sourceId": 446445,
+    "sha256": "e24ab32d177011a77bf8ee15e474f3b46b955af85ba3f899d436a51c9649be43",
+    "bytes": 442841,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 39:16",
+    "sourceId": 446452,
+    "sha256": "4b4af11fd4df4b7ccde2a0e34c5e1339daa07affb244be5cbd4dc2d74e8940ae",
+    "bytes": 183194,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 3:5",
+    "sourceId": 433085,
+    "sha256": "c96dbb3e46c23a648216b1af35e2a237ea5e77d5de900f1bfdd43217c5223924",
+    "bytes": 357894,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 3:6",
+    "sourceId": 433086,
+    "sha256": "1f0d371e7f43d9fec418bb277d073ffd9da7145c0267906978f3db8b15ce8359",
+    "bytes": 452290,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 3:7",
+    "sourceId": 433089,
+    "sha256": "de68cf994b5b1544994e80cc33442a1ff7dda129768ec3b2238ff631d0c03ff6",
+    "bytes": 538872,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 5:2",
+    "sourceId": 433087,
+    "sha256": "ab617f2b09b141d8f011452c41c298670188a7f537741df40196a167eaf7ffe9",
+    "bytes": 381814,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 5:3",
+    "sourceId": 433088,
+    "sha256": "c6f3a7cae108b18216ceca57a228e162f5735c9b5a9464540efa74166cc9174c",
+    "bytes": 293893,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 5:4",
+    "sourceId": 433090,
+    "sha256": "e862de2a343a42e77a049fcdaf1479d26b6fa1eb8b3642eda355f69d948bb006",
+    "bytes": 546862,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 5:5",
+    "sourceId": 433091,
+    "sha256": "9ee2941b367c3ea497f7e31feecb462300780b70d8b24e9bead08753e0fb91b1",
+    "bytes": 392699,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 5:6",
+    "sourceId": 433093,
+    "sha256": "d160bdad308809ab1651a90e282adbf99a8c45eebf8f26e5297b49bd4245b996",
+    "bytes": 1021560,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 5:7",
+    "sourceId": 433092,
+    "sha256": "f96f9ee43a7c60654f2f54278c1a063917bf640d88b8b97162e8b1ec758acd8c",
+    "bytes": 335294,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 5:8",
+    "sourceId": 433094,
+    "sha256": "1772af2bd10d2d7b45e719024c9f5d83ffe723f62df92839e17fdbdf08de8ae3",
+    "bytes": 311196,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 5:9",
+    "sourceId": 433095,
+    "sha256": "7a8a11a79711f748471de120c3a388ccd61dd05b0a2e486d7f8e3c24586e2068",
+    "bytes": 496634,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 5:10",
+    "sourceId": 433097,
+    "sha256": "8ce5723e3a594b277c2df65e27b825b12cb07ac0bb7ec2b2659d4b3da44a1824",
+    "bytes": 463293,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 5:11",
+    "sourceId": 433096,
+    "sha256": "f65ec7adacb70ac516816de5887eeb4379df5cfdd00f6ee2c1aa96284a72b6a4",
+    "bytes": 322399,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 5:12",
+    "sourceId": 433099,
+    "sha256": "894db197766282a05e37ae1ee67bae0adc9e4f71dc43eedaa6b7f6da3dd99076",
+    "bytes": 544744,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 5:13",
+    "sourceId": 433098,
+    "sha256": "84fafa8b5983357dd7ea8b7e5df107751e15aa51aa16931a2d2b80f24e7f1b1b",
+    "bytes": 682744,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 5:14",
+    "sourceId": 433102,
+    "sha256": "c18f7c5ef7fc3cbaff135a24e0bb53ac8694cd0688718ac43d0f942f2ae834d3",
+    "bytes": 589912,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 5:15",
+    "sourceId": 433103,
+    "sha256": "5214bd4bbc33e1bd070241ef5025e3c77369e23a9b2d015a2b357e6eda71517c",
+    "bytes": 597736,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 6:1",
+    "sourceId": 433100,
+    "sha256": "1febd839a90523acadef70947c0fd89f961ddc887a13ec59c4f124df74a6638c",
+    "bytes": 272693,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Joshua 6:27",
+    "sourceId": 433101,
+    "sha256": "ada72dd81a4fdd48d3637da02ff2ef5503afd2c23b1dda254ea04a088343fcce",
+    "bytes": 211645,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:1",
+    "sourceId": 446400,
+    "sha256": "3ff3da64f0dd9aab8cbb5b82cc1ffdc10fb51a1c727da73c30ef3d9aa7d59dc2",
+    "bytes": 487414,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:2",
+    "sourceId": 446399,
+    "sha256": "56bfc22fe98964cbf5ed539d27568b441c811766738e375001ffa5a03d9e66fd",
+    "bytes": 277740,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:3",
+    "sourceId": 446401,
+    "sha256": "04aa72a8b75b9eba5b775307c4f1ddae115424379b375c76857a47949a3db079",
+    "bytes": 460364,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:4",
+    "sourceId": 446403,
+    "sha256": "d0b8afbdd1d19ed22193f7e74241231f52863f3a0ebb097f24f5778b640ed52e",
+    "bytes": 595989,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:5",
+    "sourceId": 446402,
+    "sha256": "9f56427645ddc662719d4d2de7dfd3e3bd08abe750f4d88bdb081fb72faee4c1",
+    "bytes": 248925,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:6",
+    "sourceId": 446404,
+    "sha256": "8fee7d951f95118bcc423c9cf3921cf29f7a48c002a7d2df4532f8749c6a97a4",
+    "bytes": 210454,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:7",
+    "sourceId": 446406,
+    "sha256": "a71aff307a31e0623da3de21d33e3fa0e09cbe5e757f680409b73f3552090780",
+    "bytes": 386689,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:8",
+    "sourceId": 446405,
+    "sha256": "e2b7d1a8fefc0e40ed9ffe3ccc7eac662de59a64d6a0d7359a3f8536caa3b8ae",
+    "bytes": 323652,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:9",
+    "sourceId": 446407,
+    "sha256": "ba402da198a12ebbb92a772411867c90d529fcf72c7968e4fddd37493f414627",
+    "bytes": 346299,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:10",
+    "sourceId": 446409,
+    "sha256": "7417ddd356e532c3967b872fe4d706d138728c8cbb4d7685da0cfd0723abc41d",
+    "bytes": 411048,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:11",
+    "sourceId": 446408,
+    "sha256": "28669c369544bc4439044bab75c43a4ba5e02c9d3f47ef1b07d7b257a498f56d",
+    "bytes": 468212,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:12",
+    "sourceId": 446410,
+    "sha256": "ec26ebde17c96ee3c177bf11af722fa5e0bc5591af8532a07f26d1da00cb12f2",
+    "bytes": 405959,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:13",
+    "sourceId": 446412,
+    "sha256": "4f6b9e455499136952fb203c7a680eb9b6a46af8fca8122be563812dc0030617",
+    "bytes": 572267,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:14",
+    "sourceId": 446411,
+    "sha256": "12e9b76faa12be344b69339a0f8339c9fa546c83bdf7eb338bfb442df58f1863",
+    "bytes": 163969,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:15",
+    "sourceId": 446413,
+    "sha256": "13c8241bd5082a87ece868a0a3379cc34eb7a64037f99952ec6a1fd8aaf2d770",
+    "bytes": 310939,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:16",
+    "sourceId": 446414,
+    "sha256": "60ac272cabf32f97bee3386d420f6b19063d053b57408c8feca7b2e46fd4f542",
+    "bytes": 488805,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:17",
+    "sourceId": 446387,
+    "sha256": "7cf1d8e345e0fe79e0fef2324b4a9fe8ab40a2aaf09054c0a24fe0bd3d8b40c8",
+    "bytes": 216435,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:18",
+    "sourceId": 446388,
+    "sha256": "444d3788771d723adfa2a26a036d71f34c9040cf321f7d3192ec0f3ea672c8cb",
+    "bytes": 349976,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:19",
+    "sourceId": 446389,
+    "sha256": "188deeac5a489730e42759523a687e8e13fc9c38ff4b8d39d9a3d8b63edb69ae",
+    "bytes": 363677,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:20",
+    "sourceId": 446390,
+    "sha256": "bf63f00097c6b78d9a4f4144a896be3a044e2417535d9c8e8f4cf0c731dfa4d7",
+    "bytes": 506794,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:21",
+    "sourceId": 446391,
+    "sha256": "4c1a7a6df32d43865d5c0e4803478b0fda7d49de2fbe34d28e5cb95f82beeb88",
+    "bytes": 490601,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:22",
+    "sourceId": 446386,
+    "sha256": "bcc2900052309a6bc0c2a56f1d0106fe9cca2aa9c75a7ac3394a802177e2682f",
+    "bytes": 325770,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:23",
+    "sourceId": 446392,
+    "sha256": "a81544476a9fd12d4e082e64cf42249e9bccc4235a7d48806d2d5e0f479c3b90",
+    "bytes": 535206,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:24",
+    "sourceId": 446395,
+    "sha256": "4da8b6916516a280a914626a285f5847eebba4a83bb791649e6000a6a8b3a1ce",
+    "bytes": 509644,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:25",
+    "sourceId": 446394,
+    "sha256": "efb13c1b8b891896360f306f2736ce6a1e289af978ca79bcdff1d32027a4e0cc",
+    "bytes": 306510,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:26",
+    "sourceId": 446393,
+    "sha256": "25acf71a92c97176160f05ebd04fb434150a1edc41c8afc28e3fe77b0040257b",
+    "bytes": 496683,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:27",
+    "sourceId": 446396,
+    "sha256": "16ff850e392eac6508ce082ecc329427d02857fa1d8e3aa7a727e405c05a6f03",
+    "bytes": 541595,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 1:28",
+    "sourceId": 446397,
+    "sha256": "ed1e01d460ec1386d87e73c0bebffadc89ed09ab7be90ddbed6447cf97779315",
+    "bytes": 704716,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 3:12",
+    "sourceId": 446398,
+    "sha256": "7c144bfc59b10c8ffc469c1406f7a047d0b11049889b17582486492b73bf7533",
+    "bytes": 301420,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:1",
+    "sourceId": 446507,
+    "sha256": "559587d4891cc2b420d25286aab226ecf47dfa9c9d7888c04bbc37527d7a6c5a",
+    "bytes": 192759,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:2",
+    "sourceId": 446509,
+    "sha256": "28368164fa2b2dbfa7c5ccae3d413021b99d608246605215d38b8be8303e8ca6",
+    "bytes": 513012,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:3",
+    "sourceId": 446510,
+    "sha256": "16c787c615d032168d57e32a9072487333d1b2da94bf85ca3d1a763a7b93577b",
+    "bytes": 343062,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:4",
+    "sourceId": 446491,
+    "sha256": "4499b72531179a813f5d361bf4a51c83851d92dc572c5e7d6918dd084c3cc81d",
+    "bytes": 259470,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:5",
+    "sourceId": 446493,
+    "sha256": "b638ad8f66e34389d4d198e0afab33237501271bcfdafc59baca415a147b0d24",
+    "bytes": 187804,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:6",
+    "sourceId": 446495,
+    "sha256": "7c5c860a9b6f6d664e159ad8d13b2f734b575de9f66e8fb300189aa314a20ae1",
+    "bytes": 432808,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:7",
+    "sourceId": 446494,
+    "sha256": "c84dd096010ef9d2d3d5fb6a245e438e83375a51464fd6f5f113e82b82be512d",
+    "bytes": 282169,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:8",
+    "sourceId": 446496,
+    "sha256": "ad7f38dca5caf93c67c61fd1285a651c0a5b0b76af66702b79cf60e106660c7a",
+    "bytes": 408978,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:9",
+    "sourceId": 446492,
+    "sha256": "a708d66496c8ca0d7fbc1290a93e24629dc299a3195340ce60df1003386ffb2d",
+    "bytes": 272609,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:10",
+    "sourceId": 446497,
+    "sha256": "3f2cd540085101388a110eb68caff229e05e2a7ec1916fa272435b93dae71c74",
+    "bytes": 336852,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:11",
+    "sourceId": 446498,
+    "sha256": "2e5bc1d3c955df701137b612e7f72f8299995abbf3b4303190b1145064c4279d",
+    "bytes": 285705,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:12",
+    "sourceId": 446499,
+    "sha256": "adab0c69e0bcc81f613652f9c5235a8833e03f2f6c4f90ed2332356761b1b671",
+    "bytes": 179640,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:13",
+    "sourceId": 446501,
+    "sha256": "5d615b086792f16ad2f7a1f65b5c3ba5c3e5153f6a6fdee09d0e94f7c58fce5a",
+    "bytes": 447200,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:14",
+    "sourceId": 446500,
+    "sha256": "6d4adec0f1891d5525716aa61f48042deb1afd3973b8aa539686d160eb6332c1",
+    "bytes": 389650,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:15",
+    "sourceId": 446503,
+    "sha256": "42697ff53a9f10c5883c6212ccb4b4ec6c2458de339c3f57489ace1b43d518bf",
+    "bytes": 186211,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:16",
+    "sourceId": 446505,
+    "sha256": "cf309750a54d1162e0c75f6c6cc936a0c781a3657a6929ae9f89a97f2d4b92ea",
+    "bytes": 605717,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:17",
+    "sourceId": 446504,
+    "sha256": "09ad7989e3126759a47f18523c61fd5757af72fdc51754413c8725133fb53b04",
+    "bytes": 530983,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:18",
+    "sourceId": 446502,
+    "sha256": "11cf3fd37913b4cfba844738a6ac16277dd66741b3e5745f167a1b64012593f2",
+    "bytes": 175254,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Habakkuk 3:19",
+    "sourceId": 446506,
+    "sha256": "838d8abf6d1d2774f00b9671241102af9144fb06143199981ce7ff5b5be9bab3",
+    "bytes": 376516,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 8:13",
+    "sourceId": 440659,
+    "sha256": "9e529a8d2941abdf834f8a51b0d6331363f4fc85cb761c44b0410c76c80873be",
+    "bytes": 533805,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 8:14",
+    "sourceId": 440660,
+    "sha256": "c3321a4e879f973d55bfd3eb267e6c184fa1c1233772e42580e66079cc3e6416",
+    "bytes": 562767,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 8:15",
+    "sourceId": 440658,
+    "sha256": "b3255ab9c2bc47d7199b121b2f4fa44dab0f40fb392720f114b157a477ff8837",
+    "bytes": 207468,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 8:16",
+    "sourceId": 440663,
+    "sha256": "68010373c6429494a62384001181b57b621f656b3bc34275bc1d3f9378771c80",
+    "bytes": 513007,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 8:17",
+    "sourceId": 440665,
+    "sha256": "9005ab7fc9fababecca56ea5208da500d220695cbee38240f074c82e9406b174",
+    "bytes": 471210,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 8:18",
+    "sourceId": 440664,
+    "sha256": "9277d7451d5f750cb7b037148201b1b752e3364ffd73a45b4c03573de7586ed3",
+    "bytes": 203715,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 8:19",
+    "sourceId": 440668,
+    "sha256": "f7fd807370d272b6088c75cbf8091e98420ce5f82d9abf4b068137383db481fa",
+    "bytes": 594823,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 8:20",
+    "sourceId": 440666,
+    "sha256": "01c9a74ffa4563d7a143d825221ae951f2ffcd198f1e98e287bdea9f45142dfc",
+    "bytes": 184891,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 8:21",
+    "sourceId": 440667,
+    "sha256": "de8be0cb29c1e16e7a32bc7c694c0b5eba499e90897a8ef8056db79c719d0270",
+    "bytes": 259790,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 8:22",
+    "sourceId": 440669,
+    "sha256": "c94cefc64c226483b2f54a1c61320d3fd55a094eb6dbcfb4846827bf751eba03",
+    "bytes": 365632,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 8:23",
+    "sourceId": 440670,
+    "sha256": "1f811ff6fab05cf69e00126f0558ceaa151f6967d917c6fae1c5d7cb21788e57",
+    "bytes": 353917,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:2",
+    "sourceId": 440673,
+    "sha256": "1d809eb8dcd289468b9e22dc8bd86e9be6d6b71f0673ed617fd313c029d87aa7",
+    "bytes": 520915,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:3",
+    "sourceId": 440675,
+    "sha256": "b64427cc4f34f0535d2af0fa64d83075d4379b7f22eda905ee69ef14b702f7d4",
+    "bytes": 389734,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:4",
+    "sourceId": 440674,
+    "sha256": "1e80a19ee38dcd4642157735bca07f787ce464d14b14ae5a5cb201ddb929fa37",
+    "bytes": 338347,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:5",
+    "sourceId": 440676,
+    "sha256": "9515133f842270a5f765b9e5e3a33b1a0ca1f18157b2f44d203dd8e20f5c08c6",
+    "bytes": 237896,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:6",
+    "sourceId": 440677,
+    "sha256": "4f71c892d3a43ec022b35ee0bfe2925e41c6fe84e7c1d389235c2c6b91339819",
+    "bytes": 380306,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:7",
+    "sourceId": 440678,
+    "sha256": "630685f424962541802f685b57c935a472dec3272e36cc74bf111d8a9c1cf05d",
+    "bytes": 386688,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:9",
+    "sourceId": 440632,
+    "sha256": "aaec294730eb7fb9373b4a87aa6cc9e6c34d5ccf489abad80fc935700edecf63",
+    "bytes": 623315,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:10",
+    "sourceId": 440630,
+    "sha256": "a4a893ccc490eb27d0c8d7327fb0746d16eeeef7784cb00feffe348519818e1d",
+    "bytes": 351017,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:11",
+    "sourceId": 440631,
+    "sha256": "85606f65937a2ef4867443f50226f293af47e035ede03e12238ce430a031aac4",
+    "bytes": 496451,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:12",
+    "sourceId": 440629,
+    "sha256": "fb82856b6cd35f10ffbc8ae05eb2edd235d90c6c97a5ffe034dc923e57082fc4",
+    "bytes": 352904,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:13",
+    "sourceId": 440628,
+    "sha256": "091124dbb0596393a5180bb006b4ac5d01342d2dd8b3ebccb259e1a9f88ab578",
+    "bytes": 299746,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:14",
+    "sourceId": 440633,
+    "sha256": "a87391e9e409acb2b9015406e731194cb4f79ec0ee9e225306146befabafc0aa",
+    "bytes": 437780,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:15",
+    "sourceId": 440634,
+    "sha256": "084b71ce462cc279a1311b8821982efb4273fb8dc0101b61166e6ca5ee538189",
+    "bytes": 391403,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:16",
+    "sourceId": 440635,
+    "sha256": "f185a22deda3567c641c0f6c16e352aab164838eef6a96d01a5804bb2384fa71",
+    "bytes": 391312,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:17",
+    "sourceId": 440636,
+    "sha256": "bfdd4d78e30732412e9cf2a2844be1c25f968c1d70afec41a92a3b1da945f25d",
+    "bytes": 352810,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:18",
+    "sourceId": 440637,
+    "sha256": "bdd7f73a910d2480888f7191efff4634f2042941f0d9d7a47504edf6aa9b9cd8",
+    "bytes": 442528,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:19",
+    "sourceId": 440638,
+    "sha256": "8497f46dd56c3d7ae2726a67dd93e6b55498c3ea63274883596ebd6464c4aed1",
+    "bytes": 360856,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:20",
+    "sourceId": 440639,
+    "sha256": "3e16e84490c8e22d65fda46b1e6d2c8309ac77769135064f22b1c71281eda601",
+    "bytes": 331945,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:21",
+    "sourceId": 440642,
+    "sha256": "39177544286e7052280e4c8bd970043f39ee8f85dd0173505a723d0049f41c06",
+    "bytes": 478896,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:22",
+    "sourceId": 440641,
+    "sha256": "838653c728c6a19c55a518d22cd2948efc43ac53a4db95e8fe59fdc277b24ca7",
+    "bytes": 434728,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 9:23",
+    "sourceId": 440643,
+    "sha256": "891255635bd8921b5727c1648e88293dc42b85ccb4aa3e8266d22148670dd151",
+    "bytes": 628250,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 1:1",
+    "sourceId": 420841,
+    "sha256": "1c9a7e917199ee7ddcaa1df6102a3fc4751e86e88eae905cd2b6aaac9056cd9c",
+    "bytes": 210299,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 1:2",
+    "sourceId": 420843,
+    "sha256": "5e786d061c2241693babdec56e1fe3376027020e4e0336e1c77b1e3f02f41d40",
+    "bytes": 552729,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 1:3",
+    "sourceId": 420844,
+    "sha256": "91f5fe297c80b7dba9ffe45fa3850544397c92c776dd41531c7861b4e17a0832",
+    "bytes": 386787,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 1:4",
+    "sourceId": 420845,
+    "sha256": "3e74300cb6f097d9b814e7c869ca03945650691ebf547a613ca3ecb0033e1096",
+    "bytes": 226165,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 1:5",
+    "sourceId": 420847,
+    "sha256": "93a5688fb099a62dd9b67dc56ab206365b310676a1b4d9ac35c693b5f28ea063",
+    "bytes": 514706,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 1:6",
+    "sourceId": 420846,
+    "sha256": "ca47ebffb68aa8703fc13a6bec891486f3a3b27c23caf9fced15cf37ef3d0cf8",
+    "bytes": 183252,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 1:7",
+    "sourceId": 420849,
+    "sha256": "a4381a827a07875bc5b1352b421bfcbe12f6e15f1baeb293fdb60828b22fa437",
+    "bytes": 319295,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 1:8",
+    "sourceId": 420848,
+    "sha256": "c9214bbc53c7e9eb3c0e9175882f4745c07e11e93ac861badec48a7b7eccf76e",
+    "bytes": 453700,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 1:9",
+    "sourceId": 420850,
+    "sha256": "da063a3492cea910abfb36ff8485c6bc6ffa62807964019184b1899340c5486f",
+    "bytes": 378887,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 1:10",
+    "sourceId": 420886,
+    "sha256": "c18575fd7bdc05b04d6a236605a0d47cef75a9d8a6a35ac7e87df21d453dd42d",
+    "bytes": 302000,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 1:11",
+    "sourceId": 420887,
+    "sha256": "bd8a42eb7268193fb7365e85c9832734189a9aa6836e96bc3d5c99503808bfb1",
+    "bytes": 530953,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 1:12",
+    "sourceId": 420888,
+    "sha256": "6149099c503ce773c5fcaaed41c3e08b4ceaf4f92e898035980b246f997cfd69",
+    "bytes": 407204,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 1:13",
+    "sourceId": 420889,
+    "sha256": "160e1b340a823aefda0f587c948de72efcea6ed5437bc2b427d3e4b7930249de",
+    "bytes": 416843,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 1:14",
+    "sourceId": 420890,
+    "sha256": "15e1b8dcc82c370e789db6432ddc5802e8574abf29144efbadb4c4168b07c94d",
+    "bytes": 370364,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 1:15",
+    "sourceId": 420891,
+    "sha256": "4015813af19a54bcdd9e0d015a4efec56432bde0a6b430244d3c27fc3795ec58",
+    "bytes": 363817,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 1:16",
+    "sourceId": 420892,
+    "sha256": "2196e8210e3c1fdff747169f3f5f83368101418d916e55f5c307a4b0065ef92c",
+    "bytes": 317818,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 1:17",
+    "sourceId": 420893,
+    "sha256": "8df9303aa4426c6643ad105d9366dca3403004a539db414e431687a28f7fc13d",
+    "bytes": 527234,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 2:1",
+    "sourceId": 420851,
+    "sha256": "0b237804281bf75f4174d4f34aa9553f001ee353cd9fa8ce898338691df662f5",
+    "bytes": 386713,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 2:2",
+    "sourceId": 420852,
+    "sha256": "65efc2ebff77de2668de2d3dabf3829fc98cc2b7928133b56c8b4d6431d75ddb",
+    "bytes": 686154,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 2:3",
+    "sourceId": 420853,
+    "sha256": "09bbbf3c437b053404e106c72cecb4dadc78c61404ebab426b9fcb55c6077482",
+    "bytes": 243585,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 2:4",
+    "sourceId": 420854,
+    "sha256": "bc778e129f202030f2e16563eb6b4e12433e204a98ad3dd064affbf536b9588e",
+    "bytes": 376662,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 2:5",
+    "sourceId": 420855,
+    "sha256": "1836ed7aa1d2cfa628ba71c7e23390fcae2535585311eada23d587de85e716a7",
+    "bytes": 243784,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 2:6",
+    "sourceId": 420856,
+    "sha256": "92da03f360057ea6a588a6d03ae592461fdbaae35ac949ceca94049a3ff30a80",
+    "bytes": 203463,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 2:7",
+    "sourceId": 420857,
+    "sha256": "ea940d2b235c028bf1fbe3efc2116d3716b091d74df75662030dc3c40b624cd4",
+    "bytes": 186207,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 2:8",
+    "sourceId": 420858,
+    "sha256": "d63bc9ffd36369e3f049c054ccc1c7f556c906b6beee8c30af027de6338a92d9",
+    "bytes": 351148,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 2:9",
+    "sourceId": 420859,
+    "sha256": "933bb6636097f5d90d4264367f85826d407978790f1eb8eb1692b6587711a87a",
+    "bytes": 344968,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 2:10",
+    "sourceId": 420894,
+    "sha256": "6ee8f99772d99556f2d2cc31b86840a4bd28aa5cac14a10a15c522d5938d765e",
+    "bytes": 247159,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 2:11",
+    "sourceId": 420896,
+    "sha256": "9b19d0cf0b75570a176459ae9a2fa536882585458a0143e2cd87460284f3706d",
+    "bytes": 426936,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 2:12",
+    "sourceId": 420895,
+    "sha256": "c6fc996e735248e42b730c712a4a6b3757820ae24a3fa0386c9cd42067feece5",
+    "bytes": 288727,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 2:13",
+    "sourceId": 420897,
+    "sha256": "e2b6e86c2a86550196615b60958978ff711e151dedb310f539d2a58384f60eaf",
+    "bytes": 461966,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 2:14",
+    "sourceId": 420898,
+    "sha256": "8c8045a3ae33522b82ba4e6fcd3c6d06aa8214311220318a751957d5e6ae0f2a",
+    "bytes": 421903,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 2:15",
+    "sourceId": 420899,
+    "sha256": "a8626d23709a6aa1be4e6bbab0de26d017285284c17b004859fc34f1203062b4",
+    "bytes": 213817,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 2:16",
+    "sourceId": 420900,
+    "sha256": "ccc7ac015d1b9cd92844c98894b9955cbfa1d18a08f170947da706686bdc9065",
+    "bytes": 346246,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 3:1",
+    "sourceId": 420861,
+    "sha256": "940513e9a5d19cc43c8fbcdb841167ab464ed9aa540c3d8219f068090f0b3502",
+    "bytes": 368813,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 3:2",
+    "sourceId": 420860,
+    "sha256": "88fae024c303edd9dc040c90bc4f6ac5b5b814bbec60cc75e143f109dc78bc8a",
+    "bytes": 520959,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 3:3",
+    "sourceId": 420862,
+    "sha256": "c9764f5706bfd36b405929e060eefd1700e3c540d1815f3820fe604a66f8d9c3",
+    "bytes": 370228,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 3:4",
+    "sourceId": 420863,
+    "sha256": "71944a3ef14e418a637f96dac73c51ef3395ce0d52bf1304a249161b2103ffdf",
+    "bytes": 392562,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 3:5",
+    "sourceId": 420864,
+    "sha256": "ae6c616f7cc7815641967ee4f2b055d89a8b313eccfd8fd54ab08efcb26b665d",
+    "bytes": 402644,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 3:6",
+    "sourceId": 420865,
+    "sha256": "a725aec75a4b31eaa0380fe7f02d685ffc178c56f27c343101d4e2d160a0a45c",
+    "bytes": 299915,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 3:7",
+    "sourceId": 420866,
+    "sha256": "542231bf53b614bb492dfc6f027ee12ae8d125038d88143f5d62f09f0a8a422c",
+    "bytes": 192895,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 3:8",
+    "sourceId": 420867,
+    "sha256": "29e339b701c8706b2608d972a014e0c0a399b37cb904ff459bd095f48ff1c40a",
+    "bytes": 455397,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 3:9",
+    "sourceId": 420869,
+    "sha256": "804ad5760138549970c1eabcfff1b60eacd9ded625490c15abb9db5bcc5672af",
+    "bytes": 551507,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 3:10",
+    "sourceId": 420901,
+    "sha256": "bb805ae355ef4892c564437c01b769ba70d03925680ac093270f2e685366eb98",
+    "bytes": 386756,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 3:11",
+    "sourceId": 420903,
+    "sha256": "b7e8ff17e01f839901577a22f381ebd3cc6b308b7dc2b56f426cfec2719c3b75",
+    "bytes": 184924,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 3:12",
+    "sourceId": 420902,
+    "sha256": "8f30716b0fa7628bc82b4f30176c1c8cfd1412a4e5d0a3375c4e3c06724a946e",
+    "bytes": 157674,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 3:13",
+    "sourceId": 420904,
+    "sha256": "07daa408aa308b3e78254dd704743630b4af3f53e594ad007fd1a38fb5a96e20",
+    "bytes": 456977,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 3:14",
+    "sourceId": 420905,
+    "sha256": "fc2bf842f037c465a844a89714a23ea59e2c9bf31e20d28595582cd549defb7e",
+    "bytes": 376708,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 3:15",
+    "sourceId": 420906,
+    "sha256": "424ddfa6eff03741896cd8c6659b19ec17fc80bda0b3bd30b2168586f3704334",
+    "bytes": 388384,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 3:16",
+    "sourceId": 420908,
+    "sha256": "5af631fda5bf92ab271777a254c53fe820b6b2bf1aac3c9646a1a8a2bf0ffe22",
+    "bytes": 248841,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 3:17",
+    "sourceId": 420907,
+    "sha256": "7881dcba867f4f1ba63b1ce30615342c6f6e643059542d343dae91af4959c48d",
+    "bytes": 253857,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:1",
+    "sourceId": 420868,
+    "sha256": "8127912e3e7911a1a8d93a3a068108b1737baf1513bd7065e8e0d6ee1009c7c0",
+    "bytes": 99690,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:2",
+    "sourceId": 420870,
+    "sha256": "761a35aec0f779fcd54b123d53addccf0c7714260bff30e0bfa62db3da22b33e",
+    "bytes": 524246,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:3",
+    "sourceId": 420871,
+    "sha256": "ca34d1cf915123353a440c8dbbbe778bd44745bd7eb81602ad4f65d0d4908881",
+    "bytes": 557676,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:4",
+    "sourceId": 420872,
+    "sha256": "838e7f9cfdd9de0115e080f4d423d7642d3c914df4bd25398f4e8979637ec343",
+    "bytes": 423027,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:5",
+    "sourceId": 420873,
+    "sha256": "ac6dc558ac5b2252def6b12b8ed54719deb2dca1acdfbd644aa30fe0bd4059e2",
+    "bytes": 245885,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:6",
+    "sourceId": 420874,
+    "sha256": "9d871fbb8d6448327416536ad184e4bd231abaeb6cc8f0dd33dc4dd55184d7c8",
+    "bytes": 384437,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:7",
+    "sourceId": 420877,
+    "sha256": "e35a9cd1dc3c8b18d896be575e4adeaabdf640fcc84c55857208fbd212a621ed",
+    "bytes": 674823,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:8",
+    "sourceId": 420875,
+    "sha256": "efe51263078c3b0dd23bc05618bc288cdd7fe5889300432b32b16e48ae458250",
+    "bytes": 381770,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:9",
+    "sourceId": 420876,
+    "sha256": "7e3812dca385e78cfd7f1b5cf134bc00c7c2be2f0aecb1cd12a464a2d8231a73",
+    "bytes": 381800,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:10",
+    "sourceId": 420909,
+    "sha256": "8725e3eddd12b85d50134eb9403da3caa5b05659cb992fb2daa3594197bb9b83",
+    "bytes": 284000,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:11",
+    "sourceId": 420910,
+    "sha256": "8cca61ec020cc307742b605779d60b44a632aa4aec08b2132c089815eb4cf20c",
+    "bytes": 279273,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:12",
+    "sourceId": 420911,
+    "sha256": "e55e7052a555c3879d139ccd4f405007aa18b857067f66262a141987ac62fd9e",
+    "bytes": 512967,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:13",
+    "sourceId": 420912,
+    "sha256": "c55b9e471199e5e13145845b995925d971c810ed9a987c3686f55b2db9430532",
+    "bytes": 509686,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:14",
+    "sourceId": 420913,
+    "sha256": "af2227b2f703d8801800048759f10c6c91ca96210fc95a7f4415bad8a61ced7a",
+    "bytes": 407298,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:15",
+    "sourceId": 420914,
+    "sha256": "8618563390ffe26f1971af3cf045d071cfd432e0bba756bfbeb98324300055d1",
+    "bytes": 351323,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:16",
+    "sourceId": 420915,
+    "sha256": "eca12e4941a1d2c98c5b5a2c20c265611c28433c9199f9117eade6ddce6ad74c",
+    "bytes": 207544,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:17",
+    "sourceId": 420916,
+    "sha256": "5ffb01221982e91cfab89ce7890857baf4730a19f9efbb77ff578060c4f3d2b2",
+    "bytes": 357823,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:18",
+    "sourceId": 420918,
+    "sha256": "ba0533faeff5d426969276225d1e50bcbc560b8bac711d58754508e6cb127246",
+    "bytes": 565654,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:19",
+    "sourceId": 420917,
+    "sha256": "559d8df7e3d8b688a8b0a0ee6d26c01d1891b25ca25e4dc4e4b072b5fc8da4af",
+    "bytes": 170026,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:20",
+    "sourceId": 420919,
+    "sha256": "fc131a786bf9e254f47e05a2a0cd002fe0d7757f813215de8168ef2dfa942c8b",
+    "bytes": 397633,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:21",
+    "sourceId": 420920,
+    "sha256": "efa6ae782b96bb153eb35453904ee48d99bfd1cc9e7e9a858c6f3834e32eb51a",
+    "bytes": 367125,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:22",
+    "sourceId": 420921,
+    "sha256": "db610537bfb1a929e3ddccb74df0c8b0bccf0d2fdb942f2f7d7d47938a76083b",
+    "bytes": 439431,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:23",
+    "sourceId": 420922,
+    "sha256": "cd51ff2278f4b20a6b2e4d5ed2c0f8efda3c32010cd8bc936e5c76d00bd1dcb7",
+    "bytes": 337032,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:24",
+    "sourceId": 420923,
+    "sha256": "14166a24c1cc0764a792550a75d35f987f8ec57f0b45cee24dbc32d0786b26c1",
+    "bytes": 360801,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:25",
+    "sourceId": 420924,
+    "sha256": "e3e52dc6b7a2b65efa4a47bebffd41e988ecd27a9a4906cad7edcc47c0be4ea4",
+    "bytes": 418940,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:26",
+    "sourceId": 420925,
+    "sha256": "5814bf398d776bab62c3e36b091ea34f4ad630574d64890e8cf0bfcc88050dab",
+    "bytes": 371805,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:27",
+    "sourceId": 420926,
+    "sha256": "cedee93442ecd4fc325f565cb9b003b37be8b6a59739135ef58f7317327c5439",
+    "bytes": 477794,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:28",
+    "sourceId": 420928,
+    "sha256": "c8eb71b9c22925ec9649c25732b00816cd1c8de1a7d59107cedba4bda86007b0",
+    "bytes": 396273,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:29",
+    "sourceId": 420927,
+    "sha256": "befba2c0ef24f560203471b4127ede113170e721189042f6598458e67ef77516",
+    "bytes": 282293,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:30",
+    "sourceId": 420929,
+    "sha256": "025289174c40f26d41fa769b96518d663e4b308ba4855b7fba578464b48d4cb0",
+    "bytes": 416872,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:31",
+    "sourceId": 420930,
+    "sha256": "9b365e2117972354c6c226f407474f978cf56e386120627436f47a2429fe1873",
+    "bytes": 559381,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:32",
+    "sourceId": 420932,
+    "sha256": "1edc40e4486abad1c23a1b44f1930dbfccb3c4624f89f54a567a94d44851314a",
+    "bytes": 243780,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:33",
+    "sourceId": 420931,
+    "sha256": "7cb510978cdee7873c795ec617377eb8d3602db8142e0e1243de5f096da96611",
+    "bytes": 341524,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:34",
+    "sourceId": 420934,
+    "sha256": "7be945d353e40ca0f202873548449254eac9317b36e9e510e0bbe062b367fdcf",
+    "bytes": 402689,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 4:35",
+    "sourceId": 420933,
+    "sha256": "99d2ac0586b6cf9191004ed07046806e5cfbee82aeaedc725def2486ee0e1df4",
+    "bytes": 637953,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:1",
+    "sourceId": 420878,
+    "sha256": "30b91e76ee3e1abf20eb2b8963554e82ff0ac3cddfaae57158df405561d14d2f",
+    "bytes": 344988,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:2",
+    "sourceId": 420879,
+    "sha256": "ade6f7ce0858f79158925c3c56264311f4890e320a4d5871836897a195b8e607",
+    "bytes": 695232,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:3",
+    "sourceId": 420880,
+    "sha256": "95e9c118095f8025a5627364a921f82c81f54c96817e5a92e1da60e1e0b0554d",
+    "bytes": 373800,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:4",
+    "sourceId": 420882,
+    "sha256": "74741ded21f7cbeb75b46c50fe43a087ea95876437eaa8fedaf7b5135542e045",
+    "bytes": 740267,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:5",
+    "sourceId": 420881,
+    "sha256": "40ee39b209921e684a7913921e3dbf13a6be5d02e8cb604418619213567f5ca3",
+    "bytes": 256665,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:6",
+    "sourceId": 420884,
+    "sha256": "9a0da51550c9b43f006d4e148bf6190e7c0f4a42aa87b7c703bea3b58ffbcf18",
+    "bytes": 581952,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:7",
+    "sourceId": 420883,
+    "sha256": "ab63f2d230c6245b58d4fdfe259094699a5c4c1253a40ecf3dc2c2dabcaa5c47",
+    "bytes": 493730,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:8",
+    "sourceId": 420935,
+    "sha256": "10906bfd179bd5d7bd170729804a1df885ffea413c6f926a736b836e41eb5b91",
+    "bytes": 398562,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:9",
+    "sourceId": 420885,
+    "sha256": "9b8998138f68e9ee660bb8c39e380cfde40f57c3547da5d97612a33f9e92a524",
+    "bytes": 363839,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:10",
+    "sourceId": 420936,
+    "sha256": "636c0add595e8ea3d769fa5d9d3c574b6825732c9beb34851273ca4c97f2850f",
+    "bytes": 365814,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:11",
+    "sourceId": 420937,
+    "sha256": "ff58a3e7499254227b91541255a3804228caf034ae91a7b7765779f0b5f319e7",
+    "bytes": 728417,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:12",
+    "sourceId": 420830,
+    "sha256": "3925dc276d3e0c9ed8d23452020130a982f17bfc3a12aec1a2c6a1dfdb8893c6",
+    "bytes": 488742,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:13",
+    "sourceId": 420828,
+    "sha256": "1bf62215f0cc55e4b7170ae7510e045f76595aca5e32500449d92479b3b123e2",
+    "bytes": 373751,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:14",
+    "sourceId": 420827,
+    "sha256": "00f4703143f8689f6fff46c2fdf400f4c9f95d5a18efd6bcf15cfefd352f3c71",
+    "bytes": 98401,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:15",
+    "sourceId": 420832,
+    "sha256": "fdc504379f38ffbfe4fd38416c8ff95ecb93735cec276d32c44502ba22d7ea00",
+    "bytes": 579067,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:16",
+    "sourceId": 420831,
+    "sha256": "11d5d473db07bf0fd575740ee4c9b99b88f54581cef833160b9aba8ac025d88f",
+    "bytes": 549752,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:17",
+    "sourceId": 420829,
+    "sha256": "364acf2fed6b3acdbd5523c63566af818d159e78f805dc9e12bb5776efb20880",
+    "bytes": 380485,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:18",
+    "sourceId": 420836,
+    "sha256": "ad22ab1d19eaf07d8df579e5ea6abae04e30269cf44f0ad271b04642083a7b2a",
+    "bytes": 548427,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:19",
+    "sourceId": 420834,
+    "sha256": "7f314ed75634f44dbc9d987c0147c30a02f271eee25f68b0408dacac8ec71f0c",
+    "bytes": 152724,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:20",
+    "sourceId": 420833,
+    "sha256": "eb645124b4324728c81229df2e3760518b84e78880917fc82527612be3ce3737",
+    "bytes": 91725,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:21",
+    "sourceId": 420835,
+    "sha256": "c4c1a7320a4f7ba1bae01fa36304c88d2e37b639590857b1e9c424e9bae595bf",
+    "bytes": 445534,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:22",
+    "sourceId": 420837,
+    "sha256": "364767cb850bac6d2ab0a7814b728d4f1501eede8ad327147f6187de31b240de",
+    "bytes": 418720,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:23",
+    "sourceId": 420838,
+    "sha256": "07d564ab59a76f482aa5351eb0408864691cf6cb11971850bd6042be0c22e669",
+    "bytes": 570819,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:24",
+    "sourceId": 420842,
+    "sha256": "cf472173bbeeac97690203fc152bf4888cfc1e806c271ca487847b16911c3a0b",
+    "bytes": 541779,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:25",
+    "sourceId": 420839,
+    "sha256": "f5700cb5877a7655ae0224d02d4e6973d75a28c087cfa189188abeb40271442f",
+    "bytes": 276071,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 5:26",
+    "sourceId": 420840,
+    "sha256": "fab750f1c2d1803f03e13110d038c16fea467d67d69957d7c229ae48329dc3a7",
+    "bytes": 349898,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 43:21",
+    "sourceId": 423744,
+    "sha256": "31aa1df607a58b97edf5bf41013256c7b8bcdafa1596f2852c2ec15ebe992f84",
+    "bytes": 159204,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 43:22",
+    "sourceId": 423746,
+    "sha256": "81dfe0203dd6069575b9527a0f0dca9c41575c48dea06fb577e673287e96c08d",
+    "bytes": 178289,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 43:23",
+    "sourceId": 423745,
+    "sha256": "9d2d41298344b3a81e1c78df10494977be8431d88cacac6c726139fa6c59f2c1",
+    "bytes": 384631,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 43:24",
+    "sourceId": 423749,
+    "sha256": "055a831aa11e2ae17234fe7637d61cb73af9aa8db5d0883bc3b1b16c98a30fcc",
+    "bytes": 469968,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 43:25",
+    "sourceId": 423748,
+    "sha256": "35512fa3ff8ac192aee14c465e7f9d9622331d18d333ec8fd28b5e1b713e6d63",
+    "bytes": 271420,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 43:26",
+    "sourceId": 423747,
+    "sha256": "c52fe81b063f0afd58f49f26e452f14150695e60b7cd29266eeaa20c30df9e93",
+    "bytes": 239051,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 43:27",
+    "sourceId": 423750,
+    "sha256": "3b4e915e3d8ebf94c2732191a326db92d3fd03834f3da4860575d24a269a52cd",
+    "bytes": 178150,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 43:28",
+    "sourceId": 423751,
+    "sha256": "36faa26cac1dfe0da1e0a0d98c24b55835e594ddc0f2dac0639251ca0449c492",
+    "bytes": 255342,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:1",
+    "sourceId": 440621,
+    "sha256": "25acf7156beca9cd6bb2bf11eef6d79fc82c008faa38efd0230d5a5abbe0348e",
+    "bytes": 183126,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:2",
+    "sourceId": 440624,
+    "sha256": "1b61e0f02b51b29444d5091fffc370d4a1e0ea24109cfcc7815bc48d2d327de0",
+    "bytes": 378906,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:4",
+    "sourceId": 440623,
+    "sha256": "d503cccfe4804921ca458414c32bdc1719a1494d7903bd42f1d3fd97be52e1e3",
+    "bytes": 186094,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:5",
+    "sourceId": 440625,
+    "sha256": "b099830715debd4c1e2c474a8727db1e7a6bc7f96674259d48ffdec0e219122e",
+    "bytes": 391414,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:6",
+    "sourceId": 440626,
+    "sha256": "9e23c65898ff3bd22567002c5aa4ec6f3adb34ffd3a158fe331ab0e02e118f80",
+    "bytes": 397573,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:7",
+    "sourceId": 440605,
+    "sha256": "c3dca14074b82f16fe87d50384835821c2a5db0704021a89d98567f94100862c",
+    "bytes": 413922,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:8",
+    "sourceId": 440608,
+    "sha256": "b7fa18d1faf09cc3611e60a8ce785aaaf4b0d045ed51f947af1f39bdc19e25fb",
+    "bytes": 487393,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:9",
+    "sourceId": 440607,
+    "sha256": "1b8eb4eaa9cbacdb79ae6e9e695dcde34b4672f82ee163f99a128364d2a10bbf",
+    "bytes": 416851,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:10",
+    "sourceId": 440604,
+    "sha256": "71fcfdf4da40532bd083e8b0cf7e1ccc68799b0cd171e69c72631fcafc1d5181",
+    "bytes": 189955,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:11",
+    "sourceId": 440606,
+    "sha256": "80f347121a0303aa09528cfa71bd0bc97ce4c19f56dde1abb4cf718d9b5d3404",
+    "bytes": 376688,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:12",
+    "sourceId": 440609,
+    "sha256": "3695c71db5b3204fac1161122f7dc7ead18bc12541ca79c4ca5e1f7fbb51c2ae",
+    "bytes": 532213,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:13",
+    "sourceId": 440615,
+    "sha256": "c7283e5fc29f53bc1dbe14d78dad123d4a9c635a79657101a0bb8b79d7076a4d",
+    "bytes": 608768,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:14",
+    "sourceId": 440610,
+    "sha256": "4237c3361052195311d419afe5e2b45eedcbf2537c091bceeb8b2e39c698ad37",
+    "bytes": 373797,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:15",
+    "sourceId": 440613,
+    "sha256": "490058854c2d5314e794a053868ce218b5dc58376a6e27a12fb97c4a0052030b",
+    "bytes": 455151,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:16",
+    "sourceId": 440612,
+    "sha256": "51c9e673cde0716b770d772d21ecc2dc1df3846f6b80156f46308f5c965eed71",
+    "bytes": 476158,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:17",
+    "sourceId": 440614,
+    "sha256": "d52c507509afd4c30302013bc4ff1069e5cf6175bbf10f4d972688a163171821",
+    "bytes": 453571,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:18",
+    "sourceId": 440611,
+    "sha256": "9fb9568cbe2b316800053999d82eca1a164e4565744a071d22438a4009557e87",
+    "bytes": 272748,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:19",
+    "sourceId": 440616,
+    "sha256": "4a921308a13dd95618b5ce9e79ee7e58e161a2ecc2b5a48b2d8a98a01d170593",
+    "bytes": 733879,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:20",
+    "sourceId": 440619,
+    "sha256": "7cc5a7b4730177eee5396f43331bea815bfd267c0d567a184d63d525cc8de790",
+    "bytes": 332090,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:21",
+    "sourceId": 440618,
+    "sha256": "fb448bc963aa4aecef19e5307c5b97bf3d79bdb099e8054d8fc7cf9d77d475f6",
+    "bytes": 339955,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:22",
+    "sourceId": 440617,
+    "sha256": "a9648205b0576f7a18897e6ce117126953f85172da7a561bfe845eb608b9418c",
+    "bytes": 282341,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Isaiah 44:23",
+    "sourceId": 440620,
+    "sha256": "c421ad6b70dd4c980522144c66931010cb0adb8678055ac7d9c6915ced607702",
+    "bytes": 549826,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:1",
+    "sourceId": 420940,
+    "sha256": "aee5698dc14587f6d393950087a202febc0642f9bbd778f2b73c899bf9430f54",
+    "bytes": 99714,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:2",
+    "sourceId": 420948,
+    "sha256": "e7df76b42e06466c9325d961612704d1f9eae2876e17b06c3845281179cbc400",
+    "bytes": 520969,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:3",
+    "sourceId": 420947,
+    "sha256": "2e312d683971bb94c53647158ea3597214270b7a66f76e14a326b610a74cc3e9",
+    "bytes": 608640,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:4",
+    "sourceId": 420950,
+    "sha256": "67bdf96f79f1338978d4b2deea1dc15948782f0d7bafc6922449c48383e520e8",
+    "bytes": 357871,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:5",
+    "sourceId": 420951,
+    "sha256": "c4c678b84a496413493cd4d57163ed8a40533d33ce07a2144070d079a1325861",
+    "bytes": 500390,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:6",
+    "sourceId": 420949,
+    "sha256": "6a05cd7411abd663e994d6c7f54bb45ffc7c6a423ae721ccd6ab0797e2633b3e",
+    "bytes": 191183,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:7",
+    "sourceId": 420946,
+    "sha256": "1d54309111d74c95a8b3ed2530e5641f75e2d9949593c76735dd387f0ff2797f",
+    "bytes": 288982,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:8",
+    "sourceId": 420956,
+    "sha256": "aeb46f11d5dfb2be6182251ff30991e8730273b87702385d7badc98e82cbea97",
+    "bytes": 498700,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:9",
+    "sourceId": 420954,
+    "sha256": "955799b240f46c82711d5bcd991386c7577d508da85911b4867011a11778016e",
+    "bytes": 335252,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:10",
+    "sourceId": 420973,
+    "sha256": "abcb3d4922e63b21ef4ea64a4f95823951ebed461373161eb31e4e98f9515285",
+    "bytes": 341707,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:11",
+    "sourceId": 420974,
+    "sha256": "21fb47b02efff64cfe14ccd277a6fdaeb9adde61771d3dd4facdc01730f62c31",
+    "bytes": 402615,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:12",
+    "sourceId": 420972,
+    "sha256": "dc8e148aa641b74cd169fe514d04de4844c2ece6dbdf851a997cc6712d24838d",
+    "bytes": 95487,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:13",
+    "sourceId": 420975,
+    "sha256": "e72325954595ac230a7f5fa657fae14bbc9c25855d443def6a3822ebb922d5b5",
+    "bytes": 551368,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:14",
+    "sourceId": 420976,
+    "sha256": "d43586af5384d3e2fc7b3e442b2d265efd01e10e1931b468b7c0e49e9ca33c57",
+    "bytes": 375411,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:15",
+    "sourceId": 420977,
+    "sha256": "f4739252be9456d3924af7dbdfcdfcb39cf6a0bc5779503a5220c1074885496f",
+    "bytes": 330314,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:16",
+    "sourceId": 420978,
+    "sha256": "7c5f922a081e6a7720033659e916312dca3cfa8ea4c5453cdc87b650980d1e5b",
+    "bytes": 155692,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:17",
+    "sourceId": 420979,
+    "sha256": "d255f2134eb71852d3006e88bfe43f1f73124f47fe0d85f66591f6ef78bfd752",
+    "bytes": 91699,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:18",
+    "sourceId": 420980,
+    "sha256": "deda3b9881ae83123b5703e480cadcd454755b3ee29b9886753cae3a4b84a764",
+    "bytes": 506564,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:19",
+    "sourceId": 420981,
+    "sha256": "43da7d5addb5a22cce9da31f990439b7d875c58a7333b5e49f118d293b43b58a",
+    "bytes": 269662,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:20",
+    "sourceId": 420982,
+    "sha256": "2a190f2103d09c75df04af739fa756c042410cde60c8e885040ae259dd9f5486",
+    "bytes": 383306,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:21",
+    "sourceId": 420983,
+    "sha256": "e0d4fd2fbafa0798495fcf303da239d98d121370e77ccbf63569bd7a563d8d9a",
+    "bytes": 389637,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:22",
+    "sourceId": 420984,
+    "sha256": "51e2e3e14ba68e51f115b38b49f4f2f16ea1c3e4108d7e73767831a9b6ab61cd",
+    "bytes": 170331,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 6:23",
+    "sourceId": 420985,
+    "sha256": "0422df5fc49f3bacd9d7cb0b6856501d6a39e6a7d6c0e0c06796ac2c47fdefa9",
+    "bytes": 386543,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:1",
+    "sourceId": 420952,
+    "sha256": "a179152fe4fae838946e1ff982021d70ebc2534e39404f8ee461efe8d1bf0134",
+    "bytes": 123892,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:2",
+    "sourceId": 420955,
+    "sha256": "848026af8eba81f689d08dcecd2ed8f302a816f64d346f50179b30d959c88299",
+    "bytes": 355602,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:3",
+    "sourceId": 420953,
+    "sha256": "da518dec730695067eee0d2a7bfe117fd0bbfe29018eeeda6fb18baeec7d8aaa",
+    "bytes": 293950,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:4",
+    "sourceId": 420957,
+    "sha256": "4e8ffb93d5114bff984579314d325cfff51747682025a6b15cd3941abb42f2b9",
+    "bytes": 402669,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:5",
+    "sourceId": 420958,
+    "sha256": "0826eed8796f0bd819ef5621990d80df87317062011812b8f17a8b3d8653dba4",
+    "bytes": 234294,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:6",
+    "sourceId": 420959,
+    "sha256": "a2f90ec21630edb86bd6fb0e8f5713b0e1da1e8d9892b271b0be90cb1752fe66",
+    "bytes": 251762,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:7",
+    "sourceId": 420960,
+    "sha256": "099632daa42663a99597347704208a8144a73ff8b9067910940b9b164f5ff2f1",
+    "bytes": 263409,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:8",
+    "sourceId": 420963,
+    "sha256": "fd993ccabc63601c5b2ace4e1f1d88b3293c9227ddb92b2ce6d01fd2a06665ee",
+    "bytes": 289080,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:9",
+    "sourceId": 420961,
+    "sha256": "fa602362b3f3b5604381e214646cd3eeae8e91af88310fcf512247b84721ce05",
+    "bytes": 392663,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:10",
+    "sourceId": 420987,
+    "sha256": "c767c3e383d49d9983c49555ea0dcc84e1cbf2342b9d7656142b93359af06a46",
+    "bytes": 269734,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:11",
+    "sourceId": 420986,
+    "sha256": "4015df55ce1554401406e9ea554ec8959d4fa2d9f24e4abe49c14d6dafc1e1f9",
+    "bytes": 157539,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:12",
+    "sourceId": 420988,
+    "sha256": "2dfc38d8a76f93b90cb6c194f03b5ea64bcbbc11efe853af617574283de1ea02",
+    "bytes": 536881,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:13",
+    "sourceId": 420989,
+    "sha256": "91dc9b00e5e2d36731ab839e7919ef62f19bac423d641bfe0a8a380eb316c0ec",
+    "bytes": 216420,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:14",
+    "sourceId": 420990,
+    "sha256": "2854534afbdc6ac683e2d8591f950a7503adf35641cb1f0dfbfb434c80472d09",
+    "bytes": 357900,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:15",
+    "sourceId": 420991,
+    "sha256": "e4e335d8e906a6369e41ea819d0dbfe8bd19e6128fd1bd05b9631628e2e33130",
+    "bytes": 323416,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:16",
+    "sourceId": 420992,
+    "sha256": "9881001d923b5ce2df1ea64ff0ffc40541f7e004c990d0bfa4b88427e734740d",
+    "bytes": 455290,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:17",
+    "sourceId": 420993,
+    "sha256": "bd8c3bf086dc28be513fc68f54221313b6e9e8b028fc9fa869c76840ca4f819f",
+    "bytes": 213739,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:18",
+    "sourceId": 420997,
+    "sha256": "dba79026245bf6046202be447cd5d24777f0f03832406d519c10ba894bfa52a2",
+    "bytes": 613734,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:19",
+    "sourceId": 420994,
+    "sha256": "fe111141b761dc66292e487ec7cafd7875278eb8dda3a4794e8fccffcd80e8f1",
+    "bytes": 343306,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:20",
+    "sourceId": 420995,
+    "sha256": "bcc5d53a7b7d4d6f36dc71c190c944d589ad4f51ad281ee27462c1b784995a1d",
+    "bytes": 421706,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:21",
+    "sourceId": 420996,
+    "sha256": "cda95223b0ad2bccd0cb14c8d69bd916e029d1af16a2cc24ecc63dfe272ff719",
+    "bytes": 674645,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:22",
+    "sourceId": 420998,
+    "sha256": "76b3342d22461854c26a7e3f7f850076a40f553a315b47d538110e8c9e5fe739",
+    "bytes": 98390,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:23",
+    "sourceId": 420999,
+    "sha256": "952697e2d42e6e9304f86c6e325769bb084658f2dacc26d425a2cd00b4a2e149",
+    "bytes": 298133,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:24",
+    "sourceId": 421000,
+    "sha256": "cc8e90a164058fd12cfa3b2c06ee6c5d3b422bed64559291cf564c5c0e5e1874",
+    "bytes": 245845,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:25",
+    "sourceId": 421002,
+    "sha256": "51da95ee626a73b0c9bcae5edc39ab9b509fcb105a5672855ac4639e357b2fa1",
+    "bytes": 384084,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:26",
+    "sourceId": 421001,
+    "sha256": "93a018c1007a9d7b52aea1c2c3ab8610214f8ea12d6c4f86e1545f77f64e2fbe",
+    "bytes": 218092,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:27",
+    "sourceId": 421003,
+    "sha256": "88c8213cba25cfbfd2a765f88c17b7b719d6acd0005c8ce1e762324ee37f41e1",
+    "bytes": 229803,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:28",
+    "sourceId": 421004,
+    "sha256": "69b3a2d800f3fe4c2e1e8b3e60fa275c38330d216940dc9de1b40f5615297d4f",
+    "bytes": 95367,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:29",
+    "sourceId": 421005,
+    "sha256": "928ce5da0fcf9e8813222f515ceb12828ea2db3b62824ce4a946cb178e82d846",
+    "bytes": 394704,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:30",
+    "sourceId": 421008,
+    "sha256": "76998fbfb1ba4fec2abda380b0e3c04f516beee30e51e0d2d86aa3bb8b23e2ad",
+    "bytes": 413882,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:31",
+    "sourceId": 421006,
+    "sha256": "82804e3b5bd5dc30e7c3fdb2822c57a909b4e167c6611a52aeed95a5131580dc",
+    "bytes": 261810,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:32",
+    "sourceId": 421007,
+    "sha256": "5b33793eff3093efd51f84b80bbd153123de4620ca23acb635ab7bc3d597b2ec",
+    "bytes": 225080,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:33",
+    "sourceId": 421010,
+    "sha256": "664302de69bcdd6fe5997c2a13a811595d7753d6a5b7f3e162a7577be544008d",
+    "bytes": 345012,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:34",
+    "sourceId": 421009,
+    "sha256": "300083c236a0cede171409bc8f54033195aff5ac76be44c3f9844c1242ceb581",
+    "bytes": 645958,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:35",
+    "sourceId": 421011,
+    "sha256": "2375702c27bcc04819ae94b7b2f84fcee26f3d4ae76abc898f72b9a43aef469c",
+    "bytes": 307774,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:36",
+    "sourceId": 421012,
+    "sha256": "1aa7d5a2fae56d115abad790722a935930cda97c75ce10d7750eab4a96250c1b",
+    "bytes": 352926,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:37",
+    "sourceId": 421013,
+    "sha256": "19bad1e87f341efa56a4e514a000386d9706283d9c726cd84fb940c03a98ee89",
+    "bytes": 322414,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 7:38",
+    "sourceId": 421014,
+    "sha256": "b3359c60686b28de2ca0602afca091d722444bfc2daa3fe7681c403c7a9464ae",
+    "bytes": 439498,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:1",
+    "sourceId": 420962,
+    "sha256": "4226f88e570fb438b6403a392ec6a046175887d077a07980b28b553ae8b35c0f",
+    "bytes": 90426,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:2",
+    "sourceId": 420964,
+    "sha256": "551c60b6cedfb323bacb56e7778c11fc9a2259c042d1fa07582aef76543bc849",
+    "bytes": 461922,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:3",
+    "sourceId": 420965,
+    "sha256": "969b8b13e2acbba30adbb18457dad4f5cc92b2702b6551ca0185db222963fd7a",
+    "bytes": 169070,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:4",
+    "sourceId": 420967,
+    "sha256": "7db256626fcd536095e7d37344859c84056fa67dab3501323cc21f925ea89075",
+    "bytes": 309767,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:5",
+    "sourceId": 420966,
+    "sha256": "cc086ee48bf9343fd91c82cfb051faeffa54564d6be46a23d61fe42a4a637e70",
+    "bytes": 259674,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:6",
+    "sourceId": 420968,
+    "sha256": "025a783e78c3844c1babb4be20d16e66d691351753564d8689f1fda6fc2329b2",
+    "bytes": 227979,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:7",
+    "sourceId": 420969,
+    "sha256": "29cf6e477a0981a64bf00db810a980c06d23ef874596edb8880c2687cb2bf0fa",
+    "bytes": 556354,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:8",
+    "sourceId": 420970,
+    "sha256": "6e5d1daa146db050816254dcd48e766773ef6db57244fee59e3e5750e22ce8c4",
+    "bytes": 230007,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:9",
+    "sourceId": 420971,
+    "sha256": "fc3c4483cf0ce0c5f86224dd37562323909d91b8eccab4e3e41f6ddfb49d640c",
+    "bytes": 485815,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:10",
+    "sourceId": 421015,
+    "sha256": "25077b65f50e309c489635532f1371bb1452d35aaebf74727fa3dd4681fa72be",
+    "bytes": 281069,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:11",
+    "sourceId": 421017,
+    "sha256": "d042aa5d92d7b0451e6c096eae3818059202911cc4faecf7c5758723fb31c128",
+    "bytes": 416620,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:12",
+    "sourceId": 421016,
+    "sha256": "e3a5383f3f7034c8496467b2996bdd3a7bb0604031d18a7deeb1be4d4df7f495",
+    "bytes": 234270,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:13",
+    "sourceId": 421018,
+    "sha256": "60b9f0e6f50da96ee470950f9c27b7e5598e45305d89fd3f1aa9fc7f258e29a9",
+    "bytes": 474951,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:14",
+    "sourceId": 421019,
+    "sha256": "fb059767ecc2be245a3633acf00e8b160989233ef992eab43dc432a534e2bd59",
+    "bytes": 311221,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:15",
+    "sourceId": 421020,
+    "sha256": "2bfff72ba142e0d2ff7d9539f8888ce4069b43fc46e2add7058ff21002f08aa7",
+    "bytes": 648848,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:16",
+    "sourceId": 421021,
+    "sha256": "f100a96a11033b9222b43d8b6a5d8a9677908af7ef6a1ce3ffe485d16d799c40",
+    "bytes": 439444,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:17",
+    "sourceId": 421022,
+    "sha256": "692564c62ca7e0c65dbec92724f1e721abcfbbeb36395b664b06d02aa5dd65d6",
+    "bytes": 359230,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:18",
+    "sourceId": 421023,
+    "sha256": "30b18e2bb6d1284b398566acb2f8724f9c94571f8fb358534a29c841c3ed69d4",
+    "bytes": 320718,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:19",
+    "sourceId": 421024,
+    "sha256": "28796cefae1aa952df9e3271244d5be83dc3e168566b0d9678eaed326d330755",
+    "bytes": 215393,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:20",
+    "sourceId": 421025,
+    "sha256": "b16dbd8564a87278a9d83a5cff3ee81f6c7f3bf4f322088d8b7687acc697e1a6",
+    "bytes": 288948,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:21",
+    "sourceId": 421026,
+    "sha256": "6e2d7fe5282244a9b9b29230c0b165c84d338b73d1922e3321ed0a17e9fb6277",
+    "bytes": 556385,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:22",
+    "sourceId": 421027,
+    "sha256": "07e5dc6c3e4b8630cea6a3259bea15951a460693557f88b043e2871e7b919da1",
+    "bytes": 346378,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:23",
+    "sourceId": 421028,
+    "sha256": "7c75341b47f114d43026b6f3008de8efeca488a62ffb925c49a4c7309ae93e33",
+    "bytes": 501721,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:24",
+    "sourceId": 421029,
+    "sha256": "1839da7ee865fac2fbba8608a887931dc931deef0a1d4770e201dac3b50f2130",
+    "bytes": 577032,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:25",
+    "sourceId": 421030,
+    "sha256": "e85e4542cd996211cb97a096b08d9d347e3d38100efc1dce343e623ea4b9cfa6",
+    "bytes": 470019,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:26",
+    "sourceId": 421031,
+    "sha256": "6e871cf3a1ffeb24cbf387a06aa64a9ae02dcd95d4321b66d0abdd19eb1222b1",
+    "bytes": 616789,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:27",
+    "sourceId": 421032,
+    "sha256": "6d9c63d929f4821398680d194b510111e89af344b5ff1137f2eb0c4786747820",
+    "bytes": 327511,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:28",
+    "sourceId": 421033,
+    "sha256": "7842abd15849ba840a601de32c1a83942f9bbf52014815f83dbf751c2ba8ef78",
+    "bytes": 370446,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:29",
+    "sourceId": 421034,
+    "sha256": "cb5bee537f84434a498312677f6261462e62543ccc781e7e0a7430580ed674c7",
+    "bytes": 458633,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:30",
+    "sourceId": 421035,
+    "sha256": "058a83ed1c2c1a52435fc83b5ce1339a7e1b0a74b3ec0bbde2e5d967b0ec5280",
+    "bytes": 663481,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:31",
+    "sourceId": 421036,
+    "sha256": "d1622c3d6f40385d2f8263f4ac8dd4ecfd32f7d87d1236bff0f6f808a5c5f861",
+    "bytes": 595927,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:32",
+    "sourceId": 420941,
+    "sha256": "9932759c1157bdabed1989a42e4681e6645f8703694d30d3394e8b12a85035d8",
+    "bytes": 176922,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:33",
+    "sourceId": 420942,
+    "sha256": "5d29158d33ce5e46067721ab4422c0eacf46d16de97f2227e55d56563facde78",
+    "bytes": 431526,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:34",
+    "sourceId": 420943,
+    "sha256": "1b52cba7a2da3a653416dc20d901b042e110d7752c03908adbaa5a7b16a1584d",
+    "bytes": 250517,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:35",
+    "sourceId": 420945,
+    "sha256": "cf8edcb86a54cdb5878303449d89fa4761ca62104d6c0eff9ca423218620d0db",
+    "bytes": 431528,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 8:36",
+    "sourceId": 420944,
+    "sha256": "3482c757af009a33d84fde3014270952d2a0f0b8e0a20542fb8c8f897abb6099",
+    "bytes": 249008,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 7:21",
+    "sourceId": 440640,
+    "sha256": "62ab82d4437da273c6daa3e247859e2e3ac118abd5a670fb40a7e463ee7ed85c",
+    "bytes": 315723,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 7:22",
+    "sourceId": 440645,
+    "sha256": "f01f1d1f5fcd4a87956d0eff2c00648c2353ec1b4910a0872398771e53a85542",
+    "bytes": 404290,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 7:23",
+    "sourceId": 440644,
+    "sha256": "a357b6e3b13b8b9aad89d7ff70732ffac8ec9ca0dd3dbf8f13824c161f429b60",
+    "bytes": 618684,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 7:24",
+    "sourceId": 440647,
+    "sha256": "cd09796ca6f42aa96a172c9ff2dd9bd3ac0147e8de9a5050eb6f70839145e6db",
+    "bytes": 386720,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 7:25",
+    "sourceId": 440649,
+    "sha256": "b51e3c4181f39397a12710861807a03005fffc40acce575fbbb3d84f96742f48",
+    "bytes": 490747,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 7:26",
+    "sourceId": 440646,
+    "sha256": "c26e7da505f59425f22740639004880369062859c003910d21943f7a1a4e78c0",
+    "bytes": 307939,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 7:27",
+    "sourceId": 440648,
+    "sha256": "0d219bd5e43846898e3e6a25f4101dff5b437973a52ab388ee95fcfed540838a",
+    "bytes": 337108,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 7:28",
+    "sourceId": 440650,
+    "sha256": "366b020563ff026b2c1673f8f58ff9c4c1b67f18bb5d99145ba069fc6c948eab",
+    "bytes": 514658,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 7:29",
+    "sourceId": 440651,
+    "sha256": "911a9c6f3a0cfa02d605e35a610eabddbbbf035b25fdb5e2af0082ece331e30d",
+    "bytes": 378874,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 7:30",
+    "sourceId": 440652,
+    "sha256": "b8a39f6393e4f7c7fd4151860547b1bc5d9aef1b3a16552031af052c45844a19",
+    "bytes": 431397,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 7:31",
+    "sourceId": 440654,
+    "sha256": "3eda7bf43037134aec0cdd746462e5fe6203af66299e356216968399d99f0f03",
+    "bytes": 531015,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 7:32",
+    "sourceId": 440655,
+    "sha256": "2e973c5ce8184a73f25923a1f473389a66eab773ddd84fbd6a0e9c768ea8bd65",
+    "bytes": 488715,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 7:33",
+    "sourceId": 440653,
+    "sha256": "09c74508b0da0a3765e5ac86e88328fd792d05f5cd6441171d454980ac5b44a7",
+    "bytes": 348084,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 7:34",
+    "sourceId": 440656,
+    "sha256": "0fb3ce82a259129e3dc2438a783ad9a342440b0396059c357eae2b1553f269d5",
+    "bytes": 532170,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 8:1",
+    "sourceId": 440657,
+    "sha256": "2bb3a5d45d32c85862a066f318ca113a3117b743267a511e94861179015d0ed3",
+    "bytes": 692377,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 8:2",
+    "sourceId": 440662,
+    "sha256": "4d384d014adde4c6e554f7fbcd88afd665c976d07c98286c5e75303d06954c18",
+    "bytes": 908527,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 8:3",
+    "sourceId": 440661,
+    "sha256": "89399fb3062f63a8a56c01815b2cd6613045a7512824d4bba069414054cf119f",
+    "bytes": 538881,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:1",
+    "sourceId": 416057,
+    "sha256": "b6fd35bbae934b8ba9b9e43a5180331c8b6e7d422903ee4d1f7bf5e277721bf2",
+    "bytes": 247208,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:2",
+    "sourceId": 416062,
+    "sha256": "ae99c3a218ed3935f81d0fed8d1c82251d2029e87e65cea754f2fbaa9b3107b5",
+    "bytes": 374027,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:3",
+    "sourceId": 416060,
+    "sha256": "ffd1e5751e7a7e4c659ab12baaf8e60006044b9c7eca121dc4b6f3479640e232",
+    "bytes": 351262,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:4",
+    "sourceId": 416059,
+    "sha256": "df365d1daec7de5a3a0adaac468ba834444a270565c1155a68505f8c33d2b5cb",
+    "bytes": 370576,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:5",
+    "sourceId": 416061,
+    "sha256": "644cac30dfd9b8408ab5d1682f61bbc8ac02c686562ae60f9f154bb070c40edd",
+    "bytes": 362629,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:6",
+    "sourceId": 416058,
+    "sha256": "1131aae505c76c8e4aa6e18ad1248dc620713d3a360348772027e4f1ec3cab3e",
+    "bytes": 290302,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:7",
+    "sourceId": 416064,
+    "sha256": "6a308425387c2702829e3047bfe94544f4b4ec575deeb19d37834418f600a508",
+    "bytes": 604470,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:8",
+    "sourceId": 416067,
+    "sha256": "8fbbc35e5afbebb8aa43aeff36f59d38484ffa5d0188c1c4e954142cdcb6b180",
+    "bytes": 234240,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:9",
+    "sourceId": 416065,
+    "sha256": "81d160b4e3fefad1410f68ac989bebd176df77e48dd975f2af4218a299a65ec0",
+    "bytes": 448571,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:10",
+    "sourceId": 416085,
+    "sha256": "fdf8c1734f1dae293910ed25de42877a78d604296102e495c5c0320c8b8ea095",
+    "bytes": 370573,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:11",
+    "sourceId": 416084,
+    "sha256": "671e6273818e2b224cfb11412c55fc373d1180ac6bb76b228dcc123476e79d6d",
+    "bytes": 197835,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:12",
+    "sourceId": 416087,
+    "sha256": "09e1f8d25a13fa25f999c15a3e19d33d87411fb5f303082187e7e0eee8e6aac5",
+    "bytes": 333727,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:13",
+    "sourceId": 416086,
+    "sha256": "5d1fc679e0fbec915e9a9703a13d3551ca91a73cde93a6d92cdbeda1b546752c",
+    "bytes": 289977,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:14",
+    "sourceId": 416088,
+    "sha256": "b4f3c4ff21b3713d719c1158d901e3a29e92388abfc9ec22d5d5d75951c1045b",
+    "bytes": 210628,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:15",
+    "sourceId": 416090,
+    "sha256": "ef436fac42bc84da79f524cf36fb240a50b3112188366722df6402dd0c159b4e",
+    "bytes": 388502,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:16",
+    "sourceId": 416089,
+    "sha256": "bf165b0b1dab5b0dc764b471750b7a132607f13c28eb32a69b5159ceab22575d",
+    "bytes": 169152,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:17",
+    "sourceId": 416091,
+    "sha256": "61bdae5e4f8e91e3b7e84bd0cbac5bf09985f17fb2348d74eb74e472e942dc54",
+    "bytes": 317841,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:18",
+    "sourceId": 416093,
+    "sha256": "0717fc30ca1c3d38014053c81d14d1a9b9502719cc31bfd9fece20a1786e14d6",
+    "bytes": 439271,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:19",
+    "sourceId": 416092,
+    "sha256": "0c08b23853b84e0fccc091ccd5bbd1558005dc3ab4cfbc1e8baa11e0681ca042",
+    "bytes": 289023,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:20",
+    "sourceId": 416094,
+    "sha256": "5aee29f474e4e9f72b955104038127210802fa66a3ddded7bfd74cb2dd1a961d",
+    "bytes": 208703,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:21",
+    "sourceId": 416095,
+    "sha256": "893a1d5d77287f9d0ff5894cdcdc60b5b18a0a3f05b1236e0ffbfd88eaee1cba",
+    "bytes": 344977,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:22",
+    "sourceId": 416096,
+    "sha256": "18ec227a857dc89d2bf9cac7124f5c95404e789cf6189867e59da23a2b29532d",
+    "bytes": 384437,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:23",
+    "sourceId": 416098,
+    "sha256": "5977619d57bb6dfac7049638d5ae4b05d49b4d228668a7648b027c7281be89f0",
+    "bytes": 335448,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 9:24",
+    "sourceId": 416099,
+    "sha256": "04b3c2a05323296d6b2beef6ecf73a5442728d276663046bfa31125f9adb9aa3",
+    "bytes": 391414,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:1",
+    "sourceId": 416063,
+    "sha256": "5e5d97ddb1ad49e149113b22385e25dacca243d5866d6a6cf211303ffc10dca8",
+    "bytes": 628340,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:2",
+    "sourceId": 416066,
+    "sha256": "587c54a89528c7a9e829ce87b0de07a13d9f77bc830b32eef8f242454c32944e",
+    "bytes": 215350,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:3",
+    "sourceId": 416068,
+    "sha256": "301d73af315d317852b8ebe337a55ce99a93fcd85bab054b7933711a9b16d0af",
+    "bytes": 411845,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:4",
+    "sourceId": 416069,
+    "sha256": "cc965f58cf21dc99a2976853bcec57859e8a4b450a5b70304415f0ba417114aa",
+    "bytes": 562708,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:5",
+    "sourceId": 416071,
+    "sha256": "a4b0d5887574a0043b3e53be66e17e354071fa1bb6b9d9a124d7d8c5936216b3",
+    "bytes": 259718,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:6",
+    "sourceId": 416074,
+    "sha256": "c96dcd7d96bef53c62bb20641d9f87e92368c8719b994f1057f6d8c752cb011a",
+    "bytes": 801103,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:7",
+    "sourceId": 416072,
+    "sha256": "2c7b5062987d88a85c3042e7c302999c0fd82885af80e6c9aa2986f6d4893cd1",
+    "bytes": 357852,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:8",
+    "sourceId": 416073,
+    "sha256": "b522653630a9f7101bccc5af8464d87cdd5d61a238b2552ed09216132f9b0de0",
+    "bytes": 114268,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:9",
+    "sourceId": 416070,
+    "sha256": "c02eb3d8d9e2be01c6dffe8f7dba5fc7111651c383333daf4eb33df3fb43f0c7",
+    "bytes": 429900,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:10",
+    "sourceId": 416097,
+    "sha256": "06847136691206d0a76d83ba52c982c57ea9c38625126278f4314b12a660fb21",
+    "bytes": 213764,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:11",
+    "sourceId": 416100,
+    "sha256": "a45db7f572e1388a000f7a9dc2d711a5590cc98fe47d525465936c730f7ded98",
+    "bytes": 311201,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:12",
+    "sourceId": 416102,
+    "sha256": "4523368025421dc8eee94d66e05d48cea9c23c9850bdc59ce9d3296903a332fb",
+    "bytes": 681006,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:13",
+    "sourceId": 416101,
+    "sha256": "5234836884fc5a249bcc187a127d7e592f1f2a01e1992e40156122b0195f6be0",
+    "bytes": 355898,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:14",
+    "sourceId": 416104,
+    "sha256": "ef2de79c55f06a347c9a3ca8c5228e08bfb8c4ca8f61629b715c90aaaee2ca53",
+    "bytes": 631331,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:15",
+    "sourceId": 416103,
+    "sha256": "48dbaf20dd33773db2870714f4db1a85ab0a01a58a8e7f1961c4f0b9107594e8",
+    "bytes": 574178,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:16",
+    "sourceId": 416105,
+    "sha256": "6b17258f0528910d0d4733c488bc545044d7c2b0632e94d285577bee84dc7286",
+    "bytes": 519143,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:17",
+    "sourceId": 416106,
+    "sha256": "15093eb34a28c229612a6f000e05f4a071838bb4ead6057107ca1f92900bbc38",
+    "bytes": 551462,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:18",
+    "sourceId": 416107,
+    "sha256": "cdf91e2e7624b8657ac85d5b5d3d64395ef8e80ff885eba7761d4d13c195e04c",
+    "bytes": 325833,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:19",
+    "sourceId": 416109,
+    "sha256": "9d3f752304947e11ca88cfb38b5d820d10e9603878f2795d66aa54443a092de2",
+    "bytes": 597785,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 10:20",
+    "sourceId": 416108,
+    "sha256": "1b138316e24ca6f8ca87d7f52947e0c7528a6093d26bb696580e043fc7f811e0",
+    "bytes": 130102,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:1",
+    "sourceId": 416075,
+    "sha256": "69538e9f73afac88051ad1a6ff9c53ef29058efa5617774216628aa0b016ca90",
+    "bytes": 155631,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:2",
+    "sourceId": 416079,
+    "sha256": "805e848569b182a4fa736551d9802fac73de3bbe71cf4360dc232f413460e747",
+    "bytes": 272751,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:3",
+    "sourceId": 416080,
+    "sha256": "3d8d60f98bd05a7eb7abf3eab7ad708ea46496e7828c6f28ad823749e40c5886",
+    "bytes": 303387,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:4",
+    "sourceId": 416078,
+    "sha256": "37413799fdaf1cdda3c1cebf1f318aed28c554578458655dac576f8612650a28",
+    "bytes": 471215,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:5",
+    "sourceId": 416076,
+    "sha256": "1f33d0bc710d727f59bedc746f89b1bc5f1e614e3cf78aadac1a9211f7a83e91",
+    "bytes": 243968,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:6",
+    "sourceId": 416077,
+    "sha256": "b4555c9ae2a9185da6552d00ea81075ab40b5df4b8bfc3207eadefd5a7647dca",
+    "bytes": 255595,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:7",
+    "sourceId": 416081,
+    "sha256": "c32486e342a5a748681ee87363362a2dd1df34fbf201340ca0dae67fcec900b6",
+    "bytes": 343291,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:8",
+    "sourceId": 416082,
+    "sha256": "1419a773ec361e227bc3ee43d17604e044add7b0aadd2708c08b2d520d603850",
+    "bytes": 215471,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:9",
+    "sourceId": 416083,
+    "sha256": "9fa4fcbeab696adfcee7321762d5bc19d3feaa45f910c94d0584b3734df08034",
+    "bytes": 426803,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:10",
+    "sourceId": 416110,
+    "sha256": "80bd3ca165f5a55e90a5e10b5546a49c909716b04dbe11b4c54612d5a72b0a72",
+    "bytes": 423249,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:11",
+    "sourceId": 416111,
+    "sha256": "c6d1585c5eceb60e0f8079bb0236596f2a882734111ac5f6b43fd6a6c7230d76",
+    "bytes": 231344,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:12",
+    "sourceId": 416112,
+    "sha256": "b794bc94eff88993f13e45f34c0dc62edadd5795c4ee6bccb18b533e876e9b4f",
+    "bytes": 200819,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:13",
+    "sourceId": 416113,
+    "sha256": "b9cbbd0a65f6f0701c047b3e9fc317947c673e1b31fc3c871777dda8954125c0",
+    "bytes": 320848,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:14",
+    "sourceId": 416114,
+    "sha256": "d6a7199be19e9c3c9022d9bc0d2f991ce2dbfa1318402816af38bdf3661b9a49",
+    "bytes": 136877,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:15",
+    "sourceId": 416115,
+    "sha256": "aea44ad670f53d68d47798371d1668d7c8878ed7c4e207e973d3a6386f45683d",
+    "bytes": 79235,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:16",
+    "sourceId": 416117,
+    "sha256": "de0ffe5277b2ee3dcea6b1b458ebf8ee90a4a5f177fe17c68f3368e7ea71f7bb",
+    "bytes": 242323,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:17",
+    "sourceId": 416116,
+    "sha256": "c63b1a601ead8f420a7ce4bc995d7e3b2248204f1813f297247500158e8f67ea",
+    "bytes": 131850,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:18",
+    "sourceId": 416118,
+    "sha256": "7782a412ce63a98700ccef84df844d876906015ddab568dcbdedac4cb446c9ec",
+    "bytes": 151638,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:19",
+    "sourceId": 416119,
+    "sha256": "d9d9954076d95cd35805ccc42d52839e8c28a409e2403d9fafc68be2fe0b665f",
+    "bytes": 230108,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:20",
+    "sourceId": 416120,
+    "sha256": "7b5b420e09d96d2cacd1f2cd1b0188d138be47ecffdb4f7823b80ada706e3d6c",
+    "bytes": 191169,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:21",
+    "sourceId": 416121,
+    "sha256": "c72531d5922cd10f686b811fba2644274ba0b305a9cf577f8fbb04e3a64a1397",
+    "bytes": 375437,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:22",
+    "sourceId": 416122,
+    "sha256": "b275a2e582fd90425e30b725780a7948e18f2c9437afd5a2cd9abe5f672fd918",
+    "bytes": 363793,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:23",
+    "sourceId": 416123,
+    "sha256": "6d65b0638159304232f78618d1f556ff164257e963ac3bad4f9824f958e937fd",
+    "bytes": 203766,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:24",
+    "sourceId": 416124,
+    "sha256": "502ea204442572745243930a611b0c0d3df87833dc6c1078c7c79a5e830a490e",
+    "bytes": 195731,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:25",
+    "sourceId": 416125,
+    "sha256": "a13c17d14bc435da8f2e6a10421d0dac2f7e9b491be60d7ddf45807c13f5018a",
+    "bytes": 183354,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:26",
+    "sourceId": 416126,
+    "sha256": "2ed6058a4b6104bca83bb1ba99da993e98e0cba78fbb905b1557bf5a304be6a4",
+    "bytes": 490821,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:27",
+    "sourceId": 416128,
+    "sha256": "01242a6c450e6476ff110e0a1576a3c24b3398aebc8529823d86dbe5842b1568",
+    "bytes": 402728,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:28",
+    "sourceId": 416127,
+    "sha256": "0da1a861a70c9a10442971016d231a124c52e8d23c61950058eb9acc7f7be2c1",
+    "bytes": 236007,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:29",
+    "sourceId": 416130,
+    "sha256": "102aabe6e807bf9fa2434c2071cda9f7cda56ccdfda557c5415b5a60ca411590",
+    "bytes": 338200,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:30",
+    "sourceId": 416129,
+    "sha256": "a092e83f8d43165d2430ea6f51518879f9759dee94ebabf32ff0d9a8e4ffd6e7",
+    "bytes": 220130,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:31",
+    "sourceId": 416131,
+    "sha256": "8c26d00470c869c6fba0c3cb993dbf35cc5489b06b393af1b1fd628e3c026fb0",
+    "bytes": 307745,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:32",
+    "sourceId": 416133,
+    "sha256": "fbc39c56d5e9d8a09ad851b4b7f6f29a0924e9a4d63cb7e94dd5dfc46d418d37",
+    "bytes": 668531,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:33",
+    "sourceId": 416132,
+    "sha256": "048751ccb7e8ea1a45531687c99e86d950b1dfebf3fa431c6a2a0b82d09dd3e3",
+    "bytes": 368871,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:34",
+    "sourceId": 416134,
+    "sha256": "6141d3a77eef432e327845f7e16dc62b3ec75ded0a63b2c544ddb2b01d24d277",
+    "bytes": 412258,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:35",
+    "sourceId": 416135,
+    "sha256": "5a6729ba0d6c7d5fba644459a4fd53c716ab67afb0a1ac2aadbf170b128c6b30",
+    "bytes": 455470,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:36",
+    "sourceId": 416136,
+    "sha256": "ab6bac424767902c34bf757b5c7a316d2abecd39cd612bb146e80c5dda9ab4d0",
+    "bytes": 289109,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:37",
+    "sourceId": 416137,
+    "sha256": "8fe27488b1631655050d604da323683fb32f95f9d67417c04b5acb52087d42d4",
+    "bytes": 271580,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:38",
+    "sourceId": 416138,
+    "sha256": "e8e2e7f617fa65a68aae9e55224223a28747e9808e7fdf5b2e523258fcfec55d",
+    "bytes": 239266,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:39",
+    "sourceId": 416139,
+    "sha256": "e32b3c96ef49a11e5f5aceef2a3d319813451675f7e1c203f6f9f7ced109b870",
+    "bytes": 266399,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:40",
+    "sourceId": 416141,
+    "sha256": "145832021aab95eeed8602505385848df4a7f6a47d5ae62863435f10a40d16bc",
+    "bytes": 338308,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:41",
+    "sourceId": 416140,
+    "sha256": "5019a79dad9e3f52133d44f4bd66986839a45a004c09b6d2dc3053112760b49e",
+    "bytes": 179898,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:42",
+    "sourceId": 416142,
+    "sha256": "bde347402bc8ade5b23b3e2c1c131feb8d93ea939db3d7a17a163ce1dfee1c6b",
+    "bytes": 469908,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:43",
+    "sourceId": 416143,
+    "sha256": "1836dede40599de487074b15cf11343b71ed60500541779d8c1624100b405fe8",
+    "bytes": 301915,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:44",
+    "sourceId": 416144,
+    "sha256": "c607ecc4efdcd93110fc8909e13e9bd8db6784c9ad5e85e47a1364b8e9e11301",
+    "bytes": 461990,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:45",
+    "sourceId": 416145,
+    "sha256": "a32514d2f838c5e4c17f3b9740eb154438aa8810ec32af03bf91d2eaf5f169ae",
+    "bytes": 368773,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:46",
+    "sourceId": 416146,
+    "sha256": "902063cf9395206b89f5ddf0c66b38ec2b8b9aca5e21eb617589df9282a19134",
+    "bytes": 338309,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 11:47",
+    "sourceId": 416147,
+    "sha256": "47a43671fb04567a872c7cfd86f0af5240fef690d36cd4f573fa89738f7ac73a",
+    "bytes": 337084,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:1",
+    "sourceId": 423553,
+    "sha256": "0f6a037b755a82b8e4c2940328f17257a87600804ac1591dabdbe7d1af2bcdb4",
+    "bytes": 197798,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:2",
+    "sourceId": 423552,
+    "sha256": "c002b787409547c66f5f1249121acc45d7f925042e1f221bc5e065c0f08c83dc",
+    "bytes": 709790,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:3",
+    "sourceId": 423558,
+    "sha256": "eaf3da09a8641640e6fc73dd3e1282fbab7d8058967f64554fd8c1a2f0875ebe",
+    "bytes": 655550,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:4",
+    "sourceId": 423554,
+    "sha256": "84e8e99db8ef41a298a533b983b2e80f980c01acfc7613282e711bf97ced9413",
+    "bytes": 368763,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:5",
+    "sourceId": 423556,
+    "sha256": "8ad5194514f3a76820425b6153436af5e03f851e037f8c89cb6ef7b3f4242475",
+    "bytes": 548492,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:6",
+    "sourceId": 423555,
+    "sha256": "078cceef16637b1ad8501de0ea86228d7f9f7499d704c9956195d3ea807a79cc",
+    "bytes": 359094,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:7",
+    "sourceId": 423557,
+    "sha256": "1e6eef153db66dacbc422533d14a553aa1e3e44e44199ce7c2ba5f55e0b588de",
+    "bytes": 363755,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:8",
+    "sourceId": 423559,
+    "sha256": "d75746000f7294fcdb1e9546ef869405052af63580250b0237dd12dfc24f8b22",
+    "bytes": 479251,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:9",
+    "sourceId": 423560,
+    "sha256": "728417f792bb41a8b227ab7b5f593e3f8b988860d9787d272e315af259e6de2b",
+    "bytes": 304952,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:10",
+    "sourceId": 423561,
+    "sha256": "a6e2a16b2719ee999a2851a7bc958dcebc8e3db81129c4eca177b8ac4cb4e4db",
+    "bytes": 401013,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:11",
+    "sourceId": 423562,
+    "sha256": "01a8d8ca501871e5bd1104f815e83256170e178207b3547efad15139854e0a62",
+    "bytes": 472913,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:12",
+    "sourceId": 423563,
+    "sha256": "47f9f6b54444d702aea5bd74d2ef5f2c5bb78bc827f542381992137a390a1b34",
+    "bytes": 802605,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:13",
+    "sourceId": 423564,
+    "sha256": "56aeaacbd78c1591fc624c36acacf4292c34d23f65daff8cfc09fdbd7183845f",
+    "bytes": 350052,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:14",
+    "sourceId": 423565,
+    "sha256": "8fcba3f38aa90b28b4dfabb46c85273d0d27c5516e35bfbd7c01097776f24cf3",
+    "bytes": 303316,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:15",
+    "sourceId": 423566,
+    "sha256": "7946d0261b13be5e8fd821dac70896516876963822251f6dd344f18f3b0c9791",
+    "bytes": 287281,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:16",
+    "sourceId": 423567,
+    "sha256": "fff27800760ce82f15ecdae67b66af207dd49538374f48be8f57a4a1f3941cf0",
+    "bytes": 676385,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:17",
+    "sourceId": 423568,
+    "sha256": "5df55fa065d13c3854549e2e11a243a765b36382bf3971128afee45f4e0208ec",
+    "bytes": 533649,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:18",
+    "sourceId": 423569,
+    "sha256": "cb364a3ffcdc3e6a837a7d4b102d679e3f73c9dd36e11b8ac53479e1ba055c73",
+    "bytes": 306480,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:19",
+    "sourceId": 423571,
+    "sha256": "e3c2a4c90f3e476c42507301b29163f08a1962a749687f8024a84e1c9e992448",
+    "bytes": 581979,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:20",
+    "sourceId": 423570,
+    "sha256": "48a2cc5e372d229f6ca03400359b27ebf10e1044721c73e1ff1783fddd9eceff",
+    "bytes": 709846,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:21",
+    "sourceId": 423572,
+    "sha256": "b82424362aa6868b1f36b5ce8cf27ef9099b3de49cd60259dc18cfa018fd44b8",
+    "bytes": 594896,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:22",
+    "sourceId": 423573,
+    "sha256": "64b5f1c8e9ae2b6b4b9bdf86b6aa6c406aba35773c8840331eaf72fe846e8113",
+    "bytes": 367161,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 6:23",
+    "sourceId": 423574,
+    "sha256": "a995a1d9647e67f8444360e2ea442ebaa113c3faade896816a3469f451c44486",
+    "bytes": 235818,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 7:1",
+    "sourceId": 423537,
+    "sha256": "cea17d34b8c141afa98e60dfe28cf7d210b4e49c552741a36c806c9b55f1f1cb",
+    "bytes": 314424,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 7:2",
+    "sourceId": 423539,
+    "sha256": "d0f494730a25f604831b057bf064adb06d0eb20475a47c98cd334fa7d861fe73",
+    "bytes": 436569,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 7:3",
+    "sourceId": 423536,
+    "sha256": "a9a84c1d8df412aad7741d7aea2512367a420460d518df580cca1f228c52adad",
+    "bytes": 271382,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 7:4",
+    "sourceId": 423535,
+    "sha256": "f369a16e51b8b76d438deb7e427c3be767a559f79c2a7c492797675004cc116c",
+    "bytes": 199685,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 7:5",
+    "sourceId": 423538,
+    "sha256": "8802c4180f4746a51399603f86a9afc752b191e241b2bb96663bd109b0182c2f",
+    "bytes": 320802,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 7:6",
+    "sourceId": 423540,
+    "sha256": "9eb0d6431af44d375114baf2327001748c63c0ed73528c11cdb590e41d17cdad",
+    "bytes": 533938,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 7:7",
+    "sourceId": 423546,
+    "sha256": "04e3ab4d1cd77d0e9cf0ff965539c2e84a173f0025b569bd318826905fcb5590",
+    "bytes": 642864,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 7:8",
+    "sourceId": 423542,
+    "sha256": "5e1e0b7166c28e93f14ede680b03d5ac149c3342c478083115a1fb500b5974f1",
+    "bytes": 570601,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 7:9",
+    "sourceId": 423544,
+    "sha256": "3f5132a084469487951b8a58ea5ae1e303c47b6cda681c5f3437f784e0fca448",
+    "bytes": 463271,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 7:10",
+    "sourceId": 423545,
+    "sha256": "3591b365bb2b029c4c723ab3f02eccac60b10f2c35c3446f87c269d878e9d3e1",
+    "bytes": 519272,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 7:11",
+    "sourceId": 423541,
+    "sha256": "81745a6962be540dc3ffef5deeda4283f38356546f3dbdc10f9bd1764860e0d2",
+    "bytes": 468240,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 7:12",
+    "sourceId": 423543,
+    "sha256": "fc519de4e96cb391ff67b93d10f2187bfc9252650fa9ca4e9ca0638f1884097a",
+    "bytes": 535294,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 7:13",
+    "sourceId": 423547,
+    "sha256": "77c6e47c0a15901ac28ffdb617f3dd930955d7a84b088ceb5fe30362a385c2e9",
+    "bytes": 234191,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 7:14",
+    "sourceId": 423548,
+    "sha256": "60b68ba9eae35827e2080abc176bdc74dc9ae52688298ec6069063091dc626dd",
+    "bytes": 456998,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 7:15",
+    "sourceId": 423549,
+    "sha256": "8ec07ac93eeec009e46af9c3da0c2559fedaec623306948ac9c72aaec572034c",
+    "bytes": 327402,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 7:16",
+    "sourceId": 423550,
+    "sha256": "33335c3b3181cc7d5c1ef8497606f6b467fb1b77bc17004669726b053cea19c5",
+    "bytes": 297977,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Samuel 7:17",
+    "sourceId": 423551,
+    "sha256": "30fa5ed698497f8f6ce2546aeffc64fbf27f946c61d81b85ae400d9ce7de4313",
+    "bytes": 312757,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 12:1",
+    "sourceId": 415931,
+    "sha256": "aeeec3f68f8da6adee83e6b50905915e178cfb2607dc3aa25361cc5a69742957",
+    "bytes": 96701,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 12:2",
+    "sourceId": 415935,
+    "sha256": "35e074ae0e440dc9c7b3ff3cc70275a30f36b675defda16a2ad0c106e9049b96",
+    "bytes": 448568,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 12:3",
+    "sourceId": 415932,
+    "sha256": "68f698c919be2bbe830e18a8c072569aa47659c448d6b93711134b9660dc88dd",
+    "bytes": 168974,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 12:4",
+    "sourceId": 415934,
+    "sha256": "1d42d37fc4cf4293a1f495b98d9a377d9ceb272592604cacfaaa50eb3c1158fe",
+    "bytes": 421825,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 12:5",
+    "sourceId": 415933,
+    "sha256": "6fe535f427b4c79ccab4b8b71c05612eb929b512e20e1dd442915e7f3c854c49",
+    "bytes": 352842,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 12:6",
+    "sourceId": 415936,
+    "sha256": "02952d7ec45cbefc2c1209bbbd36d569cbf09e5e71548653668693da088bb382",
+    "bytes": 501748,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 12:7",
+    "sourceId": 415941,
+    "sha256": "ef701f86ce13fb66ce3b568cefa339a640b19456fff66ecec0947ee764175143",
+    "bytes": 405887,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 12:8",
+    "sourceId": 415938,
+    "sha256": "ed171d7ad27d81be334597febd30d38ead022ee8195a49e3cb81f402f6902454",
+    "bytes": 549754,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:1",
+    "sourceId": 415940,
+    "sha256": "b82032d8fefbaf18f9916e87729d6cca6e07a6d41d5c1bdc995276c3489ef914",
+    "bytes": 147775,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:2",
+    "sourceId": 415939,
+    "sha256": "c7cf50d1dbfb8944b6c0383088f2e04507c686e108d7f625990361bada79f39b",
+    "bytes": 533905,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:3",
+    "sourceId": 415937,
+    "sha256": "8d44f4743331c80459e3bf66c9493cda0c24ef09e25c46ff84ef118287bf440e",
+    "bytes": 604561,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:4",
+    "sourceId": 415942,
+    "sha256": "b7ef69ba60b6ed32b73e2ca7c02ec002538bcf83a2d9c4327f0ec60254b8d4f4",
+    "bytes": 492462,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:5",
+    "sourceId": 415944,
+    "sha256": "d366a6471156a9d67fcc94431c679737bf9ca96ac83bf30f1a98e58fb780e7c5",
+    "bytes": 458558,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:6",
+    "sourceId": 415946,
+    "sha256": "768d8dfb5a6589370cbb49903b20bff889155a47a5c81ee1ac4b6ac9510549bc",
+    "bytes": 536873,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:7",
+    "sourceId": 415945,
+    "sha256": "ca55c32943125c5f39127e1bc03f630011cfa3d74f8ee20d83c374bb1475f15e",
+    "bytes": 383375,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:8",
+    "sourceId": 415943,
+    "sha256": "7bad106718e09d43c344527595cb5f824856b6b1bad32e5cf1174ea5b9dfeb51",
+    "bytes": 288917,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:9",
+    "sourceId": 415947,
+    "sha256": "1725dadd2f3063d6022298ddda9ce55fe3503365ec88c60d15a34994f0cbfe0e",
+    "bytes": 187854,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:10",
+    "sourceId": 415948,
+    "sha256": "d905b4d4be935e2862ebe40e00680319ae6c0bd3e98be0ca0426692c1ce96f33",
+    "bytes": 413889,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:11",
+    "sourceId": 415949,
+    "sha256": "3334755694332f2dbb499ff8f0a1cebea2081df117a305f7efca570c0cb76730",
+    "bytes": 285705,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:12",
+    "sourceId": 415951,
+    "sha256": "1f394f42f00bae9dcc2c35222ec4021e5360f4179f823a3261e16e55ff66d010",
+    "bytes": 445667,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:13",
+    "sourceId": 415952,
+    "sha256": "d8dea4068216e6c1e6480740da245bb6c6d33614bb1d5ef1d9b48d24a20e46a7",
+    "bytes": 381817,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:14",
+    "sourceId": 415950,
+    "sha256": "bd96e5c87d58ad91935a27ef5d05c92298b60d89818988865a2cec37a93c3529",
+    "bytes": 170296,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:15",
+    "sourceId": 415953,
+    "sha256": "75e8ac3e8468711f594b4fe6d3c21caf4bcf0947ed856069976ed058ed474c79",
+    "bytes": 317821,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:16",
+    "sourceId": 415954,
+    "sha256": "015ab2d1121cc3a695d750b0499dfcf40f02c5f1a088262d8c5d103ad4a28c36",
+    "bytes": 272591,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:17",
+    "sourceId": 415955,
+    "sha256": "319ca02187d1caa145861f5675b43675da3d167c3a141e0d71d16b47f7beb8ec",
+    "bytes": 330421,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:18",
+    "sourceId": 415956,
+    "sha256": "cb67e41ff9736c71c85c3685cecde0988ae7070f83f9ca5b9e193ec39d683cc8",
+    "bytes": 187856,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:19",
+    "sourceId": 415958,
+    "sha256": "4970769c62ff2b22ab2fb787053be0ee0423026d6b8de5d900ac7193a4fbba83",
+    "bytes": 331946,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:20",
+    "sourceId": 415957,
+    "sha256": "21b0721492d3b028bb1f7794dd8e83e016f831fca8b5a681b24dd7b7099ccbb8",
+    "bytes": 447454,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:21",
+    "sourceId": 415959,
+    "sha256": "3f094f1e0c525ee520ad8d3cf9bd865bb95167681729e0d3f6551750e43e7ac4",
+    "bytes": 484138,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:22",
+    "sourceId": 415960,
+    "sha256": "5a5143f0419af74e4ba9223f3d0e235a6863327ea7e5fcee07aad08aeee5c4f6",
+    "bytes": 235904,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:23",
+    "sourceId": 415961,
+    "sha256": "c1d17329bb08698c2150c3b811c4e6d2e7d5267df545a7b8cb1a3e6e67add531",
+    "bytes": 303194,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:24",
+    "sourceId": 415962,
+    "sha256": "a24b6c8abda65a6bd8c1f50958f02c9bd90c2ff6f4b604133110a09f93ad9238",
+    "bytes": 408970,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:25",
+    "sourceId": 415963,
+    "sha256": "87048596fcb04c966b2b6687d5aecb2d7bcf9d09d79a917b063180569a6b4784",
+    "bytes": 637842,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:26",
+    "sourceId": 415964,
+    "sha256": "a0dafc44192d2a9c435f4cd68cc2541b3422ed32b608df7c5ac8c1c4374d4e85",
+    "bytes": 504594,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:27",
+    "sourceId": 415965,
+    "sha256": "b8eae3e0320d8aefa2fc0d0654f4bd209410243d8980289f5ff23af8966a0e3c",
+    "bytes": 331921,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:28",
+    "sourceId": 415966,
+    "sha256": "db06cee93fd6fbd2ee36c0ef2e933e7810f978afb7a1adbf11887d062fef6098",
+    "bytes": 432783,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:29",
+    "sourceId": 415967,
+    "sha256": "636c034eab26e59fb10270e2fd9edeba27bda433d027b25c8ae4f07baa891d52",
+    "bytes": 215467,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:30",
+    "sourceId": 415968,
+    "sha256": "9c79b41857c9251dd92026c176dcc6aca256f87cd0f76a333ffc6ff7d51afb44",
+    "bytes": 560674,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:31",
+    "sourceId": 415969,
+    "sha256": "68e9679016bb13f66c97e5b99e80dfd8b0e7e813ffb9651b4fbb9d4e74c94273",
+    "bytes": 509567,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:32",
+    "sourceId": 415970,
+    "sha256": "914ba9d3ed4a6d3f2cf85dcb163daff096c5aa02a82be3322644744b3799093d",
+    "bytes": 463265,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:33",
+    "sourceId": 415971,
+    "sha256": "e8dd0899da2ec37d319b88f2ff659dc2ee904bb1a3c276ab379c2e05b98b5cd4",
+    "bytes": 330429,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:34",
+    "sourceId": 415973,
+    "sha256": "21fec75f7d9e3987dfd6b360fd7d6983c3fd920c79eaeb3dae4e85cf75dbeda8",
+    "bytes": 612505,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:35",
+    "sourceId": 415972,
+    "sha256": "63773f25f183323c595576d1f74f3dc3979cd5f81fe7a6a893cd7ceb91b2e7cb",
+    "bytes": 213730,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:36",
+    "sourceId": 415974,
+    "sha256": "bc7586fb5b4668f285e7da6e5c24a1278ec2fd0aa2ba1832a588b345e28f323a",
+    "bytes": 346194,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:37",
+    "sourceId": 415975,
+    "sha256": "e8c20f1ee9fed01a8a20f785dd181c7443cb3d268df6b3ea723a375f88a445fc",
+    "bytes": 391200,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:38",
+    "sourceId": 415976,
+    "sha256": "93d2e2b69cf4fef62558ca69b4cd543027a4313b04806b64b4b75d30471743a0",
+    "bytes": 230048,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:39",
+    "sourceId": 415978,
+    "sha256": "38d245efdc644d4be83f4dc243a3d730b3fa47a5c65dc09b670fbabc9c583ea0",
+    "bytes": 388371,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:40",
+    "sourceId": 415977,
+    "sha256": "b7a36d3ac66afa8be9c5c4b650443ad4e319c39602e39d0c915c03d3a0b35c36",
+    "bytes": 207411,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:41",
+    "sourceId": 415979,
+    "sha256": "e4adf36e1db692f8e49cc5583e40c39e6e30e87cb024bb08c8363bfeb376a11e",
+    "bytes": 223127,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:42",
+    "sourceId": 415980,
+    "sha256": "8decfd4f1627ed2378b436b14c2455f9c220bf33051d274e3a3d9385b754f3ff",
+    "bytes": 381594,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:43",
+    "sourceId": 415981,
+    "sha256": "4e17f859f7f4e747db58ae107d28547ba1372bbe86b52c3bd9c3235fec36306e",
+    "bytes": 416876,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:44",
+    "sourceId": 415982,
+    "sha256": "28df488a60fa1a40abcd98c1ffa571bdf2f559d0c615add0911169b519cb134d",
+    "bytes": 263510,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:45",
+    "sourceId": 415985,
+    "sha256": "01c336984057df83ac8f6dc40cdbb8de490565afa7934c63152bbde07f263db2",
+    "bytes": 440681,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:46",
+    "sourceId": 415984,
+    "sha256": "3b8862cd0214922c1f9612ef25e38c716a85877bcf7db8ed835bda7077956e8b",
+    "bytes": 341597,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:47",
+    "sourceId": 415986,
+    "sha256": "92221ccc2e3f59cb9ec10c5c69e4bf44a6570cdb4bc4aad0bfa73ebe7fab469e",
+    "bytes": 281106,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:48",
+    "sourceId": 415983,
+    "sha256": "96d746a834986aa7408a6847365a7044dbcdea5d41dc335d5908c4bed62d2e55",
+    "bytes": 290158,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:49",
+    "sourceId": 415987,
+    "sha256": "badb609d12f27a390be58ad45faf043c94752f73c9cd2de0a93e279c28205c2c",
+    "bytes": 562720,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:50",
+    "sourceId": 415988,
+    "sha256": "eec9307eba515363c3f9ba41d7e159c586a217b7762318a6022467f7ee61a32e",
+    "bytes": 183242,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:51",
+    "sourceId": 415989,
+    "sha256": "685039e6b804a33b5cb50adc43bdc22a2391bdb98144a4b97d0dda56f0e32978",
+    "bytes": 660508,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:52",
+    "sourceId": 415992,
+    "sha256": "b17a05f87460e18a3b60df15fc14824f74e295e68de024225b9996eb42b3fb77",
+    "bytes": 599458,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:53",
+    "sourceId": 415990,
+    "sha256": "24d50de2f5e14f3bdd3ab1bdd2d543d3fc6c3ec0ae0d176c5f73a672b39cf897",
+    "bytes": 397399,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:54",
+    "sourceId": 415991,
+    "sha256": "7c29b42529c6f38c2e957947df1edaeb75700cb9d1d28ec48482c2d9b55ff694",
+    "bytes": 269739,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:55",
+    "sourceId": 415994,
+    "sha256": "759485204b437cd79ef8d4ffe118cc450e42f87cf1b791b452191859174db78f",
+    "bytes": 645842,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:56",
+    "sourceId": 415993,
+    "sha256": "502890f86e58f930415e915a11f512c7987057dc43317936134e520c69ab844a",
+    "bytes": 498820,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:57",
+    "sourceId": 415995,
+    "sha256": "34b347942bc278ea82a8f4c9e7fe7df8f7f66dd0657e7e64a69b42c4951dabc5",
+    "bytes": 463271,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:58",
+    "sourceId": 415996,
+    "sha256": "3631283db272650cb37f5be3c3859338c24ab0a2a4e312e98acafeb2d450d769",
+    "bytes": 420201,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 13:59",
+    "sourceId": 415997,
+    "sha256": "b1d6db61a517109299ae5460f89dd36c1d253c059c39c77ff71bcf4a3286daff",
+    "bytes": 503314,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 4:42",
+    "sourceId": 439395,
+    "sha256": "63ae204dcfdc8e567ffba711cfe7f624c0149698f53e100949af507d4a85679e",
+    "bytes": 602996,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 4:43",
+    "sourceId": 439396,
+    "sha256": "6d8ae436727cb0848d6da4f6ece04b1f63b3ddd334150c8f3d84d4c4c267b3a1",
+    "bytes": 540160,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 4:44",
+    "sourceId": 439397,
+    "sha256": "d916bbffba849432533e4c15a300490b740cb9b05473f64b3bc3e78feff64b47",
+    "bytes": 194588,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:1",
+    "sourceId": 446149,
+    "sha256": "1fc415d0c59123c01360e3eee4aa9455df48e827670352a05458161b94481dec",
+    "bytes": 642797,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:2",
+    "sourceId": 446148,
+    "sha256": "46adb9c9bfb807688cc66f47266679b6a71100f6dd086fb366d465897ac39a68",
+    "bytes": 338319,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:3",
+    "sourceId": 446151,
+    "sha256": "204c72515dfe3a66767e6c6a82c330b7c89a8545fcceb972d66b456615caaa69",
+    "bytes": 397653,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:4",
+    "sourceId": 446152,
+    "sha256": "c69d9ede6e2e2829266a00ed2d49a8903d6132ee7e34fb733f7c37ca8c85a528",
+    "bytes": 346309,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:5",
+    "sourceId": 446153,
+    "sha256": "6ae813ef76a08422d80aaf4169397a2ab22ad8005133af8c42f592815699411e",
+    "bytes": 577021,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:6",
+    "sourceId": 446136,
+    "sha256": "9e573d46641b3e5400d51b1cb3783e8009555672a86310d82f9f3305049095d5",
+    "bytes": 504677,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:7",
+    "sourceId": 446140,
+    "sha256": "deafd023cc33b32fb682132b802179b2cb156b183292df8d98b8cb73fa284d4e",
+    "bytes": 784611,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:8",
+    "sourceId": 446138,
+    "sha256": "5890ba65da54d83e48a462ec79ad656174b55e52726b59b79a071718cc614bec",
+    "bytes": 658833,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:9",
+    "sourceId": 446135,
+    "sha256": "3a4aa3844d93f8ed04632a4b2b5a7308e667bf7cc5d7e9cd3461ea7a7d666349",
+    "bytes": 266411,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:10",
+    "sourceId": 446137,
+    "sha256": "1dc93a7fd7117265340f2880a394e113d8d71e0ee9899dae3a9510accb22fdbb",
+    "bytes": 418998,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:11",
+    "sourceId": 446139,
+    "sha256": "2eeb8c205ea0ac718a77c449a811d5fd7b5fbc851036ff99f07903c359467da2",
+    "bytes": 637916,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:12",
+    "sourceId": 446141,
+    "sha256": "04925975fbf87bd21ae9b855a24596b04c67c62c813b016aa0048535d0a61257",
+    "bytes": 560806,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:13",
+    "sourceId": 446142,
+    "sha256": "6d42c93c28da6033c4382e3c6b75cc76e760d91498b8299a0243d27df1d6c4d1",
+    "bytes": 528927,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:14",
+    "sourceId": 446143,
+    "sha256": "4d9b3d78068b3531b96e950e243e9b1e53cdc19ffdf202daeb901a878d3e3d8f",
+    "bytes": 437928,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:15",
+    "sourceId": 446145,
+    "sha256": "7ff836baa82d78938b06ff1299141bacf8cc725f64fa2ea324237ff7def4a821",
+    "bytes": 714828,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:16",
+    "sourceId": 446144,
+    "sha256": "c7d09bda4565dfd9cf820abd1d810b31709fad983a62d90f53e40aa7f81214df",
+    "bytes": 333747,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:17",
+    "sourceId": 446146,
+    "sha256": "254981b4f31dd139125efe24ace836a038f8186874f5c1fbf715626723e5d5e9",
+    "bytes": 695228,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:18",
+    "sourceId": 446150,
+    "sha256": "18d83a98c5bf54d1157749de32ca276f392731ed98c24eb8ae33d9aa46f583d4",
+    "bytes": 860123,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 5:19",
+    "sourceId": 446147,
+    "sha256": "b75271e872d0385b4e192771efdd9de6281a6d1d7da97434353918e035010c0d",
+    "bytes": 211725,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:1",
+    "sourceId": 421044,
+    "sha256": "984d8b6046a294b92fe94993dcba800ef8c78bebfbd4614f5d995d72a9d275d4",
+    "bytes": 96623,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:2",
+    "sourceId": 421046,
+    "sha256": "b7e18ae42e35126b2be6c719a36b8a158957a6e9083cf765ca2ea7253a1eaee9",
+    "bytes": 231359,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:3",
+    "sourceId": 421048,
+    "sha256": "19cebafac90be02366dc991d44142605680953a73c56a651341696f0c3fcb06e",
+    "bytes": 354205,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:4",
+    "sourceId": 421049,
+    "sha256": "fb5f1839cfe88d66dcc437fd35827a002e091cd46b7bf2ba2ce309bea5852018",
+    "bytes": 378893,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:5",
+    "sourceId": 421045,
+    "sha256": "672a566db6d7e78dcfdf4eb665b14b6d5a4de0d69a14754ef6c4df88a58b24de",
+    "bytes": 250542,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:6",
+    "sourceId": 421051,
+    "sha256": "0416a8235ebbc6700215bf05aea09bc1de34b95c0ba3e3328fd3fb7a13453337",
+    "bytes": 607538,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:7",
+    "sourceId": 421050,
+    "sha256": "e60ad7385b2a26809d04f0f86be2b73c10c20a3dcc0beb04daa0fb3ee4480df4",
+    "bytes": 415098,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:8",
+    "sourceId": 421053,
+    "sha256": "dfd589241b974d4c00212dd7174107603d155481e3097c30cfe9f85e86b0ef51",
+    "bytes": 540088,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:9",
+    "sourceId": 421055,
+    "sha256": "48c7d5d0af62094125d1121394f35d79c2f77f41f5150e95c69316181c63f535",
+    "bytes": 644296,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:10",
+    "sourceId": 421052,
+    "sha256": "a948efb990966d99a960b444f7e5c1af75a4426fb3235728687653aa45815920",
+    "bytes": 581883,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:11",
+    "sourceId": 421054,
+    "sha256": "7ac75491663e0ab7a4003d775acd8a76ff763e369957ea5d68fa001553855a5c",
+    "bytes": 354190,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:12",
+    "sourceId": 421056,
+    "sha256": "4df2e72853bac39ec4f533b221e2687cbaf344f91d94f4abf9857bf79f08d3c4",
+    "bytes": 428042,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:13",
+    "sourceId": 421058,
+    "sha256": "09b536757166353522babb91abf1ea53137c33591aabaa202e9d94fccff0f050",
+    "bytes": 607502,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:14",
+    "sourceId": 421057,
+    "sha256": "22ec15bec8f88b4ccbe7b9a98f30e4245adedd88702989e485b99998318e3322",
+    "bytes": 503216,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:15",
+    "sourceId": 421059,
+    "sha256": "0ed9c78c506045e012376ce3945fe5cee6f0d41d3400b0e1a4405886c0b4dc21",
+    "bytes": 256815,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:16",
+    "sourceId": 421062,
+    "sha256": "ce206c56f773f54d043ff8fac51d75d7415aae9fdd77ab83e6d202a82b6f4993",
+    "bytes": 508421,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:17",
+    "sourceId": 421060,
+    "sha256": "5d01259ba0eba8189fa0ca8e36bb7fbc25208d7e1cc25cf136ff2a2043e6fd9d",
+    "bytes": 541799,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:18",
+    "sourceId": 421061,
+    "sha256": "c97663a958bb844a5ae3cb8722df912a21efa69b5c42e345b7631878191d8bbf",
+    "bytes": 376664,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:19",
+    "sourceId": 421066,
+    "sha256": "7702eb72f69e634f75aef27edfc600a8efe6807b5cfb91bdd87a96401258595a",
+    "bytes": 328649,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:20",
+    "sourceId": 421063,
+    "sha256": "b24d24edb468453a2e13bb290ccc17348de9ff8cb4e090dc85e99bc2f880f3b3",
+    "bytes": 323737,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:21",
+    "sourceId": 421064,
+    "sha256": "f857aed5efaa87c9a415e41c63901d4520b4d005f6fa981b16d5b7da598a4288",
+    "bytes": 632981,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:22",
+    "sourceId": 421065,
+    "sha256": "582f7d95646275f9a21f5257f20764355d699c5cdcb93cb979582b5b16d8c567",
+    "bytes": 371730,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:23",
+    "sourceId": 421067,
+    "sha256": "1a7806a9af311b5866a4d7c492c1db9ee2b510956518955af950bf7cbeef9800",
+    "bytes": 306569,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:24",
+    "sourceId": 421068,
+    "sha256": "cae4fe2e9b732fb752ed759d14ca38935b615aff073ae01549baf14e5fcf0d2d",
+    "bytes": 354164,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:25",
+    "sourceId": 421069,
+    "sha256": "deb82d1763c387dfac53f95d689161ab67681eec41024bb3297d787418139813",
+    "bytes": 525939,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:26",
+    "sourceId": 421070,
+    "sha256": "44fcfa274402f31ea701d41dc1a7599aad5ce6543c6b181886e14589f3a8c844",
+    "bytes": 192825,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:27",
+    "sourceId": 421071,
+    "sha256": "24f5d040f799f68ee31392e11fa390e084a256da95c8946d14db366ca900c56b",
+    "bytes": 328564,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:28",
+    "sourceId": 421074,
+    "sha256": "7972be82da9fb4328929635a87e7a18cc5d25d921908c192808906fdf6689feb",
+    "bytes": 509647,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:29",
+    "sourceId": 421072,
+    "sha256": "96b33b819d239ebcef0824427f0aa17f9d29e9ccd355c58c614d8985441229cb",
+    "bytes": 320812,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:30",
+    "sourceId": 421073,
+    "sha256": "173d84426e43eb28444275535b4171d6858aa41f03f9bda3a1680befc854af3c",
+    "bytes": 256710,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:31",
+    "sourceId": 421075,
+    "sha256": "51b37b6e60c99cd6d49a4ae08e61f9636c9e94e801f686d5cbcb45ef5cbca59c",
+    "bytes": 461999,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:32",
+    "sourceId": 421076,
+    "sha256": "a24ea1262315313e3a3b7072d3373bd1399b3292b05aeb7908ca9c78083975b3",
+    "bytes": 263250,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:33",
+    "sourceId": 421077,
+    "sha256": "5cad0f43fa7e8c5444b80078229bce6c181f09762e7743431e4b02f8895dbba6",
+    "bytes": 131694,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:34",
+    "sourceId": 421078,
+    "sha256": "9be75bcaa4c873eba4a25c2443bccb2768532ac39bad8bc45a26642dd91d5928",
+    "bytes": 400994,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:35",
+    "sourceId": 421079,
+    "sha256": "326296ef9963ff9d7d9594ba2a5aaf2ee3b8b9c2a79610a0f735da8fa76721f5",
+    "bytes": 275971,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:36",
+    "sourceId": 421080,
+    "sha256": "6cb3f6d5452900eda8f7858a63df6e94f3e45ec0028d0f388d223dc21f87811f",
+    "bytes": 471260,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:37",
+    "sourceId": 421081,
+    "sha256": "08c6fa60383a111b252c32172c82694d12d48d24ea0a8095e3750d1e3c63213c",
+    "bytes": 368770,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:38",
+    "sourceId": 421082,
+    "sha256": "230ed0bde9a9d18d5a5b416941c580aa5c9efdea823f14c2342edc8c4f894388",
+    "bytes": 242123,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:39",
+    "sourceId": 421083,
+    "sha256": "9f72de68a33267e9e79247ff8f634a0466b462a9c525ee9372a25f8db095c15f",
+    "bytes": 288912,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:40",
+    "sourceId": 421084,
+    "sha256": "feb5d4bbcb81463945b70ae3c1410f6ff7469c422cb568585b8282b71f241aa3",
+    "bytes": 370457,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:41",
+    "sourceId": 421085,
+    "sha256": "ef990fe1f40b6228405a39f767eee2870af305d00af8b48767c2e9114beb9a08",
+    "bytes": 349784,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:42",
+    "sourceId": 421086,
+    "sha256": "c34a9c86c592c622525668efbe3af763cd76fb7863e19cc476606529b33e2044",
+    "bytes": 301877,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:43",
+    "sourceId": 421087,
+    "sha256": "39b53d0f6cfbd4088f0ebd1f0b59c610ae997f7c041f7ba4767fe5fdea4c3d68",
+    "bytes": 341675,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:44",
+    "sourceId": 421088,
+    "sha256": "ae6be9f8e47b2318a9538ac9f8a0bdb8aa2cd317e150760e3ad4957c8f46c710",
+    "bytes": 343376,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:45",
+    "sourceId": 421089,
+    "sha256": "524816289a735fffc00c4cdb641c8b23ba19e9eb60b4bf457afeb6fedf711f80",
+    "bytes": 357686,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:46",
+    "sourceId": 421090,
+    "sha256": "45af3d9ecbb3ceeaa44bdf0c7de2aa7bdfbf67b4406e6ad856465e9bbb2ee924",
+    "bytes": 197672,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:47",
+    "sourceId": 421091,
+    "sha256": "b526f59c57bde73373ef4895ec5db073116619f477fe349eeb80e99676e20633",
+    "bytes": 248922,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:48",
+    "sourceId": 421092,
+    "sha256": "d24f46bdf0a7f4e4333075bb762d9e075206ae46d457ae2da32704be580f53bb",
+    "bytes": 484176,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:49",
+    "sourceId": 421093,
+    "sha256": "3fa19002f2148f2bb52a021438c2cf317081c1e9c36247e6dd739028e2569d37",
+    "bytes": 285588,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:50",
+    "sourceId": 421094,
+    "sha256": "0fac70861f771f0ff2a6d915209cc5295ff37e8d272658ec04f4e4b4f019f048",
+    "bytes": 178196,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:51",
+    "sourceId": 421095,
+    "sha256": "2749b4290c872d0769c244c04cf43f8aba6f9c5333cd8007865fd81aeda8befb",
+    "bytes": 669740,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:52",
+    "sourceId": 421096,
+    "sha256": "931f55d5b80f6c4c89c15e3d3d03ad2560caad484617c3159716aaaf2bf179b4",
+    "bytes": 391312,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:53",
+    "sourceId": 421097,
+    "sha256": "a468f0b4984f80b08f3b241bd5d3bcc0eea62cca55c5dcbae685c634a3d954bd",
+    "bytes": 294069,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:54",
+    "sourceId": 421098,
+    "sha256": "35201d4f4f6fa2c3b9db4821a726a3751b403efb44c120786da23368152b3378",
+    "bytes": 159319,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:55",
+    "sourceId": 421099,
+    "sha256": "aa61d4a7a5c1de1beeb6390859eb5158019b34cf70b0730ae99263f6071e954c",
+    "bytes": 96652,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:56",
+    "sourceId": 421102,
+    "sha256": "54c905c214e46aad83c9f2cafaaae83372c2ab7743c272d0838bddb343d4b614",
+    "bytes": 135058,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 14:57",
+    "sourceId": 421101,
+    "sha256": "91cdb6c95c5174b717c0849519e8a11ddd79482a730d274ded838fd6c0914042",
+    "bytes": 223288,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:1",
+    "sourceId": 421100,
+    "sha256": "5b63f3355cd01eea64811993fd95eebc5d2345a8e50a8f74cc9c4d7f7ff5945c",
+    "bytes": 123820,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:2",
+    "sourceId": 421103,
+    "sha256": "7d4f4bbc79b18af1e9409818b0f19cdb3664b5732d983a23e48e2b4124cf1080",
+    "bytes": 344810,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:3",
+    "sourceId": 421104,
+    "sha256": "beb12ca7a106f3ffba2b8deb80c2cd3b1c88881af3607884c6b9efca57934cb3",
+    "bytes": 397528,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:4",
+    "sourceId": 421105,
+    "sha256": "115943d3ad224f5e48b447e994592ca1e18033f6caaef5c7d5153e07f5dc0c56",
+    "bytes": 320788,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:5",
+    "sourceId": 421106,
+    "sha256": "04e2578a77b426d4ed6343c3a7ebc50c25d4f1562787ff5b0effe5358820b0d9",
+    "bytes": 285555,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:6",
+    "sourceId": 421107,
+    "sha256": "fea498fd90b8e96ceed88c2539665ad9347e54f3c0b89aa9027c5474e91c6acd",
+    "bytes": 311122,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:7",
+    "sourceId": 421108,
+    "sha256": "7521f762f59cd3b91dbd1da347ef55a9329a15ddf7b6c6f16f17266076702fbf",
+    "bytes": 255564,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:8",
+    "sourceId": 421109,
+    "sha256": "f4dac380458a237b6bd42a4fe553169d0929a86f80e3e81ce7c587e719c643ce",
+    "bytes": 256781,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:9",
+    "sourceId": 421110,
+    "sha256": "0186b6d317392e4e0c37596b845d9402122295dd6149547f5dac345184a69f92",
+    "bytes": 197867,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:10",
+    "sourceId": 421111,
+    "sha256": "f7564b9174e46c918d8f51b5b1c9e2ca07914939894e4183da2537998876b298",
+    "bytes": 421918,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:11",
+    "sourceId": 421113,
+    "sha256": "eca66b03ff9b4b519a4b7ce66f2a34a1a003facdbbece7053cd4b328d9c83cc7",
+    "bytes": 357951,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:12",
+    "sourceId": 421112,
+    "sha256": "cbe13d040d10affe251ba81cbedb775f7eead242c4a6fddad5d313517de66761",
+    "bytes": 266438,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:13",
+    "sourceId": 421115,
+    "sha256": "67d43dc26dcf041f0669c3a5e0713b90defcee251c999b68175482bc29f6ba4b",
+    "bytes": 448613,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:14",
+    "sourceId": 421114,
+    "sha256": "d4e285bcd0bc4ae5d25f07cd3d10078ba362ae9f7064cc843051c18a2bdeab21",
+    "bytes": 458573,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:15",
+    "sourceId": 421116,
+    "sha256": "6710c86d755b66c3cdef26f5edb9f0327dcc11f620c8ea6ffbdc1ca6786079e5",
+    "bytes": 352751,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:16",
+    "sourceId": 421117,
+    "sha256": "673c3f0f2c225d5c7ceca7a7a3f42f6213383fa0b65e1372e16903b798a6f034",
+    "bytes": 279297,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:17",
+    "sourceId": 421118,
+    "sha256": "75b4eeb85e9ea4c90b348005762053c26f414d4871edb68d6c68f4fa0db066ba",
+    "bytes": 255432,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:18",
+    "sourceId": 421119,
+    "sha256": "d19075b0377e1b8698351a87ed51d4663718b3e9c1162de7bf9c5fdb794503a1",
+    "bytes": 294063,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:19",
+    "sourceId": 421121,
+    "sha256": "84b289461a574a9b79fc7a333c1cc9899a24cd9db599be4827352993cd2536aa",
+    "bytes": 411018,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:20",
+    "sourceId": 421122,
+    "sha256": "5b9013080091b1eb279be1a430b58b30f62ab0e6ce9500c2bc0a27065c7079df",
+    "bytes": 322483,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:21",
+    "sourceId": 421120,
+    "sha256": "334332aaa43d760c83b7aa5af665db80cb30ee5febbc4d465b120a509fe6956e",
+    "bytes": 272640,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:22",
+    "sourceId": 421123,
+    "sha256": "3767050faf9c4dc4d2f13b40cc7a12fe54ea18facbeaca7302c8b041952ba2d4",
+    "bytes": 323415,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:23",
+    "sourceId": 421124,
+    "sha256": "f8b3774a56c449497916cf46dceac058f2108f5e3c3635538870fc00a83a3a84",
+    "bytes": 371735,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:24",
+    "sourceId": 421125,
+    "sha256": "205fcede81f4be551345474eb0e2edb489317bde64d14dacf33c40352f70be12",
+    "bytes": 476252,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:25",
+    "sourceId": 421127,
+    "sha256": "3525819ed11d6b6f7c40607a7b88505993083b3123763b080fff5b206c812a09",
+    "bytes": 574033,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:26",
+    "sourceId": 421126,
+    "sha256": "4525484f68f6f45903d35031a02c48e7f0094b527dfb4ddd49be18dbff817325",
+    "bytes": 467035,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:27",
+    "sourceId": 421040,
+    "sha256": "9b0db36d033515eaeeed3f8db91b70f071152dac31b6ac59246abc453ebcf731",
+    "bytes": 243868,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:28",
+    "sourceId": 421038,
+    "sha256": "9e6fae3ed5622e21ecdaa316a9753cbfead3eac241e40b19db579fa1373d97e9",
+    "bytes": 223338,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:29",
+    "sourceId": 421043,
+    "sha256": "6fd041d54a33995243987bb37ba48fd27baf599069e6790747f3c727ff01f7f5",
+    "bytes": 366886,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:30",
+    "sourceId": 421042,
+    "sha256": "a8832ea84726ae039df54e6ee86aafbd5a46606e2b1a15a76e5441f902e1ee9f",
+    "bytes": 357874,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:31",
+    "sourceId": 421041,
+    "sha256": "b852791f136a7afd29547939e277a2754e779fa2dc24bf47962dc486938f1e6e",
+    "bytes": 306622,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:32",
+    "sourceId": 421039,
+    "sha256": "46585ff13936346c7d3e7a25307aa6532758f965ee788f6388c673aba9ba9fd0",
+    "bytes": 232884,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 15:33",
+    "sourceId": 421047,
+    "sha256": "5bd8572a4f953c153335afa062a58a80125a202bbe14ad024cc071bb52443a88",
+    "bytes": 359266,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:3",
+    "sourceId": 423587,
+    "sha256": "158b15f98fbdb6ec16be4d0c226454805aeb7e002b7f7553cd3231cb4cb93a90",
+    "bytes": 423300,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:4",
+    "sourceId": 423588,
+    "sha256": "d6d05429fe2f06467bb5a942b5ab416aee966e49a6b6bfa1162f38dfb9bec9e4",
+    "bytes": 677708,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:5",
+    "sourceId": 423590,
+    "sha256": "d79af5a5b714d70f5e00b6a905cb60909e7e2328ee0b42293fce3aab419fc805",
+    "bytes": 362480,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:6",
+    "sourceId": 423589,
+    "sha256": "d6660010f71a1874576bde6d3c03b417ec6ac1873cc083359db2cff4df9ef587",
+    "bytes": 701873,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:7",
+    "sourceId": 423591,
+    "sha256": "dde0d30683f8314475be15ad0c0566ecb40a94c67d397057c102c32cb719cd80",
+    "bytes": 474857,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:8",
+    "sourceId": 423592,
+    "sha256": "ad630cd01325d67bba295be7cee645ff8253774f5bce6dd623da3732bae6305d",
+    "bytes": 866954,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:9",
+    "sourceId": 423578,
+    "sha256": "f36c89f9acb4a8b7f9dea0a12c7b8bebba18a4e0a66bbedbed12a0259d50cb67",
+    "bytes": 745029,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:10",
+    "sourceId": 423577,
+    "sha256": "d018819c6f2633d991e92d8d113a12936dfa3fb819143f93d2b67e27e2bf0a10",
+    "bytes": 669778,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:11",
+    "sourceId": 423575,
+    "sha256": "1dd62f5a09e321ebf81ea9bb8ce1d594ebab8c551a10d2220e80fd1b1fdb5bd0",
+    "bytes": 210312,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:12",
+    "sourceId": 423580,
+    "sha256": "ff4d969626283d5f94db2c62ad35b04a47615d333983a9935070dd5cdf27506a",
+    "bytes": 855215,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:13",
+    "sourceId": 423579,
+    "sha256": "1b491f1d13727fbb7593c282a97b8b4f5083630b035502442c70958d064a1f2b",
+    "bytes": 796501,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:14",
+    "sourceId": 423576,
+    "sha256": "f90e9d4fc7f143884dad73a59c41e3dc821ecc997a08e759c5f34b83906b6797",
+    "bytes": 368858,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:15",
+    "sourceId": 423581,
+    "sha256": "9f137570060c358ed9a0257763d39db992acfde45825317d1d7778c99be846f0",
+    "bytes": 540133,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:16",
+    "sourceId": 423582,
+    "sha256": "5933a7bd44320292719c445383f66e5a6330b059b657dd33d8fbdde1ec118524",
+    "bytes": 495466,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:17",
+    "sourceId": 423586,
+    "sha256": "0127f88fbd1b153da5f601278edbf2a658b74a4b378e6775f905bde4a2e4b5b5",
+    "bytes": 621679,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:18",
+    "sourceId": 423583,
+    "sha256": "7cd68178b7c3aee842808048beda34b47a80dd2faf1000d8b9b4dd02ebd4878b",
+    "bytes": 528953,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:19",
+    "sourceId": 423584,
+    "sha256": "b714458f0a9c37e1ec61c4db1d91812adaba5ead3201ad433069919e6fd7bf3a",
+    "bytes": 602978,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "II Kings 7:20",
+    "sourceId": 423585,
+    "sha256": "68ea3792d7d862e1f915979ad4bf04acb30cdcf699a3f71b534faa5ba1873266",
+    "bytes": 250578,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:1",
+    "sourceId": 446239,
+    "sha256": "cca52de8cdf2e9c65dd714eb5c72d5a935e7208eef76979b33530bf718e7e137",
+    "bytes": 282249,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:2",
+    "sourceId": 446240,
+    "sha256": "85ed908e63801c2a4eb17721473613999e2d8478da994cf447c3398073312a54",
+    "bytes": 680957,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:3",
+    "sourceId": 446242,
+    "sha256": "c2471028d298e4d51b244a21b224d3b17dc07b66b94a96cd164ed43da920d7e9",
+    "bytes": 299882,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:4",
+    "sourceId": 446244,
+    "sha256": "821694fafad4c657c4b2a0941d10d32ccadf492fc815b8bef671d4feece92caf",
+    "bytes": 590017,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:5",
+    "sourceId": 446243,
+    "sha256": "d928504b51096f2ddca904579854895342b128db726f3c1cc25c441b03d17470",
+    "bytes": 320867,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:6",
+    "sourceId": 446245,
+    "sha256": "94b457045c7acf07b198ee4bae0d1ad7deb2839399576390054f9fd90a058a70",
+    "bytes": 251845,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:7",
+    "sourceId": 446246,
+    "sha256": "8f0e784db764dd620b468ce094cec4b41ae6d0d006dbcb15420fd1db44b01b50",
+    "bytes": 261714,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:8",
+    "sourceId": 446168,
+    "sha256": "ea1d11afb0cfb1a14af44d98c81f0e2566a2d6ffc37d66074137d17429009f64",
+    "bytes": 351254,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:9",
+    "sourceId": 446169,
+    "sha256": "6e14a57f458eca17b38d7413669c158de35e2a5292021a388f7114c548179284",
+    "bytes": 319515,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:10",
+    "sourceId": 446172,
+    "sha256": "70189fac591b23817827e54fe5439932474522b0a7430fc1fe16166406250ca7",
+    "bytes": 500465,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:11",
+    "sourceId": 446167,
+    "sha256": "6b0f167c06a0f8c8c4d9b297ed4c18bbc72d5bbffae9cc6f62c219abcbe3d77d",
+    "bytes": 353928,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:12",
+    "sourceId": 446170,
+    "sha256": "c33cffd366d89dd8aa8594cc7f750571fc2b69f234ef9239353b3df468766d26",
+    "bytes": 488763,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:13",
+    "sourceId": 446171,
+    "sha256": "12750572fdbaf3e0a2e9f07aac3db067611d40743503a6e19fbebde7c3216506",
+    "bytes": 424720,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:14",
+    "sourceId": 446173,
+    "sha256": "fce60673c3b19150b99fb570209e444a827e7f6d98ca317db41ad97ccdc7bde1",
+    "bytes": 484145,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:15",
+    "sourceId": 446174,
+    "sha256": "fb1537824217e678f8f0e2c757d34f1993d2e511c4c16a4f21cad79c6ac8c928",
+    "bytes": 581967,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:16",
+    "sourceId": 446180,
+    "sha256": "77854c3c8006ca963c45f48ddc0cd07e58741db90c3b02f68a212c9160682275",
+    "bytes": 466935,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:17",
+    "sourceId": 446179,
+    "sha256": "ac42d70c759c7d91b10a252c31bd4fadd500332a1a6b8d5f7381e1168e994072",
+    "bytes": 463342,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:18",
+    "sourceId": 446176,
+    "sha256": "190cdfde2af11f972cff253d26f9d1cc816a4b215772449e4624099385d7edfe",
+    "bytes": 480778,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:19",
+    "sourceId": 446177,
+    "sha256": "a284575031d77f98034d1a66ab80d21abab501c18a37681bb3fa7b09acc41ae4",
+    "bytes": 328630,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:20",
+    "sourceId": 446175,
+    "sha256": "f41aa9ed1ecefdb564b99c2e8ef51fd1d1eca6f726b800505eba019408c9bcc4",
+    "bytes": 288726,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:21",
+    "sourceId": 446178,
+    "sha256": "72576445fe6d704ae330bd0e3565781ab5e50c22de28894b045e336899a291db",
+    "bytes": 720768,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:22",
+    "sourceId": 446181,
+    "sha256": "b447d383cd24c04ef6ef1994cbdaf6821443cac0785b37515a2ef3ee2a23b3b7",
+    "bytes": 322510,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:23",
+    "sourceId": 446182,
+    "sha256": "ef45f244594779a57b25f551a5c07ca3bb6e36d81cd4c1caee13c8418b45a7d8",
+    "bytes": 351290,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:24",
+    "sourceId": 446185,
+    "sha256": "3b38254e87ef8b49100455f74150d4e5e840fd0f0b7de0f81dcc752f4e17e106",
+    "bytes": 452357,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:25",
+    "sourceId": 446183,
+    "sha256": "25fac3ea415afea42c17c52214ef9ed315570c0e578d2deefcd47156a60764d1",
+    "bytes": 157862,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:26",
+    "sourceId": 446184,
+    "sha256": "e19047a4b63b52380142d9b5174f84aac18b9b9d32cb25072d7ea13c8087d9e5",
+    "bytes": 338313,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:27",
+    "sourceId": 446186,
+    "sha256": "724bb285841bd89c107f7aa14b8fdf51afc5bcc42f1249aefa66f24f78199a2c",
+    "bytes": 587006,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:28",
+    "sourceId": 446187,
+    "sha256": "890899c32b495fd0c444c585a0414f2dd8bf95cc0459eb340ae3c101a97d505f",
+    "bytes": 299596,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:29",
+    "sourceId": 446188,
+    "sha256": "616a2dca5d6592bb945053c45fe9f585d05aac30cd39ad467ace66a1dd8ebfb4",
+    "bytes": 543338,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:30",
+    "sourceId": 446189,
+    "sha256": "40eb5882737a8d5ba3225e4a9aee7a3bcf8fb72e9911cd9aece263c955261bd8",
+    "bytes": 280936,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:31",
+    "sourceId": 446190,
+    "sha256": "99aff3dd18e38bc6cb51780828dc50025ddf03cf7d23e2099d1053bee3ff5304",
+    "bytes": 207347,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:32",
+    "sourceId": 446191,
+    "sha256": "27d7f991ac683566f6cadb11aa0fd68a48d700fee8ead6dce6786b8f87956f43",
+    "bytes": 386821,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:33",
+    "sourceId": 446192,
+    "sha256": "8b729e33e6d4567bc75be3359be8421e22aa725b809b7c14ddba240029f8df67",
+    "bytes": 401124,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 16:34",
+    "sourceId": 446193,
+    "sha256": "a678a0a5ad9f3f8631c16cf32bdae9a8ae868440ea8f31ed099d2b7fca5944a4",
+    "bytes": 503313,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 17:1",
+    "sourceId": 446194,
+    "sha256": "97c8f6144188677401e79ca36fec2274812a2ab8da0c225f27d60d0022b77816",
+    "bytes": 93613,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 17:2",
+    "sourceId": 446195,
+    "sha256": "59f07e29a338a7b90932e56353a84fe7a44a538bf9749773e411757309de9ad1",
+    "bytes": 362288,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 17:3",
+    "sourceId": 446196,
+    "sha256": "d854504057be7b2d0d23ac2df9150bffbd2ed1c2d3fff44b914fa74b24f64aea",
+    "bytes": 416881,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 17:4",
+    "sourceId": 446198,
+    "sha256": "be849b728a771d6252dad721b1e4fb8ed3c187dac7ecac02db8c862612ad419f",
+    "bytes": 615150,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 17:5",
+    "sourceId": 446200,
+    "sha256": "d8fdf56a44e7ec2ed2274054efc3f8fa4cb63586c09f287813449ff8dc8d0f69",
+    "bytes": 725685,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 17:6",
+    "sourceId": 446197,
+    "sha256": "cf1a5fba273864a2f8558d87775f5c541d3f8add0ce5c30dc918b4063f3d9739",
+    "bytes": 350049,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 17:7",
+    "sourceId": 446199,
+    "sha256": "a5ab15f3a55c4dd85e55891ed315ca9c9fb9fbe9c19297d77bcd9de4400a42bd",
+    "bytes": 415270,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 17:8",
+    "sourceId": 446202,
+    "sha256": "b172944098a455e1a592c4f65a6192b09725a154874a272fc087e87af3479f43",
+    "bytes": 328666,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 17:9",
+    "sourceId": 446201,
+    "sha256": "7a5438eec9427b6eae81b8b5466b4b280c4bceec17ffad1d00c2ac2f08deb9f1",
+    "bytes": 328685,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 17:10",
+    "sourceId": 446203,
+    "sha256": "e19dfe046adafcbcb5f9d1f2a49cfc1a23b8dcc913902ee8ecd9162b2aaec704",
+    "bytes": 490818,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 17:11",
+    "sourceId": 446204,
+    "sha256": "b788175dae83e9f553d32e6e19e84f174a6a21a5ef60934827bceec34f82dabf",
+    "bytes": 436560,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 17:12",
+    "sourceId": 446205,
+    "sha256": "fcd317acaf369e017c392a17abf2e87dc9c2ee9e53a6096622e662044b1de4de",
+    "bytes": 341537,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 17:13",
+    "sourceId": 446206,
+    "sha256": "6f91dd3ad3e85c0aef4ba63af2fa8bd0c5592e5233933f4004f11f524a943927",
+    "bytes": 493768,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 17:14",
+    "sourceId": 446207,
+    "sha256": "44008c03e6be33f97a06036292237635d0636d89c5eaf24668300db1747a1b2f",
+    "bytes": 535166,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 17:15",
+    "sourceId": 446210,
+    "sha256": "9ab993973f9480b0c19d0db65ea6b0cb5fc5c20cdeae08dc20f1bc59b8d2a617",
+    "bytes": 439408,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 17:16",
+    "sourceId": 446208,
+    "sha256": "20cfa3e8e6f886803d252bf268a527fca6ec54fa1523953c632ab642c7fd503c",
+    "bytes": 202460,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:1",
+    "sourceId": 446209,
+    "sha256": "358ad88f55ab9f11494548091f81584855469fea6f4de238babcc3902521ab6b",
+    "bytes": 96748,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:2",
+    "sourceId": 446211,
+    "sha256": "a833c2ea0082e6e65081e5deddd088b3a570bf1225d7c2358a70dd49427372e5",
+    "bytes": 219973,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:3",
+    "sourceId": 446212,
+    "sha256": "abbf12dd1c7f29f48a1453b6576c40e3582aaa0f83c2aee4830de37d8a31e3e3",
+    "bytes": 608676,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:4",
+    "sourceId": 446213,
+    "sha256": "0772ba9998cf3b7432c5f1f054c89c11a34b854bdc82f7d71bbf3b56cc6f1bc9",
+    "bytes": 272654,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:5",
+    "sourceId": 446214,
+    "sha256": "c81b60292e0d248eab9f53376b03000d5d3ccaf3ae4bdce831de7364f03125c0",
+    "bytes": 314503,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:6",
+    "sourceId": 446215,
+    "sha256": "f12ae0142f902ff96d0814f5f8954585169a515d12dd1bf01027863e9ea03953",
+    "bytes": 245879,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:7",
+    "sourceId": 446217,
+    "sha256": "012fd3277feccec9678f6ce5e865714382842a3231ad9b07bf76ced2968c9d74",
+    "bytes": 281040,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:8",
+    "sourceId": 446216,
+    "sha256": "77bf5691dbf8380532e15cbe81c36453f9c9ab45993206229153ee12d57e2a5a",
+    "bytes": 165728,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:9",
+    "sourceId": 446218,
+    "sha256": "b48ae7b4e50d60f14b054573ae093a2ebc448f924b58fe617c61ecbb73de7cc6",
+    "bytes": 337019,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:10",
+    "sourceId": 446219,
+    "sha256": "a6a877a06ed8cc6ad4ef7b522e01b29fdbd00436cb738ae2901821fffa4d7cf9",
+    "bytes": 255544,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:11",
+    "sourceId": 446220,
+    "sha256": "85394da78af6a45d5444e0c014744111ae07bb0045e4b5b0a0e694f8faafa0c2",
+    "bytes": 272589,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:12",
+    "sourceId": 446221,
+    "sha256": "6b172591bac60d92fefca37a5642c46f3f59de1a65722b79f9eb299a016ee794",
+    "bytes": 171900,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:13",
+    "sourceId": 446223,
+    "sha256": "5b00249dcacf7c987fc55f0198871e0f7155a1353bec8377dd93a6fbf2036a16",
+    "bytes": 167101,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:14",
+    "sourceId": 446222,
+    "sha256": "bbe738ce1e7e89809458999182ee90e6573fab55206657f2a1f92c58623975eb",
+    "bytes": 256545,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:15",
+    "sourceId": 446225,
+    "sha256": "4b2a8564a7890c48f79bcb0d64840564ac5e713bc47b89e9cd13337dffba3ecd",
+    "bytes": 243828,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:16",
+    "sourceId": 446224,
+    "sha256": "fa98ac7707e1131b80684e331e812d3993faee3ae9d8cc0f3df0db231495f3b9",
+    "bytes": 169046,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:17",
+    "sourceId": 446226,
+    "sha256": "efd84d5207cd1fa39445a02069c8efbaa7cbb0e5fd88bddcbdd7ec39cba929c2",
+    "bytes": 418790,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:18",
+    "sourceId": 446227,
+    "sha256": "491c3d9d328eac71a69e1d32f01997726fb571ae96d1c2abd272a38b56f60a71",
+    "bytes": 312842,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:19",
+    "sourceId": 446230,
+    "sha256": "e9eba15b2827875ade7a76a1abfbe1e6393ef4fa94005165354f8e237c6f8fef",
+    "bytes": 235802,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:20",
+    "sourceId": 446228,
+    "sha256": "10f8bcd708c15b86ff75161b991d3f674c2585871d4b97e342f16b95e32d906c",
+    "bytes": 215347,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:21",
+    "sourceId": 446229,
+    "sha256": "d66bdc182cde5352c094a4cb477535e749b2d879fffaf3b0c4fde4c44828f6c9",
+    "bytes": 290127,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:22",
+    "sourceId": 446231,
+    "sha256": "73ee614d16f3edf07b838e82270bfa8c88e27ddf20837cfc38c0996f7e4c82e9",
+    "bytes": 191223,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:23",
+    "sourceId": 446232,
+    "sha256": "9b0a391944c519558276698a28bfdb26181155e11aca9b6473aeec946742a3ac",
+    "bytes": 381524,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:24",
+    "sourceId": 446233,
+    "sha256": "ff1bed78e6720f27f0f4ed26ce892f584b9f5ebe819e438ed6c08ebdde791bf2",
+    "bytes": 291649,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:25",
+    "sourceId": 446234,
+    "sha256": "644fc7f74e785683f2b659b9ebea21a9acd08225a10721616599c78fe884d34e",
+    "bytes": 248873,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:26",
+    "sourceId": 446235,
+    "sha256": "d721a572ef99420cd9f1b243f1ab5c5a287bce9403481cebf3561a44557d6b19",
+    "bytes": 391360,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:27",
+    "sourceId": 446236,
+    "sha256": "effa69ca97e51101e50a14b728f18dc757982351ee61e4873bf700d60e1b4052",
+    "bytes": 279328,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:28",
+    "sourceId": 446237,
+    "sha256": "11f8bf533b367d49dfed5268b42e35b342e3bf24221227cbdd3fa7019159e5d8",
+    "bytes": 311177,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:29",
+    "sourceId": 446238,
+    "sha256": "0af4bdc79dacb19b78cae2332963d9be37ed9f41f5bd6c07fae12180e4484825",
+    "bytes": 343298,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 18:30",
+    "sourceId": 446241,
+    "sha256": "cf4a2790f145e7fc7780444db1315dd68e4c4dbce28aa277d466ba08093d2c2e",
+    "bytes": 437795,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:1",
+    "sourceId": 440803,
+    "sha256": "094f90102bd0da64ac1bb745e1c9d6aa40ff6f55e03ae5b0f1ba6ab57afe8daf",
+    "bytes": 101736,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:2",
+    "sourceId": 440805,
+    "sha256": "7147afc68a1253e71252c5cbf0a48cf56b20c9f009179fae3da3e1cc9ac2190a",
+    "bytes": 315704,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:3",
+    "sourceId": 440807,
+    "sha256": "f8ff674b8d6ba6652663ebc6443913cf166f5d4cff634dacf43a5c2c3a0aa04d",
+    "bytes": 455260,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:4",
+    "sourceId": 440808,
+    "sha256": "b5f7a56990f7bbf6f5b3db1194a8f15df4780916cd15006562291c7d5c44f109",
+    "bytes": 645823,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:5",
+    "sourceId": 440809,
+    "sha256": "3b235ad8cf265ca4d33cd970428bad7c180bdece2bbf57a11e71840d07f72761",
+    "bytes": 306415,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:6",
+    "sourceId": 440811,
+    "sha256": "a34bebdd3547244aaf7dfff7a8703bd4f80533b5140c07f125e751006102de4c",
+    "bytes": 264791,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:7",
+    "sourceId": 440812,
+    "sha256": "0130f13d6c4d392e47934b1e4528eccab76c37280ae427a9f416587f34b6acc0",
+    "bytes": 312962,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:8",
+    "sourceId": 440810,
+    "sha256": "ac40c51d98e80e0ebcb7811418072a384fc989eec748f32aa472433b95628de5",
+    "bytes": 174103,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:9",
+    "sourceId": 440813,
+    "sha256": "761076eb2d938c186939cc284a33b8697536c0ccedbe2c7aee19116c958c12af",
+    "bytes": 346266,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:10",
+    "sourceId": 440795,
+    "sha256": "ea69742b022805d7bc751b2df449f3b8d7467ce81372b27697a06d57614afb18",
+    "bytes": 182023,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:11",
+    "sourceId": 440797,
+    "sha256": "243887ebec6a9039dcb51bfec5bc3b27314eb6877a36938e73a659572125f403",
+    "bytes": 431496,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:12",
+    "sourceId": 440800,
+    "sha256": "454fc65f7bc65f600eada00d50a62be830365efb1d98bda0a6b4ee5af44b874b",
+    "bytes": 480853,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:13",
+    "sourceId": 440796,
+    "sha256": "e07d5c1870c3890329fcf4782cb9fc324165d0501958ac82bd1aa4a7c24ca647",
+    "bytes": 309943,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:14",
+    "sourceId": 440799,
+    "sha256": "1da7759c8a3733a3c31682c35cde2c04937584c41a65b2c144df7d1c58bca600",
+    "bytes": 381821,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:15",
+    "sourceId": 440798,
+    "sha256": "09371ee802253e7d1e579c9bb2595ad00949061cc3d890ad5a815cd57d90631f",
+    "bytes": 314639,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:16",
+    "sourceId": 440801,
+    "sha256": "dd197907d09281f66ef0aaeba17c613b94c65b2704b289112a41c14b297400a1",
+    "bytes": 192913,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:17",
+    "sourceId": 440802,
+    "sha256": "0808930bc49b00484dfb3f04ac00cc5dde305b96d250cec630ff886929b4f30e",
+    "bytes": 123955,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:18",
+    "sourceId": 440804,
+    "sha256": "2148dbb7e9df7f68fc1ddb7dbca6168012f22c3540fca199cbcd9625b5b050d3",
+    "bytes": 504715,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 22:19",
+    "sourceId": 440806,
+    "sha256": "a07c41abfb6e3a23eb822c3dbaaf0ee1d0825bc4b0816992bbcb67fdef0051d2",
+    "bytes": 450887,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:1",
+    "sourceId": 416154,
+    "sha256": "1f6c69d0e9ea057538fe33c37d5f6caf8d3f448b3bc63c978063170fa04dd1a6",
+    "bytes": 93556,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:2",
+    "sourceId": 416159,
+    "sha256": "f69227db31f09f2d02dc8df458fcf495f93b8b2dec1d55282edf7f5932cc2911",
+    "bytes": 315555,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:3",
+    "sourceId": 416155,
+    "sha256": "cab890418952884162f6f99a7d26b83fcdd88a8ec4717b8ee3949d366a8ad9b8",
+    "bytes": 213616,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:4",
+    "sourceId": 416157,
+    "sha256": "98a2b1b1ada4e1fa84817ec0085c82d18de381b12af0371b91cfd7e3ee7ad879",
+    "bytes": 263532,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:5",
+    "sourceId": 416156,
+    "sha256": "8f775494d06aa79535198da48e13888e30b12fb72c48b148953e42c7ab2c062e",
+    "bytes": 226242,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:6",
+    "sourceId": 416158,
+    "sha256": "6abd81569010cb5a8dac7ae369a6bc79d6ca1247fbdcc4d23265b4172d1d7502",
+    "bytes": 304915,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:7",
+    "sourceId": 416160,
+    "sha256": "925b9d202d9e7b61b65a856f17cfa841e73c6c6c53be1ed7a0e26257c1fc9928",
+    "bytes": 231246,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:8",
+    "sourceId": 416165,
+    "sha256": "1183d630efaa611100841a595044f1e6e85ba5fe95c5636beac4566082654744",
+    "bytes": 287220,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:9",
+    "sourceId": 416163,
+    "sha256": "28f61ea2528ad0f204cdf457be3f758c863a78daf1cd2631d1c99f03dea354f2",
+    "bytes": 314417,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:10",
+    "sourceId": 416164,
+    "sha256": "6843b10b9b6a4ae58f89b13c9ba7067959af9206e32750ec250a16d5cef1072c",
+    "bytes": 327486,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:11",
+    "sourceId": 416161,
+    "sha256": "7ad4cf0c91ef46ef4b5e4cab6b3712ed221fa2e7f9d6a3602b784073c8a96644",
+    "bytes": 191216,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:12",
+    "sourceId": 416162,
+    "sha256": "e59603b58784caf91277606442b9e13166965a37d5696b4805090f2fcc385f37",
+    "bytes": 242256,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:13",
+    "sourceId": 416166,
+    "sha256": "27d957386026c2212dbf8c562353a07e983e0f7459ab8ac91ddec1488fc4270f",
+    "bytes": 307924,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:14",
+    "sourceId": 416169,
+    "sha256": "ee8db9463e4d1ed04cfb3d99ecdddebc0704554715f4cafa7ab499f05753c750",
+    "bytes": 259676,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:15",
+    "sourceId": 416170,
+    "sha256": "23b6d8eeef66cbe8c3bf601285971d95e574f67585228c46d82ace2513a1107d",
+    "bytes": 288904,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:16",
+    "sourceId": 416167,
+    "sha256": "ace42b764a76a8059916e334cc3c71560d74ff816a0e1a0e147f23db082cfad0",
+    "bytes": 223363,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:17",
+    "sourceId": 416168,
+    "sha256": "afc859c99451632ff1298848539187541fb3f7bab2fdb5f2a454f746494820aa",
+    "bytes": 245883,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:18",
+    "sourceId": 416171,
+    "sha256": "06971e57be549a64f83e5910afe6e3c028ee1b7b2df108d75ae6112507302129",
+    "bytes": 238050,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:19",
+    "sourceId": 416176,
+    "sha256": "b5f45de579ba7f0665300d99d916a5e272e0f023cc6aa68d2f5842584f6052e0",
+    "bytes": 444379,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:20",
+    "sourceId": 416177,
+    "sha256": "50c58c2b8ad2b252bce1e85b7e822b67c2ebff423f0bdb12836628abed08124f",
+    "bytes": 615337,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:21",
+    "sourceId": 416173,
+    "sha256": "043c283c9f44229e90b6004cbe1fcf4cbc4e6762061c6a70b31d65cb22982b19",
+    "bytes": 199494,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:22",
+    "sourceId": 416175,
+    "sha256": "4fd05341e9dbce3da48104b2e857abff0bbeca3ae8be4360f3b6e0c93955209a",
+    "bytes": 397799,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:23",
+    "sourceId": 416174,
+    "sha256": "af54c3686ed906731862cba69718096040dd1cfe5e36a7c2a819d9d77de73aae",
+    "bytes": 467152,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:24",
+    "sourceId": 416172,
+    "sha256": "f1970bcaf5781fb158eaea99a254646bfd26c0818190759e68e7fa693fec6c68",
+    "bytes": 205674,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:25",
+    "sourceId": 416179,
+    "sha256": "1f555d3bda4a22764464e39c8bf86a805c695f8f3f93888ecad0d462efa608b0",
+    "bytes": 277683,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:26",
+    "sourceId": 416178,
+    "sha256": "a20a8e388932ab00e71924f7dd0c070522616d462e89b951b00037e5ad6c50f4",
+    "bytes": 176873,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:27",
+    "sourceId": 416180,
+    "sha256": "df85579af38328d047531c062bb5532834c5445c85171ca5506c14d71ebae81b",
+    "bytes": 248804,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:28",
+    "sourceId": 416183,
+    "sha256": "dd3ff45fec304b4bd773ba60211dc9d76690b641d292428a2a51dee0ef23bd9c",
+    "bytes": 338326,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:29",
+    "sourceId": 416181,
+    "sha256": "65ed392718e44ca15774ad5f67e47c8c52822f76b60fa4cdf15bbb9232f2c384",
+    "bytes": 264848,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:30",
+    "sourceId": 416182,
+    "sha256": "1b45bc0a06406c16790df151bd60936e8b0aea9c5509862f9c450e8519f7d5fe",
+    "bytes": 189881,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:31",
+    "sourceId": 416186,
+    "sha256": "27a9d54a6f2fb3f4e257fa7daa297ec1df5f2a9c212ec109958899dd7276e8b1",
+    "bytes": 311190,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:32",
+    "sourceId": 416185,
+    "sha256": "ee4e5cd1aaea0b5f23b3b8c65d3606dd36a2a37048ecbbdb98d8a2fb368aa8fa",
+    "bytes": 263284,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:33",
+    "sourceId": 416184,
+    "sha256": "b17ac33a73a53384b0e8c426e739054fa887a52d3ac8d5b2fbfb628d56f5378a",
+    "bytes": 203740,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:34",
+    "sourceId": 416189,
+    "sha256": "acce1840770408987a8ffd77bf8e8edc6887c6e2125f16966140c179ee699473",
+    "bytes": 457027,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:35",
+    "sourceId": 416187,
+    "sha256": "239b56461e395deda91ccd58d6fcbb11db7e277adc5d1d80861d2a241976d128",
+    "bytes": 235966,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:36",
+    "sourceId": 416188,
+    "sha256": "bd06fae8fa3b64f0593d3a3d803cda422208b6d49572f064bf1b98f0c73812c8",
+    "bytes": 419059,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 19:37",
+    "sourceId": 416191,
+    "sha256": "4e115633330239d08ee2eb6a44c436fb96d084f0b4c26d22239c16f2e7eb0355",
+    "bytes": 228042,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:1",
+    "sourceId": 416190,
+    "sha256": "4b5cc78b57e3bd857f5830635dee1a9728d7629906c17109e13c02da512256f7",
+    "bytes": 93726,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:2",
+    "sourceId": 416193,
+    "sha256": "8f476c279c68bac2f199bd6c163cb23f87f2e4fbd25890bc4655ae6a3c0d8cde",
+    "bytes": 604435,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:3",
+    "sourceId": 416192,
+    "sha256": "acaf21845cb437998cb9376e0c1986a4164cb470eae4498f05568a4f3088a208",
+    "bytes": 549706,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:4",
+    "sourceId": 416195,
+    "sha256": "5a3adff48b1c675d66107ececc134b7ae4e1c41dcebeeb03194450242ce032e9",
+    "bytes": 472631,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:5",
+    "sourceId": 416194,
+    "sha256": "e3f2d83cc95d4a51f6327241ffeee6872e1eefad67a51c37407255d95f848e9a",
+    "bytes": 508371,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:6",
+    "sourceId": 416196,
+    "sha256": "d777af2674049b362fdcf9d5271026ec56e3d94dd977c86a7a2d398da1dd338a",
+    "bytes": 440704,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:7",
+    "sourceId": 416197,
+    "sha256": "bb0a531a38d9c6931cd89fd6d447fb8b6f1855f2ca6527a231fd0a99fff8b038",
+    "bytes": 226220,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:8",
+    "sourceId": 416198,
+    "sha256": "d800efa161fecf57aa0402691c94e8f329b508c5791f7983096f1e7a37a46788",
+    "bytes": 197795,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:9",
+    "sourceId": 416199,
+    "sha256": "af06fbb5abd5ca51d8db9d10f339235e09f064ac780dd72a9e9c48794b147608",
+    "bytes": 362610,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:10",
+    "sourceId": 416200,
+    "sha256": "cc5a11459211ee7e73a18ab67658411853d16553f77a03422951cb6d1772a792",
+    "bytes": 346247,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:11",
+    "sourceId": 416201,
+    "sha256": "a7f77086b38bc9466d8d6a6743ea026496349a6f3e693674b44adfd6cd4cf138",
+    "bytes": 330306,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:12",
+    "sourceId": 416203,
+    "sha256": "2bed83b8cfb23badd5c036dbb72954b56d8df91e69ad0272adf40502ceb385cf",
+    "bytes": 299925,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:13",
+    "sourceId": 416202,
+    "sha256": "64a55635178c33f2198fa072f4cabcbe06bc3bae99306fa62502b8351225c98b",
+    "bytes": 337021,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:14",
+    "sourceId": 416204,
+    "sha256": "bce4e369b5ebe0836d57885588df552958de2871f1c41a407d694da5a584950d",
+    "bytes": 463253,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:15",
+    "sourceId": 416205,
+    "sha256": "a9c61cc33b9ef5bd2c6cbc4696658f8eb0338a6f6caff6d5076b6cae9896a72e",
+    "bytes": 289136,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:16",
+    "sourceId": 416206,
+    "sha256": "b85a36bd92c5d6d8079f713428101bf897112d5f0c9fe397b04b0d203620dcbe",
+    "bytes": 376818,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:17",
+    "sourceId": 416208,
+    "sha256": "9dfe43d2e135aa6540618a4192032bd62108e9da35e985756f6183e28b4d48c1",
+    "bytes": 668546,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:18",
+    "sourceId": 416207,
+    "sha256": "b247537498821073e5c53a6c791c659f4a072c9f3f7139fdf37ebad85cf67436",
+    "bytes": 519374,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:19",
+    "sourceId": 416209,
+    "sha256": "b8035c98fe29f3502a9085e3770cee66b4f089434ba3032441f848d7fa3b1ef1",
+    "bytes": 344893,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:20",
+    "sourceId": 416211,
+    "sha256": "caf88bd24beb376c684a490baf6195745db7ec6998424319cd2a6f83698a5b3e",
+    "bytes": 323627,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:21",
+    "sourceId": 416210,
+    "sha256": "322fe13f6d2499c2f4f94f42893f8a14e8f6c646cc80395badcb3e11842286af",
+    "bytes": 335330,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:22",
+    "sourceId": 416212,
+    "sha256": "5fda1bc932b21d44132f65858405e7c540e9ad3a0c48099781021c4bc11aea67",
+    "bytes": 421893,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:23",
+    "sourceId": 416213,
+    "sha256": "6697ef6dddbd54322549064bf16be1301f1ed3a9aa30a1f9f0a2e39c20435ff5",
+    "bytes": 325759,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:24",
+    "sourceId": 416214,
+    "sha256": "8fd6dfd6636779a2d702145acad2bbf55c357ee6fa763c8b08ef4be62c352cbd",
+    "bytes": 580290,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:25",
+    "sourceId": 416216,
+    "sha256": "e09d7d969f5970958c8ec106082291e1b4924de2e928c0da1287c9f3e96ce9ca",
+    "bytes": 660566,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:26",
+    "sourceId": 416217,
+    "sha256": "08b587bb20be5c9030300d742f8947967f174a9aa17a6af451a4f7af45de8eac",
+    "bytes": 287321,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 20:27",
+    "sourceId": 416215,
+    "sha256": "ca1333476393a82fb8047d20fa2f9030881eaa37acff29dfa41f61c8f3710357",
+    "bytes": 400902,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Amos 9:7",
+    "sourceId": 439476,
+    "sha256": "f334e8cd610a6ad811fb325d2c957dc0fd2009926269ea4aac7d4783f2516d7c",
+    "bytes": 657294,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Amos 9:8",
+    "sourceId": 439478,
+    "sha256": "e1472ce165c2ce182d508e11ab2eeb99da3efaebb846012fb6ff5a9297968246",
+    "bytes": 852275,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Amos 9:9",
+    "sourceId": 439481,
+    "sha256": "0f9aa8a96fd9107656a8702360f517257e461da3f959dd8b09a190fc51e9c8e9",
+    "bytes": 534683,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Amos 9:10",
+    "sourceId": 439480,
+    "sha256": "5ac9b78bc5fba5805c126b1ff0854c0b0270bf01cf576a7c6b43af2ea7196a56",
+    "bytes": 409181,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Amos 9:11",
+    "sourceId": 439482,
+    "sha256": "401e0f69e479dbf74bd761482716629cbf1b4b1226b0364fdb12f8056be24990",
+    "bytes": 626041,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Amos 9:12",
+    "sourceId": 439479,
+    "sha256": "378d9802d872fa1ea689126f8e485b66780ea8663256bd278aeb09124e9e6cd4",
+    "bytes": 450184,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Amos 9:13",
+    "sourceId": 439483,
+    "sha256": "9ba85cc7071d407b63cdfc512f1b956b3e186a6bb6106c38ea6d00259ecdf3ad",
+    "bytes": 604191,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Amos 9:14",
+    "sourceId": 439485,
+    "sha256": "bde1dfa31f4f2ec7e40c7413ce17049126ec06eb51f978304ec410e460f7870c",
+    "bytes": 704506,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Amos 9:15",
+    "sourceId": 439484,
+    "sha256": "852bede3031ecbf1fdcdefbe6db2be78a6778125fee58f8499afe2bd3795485f",
+    "bytes": 423217,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:1",
+    "sourceId": 438912,
+    "sha256": "6122f748496e7c4ea325494d48c3604256796a54acd9731d03e911797e2b2e55",
+    "bytes": 315690,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:2",
+    "sourceId": 438911,
+    "sha256": "faa730affce524a0f25c7c451821d714a997e4b641a9ce8b0bff5d7ff9893de0",
+    "bytes": 275773,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:3",
+    "sourceId": 438913,
+    "sha256": "e6d8b1e0ad12299517d823120e6bf8b79cb91dd6af63e16d8a33ee592bdc83cd",
+    "bytes": 282176,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:4",
+    "sourceId": 438910,
+    "sha256": "10d59c9599df20e46e6a0656d141f3151c636e9d8b22a8d73f3fa11ec2a873cb",
+    "bytes": 160576,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:5",
+    "sourceId": 438914,
+    "sha256": "2efedb1bd88f45748829183212b131ec6cd70534e05dc64c49f54077532e0bfe",
+    "bytes": 328624,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:6",
+    "sourceId": 438915,
+    "sha256": "a2315d4070c88cd3673635d60058e050d46b0498243d8e90eb932cd7eba482e9",
+    "bytes": 456970,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:7",
+    "sourceId": 438916,
+    "sha256": "d2cdf4f3bcb9a631a23802286b41e30dfd5c7e13a752958113e63c7a27c1c484",
+    "bytes": 360895,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:8",
+    "sourceId": 438917,
+    "sha256": "d6241437db9f982c8c1173dc4775954f31bbb8b7a781def65b359e36c7206da3",
+    "bytes": 340045,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:9",
+    "sourceId": 438918,
+    "sha256": "211ddd8301cb64eaff2a56bda9e8422d3d5883d002e8427b69be59ea51d6322c",
+    "bytes": 295197,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:10",
+    "sourceId": 438921,
+    "sha256": "e25fe1e76074b8f601fdae6805aa6c69fa66976114562b04f5f2dce7c1eae6b3",
+    "bytes": 546759,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:11",
+    "sourceId": 438920,
+    "sha256": "e859671facc295586e87aab057f61c8250ffdb3cfa9e10d4cae72f540e15a5f8",
+    "bytes": 234185,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:12",
+    "sourceId": 438919,
+    "sha256": "3cc6362c0c57f35b859c5195526a315fc38bb56dabf7ab62223adfee0e68b097",
+    "bytes": 503264,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:13",
+    "sourceId": 438922,
+    "sha256": "6cf019717697144e74bb69d2cecbbfe26b6a7d8132268b6140ebef9e126fdd80",
+    "bytes": 155597,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:14",
+    "sourceId": 438923,
+    "sha256": "5a8724f8376370c182e42e2c934c63419906cf972699452a73f2c91d45e15443",
+    "bytes": 341666,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:15",
+    "sourceId": 438924,
+    "sha256": "f3eb517d1eb2d3b47780c726418cf008f091dae0973cf7663e1039be3de8c8dd",
+    "bytes": 210354,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:16",
+    "sourceId": 438925,
+    "sha256": "c3c8d87b00b3c3d96e9e5280f5fd064b4838f448e7619306280c59fdc1742bff",
+    "bytes": 101715,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:17",
+    "sourceId": 438926,
+    "sha256": "b5342c75b1e1a90f580bfeae1c66973cee03eebd6493ba279fac918353100d69",
+    "bytes": 405915,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:18",
+    "sourceId": 438928,
+    "sha256": "87da100b7735edb9b372b69191ae17f541db9d49238fcf1c4f5e3f93e2a41457",
+    "bytes": 333654,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:19",
+    "sourceId": 438927,
+    "sha256": "575a05304e1e0363329f8720be8d339e04d9086c4fb1b05421258b741cc55c24",
+    "bytes": 223319,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:20",
+    "sourceId": 438929,
+    "sha256": "d69dece36f1af11b1fab0bfa79df7def39fcf425e7f1014f5b2ee841e45c704f",
+    "bytes": 320614,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:21",
+    "sourceId": 438930,
+    "sha256": "2b363d0f58e054f2206ec6135d10bd0ad232419d1c6313da1f0544bd6018190e",
+    "bytes": 516246,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:22",
+    "sourceId": 438931,
+    "sha256": "797d78d2c00f3664d95176dad8c9dd1efef6b4420b9ffd76fa9bd4cbd0ed3b0c",
+    "bytes": 194467,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:23",
+    "sourceId": 438934,
+    "sha256": "0cfd9bf258fb9cb092fef9564fab870b4eb08786f9eb1dd377f279f03a78c3e6",
+    "bytes": 496710,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 21:24",
+    "sourceId": 438933,
+    "sha256": "127bafdedd255e3932f1558fb76a0fd8ea8d3942c399e49f970963e2e3a2fae1",
+    "bytes": 200787,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:1",
+    "sourceId": 438932,
+    "sha256": "51c0064868a3f02b04f176737604011969ba38b8a8358e2eeb9e90d866164642",
+    "bytes": 99669,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:2",
+    "sourceId": 438935,
+    "sha256": "4c2718d917628f51d331841857cec5dd03550146e25e272a32dd9af6b4eec4e7",
+    "bytes": 440644,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:3",
+    "sourceId": 438936,
+    "sha256": "7a8c9132d6228710eb017263beced617b9ea0fab09347719ec8c164a4031c329",
+    "bytes": 639273,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:4",
+    "sourceId": 438937,
+    "sha256": "a1dc7eaaad0a592f80a99cc08fca9dce06db2ac99c21196f3e59db2a1226d107",
+    "bytes": 592781,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:5",
+    "sourceId": 438938,
+    "sha256": "80370c39af7a2dcaf8314710497b4def1642c8381f838be2651bd1d75ea47b67",
+    "bytes": 325641,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:6",
+    "sourceId": 438940,
+    "sha256": "fb253c39c047cef161bdce0214a036ff3a30f7073dab570ddd38cda5f80790dc",
+    "bytes": 362459,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:7",
+    "sourceId": 438939,
+    "sha256": "3dac18cd8cc2f88fa72b3613adefdeac966d33fe0c1d75a8aa73998165ad2202",
+    "bytes": 229939,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:8",
+    "sourceId": 438941,
+    "sha256": "fcecfbc7b0b7681b425628808da6a44e452d128356f3b3bad81af46a95af59a6",
+    "bytes": 191180,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:9",
+    "sourceId": 438942,
+    "sha256": "dc57a063ac039f20d517c188804c32a4dc85d0badadc53eb35da42e37a32895d",
+    "bytes": 317597,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:10",
+    "sourceId": 438943,
+    "sha256": "1114744b6d647df881e939dc8b41924b80bf158011326de1adea987d2195ca1c",
+    "bytes": 232990,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:11",
+    "sourceId": 438944,
+    "sha256": "aec7bbb4a48959b28e291e8e72977d3dd2006b7dfd74e480d9fa4ea25ac46161",
+    "bytes": 381647,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:12",
+    "sourceId": 438945,
+    "sha256": "926cccbfc42bf2848927ca587d5b530608d95ae1708a61235e750eaf206258d2",
+    "bytes": 279250,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:13",
+    "sourceId": 438946,
+    "sha256": "55a25ee59a4808f72a46ea6cbaa0f56a547f664bba4cb1cc1c8f1e15a33af5f2",
+    "bytes": 482822,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:14",
+    "sourceId": 438947,
+    "sha256": "e1bdd513c3350ef8eaa81453d6d3468584376cf29f58d2ea2fa9dd15acd03a9c",
+    "bytes": 289044,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:15",
+    "sourceId": 438948,
+    "sha256": "672e143e44585eeaa872dea505dd80e40169a0b265630c7ef38d337b813a257d",
+    "bytes": 224854,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:16",
+    "sourceId": 438949,
+    "sha256": "b9d2da6e44e92fbf96f8cb9129d7fc23f0afadc939841692f0c754f4b1d0201b",
+    "bytes": 279166,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:17",
+    "sourceId": 438950,
+    "sha256": "14a7c3531188d34c627ce6738e0b457e2bacd9358eadb0a93ce963e3d3d6a386",
+    "bytes": 96706,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:18",
+    "sourceId": 438951,
+    "sha256": "d8f5d1ab345965a91776cff41a5ffb06c7b75d2a03b97da6ed624a631ff8bb4b",
+    "bytes": 648787,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:19",
+    "sourceId": 438952,
+    "sha256": "0007e5c0e55a1dfa843b726fbd43317c36b02fb7bc55052b79bcec09faf2990c",
+    "bytes": 223162,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:20",
+    "sourceId": 438953,
+    "sha256": "8b0d29b07374c22ea2bd43718a000c7c4bde3b225a1b15902e91c27c66804c70",
+    "bytes": 213737,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:21",
+    "sourceId": 438954,
+    "sha256": "ee23fc3d9acbf723bde71f694d913b44e1ac5494344e4ede2f9406a37a400a01",
+    "bytes": 469938,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:22",
+    "sourceId": 438956,
+    "sha256": "75ea540a71717a7fe798abc9ae08f1e7024b70ce157223793caa5a6f96312e29",
+    "bytes": 492508,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:23",
+    "sourceId": 438955,
+    "sha256": "8a3b01ac9222e3e95535ca901ef040fc8e6135d453a48b50d8c9bb25291dbd11",
+    "bytes": 277683,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:24",
+    "sourceId": 438958,
+    "sha256": "7441f8c9b89d18ba79d5063becccb85b575797e8f4a3863f6ea7d67092489f2f",
+    "bytes": 285628,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:25",
+    "sourceId": 438959,
+    "sha256": "6656c951be00b370f6a7d0a01c71488e5634b672e2506ea710e25fc10918f10d",
+    "bytes": 386740,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:26",
+    "sourceId": 438957,
+    "sha256": "6c3890ff30dfbfb388df2d5246512f15ae5bb845137b7d067e6cd0073826d07e",
+    "bytes": 91507,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:27",
+    "sourceId": 438960,
+    "sha256": "1734f59c01d800bfd379471a623a87232a2f8801a4a3fc3a1d1eed1d01442604",
+    "bytes": 472881,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:28",
+    "sourceId": 438961,
+    "sha256": "fd701d91f18ea1422faaf4cb9dcfcd26d0cf8ea3c4eed1b21c70f54aba3a7b48",
+    "bytes": 219984,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:29",
+    "sourceId": 438962,
+    "sha256": "49532c7f77c3a6faf75f2b8ef3d24c1b68bb8bc6c0300d86a95ae4bf39c20b13",
+    "bytes": 207286,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:30",
+    "sourceId": 438963,
+    "sha256": "81d59e5a015410d430089b40c746c5fb53c67acaf37fc339dc9f34b137f0a0b6",
+    "bytes": 210399,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:31",
+    "sourceId": 438964,
+    "sha256": "97c59f67c9cd7b3bb20f01a85070bfcd9846c7037872a2529a2d44d5caa40292",
+    "bytes": 168915,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:32",
+    "sourceId": 438965,
+    "sha256": "a58c2f6db8b46123fc6fdf3aeb1947b7aea8d018accbf23c825f8af75c30ec8b",
+    "bytes": 295139,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 22:33",
+    "sourceId": 438966,
+    "sha256": "6e94f379bd3764fb92c5ec907f2f074841d1353f67e8c0e2c018f8eb41a2b568",
+    "bytes": 230049,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:1",
+    "sourceId": 438967,
+    "sha256": "57dbba49065690d03f27907335bb647c9b73f3a0cf05b3a2445f9851c4c085d6",
+    "bytes": 96599,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:2",
+    "sourceId": 438968,
+    "sha256": "f5fab7683b26f59f57be5a16d6ad4bcdcd5ccd33339f1fedd12198f8a9f7af6d",
+    "bytes": 381648,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:3",
+    "sourceId": 438969,
+    "sha256": "18c5ce823b498b181bd30ed76563a03bbe0b328888b7ba1b79ebc8bfb4cc0588",
+    "bytes": 463266,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:4",
+    "sourceId": 438970,
+    "sha256": "3f8a3a8134c1d52224d0d3e933a8f401d188e96e7a492aeddabddfe5a9251dfa",
+    "bytes": 216734,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:5",
+    "sourceId": 438971,
+    "sha256": "746d6f79f41bbdf6d071e04704f98bbb8644cbc55ee3edebc9d17b410c07423e",
+    "bytes": 253823,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:6",
+    "sourceId": 438973,
+    "sha256": "1313fd4d7aa6a08cd65f7bc3fbd43c8d9db767c88686179532719f902c77ef69",
+    "bytes": 269536,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:7",
+    "sourceId": 438972,
+    "sha256": "7d4050e9affbbd2443704ac439baa7f9fae46f5140e63fbc22cbafaa9f89f6a7",
+    "bytes": 226287,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:8",
+    "sourceId": 438974,
+    "sha256": "912e243656467f6b4f9b3f278d923a3a363c7ead5542c72aa6ca66af7c191ef0",
+    "bytes": 317799,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:9",
+    "sourceId": 438975,
+    "sha256": "64ea9a619ceb1b3657dbd9d092d837df3e1b8fc8b16c48d857b62cd1eeb3df4e",
+    "bytes": 95407,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:10",
+    "sourceId": 438977,
+    "sha256": "c0c3c0fc4043031c15dfe1b9ffd004fb5a31bf1780ff12cfebefa2daf8ad7220",
+    "bytes": 538731,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:11",
+    "sourceId": 438976,
+    "sha256": "9f22bb29b27a928337ec1ee95fba6809ef6d4a36b18210cef5baaf992eb56177",
+    "bytes": 285627,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:12",
+    "sourceId": 438978,
+    "sha256": "f5bb15e6a4944af8fcc2c05de26596d00a8edf10c3f10bb04f173d3429b8a46b",
+    "bytes": 303087,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:13",
+    "sourceId": 438979,
+    "sha256": "3b56b75f4f3b0b7381d4771d0e96ab80e5f671a7ad7d0929a436565d86d63134",
+    "bytes": 347949,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:14",
+    "sourceId": 438980,
+    "sha256": "aa9fab7c4f7c6266a8e73c126abafe311c616d65734b3d69035f70ff59ad2e8d",
+    "bytes": 485849,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:15",
+    "sourceId": 438981,
+    "sha256": "da1b1dbbdbfae9244b5b84db03907008f178b1d73cee9c0f563242a673c117ec",
+    "bytes": 343250,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:16",
+    "sourceId": 438982,
+    "sha256": "55dd9514e646cb3aed18ff9ab232406eae3a12504f11a49bd1513d193d1d31fd",
+    "bytes": 328684,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:17",
+    "sourceId": 438983,
+    "sha256": "3d59c2bf7c4dc200a5fb7dd8fa17117882c04facfa2ee0a093170206bde9956d",
+    "bytes": 423172,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:18",
+    "sourceId": 438984,
+    "sha256": "6c411ac79ef329b67f2e119808bb09ee227cf9cbdcf3a331bcf7ff725e07670a",
+    "bytes": 584800,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:19",
+    "sourceId": 438985,
+    "sha256": "3e8a01541f38a7f237e987dcf6a1dac6a35c34d1c53bb26a17969839e9d6e2b9",
+    "bytes": 288849,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:20",
+    "sourceId": 438986,
+    "sha256": "4fab4286e206b796b0cc8509540dc9b3b10723406d881c23ffcd26b7488a1b65",
+    "bytes": 464941,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:21",
+    "sourceId": 438987,
+    "sha256": "df15b2ab80667c28137051d9e07360a8fce9fe39d691c67f7680ec851a00bdf1",
+    "bytes": 490805,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:22",
+    "sourceId": 438989,
+    "sha256": "633baeae4ed0cdc6522a5dde4e6f57a95fd2269260420b2d4f1c74e8b9375ec8",
+    "bytes": 540126,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:23",
+    "sourceId": 438988,
+    "sha256": "68904d1283dcc2fe3a590e25ea17891aab0fb9c340566e70c37132b5e2191ab7",
+    "bytes": 95364,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:24",
+    "sourceId": 438991,
+    "sha256": "17fc2f36699a56d980af101d74cbb15e80954642432696ba39fd1dcea99ea7b5",
+    "bytes": 371697,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:25",
+    "sourceId": 438990,
+    "sha256": "6d5ab0f786fd7c16f32820b13fc588fe2ddae07e24fcbd7df8cd3c8f7d7068c8",
+    "bytes": 171776,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:26",
+    "sourceId": 438992,
+    "sha256": "4b2f42d0e6c8cba242aba6367a79212f81204cbcb27373f1c15d00446fd421ea",
+    "bytes": 96631,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:27",
+    "sourceId": 438993,
+    "sha256": "c96c1d254457b2f2ed4348d8287887ae9f26a72ad055136238e1fdc32c34aa0a",
+    "bytes": 527204,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:28",
+    "sourceId": 438994,
+    "sha256": "26640987523cd6726b00303c32c875a878384a7a68ddc7e534131cb037b19252",
+    "bytes": 383400,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:29",
+    "sourceId": 438995,
+    "sha256": "ede06d7b653e618c127770296626d9a41ec7b75327ff24f32849b35e2d55c712",
+    "bytes": 282218,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:30",
+    "sourceId": 438997,
+    "sha256": "52d0a102a98970d1671ef2eb2252d19d9c39fd9753246839bdc5a96176853151",
+    "bytes": 378725,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:31",
+    "sourceId": 438996,
+    "sha256": "9c01bcafbf9a24f72b892faa76d8a765a0502fde0118aaacd9adbb9d61889f7e",
+    "bytes": 261789,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:32",
+    "sourceId": 438998,
+    "sha256": "f75761ff0bc4a6d2998d19c8eacb75ff4a155d4d2a0c4e0ce9ea48a3a3007e9b",
+    "bytes": 368774,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:33",
+    "sourceId": 438999,
+    "sha256": "076968a2facab57a03951ea6cde212b14646042df483e79362b2bd04a45c3b40",
+    "bytes": 96620,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:34",
+    "sourceId": 439001,
+    "sha256": "00d026d19ad914366f57caf2f4963936af6760bea30847dfed003f7e44ae7a1e",
+    "bytes": 378742,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:35",
+    "sourceId": 439000,
+    "sha256": "a1290cc01472c164d2019ecf3a6dcb3ee0c94d12bb33d6c35295c56a66241059",
+    "bytes": 173800,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:36",
+    "sourceId": 439002,
+    "sha256": "547b480a3a8838aea28a2fb0946e3e3da4c4c929714494ead3e0c1232799582e",
+    "bytes": 525831,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:37",
+    "sourceId": 439003,
+    "sha256": "dbc25a28f891bc5a3bd7f6cf23811d3f629011756a6896542c89a356255302dc",
+    "bytes": 460292,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:38",
+    "sourceId": 439006,
+    "sha256": "a7355806620491cc955e707c8367ac71ed5f499c5b3f9208e0ee4191819d0029",
+    "bytes": 376772,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:39",
+    "sourceId": 439004,
+    "sha256": "6ca3d7f94b2e22b2b0d36d67dbb82eb26c63620ca1614fb204c8cba0dcb2523d",
+    "bytes": 546794,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:40",
+    "sourceId": 439005,
+    "sha256": "784d3337960ee362be46b666bcb3e695685ebabba02e4cafa2d352e3a6c83fb2",
+    "bytes": 501756,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:41",
+    "sourceId": 439007,
+    "sha256": "46d962d9b7957cb154dd3a7dced8c5ff3b514c170f3d2ff0bb97fb239270c1f8",
+    "bytes": 376617,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:42",
+    "sourceId": 439008,
+    "sha256": "1ad97e524f97afa4a955d90e444f4566efa4e6c6b3efd5d120fc501ecde1abd6",
+    "bytes": 227903,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:43",
+    "sourceId": 439009,
+    "sha256": "c06105381ed79b6c8a8e48df5c316de7a706dd490868eb42463762023641dd26",
+    "bytes": 384689,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 23:44",
+    "sourceId": 439010,
+    "sha256": "5f84c97d35a40e17424dffd87f9a304f9f2e6177e1202788ad1f43ee46767295",
+    "bytes": 179706,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:1",
+    "sourceId": 439011,
+    "sha256": "a1b0938bc502c18119d62a1abd4838d0f7e9a36328436589af736fc98099d526",
+    "bytes": 87405,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:2",
+    "sourceId": 439012,
+    "sha256": "2a55a5c2af7b47d26959e69e09144a2e248929ef6219ccf7ca995f9a8fe98feb",
+    "bytes": 406008,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:3",
+    "sourceId": 439013,
+    "sha256": "ece818e722f2f3ff2f5fae58b4b43632afa900064700a5500ca28c127d2fc85a",
+    "bytes": 456909,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:4",
+    "sourceId": 439014,
+    "sha256": "0592ced11313822d961d5af8408a74e4392a99beb69c707c5b92a4d8f1b0f8b3",
+    "bytes": 221730,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:5",
+    "sourceId": 439016,
+    "sha256": "31c020d447b325172a79e4270c671d00e066f5b7b8849ce5f77f2436ccdf8ce4",
+    "bytes": 311147,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:6",
+    "sourceId": 439015,
+    "sha256": "3ace2d9f06015816b579438397f9ff583d23efd8f9c80ab800a36512c432d4f6",
+    "bytes": 306497,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:8",
+    "sourceId": 439018,
+    "sha256": "e5ae545f160e454d662741ca422d50406aff70ee3d774f9fde1dbb88e197b1c1",
+    "bytes": 307718,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:9",
+    "sourceId": 439019,
+    "sha256": "2aea11e66a08b84171732c8cfbcebe43340483bb799ad6d1de6ed7a457912253",
+    "bytes": 405827,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:10",
+    "sourceId": 439020,
+    "sha256": "a713d8b1e04d149154bd193f542d3fdfa1b16b8e769a90525db8da41fd1836cf",
+    "bytes": 485726,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:11",
+    "sourceId": 439023,
+    "sha256": "02a63411045ca8f4dc936bfecfceab1ea3e4ccfc2938b93e477d758deb864417",
+    "bytes": 471148,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:12",
+    "sourceId": 439021,
+    "sha256": "f4314c622e00f430b5b0d4c4494de2723949415ba00fa1d00c24f7ca5a7b07c9",
+    "bytes": 175320,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:13",
+    "sourceId": 439022,
+    "sha256": "b2afe34615b46c9c830545ea5ae32b2c2bbef3fa74ed35ff5cf8bba9619c4d45",
+    "bytes": 85733,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:14",
+    "sourceId": 439024,
+    "sha256": "f80c6d5adf4140cdfed93766c7f8ce85fda2a91f35cad04fee37e576136cf60f",
+    "bytes": 380488,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:15",
+    "sourceId": 439025,
+    "sha256": "ca1a25ce100059557f08dc51b99c8b57e615d42252a79d83de830296e7162711",
+    "bytes": 267666,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:16",
+    "sourceId": 439027,
+    "sha256": "862ffccdf2b80d6265851c42b97915a3f0d84303dc8712d8efcbc852b3301e9f",
+    "bytes": 368728,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:17",
+    "sourceId": 439026,
+    "sha256": "0d9e961d1d32465cebc5d882cc6119750a86c28b7d5a952102790875ebc5d811",
+    "bytes": 189861,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:18",
+    "sourceId": 438904,
+    "sha256": "5afe10fb7ba9a3b6f951db700b44611426e393de6743ba6d0bf7fec897bedc8d",
+    "bytes": 178222,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:19",
+    "sourceId": 438906,
+    "sha256": "23b7bbd0f29c81123a6e785d96de180983f149078de2fe8f18b92c4842a091e9",
+    "bytes": 246985,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:20",
+    "sourceId": 438908,
+    "sha256": "402c40356c8adab722756c856ed1c2ac21172b5c1a8d3c9ce43109c2f8c2701c",
+    "bytes": 368830,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:21",
+    "sourceId": 438905,
+    "sha256": "342e6d31778ed4dba01ecd3e0d6885e2adf53a0f4fe7d28278b2f84ba713ca7d",
+    "bytes": 170181,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:22",
+    "sourceId": 438907,
+    "sha256": "ea0d4c3488b18665f7980b99f70599c40ef1bc63bcd2c129478a6f71370b02b8",
+    "bytes": 264662,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 24:23",
+    "sourceId": 438909,
+    "sha256": "67c293913a62874252886da31bb8b2290970bdb6285cf996408dc72416fb302e",
+    "bytes": 514487,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 44:15",
+    "sourceId": 423685,
+    "sha256": "81166c2c570f1e26228a3759ec369489865d04357d432d50a48d279f92c0cc36",
+    "bytes": 696921,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 44:16",
+    "sourceId": 423686,
+    "sha256": "1b925743694c8a899a42048c95d36b1e5a305d51f4cc93cb75f6bc5348aa7780",
+    "bytes": 384706,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 44:17",
+    "sourceId": 423683,
+    "sha256": "b5e943ba184730d087fe0d0fba85e171c370f218aa32d97ae784768b93f10585",
+    "bytes": 544784,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 44:18",
+    "sourceId": 423688,
+    "sha256": "de04d3ab422d72ee778412cebc20c0313709184a59e3dbe0066eed36f641dff1",
+    "bytes": 365928,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 44:19",
+    "sourceId": 423689,
+    "sha256": "8fec488d05a5f2a10e4ac4390dd6e9f2aeb2bf6de238b0ebc87109080a5bfc7f",
+    "bytes": 839425,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 44:20",
+    "sourceId": 423692,
+    "sha256": "ccef55a993a5695e1297a6b8318e44409e8886edff25ba12ec9cef49aafccb81",
+    "bytes": 274251,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 44:21",
+    "sourceId": 423690,
+    "sha256": "a772c0eadf0affa4f708abe71070c8eb6d8b3d3d83bdfbbe4b966f6d62f7edb6",
+    "bytes": 190040,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 44:22",
+    "sourceId": 423693,
+    "sha256": "6ee38b67f331b64b1db2d5904884c500f65517e7a3958dd20ee9bb0185c9441d",
+    "bytes": 508405,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 44:23",
+    "sourceId": 423691,
+    "sha256": "aea8f7bcda727427f0642212dc527286fef2c93e16320198e7e8d8705fcb73b0",
+    "bytes": 211401,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 44:24",
+    "sourceId": 423680,
+    "sha256": "c57ddb45758e27f8383ad4f3414b13f1b339b8c46995ee37f72b7692a3dbe69e",
+    "bytes": 408864,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 44:25",
+    "sourceId": 423682,
+    "sha256": "21c1019b39f9cdc3d98d337ce285296fd24821102bdce64dde0c78ce5356db7e",
+    "bytes": 533838,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 44:26",
+    "sourceId": 423677,
+    "sha256": "18dd131f51f72e66f1c0618212088c0a7fa0f16a992cf29d6f47b0b4584b0da8",
+    "bytes": 183252,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 44:27",
+    "sourceId": 423678,
+    "sha256": "324b60352e06c70c991053661212a9ae1075c397c367f53f10828fb309a1dbae",
+    "bytes": 370476,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 44:28",
+    "sourceId": 423681,
+    "sha256": "a2933b9ceab07c917b5cb4f45e24caa9d7a6a991e0e3308595494f55a3095283",
+    "bytes": 357895,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 44:29",
+    "sourceId": 423679,
+    "sha256": "900a8f18e14ea3664804468374ace75c296b1f43c1d33770a9eb260ac8b16bfb",
+    "bytes": 283950,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 44:30",
+    "sourceId": 423687,
+    "sha256": "f8763557bc0465dc0104e139ad1dec2f6dd71633b8ee86593648040a8e5a2363",
+    "bytes": 533999,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Ezekiel 44:31",
+    "sourceId": 423684,
+    "sha256": "45dfc1e8416ad2dddb89df1aa2d7be32c77b5fd07d4aed95057f62e0f360ae53",
+    "bytes": 242217,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:1",
+    "sourceId": 446248,
+    "sha256": "8cb886b558ccced25a63232e108f884aa06dacc141da8f29c54c5ce5e8266066",
+    "bytes": 133896,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:2",
+    "sourceId": 446253,
+    "sha256": "20a15dfee932e280d092ab02aaab0e800b8cc47d3b7ba73dfdf1ef9d87a6fc60",
+    "bytes": 401380,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:3",
+    "sourceId": 446254,
+    "sha256": "c3f309e09a52fef9fb325c1fb9325ac21894343ef46eec731930d7e43d41ed0b",
+    "bytes": 256706,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:4",
+    "sourceId": 446256,
+    "sha256": "f1dea40a79de1dcc84dd9b82833607fc7f8ce144a4711db392d12a7347a5e837",
+    "bytes": 359257,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:5",
+    "sourceId": 446257,
+    "sha256": "162d4b2578aba491f2ebcdad233ede0c701520bbde68f18332ad59c50c504e63",
+    "bytes": 325634,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:6",
+    "sourceId": 446258,
+    "sha256": "9be3726f5a6b652200424ef729ec5413815d5fe8d6dc23d0501ad25c52afd693",
+    "bytes": 404283,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:7",
+    "sourceId": 446255,
+    "sha256": "311cc0fa39b56588e3654f156dd23a733885e8fe184e79df16463940e72c1863",
+    "bytes": 234182,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:8",
+    "sourceId": 446259,
+    "sha256": "96e5ef93e00154ecb326b09859be7165ecf6ce79b8634e5169dae39856523470",
+    "bytes": 461914,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:9",
+    "sourceId": 446260,
+    "sha256": "8b22d352efb07009b7bdcd312003add165c2318426a29f019e8b7cb87a310546",
+    "bytes": 365789,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:10",
+    "sourceId": 446261,
+    "sha256": "01e913617fb35ac5065fdc5982a9b09178b2b756b32717b2fdf9c1953b7cec99",
+    "bytes": 567331,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:11",
+    "sourceId": 446264,
+    "sha256": "3d6c9e7528b2acb2a6891715216c0ee8111e184f89e03b536b57e648c3d4cb3c",
+    "bytes": 421760,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:12",
+    "sourceId": 446263,
+    "sha256": "e86d9e15efd0a2b9d1ccad8a9e78a1bfce0234007cbd02d3a637f5229e55473d",
+    "bytes": 251530,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:13",
+    "sourceId": 446262,
+    "sha256": "847df798077aebfcebd6614d8f1159e824a4f2904b2c13d082fb665a0c9d491e",
+    "bytes": 189853,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:14",
+    "sourceId": 446265,
+    "sha256": "833a4a80686ef7e8e8c53ab9407d12438cd93d3d76c257a6bbb9eb7e2ece083d",
+    "bytes": 276003,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:15",
+    "sourceId": 446266,
+    "sha256": "6fa0cf5a0b51015e3ef98703d0c96d7594eb7588f70d2f6bf4817e682df9ed70",
+    "bytes": 317785,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:16",
+    "sourceId": 446269,
+    "sha256": "3a92c63d2977b59f6a6780868da63283c2f73d17bd12a271a36c874a38785405",
+    "bytes": 421807,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:17",
+    "sourceId": 446267,
+    "sha256": "1726b2c2d1f81970b9fcaf9a8ea585f3b067586e561eea0e1b85d89e16973a7e",
+    "bytes": 277722,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:18",
+    "sourceId": 446270,
+    "sha256": "db28c806f27769b23013f1dde0342e87a6772c488e02e4d75dd58e4f282670e1",
+    "bytes": 311156,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:19",
+    "sourceId": 446268,
+    "sha256": "f14974bd303cfabe3cc7513b52077e2a43da909999082a499d713d6667012aba",
+    "bytes": 247170,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:20",
+    "sourceId": 446271,
+    "sha256": "8caf1d3c4b6e0079bcd9600c169b0dcc8d628842695ee431329623012800af6e",
+    "bytes": 309883,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:21",
+    "sourceId": 446272,
+    "sha256": "7f09233ac7426d2f47519f7d2ba89b456018ae237143f418ccc8077afef20840",
+    "bytes": 298250,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:22",
+    "sourceId": 446275,
+    "sha256": "97c2502b3925b3ab897783a932f4575ce111faa453266ceaef2f2cf52416ba3c",
+    "bytes": 479194,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:23",
+    "sourceId": 446274,
+    "sha256": "995b48894fe18b746d957cf20adee85caade60a99af8caa0f3f81bd186ad6ed8",
+    "bytes": 323712,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:24",
+    "sourceId": 446273,
+    "sha256": "8040a398406124539a798b6719e8ef295820c7f1b689ba5ff25a493cc324f119",
+    "bytes": 167404,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:25",
+    "sourceId": 446276,
+    "sha256": "3bea92317aea89603aec8f75c57d585f9bc524ff035aced422f34dad90d4ad78",
+    "bytes": 355961,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:26",
+    "sourceId": 446277,
+    "sha256": "ea85bbe3aaed0706369ebfca63d861a8c9290af0aa8ef9c9d5087d71bcf6d284",
+    "bytes": 312741,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:27",
+    "sourceId": 446278,
+    "sha256": "52e2dfb774339f25a5147d7188f058d755f7efab2173d9d9f04e06f13087dbe0",
+    "bytes": 312795,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:28",
+    "sourceId": 446280,
+    "sha256": "667a9a5edc8f9712d2e98daf8cf93ed978f4ec2ff0e33393c4455c5fa71e13d4",
+    "bytes": 524316,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:29",
+    "sourceId": 446279,
+    "sha256": "8979540c2ff733f1c21a4ed5ab1f9d29bd8820dc281e0f32632d4b54d9e9d6fe",
+    "bytes": 389666,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:30",
+    "sourceId": 446281,
+    "sha256": "87f2b3880bfc965b89df7e378547b8f991f5f686a719d1a8da91605a8e22b8d6",
+    "bytes": 588203,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:31",
+    "sourceId": 446283,
+    "sha256": "3d94f7b91c8c11fec09d281e94f1acf7455f44e9df9fb66eb22ab30e141e95d7",
+    "bytes": 388397,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:32",
+    "sourceId": 446282,
+    "sha256": "c18639e6a8798dbba498b86406fc9a4f58016b9a433cf9a6c968fbede296fbe5",
+    "bytes": 255502,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:33",
+    "sourceId": 446284,
+    "sha256": "aaf2b9dcbbbe09a90f4bc1d4d61f548fe5eb150380a01a68e478708f5b2c342c",
+    "bytes": 532169,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:34",
+    "sourceId": 446285,
+    "sha256": "dd0495e9e2f24df17c828906bddb33eb110f86b91df4a5749744df3dbf2265dd",
+    "bytes": 274221,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:35",
+    "sourceId": 446287,
+    "sha256": "6f95aba7f76b898bbe19bdaf9c7a5c2ab7ea0cd4dea802a5e6e14cac761f667c",
+    "bytes": 325576,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:36",
+    "sourceId": 446286,
+    "sha256": "1d3d201c24eb55a3ae457a8ae1239d55cf8dee9b5545acc2da92b8a8a9b2df67",
+    "bytes": 272553,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:37",
+    "sourceId": 446288,
+    "sha256": "1d4e5476761cd4f34c5261b065570f6dd525fe2141db69c97df90b9786b09fd4",
+    "bytes": 215488,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:38",
+    "sourceId": 446289,
+    "sha256": "e57f3e1f5e6f16df5baeb62c2e0d795328cb508ca1efe3b8827144d669fb3333",
+    "bytes": 391208,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:39",
+    "sourceId": 446290,
+    "sha256": "da995183c47b8b85d05a95accd4644c45eef4d61364e9613c162ae92e41a5516",
+    "bytes": 259477,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:40",
+    "sourceId": 446291,
+    "sha256": "069da2e3a888913c8b1b4a3cd5e3306d032f436ea60a95e47f4e2b0afec0dfc1",
+    "bytes": 239242,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:41",
+    "sourceId": 446292,
+    "sha256": "086fa1f15f9cc452efb92b57a659000c9575f465f07eae23d43e9766744b0ae0",
+    "bytes": 301837,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:42",
+    "sourceId": 446293,
+    "sha256": "c7820e9fb4a195b1fbbb60a846f9c249da58ff0ca7d739c2214c438a930357fd",
+    "bytes": 291931,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:43",
+    "sourceId": 446294,
+    "sha256": "056552208eae88ed885cb561c801f4539887554821a7afe8fc7e3bc9fefb6a42",
+    "bytes": 168933,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:44",
+    "sourceId": 446295,
+    "sha256": "8e1c88ae083fbb62d1fed12fc95e985cfd0068e0825db1ce9dca3b530b361b6c",
+    "bytes": 381803,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:45",
+    "sourceId": 446296,
+    "sha256": "587d3b6f4dada23ab64ab58de67091148574096c14e24c8d446c61babce53551",
+    "bytes": 501766,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:46",
+    "sourceId": 446297,
+    "sha256": "12cf010013766a52003143b7b982b7870027673e1a6c3f16970fc7697d673e17",
+    "bytes": 498679,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:47",
+    "sourceId": 446298,
+    "sha256": "fb6891d563f003faf030b05b30de565b98348b3462c5f9f80e7f385ff792d60a",
+    "bytes": 418927,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:48",
+    "sourceId": 446299,
+    "sha256": "be7d7ff882e9e228fe824409c8c0b4253d62435f15f3e2aef5b0725b227b047e",
+    "bytes": 232987,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:49",
+    "sourceId": 446302,
+    "sha256": "a004ea387d53abf5715e9f3b8982db72dde1cd0d2ad1aa123d2094d3ffc53e2e",
+    "bytes": 391456,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:50",
+    "sourceId": 446301,
+    "sha256": "abe1a787fff627930ed226a3927cc388e9fe04ad15392063fdd0020408ac3bd1",
+    "bytes": 448608,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:51",
+    "sourceId": 446300,
+    "sha256": "7d868f6cb6362e01d6547c99db37a059634c85a7e073692ec616c7fb1be85696",
+    "bytes": 251522,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:52",
+    "sourceId": 446303,
+    "sha256": "c5e20522d2e9e07a01a34e9c2dc18a705978bd039499e5400d42c71b8adc41a8",
+    "bytes": 344776,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:53",
+    "sourceId": 446250,
+    "sha256": "372fe4d6337b08580ce4a41f6185b4227a9324ee7b4850944c3a93514fa3a2b8",
+    "bytes": 256724,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:54",
+    "sourceId": 446249,
+    "sha256": "06f09001fdf6d96e2fc6066fdc9e64d89f4eeaffd6bd6983531a7a35ebb6f8ea",
+    "bytes": 241912,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 25:55",
+    "sourceId": 446251,
+    "sha256": "5c89c6276b5226ceb589070299eb993a01c8fbd2b40d781f929f2829ba3de233",
+    "bytes": 303161,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:3",
+    "sourceId": 440517,
+    "sha256": "a50372a79bafa8322889a85677a5219c56b14dd2726a3207c63f400fe4044789",
+    "bytes": 200709,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:4",
+    "sourceId": 440516,
+    "sha256": "cd6234dc0739d8fc4dcbbd307649e18099efc810e3da305f5e24b105c7ec7839",
+    "bytes": 240868,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:5",
+    "sourceId": 440520,
+    "sha256": "9e8b4684ea62ee4d4043c9734e618fc7f851200c61f11ff76b8d7e5caec00fbd",
+    "bytes": 389455,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:6",
+    "sourceId": 440521,
+    "sha256": "006e790af2354ae8056e81dd24b62d1f409e4356b81d9937762b280ba25fc825",
+    "bytes": 394610,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:7",
+    "sourceId": 440518,
+    "sha256": "344ade93e535332fa32d402abce7a483f7955913586b5bcb4e80beb0b9bd8c53",
+    "bytes": 186207,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:8",
+    "sourceId": 440524,
+    "sha256": "f62079c816beb12f33d47a92ae5c3091a15fe943c3873ab8e212ee0fc80102b2",
+    "bytes": 317748,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:9",
+    "sourceId": 440522,
+    "sha256": "bf1a0f879e95e8ba32e3b22bd95f8b96b5a590c61e58ef03578076cc4a11532a",
+    "bytes": 280858,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:10",
+    "sourceId": 440523,
+    "sha256": "24a7dd9fe3fa95ce3d2386311e38490d4a35b27369cf56c8c727554e25fb8346",
+    "bytes": 215470,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:11",
+    "sourceId": 440525,
+    "sha256": "804cc19e4ccaa309311720b54f59d7218b0ebd5212d99c2110601852a172baca",
+    "bytes": 183189,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:12",
+    "sourceId": 440526,
+    "sha256": "7a801bb3eacc2afb81dc876ff166dd9e74f4c0040cbbc9f1ff2717daacc78647",
+    "bytes": 251786,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:13",
+    "sourceId": 440527,
+    "sha256": "69f83256ff27bf5d369a160c6e0998949e7e5b2c3b05ba9998abcd9d74408f39",
+    "bytes": 453631,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:14",
+    "sourceId": 440528,
+    "sha256": "a451f18eee81d03d9f4030981b12ec972d08288d01cbbcd0ce9f1bbf48e4633f",
+    "bytes": 210403,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:15",
+    "sourceId": 440529,
+    "sha256": "ff0f1dab2966e67d96ed286e3381347ce8d575f2c8c9c60164c59d0c26ae1f81",
+    "bytes": 331957,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:16",
+    "sourceId": 440530,
+    "sha256": "724fdaeaaf2d76961e661839e026bd6ec324283e8951825a1cfd5e0e865b55d4",
+    "bytes": 572337,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:17",
+    "sourceId": 440531,
+    "sha256": "d563750894d256be68a4d56ef99bd7c59b4bd931fa87cc61fd323b04839ba1c2",
+    "bytes": 384678,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:18",
+    "sourceId": 440532,
+    "sha256": "db608a7412973321605fd27bcbd8f01cc9f61e366baab31f46cf802b1043ffcb",
+    "bytes": 285620,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:19",
+    "sourceId": 440533,
+    "sha256": "a002d02206728decde184927eff0966ae674c7f5fa1150af1fc9a17282dfa738",
+    "bytes": 288879,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:20",
+    "sourceId": 440534,
+    "sha256": "831d928dc1027f3fc98e32ae3770138c765a0a4236fbb51b7b2410f14d89b5ac",
+    "bytes": 309899,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:21",
+    "sourceId": 440535,
+    "sha256": "bc8f4bd9f0d56deaa42f008130f73c1752e8b6b421f7bfd50880adddd95301d7",
+    "bytes": 344968,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:22",
+    "sourceId": 440536,
+    "sha256": "0fa11f890b601270745f94ac475a628526192c7dfadf28e346563da546cce7cf",
+    "bytes": 434852,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:23",
+    "sourceId": 440538,
+    "sha256": "27987a48895d0bf30c1336d925ae9fb167d5a8bfc818f1e60b9239056d54c0d4",
+    "bytes": 221606,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:24",
+    "sourceId": 440539,
+    "sha256": "9272ae6f41d224551ccb1bbced1335a65c23388fbaa57001dbd8061cd542b7b0",
+    "bytes": 296825,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:25",
+    "sourceId": 440537,
+    "sha256": "ea60bf127b95cbeac74b82a9786c72aba070c9ba0a5fec41c7ef13469a94f5ba",
+    "bytes": 457068,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:26",
+    "sourceId": 440540,
+    "sha256": "9d0c2248c0fab982b70e47c772e1e3daaffb7c0bb361eff8cfc9653778ac08a4",
+    "bytes": 501601,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:27",
+    "sourceId": 440541,
+    "sha256": "f614faff072f0951415a857bc8dff94829afb6c4792697329535201ae31a80fb",
+    "bytes": 191210,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:28",
+    "sourceId": 440542,
+    "sha256": "ba688aa089ce35a4183fd3c131e0f847eaafe0da4724693493529d06d5e69a84",
+    "bytes": 251752,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:29",
+    "sourceId": 440543,
+    "sha256": "78b416676a25cda69e9225948c8f470c8e9201181545465455a67f2c56a4b9fb",
+    "bytes": 179673,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:30",
+    "sourceId": 440545,
+    "sha256": "2580a409df5bc279f8d6ccb0dbde5d435e6d9576705b31aae23bea79a4617262",
+    "bytes": 432761,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:31",
+    "sourceId": 440544,
+    "sha256": "1b6b2dba6784ae139ec70dcbd1eca6d675e0022d0136c494e3054f538f3c3753",
+    "bytes": 331834,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:32",
+    "sourceId": 440546,
+    "sha256": "65c23a6346302c03e070b1c1936910508d0897e27688a31fd6ba441c80a45a8f",
+    "bytes": 256731,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:33",
+    "sourceId": 440547,
+    "sha256": "1aca031fc61e87f817641821c396875a8e15c10991526a1407c4c50f27d14496",
+    "bytes": 383438,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:34",
+    "sourceId": 440548,
+    "sha256": "a8155c4b6632e89fb60458b567558cf67f3db2f41f80ba70f7e043e3bf80e43d",
+    "bytes": 514700,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:35",
+    "sourceId": 440549,
+    "sha256": "cd1e71786f3f86999770c402452fe942c435677d14efa8c14363c9ef6b87a5ef",
+    "bytes": 340014,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:36",
+    "sourceId": 440552,
+    "sha256": "96491a13bc19d572abd6992592bcaf99515fdf985fd0bc27de1abd9fdb45f17b",
+    "bytes": 543822,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:37",
+    "sourceId": 440550,
+    "sha256": "2d0e3295bbdca2c6a4acfaaa9b868cbf39d3954ba0727861d86d6051090b02e6",
+    "bytes": 360793,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:38",
+    "sourceId": 440551,
+    "sha256": "3772c782f3c41929cfa2a3c0117618807f0f7e4dabbc093ad1ab08e870a59a1f",
+    "bytes": 171841,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:39",
+    "sourceId": 440553,
+    "sha256": "565d3adb8c053bbb3f849479890922e42756c8e243ce7fb14a381e695c3077ca",
+    "bytes": 381678,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:40",
+    "sourceId": 440554,
+    "sha256": "887a6dac7ceec436ca038cf4cec63566a783fe49aaf9cdeafbb7ab60803067e6",
+    "bytes": 346261,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:41",
+    "sourceId": 440555,
+    "sha256": "c08ee9918c950d8d1c04aa9e36410248886c8926b90fa3ce992418a57202855e",
+    "bytes": 431424,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:42",
+    "sourceId": 440556,
+    "sha256": "1dbd80370955bde56562c0e8d09777dd8dcb6789acf49eabd3de701e2184c7a2",
+    "bytes": 362422,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:43",
+    "sourceId": 440557,
+    "sha256": "5ef5b6ccf9b6128fe08802af920c2e739039cf5f92c5fa6e23c6f7e7059b037a",
+    "bytes": 549714,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:44",
+    "sourceId": 440558,
+    "sha256": "7b28698bf5accd314b58b2ff191b042d4708d91f87e25460a65f91c9c52561b8",
+    "bytes": 508390,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:45",
+    "sourceId": 440559,
+    "sha256": "a523b5657736fea4125e872a3868c1e07492261f70abb7111c806eb34b4e2ab9",
+    "bytes": 455255,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 26:46",
+    "sourceId": 440561,
+    "sha256": "ea3e6264d8d673869bb66492efe2c541a0987a4184a114af8af3a708563f461a",
+    "bytes": 445711,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:6",
+    "sourceId": 440821,
+    "sha256": "a040c5dd4958b3b324ccf5b4b5686b656cc44f105c91ffb1afb707a462cec1c9",
+    "bytes": 178232,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:7",
+    "sourceId": 440825,
+    "sha256": "4738f0c671e54d1affcd5eff1ae0ed98181de3dec8ba9f45dfcf4e92b7ecaea8",
+    "bytes": 530882,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:8",
+    "sourceId": 440830,
+    "sha256": "706d8066fe89c521b6cb5d8b91472594ff4cea2b4155304e8144009d5038037e",
+    "bytes": 989962,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:9",
+    "sourceId": 440827,
+    "sha256": "0583d622f3e93d5c8a2a1d1f3f944824e5b125ab16a6b74b5621c1910d53e2c3",
+    "bytes": 384699,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:10",
+    "sourceId": 440826,
+    "sha256": "646a775e82edc57807d16801bd91f791b84684e6dfed49c1c27080bce0ad5eef",
+    "bytes": 237882,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:11",
+    "sourceId": 440828,
+    "sha256": "fa13c97b29e1fd73694115b6996393ad139d1828b15fdeb31ab9732544c320f4",
+    "bytes": 243865,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:12",
+    "sourceId": 440831,
+    "sha256": "9aaa6b0ec1223de8352feaf562c105d1e7650e2a35affd1bcbd63dde7f13a6d0",
+    "bytes": 620368,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:13",
+    "sourceId": 440829,
+    "sha256": "1ec0d76705c8f03975d31441621f87260f069ac3887516102b5786fc2399c571",
+    "bytes": 133938,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:14",
+    "sourceId": 440832,
+    "sha256": "ee7216043ed296a1f1f6e2a45b432187554ff57146b8e539d297b3219e9c01e1",
+    "bytes": 773879,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:15",
+    "sourceId": 440834,
+    "sha256": "da1c7185f5242aa9016820710152d19a90715959164782001497b25a982dda41",
+    "bytes": 363822,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:16",
+    "sourceId": 440833,
+    "sha256": "c734eefe5f2101342f3bfbca50ac4d487aaa51bd373568bcc42fa200be88ce38",
+    "bytes": 281023,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:17",
+    "sourceId": 440835,
+    "sha256": "b63bf69b3c3477262fc17b98ffccb188f9739063a8dd02e99c91d8788d54e76a",
+    "bytes": 495377,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:18",
+    "sourceId": 440816,
+    "sha256": "3b02ca487247430ae7c4a294225f157390edfaabe1f75e18549b051f6b326da1",
+    "bytes": 371779,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:19",
+    "sourceId": 440815,
+    "sha256": "c2c626c012877dbce62894054c79061c36cba6de123e9d2ee569bdb99ba28f74",
+    "bytes": 487498,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:20",
+    "sourceId": 440818,
+    "sha256": "038525912e1216c85e5baf7985cd63491997a5245878962940976b651110ab73",
+    "bytes": 399251,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:21",
+    "sourceId": 440817,
+    "sha256": "01cd87690308813aee1edd94717da2a21f7abfa1910175bce73aa406f15236c9",
+    "bytes": 413943,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:22",
+    "sourceId": 440814,
+    "sha256": "733910318832117c5d958724354a542ef4262ece1ec0ac140799e673f3a124d7",
+    "bytes": 306570,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:23",
+    "sourceId": 440819,
+    "sha256": "f577b67f095f95fd14f27f05eaa0ef60414b2874bfac12f6a671a6be51355542",
+    "bytes": 613622,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:24",
+    "sourceId": 440823,
+    "sha256": "f5c8abd1ff5bcf5594ed01ced551c545ccc56e664abfa2f77db9f4343cbb8abd",
+    "bytes": 708142,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:25",
+    "sourceId": 440822,
+    "sha256": "d286e6ee091b7d22bb928cf9c0ef339d6967578fa571285f9b5345d52ed4713a",
+    "bytes": 439396,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:26",
+    "sourceId": 440824,
+    "sha256": "013ddff8ddcbd0d2a49f71c5fec4a3171fa0638c983da194752390e89d2e893d",
+    "bytes": 133745,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 32:27",
+    "sourceId": 440820,
+    "sha256": "2ea5e8e0a8bff2c58bc6c655429cdb57d7d69cca1b41be49f6d4436480744f65",
+    "bytes": 271236,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:1",
+    "sourceId": 440560,
+    "sha256": "ecfe5e604567b962a333ec74b74ab26a500cf0fa71ffbadced746f202bf577d4",
+    "bytes": 95486,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:2",
+    "sourceId": 440562,
+    "sha256": "bc1878ada08b84ff34d90c07923bab4dd161a9c1e1de993c23e242c36733d33d",
+    "bytes": 365831,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:3",
+    "sourceId": 440563,
+    "sha256": "daffd1ea3b2e91f441b1db72afbd0c1847ee1d14cc28f6a5dd9b50d53973bab8",
+    "bytes": 429866,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:4",
+    "sourceId": 440564,
+    "sha256": "c6649e6ee776c04adb7fe4d511d29fb9b1617d112fb41278a4e51444b8a6db80",
+    "bytes": 165624,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:5",
+    "sourceId": 440565,
+    "sha256": "cec66f4d4cbd3d8636170d869ee8bc53682daa7d6bfee7fb603c3350f9210310",
+    "bytes": 421879,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:6",
+    "sourceId": 440566,
+    "sha256": "9a6292187d6e3c463fa98596a209543cf2b452bbc50841a45b207fcbb68ea1c5",
+    "bytes": 452344,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:7",
+    "sourceId": 440567,
+    "sha256": "a9750e51d8859db6baf9ba609fedb361181972894d0a4d9c298a70924fb08fc9",
+    "bytes": 383416,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:8",
+    "sourceId": 440568,
+    "sha256": "0bc5f201381600d9c7e73057b2f4df49a5e7c8543b9080ca9c16098c582c9205",
+    "bytes": 461902,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:9",
+    "sourceId": 440569,
+    "sha256": "ab7e05602e7e046f3a1ec998ec0fa9ec580a7e08a28bf7683394d3eaaf9b4889",
+    "bytes": 376725,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:10",
+    "sourceId": 440570,
+    "sha256": "ab67e837e46dad0ed83299ffe3e2447cb7e8b6268688ffa5223691c9c80bf797",
+    "bytes": 436426,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:11",
+    "sourceId": 440571,
+    "sha256": "2886aefae534948b76cf3386729d17d95fd89f5fde0f8d33c8ac1fb651c7b98f",
+    "bytes": 373780,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:12",
+    "sourceId": 440572,
+    "sha256": "39869e3d67b670cde471cfbd9e38c7b9bce43ac5e830bae83a9e265301e56cd3",
+    "bytes": 266413,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:13",
+    "sourceId": 440573,
+    "sha256": "26cfd100e591151c36496930aa578f3a612d9ea2e2c5eab330beda175d354bea",
+    "bytes": 181938,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:14",
+    "sourceId": 440574,
+    "sha256": "f5e20abd2debfc6fc99b723f78e460c95271dc43c01298fed48c9d26839f6f72",
+    "bytes": 442774,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:15",
+    "sourceId": 440575,
+    "sha256": "35edafe895398ce40e751cd3465672ae0dc24278771324788c4f48a75c93196e",
+    "bytes": 314425,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:16",
+    "sourceId": 440576,
+    "sha256": "13750362ba0fa9f7bb4c52266034bf8b8cf339da5c85422e02dad6f9dde92242",
+    "bytes": 460324,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:17",
+    "sourceId": 440577,
+    "sha256": "5afa289ed2919812d5749375b6e1c1ea5e41c9091cf1b243ea9335e04842aacd",
+    "bytes": 174028,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:18",
+    "sourceId": 440579,
+    "sha256": "3052ae7684d4fce69086b856fd2769e23727dedd4299fb641ab87818e06dbc81",
+    "bytes": 458499,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:19",
+    "sourceId": 440578,
+    "sha256": "409aa3e8afd380ce5622c807b9c63a5f8c8c7566b0c6435ef8219f43b9158194",
+    "bytes": 367165,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:20",
+    "sourceId": 440580,
+    "sha256": "11548602581b70f088446dcccb5fd2759ad14ab80c9fbd75e109261d4551158d",
+    "bytes": 245860,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:21",
+    "sourceId": 440581,
+    "sha256": "35e9ef96783919e657b30ea8e65ace5c570a972e87541d98841802c52c61d735",
+    "bytes": 315800,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:22",
+    "sourceId": 440505,
+    "sha256": "7cecd8e413cc1ba49f61e8a7ab7e9f7202b5385c15c24628305d84128b6ec1c8",
+    "bytes": 242184,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:23",
+    "sourceId": 440509,
+    "sha256": "2a6093c2d5ff83159f77d45ac00a0548a0e12c338672614539a5c44fba5dec58",
+    "bytes": 381790,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:24",
+    "sourceId": 440506,
+    "sha256": "a755da7a13a770999668de6f403764315ad61eef358af9c05ded32129987a86c",
+    "bytes": 290125,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:25",
+    "sourceId": 440504,
+    "sha256": "4f032ea3df728b73e14413af27a3919671179664b834adbbc4003fdb5d980c44",
+    "bytes": 213625,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:26",
+    "sourceId": 440507,
+    "sha256": "b22cdf6f6e2de99c5ad23ba8784bfaab7272f50e13109d450b7fa320bae6d0d1",
+    "bytes": 317748,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:27",
+    "sourceId": 440508,
+    "sha256": "7fb6096c2ad17a93f2fc3c775bfef63227253490495413a7ffd8416d338b4053",
+    "bytes": 335336,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:28",
+    "sourceId": 440512,
+    "sha256": "6a4613bc9a04a2d4675ffe3f98a8dfd345e8de453e399eb8f3a31473718b8a79",
+    "bytes": 570645,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:29",
+    "sourceId": 440514,
+    "sha256": "b2f4979b1b7f8758bc375ae09ad25c24528ecea0be3029e238dd62fd8532ac18",
+    "bytes": 255568,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:30",
+    "sourceId": 440510,
+    "sha256": "f872f54d5cdcf65af35f7354d490928f28629e9dce9d68e750315e6915bef7ec",
+    "bytes": 304737,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:32",
+    "sourceId": 440513,
+    "sha256": "4fa0bba13760f8a65685af2d84801b313dcfa4e6175e711d0bf3c32daedec5b5",
+    "bytes": 333749,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:33",
+    "sourceId": 440515,
+    "sha256": "f12d02276de03484ee8fc04636eec8994d47e9b83b8e9db9cfee985b64d528d7",
+    "bytes": 404313,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "torah",
+    "ref": "Leviticus 27:34",
+    "sourceId": 440519,
+    "sha256": "5682d4e1f2fd9ae8a7b44d18adc8cd55a791528224c55659070122243bdcfedb",
+    "bytes": 311043,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 16:19",
+    "sourceId": 440849,
+    "sha256": "90b04bf369b2def16c320dffea6ae59fbc5f47ada494745b8533c5a67a282d3b",
+    "bytes": 602909,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 16:20",
+    "sourceId": 440850,
+    "sha256": "a7f773fe0353e71a2cdde105872e90642326c86359ffb4213409cdfbed023c30",
+    "bytes": 172016,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 16:21",
+    "sourceId": 440852,
+    "sha256": "1af0256f286dc6779afd6f6759d0454f32162011f5351bdf59e5e388db5edc37",
+    "bytes": 359126,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 17:1",
+    "sourceId": 440839,
+    "sha256": "a18df22161810d15f6a07cc8d6961681a02d2886af196a8e4c605ccdbabcd2d5",
+    "bytes": 411019,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 17:2",
+    "sourceId": 440836,
+    "sha256": "e0fbdb055af4c70aed9eb5a83ca9f54563fca68e41775c030b061096f75e72cd",
+    "bytes": 287333,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 17:3",
+    "sourceId": 440837,
+    "sha256": "583d4e6fde79c84a2422451c83c63880cdd0a1ab73660b5ab31cb19a88b55345",
+    "bytes": 346217,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 17:4",
+    "sourceId": 440841,
+    "sha256": "7ddf155334f4d59fa77b25561043070a3baec6b60be4a2686bfe582ec20dc33e",
+    "bytes": 562790,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 17:5",
+    "sourceId": 440840,
+    "sha256": "cb8fa8d347104d3987d304fc4116b412025a98e56d32ea74b35689f2f060a7dd",
+    "bytes": 424807,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 17:6",
+    "sourceId": 440838,
+    "sha256": "9ae56bea77f6494e78e4b373974c338fd7b030772bcc9db369f242786b2b990b",
+    "bytes": 375582,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 17:7",
+    "sourceId": 440842,
+    "sha256": "b0c881535b831a3ba0f85dbc57cf5745a1c06eca2c52e73e853be80ead077e56",
+    "bytes": 234273,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 17:8",
+    "sourceId": 440847,
+    "sha256": "b13693077cb23d3ef1eed6b755ed9825d3d638af6b2ad0994fe95f6cab9e16dc",
+    "bytes": 671325,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 17:9",
+    "sourceId": 440844,
+    "sha256": "4478adc4cfd4a0a2eadd572102a171b0fc95aec6917fe156933824c9e0bdf46e",
+    "bytes": 216419,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 17:10",
+    "sourceId": 440846,
+    "sha256": "960bffd56c396482a6d1a5b3f4ef3452f8f74ad7513fe7a59f135b78550a3b6d",
+    "bytes": 315773,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 17:11",
+    "sourceId": 440845,
+    "sha256": "1832f7f64b1d08ee070dd80805f0861898f20680820cd954b92d55848eb4adf3",
+    "bytes": 365957,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 17:12",
+    "sourceId": 440843,
+    "sha256": "4451d4b10013abb7fcebcfc7f99b2985ce5540a106eb2aa255e492902f3fa7bb",
+    "bytes": 216704,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 17:13",
+    "sourceId": 440848,
+    "sha256": "a0f4da994abd333de3019e17e085dfbbcd3d956c657eae35a21e3700ed38d187",
+    "bytes": 367202,
+    "mimeType": "audio/mpeg"
+  },
+  {
+    "kind": "haftarah",
+    "ref": "Jeremiah 17:14",
+    "sourceId": 440851,
+    "sha256": "09eeffe5282786f7302010056bd3731fc90e334ca1dc04da576917538066b0df",
+    "bytes": 283870,
     "mimeType": "audio/mpeg"
   }
 ];
