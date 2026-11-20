@@ -90,6 +90,11 @@ export function syntheticCourseRoutes() {
   const json = (route: Route, body: unknown) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
   /** A page, or a whole context (the offline browser test: a context also routes the service worker's own requests). */
   async function install(page: Pick<Page | BrowserContext, "route" | "addInitScript">, week: { date?: string; torah?: string | null } = {}) {
+    // All text, timelines and native media in this fixture describe synthetic
+    // PocketTorah assets. Do not mix live Shermet metadata into the same refs.
+    await page.route("**/api/shermet-audio/catalog*", route => json(route, new URL(route.request().url()).searchParams.get("format") === "manifest" ? { recordings: [] } : { refs: [] }));
+    await page.route("**/api/shermet-audio/timing?*", route => json(route, { timing: null }));
+    await page.route("**/api/shermet-library?*", route => json(route, { items: [], nextOffset: null }));
     await page.route("**/api/public/**", async route => {
       const url = new URL(route.request().url()), q = url.searchParams; seen.push(url.pathname + url.search);
       const kind = q.get("kind") ?? "torah";

@@ -285,7 +285,20 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and keeps Start
         return { top: bounds.top, bottom: bounds.bottom };
       });
       expect(firstWord.top).toBeGreaterThanOrEqual(0); expect(firstWord.bottom).toBeLessThanOrEqual(await tab.evaluate(() => innerHeight));
-      const readingText = await first.textContent();
+      // Compare the actual pronounced words. The inline reading additionally
+      // carries the 44px verse number pinned beside its first word; the modal
+      // uses its own reference heading instead of repeating that numeral.
+      const readingWords = await first.locator("[data-word-index]").allTextContents();
+      const copied = await first.evaluate(node => {
+        const range = document.createRange(); range.selectNodeContents(node);
+        const selection = getSelection()!; selection.removeAllRanges(); selection.addRange(range);
+        const data = new DataTransfer();
+        node.dispatchEvent(new ClipboardEvent("copy", { clipboardData: data, bubbles: true, cancelable: true }));
+        selection.removeAllRanges();
+        return data.getData("text/plain");
+      });
+      expect(copied.trim().startsWith(readingWords[0])).toBe(true);
+      expect(copied).not.toMatch(/[A-Za-z0-9\u00a0]/);
       await safe(() => tab.screenshot({ path: join(directory, `${size.toLowerCase()}-reading.png`) }));
       // Readings for everyone E2: the header has no Refresh reading or Start reading button; the text takes focus where a reader puts it.
       expect(await tab.getByRole("button", { name: "Start reading", exact: true }).count()).toBe(0);
@@ -296,7 +309,7 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and keeps Start
       const closeup = tab.locator('[data-testid="study-verses"] [data-verse-ref="Genesis 1:1"] button[data-verse-number]'); await safe(() => upClose(tab, "Genesis 1:1"));
       const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
       await ui(dialog.getByRole("button", { name: "Close practice view", exact: true })).toBeVisible();
-      expect(await dialog.getByTestId("study-hebrew").textContent()).toBe(readingText);
+      expect(await dialog.getByTestId("study-hebrew").locator("[data-word-index]").allTextContents()).toEqual(readingWords);
       expect(await dialog.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
       await safe(() => tab.screenshot({ path: join(directory, `${size.toLowerCase()}-lift.png`) }));
       if (size === "Huge") {
