@@ -316,7 +316,23 @@ describe("offline: only a signed-in CRC person keeps the evening text", () => {
     async delete(input: RequestInfo) { return this.entries.delete(new URL(typeof input === "string" ? input : input.url, origin).href); }
     async keys() { return [...this.entries.keys()].map(url => new Request(url)); }
   }
-  class FakeCaches { stores = new Map<string, FakeCache>(); async open(name: string) { if (!this.stores.has(name)) this.stores.set(name, new FakeCache()); return this.stores.get(name)!; } async has(name: string) { return this.stores.has(name); } async delete(name: string) { return this.stores.delete(name); } async keys() { return [...this.stores.keys()]; } }
+  class FakeCaches {
+    stores = new Map<string, FakeCache>();
+    async open(name: string) {
+      if (!this.stores.has(name)) this.stores.set(name, new FakeCache());
+      return this.stores.get(name)!;
+    }
+    async has(name: string) { return this.stores.has(name); }
+    async match(input: RequestInfo, { cacheName }: MultiCacheQueryOptions = {}) {
+      if (cacheName !== undefined) return this.stores.get(cacheName)?.match(input);
+      for (const cache of this.stores.values()) {
+        const hit = await cache.match(input);
+        if (hit) return hit;
+      }
+    }
+    async delete(name: string) { return this.stores.delete(name); }
+    async keys() { return [...this.stores.keys()]; }
+  }
   const c = syntheticEveningCatalog(), book = parseEveningBook(c.feedBytes, c.provenanceBytes, c.pins, c.pin);
   function harness(owner: () => OwnerAnswer) {
     const runtime: PublicRuntime = { resolveTenant: async () => undefined, reading: {} as PublicRuntime["reading"], commentary: async () => { throw new Error("unused"); }, ...unavailableExtras,
