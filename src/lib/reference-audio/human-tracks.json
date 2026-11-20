@@ -2501,13 +2501,13 @@
     ]
   },
   {
-    "id": "finkel-a501758c65e8e4e54d71caaa",
+    "id": "finkel-65506a5e8a11cbbcb479cbd3",
     "voice": "josh-finkel",
     "title": "Esther 7:1–3 · Chant, faster",
     "kind": "megillah",
-    "audioPath": "/api/human-tracks/finkel-a501758c65e8e4e54d71caaa",
-    "bytes": 545856,
-    "sha256": "a501758c65e8e4e54d71caaab476aa09d46817cc26ebd7fe1c7efda336db47d9",
+    "audioPath": "/api/human-tracks/finkel-65506a5e8a11cbbcb479cbd3",
+    "bytes": 545644,
+    "sha256": "65506a5e8a11cbbcb479cbd3b41e88f8e4d229e4114ab6010f763dce043c30c4",
     "durationSec": 68.14,
     "passages": [
       {
@@ -2520,13 +2520,13 @@
     ]
   },
   {
-    "id": "finkel-6eceede42f723b80d9869dd4",
+    "id": "finkel-ee5da0082c4728bae568d150",
     "voice": "josh-finkel",
     "title": "Esther 7:1–3 · Spoken reading",
     "kind": "megillah",
-    "audioPath": "/api/human-tracks/finkel-6eceede42f723b80d9869dd4",
-    "bytes": 469159,
-    "sha256": "6eceede42f723b80d9869dd427f671db78faf9ebcbfb00c8a053b953ff6d2ba4",
+    "audioPath": "/api/human-tracks/finkel-ee5da0082c4728bae568d150",
+    "bytes": 468949,
+    "sha256": "ee5da0082c4728bae568d1503a8af2bc6dd42d9ba0f786ad74fa6d55c3dc9559",
     "durationSec": 58.55,
     "passages": [
       {
@@ -2539,13 +2539,13 @@
     ]
   },
   {
-    "id": "finkel-e8b168276a8065bcfa2ad901",
+    "id": "finkel-1cf40867894eea20748e116c",
     "voice": "josh-finkel",
     "title": "Esther 7:2–3 · Chant",
     "kind": "megillah",
-    "audioPath": "/api/human-tracks/finkel-e8b168276a8065bcfa2ad901",
-    "bytes": 775091,
-    "sha256": "e8b168276a8065bcfa2ad901cacbecac8b9a7eaa85ae869681bb09e83752d853",
+    "audioPath": "/api/human-tracks/finkel-1cf40867894eea20748e116c",
+    "bytes": 774895,
+    "sha256": "1cf40867894eea20748e116c0f338b4a0287d7a8332c41441cc55d1ee1fa3807",
     "durationSec": 96.79,
     "passages": [
       {
@@ -2558,13 +2558,13 @@
     ]
   },
   {
-    "id": "finkel-d5db0413a298caa5b5770f1b",
+    "id": "finkel-2102a64401b1af66514e8ae5",
     "voice": "josh-finkel",
     "title": "Esther 7:4 · Chant",
     "kind": "megillah",
-    "audioPath": "/api/human-tracks/finkel-d5db0413a298caa5b5770f1b",
-    "bytes": 358173,
-    "sha256": "d5db0413a298caa5b5770f1b86356170a07760806dc1b619529ecb8fe5cba50f",
+    "audioPath": "/api/human-tracks/finkel-2102a64401b1af66514e8ae5",
+    "bytes": 357981,
+    "sha256": "2102a64401b1af66514e8ae5ae72fffca20b9e1f37f29a9fdea08f916e27a763",
     "durationSec": 44.69,
     "passages": [
       {
@@ -2577,13 +2577,13 @@
     ]
   },
   {
-    "id": "finkel-83f23f8b98729e5edbd729aa",
+    "id": "finkel-a2953578ecb7fc3ba46e922c",
     "voice": "josh-finkel",
     "title": "Esther 7:4 · Spoken reading",
     "kind": "megillah",
-    "audioPath": "/api/human-tracks/finkel-83f23f8b98729e5edbd729aa",
-    "bytes": 222559,
-    "sha256": "83f23f8b98729e5edbd729aad6b3d34bf485e5dd948af095453c184992fefdc7",
+    "audioPath": "/api/human-tracks/finkel-a2953578ecb7fc3ba46e922c",
+    "bytes": 222353,
+    "sha256": "a2953578ecb7fc3ba46e922cf3aec653e12d87870167d2532d05f0896a063023",
     "durationSec": 27.73,
     "passages": [
       {
@@ -2596,13 +2596,13 @@
     ]
   },
   {
-    "id": "finkel-b31e080c2f455e4b12a627ef",
+    "id": "finkel-a9ff9c16d2b3e2d04f1d27b2",
     "voice": "josh-finkel",
     "title": "Esther 7:5 · Chant",
     "kind": "megillah",
-    "audioPath": "/api/human-tracks/finkel-b31e080c2f455e4b12a627ef",
-    "bytes": 439257,
-    "sha256": "b31e080c2f455e4b12a627ef8303d370ce8a891b604a38eef8f8402ff24527f8",
+    "audioPath": "/api/human-tracks/finkel-a9ff9c16d2b3e2d04f1d27b2",
+    "bytes": 439065,
+    "sha256": "a9ff9c16d2b3e2d04f1d27b2ac3da13c745207e9321b31735123c30b967fb6f6",
     "durationSec": 54.83,
     "passages": [
       {
@@ -2615,13 +2615,13 @@
     ]
   },
   {
-    "id": "finkel-d5c1b20ee8e82d131ff404a8",
+    "id": "finkel-327d42b609af4175a9dcec8f",
     "voice": "josh-finkel",
     "title": "Esther 7:6 · Chant",
     "kind": "megillah",
-    "audioPath": "/api/human-tracks/finkel-d5c1b20ee8e82d131ff404a8",
-    "bytes": 150656,
-    "sha256": "d5c1b20ee8e82d131ff404a8ea5f02483d4f72e70af0c71c1b42e35c8dca8897",
+    "audioPath": "/api/human-tracks/finkel-327d42b609af4175a9dcec8f",
+    "bytes": 150464,
+    "sha256": "327d42b609af4175a9dcec8fc0406ff7d463e5cfd7944835114c7340e5efa0dd",
     "durationSec": 18.74,
     "passages": [
       {
@@ -2634,13 +2634,13 @@
     ]
   },
   {
-    "id": "finkel-56284ab159b0c613dc3b6a5c",
+    "id": "finkel-d40330c2b9e61c1a0050208e",
     "voice": "josh-finkel",
     "title": "Esther 7:6 · Chant",
     "kind": "megillah",
-    "audioPath": "/api/human-tracks/finkel-56284ab159b0c613dc3b6a5c",
-    "bytes": 245533,
-    "sha256": "56284ab159b0c613dc3b6a5c20a145b26df8c465dc350c07b7bc683603524c0a",
+    "audioPath": "/api/human-tracks/finkel-d40330c2b9e61c1a0050208e",
+    "bytes": 245341,
+    "sha256": "d40330c2b9e61c1a0050208e9921b53ac02582c1d176cd8b7cea7621fcca722a",
     "durationSec": 30.6,
     "passages": [
       {
@@ -2653,13 +2653,13 @@
     ]
   },
   {
-    "id": "finkel-0b2fa2d31de8c6c70a8bf13f",
+    "id": "finkel-d740721d927f928c8a86b06d",
     "voice": "josh-finkel",
     "title": "Esther 7:7 · Chant",
     "kind": "megillah",
-    "audioPath": "/api/human-tracks/finkel-0b2fa2d31de8c6c70a8bf13f",
-    "bytes": 233830,
-    "sha256": "0b2fa2d31de8c6c70a8bf13f82bea92767d1d30ecb3fe0b9e607e95ca8f93e2a",
+    "audioPath": "/api/human-tracks/finkel-d740721d927f928c8a86b06d",
+    "bytes": 233638,
+    "sha256": "d740721d927f928c8a86b06d0814e9f2f524bd425b8d6babaa078727660b219c",
     "durationSec": 29.15,
     "passages": [
       {
@@ -2672,13 +2672,13 @@
     ]
   },
   {
-    "id": "finkel-4167169c28409420e661d8a5",
+    "id": "finkel-a93a06d30b1278ef3989ab3e",
     "voice": "josh-finkel",
     "title": "Esther 7:7 · Chant",
     "kind": "megillah",
-    "audioPath": "/api/human-tracks/finkel-4167169c28409420e661d8a5",
-    "bytes": 411880,
-    "sha256": "4167169c28409420e661d8a599bac134e22868a82c1bd904f65f38fce0653834",
+    "audioPath": "/api/human-tracks/finkel-a93a06d30b1278ef3989ab3e",
+    "bytes": 411688,
+    "sha256": "a93a06d30b1278ef3989ab3e38a1ed198dedd2f4a8acfe40d81248cde9f08f13",
     "durationSec": 51.4,
     "passages": [
       {
@@ -2691,13 +2691,13 @@
     ]
   },
   {
-    "id": "finkel-56134a23d027c86759cf6821",
+    "id": "finkel-cc049ba4b082eb29e2223d3b",
     "voice": "josh-finkel",
     "title": "Esther 7:7–8 · Chant",
     "kind": "megillah",
-    "audioPath": "/api/human-tracks/finkel-56134a23d027c86759cf6821",
-    "bytes": 342294,
-    "sha256": "56134a23d027c86759cf6821f5f29ddeba877578513a7ad2b2a1f6f820ef479f",
+    "audioPath": "/api/human-tracks/finkel-cc049ba4b082eb29e2223d3b",
+    "bytes": 342098,
+    "sha256": "cc049ba4b082eb29e2223d3b4229b40c3ee7b79dfa580f4803f3023e9beef2e2",
     "durationSec": 42.71,
     "passages": [
       {
@@ -2710,13 +2710,13 @@
     ]
   },
   {
-    "id": "finkel-e719e86a18c8b8c1521b1fc7",
+    "id": "finkel-7e7dd84244f674f7ec96ec9f",
     "voice": "josh-finkel",
     "title": "Esther 7:8 · Chant",
     "kind": "megillah",
-    "audioPath": "/api/human-tracks/finkel-e719e86a18c8b8c1521b1fc7",
-    "bytes": 670806,
-    "sha256": "e719e86a18c8b8c1521b1fc713cbb69478a759b01a09cfc5614b0b845e1c35c8",
+    "audioPath": "/api/human-tracks/finkel-7e7dd84244f674f7ec96ec9f",
+    "bytes": 670614,
+    "sha256": "7e7dd84244f674f7ec96ec9f7ec1c8c6dadcf284997d5b21b395b434f8089d67",
     "durationSec": 83.75,
     "passages": [
       {
@@ -2729,13 +2729,13 @@
     ]
   },
   {
-    "id": "finkel-6b7178cd71d79cc190333f45",
+    "id": "finkel-7daf2bec6528ad3eb3906d5f",
     "voice": "josh-finkel",
     "title": "Amos 2:1, Amos 2:6–9 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-6b7178cd71d79cc190333f45",
-    "bytes": 1084188,
-    "sha256": "6b7178cd71d79cc190333f45dd6a7d3b9ba745a1b31c976acfae23c2e36ae9f4",
+    "audioPath": "/api/human-tracks/finkel-7daf2bec6528ad3eb3906d5f",
+    "bytes": 1083976,
+    "sha256": "7daf2bec6528ad3eb3906d5ff962427cc93e867686e00d2b5c0f59c483f681db",
     "durationSec": 135.44,
     "passages": [
       {
@@ -2755,13 +2755,13 @@
     ]
   },
   {
-    "id": "finkel-df74c86f70e8921c56211b29",
+    "id": "finkel-9311ac7d56f7eab973d1150a",
     "voice": "josh-finkel",
     "title": "Amos 9:7 · Speak and repeat",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-df74c86f70e8921c56211b29",
-    "bytes": 1455793,
-    "sha256": "df74c86f70e8921c56211b297c48c000c0bae530ae0da67ae2e68e86d9c883e4",
+    "audioPath": "/api/human-tracks/finkel-9311ac7d56f7eab973d1150a",
+    "bytes": 1455541,
+    "sha256": "9311ac7d56f7eab973d1150a06df38c783626c8e3a74c09941d2f618ed920639",
     "durationSec": 181.89,
     "passages": [
       {
@@ -2774,23 +2774,23 @@
     ]
   },
   {
-    "id": "finkel-49ea2be3f84c69611b228d27",
+    "id": "finkel-2ced973773a3e8a69e6ef654",
     "voice": "josh-finkel",
     "title": "Haftarah practice · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-49ea2be3f84c69611b228d27",
-    "bytes": 210064,
-    "sha256": "49ea2be3f84c69611b228d27971dfc56595292f71ea9bfd20ec60eb3e64f8076",
+    "audioPath": "/api/human-tracks/finkel-2ced973773a3e8a69e6ef654",
+    "bytes": 209856,
+    "sha256": "2ced973773a3e8a69e6ef654f3354fd07ba0ff4e9f6f79dd28ad0f4010f753ad",
     "durationSec": 26.17
   },
   {
-    "id": "finkel-5adc7501a4541a22bcd918e6",
+    "id": "finkel-3ef0850994098421494706b6",
     "voice": "josh-finkel",
     "title": "Amos 9:7–8 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-5adc7501a4541a22bcd918e6",
-    "bytes": 653376,
-    "sha256": "5adc7501a4541a22bcd918e617d57d1aaf1ab900469d49955ac1f3aa0e7a8e84",
+    "audioPath": "/api/human-tracks/finkel-3ef0850994098421494706b6",
+    "bytes": 653184,
+    "sha256": "3ef0850994098421494706b6e54992d12395b3bb8c725e1049e50d13bbb57c74",
     "durationSec": 81.59,
     "passages": [
       {
@@ -2803,13 +2803,13 @@
     ]
   },
   {
-    "id": "finkel-1831db52f63a1f42978c5a4f",
+    "id": "finkel-22e2e80359c7b4550e509ef9",
     "voice": "josh-finkel",
     "title": "Amos 9:8 · Speak and repeat",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-1831db52f63a1f42978c5a4f",
-    "bytes": 1449106,
-    "sha256": "1831db52f63a1f42978c5a4fd03aee516894e241f7f1d161ad6d5aa862545fff",
+    "audioPath": "/api/human-tracks/finkel-22e2e80359c7b4550e509ef9",
+    "bytes": 1448854,
+    "sha256": "22e2e80359c7b4550e509ef914b603189b76dd5f9287b6f6f6dbe409abc0c3ee",
     "durationSec": 181.04,
     "passages": [
       {
@@ -2822,13 +2822,13 @@
     ]
   },
   {
-    "id": "finkel-a768f40959d4f021fc6fb98c",
+    "id": "finkel-c6456fd89bcc2520e53b7a70",
     "voice": "josh-finkel",
     "title": "Amos 9:8–10 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-a768f40959d4f021fc6fb98c",
-    "bytes": 664514,
-    "sha256": "a768f40959d4f021fc6fb98cda9c8fc7b1bdc7b6771ce389a8441becf0cc9eef",
+    "audioPath": "/api/human-tracks/finkel-c6456fd89bcc2520e53b7a70",
+    "bytes": 664320,
+    "sha256": "c6456fd89bcc2520e53b7a706d9d2f5d46f852ecbede652e2501152d7e20e853",
     "durationSec": 82.97,
     "passages": [
       {
@@ -2841,13 +2841,13 @@
     ]
   },
   {
-    "id": "finkel-e28e8363d79901161d781195",
+    "id": "finkel-9f682b8581e20201315a6f2d",
     "voice": "josh-finkel",
     "title": "Ezekiel 1:4–8 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-e28e8363d79901161d781195",
-    "bytes": 1066374,
-    "sha256": "e28e8363d79901161d78119566452dda802a118eed422d12b4f35c66ee2cf851",
+    "audioPath": "/api/human-tracks/finkel-9f682b8581e20201315a6f2d",
+    "bytes": 1066176,
+    "sha256": "9f682b8581e20201315a6f2d5e027da95c9e4cc03597e9980e32ac36ecb142cc",
     "durationSec": 133.21,
     "passages": [
       {
@@ -2860,13 +2860,13 @@
     ]
   },
   {
-    "id": "finkel-4047028c10eaf1df60ce5a25",
+    "id": "finkel-9d328ffdc4530a41f6b4bb7a",
     "voice": "josh-finkel",
     "title": "Ezekiel 1:4–8 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-4047028c10eaf1df60ce5a25",
-    "bytes": 1011462,
-    "sha256": "4047028c10eaf1df60ce5a2542b4870d35abc273d67fe33c2dbd5397ed2478bc",
+    "audioPath": "/api/human-tracks/finkel-9d328ffdc4530a41f6b4bb7a",
+    "bytes": 1011264,
+    "sha256": "9d328ffdc4530a41f6b4bb7a8402258e37e8bd4e9c91fdad3e3e9e53eaba5685",
     "durationSec": 126.35,
     "passages": [
       {
@@ -2879,23 +2879,23 @@
     ]
   },
   {
-    "id": "finkel-b301f7b7635b5e40bcb5b29b",
+    "id": "finkel-efc66a2000d51a02932a2559",
     "voice": "josh-finkel",
     "title": "Haftarah practice · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-b301f7b7635b5e40bcb5b29b",
-    "bytes": 193364,
-    "sha256": "b301f7b7635b5e40bcb5b29ba5a7f8c15a826308e08834843ff6c66e2a1d99d4",
+    "audioPath": "/api/human-tracks/finkel-efc66a2000d51a02932a2559",
+    "bytes": 193152,
+    "sha256": "efc66a2000d51a02932a2559323ff32c4205f791b25dc99c37e376a49b6d7f27",
     "durationSec": 24.08
   },
   {
-    "id": "finkel-1422857fe99fb59bfb38f2c9",
+    "id": "finkel-40b028fdab43dc6338a7f121",
     "voice": "josh-finkel",
     "title": "Ezekiel 43:21–24 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-1422857fe99fb59bfb38f2c9",
-    "bytes": 641868,
-    "sha256": "1422857fe99fb59bfb38f2c96843499693b06964b81a7ba74b4137c6fc07966d",
+    "audioPath": "/api/human-tracks/finkel-40b028fdab43dc6338a7f121",
+    "bytes": 641664,
+    "sha256": "40b028fdab43dc6338a7f121bd914fdf9f03b68b9c8036828c64a0a08ce2f23a",
     "durationSec": 80.14,
     "passages": [
       {
@@ -2908,13 +2908,13 @@
     ]
   },
   {
-    "id": "finkel-01e9ed9d03e3cbac371a9703",
+    "id": "finkel-acd8f83b164d1e9ed71e0ee3",
     "voice": "josh-finkel",
     "title": "Ezekiel 43:21–24 · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-01e9ed9d03e3cbac371a9703",
-    "bytes": 423770,
-    "sha256": "01e9ed9d03e3cbac371a970398113408ee7a71d4b45b07e20bf8245e94843c98",
+    "audioPath": "/api/human-tracks/finkel-acd8f83b164d1e9ed71e0ee3",
+    "bytes": 423552,
+    "sha256": "acd8f83b164d1e9ed71e0ee388289267c27151f67d500a5d6c69dea8186367fe",
     "durationSec": 52.89,
     "passages": [
       {
@@ -2927,13 +2927,13 @@
     ]
   },
   {
-    "id": "finkel-f91039eb7de19fdd0aea0a23",
+    "id": "finkel-c2e52259ae99643c252ace11",
     "voice": "josh-finkel",
     "title": "Ezekiel 45:16–20 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-f91039eb7de19fdd0aea0a23",
-    "bytes": 1087692,
-    "sha256": "f91039eb7de19fdd0aea0a235ed5a5ceeaa5ccd6930990382f6bf973c7c44973",
+    "audioPath": "/api/human-tracks/finkel-c2e52259ae99643c252ace11",
+    "bytes": 1087488,
+    "sha256": "c2e52259ae99643c252ace1108c87a1b27c11c76570d858e800056e46f01d445",
     "durationSec": 135.87,
     "passages": [
       {
@@ -2946,13 +2946,13 @@
     ]
   },
   {
-    "id": "finkel-623c3473fd9cabc8df76cdca",
+    "id": "finkel-c8c44c3ee398da923fb0dda2",
     "voice": "josh-finkel",
     "title": "Ezekiel 45:16–20 · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-623c3473fd9cabc8df76cdca",
-    "bytes": 745562,
-    "sha256": "623c3473fd9cabc8df76cdca80a8fd0e0bf2a810bfc324e776ef4ca85bd8d0cf",
+    "audioPath": "/api/human-tracks/finkel-c8c44c3ee398da923fb0dda2",
+    "bytes": 745344,
+    "sha256": "c8c44c3ee398da923fb0dda2cf0c4d8bf66c6b62f83bd3cdd6f0473ba78bef8f",
     "durationSec": 93.1,
     "passages": [
       {
@@ -2965,13 +2965,13 @@
     ]
   },
   {
-    "id": "finkel-f939c865e831deb89da52e32",
+    "id": "finkel-ef35f6c442998231230079d7",
     "voice": "josh-finkel",
     "title": "Ezekiel 45:21–25 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-f939c865e831deb89da52e32",
-    "bytes": 1140108,
-    "sha256": "f939c865e831deb89da52e32392ddcdb82b21c5a8e19b0c6ab639f16159b80ae",
+    "audioPath": "/api/human-tracks/finkel-ef35f6c442998231230079d7",
+    "bytes": 1139904,
+    "sha256": "ef35f6c442998231230079d7ccf9d7969f752a2f7e3ac5479e74ccbe06924ea3",
     "durationSec": 142.44,
     "passages": [
       {
@@ -2984,23 +2984,23 @@
     ]
   },
   {
-    "id": "finkel-cffe801e4675e312e98ba088",
+    "id": "finkel-77617beb0bddf2654307381d",
     "voice": "josh-finkel",
     "title": "Haftarah practice · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-cffe801e4675e312e98ba088",
-    "bytes": 693338,
-    "sha256": "cffe801e4675e312e98ba0883d122cb0a546c9f55fd06ee0f18e24c71805c5ef",
+    "audioPath": "/api/human-tracks/finkel-77617beb0bddf2654307381d",
+    "bytes": 693120,
+    "sha256": "77617beb0bddf2654307381de4f0d5bedb184dd2e84f164e27efba974b530da9",
     "durationSec": 86.59
   },
   {
-    "id": "finkel-25c9cf036633815e6cacd7d7",
+    "id": "finkel-e12dff7e4bde4fdb872065c2",
     "voice": "josh-finkel",
     "title": "I Kings 1:36–37 · Chant and repeat",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-25c9cf036633815e6cacd7d7",
-    "bytes": 3169647,
-    "sha256": "25c9cf036633815e6cacd7d707d62527becba2e0b4f3d9b4ad7821b99d173d35",
+    "audioPath": "/api/human-tracks/finkel-e12dff7e4bde4fdb872065c2",
+    "bytes": 3169383,
+    "sha256": "e12dff7e4bde4fdb872065c2d57edbd4d20030ff738fdff1eee95d6f33a84a94",
     "durationSec": 396.1,
     "passages": [
       {
@@ -3013,13 +3013,13 @@
     ]
   },
   {
-    "id": "finkel-29d2b2afefab2320c7c9705a",
+    "id": "finkel-7ac1451a34ba991f26a77e7f",
     "voice": "josh-finkel",
     "title": "I Samuel 1:14–19 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-29d2b2afefab2320c7c9705a",
-    "bytes": 1220556,
-    "sha256": "29d2b2afefab2320c7c9705ac14564cf9f0a005bf99992e1179967b5796c790b",
+    "audioPath": "/api/human-tracks/finkel-7ac1451a34ba991f26a77e7f",
+    "bytes": 1220352,
+    "sha256": "7ac1451a34ba991f26a77e7ffd6fd333461725c5fb5d5af02d55d58bd0ab680f",
     "durationSec": 152.49,
     "passages": [
       {
@@ -3032,23 +3032,23 @@
     ]
   },
   {
-    "id": "finkel-108517177e598862722c5114",
+    "id": "finkel-25edec7188c4fc2f07c61ae1",
     "voice": "josh-finkel",
     "title": "Haftarah practice · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-108517177e598862722c5114",
-    "bytes": 759194,
-    "sha256": "108517177e598862722c5114f5fcab80246c8dbc22e18e2c85ed15100896d9f2",
+    "audioPath": "/api/human-tracks/finkel-25edec7188c4fc2f07c61ae1",
+    "bytes": 758976,
+    "sha256": "25edec7188c4fc2f07c61ae1927e3901e0bab952ee967ae909c25fef19911220",
     "durationSec": 94.82
   },
   {
-    "id": "finkel-e5add21fd87cdb90bba45ff2",
+    "id": "finkel-b2d8b83b19c36f1c4b9d08d8",
     "voice": "josh-finkel",
     "title": "II Kings 4:42 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-e5add21fd87cdb90bba45ff2",
-    "bytes": 235782,
-    "sha256": "e5add21fd87cdb90bba45ff26e57355fb80a8c2100bb0aa00728a2d056025865",
+    "audioPath": "/api/human-tracks/finkel-b2d8b83b19c36f1c4b9d08d8",
+    "bytes": 235584,
+    "sha256": "b2d8b83b19c36f1c4b9d08d8eadb357da31a1d1faa1a2a59604196567e7a52fa",
     "durationSec": 29.38,
     "passages": [
       {
@@ -3061,13 +3061,13 @@
     ]
   },
   {
-    "id": "finkel-7572e302eb3923ed25ff130d",
+    "id": "finkel-ae2805302fe297d3aa7dd1a9",
     "voice": "josh-finkel",
     "title": "II Kings 4:42 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-7572e302eb3923ed25ff130d",
-    "bytes": 395910,
-    "sha256": "7572e302eb3923ed25ff130d84643169419b4e78ffbdc476333acc15399125ef",
+    "audioPath": "/api/human-tracks/finkel-ae2805302fe297d3aa7dd1a9",
+    "bytes": 395712,
+    "sha256": "ae2805302fe297d3aa7dd1a99a969f3124b68fb16da6680b474eec3a2c34c2a4",
     "durationSec": 49.4,
     "passages": [
       {
@@ -3080,33 +3080,33 @@
     ]
   },
   {
-    "id": "finkel-7469418c13e53b1f5c36bb2a",
+    "id": "finkel-38c7d96feade3c1f85da0b19",
     "voice": "josh-finkel",
     "title": "Haftarah practice · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-7469418c13e53b1f5c36bb2a",
-    "bytes": 40916,
-    "sha256": "7469418c13e53b1f5c36bb2a3379009197632430eafca51b149b2799cc208c2e",
+    "audioPath": "/api/human-tracks/finkel-38c7d96feade3c1f85da0b19",
+    "bytes": 40704,
+    "sha256": "38c7d96feade3c1f85da0b19d2ef18060055903e326f6dc72be7d17554e7c7fa",
     "durationSec": 5.04
   },
   {
-    "id": "finkel-a4b1fa6491d8208a781d0ebd",
+    "id": "finkel-ccdf7b5fda2540c1aff551a2",
     "voice": "josh-finkel",
     "title": "Haftarah practice · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-a4b1fa6491d8208a781d0ebd",
-    "bytes": 279750,
-    "sha256": "a4b1fa6491d8208a781d0ebd40ee24e3afe23dcaa8b077b4d06e246d27da2a8d",
+    "audioPath": "/api/human-tracks/finkel-ccdf7b5fda2540c1aff551a2",
+    "bytes": 279552,
+    "sha256": "ccdf7b5fda2540c1aff551a26c5531236dd3071925c53cc68ce7b4b10ae5f2ac",
     "durationSec": 34.89
   },
   {
-    "id": "finkel-9ab780e5334528fe20970e17",
+    "id": "finkel-040a51c73d929999e85c41f4",
     "voice": "josh-finkel",
     "title": "II Kings 4:43 · Chant, faster",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-9ab780e5334528fe20970e17",
-    "bytes": 256150,
-    "sha256": "9ab780e5334528fe20970e1772cfecff0ab17305b4c6ca6a29676369b171234c",
+    "audioPath": "/api/human-tracks/finkel-040a51c73d929999e85c41f4",
+    "bytes": 255936,
+    "sha256": "040a51c73d929999e85c41f4e949abb3c6f42001216d283ac692c4d2aea300d3",
     "durationSec": 31.93,
     "passages": [
       {
@@ -3119,13 +3119,13 @@
     ]
   },
   {
-    "id": "finkel-506a00cb71ba8b8845c4f38c",
+    "id": "finkel-7085255332c1d2edcb945af2",
     "voice": "josh-finkel",
     "title": "II Kings 4:43–44 · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-506a00cb71ba8b8845c4f38c",
-    "bytes": 374618,
-    "sha256": "506a00cb71ba8b8845c4f38c7f9e91f67d0ff9f47e4e2aba89d506e3cda36336",
+    "audioPath": "/api/human-tracks/finkel-7085255332c1d2edcb945af2",
+    "bytes": 374400,
+    "sha256": "7085255332c1d2edcb945af29a2cfd8d1e5606d99cea09c6a229708e0e811861",
     "durationSec": 46.75,
     "passages": [
       {
@@ -3138,13 +3138,13 @@
     ]
   },
   {
-    "id": "finkel-067980e69c3a38fee24aaf58",
+    "id": "finkel-d02b3b81a97ae01d6d90d36e",
     "voice": "josh-finkel",
     "title": "II Kings 4:44 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-067980e69c3a38fee24aaf58",
-    "bytes": 138630,
-    "sha256": "067980e69c3a38fee24aaf588b1455b5ffa38d9cd6bd15abd9d134c5a2cc8ab2",
+    "audioPath": "/api/human-tracks/finkel-d02b3b81a97ae01d6d90d36e",
+    "bytes": 138432,
+    "sha256": "d02b3b81a97ae01d6d90d36e3d38fb8125353e9ce2082ea873b6dc598daf4ccc",
     "durationSec": 17.24,
     "passages": [
       {
@@ -3157,13 +3157,13 @@
     ]
   },
   {
-    "id": "finkel-0781a9c082d2694dcae36761",
+    "id": "finkel-eb72210d907f448ca5fe2df1",
     "voice": "josh-finkel",
     "title": "II Kings 4:44 · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-0781a9c082d2694dcae36761",
-    "bytes": 100820,
-    "sha256": "0781a9c082d2694dcae36761028c622cce7058804e7cc0f3e84e90af73874ad1",
+    "audioPath": "/api/human-tracks/finkel-eb72210d907f448ca5fe2df1",
+    "bytes": 100608,
+    "sha256": "eb72210d907f448ca5fe2df15f03312dc077b5fbfba25b6a873de993f4ecce44",
     "durationSec": 12.52,
     "passages": [
       {
@@ -3176,13 +3176,13 @@
     ]
   },
   {
-    "id": "finkel-4f606905b4a7633369537b9d",
+    "id": "finkel-af3b31bbfd5c05d4a707d0bf",
     "voice": "josh-finkel",
     "title": "II Samuel 7:1–2 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-4f606905b4a7633369537b9d",
-    "bytes": 440074,
-    "sha256": "4f606905b4a7633369537b9d89690ecad902a350e95f16ca4b87e44f863a93f9",
+    "audioPath": "/api/human-tracks/finkel-af3b31bbfd5c05d4a707d0bf",
+    "bytes": 439872,
+    "sha256": "af3b31bbfd5c05d4a707d0bf65d0827a6ca328d3c7d916942631f06ed31cbbc1",
     "durationSec": 54.93,
     "passages": [
       {
@@ -3195,13 +3195,13 @@
     ]
   },
   {
-    "id": "finkel-964df3d397d74fcd6193ca3d",
+    "id": "finkel-68f7a8237533cbce1cb71e05",
     "voice": "josh-finkel",
     "title": "II Samuel 7:1–3 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-964df3d397d74fcd6193ca3d",
-    "bytes": 623050,
-    "sha256": "964df3d397d74fcd6193ca3d8529d1bbcb160ca3f0090d942b7dad62dec87b81",
+    "audioPath": "/api/human-tracks/finkel-68f7a8237533cbce1cb71e05",
+    "bytes": 622848,
+    "sha256": "68f7a8237533cbce1cb71e05a216f661e5e202e3caac7a53801ab9097461e860",
     "durationSec": 77.8,
     "passages": [
       {
@@ -3214,13 +3214,13 @@
     ]
   },
   {
-    "id": "finkel-f91250385225098a8edaedcd",
+    "id": "finkel-e466428d5617e6f395a08132",
     "voice": "josh-finkel",
     "title": "II Samuel 7:6–7 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-f91250385225098a8edaedcd",
-    "bytes": 703835,
-    "sha256": "f91250385225098a8edaedcd5ebceba707bab0bd221d182d67b37a57cde86a49",
+    "audioPath": "/api/human-tracks/finkel-e466428d5617e6f395a08132",
+    "bytes": 703633,
+    "sha256": "e466428d5617e6f395a08132c38db6f3b1e59bd94371be47c086b015a01e90c1",
     "durationSec": 87.88,
     "passages": [
       {
@@ -3233,13 +3233,13 @@
     ]
   },
   {
-    "id": "finkel-b8fec36e28feef57b429728d",
+    "id": "finkel-22bdb92e1dd93c2455dcdb1d",
     "voice": "josh-finkel",
     "title": "Isaiah 40:27–31 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-b8fec36e28feef57b429728d",
-    "bytes": 960778,
-    "sha256": "b8fec36e28feef57b429728d68990af6477b8e2d2cc12370f711187c9cfc0c48",
+    "audioPath": "/api/human-tracks/finkel-22bdb92e1dd93c2455dcdb1d",
+    "bytes": 960576,
+    "sha256": "22bdb92e1dd93c2455dcdb1d95b9ab1c854d91b0d21be626f4ca87ac85c0baac",
     "durationSec": 120.01,
     "passages": [
       {
@@ -3252,13 +3252,13 @@
     ]
   },
   {
-    "id": "finkel-31b5e2891644671c3d794f0a",
+    "id": "finkel-ad733d2787e0cee375b2a036",
     "voice": "josh-finkel",
     "title": "Isaiah 40:27–31 · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-31b5e2891644671c3d794f0a",
-    "bytes": 605208,
-    "sha256": "31b5e2891644671c3d794f0a68e7bcaa103962c9445c62b5259471e2f586f840",
+    "audioPath": "/api/human-tracks/finkel-ad733d2787e0cee375b2a036",
+    "bytes": 604992,
+    "sha256": "ad733d2787e0cee375b2a0360c7ee682ad2445e285433dbfdf2893880bbf4010",
     "durationSec": 75.57,
     "passages": [
       {
@@ -3271,13 +3271,13 @@
     ]
   },
   {
-    "id": "finkel-7b6e67decaad2c49a38903e4",
+    "id": "finkel-bf55092ccb39d1072b225285",
     "voice": "josh-finkel",
     "title": "Isaiah 41:8–13 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-7b6e67decaad2c49a38903e4",
-    "bytes": 1266824,
-    "sha256": "7b6e67decaad2c49a38903e4c47040f4c6aa9aa4275a9e4e60e5c170f509c9ff",
+    "audioPath": "/api/human-tracks/finkel-bf55092ccb39d1072b225285",
+    "bytes": 1266624,
+    "sha256": "bf55092ccb39d1072b22528587279ea0cf6da8113ec4d6a173b8d97304ab11c7",
     "durationSec": 158.28,
     "passages": [
       {
@@ -3290,23 +3290,23 @@
     ]
   },
   {
-    "id": "finkel-8f02fa314c14b4d89ade144c",
+    "id": "finkel-07328db4e9662ab1bb539428",
     "voice": "josh-finkel",
     "title": "Haftarah practice · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-8f02fa314c14b4d89ade144c",
-    "bytes": 246358,
-    "sha256": "8f02fa314c14b4d89ade144ce717c030b1f745802daf12ab5ca8d7163669c3b1",
+    "audioPath": "/api/human-tracks/finkel-07328db4e9662ab1bb539428",
+    "bytes": 246144,
+    "sha256": "07328db4e9662ab1bb5394287e67e7ccc16d6d485796520b45d5919959db0a3c",
     "durationSec": 30.7
   },
   {
-    "id": "finkel-d2039a6f683abafdebb1ef3e",
+    "id": "finkel-9b2a6d6513b724be60b2077f",
     "voice": "josh-finkel",
     "title": "Isaiah 49:14 · Chant, faster",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-d2039a6f683abafdebb1ef3e",
-    "bytes": 136916,
-    "sha256": "d2039a6f683abafdebb1ef3ec26c71bd806bb0288f954ad509a57cbce54bc9a5",
+    "audioPath": "/api/human-tracks/finkel-9b2a6d6513b724be60b2077f",
+    "bytes": 136704,
+    "sha256": "9b2a6d6513b724be60b2077fbce7445a91e67cb7ea854079f7c7541067edb7aa",
     "durationSec": 17.02,
     "passages": [
       {
@@ -3319,13 +3319,13 @@
     ]
   },
   {
-    "id": "finkel-a002dd7eeb384bb028689452",
+    "id": "finkel-ed53dba3ab96e6c60a8fae2c",
     "voice": "josh-finkel",
     "title": "Isaiah 49:14–18 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-a002dd7eeb384bb028689452",
-    "bytes": 1002058,
-    "sha256": "a002dd7eeb384bb028689452308edcc68816e086934940708af060b933f0217a",
+    "audioPath": "/api/human-tracks/finkel-ed53dba3ab96e6c60a8fae2c",
+    "bytes": 1001856,
+    "sha256": "ed53dba3ab96e6c60a8fae2c63e2e4b7e04120447ce17435e9b56a4f092d5a30",
     "durationSec": 125.18,
     "passages": [
       {
@@ -3338,23 +3338,23 @@
     ]
   },
   {
-    "id": "finkel-d369b6254eb9d9dbbd83548b",
+    "id": "finkel-e13e6701a93a1dcf0c995d8a",
     "voice": "josh-finkel",
     "title": "Haftarah practice · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-d369b6254eb9d9dbbd83548b",
-    "bytes": 602890,
-    "sha256": "d369b6254eb9d9dbbd83548b08a4dca31827d23d66938b5f1f0c9464f7fa6592",
+    "audioPath": "/api/human-tracks/finkel-e13e6701a93a1dcf0c995d8a",
+    "bytes": 602688,
+    "sha256": "e13e6701a93a1dcf0c995d8aeb481314ac6f986044319b1c1ad245a295331cdb",
     "durationSec": 75.27
   },
   {
-    "id": "finkel-67d0ad6617ee36408f47d17b",
+    "id": "finkel-239643c6dfac594a716de2db",
     "voice": "josh-finkel",
     "title": "Isaiah 49:16–18 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-67d0ad6617ee36408f47d17b",
-    "bytes": 474442,
-    "sha256": "67d0ad6617ee36408f47d17ba3c4fb3452ee4bfdcf021b1d04cbbe97ed2f9ad2",
+    "audioPath": "/api/human-tracks/finkel-239643c6dfac594a716de2db",
+    "bytes": 474240,
+    "sha256": "239643c6dfac594a716de2dbb938b278990206bc41b260e74a96fe22fc3a683f",
     "durationSec": 59.21,
     "passages": [
       {
@@ -3367,13 +3367,13 @@
     ]
   },
   {
-    "id": "finkel-54178f53c23f5e1359b044cc",
+    "id": "finkel-7974eb9f39a756f91bf3b72a",
     "voice": "josh-finkel",
     "title": "Isaiah 6:1 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-54178f53c23f5e1359b044cc",
-    "bytes": 293807,
-    "sha256": "54178f53c23f5e1359b044ccbaae2588c1c2e82945c6cdb6621bedce88b0a77f",
+    "audioPath": "/api/human-tracks/finkel-7974eb9f39a756f91bf3b72a",
+    "bytes": 293615,
+    "sha256": "7974eb9f39a756f91bf3b72a939ab26320aa896d784c7bd49a8093f1b4faa842",
     "durationSec": 36.64,
     "passages": [
       {
@@ -3386,13 +3386,13 @@
     ]
   },
   {
-    "id": "finkel-591ba7bc2f3c2a96308959a0",
+    "id": "finkel-b5d5c0260cbc96ce0336d197",
     "voice": "josh-finkel",
     "title": "Isaiah 6:1 · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-591ba7bc2f3c2a96308959a0",
-    "bytes": 159950,
-    "sha256": "591ba7bc2f3c2a96308959a057a952a9149b76a382b129045325788edb97f8bb",
+    "audioPath": "/api/human-tracks/finkel-b5d5c0260cbc96ce0336d197",
+    "bytes": 159744,
+    "sha256": "b5d5c0260cbc96ce0336d197c5ef259681a3f02b32f9191655a4cadbf8e59688",
     "durationSec": 19.91,
     "passages": [
       {
@@ -3405,23 +3405,23 @@
     ]
   },
   {
-    "id": "finkel-30a13b09ea13c5b160a68ba2",
+    "id": "finkel-0c87241339d3b59680687367",
     "voice": "josh-finkel",
     "title": "Haftarah practice · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-30a13b09ea13c5b160a68ba2",
-    "bytes": 173449,
-    "sha256": "30a13b09ea13c5b160a68ba266b5070e74db7177af1d4dec566ecc53ed75ee08",
+    "audioPath": "/api/human-tracks/finkel-0c87241339d3b59680687367",
+    "bytes": 173243,
+    "sha256": "0c87241339d3b59680687367ea428c375fc9e258c5e2cd78db34913bf9b6b785",
     "durationSec": 21.59
   },
   {
-    "id": "finkel-8e2ec3a0e9ceed5e48a054e1",
+    "id": "finkel-d98e828f47ab70b35955d89a",
     "voice": "josh-finkel",
     "title": "Isaiah 6:1–5 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-8e2ec3a0e9ceed5e48a054e1",
-    "bytes": 1283908,
-    "sha256": "8e2ec3a0e9ceed5e48a054e1adcf6a712695ff0ebb21b5ad16439de55b16bd0f",
+    "audioPath": "/api/human-tracks/finkel-d98e828f47ab70b35955d89a",
+    "bytes": 1283712,
+    "sha256": "d98e828f47ab70b35955d89afe851f42e5b4151cc4f6da46dd5a5344c6ac73e0",
     "durationSec": 160.41,
     "passages": [
       {
@@ -3434,13 +3434,13 @@
     ]
   },
   {
-    "id": "finkel-b992f75776264ccd7086c02f",
+    "id": "finkel-5f49a2b910ad8876d4ccba26",
     "voice": "josh-finkel",
     "title": "Isaiah 6:2 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-b992f75776264ccd7086c02f",
-    "bytes": 387012,
-    "sha256": "b992f75776264ccd7086c02f6de86fd2c36f317507d6aa7305edc2c3390dee94",
+    "audioPath": "/api/human-tracks/finkel-5f49a2b910ad8876d4ccba26",
+    "bytes": 386820,
+    "sha256": "5f49a2b910ad8876d4ccba268748117d9caed7829f2e9601ff32953ae071082f",
     "durationSec": 48.3,
     "passages": [
       {
@@ -3453,13 +3453,13 @@
     ]
   },
   {
-    "id": "finkel-afd3a9602bd1fc85a73a3d8e",
+    "id": "finkel-c3e867b4a5caeef4ac7c55aa",
     "voice": "josh-finkel",
     "title": "Isaiah 6:2 · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-afd3a9602bd1fc85a73a3d8e",
-    "bytes": 253488,
-    "sha256": "afd3a9602bd1fc85a73a3d8e0aa65b58bcb4faf67cfd49e7500d5b997fca92be",
+    "audioPath": "/api/human-tracks/finkel-c3e867b4a5caeef4ac7c55aa",
+    "bytes": 253282,
+    "sha256": "c3e867b4a5caeef4ac7c55aae6e9ee0562256837073dcb788fa3dad7b83f52d7",
     "durationSec": 31.59,
     "passages": [
       {
@@ -3472,13 +3472,13 @@
     ]
   },
   {
-    "id": "finkel-36e48bb891d83e7f8ce067da",
+    "id": "finkel-0fa0a31eb6c3fc3f22a77e6d",
     "voice": "josh-finkel",
     "title": "Isaiah 6:3 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-36e48bb891d83e7f8ce067da",
-    "bytes": 174271,
-    "sha256": "36e48bb891d83e7f8ce067da270e83e4f250e6c34e455d883b8c3874d35599d9",
+    "audioPath": "/api/human-tracks/finkel-0fa0a31eb6c3fc3f22a77e6d",
+    "bytes": 174079,
+    "sha256": "0fa0a31eb6c3fc3f22a77e6df2f986b132f771c4c2584b9630393fb1d8f6d04c",
     "durationSec": 21.69,
     "passages": [
       {
@@ -3491,23 +3491,23 @@
     ]
   },
   {
-    "id": "finkel-d4308bc76b69a2d1f1bd514b",
+    "id": "finkel-7e09361fe083806dfc26201c",
     "voice": "josh-finkel",
     "title": "Haftarah practice · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-d4308bc76b69a2d1f1bd514b",
-    "bytes": 675858,
-    "sha256": "d4308bc76b69a2d1f1bd514b07b0e26d4959faa76d105ebbae1ba20f8594c336",
+    "audioPath": "/api/human-tracks/finkel-7e09361fe083806dfc26201c",
+    "bytes": 675648,
+    "sha256": "7e09361fe083806dfc26201cf12e8b2dbc1d23d30d4cf4803aa21ec268ce477c",
     "durationSec": 84.39
   },
   {
-    "id": "finkel-5756731264024189521e687e",
+    "id": "finkel-f20034dd847088ef578105bf",
     "voice": "josh-finkel",
     "title": "Jeremiah 16:19 · Speak and repeat",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-5756731264024189521e687e",
-    "bytes": 1452744,
-    "sha256": "5756731264024189521e687e2655eabff7d39f8813291df90210f09dd0f62440",
+    "audioPath": "/api/human-tracks/finkel-f20034dd847088ef578105bf",
+    "bytes": 1452480,
+    "sha256": "f20034dd847088ef578105bf3f7a2d5dc50976c0c9afa54fa12435582b66e020",
     "durationSec": 181.49,
     "passages": [
       {
@@ -3520,13 +3520,13 @@
     ]
   },
   {
-    "id": "finkel-97e43132992413adfe53ce04",
+    "id": "finkel-2a4d0e7a8305753fce13dc30",
     "voice": "josh-finkel",
     "title": "Jeremiah 16:20 · Chant and repeat",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-97e43132992413adfe53ce04",
-    "bytes": 351814,
-    "sha256": "97e43132992413adfe53ce04af7f951b65ac8ffb2ae5cafdd218ecac0269fc5b",
+    "audioPath": "/api/human-tracks/finkel-2a4d0e7a8305753fce13dc30",
+    "bytes": 351552,
+    "sha256": "2a4d0e7a8305753fce13dc30fe9666e54493334194b21ba4230d19cecdf22a00",
     "durationSec": 43.89,
     "passages": [
       {
@@ -3539,13 +3539,13 @@
     ]
   },
   {
-    "id": "finkel-fdf9d994db530bac480fc40d",
+    "id": "finkel-37ba2d6dc1375eacdcfee8a0",
     "voice": "josh-finkel",
     "title": "Jeremiah 17:2 · Speak and repeat",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-fdf9d994db530bac480fc40d",
-    "bytes": 734470,
-    "sha256": "fdf9d994db530bac480fc40ded0fc72c74a1fb1a3f29c24662fa6d612de58167",
+    "audioPath": "/api/human-tracks/finkel-37ba2d6dc1375eacdcfee8a0",
+    "bytes": 734208,
+    "sha256": "37ba2d6dc1375eacdcfee8a0f33522213bb80014a37cbd335b885332af3d0d9e",
     "durationSec": 91.71,
     "passages": [
       {
@@ -3558,13 +3558,13 @@
     ]
   },
   {
-    "id": "finkel-df1552425f1782195382b7a7",
+    "id": "finkel-181629c2232c042afa5ff75d",
     "voice": "josh-finkel",
     "title": "Joshua 2:1–5 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-df1552425f1782195382b7a7",
-    "bytes": 1651972,
-    "sha256": "df1552425f1782195382b7a7b18d288742d7ed7cf94ac23320dd9e4201ba2949",
+    "audioPath": "/api/human-tracks/finkel-181629c2232c042afa5ff75d",
+    "bytes": 1651776,
+    "sha256": "181629c2232c042afa5ff75d1a7b9958bcf5c27eebf324fd6559acdcfd1c0b2f",
     "durationSec": 206.41,
     "passages": [
       {
@@ -3577,13 +3577,13 @@
     ]
   },
   {
-    "id": "finkel-c35ea31074c23ecc93641efd",
+    "id": "finkel-50e0041338f27167fbb952f4",
     "voice": "josh-finkel",
     "title": "Joshua 2:1–5 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-c35ea31074c23ecc93641efd",
-    "bytes": 1542673,
-    "sha256": "c35ea31074c23ecc93641efdd9fb5fb39f7d59da21b6dc0f8b486a07e1a6423d",
+    "audioPath": "/api/human-tracks/finkel-50e0041338f27167fbb952f4",
+    "bytes": 1542477,
+    "sha256": "50e0041338f27167fbb952f4654083d816d57a9591a2776db074dd19adc89fc2",
     "durationSec": 192.75,
     "passages": [
       {
@@ -3596,13 +3596,13 @@
     ]
   },
   {
-    "id": "finkel-0e08afac64b3a465b4904978",
+    "id": "finkel-59d0e303f66964321bb85f7b",
     "voice": "josh-finkel",
     "title": "Joshua 2:1–5 · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-0e08afac64b3a465b4904978",
-    "bytes": 976146,
-    "sha256": "0e08afac64b3a465b4904978c8e89d9294998e8fb4ef7aeea687075a1760109d",
+    "audioPath": "/api/human-tracks/finkel-59d0e303f66964321bb85f7b",
+    "bytes": 975936,
+    "sha256": "59d0e303f66964321bb85f7b0ef890ee40d9550896b0b42f3b2a0435e495cf9f",
     "durationSec": 121.94,
     "passages": [
       {
@@ -3615,13 +3615,13 @@
     ]
   },
   {
-    "id": "finkel-8fcb44e0b11badec202ae5c2",
+    "id": "finkel-a8d20cca3339617f510354bb",
     "voice": "josh-finkel",
     "title": "Joshua 2:21–24 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-8fcb44e0b11badec202ae5c2",
-    "bytes": 915111,
-    "sha256": "8fcb44e0b11badec202ae5c2d4cd94c2ac42f6cbe8312fd1eb7a8b3b7eedc250",
+    "audioPath": "/api/human-tracks/finkel-a8d20cca3339617f510354bb",
+    "bytes": 914911,
+    "sha256": "a8d20cca3339617f510354bb40751a8c831af2bd70acb2841cda869a3725561e",
     "durationSec": 114.29,
     "passages": [
       {
@@ -3634,13 +3634,13 @@
     ]
   },
   {
-    "id": "finkel-7ece38361c594bea3d4bf1ce",
+    "id": "finkel-da90ea123785857740315639",
     "voice": "josh-finkel",
     "title": "Joshua 2:6–11 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-7ece38361c594bea3d4bf1ce",
-    "bytes": 1635671,
-    "sha256": "7ece38361c594bea3d4bf1cefda9d1204642ff2b648248cd9c9c46cae5399e52",
+    "audioPath": "/api/human-tracks/finkel-da90ea123785857740315639",
+    "bytes": 1635473,
+    "sha256": "da90ea1237858577403156397a9d1f0453e661f16b6869464424cea93b220ecd",
     "durationSec": 204.38,
     "passages": [
       {
@@ -3653,13 +3653,13 @@
     ]
   },
   {
-    "id": "finkel-8232509593aa4c98abb3167f",
+    "id": "finkel-1fbb308fa89ef6eccb62bfb9",
     "voice": "josh-finkel",
     "title": "Judges 13:2 · Chant and repeat",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-8232509593aa4c98abb3167f",
-    "bytes": 1164160,
-    "sha256": "8232509593aa4c98abb3167fdc096b3dd5879c8eac4004fc9e8b83cb16193185",
+    "audioPath": "/api/human-tracks/finkel-1fbb308fa89ef6eccb62bfb9",
+    "bytes": 1163904,
+    "sha256": "1fbb308fa89ef6eccb62bfb929fae076d049b2cdf68e96f5ebf36cc2b59eed57",
     "durationSec": 145.44,
     "passages": [
       {
@@ -3672,33 +3672,33 @@
     ]
   },
   {
-    "id": "finkel-4711b063178c55af446afaeb",
+    "id": "finkel-29f20760712fff1366ad5b6f",
     "voice": "josh-finkel",
     "title": "Haftarah practice · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-4711b063178c55af446afaeb",
-    "bytes": 556998,
-    "sha256": "4711b063178c55af446afaeb99e66a2c8892319a15ebc1d5c1988b4840d77715",
+    "audioPath": "/api/human-tracks/finkel-29f20760712fff1366ad5b6f",
+    "bytes": 556800,
+    "sha256": "29f20760712fff1366ad5b6fb0da69734175c0999b3faa838dbfcc2c3653efaf",
     "durationSec": 69.54
   },
   {
-    "id": "finkel-f97909f4014ada95af97ff81",
+    "id": "finkel-c21f78d729851802535335a7",
     "voice": "josh-finkel",
     "title": "Haftarah practice · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-f97909f4014ada95af97ff81",
-    "bytes": 1046982,
-    "sha256": "f97909f4014ada95af97ff81d6e4dedebaa9ab71d4faceb90fd5f827ffbcc7a6",
+    "audioPath": "/api/human-tracks/finkel-c21f78d729851802535335a7",
+    "bytes": 1046784,
+    "sha256": "c21f78d729851802535335a7d75f6327d15b466580000c8e92f9b0c535769dd3",
     "durationSec": 130.8
   },
   {
-    "id": "finkel-bf0c25d32cd89c1c8c7b87da",
+    "id": "finkel-5271decb580bf3cdfad1f9d3",
     "voice": "josh-finkel",
     "title": "Micah 5:6–6:8 · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-bf0c25d32cd89c1c8c7b87da",
-    "bytes": 2045588,
-    "sha256": "bf0c25d32cd89c1c8c7b87dad2933318e0a0a8b5addd62a310c6c3b1676e4358",
+    "audioPath": "/api/human-tracks/finkel-5271decb580bf3cdfad1f9d3",
+    "bytes": 2045376,
+    "sha256": "5271decb580bf3cdfad1f9d3e3f3aa9fadf3c592b694da2bd3be4109621b5d45",
     "durationSec": 255.62,
     "passages": [
       {
@@ -3711,23 +3711,23 @@
     ]
   },
   {
-    "id": "finkel-b9b98ed9ce7d168c22017080",
+    "id": "finkel-dacc37795cc0f3908d4a4661",
     "voice": "josh-finkel",
     "title": "Haftarah practice · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-b9b98ed9ce7d168c22017080",
-    "bytes": 146690,
-    "sha256": "b9b98ed9ce7d168c22017080e1c2bedd152c07eef2b04f92d1a8106bc16ab2fb",
+    "audioPath": "/api/human-tracks/finkel-dacc37795cc0f3908d4a4661",
+    "bytes": 146496,
+    "sha256": "dacc37795cc0f3908d4a4661773c6ecd3a40bd738c1941c5e68389cce3f8480f",
     "durationSec": 18.26
   },
   {
-    "id": "finkel-d544133143069c51bea2cf01",
+    "id": "finkel-4c832ebcc319721920f91312",
     "voice": "josh-finkel",
     "title": "Micah 6:8 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-d544133143069c51bea2cf01",
-    "bytes": 240190,
-    "sha256": "d544133143069c51bea2cf018b4ab32391f2c4eaf511805358cf157f21ca731e",
+    "audioPath": "/api/human-tracks/finkel-4c832ebcc319721920f91312",
+    "bytes": 240000,
+    "sha256": "4c832ebcc319721920f9131234338086c3f6fe44d21bfb692f5e1988144a750d",
     "durationSec": 29.93,
     "passages": [
       {
@@ -3740,13 +3740,13 @@
     ]
   },
   {
-    "id": "finkel-4aedfdf50627096a0955e429",
+    "id": "finkel-e3c7b49be5558e2eeca4d2a3",
     "voice": "josh-finkel",
     "title": "Zechariah 2:14–17 · Chant",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-4aedfdf50627096a0955e429",
-    "bytes": 815246,
-    "sha256": "4aedfdf50627096a0955e429f26d6a4a4e3928bdf20c41c3ed055c2cba01d4f4",
+    "audioPath": "/api/human-tracks/finkel-e3c7b49be5558e2eeca4d2a3",
+    "bytes": 815040,
+    "sha256": "e3c7b49be5558e2eeca4d2a3e550bbc1d956562a7285ba7fa1c0af82ebaf9a66",
     "durationSec": 101.83,
     "passages": [
       {
@@ -3759,13 +3759,13 @@
     ]
   },
   {
-    "id": "finkel-47c454cb66693a8eb045f2fa",
+    "id": "finkel-214b347e657dbaa5a1850480",
     "voice": "josh-finkel",
     "title": "Zechariah 2:14–17 · Spoken reading",
     "kind": "haftarah",
-    "audioPath": "/api/human-tracks/finkel-47c454cb66693a8eb045f2fa",
-    "bytes": 545884,
-    "sha256": "47c454cb66693a8eb045f2fad489a5fd4ad331dda281c3bbe2f8a446925a3cbd",
+    "audioPath": "/api/human-tracks/finkel-214b347e657dbaa5a1850480",
+    "bytes": 545664,
+    "sha256": "214b347e657dbaa5a1850480640db615203f0cf815c01419ca72779e505752eb",
     "durationSec": 68.14,
     "passages": [
       {
@@ -3778,213 +3778,213 @@
     ]
   },
   {
-    "id": "finkel-fa9f60593264798c1f0b9c37",
+    "id": "finkel-0bcca241a508fc41dc66cf9a",
     "voice": "josh-finkel",
     "title": "Service practice · Chant",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-fa9f60593264798c1f0b9c37",
-    "bytes": 128528,
-    "sha256": "fa9f60593264798c1f0b9c373df463a72cc927b24bd65984e8e9bd7df5226153",
+    "audioPath": "/api/human-tracks/finkel-0bcca241a508fc41dc66cf9a",
+    "bytes": 128312,
+    "sha256": "0bcca241a508fc41dc66cf9aeeb84e4012b743e003a1908bc2c8e86cbc2377f2",
     "durationSec": 15.98
   },
   {
-    "id": "finkel-4a07ca391441e7a849559f17",
+    "id": "finkel-726c9b975737a6c670e177f0",
     "voice": "josh-finkel",
     "title": "Ahavah Rabbah · Chant",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-4a07ca391441e7a849559f17",
-    "bytes": 48390,
-    "sha256": "4a07ca391441e7a849559f17d18773a0fe0f11159fee870799c1efe6ff133cf2",
+    "audioPath": "/api/human-tracks/finkel-726c9b975737a6c670e177f0",
+    "bytes": 48192,
+    "sha256": "726c9b975737a6c670e177f01be4b8a4bd02a136d2a5ee2fb43b5bd003618da5",
     "durationSec": 5.97
   },
   {
-    "id": "finkel-a40c1813a99edca038357047",
+    "id": "finkel-f63041dc99000f9d57fca4bc",
     "voice": "josh-finkel",
     "title": "Service practice · Chant",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-a40c1813a99edca038357047",
-    "bytes": 299910,
-    "sha256": "a40c1813a99edca038357047bffc6d7bc50a7e9c4eda9a424a4ac3d2e97b01f4",
+    "audioPath": "/api/human-tracks/finkel-f63041dc99000f9d57fca4bc",
+    "bytes": 299712,
+    "sha256": "f63041dc99000f9d57fca4bc6579331f651126fea0c90e27c8af729f7ea95f7a",
     "durationSec": 37.4
   },
   {
-    "id": "finkel-71df65678a98e8e389ddd888",
+    "id": "finkel-aa9cadbb00b4848fcfba1af0",
     "voice": "josh-finkel",
     "title": "Service practice · Chant",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-71df65678a98e8e389ddd888",
-    "bytes": 111942,
-    "sha256": "71df65678a98e8e389ddd888bea4121d42d3386f09aefd2b11569e7770c9ef81",
+    "audioPath": "/api/human-tracks/finkel-aa9cadbb00b4848fcfba1af0",
+    "bytes": 111744,
+    "sha256": "aa9cadbb00b4848fcfba1af0a324ca7d8a0e7b339843ab81bcee364d9d4ff2df",
     "durationSec": 13.9
   },
   {
-    "id": "finkel-809bbaf6f563a894f45e97a5",
+    "id": "finkel-63f5bf49845be9714b4acc80",
     "voice": "josh-finkel",
     "title": "Blessing after the Torah reading · Chant",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-809bbaf6f563a894f45e97a5",
-    "bytes": 180716,
-    "sha256": "809bbaf6f563a894f45e97a535be43f0de47ab7a1022da9669c74843e20f7f88",
+    "audioPath": "/api/human-tracks/finkel-63f5bf49845be9714b4acc80",
+    "bytes": 180480,
+    "sha256": "63f5bf49845be9714b4acc80fac64261da14add1e2554184a392b158cf8400f0",
     "durationSec": 22.49
   },
   {
-    "id": "finkel-4240efac5f1c077c8ce98851",
+    "id": "finkel-68b276af542d9c76d089a9cb",
     "voice": "josh-finkel",
     "title": "Blessing before the Torah reading · Chant",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-4240efac5f1c077c8ce98851",
-    "bytes": 241608,
-    "sha256": "4240efac5f1c077c8ce988515879f7dfc3c906547bdf9e83c2c4505c616d28c4",
+    "audioPath": "/api/human-tracks/finkel-68b276af542d9c76d089a9cb",
+    "bytes": 241370,
+    "sha256": "68b276af542d9c76d089a9cbd432ba3426a44402042b78a2c5af939277527df4",
     "durationSec": 30.1
   },
   {
-    "id": "finkel-3e6272dc32e7f249ac9defb5",
+    "id": "finkel-87fbbaaea5fcf83d317a7533",
     "voice": "josh-finkel",
     "title": "Blessing before the Torah reading · Chant",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-3e6272dc32e7f249ac9defb5",
-    "bytes": 263278,
-    "sha256": "3e6272dc32e7f249ac9defb5de03ee80788226f5dbe59ade068b44dffc8a50f4",
+    "audioPath": "/api/human-tracks/finkel-87fbbaaea5fcf83d317a7533",
+    "bytes": 263040,
+    "sha256": "87fbbaaea5fcf83d317a753388087f293cb5514f787632d8b873b90bcdf8e86d",
     "durationSec": 32.83
   },
   {
-    "id": "finkel-c5ceea898857ead0e66396e4",
+    "id": "finkel-7a0a231db43dd2ba5a6e9ed0",
     "voice": "josh-finkel",
     "title": "Blessing before the haftarah · Chant",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-c5ceea898857ead0e66396e4",
-    "bytes": 391140,
-    "sha256": "c5ceea898857ead0e66396e41ef0139a935cf28909364534c035cb865f2c809e",
+    "audioPath": "/api/human-tracks/finkel-7a0a231db43dd2ba5a6e9ed0",
+    "bytes": 390912,
+    "sha256": "7a0a231db43dd2ba5a6e9ed01563a713d775b25eb1ec9065d72dd699702b475a",
     "durationSec": 48.81
   },
   {
-    "id": "finkel-bd64997269d70987a81748de",
+    "id": "finkel-13f71d8a0151cc0188f81120",
     "voice": "josh-finkel",
     "title": "Blessing before the haftarah · Chant",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-bd64997269d70987a81748de",
-    "bytes": 429889,
-    "sha256": "bd64997269d70987a81748def037cdfe4b0afed333c10a72b6e3fc912c016aea",
+    "audioPath": "/api/human-tracks/finkel-13f71d8a0151cc0188f81120",
+    "bytes": 429661,
+    "sha256": "13f71d8a0151cc0188f811203140e1711a3986b80b2e21e25f8d070ad4c5b8d6",
     "durationSec": 53.65
   },
   {
-    "id": "finkel-163c6a1a6af9301b5338026b",
+    "id": "finkel-ba8ecf443b2039a8079ec1ef",
     "voice": "josh-finkel",
     "title": "Blessings after the haftarah · Chant",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-163c6a1a6af9301b5338026b",
-    "bytes": 633017,
-    "sha256": "163c6a1a6af9301b5338026b334fcfbc482123b91c67222bafdf217cc6f15a0b",
+    "audioPath": "/api/human-tracks/finkel-ba8ecf443b2039a8079ec1ef",
+    "bytes": 632789,
+    "sha256": "ba8ecf443b2039a8079ec1efab2a1786aaa87e0ed960c459153a10303f22e9a5",
     "durationSec": 79.04
   },
   {
-    "id": "finkel-a688b1f4acaeecdc895a8f15",
+    "id": "finkel-a66913918bec079c001ccf78",
     "voice": "josh-finkel",
     "title": "Kedushah · Chant",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-a688b1f4acaeecdc895a8f15",
-    "bytes": 406443,
-    "sha256": "a688b1f4acaeecdc895a8f1544218858969b63bbcfe1d3f86ec18c9467c3ba5d",
+    "audioPath": "/api/human-tracks/finkel-a66913918bec079c001ccf78",
+    "bytes": 406255,
+    "sha256": "a66913918bec079c001ccf7896ac67d6c719ab8ee7df1119a43addf22fa0ec65",
     "durationSec": 50.72
   },
   {
-    "id": "finkel-ff3cad2148d0d1da35efba3d",
+    "id": "finkel-66260d6aaecd27f8fa727ba2",
     "voice": "josh-finkel",
     "title": "Kedushah · Chant",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-ff3cad2148d0d1da35efba3d",
-    "bytes": 262247,
-    "sha256": "ff3cad2148d0d1da35efba3d5344699d5cc9832e9dc630d6226e20388ad1cac8",
+    "audioPath": "/api/human-tracks/finkel-66260d6aaecd27f8fa727ba2",
+    "bytes": 262059,
+    "sha256": "66260d6aaecd27f8fa727ba23b35abcc0977eec13a979bd96aa545cbd9c4173e",
     "durationSec": 32.7
   },
   {
-    "id": "finkel-69f185bfeb52517a86b783a7",
+    "id": "finkel-085c9e877127921bf357227e",
     "voice": "josh-finkel",
     "title": "Kiddush · Chant",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-69f185bfeb52517a86b783a7",
-    "bytes": 265530,
-    "sha256": "69f185bfeb52517a86b783a734d84bbcfbbc8ed86b2a1c2d22f4471f122d444a",
+    "audioPath": "/api/human-tracks/finkel-085c9e877127921bf357227e",
+    "bytes": 265344,
+    "sha256": "085c9e877127921bf357227e4078e27e73d0ba7bc332c5ef6101b3748ae77370",
     "durationSec": 33.12
   },
   {
-    "id": "finkel-a29708a72c0583e729fa1d16",
+    "id": "finkel-cc941489020a05ec9dbe25a7",
     "voice": "josh-finkel",
     "title": "Kiddush · Chant",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-a29708a72c0583e729fa1d16",
-    "bytes": 715313,
-    "sha256": "a29708a72c0583e729fa1d16851ef3fe888d99ce54995f1d317b4b76b595a16e",
+    "audioPath": "/api/human-tracks/finkel-cc941489020a05ec9dbe25a7",
+    "bytes": 715127,
+    "sha256": "cc941489020a05ec9dbe25a71f8cf908abb06f3874cc74e66d3484754916d555",
     "durationSec": 89.32
   },
   {
-    "id": "finkel-14db044ed1e4f5503c10b7da",
+    "id": "finkel-02026f74ee475f8dd5a6d653",
     "voice": "josh-finkel",
     "title": "Service practice · Chant",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-14db044ed1e4f5503c10b7da",
-    "bytes": 414906,
-    "sha256": "14db044ed1e4f5503c10b7da553a66a25946c4c9753492ad8895da0e5d176a96",
+    "audioPath": "/api/human-tracks/finkel-02026f74ee475f8dd5a6d653",
+    "bytes": 414720,
+    "sha256": "02026f74ee475f8dd5a6d65384812655070ac42a14ce1a738395c2e08bb8f79b",
     "durationSec": 51.79
   },
   {
-    "id": "finkel-e46d94679f0b0c4e3a530ca1",
+    "id": "finkel-ef52496389212ea1ba1bec23",
     "voice": "josh-finkel",
     "title": "Service practice · Chant and repeat",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-e46d94679f0b0c4e3a530ca1",
-    "bytes": 962807,
-    "sha256": "e46d94679f0b0c4e3a530ca11fafb801fc16e438aee60c1298da3dca4c60da7d",
+    "audioPath": "/api/human-tracks/finkel-ef52496389212ea1ba1bec23",
+    "bytes": 962559,
+    "sha256": "ef52496389212ea1ba1bec2309f7f0ce7caa5b9f9fb9d5b0a47517cd819eca57",
     "durationSec": 120.25
   },
   {
-    "id": "finkel-f35a2837f995f0bcc9c767a1",
+    "id": "finkel-2a544c9ab2304ec012a48724",
     "voice": "josh-finkel",
     "title": "Service practice · Chant and repeat",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-f35a2837f995f0bcc9c767a1",
-    "bytes": 541295,
-    "sha256": "f35a2837f995f0bcc9c767a1ea49bbb952da4015332d78d1107ecf031b461e69",
+    "audioPath": "/api/human-tracks/finkel-2a544c9ab2304ec012a48724",
+    "bytes": 541047,
+    "sha256": "2a544c9ab2304ec012a4872432dcf4122249dc6ba13142092f5bc0001abbc6d7",
     "durationSec": 67.56
   },
   {
-    "id": "finkel-ac569e28fedae56271632f6f",
+    "id": "finkel-007d2904325f682344c661fd",
     "voice": "josh-finkel",
     "title": "L'dor Vador · Chant",
     "kind": "other",
-    "audioPath": "/api/human-tracks/finkel-ac569e28fedae56271632f6f",
-    "bytes": 724098,
-    "sha256": "ac569e28fedae56271632f6fc0715602810703ae142eecdb6f92bede28cf8291",
+    "audioPath": "/api/human-tracks/finkel-007d2904325f682344c661fd",
+    "bytes": 723904,
+    "sha256": "007d2904325f682344c661fd9cfacabff04fc5adb138c0deeb6fd556fd82973a",
     "durationSec": 90.42
   },
   {
-    "id": "finkel-c773bbaf2750f2f5153ccd77",
+    "id": "finkel-6fc8839ae807d1f3d4ae66de",
     "voice": "josh-finkel",
     "title": "Torah practice · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-c773bbaf2750f2f5153ccd77",
-    "bytes": 100931,
-    "sha256": "c773bbaf2750f2f5153ccd77ead410add799fb66fe4dd9e137d3acf3ec90e3ec",
+    "audioPath": "/api/human-tracks/finkel-6fc8839ae807d1f3d4ae66de",
+    "bytes": 100727,
+    "sha256": "6fc8839ae807d1f3d4ae66deae5ba9ea8c0757ad004b11b172e378e06e8387d6",
     "durationSec": 12.53
   },
   {
-    "id": "finkel-b1257eb9f126b9ee901a9921",
+    "id": "finkel-29b8cef32cd009a246802f1f",
     "voice": "josh-finkel",
     "title": "Torah practice · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-b1257eb9f126b9ee901a9921",
-    "bytes": 42418,
-    "sha256": "b1257eb9f126b9ee901a992158e5708ba20951b599241133e1715770e39bcf68",
+    "audioPath": "/api/human-tracks/finkel-29b8cef32cd009a246802f1f",
+    "bytes": 42212,
+    "sha256": "29b8cef32cd009a246802f1f2f22acb940f742751ee19d394dc94ff607787c7f",
     "durationSec": 5.21
   },
   {
-    "id": "finkel-605b931f8a4590a159aa30b1",
+    "id": "finkel-d9654852d35e75d3037359f4",
     "voice": "josh-finkel",
     "title": "Deuteronomy 7:25–8:1 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-605b931f8a4590a159aa30b1",
-    "bytes": 816980,
-    "sha256": "605b931f8a4590a159aa30b1ccecc6a81bb2f0027a4f728d77411c2c25c7e2b2",
+    "audioPath": "/api/human-tracks/finkel-d9654852d35e75d3037359f4",
+    "bytes": 816768,
+    "sha256": "d9654852d35e75d3037359f46ac1dfc478e5043661fe13583c44b4145108dc25",
     "durationSec": 102.03,
     "passages": [
       {
@@ -3997,13 +3997,13 @@
     ]
   },
   {
-    "id": "finkel-7c1897fd01aefc99000e2fb7",
+    "id": "finkel-c7d8c43171608bbea5ac354d",
     "voice": "josh-finkel",
     "title": "Deuteronomy 7:25–8:1 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-7c1897fd01aefc99000e2fb7",
-    "bytes": 689698,
-    "sha256": "7c1897fd01aefc99000e2fb7e4338924e3b3397b8a8b2ed9899dbc533fa7aa5e",
+    "audioPath": "/api/human-tracks/finkel-c7d8c43171608bbea5ac354d",
+    "bytes": 689472,
+    "sha256": "c7d8c43171608bbea5ac354d9a053b20f71465879ac75e353abd278e5f0d1744",
     "durationSec": 86.13,
     "passages": [
       {
@@ -4016,13 +4016,13 @@
     ]
   },
   {
-    "id": "finkel-0a5245d6aa543adf3b681ebd",
+    "id": "finkel-0e986c9edd7fdc7a6d15fbf1",
     "voice": "josh-finkel",
     "title": "Deuteronomy 7:25–8:1 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-0a5245d6aa543adf3b681ebd",
-    "bytes": 471778,
-    "sha256": "0a5245d6aa543adf3b681ebdc2d7cef515a417342776ddf33d973aa2cb732f3a",
+    "audioPath": "/api/human-tracks/finkel-0e986c9edd7fdc7a6d15fbf1",
+    "bytes": 471552,
+    "sha256": "0e986c9edd7fdc7a6d15fbf120593b6b4203bcdc3a47440958c019c08399fd76",
     "durationSec": 58.89,
     "passages": [
       {
@@ -4035,13 +4035,13 @@
     ]
   },
   {
-    "id": "finkel-f4f1df716e17f16acd863ad2",
+    "id": "finkel-0da9f692433525fd0d23e1de",
     "voice": "josh-finkel",
     "title": "Deuteronomy 8:2 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-f4f1df716e17f16acd863ad2",
-    "bytes": 445834,
-    "sha256": "f4f1df716e17f16acd863ad23ac44043344842f8ceca2933580034bc9392b1ec",
+    "audioPath": "/api/human-tracks/finkel-0da9f692433525fd0d23e1de",
+    "bytes": 445632,
+    "sha256": "0da9f692433525fd0d23e1de1310502898e2c3854c945a137f0be8c3fe75b6da",
     "durationSec": 55.64,
     "passages": [
       {
@@ -4054,13 +4054,13 @@
     ]
   },
   {
-    "id": "finkel-d922e42186c04084dc8bd58e",
+    "id": "finkel-ed0e0ebbb5463cd9fcb98c2d",
     "voice": "josh-finkel",
     "title": "Deuteronomy 8:2–4 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-d922e42186c04084dc8bd58e",
-    "bytes": 888782,
-    "sha256": "d922e42186c04084dc8bd58e1739e2118761e480e232738dac7fe41875663e74",
+    "audioPath": "/api/human-tracks/finkel-ed0e0ebbb5463cd9fcb98c2d",
+    "bytes": 888576,
+    "sha256": "ed0e0ebbb5463cd9fcb98c2ddb7e8e17f088c486ce3e4bc37900db56e9cf3f20",
     "durationSec": 111.01,
     "passages": [
       {
@@ -4073,13 +4073,13 @@
     ]
   },
   {
-    "id": "finkel-ea3c120a8c095c070f9c7b61",
+    "id": "finkel-306eb2a800b65aafb5e556b6",
     "voice": "josh-finkel",
     "title": "Deuteronomy 8:2–4 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-ea3c120a8c095c070f9c7b61",
-    "bytes": 1041614,
-    "sha256": "ea3c120a8c095c070f9c7b61808f07adfbcdf5a9211d971866bbc09e7e5dca5b",
+    "audioPath": "/api/human-tracks/finkel-306eb2a800b65aafb5e556b6",
+    "bytes": 1041408,
+    "sha256": "306eb2a800b65aafb5e556b681645aa4da4ad8377243d9ea6032e9efb66e40e1",
     "durationSec": 130.11,
     "passages": [
       {
@@ -4092,33 +4092,33 @@
     ]
   },
   {
-    "id": "finkel-290db33e74f28e2120d8d467",
+    "id": "finkel-4c13e462246ed60cf2bed54c",
     "voice": "josh-finkel",
     "title": "Torah practice · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-290db33e74f28e2120d8d467",
-    "bytes": 711196,
-    "sha256": "290db33e74f28e2120d8d467fc0e7de9ea11efab5632c7637e3e7257d5680014",
+    "audioPath": "/api/human-tracks/finkel-4c13e462246ed60cf2bed54c",
+    "bytes": 710976,
+    "sha256": "4c13e462246ed60cf2bed54c467041e4d85b01541a0497252f401f159d708817",
     "durationSec": 88.82
   },
   {
-    "id": "finkel-99d21ffd4a7c0df75997c369",
+    "id": "finkel-9905702b2076a6a2447b1ba6",
     "voice": "josh-finkel",
     "title": "Torah practice · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-99d21ffd4a7c0df75997c369",
-    "bytes": 226012,
-    "sha256": "99d21ffd4a7c0df75997c369b294b64243dca66fef0fefbce11ac15d71f1bb91",
+    "audioPath": "/api/human-tracks/finkel-9905702b2076a6a2447b1ba6",
+    "bytes": 225792,
+    "sha256": "9905702b2076a6a2447b1ba65d44b7aafd86749c2ad6c3063bee0d94efbf15dd",
     "durationSec": 28.17
   },
   {
-    "id": "finkel-617a1395b40d7f021b3e6960",
+    "id": "finkel-868d39a96429b183fc8dec24",
     "voice": "josh-finkel",
     "title": "Deuteronomy 8:2–4 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-617a1395b40d7f021b3e6960",
-    "bytes": 526684,
-    "sha256": "617a1395b40d7f021b3e696075d43a77c5185029be719d40f695e53530342467",
+    "audioPath": "/api/human-tracks/finkel-868d39a96429b183fc8dec24",
+    "bytes": 526464,
+    "sha256": "868d39a96429b183fc8dec24a2aec644673b922a0919499dea30f5dd9c064ae5",
     "durationSec": 65.76,
     "passages": [
       {
@@ -4131,13 +4131,13 @@
     ]
   },
   {
-    "id": "finkel-320ec8850f599ba25493f69c",
+    "id": "finkel-8ebb62d4bd80c61dec470325",
     "voice": "josh-finkel",
     "title": "Deuteronomy 8:3 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-320ec8850f599ba25493f69c",
-    "bytes": 366922,
-    "sha256": "320ec8850f599ba25493f69c1318cc626372cf8a0d1447fc4dac0a2a57d1da54",
+    "audioPath": "/api/human-tracks/finkel-8ebb62d4bd80c61dec470325",
+    "bytes": 366720,
+    "sha256": "8ebb62d4bd80c61dec470325ba30868ac90cbae516bcd707d0009615b1512490",
     "durationSec": 45.77,
     "passages": [
       {
@@ -4150,23 +4150,23 @@
     ]
   },
   {
-    "id": "finkel-a4c6e7e66dd2e5c4264ef1ac",
+    "id": "finkel-a4940d168cd9c17baad1abeb",
     "voice": "josh-finkel",
     "title": "Torah practice · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-a4c6e7e66dd2e5c4264ef1ac",
-    "bytes": 361944,
-    "sha256": "a4c6e7e66dd2e5c4264ef1ac061911477ed397b94c71a6fd2e4d5b9ef41720ea",
+    "audioPath": "/api/human-tracks/finkel-a4940d168cd9c17baad1abeb",
+    "bytes": 361742,
+    "sha256": "a4940d168cd9c17baad1abebf8a6559832aa4a0ab91ab5f6be9725c5524a6b3d",
     "durationSec": 45.141
   },
   {
-    "id": "finkel-8803bfed230d574658c49228",
+    "id": "finkel-deab29cea9fc03c75bae3cfd",
     "voice": "josh-finkel",
     "title": "Deuteronomy 8:3 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-8803bfed230d574658c49228",
-    "bytes": 291100,
-    "sha256": "8803bfed230d574658c49228b0f57d15ce31c3ff53e6282b171be4e9743b8bcd",
+    "audioPath": "/api/human-tracks/finkel-deab29cea9fc03c75bae3cfd",
+    "bytes": 290898,
+    "sha256": "deab29cea9fc03c75bae3cfd21afcdffa8ff474d3ae64ea89bfa8755371b70a2",
     "durationSec": 36.29,
     "passages": [
       {
@@ -4179,13 +4179,13 @@
     ]
   },
   {
-    "id": "finkel-c9a659233c89d6423706d550",
+    "id": "finkel-c6cd092e2c1ed35e22d46aa4",
     "voice": "josh-finkel",
     "title": "Deuteronomy 8:3 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-c9a659233c89d6423706d550",
-    "bytes": 366976,
-    "sha256": "c9a659233c89d6423706d5503a109ea092ff6392513bc8a4ba7fed5e61896ddc",
+    "audioPath": "/api/human-tracks/finkel-c6cd092e2c1ed35e22d46aa4",
+    "bytes": 366758,
+    "sha256": "c6cd092e2c1ed35e22d46aa4b448799490327025995f6b58935c6da7178c66d3",
     "durationSec": 45.77,
     "passages": [
       {
@@ -4198,13 +4198,13 @@
     ]
   },
   {
-    "id": "finkel-94d5f645e6649b2de572770a",
+    "id": "finkel-23b91e11ffeb700f01ccf425",
     "voice": "josh-finkel",
     "title": "Deuteronomy 8:5 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-94d5f645e6649b2de572770a",
-    "bytes": 120364,
-    "sha256": "94d5f645e6649b2de572770a02f3407fbb8f0087cdc11c222566cff35ff45ef7",
+    "audioPath": "/api/human-tracks/finkel-23b91e11ffeb700f01ccf425",
+    "bytes": 120162,
+    "sha256": "23b91e11ffeb700f01ccf425a172bde6c6680cda68b5fb46aaeebb9895a57148",
     "durationSec": 14.96,
     "passages": [
       {
@@ -4217,13 +4217,13 @@
     ]
   },
   {
-    "id": "finkel-f5e69a5538f26e1284adc6d2",
+    "id": "finkel-55b4cab2d846d4684461d1f1",
     "voice": "josh-finkel",
     "title": "Deuteronomy 8:5 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-f5e69a5538f26e1284adc6d2",
-    "bytes": 84837,
-    "sha256": "f5e69a5538f26e1284adc6d2b811eabbbb6794a66d42c4e7e50cc91e29d7cf28",
+    "audioPath": "/api/human-tracks/finkel-55b4cab2d846d4684461d1f1",
+    "bytes": 84635,
+    "sha256": "55b4cab2d846d4684461d1f1abd68c48e888dacc17704e972bc65f1ea348ba55",
     "durationSec": 10.51,
     "passages": [
       {
@@ -4236,13 +4236,13 @@
     ]
   },
   {
-    "id": "finkel-60db500519799222843fd43a",
+    "id": "finkel-a18433548fe9ebe630d37d05",
     "voice": "josh-finkel",
     "title": "Deuteronomy 8:5–7 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-60db500519799222843fd43a",
-    "bytes": 535310,
-    "sha256": "60db500519799222843fd43a46e3d26db99dab0e03e52213b29184d980884dd5",
+    "audioPath": "/api/human-tracks/finkel-a18433548fe9ebe630d37d05",
+    "bytes": 535104,
+    "sha256": "a18433548fe9ebe630d37d0523e5668c2d3a9f2f0f01925d8e56e3154e34d443",
     "durationSec": 66.84,
     "passages": [
       {
@@ -4255,23 +4255,23 @@
     ]
   },
   {
-    "id": "finkel-e5ba20369a680475459e23c4",
+    "id": "finkel-a8b6c5afa9082ae78afe57dc",
     "voice": "josh-finkel",
     "title": "Torah practice · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-e5ba20369a680475459e23c4",
-    "bytes": 363868,
-    "sha256": "e5ba20369a680475459e23c4e2e82d22886c83d22a8163d188150282da3cc1d3",
+    "audioPath": "/api/human-tracks/finkel-a8b6c5afa9082ae78afe57dc",
+    "bytes": 363648,
+    "sha256": "a8b6c5afa9082ae78afe57dc248d585925174b97bd1e7b7bbb56f9b347cd1c89",
     "durationSec": 45.4
   },
   {
-    "id": "finkel-5a13b3ecc101c4552385c320",
+    "id": "finkel-5a55f75e41d9f0c911961a90",
     "voice": "josh-finkel",
     "title": "Deuteronomy 8:6–7 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-5a13b3ecc101c4552385c320",
-    "bytes": 368636,
-    "sha256": "5a13b3ecc101c4552385c3206eb64233513d8761fea4c4349b54a5c2f712e6ae",
+    "audioPath": "/api/human-tracks/finkel-5a55f75e41d9f0c911961a90",
+    "bytes": 368430,
+    "sha256": "5a55f75e41d9f0c911961a902f5a9d011e220a4e6e2a7ae2b18670cf7015576a",
     "durationSec": 45.98,
     "passages": [
       {
@@ -4284,13 +4284,13 @@
     ]
   },
   {
-    "id": "finkel-516ed42f5d324877fa440683",
+    "id": "finkel-d55991e254600a8c40c617b5",
     "voice": "josh-finkel",
     "title": "Deuteronomy 8:7 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-516ed42f5d324877fa440683",
-    "bytes": 209389,
-    "sha256": "516ed42f5d324877fa440683e906057d11c3826635080b734d4a665882d8cb8e",
+    "audioPath": "/api/human-tracks/finkel-d55991e254600a8c40c617b5",
+    "bytes": 209187,
+    "sha256": "d55991e254600a8c40c617b564e14e97b75f676bd9675d37c5149682ae8f34fc",
     "durationSec": 26.09,
     "passages": [
       {
@@ -4303,13 +4303,13 @@
     ]
   },
   {
-    "id": "finkel-ef1fc3ec1b5814d3eb9c370d",
+    "id": "finkel-c2f61638bdbdb2775c48736c",
     "voice": "josh-finkel",
     "title": "Deuteronomy 8:8–10 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-ef1fc3ec1b5814d3eb9c370d",
-    "bytes": 612496,
-    "sha256": "ef1fc3ec1b5814d3eb9c370dbc73297717691f00c57814a87ab3c02f9fa06efc",
+    "audioPath": "/api/human-tracks/finkel-c2f61638bdbdb2775c48736c",
+    "bytes": 612288,
+    "sha256": "c2f61638bdbdb2775c48736ce812adb31abd70b941607b2385f4024b20e923c5",
     "durationSec": 76.47,
     "passages": [
       {
@@ -4322,13 +4322,13 @@
     ]
   },
   {
-    "id": "finkel-19f424ccbc64fc92f29941be",
+    "id": "finkel-155466e2f0fa073bd3c44d82",
     "voice": "josh-finkel",
     "title": "Deuteronomy 8:8–10 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-19f424ccbc64fc92f29941be",
-    "bytes": 622096,
-    "sha256": "19f424ccbc64fc92f29941be86776ae7cac15082519a972348a5b9d575bea474",
+    "audioPath": "/api/human-tracks/finkel-155466e2f0fa073bd3c44d82",
+    "bytes": 621888,
+    "sha256": "155466e2f0fa073bd3c44d82f52480f307d182c5ee1ea8f6c4089c88e2e0d3e5",
     "durationSec": 77.68,
     "passages": [
       {
@@ -4341,13 +4341,13 @@
     ]
   },
   {
-    "id": "finkel-4ac988824d8fb160533fb2fe",
+    "id": "finkel-132be5b8459a5868b846bf44",
     "voice": "josh-finkel",
     "title": "Deuteronomy 8:8–10 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-4ac988824d8fb160533fb2fe",
-    "bytes": 452944,
-    "sha256": "4ac988824d8fb160533fb2fe4aa213290ce1dfd2800b24385dd7c4541c38b7b7",
+    "audioPath": "/api/human-tracks/finkel-132be5b8459a5868b846bf44",
+    "bytes": 452736,
+    "sha256": "132be5b8459a5868b846bf44bca8788649275f4d9565a59f53decb7aadf2a785",
     "durationSec": 56.53,
     "passages": [
       {
@@ -4360,23 +4360,23 @@
     ]
   },
   {
-    "id": "finkel-79b24ed7477d78a26e8bf619",
+    "id": "finkel-c9e1f2b5ec64d5901e8e67e5",
     "voice": "josh-finkel",
     "title": "Torah practice · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-79b24ed7477d78a26e8bf619",
-    "bytes": 492126,
-    "sha256": "79b24ed7477d78a26e8bf619d9fc0828ad0fe116da9b5a7a31a509e93018f98f",
+    "audioPath": "/api/human-tracks/finkel-c9e1f2b5ec64d5901e8e67e5",
+    "bytes": 491904,
+    "sha256": "c9e1f2b5ec64d5901e8e67e5fbfb4a1140ddd93cf47c133c4b5b3cb8c7127b6f",
     "durationSec": 61.44
   },
   {
-    "id": "finkel-0f8fe0213175cb77621231cd",
+    "id": "finkel-8d4206d709aab61bca0a47b5",
     "voice": "josh-finkel",
     "title": "Deuteronomy 8:8–10 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-0f8fe0213175cb77621231cd",
-    "bytes": 457950,
-    "sha256": "0f8fe0213175cb77621231cd66a11cce89d1ffc19cced62d609b130705cc50f2",
+    "audioPath": "/api/human-tracks/finkel-8d4206d709aab61bca0a47b5",
+    "bytes": 457728,
+    "sha256": "8d4206d709aab61bca0a47b5ea59d762a70f8f359310b5b3ab0f22698f684b23",
     "durationSec": 57.16,
     "passages": [
       {
@@ -4389,13 +4389,13 @@
     ]
   },
   {
-    "id": "finkel-18c35dbf711dd9074d2d26a9",
+    "id": "finkel-843a3f133fd2ef5a6553e16f",
     "voice": "josh-finkel",
     "title": "Exodus 20:12 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-18c35dbf711dd9074d2d26a9",
-    "bytes": 507844,
-    "sha256": "18c35dbf711dd9074d2d26a9c85e794f3dbe4dac0899c9eb73f9da870ca67a31",
+    "audioPath": "/api/human-tracks/finkel-843a3f133fd2ef5a6553e16f",
+    "bytes": 507648,
+    "sha256": "843a3f133fd2ef5a6553e16f9d55866b4abfdd2eb1ea0fd143ce22868669222d",
     "durationSec": 63.39,
     "passages": [
       {
@@ -4408,13 +4408,13 @@
     ]
   },
   {
-    "id": "finkel-f9f4b5682d901d56d1387e78",
+    "id": "finkel-509fbdccd830d04768a64ce9",
     "voice": "josh-finkel",
     "title": "Exodus 20:12 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-f9f4b5682d901d56d1387e78",
-    "bytes": 216596,
-    "sha256": "f9f4b5682d901d56d1387e78a9265b82d65e1d9a58ca94fc5c2f52e4a023979f",
+    "audioPath": "/api/human-tracks/finkel-509fbdccd830d04768a64ce9",
+    "bytes": 216384,
+    "sha256": "509fbdccd830d04768a64ce9dc8f22cf063060b2ef2144f92f9fd03689a265ed",
     "durationSec": 26.98,
     "passages": [
       {
@@ -4427,13 +4427,13 @@
     ]
   },
   {
-    "id": "finkel-414346b29e9657ca3f02539f",
+    "id": "finkel-79c6eaa4b56835a47468ec08",
     "voice": "josh-finkel",
     "title": "Exodus 20:12 · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-414346b29e9657ca3f02539f",
-    "bytes": 1135364,
-    "sha256": "414346b29e9657ca3f02539f738cf069ad960283fd532eed7a63367e58dd3c76",
+    "audioPath": "/api/human-tracks/finkel-79c6eaa4b56835a47468ec08",
+    "bytes": 1135104,
+    "sha256": "79c6eaa4b56835a47468ec08f9cf9f272da599312858ab06c61b146b102d631b",
     "durationSec": 141.82,
     "passages": [
       {
@@ -4446,13 +4446,13 @@
     ]
   },
   {
-    "id": "finkel-b782c375d5b06ec1bf56d19a",
+    "id": "finkel-897d6a6666e50ed91251cffd",
     "voice": "josh-finkel",
     "title": "Exodus 20:13–14 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-b782c375d5b06ec1bf56d19a",
-    "bytes": 269976,
-    "sha256": "b782c375d5b06ec1bf56d19abd7569db85bdaf18986775b0fdc85ea78e0820ef",
+    "audioPath": "/api/human-tracks/finkel-897d6a6666e50ed91251cffd",
+    "bytes": 269760,
+    "sha256": "897d6a6666e50ed91251cffd0c5c09ae5a7f2d603f082872b7d38827863c03c8",
     "durationSec": 33.65,
     "passages": [
       {
@@ -4465,23 +4465,23 @@
     ]
   },
   {
-    "id": "finkel-b46df764fdbddb085ac1c07a",
+    "id": "finkel-39f00ce3f3d01c29c0c086ef",
     "voice": "josh-finkel",
     "title": "Torah practice · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-b46df764fdbddb085ac1c07a",
-    "bytes": 399940,
-    "sha256": "b46df764fdbddb085ac1c07ad5d71865cc81703a3a2441d95caef77166ac6b7d",
+    "audioPath": "/api/human-tracks/finkel-39f00ce3f3d01c29c0c086ef",
+    "bytes": 399744,
+    "sha256": "39f00ce3f3d01c29c0c086ef0e761f41df9ed1c8f7068ba148c3bf6e40e8e2fc",
     "durationSec": 49.91
   },
   {
-    "id": "finkel-fce12a11596d9c90c24a3e84",
+    "id": "finkel-4b04eff44cc38dd5e194cd4e",
     "voice": "josh-finkel",
     "title": "Exodus 20:14 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-fce12a11596d9c90c24a3e84",
-    "bytes": 177604,
-    "sha256": "fce12a11596d9c90c24a3e84e5973205f2bbfbe2f4807f1d7a603390ddc0d5f5",
+    "audioPath": "/api/human-tracks/finkel-4b04eff44cc38dd5e194cd4e",
+    "bytes": 177408,
+    "sha256": "4b04eff44cc38dd5e194cd4ecdc542fa3b2f52ba561fa9f606fd38293df1621f",
     "durationSec": 22.11,
     "passages": [
       {
@@ -4494,13 +4494,13 @@
     ]
   },
   {
-    "id": "finkel-82f47c1c27af12272bd72fc3",
+    "id": "finkel-5316db143af644b62c873601",
     "voice": "josh-finkel",
     "title": "Exodus 20:14 · Speak and repeat, slower",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-82f47c1c27af12272bd72fc3",
-    "bytes": 897492,
-    "sha256": "82f47c1c27af12272bd72fc3b4bd1f44bc960f49733b8246cf72df1da62983c9",
+    "audioPath": "/api/human-tracks/finkel-5316db143af644b62c873601",
+    "bytes": 897216,
+    "sha256": "5316db143af644b62c873601a6d9867ac86ead59c15e4ffdba3e42e4e48066fa",
     "durationSec": 112.1,
     "passages": [
       {
@@ -4513,23 +4513,23 @@
     ]
   },
   {
-    "id": "finkel-312245f5563335db83dd119e",
+    "id": "finkel-f5adc3d1359ceabbbdc3949f",
     "voice": "josh-finkel",
     "title": "Torah practice · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-312245f5563335db83dd119e",
-    "bytes": 144006,
-    "sha256": "312245f5563335db83dd119eee43f64e64a61635f57b2a30ef98bcc8058073fc",
+    "audioPath": "/api/human-tracks/finkel-f5adc3d1359ceabbbdc3949f",
+    "bytes": 143808,
+    "sha256": "f5adc3d1359ceabbbdc3949f6705c016cae4b6db30e561bdb30a1ce7d894a5ff",
     "durationSec": 17.91
   },
   {
-    "id": "finkel-79e9fd853a6af8012a5f5878",
+    "id": "finkel-c34aa03fbcc40387b3fe4260",
     "voice": "josh-finkel",
     "title": "Exodus 20:2–6 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-79e9fd853a6af8012a5f5878",
-    "bytes": 565460,
-    "sha256": "79e9fd853a6af8012a5f587868e65b25239f7a3549fad74129d2cb61710ebe73",
+    "audioPath": "/api/human-tracks/finkel-c34aa03fbcc40387b3fe4260",
+    "bytes": 565248,
+    "sha256": "c34aa03fbcc40387b3fe426077e2f264786de8a3841b082ab9008de4cdf6936c",
     "durationSec": 70.6,
     "passages": [
       {
@@ -4542,23 +4542,23 @@
     ]
   },
   {
-    "id": "finkel-0a73f7daad506aca1dbd9aaf",
+    "id": "finkel-ab373ce935b57f6b40008e07",
     "voice": "josh-finkel",
     "title": "Torah practice · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-0a73f7daad506aca1dbd9aaf",
-    "bytes": 1050822,
-    "sha256": "0a73f7daad506aca1dbd9aafb6b187a93d325ef1f0fd8e402f4996edafe4b24e",
+    "audioPath": "/api/human-tracks/finkel-ab373ce935b57f6b40008e07",
+    "bytes": 1050624,
+    "sha256": "ab373ce935b57f6b40008e07cf124cf66554ac877575fddb9f74f0ff4c1f657e",
     "durationSec": 131.27
   },
   {
-    "id": "finkel-ce6f030e284b7c593b0f7cb4",
+    "id": "finkel-f28defdef24a702ace9c8351",
     "voice": "josh-finkel",
     "title": "Exodus 20:7–9 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-ce6f030e284b7c593b0f7cb4",
-    "bytes": 412806,
-    "sha256": "ce6f030e284b7c593b0f7cb47bab35b474e297e877ac7f0eba272ac968064063",
+    "audioPath": "/api/human-tracks/finkel-f28defdef24a702ace9c8351",
+    "bytes": 412608,
+    "sha256": "f28defdef24a702ace9c83515d67484ea3e04777c65b621cf10b9b7b6fa3cb3f",
     "durationSec": 51.52,
     "passages": [
       {
@@ -4571,13 +4571,13 @@
     ]
   },
   {
-    "id": "finkel-8573f4addfca999f495317c0",
+    "id": "finkel-454413a58a686f9750336697",
     "voice": "josh-finkel",
     "title": "Exodus 20:8–11 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-8573f4addfca999f495317c0",
-    "bytes": 936776,
-    "sha256": "8573f4addfca999f495317c0e583ceca82e7c2c61047063aa1d066bb66276c11",
+    "audioPath": "/api/human-tracks/finkel-454413a58a686f9750336697",
+    "bytes": 936576,
+    "sha256": "454413a58a686f97503366978f017b1b9cf83579ed4577b8725b7e10a9b89fc2",
     "durationSec": 117.02,
     "passages": [
       {
@@ -4590,13 +4590,13 @@
     ]
   },
   {
-    "id": "finkel-6518a221a5a382ec2a25c0c2",
+    "id": "finkel-b4c8d02c851d16aa297ad33f",
     "voice": "josh-finkel",
     "title": "Exodus 20:8–11 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-6518a221a5a382ec2a25c0c2",
-    "bytes": 686230,
-    "sha256": "6518a221a5a382ec2a25c0c2ae80c050c851cd6fa9f9e738347665292420f45f",
+    "audioPath": "/api/human-tracks/finkel-b4c8d02c851d16aa297ad33f",
+    "bytes": 686016,
+    "sha256": "b4c8d02c851d16aa297ad33f078ed79361ca038cfc31b9f74a84c4e626de88fc",
     "durationSec": 85.69,
     "passages": [
       {
@@ -4609,13 +4609,13 @@
     ]
   },
   {
-    "id": "finkel-55b1b8ae9405d5c46ef31c91",
+    "id": "finkel-64b7b173380b2a710f160a33",
     "voice": "josh-finkel",
     "title": "Exodus 30:8–10 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-55b1b8ae9405d5c46ef31c91",
-    "bytes": 581768,
-    "sha256": "55b1b8ae9405d5c46ef31c9107142f3e88924f65c76ebfeb38a698d5257d135d",
+    "audioPath": "/api/human-tracks/finkel-64b7b173380b2a710f160a33",
+    "bytes": 581568,
+    "sha256": "64b7b173380b2a710f160a333dcde4d89043c1259e477566bed62af2f0fe37f4",
     "durationSec": 72.63,
     "passages": [
       {
@@ -4628,13 +4628,13 @@
     ]
   },
   {
-    "id": "finkel-951aaa87cc399a367503462d",
+    "id": "finkel-156dff79c4d5d74fcb03ef1b",
     "voice": "josh-finkel",
     "title": "Exodus 30:8–10 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-951aaa87cc399a367503462d",
-    "bytes": 392662,
-    "sha256": "951aaa87cc399a367503462dfef4490b0b581214af83379c4d6339dfb592c25c",
+    "audioPath": "/api/human-tracks/finkel-156dff79c4d5d74fcb03ef1b",
+    "bytes": 392448,
+    "sha256": "156dff79c4d5d74fcb03ef1bc9fdc0e93bbc8b9e5bc4382e9a7f27c9baf45862",
     "durationSec": 48.99,
     "passages": [
       {
@@ -4647,13 +4647,13 @@
     ]
   },
   {
-    "id": "finkel-e5a0f9b232d7f639fdf20b85",
+    "id": "finkel-233c4a0e61522b1a795d7a2b",
     "voice": "josh-finkel",
     "title": "Exodus 31:3 · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-e5a0f9b232d7f639fdf20b85",
-    "bytes": 575106,
-    "sha256": "e5a0f9b232d7f639fdf20b856d74e3ac496e7137b852869a3ba3ddc93d763e51",
+    "audioPath": "/api/human-tracks/finkel-233c4a0e61522b1a795d7a2b",
+    "bytes": 574848,
+    "sha256": "233c4a0e61522b1a795d7a2bac088f8c9aa4cb5576f4e5a9134da6837d57acb3",
     "durationSec": 71.8,
     "passages": [
       {
@@ -4666,13 +4666,13 @@
     ]
   },
   {
-    "id": "finkel-d817a5c4fa5914c49635c268",
+    "id": "finkel-6d317a0f78f075857a3abc13",
     "voice": "josh-finkel",
     "title": "Exodus 35:13–20 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-d817a5c4fa5914c49635c268",
-    "bytes": 827544,
-    "sha256": "d817a5c4fa5914c49635c268a16c76e19f59e225f720ba5be55d516de9f7ad11",
+    "audioPath": "/api/human-tracks/finkel-6d317a0f78f075857a3abc13",
+    "bytes": 827328,
+    "sha256": "6d317a0f78f075857a3abc131a71f87fae9798b86e6c47410bb6dfc5363d8aad",
     "durationSec": 103.36,
     "passages": [
       {
@@ -4685,13 +4685,13 @@
     ]
   },
   {
-    "id": "finkel-002e15656e0816d393ae30c7",
+    "id": "finkel-6b14ea065c90b759cc0af9a5",
     "voice": "josh-finkel",
     "title": "Exodus 35:18–20 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-002e15656e0816d393ae30c7",
-    "bytes": 480586,
-    "sha256": "002e15656e0816d393ae30c7a54a65a0ce513efe89129822e7b208ca5fea4017",
+    "audioPath": "/api/human-tracks/finkel-6b14ea065c90b759cc0af9a5",
+    "bytes": 480384,
+    "sha256": "6b14ea065c90b759cc0af9a56013200cb098b32055feb4b6c940811894d4b0b9",
     "durationSec": 60.0,
     "passages": [
       {
@@ -4704,13 +4704,13 @@
     ]
   },
   {
-    "id": "finkel-4bca7c863fe45a79e7379a93",
+    "id": "finkel-fb2c65560714b42aa6c9feb6",
     "voice": "josh-finkel",
     "title": "Exodus 35:18–20 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-4bca7c863fe45a79e7379a93",
-    "bytes": 275546,
-    "sha256": "4bca7c863fe45a79e7379a930c35d3800819157b7eeac862d6d1dcb93f907323",
+    "audioPath": "/api/human-tracks/finkel-fb2c65560714b42aa6c9feb6",
+    "bytes": 275328,
+    "sha256": "fb2c65560714b42aa6c9feb6a0d4b6def8b68d4bc4d25b4a8c03c39539102b23",
     "durationSec": 34.36,
     "passages": [
       {
@@ -4723,13 +4723,13 @@
     ]
   },
   {
-    "id": "finkel-b56613a8417561adc081cac2",
+    "id": "finkel-0d28220e5a3b0e8c55165d1f",
     "voice": "josh-finkel",
     "title": "Exodus 35:18–20 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-b56613a8417561adc081cac2",
-    "bytes": 320280,
-    "sha256": "b56613a8417561adc081cac23c3bf094b19eb4dd06b24d29efd8f6f186be0d15",
+    "audioPath": "/api/human-tracks/finkel-0d28220e5a3b0e8c55165d1f",
+    "bytes": 320064,
+    "sha256": "0d28220e5a3b0e8c55165d1fe37739fdb8475f0122ba212b3b69ca20d424d6e4",
     "durationSec": 39.94,
     "passages": [
       {
@@ -4742,13 +4742,13 @@
     ]
   },
   {
-    "id": "finkel-2191db3afeb05bcebe5b01c9",
+    "id": "finkel-fc9e4745fe19075d9b1c1afe",
     "voice": "josh-finkel",
     "title": "Exodus 35:1–3 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-2191db3afeb05bcebe5b01c9",
-    "bytes": 656646,
-    "sha256": "2191db3afeb05bcebe5b01c9b7fba0e7bb351607d22ac3c25862f5bdde5bf063",
+    "audioPath": "/api/human-tracks/finkel-fc9e4745fe19075d9b1c1afe",
+    "bytes": 656448,
+    "sha256": "fc9e4745fe19075d9b1c1afe592e3e846335ec66204825ae82a98d06c4fce2bd",
     "durationSec": 82.0,
     "passages": [
       {
@@ -4761,13 +4761,13 @@
     ]
   },
   {
-    "id": "finkel-0b66ab5a84c3fae11cf440c0",
+    "id": "finkel-a0c8675142b255d84886ba51",
     "voice": "josh-finkel",
     "title": "Exodus 35:1–3 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-0b66ab5a84c3fae11cf440c0",
-    "bytes": 360212,
-    "sha256": "0b66ab5a84c3fae11cf440c0b5291c8dcdd7f4543968bd203c98bad9bd58e54c",
+    "audioPath": "/api/human-tracks/finkel-a0c8675142b255d84886ba51",
+    "bytes": 360000,
+    "sha256": "a0c8675142b255d84886ba51db1fc0d9037289ebbec9e80964684a49459b32fd",
     "durationSec": 44.94,
     "passages": [
       {
@@ -4780,13 +4780,13 @@
     ]
   },
   {
-    "id": "finkel-27c9b92915aaf9d99d19c104",
+    "id": "finkel-7712a91247ffbc97b388398e",
     "voice": "josh-finkel",
     "title": "Exodus 35:21–23 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-27c9b92915aaf9d99d19c104",
-    "bytes": 1085014,
-    "sha256": "27c9b92915aaf9d99d19c10417d2636be998b9d559936a3e0a136f3e0f509bea",
+    "audioPath": "/api/human-tracks/finkel-7712a91247ffbc97b388398e",
+    "bytes": 1084812,
+    "sha256": "7712a91247ffbc97b388398e1b82a9c82009f240b72a3465b3e5e88c9fabe9cf",
     "durationSec": 135.54,
     "passages": [
       {
@@ -4799,13 +4799,13 @@
     ]
   },
   {
-    "id": "finkel-3a2479bd93fe4875c29e5320",
+    "id": "finkel-91a93e126d3a0d4e43c8bbe5",
     "voice": "josh-finkel",
     "title": "Exodus 35:21–23 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-3a2479bd93fe4875c29e5320",
-    "bytes": 626526,
-    "sha256": "3a2479bd93fe4875c29e53204f3670ab387cd9886c07ac744a93433971f21921",
+    "audioPath": "/api/human-tracks/finkel-91a93e126d3a0d4e43c8bbe5",
+    "bytes": 626310,
+    "sha256": "91a93e126d3a0d4e43c8bbe59566dcca07b1cc0b69edb6483811b2e5aa892b35",
     "durationSec": 78.22,
     "passages": [
       {
@@ -4818,13 +4818,13 @@
     ]
   },
   {
-    "id": "finkel-6f0649471b030122598519b0",
+    "id": "finkel-51aec6ef2413047eee1126f8",
     "voice": "josh-finkel",
     "title": "Exodus 35:23 · Chant and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-6f0649471b030122598519b0",
-    "bytes": 1326786,
-    "sha256": "6f0649471b030122598519b0a244f3c1b448e9d3496a8776a917e2c7ba0992b1",
+    "audioPath": "/api/human-tracks/finkel-51aec6ef2413047eee1126f8",
+    "bytes": 1326528,
+    "sha256": "51aec6ef2413047eee1126f88b75666645d7037167bd39ee5cdf9a9d57cddc41",
     "durationSec": 165.75,
     "passages": [
       {
@@ -4837,13 +4837,13 @@
     ]
   },
   {
-    "id": "finkel-6019eb61786431a45014206c",
+    "id": "finkel-1dc8d157cc5e6dc3b10d7329",
     "voice": "josh-finkel",
     "title": "Exodus 35:23 · Chant and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-6019eb61786431a45014206c",
-    "bytes": 491778,
-    "sha256": "6019eb61786431a45014206c7d9fd6a0acd98377cea5a9a281076d61d5b8063d",
+    "audioPath": "/api/human-tracks/finkel-1dc8d157cc5e6dc3b10d7329",
+    "bytes": 491520,
+    "sha256": "1dc8d157cc5e6dc3b10d73297736808a7c68a4f9fb780188ce5ce49f91024e63",
     "durationSec": 61.39,
     "passages": [
       {
@@ -4856,23 +4856,23 @@
     ]
   },
   {
-    "id": "finkel-7bd1966af08ee7f9d7b141d9",
+    "id": "finkel-aac8e9cda15bdd311e5ceebb",
     "voice": "josh-finkel",
     "title": "Torah practice · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-7bd1966af08ee7f9d7b141d9",
-    "bytes": 675274,
-    "sha256": "7bd1966af08ee7f9d7b141d9affe26ab00fc73ee6d64082cc1440dc345681498",
+    "audioPath": "/api/human-tracks/finkel-aac8e9cda15bdd311e5ceebb",
+    "bytes": 675072,
+    "sha256": "aac8e9cda15bdd311e5ceebb63c39c105a4c05c4a6f2731deb77019c4e2606a9",
     "durationSec": 84.33
   },
   {
-    "id": "finkel-97ec161ff8a647f3eaf0cf27",
+    "id": "finkel-f540929771cf176fc6c9accb",
     "voice": "josh-finkel",
     "title": "Exodus 35:24–26 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-97ec161ff8a647f3eaf0cf27",
-    "bytes": 525722,
-    "sha256": "97ec161ff8a647f3eaf0cf27db74dc730e84c75bf5e05eaf29933c7848093cb3",
+    "audioPath": "/api/human-tracks/finkel-f540929771cf176fc6c9accb",
+    "bytes": 525504,
+    "sha256": "f540929771cf176fc6c9accbc543ec4c815e8babda2dd181344e2ed4852eceb4",
     "durationSec": 65.63,
     "passages": [
       {
@@ -4885,23 +4885,23 @@
     ]
   },
   {
-    "id": "finkel-00a110bbf85d5406342659df",
+    "id": "finkel-79a442b6533c017258bceebe",
     "voice": "josh-finkel",
     "title": "Torah practice · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-00a110bbf85d5406342659df",
-    "bytes": 413016,
-    "sha256": "00a110bbf85d5406342659df69168a1cbfeff43927dd80e77b8e45a9c4a5a012",
+    "audioPath": "/api/human-tracks/finkel-79a442b6533c017258bceebe",
+    "bytes": 412800,
+    "sha256": "79a442b6533c017258bceebe57ba5c528c49ed6fb2dd43605ac655f96c212ca6",
     "durationSec": 51.53
   },
   {
-    "id": "finkel-bb8ac09ad688724b6235a7f4",
+    "id": "finkel-41f412eb599a16c8ea2a0238",
     "voice": "josh-finkel",
     "title": "Exodus 35:27–29 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-bb8ac09ad688724b6235a7f4",
-    "bytes": 507082,
-    "sha256": "bb8ac09ad688724b6235a7f41bbf379038eb9a081a455087a4c0b70c50d81f05",
+    "audioPath": "/api/human-tracks/finkel-41f412eb599a16c8ea2a0238",
+    "bytes": 506880,
+    "sha256": "41f412eb599a16c8ea2a02389001d4b2173764f4c6944ac08c962d51423a3c2d",
     "durationSec": 63.29,
     "passages": [
       {
@@ -4914,13 +4914,13 @@
     ]
   },
   {
-    "id": "finkel-1b296a167a47e9cf2364516b",
+    "id": "finkel-5c651d245a5e31da95fa13c1",
     "voice": "josh-finkel",
     "title": "Exodus 35:27–29 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-1b296a167a47e9cf2364516b",
-    "bytes": 692362,
-    "sha256": "1b296a167a47e9cf2364516ba2dd07bc9cf8420f85a00bec2c4eddc57ab7f55d",
+    "audioPath": "/api/human-tracks/finkel-5c651d245a5e31da95fa13c1",
+    "bytes": 692160,
+    "sha256": "5c651d245a5e31da95fa13c16f57f7daec7a54c76fbdac03196c073888d44126",
     "durationSec": 86.47,
     "passages": [
       {
@@ -4933,13 +4933,13 @@
     ]
   },
   {
-    "id": "finkel-21cbecfbff83213887c0a73c",
+    "id": "finkel-5c94fcc766670fbf23feb1f8",
     "voice": "josh-finkel",
     "title": "Exodus 35:27–29 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-21cbecfbff83213887c0a73c",
-    "bytes": 459672,
-    "sha256": "21cbecfbff83213887c0a73c282e7c40ba0d40b6ec4b5da8b0ec2ef695b72766",
+    "audioPath": "/api/human-tracks/finkel-5c94fcc766670fbf23feb1f8",
+    "bytes": 459456,
+    "sha256": "5c94fcc766670fbf23feb1f8b2fd74e1408830a5c2a1f1941200c2d3d77c35bf",
     "durationSec": 57.38,
     "passages": [
       {
@@ -4952,13 +4952,13 @@
     ]
   },
   {
-    "id": "finkel-36fcd982f6d841548da20ffc",
+    "id": "finkel-8cce4ab2270b2a8b26c3f5e1",
     "voice": "josh-finkel",
     "title": "Exodus 35:30, Exodus 38:22 · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-36fcd982f6d841548da20ffc",
-    "bytes": 752160,
-    "sha256": "36fcd982f6d841548da20ffcc9f0457f53947ee30a6f303d7c71fd63a69433e7",
+    "audioPath": "/api/human-tracks/finkel-8cce4ab2270b2a8b26c3f5e1",
+    "bytes": 751872,
+    "sha256": "8cce4ab2270b2a8b26c3f5e1f531a9f6602a91d5a095d6ff82304346f1f10bb6",
     "durationSec": 93.92,
     "passages": [
       {
@@ -4978,13 +4978,13 @@
     ]
   },
   {
-    "id": "finkel-943245fed533349ed18942b6",
+    "id": "finkel-9b6a16cf8e73a6a866d5e8f9",
     "voice": "josh-finkel",
     "title": "Exodus 35:30–32 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-943245fed533349ed18942b6",
-    "bytes": 553354,
-    "sha256": "943245fed533349ed18942b632cfc22fbf1760fb5ebd05ce38f9942c78cad2b6",
+    "audioPath": "/api/human-tracks/finkel-9b6a16cf8e73a6a866d5e8f9",
+    "bytes": 553152,
+    "sha256": "9b6a16cf8e73a6a866d5e8f97cc88997dcd5e42ca30dafd8dacd02675c747794",
     "durationSec": 69.08,
     "passages": [
       {
@@ -4997,13 +4997,13 @@
     ]
   },
   {
-    "id": "finkel-a006505f2b388010c2ac35f9",
+    "id": "finkel-f3cfadb794a9d761ce687953",
     "voice": "josh-finkel",
     "title": "Exodus 35:30–32 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-a006505f2b388010c2ac35f9",
-    "bytes": 366170,
-    "sha256": "a006505f2b388010c2ac35f9115dbbbd63f3831f1495e6a223846060d9035917",
+    "audioPath": "/api/human-tracks/finkel-f3cfadb794a9d761ce687953",
+    "bytes": 365952,
+    "sha256": "f3cfadb794a9d761ce6879530a2dfb9af50485623ab3e3026d6f2c0053b9c46d",
     "durationSec": 45.69,
     "passages": [
       {
@@ -5016,23 +5016,23 @@
     ]
   },
   {
-    "id": "finkel-6aca3441b7dd1ddfa8ce62c0",
+    "id": "finkel-894431bf7da48a00ccead0b5",
     "voice": "josh-finkel",
     "title": "Torah practice · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-6aca3441b7dd1ddfa8ce62c0",
-    "bytes": 1289609,
-    "sha256": "6aca3441b7dd1ddfa8ce62c0ebb7e71602c9dee822a45d3646b412ea974062b4",
+    "audioPath": "/api/human-tracks/finkel-894431bf7da48a00ccead0b5",
+    "bytes": 1289403,
+    "sha256": "894431bf7da48a00ccead0b5db4ebda5e3933fc2f98382031d91f9bfe4f60d91",
     "durationSec": 161.11
   },
   {
-    "id": "finkel-ae4f37c93d5372c0176c2274",
+    "id": "finkel-1f33749b6214d666f9c4d3ba",
     "voice": "josh-finkel",
     "title": "Exodus 35:4–12 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-ae4f37c93d5372c0176c2274",
-    "bytes": 1273160,
-    "sha256": "ae4f37c93d5372c0176c2274198b34569abc254926860f0eabecec5aa0c14c38",
+    "audioPath": "/api/human-tracks/finkel-1f33749b6214d666f9c4d3ba",
+    "bytes": 1272960,
+    "sha256": "1f33749b6214d666f9c4d3ba7b0f4df12a526c2706ec94e00d46e7673ea7b498",
     "durationSec": 159.05,
     "passages": [
       {
@@ -5045,13 +5045,13 @@
     ]
   },
   {
-    "id": "finkel-80593e678014e6338fdd838e",
+    "id": "finkel-7e3c647f581919e818c861f8",
     "voice": "josh-finkel",
     "title": "Exodus 35:4–12 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-80593e678014e6338fdd838e",
-    "bytes": 896854,
-    "sha256": "80593e678014e6338fdd838e7ccf465a960505e49d3bb19d618fb456e84cb98c",
+    "audioPath": "/api/human-tracks/finkel-7e3c647f581919e818c861f8",
+    "bytes": 896640,
+    "sha256": "7e3c647f581919e818c861f82e1abdfdd836b4422fda8a4eb477f1c562a1f031",
     "durationSec": 112.02,
     "passages": [
       {
@@ -5064,13 +5064,13 @@
     ]
   },
   {
-    "id": "finkel-2bb08bebf7c103d1a5c43955",
+    "id": "finkel-01344f1d84c30f62031b1fbd",
     "voice": "josh-finkel",
     "title": "Exodus 36:1–3 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-2bb08bebf7c103d1a5c43955",
-    "bytes": 1067910,
-    "sha256": "2bb08bebf7c103d1a5c439550b4d3fc203556301a931cd09f6be384452bcf00e",
+    "audioPath": "/api/human-tracks/finkel-01344f1d84c30f62031b1fbd",
+    "bytes": 1067712,
+    "sha256": "01344f1d84c30f62031b1fbd44a0f53d7af26054d968c79847db64e0f54aa047",
     "durationSec": 133.4,
     "passages": [
       {
@@ -5083,13 +5083,13 @@
     ]
   },
   {
-    "id": "finkel-edf7c7c8b38af11e494db6e9",
+    "id": "finkel-19366b208cce66e5993e0fe6",
     "voice": "josh-finkel",
     "title": "Exodus 36:4–7 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-edf7c7c8b38af11e494db6e9",
-    "bytes": 840712,
-    "sha256": "edf7c7c8b38af11e494db6e971198948abf6df59c169503b1bcd898b2fddc716",
+    "audioPath": "/api/human-tracks/finkel-19366b208cce66e5993e0fe6",
+    "bytes": 840514,
+    "sha256": "19366b208cce66e5993e0fe64ad9de29f76004dac59a6dbcc0c20d658df83ada",
     "durationSec": 105.01,
     "passages": [
       {
@@ -5102,13 +5102,13 @@
     ]
   },
   {
-    "id": "finkel-46edd982fcfd01b0d5644503",
+    "id": "finkel-85e4930b594a0f4808c95a7d",
     "voice": "josh-finkel",
     "title": "Exodus 36:4–7 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-46edd982fcfd01b0d5644503",
-    "bytes": 575951,
-    "sha256": "46edd982fcfd01b0d564450325b31a25ecd99341c54037c2c876faa5dbf03d01",
+    "audioPath": "/api/human-tracks/finkel-85e4930b594a0f4808c95a7d",
+    "bytes": 575737,
+    "sha256": "85e4930b594a0f4808c95a7d032a2a02b72c14eabdba5be23b57fdb815895e30",
     "durationSec": 71.89,
     "passages": [
       {
@@ -5121,13 +5121,13 @@
     ]
   },
   {
-    "id": "finkel-08cb11010b91066b7fbd3ed0",
+    "id": "finkel-9b574a9a74c6f3bfa5986467",
     "voice": "josh-finkel",
     "title": "Exodus 36:4–7 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-08cb11010b91066b7fbd3ed0",
-    "bytes": 591832,
-    "sha256": "08cb11010b91066b7fbd3ed040b0f2fd5aaeee6c54fda8d710f6efb1c8f27e75",
+    "audioPath": "/api/human-tracks/finkel-9b574a9a74c6f3bfa5986467",
+    "bytes": 591620,
+    "sha256": "9b574a9a74c6f3bfa5986467e21c9f5f87377c9fc8f6db5f4996ba7186d27ac7",
     "durationSec": 73.89,
     "passages": [
       {
@@ -5140,13 +5140,13 @@
     ]
   },
   {
-    "id": "finkel-e10463be28dc87e735fa0d23",
+    "id": "finkel-36b9957049f5bcfe2fbb36dc",
     "voice": "josh-finkel",
     "title": "Genesis 17:15–17 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-e10463be28dc87e735fa0d23",
-    "bytes": 652812,
-    "sha256": "e10463be28dc87e735fa0d239610ea820b922888ed778ac3265de92eeab67e43",
+    "audioPath": "/api/human-tracks/finkel-36b9957049f5bcfe2fbb36dc",
+    "bytes": 652608,
+    "sha256": "36b9957049f5bcfe2fbb36dc31e98f57745416246455d49280a67503f7ca947b",
     "durationSec": 81.52,
     "passages": [
       {
@@ -5159,13 +5159,13 @@
     ]
   },
   {
-    "id": "finkel-41d29839da3d805445444e59",
+    "id": "finkel-8f1fd68c0af1e9d9b8f04d91",
     "voice": "josh-finkel",
     "title": "Genesis 17:15–17 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-41d29839da3d805445444e59",
-    "bytes": 492124,
-    "sha256": "41d29839da3d805445444e599e897a0f07a4105ec807df6585ec50bd6dfa647f",
+    "audioPath": "/api/human-tracks/finkel-8f1fd68c0af1e9d9b8f04d91",
+    "bytes": 491904,
+    "sha256": "8f1fd68c0af1e9d9b8f04d916d23aed6e3538677482ba85c35f549c912bf6d84",
     "durationSec": 61.44,
     "passages": [
       {
@@ -5178,13 +5178,13 @@
     ]
   },
   {
-    "id": "finkel-ba065f54980c68978312f6d8",
+    "id": "finkel-69d30008a452dea94aaa22c3",
     "voice": "josh-finkel",
     "title": "Genesis 17:15–17 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-ba065f54980c68978312f6d8",
-    "bytes": 475802,
-    "sha256": "ba065f54980c68978312f6d87163a2818ddd89df235547fe60fa85520c24d5b5",
+    "audioPath": "/api/human-tracks/finkel-69d30008a452dea94aaa22c3",
+    "bytes": 475584,
+    "sha256": "69d30008a452dea94aaa22c35a36c95088c8ff1b65c97c029781a36931a244f5",
     "durationSec": 59.39,
     "passages": [
       {
@@ -5197,13 +5197,13 @@
     ]
   },
   {
-    "id": "finkel-dac73d19db295f9e7327dd59",
+    "id": "finkel-1fdb1202607ae47249414796",
     "voice": "josh-finkel",
     "title": "Genesis 17:18–20 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-dac73d19db295f9e7327dd59",
-    "bytes": 705996,
-    "sha256": "dac73d19db295f9e7327dd59599ab7e2387336eed9215afa30ab4a7bcfb315e9",
+    "audioPath": "/api/human-tracks/finkel-1fdb1202607ae47249414796",
+    "bytes": 705792,
+    "sha256": "1fdb1202607ae4724941479645e982a71164b072771104e6eeffa4aa9fe58d4d",
     "durationSec": 88.17,
     "passages": [
       {
@@ -5216,13 +5216,13 @@
     ]
   },
   {
-    "id": "finkel-53c20232d11bc7a3b4d834f1",
+    "id": "finkel-a9db0b149c3938eeec5ffe1a",
     "voice": "josh-finkel",
     "title": "Genesis 17:18–20 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-53c20232d11bc7a3b4d834f1",
-    "bytes": 655500,
-    "sha256": "53c20232d11bc7a3b4d834f18ee3cdb65a732ef452a041022c1e8c446d274bd2",
+    "audioPath": "/api/human-tracks/finkel-a9db0b149c3938eeec5ffe1a",
+    "bytes": 655296,
+    "sha256": "a9db0b149c3938eeec5ffe1ac5eca8c12c1a8f568b44bb3fc73f7dec67ac926f",
     "durationSec": 81.85,
     "passages": [
       {
@@ -5235,13 +5235,13 @@
     ]
   },
   {
-    "id": "finkel-3c9eda6df5322ff369ad3f35",
+    "id": "finkel-9cf8ce6078432c487e3cbf03",
     "voice": "josh-finkel",
     "title": "Genesis 17:18–20 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-3c9eda6df5322ff369ad3f35",
-    "bytes": 477516,
-    "sha256": "3c9eda6df5322ff369ad3f352c456d53a14f05d73123fbbf24ca8641c1169d40",
+    "audioPath": "/api/human-tracks/finkel-9cf8ce6078432c487e3cbf03",
+    "bytes": 477312,
+    "sha256": "9cf8ce6078432c487e3cbf03fcc4a5f4e3aaf0df3bfeb6ef2cf714577e890d59",
     "durationSec": 59.6,
     "passages": [
       {
@@ -5254,13 +5254,13 @@
     ]
   },
   {
-    "id": "finkel-9c11b2be7b68cef87e811297",
+    "id": "finkel-4b445ebffe1602ef7f92f47e",
     "voice": "josh-finkel",
     "title": "Genesis 17:18–20 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-9c11b2be7b68cef87e811297",
-    "bytes": 477516,
-    "sha256": "9c11b2be7b68cef87e811297afff51c9e17ebed3a794a5e1013cbe5cdebddb6d",
+    "audioPath": "/api/human-tracks/finkel-4b445ebffe1602ef7f92f47e",
+    "bytes": 477312,
+    "sha256": "4b445ebffe1602ef7f92f47ed82cb6afd0078b8aa74b7dcdd6e8da04cf370dad",
     "durationSec": 59.6,
     "passages": [
       {
@@ -5273,13 +5273,13 @@
     ]
   },
   {
-    "id": "finkel-ceaf8a2d5f5d516bb025baca",
+    "id": "finkel-8e11a07c488832288c7cce3f",
     "voice": "josh-finkel",
     "title": "Genesis 17:21–23 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-ceaf8a2d5f5d516bb025baca",
-    "bytes": 736716,
-    "sha256": "ceaf8a2d5f5d516bb025bacabb4f8102114f984560f0f9f340f5cd3413af29fc",
+    "audioPath": "/api/human-tracks/finkel-8e11a07c488832288c7cce3f",
+    "bytes": 736512,
+    "sha256": "8e11a07c488832288c7cce3f75c4145ee21427d16ad95b0a7f92a5ffb0c5bd0b",
     "durationSec": 92.0,
     "passages": [
       {
@@ -5292,13 +5292,13 @@
     ]
   },
   {
-    "id": "finkel-ea19b8ee3fed22d2d2881591",
+    "id": "finkel-e5b4369466c7f0322c340e70",
     "voice": "josh-finkel",
     "title": "Genesis 17:21–23 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-ea19b8ee3fed22d2d2881591",
-    "bytes": 473498,
-    "sha256": "ea19b8ee3fed22d2d288159124c9b4ea99bd3a08e3338a8ad6e41688df3fc9f9",
+    "audioPath": "/api/human-tracks/finkel-e5b4369466c7f0322c340e70",
+    "bytes": 473280,
+    "sha256": "e5b4369466c7f0322c340e7030121152dc5bbed756ace57240c33263cea259c1",
     "durationSec": 59.11,
     "passages": [
       {
@@ -5311,13 +5311,13 @@
     ]
   },
   {
-    "id": "finkel-1d6102f75c435599e31c3436",
+    "id": "finkel-4cc4343f7dc09a015d6d7a63",
     "voice": "josh-finkel",
     "title": "Genesis 17:23–24, Genesis 17:26–27 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-1d6102f75c435599e31c3436",
-    "bytes": 219518,
-    "sha256": "1d6102f75c435599e31c34365868b0694992e08e0efd5654249409b459d8227a",
+    "audioPath": "/api/human-tracks/finkel-4cc4343f7dc09a015d6d7a63",
+    "bytes": 219264,
+    "sha256": "4cc4343f7dc09a015d6d7a637c357c3a648d22b8336a16748b43913ed2248045",
     "durationSec": 27.34,
     "passages": [
       {
@@ -5337,23 +5337,23 @@
     ]
   },
   {
-    "id": "finkel-bbca4d80e5f5ea9b599c7cdd",
+    "id": "finkel-f2dfbe72ac804af0b8e62e2e",
     "voice": "josh-finkel",
     "title": "Torah practice · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-bbca4d80e5f5ea9b599c7cdd",
-    "bytes": 136154,
-    "sha256": "bbca4d80e5f5ea9b599c7cddaa77377ac6704ade0fa2ac6bc1ee591f959ab0d3",
+    "audioPath": "/api/human-tracks/finkel-f2dfbe72ac804af0b8e62e2e",
+    "bytes": 135936,
+    "sha256": "f2dfbe72ac804af0b8e62e2e0d554e44a40eebfe3202626011c3ffc828671f35",
     "durationSec": 16.94
   },
   {
-    "id": "finkel-71acc54954ada34836071793",
+    "id": "finkel-a20e8f6134a873ee7bacd994",
     "voice": "josh-finkel",
     "title": "Genesis 17:24–27 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-71acc54954ada34836071793",
-    "bytes": 432012,
-    "sha256": "71acc54954ada34836071793574078a963788636bbe80324a97f235db55ee47c",
+    "audioPath": "/api/human-tracks/finkel-a20e8f6134a873ee7bacd994",
+    "bytes": 431808,
+    "sha256": "a20e8f6134a873ee7bacd994ef117dc81207e023171579e59cef4a87c6a657a2",
     "durationSec": 53.92,
     "passages": [
       {
@@ -5366,13 +5366,13 @@
     ]
   },
   {
-    "id": "finkel-348b24ab59148da268140a13",
+    "id": "finkel-a63d70a30a86290abbb5523c",
     "voice": "josh-finkel",
     "title": "Genesis 21:11–13 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-348b24ab59148da268140a13",
-    "bytes": 597324,
-    "sha256": "348b24ab59148da268140a1357ddd6ba254e343fe6f6ecfe3081ef7f815d2d57",
+    "audioPath": "/api/human-tracks/finkel-a63d70a30a86290abbb5523c",
+    "bytes": 597120,
+    "sha256": "a63d70a30a86290abbb5523c3b30470c3a6a77ecc2caeecd673240f9fc8ad64b",
     "durationSec": 74.59,
     "passages": [
       {
@@ -5385,13 +5385,13 @@
     ]
   },
   {
-    "id": "finkel-c87c68545947b4fb88f41b97",
+    "id": "finkel-8984aad5bdf7c61dfff36910",
     "voice": "josh-finkel",
     "title": "Genesis 21:11–13 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-c87c68545947b4fb88f41b97",
-    "bytes": 351962,
-    "sha256": "c87c68545947b4fb88f41b974003fdafa0fcd408530c6048e6b52c059f1a6167",
+    "audioPath": "/api/human-tracks/finkel-8984aad5bdf7c61dfff36910",
+    "bytes": 351744,
+    "sha256": "8984aad5bdf7c61dfff369100c05d8de53dfe7b49d710377aaf6ef4ae563c1b7",
     "durationSec": 43.91,
     "passages": [
       {
@@ -5404,13 +5404,13 @@
     ]
   },
   {
-    "id": "finkel-7a3a5aa6e7152630b0daebce",
+    "id": "finkel-a77914fc3a96a55166226215",
     "voice": "josh-finkel",
     "title": "Genesis 21:1–4 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-7a3a5aa6e7152630b0daebce",
-    "bytes": 1486043,
-    "sha256": "7a3a5aa6e7152630b0daebcefaf116b3778737a4f9806f716ea48087d28c2a6c",
+    "audioPath": "/api/human-tracks/finkel-a77914fc3a96a55166226215",
+    "bytes": 1485843,
+    "sha256": "a77914fc3a96a55166226215f8a9095de9bacc62e580d03616904eed446173d1",
     "durationSec": 185.66,
     "passages": [
       {
@@ -5423,13 +5423,13 @@
     ]
   },
   {
-    "id": "finkel-655d26b95ed41bc27217f36b",
+    "id": "finkel-ed09cc91a26e2eb294bc516f",
     "voice": "josh-finkel",
     "title": "Genesis 22:1 · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-655d26b95ed41bc27217f36b",
-    "bytes": 817369,
-    "sha256": "655d26b95ed41bc27217f36b48061cf447aee924f02ecf048ef88cc6cf5a6de3",
+    "audioPath": "/api/human-tracks/finkel-ed09cc91a26e2eb294bc516f",
+    "bytes": 817109,
+    "sha256": "ed09cc91a26e2eb294bc516fd328ffb2a537547a72de54b483acbffc25dcba79",
     "durationSec": 102.08,
     "passages": [
       {
@@ -5442,13 +5442,13 @@
     ]
   },
   {
-    "id": "finkel-981596e4d55b44de6081a27f",
+    "id": "finkel-e9502321c1892a9ee0c64b52",
     "voice": "josh-finkel",
     "title": "Genesis 22:1 · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-981596e4d55b44de6081a27f",
-    "bytes": 714342,
-    "sha256": "981596e4d55b44de6081a27fdaeca257422888210285031a94866ad4a1e1a880",
+    "audioPath": "/api/human-tracks/finkel-e9502321c1892a9ee0c64b52",
+    "bytes": 714082,
+    "sha256": "e9502321c1892a9ee0c64b528f1eeb6721b1d40f6ae5a36d6f0114ba1bfde8e8",
     "durationSec": 89.19,
     "passages": [
       {
@@ -5461,13 +5461,13 @@
     ]
   },
   {
-    "id": "finkel-52b058193eddae2de25e1956",
+    "id": "finkel-9b84695699a19e0d279f1f2b",
     "voice": "josh-finkel",
     "title": "Genesis 22:1–3 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-52b058193eddae2de25e1956",
-    "bytes": 830265,
-    "sha256": "52b058193eddae2de25e19566d8ba5adf362629f5ab5c1728477ecfafdaf292b",
+    "audioPath": "/api/human-tracks/finkel-9b84695699a19e0d279f1f2b",
+    "bytes": 830065,
+    "sha256": "9b84695699a19e0d279f1f2bdc370b1912bdd65e14c9c98fcee803e33c1936aa",
     "durationSec": 103.69,
     "passages": [
       {
@@ -5480,13 +5480,13 @@
     ]
   },
   {
-    "id": "finkel-51c044c9ded96fbd4f89df82",
+    "id": "finkel-344b00016cc01a8123a4b1a4",
     "voice": "josh-finkel",
     "title": "Genesis 22:1–3 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-51c044c9ded96fbd4f89df82",
-    "bytes": 601029,
-    "sha256": "51c044c9ded96fbd4f89df82ca3ebbe3ce82fa8f4481ca674d522d307d3c6f8f",
+    "audioPath": "/api/human-tracks/finkel-344b00016cc01a8123a4b1a4",
+    "bytes": 600815,
+    "sha256": "344b00016cc01a8123a4b1a43e234a31b4490290c3b6dec32477151977c40832",
     "durationSec": 75.04,
     "passages": [
       {
@@ -5499,13 +5499,13 @@
     ]
   },
   {
-    "id": "finkel-5619885c5787d639f02a48bc",
+    "id": "finkel-dc0acf819935a3cae1d5b017",
     "voice": "josh-finkel",
     "title": "Genesis 22:2 · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-5619885c5787d639f02a48bc",
-    "bytes": 1418185,
-    "sha256": "5619885c5787d639f02a48bc0c3a7049eb7a7d91b1ae38b5c77db9df5355ddda",
+    "audioPath": "/api/human-tracks/finkel-dc0acf819935a3cae1d5b017",
+    "bytes": 1417925,
+    "sha256": "dc0acf819935a3cae1d5b01766bebff60ce9ac4677d53b68cf6d5fcd2e5160a0",
     "durationSec": 177.18,
     "passages": [
       {
@@ -5518,13 +5518,13 @@
     ]
   },
   {
-    "id": "finkel-d58f6fb9e79b3adcc7ff139c",
+    "id": "finkel-df79b0ebc2a1dd2bc1943868",
     "voice": "josh-finkel",
     "title": "Genesis 22:3 · Chant and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-d58f6fb9e79b3adcc7ff139c",
-    "bytes": 1722498,
-    "sha256": "d58f6fb9e79b3adcc7ff139ccf4416e768df3e277576643b85edcab1c0783a01",
+    "audioPath": "/api/human-tracks/finkel-df79b0ebc2a1dd2bc1943868",
+    "bytes": 1722240,
+    "sha256": "df79b0ebc2a1dd2bc19438681b0231ead52d02797ad0e083951b6ec0bf58615a",
     "durationSec": 215.22,
     "passages": [
       {
@@ -5537,13 +5537,13 @@
     ]
   },
   {
-    "id": "finkel-830ccc1e6108cea14e08bb8e",
+    "id": "finkel-e9a47873c067a6666cc192c9",
     "voice": "josh-finkel",
     "title": "Genesis 37:1 · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-830ccc1e6108cea14e08bb8e",
-    "bytes": 1216388,
-    "sha256": "830ccc1e6108cea14e08bb8ef987741a9926a29e69e428c2689da063d5fbcad7",
+    "audioPath": "/api/human-tracks/finkel-e9a47873c067a6666cc192c9",
+    "bytes": 1216128,
+    "sha256": "e9a47873c067a6666cc192c9023cdd4f88f4c5c9249930926a659e6613e253fc",
     "durationSec": 151.96,
     "passages": [
       {
@@ -5556,13 +5556,13 @@
     ]
   },
   {
-    "id": "finkel-76f68e2eb50b62f0e9652836",
+    "id": "finkel-9ec4044493d1ab6c1b055b24",
     "voice": "josh-finkel",
     "title": "Genesis 37:10–12 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-76f68e2eb50b62f0e9652836",
-    "bytes": 538380,
-    "sha256": "76f68e2eb50b62f0e9652836f108837cb86bd6b5202521058f6af93a79c13264",
+    "audioPath": "/api/human-tracks/finkel-9ec4044493d1ab6c1b055b24",
+    "bytes": 538176,
+    "sha256": "9ec4044493d1ab6c1b055b2473cbe47a9b315d2d8657de7c5d57f88bb12bd6fd",
     "durationSec": 67.21,
     "passages": [
       {
@@ -5575,13 +5575,13 @@
     ]
   },
   {
-    "id": "finkel-6f7cb4e50a816345b346af04",
+    "id": "finkel-87021ec9e4e82df346f976a8",
     "voice": "josh-finkel",
     "title": "Genesis 37:10–12 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-6f7cb4e50a816345b346af04",
-    "bytes": 361946,
-    "sha256": "6f7cb4e50a816345b346af0415570332dac529a2df7ab1ba9b8367a8c17a588f",
+    "audioPath": "/api/human-tracks/finkel-87021ec9e4e82df346f976a8",
+    "bytes": 361728,
+    "sha256": "87021ec9e4e82df346f976a8ef0126e5fc8c71dd490696ddff62eeaf940dd15c",
     "durationSec": 45.15,
     "passages": [
       {
@@ -5594,13 +5594,13 @@
     ]
   },
   {
-    "id": "finkel-b673d59fe8bbb30290a9d874",
+    "id": "finkel-e4af640b2560ca98d7f100ae",
     "voice": "josh-finkel",
     "title": "Genesis 37:18–20 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-b673d59fe8bbb30290a9d874",
-    "bytes": 516800,
-    "sha256": "b673d59fe8bbb30290a9d874583df728bd06d3f648cb4b4704da7ea7c3db4800",
+    "audioPath": "/api/human-tracks/finkel-e4af640b2560ca98d7f100ae",
+    "bytes": 516596,
+    "sha256": "e4af640b2560ca98d7f100aef58a1c07d5c6d2eef586b8d34f8b9c23e42836e6",
     "durationSec": 64.51,
     "passages": [
       {
@@ -5613,13 +5613,13 @@
     ]
   },
   {
-    "id": "finkel-5b74e635dcde11df468a87e8",
+    "id": "finkel-b78eaaa302ae524c32284605",
     "voice": "josh-finkel",
     "title": "Genesis 37:18–20 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-5b74e635dcde11df468a87e8",
-    "bytes": 406475,
-    "sha256": "5b74e635dcde11df468a87e8aeeefa866a1e107a737323b1ba3cf12fbd0d2fa6",
+    "audioPath": "/api/human-tracks/finkel-b78eaaa302ae524c32284605",
+    "bytes": 406255,
+    "sha256": "b78eaaa302ae524c32284605d268b3272ab2bb16a804eaa9a152dd4f04a869cf",
     "durationSec": 50.71,
     "passages": [
       {
@@ -5632,13 +5632,13 @@
     ]
   },
   {
-    "id": "finkel-1f91dda0d7cc446a64491ace",
+    "id": "finkel-3195d6931eaa4f83d6ea7479",
     "voice": "josh-finkel",
     "title": "Genesis 37:1–3 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-1f91dda0d7cc446a64491ace",
-    "bytes": 707912,
-    "sha256": "1f91dda0d7cc446a64491aced799d93f4f8e323d421ed51537b3b32391693785",
+    "audioPath": "/api/human-tracks/finkel-3195d6931eaa4f83d6ea7479",
+    "bytes": 707712,
+    "sha256": "3195d6931eaa4f83d6ea747913fbf2598f92e0853585a5b02d8b8109b5f05cbd",
     "durationSec": 88.41,
     "passages": [
       {
@@ -5651,13 +5651,13 @@
     ]
   },
   {
-    "id": "finkel-7589f4c5c3e54b20d213229b",
+    "id": "finkel-599aa494918c0c34f19957cb",
     "voice": "josh-finkel",
     "title": "Genesis 37:1–3 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-7589f4c5c3e54b20d213229b",
-    "bytes": 502870,
-    "sha256": "7589f4c5c3e54b20d213229b68f34db2bba0f2d344b7fd392cbf312cfad9b724",
+    "audioPath": "/api/human-tracks/finkel-599aa494918c0c34f19957cb",
+    "bytes": 502656,
+    "sha256": "599aa494918c0c34f19957cb719b97ac59fc3fe26a24cd942706152a6c41989d",
     "durationSec": 62.78,
     "passages": [
       {
@@ -5670,13 +5670,13 @@
     ]
   },
   {
-    "id": "finkel-ac1e75634a36a9fdb8e99fa4",
+    "id": "finkel-2f53b8b903829907b9f4ce37",
     "voice": "josh-finkel",
     "title": "Genesis 37:21–23 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-ac1e75634a36a9fdb8e99fa4",
-    "bytes": 674580,
-    "sha256": "ac1e75634a36a9fdb8e99fa444b9c48fe9a9cf30eef6690837c3ebb509d3dfe1",
+    "audioPath": "/api/human-tracks/finkel-2f53b8b903829907b9f4ce37",
+    "bytes": 674376,
+    "sha256": "2f53b8b903829907b9f4ce37f364d40729432c615124cf76fed2e4f3ed6504b0",
     "durationSec": 84.24,
     "passages": [
       {
@@ -5689,13 +5689,13 @@
     ]
   },
   {
-    "id": "finkel-cbdcdce9c97b007eac7844d8",
+    "id": "finkel-b544092b087281e57da38740",
     "voice": "josh-finkel",
     "title": "Genesis 37:21–23 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-cbdcdce9c97b007eac7844d8",
-    "bytes": 490694,
-    "sha256": "cbdcdce9c97b007eac7844d8d49573335fae89842028155eb266a1295fe406eb",
+    "audioPath": "/api/human-tracks/finkel-b544092b087281e57da38740",
+    "bytes": 490474,
+    "sha256": "b544092b087281e57da38740b1bdd042e8f5cf574d76011637db4735abd27456",
     "durationSec": 61.25,
     "passages": [
       {
@@ -5708,13 +5708,13 @@
     ]
   },
   {
-    "id": "finkel-5cc86bd711e41bd09976911f",
+    "id": "finkel-0de3834db7594a520ab78458",
     "voice": "josh-finkel",
     "title": "Genesis 37:24–26 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-5cc86bd711e41bd09976911f",
-    "bytes": 619409,
-    "sha256": "5cc86bd711e41bd09976911f6a415373052c4b5120dd586cf7517602407ccafd",
+    "audioPath": "/api/human-tracks/finkel-0de3834db7594a520ab78458",
+    "bytes": 619205,
+    "sha256": "0de3834db7594a520ab784582c8c49636959d31255350fe88ff352b3c1285413",
     "durationSec": 77.34,
     "passages": [
       {
@@ -5727,13 +5727,13 @@
     ]
   },
   {
-    "id": "finkel-3cb27238b70f94edc467a6ed",
+    "id": "finkel-79c327f73f600209d1b00687",
     "voice": "josh-finkel",
     "title": "Genesis 37:24–26 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-3cb27238b70f94edc467a6ed",
-    "bytes": 482752,
-    "sha256": "3cb27238b70f94edc467a6eda15892002cca71f14040e15349dc4add1ee6adbc",
+    "audioPath": "/api/human-tracks/finkel-79c327f73f600209d1b00687",
+    "bytes": 482532,
+    "sha256": "79c327f73f600209d1b0068729e4da312ac5de166bfaeb6eb992aed64fdff435",
     "durationSec": 60.24,
     "passages": [
       {
@@ -5746,13 +5746,13 @@
     ]
   },
   {
-    "id": "finkel-3a41bd16c132e56336022c84",
+    "id": "finkel-054dba5d4e2e2c849e425741",
     "voice": "josh-finkel",
     "title": "Genesis 37:4 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-3a41bd16c132e56336022c84",
-    "bytes": 229863,
-    "sha256": "3a41bd16c132e56336022c841b8cc57be0749092b3677c203d7c658884d9a0a5",
+    "audioPath": "/api/human-tracks/finkel-054dba5d4e2e2c849e425741",
+    "bytes": 229667,
+    "sha256": "054dba5d4e2e2c849e425741dbc484379bccee3eaf75f63492211a0fc3171a1c",
     "durationSec": 28.65,
     "passages": [
       {
@@ -5765,13 +5765,13 @@
     ]
   },
   {
-    "id": "finkel-fdcd1d9da560f5c4dda743f6",
+    "id": "finkel-96672a877755deaaec653b7a",
     "voice": "josh-finkel",
     "title": "Genesis 37:4 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-fdcd1d9da560f5c4dda743f6",
-    "bytes": 168021,
-    "sha256": "fdcd1d9da560f5c4dda743f653dff23b7b9b945c361200c82d6178a22142af88",
+    "audioPath": "/api/human-tracks/finkel-96672a877755deaaec653b7a",
+    "bytes": 167809,
+    "sha256": "96672a877755deaaec653b7a0afbf85218da217ac11c0c0449352588a0931ae1",
     "durationSec": 20.91,
     "passages": [
       {
@@ -5784,13 +5784,13 @@
     ]
   },
   {
-    "id": "finkel-4078e8296481eb37703af80b",
+    "id": "finkel-cffb1db6cceafa3425abfe70",
     "voice": "josh-finkel",
     "title": "Genesis 37:4 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-4078e8296481eb37703af80b",
-    "bytes": 149211,
-    "sha256": "4078e8296481eb37703af80b0cf59969f71c9f124299177a6b4c41efaf325941",
+    "audioPath": "/api/human-tracks/finkel-cffb1db6cceafa3425abfe70",
+    "bytes": 149001,
+    "sha256": "cffb1db6cceafa3425abfe70ba524c5696b54818d17b8355214e07d26d273930",
     "durationSec": 18.57,
     "passages": [
       {
@@ -5803,13 +5803,13 @@
     ]
   },
   {
-    "id": "finkel-225b3d7644782e5523d1c0e4",
+    "id": "finkel-a41921d347484729d075019d",
     "voice": "josh-finkel",
     "title": "Genesis 37:5 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-225b3d7644782e5523d1c0e4",
-    "bytes": 93190,
-    "sha256": "225b3d7644782e5523d1c0e4af965d1e0579245124299280744a1eaad84432d6",
+    "audioPath": "/api/human-tracks/finkel-a41921d347484729d075019d",
+    "bytes": 92994,
+    "sha256": "a41921d347484729d075019d59994f0f127bef19ec2610eb2bce92bb2f4e6744",
     "durationSec": 11.56,
     "passages": [
       {
@@ -5822,13 +5822,13 @@
     ]
   },
   {
-    "id": "finkel-4d725bffc1a55f8835c81b24",
+    "id": "finkel-35113a0a303cf21cb5859689",
     "voice": "josh-finkel",
     "title": "Genesis 37:5 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-4d725bffc1a55f8835c81b24",
-    "bytes": 106999,
-    "sha256": "4d725bffc1a55f8835c81b243e77b3d1477c570c27161a2c796ab209c0a41b3b",
+    "audioPath": "/api/human-tracks/finkel-35113a0a303cf21cb5859689",
+    "bytes": 106787,
+    "sha256": "35113a0a303cf21cb5859689308d894390a878f0f37eae2102eb68d316af6a78",
     "durationSec": 13.28,
     "passages": [
       {
@@ -5841,13 +5841,13 @@
     ]
   },
   {
-    "id": "finkel-616c173b6dc9d8043cf6d610",
+    "id": "finkel-de819c1d212e918c396d536d",
     "voice": "josh-finkel",
     "title": "Genesis 37:6 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-616c173b6dc9d8043cf6d610",
-    "bytes": 129762,
-    "sha256": "616c173b6dc9d8043cf6d610703a2c2d747bb3d21218bf115dd2623cce934ed3",
+    "audioPath": "/api/human-tracks/finkel-de819c1d212e918c396d536d",
+    "bytes": 129566,
+    "sha256": "de819c1d212e918c396d536d08fdb9fcd02c3cb2ffaa3bbf71e47f9993e76a40",
     "durationSec": 16.14,
     "passages": [
       {
@@ -5860,13 +5860,13 @@
     ]
   },
   {
-    "id": "finkel-5233abac33e834b8b0330a51",
+    "id": "finkel-da7af7e6c12241db469d28fb",
     "voice": "josh-finkel",
     "title": "Genesis 37:6 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-5233abac33e834b8b0330a51",
-    "bytes": 74814,
-    "sha256": "5233abac33e834b8b0330a5195e701e08ca4ef335f81de335d0f7f5472c7defe",
+    "audioPath": "/api/human-tracks/finkel-da7af7e6c12241db469d28fb",
+    "bytes": 74604,
+    "sha256": "da7af7e6c12241db469d28fbe0daf34075e8eb71f0dff6a7f0d8a92a5ec0b447",
     "durationSec": 9.25,
     "passages": [
       {
@@ -5879,13 +5879,13 @@
     ]
   },
   {
-    "id": "finkel-cbaf2502276eeea5c89838fa",
+    "id": "finkel-9c4de96a24be55a0dcb740c1",
     "voice": "josh-finkel",
     "title": "Leviticus 17:11 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-cbaf2502276eeea5c89838fa",
-    "bytes": 488074,
-    "sha256": "cbaf2502276eeea5c89838fa7a0fa6adb2a749ece2f6d0520b335fd25df58bfb",
+    "audioPath": "/api/human-tracks/finkel-9c4de96a24be55a0dcb740c1",
+    "bytes": 487872,
+    "sha256": "9c4de96a24be55a0dcb740c1fa8fbd57d4254420c91966d71eca9511b3e4c018",
     "durationSec": 60.92,
     "passages": [
       {
@@ -5898,23 +5898,23 @@
     ]
   },
   {
-    "id": "finkel-96867f5cf6df371206ff302e",
+    "id": "finkel-0dcacaf4fe0fdd2effd350e9",
     "voice": "josh-finkel",
     "title": "Torah practice · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-96867f5cf6df371206ff302e",
-    "bytes": 251920,
-    "sha256": "96867f5cf6df371206ff302e0278f6a505e9e535b08433b847576a0899cfc93d",
+    "audioPath": "/api/human-tracks/finkel-0dcacaf4fe0fdd2effd350e9",
+    "bytes": 251712,
+    "sha256": "0dcacaf4fe0fdd2effd350e92e8817afb294b532c9a4c312254f612d6634c199",
     "durationSec": 31.4
   },
   {
-    "id": "finkel-4497060b8760f890a398ce8e",
+    "id": "finkel-6d5a948f2d5d6a4264c7b11d",
     "voice": "josh-finkel",
     "title": "Leviticus 19:1–2, Leviticus 20:2 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-4497060b8760f890a398ce8e",
-    "bytes": 285178,
-    "sha256": "4497060b8760f890a398ce8ece4fb4c8011725b745489a4c487f4d0a60a35383",
+    "audioPath": "/api/human-tracks/finkel-6d5a948f2d5d6a4264c7b11d",
+    "bytes": 284928,
+    "sha256": "6d5a948f2d5d6a4264c7b11d1c0cc2bc2bd9bb33ce5fa61da8abf6d8fdf09f39",
     "durationSec": 35.56,
     "passages": [
       {
@@ -5934,13 +5934,13 @@
     ]
   },
   {
-    "id": "finkel-4f691fba95a7aa05f67adaf0",
+    "id": "finkel-27bd07ba302de769d6662d4a",
     "voice": "josh-finkel",
     "title": "Leviticus 19:32–34 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-4f691fba95a7aa05f67adaf0",
-    "bytes": 551632,
-    "sha256": "4f691fba95a7aa05f67adaf04a67057d0480f56afa22777632c128cfa9103423",
+    "audioPath": "/api/human-tracks/finkel-27bd07ba302de769d6662d4a",
+    "bytes": 551424,
+    "sha256": "27bd07ba302de769d6662d4a750f5b6861eed1920f8ab4a65df09e098a05b545",
     "durationSec": 68.88,
     "passages": [
       {
@@ -5953,13 +5953,13 @@
     ]
   },
   {
-    "id": "finkel-16e0bf57ebccb038b65f8a15",
+    "id": "finkel-fa250f5a8ca3b0a766044f5b",
     "voice": "josh-finkel",
     "title": "Leviticus 19:32–34 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-16e0bf57ebccb038b65f8a15",
-    "bytes": 403230,
-    "sha256": "16e0bf57ebccb038b65f8a156ef86d708a432ac76bb7b9a7a37324b7fdad7550",
+    "audioPath": "/api/human-tracks/finkel-fa250f5a8ca3b0a766044f5b",
+    "bytes": 403008,
+    "sha256": "fa250f5a8ca3b0a766044f5bdf254f0e125ed8935e4028173957d5435e85269e",
     "durationSec": 50.32,
     "passages": [
       {
@@ -5972,13 +5972,13 @@
     ]
   },
   {
-    "id": "finkel-8a015461edb9e2848e22612c",
+    "id": "finkel-ba8fe832ddacdb9884b8eb08",
     "voice": "josh-finkel",
     "title": "Leviticus 19:33–34 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-8a015461edb9e2848e22612c",
-    "bytes": 384416,
-    "sha256": "8a015461edb9e2848e22612c9dce833dcb19eb5d83feecd1a275a8c78e78746c",
+    "audioPath": "/api/human-tracks/finkel-ba8fe832ddacdb9884b8eb08",
+    "bytes": 384192,
+    "sha256": "ba8fe832ddacdb9884b8eb08a436f26033882308db879d79224b22c7e1babedc",
     "durationSec": 47.96,
     "passages": [
       {
@@ -5991,13 +5991,13 @@
     ]
   },
   {
-    "id": "finkel-819742ab31816fd80850f41d",
+    "id": "finkel-ec46924e5801f92f7f7f4a2b",
     "voice": "josh-finkel",
     "title": "Leviticus 19:35 · Chant and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-819742ab31816fd80850f41d",
-    "bytes": 788325,
-    "sha256": "819742ab31816fd80850f41d7c8defd0941fcbb8cfa58d5903ab74b9c8abdea9",
+    "audioPath": "/api/human-tracks/finkel-ec46924e5801f92f7f7f4a2b",
+    "bytes": 788061,
+    "sha256": "ec46924e5801f92f7f7f4a2b2b96fe9a7d3966389357cf5b3df5e447110e4e47",
     "durationSec": 98.44,
     "passages": [
       {
@@ -6010,13 +6010,13 @@
     ]
   },
   {
-    "id": "finkel-fa2f98e54bc378c4a65bad8b",
+    "id": "finkel-7619bc3bb8bf8be802b17486",
     "voice": "josh-finkel",
     "title": "Leviticus 19:35 · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-fa2f98e54bc378c4a65bad8b",
-    "bytes": 510384,
-    "sha256": "fa2f98e54bc378c4a65bad8bf0971165e60fb07bfd90bb579bf54cb34be57af8",
+    "audioPath": "/api/human-tracks/finkel-7619bc3bb8bf8be802b17486",
+    "bytes": 510118,
+    "sha256": "7619bc3bb8bf8be802b174860b275ac9ecac4b9e7fecf8beb7f8cf323db89d38",
     "durationSec": 63.7,
     "passages": [
       {
@@ -6029,23 +6029,23 @@
     ]
   },
   {
-    "id": "finkel-25954fdbc9524c43d38e2b84",
+    "id": "finkel-28c76b7476a97e5b3f955f9c",
     "voice": "josh-finkel",
     "title": "Torah practice · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-25954fdbc9524c43d38e2b84",
-    "bytes": 418014,
-    "sha256": "25954fdbc9524c43d38e2b84d36bc886e0b83656c3d43ea1b43e87c47b64a0e3",
+    "audioPath": "/api/human-tracks/finkel-28c76b7476a97e5b3f955f9c",
+    "bytes": 417792,
+    "sha256": "28c76b7476a97e5b3f955f9c27148585d4907aeffa6d1bc57cbe9bbbeae85fe3",
     "durationSec": 52.17
   },
   {
-    "id": "finkel-9cdbdf560fd7b41aebf77f08",
+    "id": "finkel-9383075fe9b7595a9baf1b42",
     "voice": "josh-finkel",
     "title": "Leviticus 19:36, Leviticus 20:7–8 · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-9cdbdf560fd7b41aebf77f08",
-    "bytes": 972683,
-    "sha256": "9cdbdf560fd7b41aebf77f083d97900e361d59a97558e8d7f6904fdc9d063e59",
+    "audioPath": "/api/human-tracks/finkel-9383075fe9b7595a9baf1b42",
+    "bytes": 972381,
+    "sha256": "9383075fe9b7595a9baf1b4291b088ef744d776828ab30c9c1944a368cd54348",
     "durationSec": 121.48,
     "passages": [
       {
@@ -6065,13 +6065,13 @@
     ]
   },
   {
-    "id": "finkel-12ebedc9bce65ba6e918c69a",
+    "id": "finkel-dee6cffe8da7c3ced888ff26",
     "voice": "josh-finkel",
     "title": "Leviticus 19:36, Leviticus 24:22, Leviticus 26:44–45 · Chant and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-12ebedc9bce65ba6e918c69a",
-    "bytes": 1469881,
-    "sha256": "12ebedc9bce65ba6e918c69a8b285b24dfc429b4431d3f5a2d5582202cfd6100",
+    "audioPath": "/api/human-tracks/finkel-dee6cffe8da7c3ced888ff26",
+    "bytes": 1469543,
+    "sha256": "dee6cffe8da7c3ced888ff26a7201aaafdd621ccfffefba6bf3cbc24a07c1b80",
     "durationSec": 183.64,
     "passages": [
       {
@@ -6098,13 +6098,13 @@
     ]
   },
   {
-    "id": "finkel-66291b1fff8a1a6ea62520ac",
+    "id": "finkel-805cf5b2c90a5d1431c7eabf",
     "voice": "josh-finkel",
     "title": "Leviticus 19:36–37 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-66291b1fff8a1a6ea62520ac",
-    "bytes": 492496,
-    "sha256": "66291b1fff8a1a6ea62520aca3784c225df829639a52b7c318eda826fa499aff",
+    "audioPath": "/api/human-tracks/finkel-805cf5b2c90a5d1431c7eabf",
+    "bytes": 492288,
+    "sha256": "805cf5b2c90a5d1431c7eabfc5a816c3b3a2a8a852b1191ed623545aa928fc59",
     "durationSec": 61.47,
     "passages": [
       {
@@ -6117,13 +6117,13 @@
     ]
   },
   {
-    "id": "finkel-f99bd6e740e94187bf3cc6b1",
+    "id": "finkel-a4042143c08007fb9efffb68",
     "voice": "josh-finkel",
     "title": "Leviticus 19:37 · Chant and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-f99bd6e740e94187bf3cc6b1",
-    "bytes": 825105,
-    "sha256": "f99bd6e740e94187bf3cc6b17e1898953ac62d451dde0094c9e2d60df129a2aa",
+    "audioPath": "/api/human-tracks/finkel-a4042143c08007fb9efffb68",
+    "bytes": 824841,
+    "sha256": "a4042143c08007fb9efffb681f9e864594454388f8a580d4eaf8e270df36a07d",
     "durationSec": 103.03,
     "passages": [
       {
@@ -6136,13 +6136,13 @@
     ]
   },
   {
-    "id": "finkel-68b3c78acb08425207c4d581",
+    "id": "finkel-6c99736d77102a18ddabcad4",
     "voice": "josh-finkel",
     "title": "Leviticus 19:37 · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-68b3c78acb08425207c4d581",
-    "bytes": 600454,
-    "sha256": "68b3c78acb08425207c4d581438be05a8231ff7c6d53e4b6ec8800fdd729089f",
+    "audioPath": "/api/human-tracks/finkel-6c99736d77102a18ddabcad4",
+    "bytes": 600188,
+    "sha256": "6c99736d77102a18ddabcad4d87210fa1f7347d98518f6beeeedf0d10343a23e",
     "durationSec": 74.95,
     "passages": [
       {
@@ -6155,13 +6155,13 @@
     ]
   },
   {
-    "id": "finkel-f0b55485f91cbf6d11f2f5ce",
+    "id": "finkel-e07b3b888c7e22710735860f",
     "voice": "josh-finkel",
     "title": "Leviticus 1:14 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-f0b55485f91cbf6d11f2f5ce",
-    "bytes": 199496,
-    "sha256": "f0b55485f91cbf6d11f2f5cee744de7a78beb319edfa3d3b67c909bb8fe5836b",
+    "audioPath": "/api/human-tracks/finkel-e07b3b888c7e22710735860f",
+    "bytes": 199296,
+    "sha256": "e07b3b888c7e22710735860f7ea118676b14c6dfa699a6adcbbf593891646e39",
     "durationSec": 24.85,
     "passages": [
       {
@@ -6174,13 +6174,13 @@
     ]
   },
   {
-    "id": "finkel-9f7ccc2377ef2316b2ef62a2",
+    "id": "finkel-2671c063483bdc5328c37756",
     "voice": "josh-finkel",
     "title": "Leviticus 1:14–17 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-9f7ccc2377ef2316b2ef62a2",
-    "bytes": 544924,
-    "sha256": "9f7ccc2377ef2316b2ef62a2879749b573366ab72bbfac5e3b1190223c4505a6",
+    "audioPath": "/api/human-tracks/finkel-2671c063483bdc5328c37756",
+    "bytes": 544704,
+    "sha256": "2671c063483bdc5328c37756a768c185f3006d90309c9be6bb8ce2cee6a448cf",
     "durationSec": 68.04,
     "passages": [
       {
@@ -6193,13 +6193,13 @@
     ]
   },
   {
-    "id": "finkel-4447facee120c2aad92eb506",
+    "id": "finkel-1053c383de00fbf441bbb580",
     "voice": "josh-finkel",
     "title": "Leviticus 1:15–17 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-4447facee120c2aad92eb506",
-    "bytes": 606926,
-    "sha256": "4447facee120c2aad92eb506b0350a1b02f8e77fb900e6bfcf8e59d975fbc85f",
+    "audioPath": "/api/human-tracks/finkel-1053c383de00fbf441bbb580",
+    "bytes": 606720,
+    "sha256": "1053c383de00fbf441bbb580d707f50fe0ddb8cb43c5318a8167bce583aec0cc",
     "durationSec": 75.79,
     "passages": [
       {
@@ -6212,13 +6212,13 @@
     ]
   },
   {
-    "id": "finkel-6b6a390155633e9353556b4f",
+    "id": "finkel-bdbf9fc88a20ba8dce29afac",
     "voice": "josh-finkel",
     "title": "Leviticus 20:2 · Chant and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-6b6a390155633e9353556b4f",
-    "bytes": 2638419,
-    "sha256": "6b6a390155633e9353556b4f80d82e1dd229a6ba346cd22538c67d00fb4634ab",
+    "audioPath": "/api/human-tracks/finkel-bdbf9fc88a20ba8dce29afac",
+    "bytes": 2638157,
+    "sha256": "bdbf9fc88a20ba8dce29afacfdfed79a2fd7c80a9715d25fe9dae757943cd254",
     "durationSec": 329.71,
     "passages": [
       {
@@ -6231,13 +6231,13 @@
     ]
   },
   {
-    "id": "finkel-ad6c719fb597b66f6c8c7638",
+    "id": "finkel-2fb72043649d0b0ce3a0c893",
     "voice": "josh-finkel",
     "title": "Leviticus 20:2–3 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-ad6c719fb597b66f6c8c7638",
-    "bytes": 704268,
-    "sha256": "ad6c719fb597b66f6c8c76381781a63e2f8f1954bccd6ed40507d4b7facebe7e",
+    "audioPath": "/api/human-tracks/finkel-2fb72043649d0b0ce3a0c893",
+    "bytes": 704064,
+    "sha256": "2fb72043649d0b0ce3a0c8930d10b3d8fd57d6ecdc4e6698c67b9dfad658f7b5",
     "durationSec": 87.94,
     "passages": [
       {
@@ -6250,23 +6250,23 @@
     ]
   },
   {
-    "id": "finkel-1f80aa36789bd347a90a55f7",
+    "id": "finkel-b04f7bc49cebec7b4c4c30e6",
     "voice": "josh-finkel",
     "title": "Torah practice · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-1f80aa36789bd347a90a55f7",
-    "bytes": 162262,
-    "sha256": "1f80aa36789bd347a90a55f73178de381f536d0b8bd4988b9988c56aed4c7156",
+    "audioPath": "/api/human-tracks/finkel-b04f7bc49cebec7b4c4c30e6",
+    "bytes": 162048,
+    "sha256": "b04f7bc49cebec7b4c4c30e67ef1668832464f5883aa63a7c60689705dcdb757",
     "durationSec": 20.2
   },
   {
-    "id": "finkel-0c7e5af7ad172387635a1528",
+    "id": "finkel-177ac6013f111db1dc15e8f9",
     "voice": "josh-finkel",
     "title": "Leviticus 20:3–4 · Chant and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-0c7e5af7ad172387635a1528",
-    "bytes": 1681505,
-    "sha256": "0c7e5af7ad172387635a15287ee098077c1cde7a4e3acffcae9f2844647d8420",
+    "audioPath": "/api/human-tracks/finkel-177ac6013f111db1dc15e8f9",
+    "bytes": 1681239,
+    "sha256": "177ac6013f111db1dc15e8f96b00596714c999d8cd2b866c9eef1ec48c347d0a",
     "durationSec": 210.1,
     "passages": [
       {
@@ -6279,13 +6279,13 @@
     ]
   },
   {
-    "id": "finkel-9ba3de42552a2dd0d529f637",
+    "id": "finkel-9002fd07e1d6dcb412c8e299",
     "voice": "josh-finkel",
     "title": "Leviticus 27:14–16 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-9ba3de42552a2dd0d529f637",
-    "bytes": 677300,
-    "sha256": "9ba3de42552a2dd0d529f6374d7a669ddf36aab70d521ca5f208008249102fbc",
+    "audioPath": "/api/human-tracks/finkel-9002fd07e1d6dcb412c8e299",
+    "bytes": 677092,
+    "sha256": "9002fd07e1d6dcb412c8e299ea16e1ed345825de9ca45dc2d61a00d296cca653",
     "durationSec": 84.56,
     "passages": [
       {
@@ -6298,13 +6298,13 @@
     ]
   },
   {
-    "id": "finkel-e056b9b0b0e3e07774cac2aa",
+    "id": "finkel-2ce5efa2fe69afeff905196b",
     "voice": "josh-finkel",
     "title": "Leviticus 27:14–16 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-e056b9b0b0e3e07774cac2aa",
-    "bytes": 444722,
-    "sha256": "e056b9b0b0e3e07774cac2aa6fe759c34fc957bfb5d9560a1e23a35f195751a5",
+    "audioPath": "/api/human-tracks/finkel-2ce5efa2fe69afeff905196b",
+    "bytes": 444498,
+    "sha256": "2ce5efa2fe69afeff905196b7fa4866aac10bf72868e97ff26e7bcf2f4c934df",
     "durationSec": 55.49,
     "passages": [
       {
@@ -6317,23 +6317,23 @@
     ]
   },
   {
-    "id": "finkel-e69002cb921c7def479eaff2",
+    "id": "finkel-30c2e78fbf8f751a09c341d7",
     "voice": "josh-finkel",
     "title": "Torah practice · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-e69002cb921c7def479eaff2",
-    "bytes": 423404,
-    "sha256": "e69002cb921c7def479eaff24bff38b338d17297eca8eac967e55cab18829e77",
+    "audioPath": "/api/human-tracks/finkel-30c2e78fbf8f751a09c341d7",
+    "bytes": 423182,
+    "sha256": "30c2e78fbf8f751a09c341d722ac8de267f7de856ca1bd5d97565d6b8948d7d9",
     "durationSec": 52.83
   },
   {
-    "id": "finkel-447d893146675a5791e80ff1",
+    "id": "finkel-658ddc1e551a34af4a30d01e",
     "voice": "josh-finkel",
     "title": "Leviticus 27:15 · Chant and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-447d893146675a5791e80ff1",
-    "bytes": 1111616,
-    "sha256": "447d893146675a5791e80ff135acc1a8772f3de4d729474c1d8444dd8299b6e1",
+    "audioPath": "/api/human-tracks/finkel-658ddc1e551a34af4a30d01e",
+    "bytes": 1111352,
+    "sha256": "658ddc1e551a34af4a30d01e90e6d366d67ef27c4a6d00bfaaab3b8c66b192cb",
     "durationSec": 138.86,
     "passages": [
       {
@@ -6346,13 +6346,13 @@
     ]
   },
   {
-    "id": "finkel-31c25f2219c6b27c975602bb",
+    "id": "finkel-a3e7660eadf4ca8836996469",
     "voice": "josh-finkel",
     "title": "Leviticus 27:16 · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-31c25f2219c6b27c975602bb",
-    "bytes": 936075,
-    "sha256": "31c25f2219c6b27c975602bb665b037ba1c3c6523b1c9bd28c636a135c2fd8d0",
+    "audioPath": "/api/human-tracks/finkel-a3e7660eadf4ca8836996469",
+    "bytes": 935809,
+    "sha256": "a3e7660eadf4ca8836996469b437cfa91449e32b118f040294fe99be8cab3d09",
     "durationSec": 116.9,
     "passages": [
       {
@@ -6365,13 +6365,13 @@
     ]
   },
   {
-    "id": "finkel-c1ffb60c9e0b33235235518a",
+    "id": "finkel-bde37150827511e6623224e9",
     "voice": "josh-finkel",
     "title": "Leviticus 27:17–18 · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-c1ffb60c9e0b33235235518a",
-    "bytes": 512480,
-    "sha256": "c1ffb60c9e0b33235235518a6ad2bed627db837b0a7b7641a15ee124426fd7f3",
+    "audioPath": "/api/human-tracks/finkel-bde37150827511e6623224e9",
+    "bytes": 512208,
+    "sha256": "bde37150827511e6623224e90dac8f3ddf24cdb0f7511f3be9dafba728fd5f46",
     "durationSec": 63.95,
     "passages": [
       {
@@ -6384,13 +6384,13 @@
     ]
   },
   {
-    "id": "finkel-ec19e43d106b66a060ae499f",
+    "id": "finkel-eef642b5890a6b13831b31af",
     "voice": "josh-finkel",
     "title": "Leviticus 27:17–19 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-ec19e43d106b66a060ae499f",
-    "bytes": 417121,
-    "sha256": "ec19e43d106b66a060ae499f921586a0f608598056670aad654025c149e58a15",
+    "audioPath": "/api/human-tracks/finkel-eef642b5890a6b13831b31af",
+    "bytes": 416913,
+    "sha256": "eef642b5890a6b13831b31aff1fd8cc0807670bbc792d16f8b89d60c22d9ff94",
     "durationSec": 52.06,
     "passages": [
       {
@@ -6403,13 +6403,13 @@
     ]
   },
   {
-    "id": "finkel-3c516c8f0ce815b793bd093c",
+    "id": "finkel-87b5b53d62831312088b039b",
     "voice": "josh-finkel",
     "title": "Leviticus 27:17–19 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-3c516c8f0ce815b793bd093c",
-    "bytes": 445347,
-    "sha256": "3c516c8f0ce815b793bd093c48b61f13c1b3efe8d6904e7fd6bf85d011874540",
+    "audioPath": "/api/human-tracks/finkel-87b5b53d62831312088b039b",
+    "bytes": 445125,
+    "sha256": "87b5b53d62831312088b039bd8d5af097860bc2f9f613a18c2ca47b62ce09567",
     "durationSec": 55.58,
     "passages": [
       {
@@ -6422,13 +6422,13 @@
     ]
   },
   {
-    "id": "finkel-b4e66e5f1564b60e81618290",
+    "id": "finkel-dc61f7ad7e651c6021ca9647",
     "voice": "josh-finkel",
     "title": "Leviticus 27:18 · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-b4e66e5f1564b60e81618290",
-    "bytes": 1093019,
-    "sha256": "b4e66e5f1564b60e81618290dd4f62449e30da45f7a9a6d3856433c2c390c46f",
+    "audioPath": "/api/human-tracks/finkel-dc61f7ad7e651c6021ca9647",
+    "bytes": 1092753,
+    "sha256": "dc61f7ad7e651c6021ca964771280ad27d4f0d18fb06fc8f7f8cf04616b7f064",
     "durationSec": 136.52,
     "passages": [
       {
@@ -6441,13 +6441,13 @@
     ]
   },
   {
-    "id": "finkel-38da501b86672a451c815b5b",
+    "id": "finkel-e9eeb2be84bd0667589eafdc",
     "voice": "josh-finkel",
     "title": "Leviticus 27:19 · Chant and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-38da501b86672a451c815b5b",
-    "bytes": 914130,
-    "sha256": "38da501b86672a451c815b5bc68abc1f2121a519819d951008cf26db2f4f0cf4",
+    "audioPath": "/api/human-tracks/finkel-e9eeb2be84bd0667589eafdc",
+    "bytes": 913866,
+    "sha256": "e9eeb2be84bd0667589eafdc5fcea0f3951c084d3587c647d32c751725c6886d",
     "durationSec": 114.16,
     "passages": [
       {
@@ -6460,13 +6460,13 @@
     ]
   },
   {
-    "id": "finkel-93305ac7802db235ff02efa5",
+    "id": "finkel-1e9a8cfb5fc09937ec929820",
     "voice": "josh-finkel",
     "title": "Leviticus 27:19 · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-93305ac7802db235ff02efa5",
-    "bytes": 785610,
-    "sha256": "93305ac7802db235ff02efa533a8e715e193d90f996894b4187843fdb422db3e",
+    "audioPath": "/api/human-tracks/finkel-1e9a8cfb5fc09937ec929820",
+    "bytes": 785344,
+    "sha256": "1e9a8cfb5fc09937ec929820ff619897668b7ff6493bc7538bef0cfb8fc2e21c",
     "durationSec": 98.11,
     "passages": [
       {
@@ -6479,13 +6479,13 @@
     ]
   },
   {
-    "id": "finkel-22fbc8e32e9838df4f231bae",
+    "id": "finkel-21108c897a1b004fe6562556",
     "voice": "josh-finkel",
     "title": "Leviticus 27:20–22 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-22fbc8e32e9838df4f231bae",
-    "bytes": 502672,
-    "sha256": "22fbc8e32e9838df4f231baedf78f573dd55553393879a2b617eeabcbd8edb12",
+    "audioPath": "/api/human-tracks/finkel-21108c897a1b004fe6562556",
+    "bytes": 502464,
+    "sha256": "21108c897a1b004fe6562556d1c717a8dcdc18fe6f0807c43acca3408db058a9",
     "durationSec": 62.74,
     "passages": [
       {
@@ -6498,13 +6498,13 @@
     ]
   },
   {
-    "id": "finkel-95bfbb9fdb794eaf142b2c42",
+    "id": "finkel-3e4ae031da9266ea1c5d3134",
     "voice": "josh-finkel",
     "title": "Leviticus 27:20–22 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-95bfbb9fdb794eaf142b2c42",
-    "bytes": 357342,
-    "sha256": "95bfbb9fdb794eaf142b2c42dd9baed1da5e638a6e9896ea641ddfdd23ede38b",
+    "audioPath": "/api/human-tracks/finkel-3e4ae031da9266ea1c5d3134",
+    "bytes": 357120,
+    "sha256": "3e4ae031da9266ea1c5d31343f1886239cffe4f2e0143bfb37b9fafe1bc73e9c",
     "durationSec": 44.59,
     "passages": [
       {
@@ -6517,23 +6517,23 @@
     ]
   },
   {
-    "id": "finkel-67d5914e4e1403bf849aeff0",
+    "id": "finkel-8284bbf09c3288cddb9e2b71",
     "voice": "josh-finkel",
     "title": "Torah practice · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-67d5914e4e1403bf849aeff0",
-    "bytes": 437392,
-    "sha256": "67d5914e4e1403bf849aeff0829f6df075bcef94d1809dcbde359efaf379b7eb",
+    "audioPath": "/api/human-tracks/finkel-8284bbf09c3288cddb9e2b71",
+    "bytes": 437184,
+    "sha256": "8284bbf09c3288cddb9e2b71b2130f6304540645eae69fb8c6717aaf7199cb60",
     "durationSec": 54.59
   },
   {
-    "id": "finkel-c33cbb545c87bc5f8f4af275",
+    "id": "finkel-2b8f77623e16c11fbd41e63e",
     "voice": "josh-finkel",
     "title": "Leviticus 27:24–25 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-c33cbb545c87bc5f8f4af275",
-    "bytes": 278046,
-    "sha256": "c33cbb545c87bc5f8f4af275932506b705d4fb61594822ff874ff292c64420d8",
+    "audioPath": "/api/human-tracks/finkel-2b8f77623e16c11fbd41e63e",
+    "bytes": 277824,
+    "sha256": "2b8f77623e16c11fbd41e63ec63e6818f877157af85a5f2838d73a0c71fff5db",
     "durationSec": 34.68,
     "passages": [
       {
@@ -6546,13 +6546,13 @@
     ]
   },
   {
-    "id": "finkel-eef626ca5c1c3b494056074b",
+    "id": "finkel-1256c39844aa817075d8f0d9",
     "voice": "josh-finkel",
     "title": "Leviticus 2:1–3 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-eef626ca5c1c3b494056074b",
-    "bytes": 623050,
-    "sha256": "eef626ca5c1c3b494056074b72eb177bb18b5a29238bdd4cab92fb6f25ba2f8e",
+    "audioPath": "/api/human-tracks/finkel-1256c39844aa817075d8f0d9",
+    "bytes": 622848,
+    "sha256": "1256c39844aa817075d8f0d92f4d3e350b7448b6a8affd14c0eb50fe0f2cfdb4",
     "durationSec": 77.8,
     "passages": [
       {
@@ -6565,13 +6565,13 @@
     ]
   },
   {
-    "id": "finkel-b90b60ee939b07ca26e2e19d",
+    "id": "finkel-b7049aed15451aa568ac19e5",
     "voice": "josh-finkel",
     "title": "Leviticus 2:1–3 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-b90b60ee939b07ca26e2e19d",
-    "bytes": 419352,
-    "sha256": "b90b60ee939b07ca26e2e19df4ad98827ba0803bc502b601a62ae3f86c495f68",
+    "audioPath": "/api/human-tracks/finkel-b7049aed15451aa568ac19e5",
+    "bytes": 419136,
+    "sha256": "b7049aed15451aa568ac19e5388e44b0453ce5c3b16bcbb4bc239d74930da4df",
     "durationSec": 52.34,
     "passages": [
       {
@@ -6584,13 +6584,13 @@
     ]
   },
   {
-    "id": "finkel-0e65c3aee82bcc9225d798f9",
+    "id": "finkel-a898b528c1dd5bf17f790fd4",
     "voice": "josh-finkel",
     "title": "Leviticus 2:4–6 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-0e65c3aee82bcc9225d798f9",
-    "bytes": 328714,
-    "sha256": "0e65c3aee82bcc9225d798f90b71309ceaeb769d9d59fd47e007853a87fe1fbb",
+    "audioPath": "/api/human-tracks/finkel-a898b528c1dd5bf17f790fd4",
+    "bytes": 328512,
+    "sha256": "a898b528c1dd5bf17f790fd4cdc7bcf0a14356a38d9be425439dd245820d69d8",
     "durationSec": 41.01,
     "passages": [
       {
@@ -6603,13 +6603,13 @@
     ]
   },
   {
-    "id": "finkel-ad9162c05a1039a52a2ec05a",
+    "id": "finkel-745fd4f310922dd2e4f1854e",
     "voice": "josh-finkel",
     "title": "Leviticus 2:4–6 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-ad9162c05a1039a52a2ec05a",
-    "bytes": 457546,
-    "sha256": "ad9162c05a1039a52a2ec05aaf4f98f62b3d93bf0da87765a5d48f028b5dd76a",
+    "audioPath": "/api/human-tracks/finkel-745fd4f310922dd2e4f1854e",
+    "bytes": 457344,
+    "sha256": "745fd4f310922dd2e4f1854e6d3d0343402fa3515ae4c266249975a8ce70db18",
     "durationSec": 57.1,
     "passages": [
       {
@@ -6622,13 +6622,13 @@
     ]
   },
   {
-    "id": "finkel-aa889e28fe09c46f39408399",
+    "id": "finkel-780022c0e167c5e4994176b4",
     "voice": "josh-finkel",
     "title": "Leviticus 2:4–6 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-aa889e28fe09c46f39408399",
-    "bytes": 342744,
-    "sha256": "aa889e28fe09c46f394083994344f228a366885d9566cd83364fa8fc5332d5a1",
+    "audioPath": "/api/human-tracks/finkel-780022c0e167c5e4994176b4",
+    "bytes": 342528,
+    "sha256": "780022c0e167c5e4994176b4417210167b6ea074ae8b1cf08b9a88318d8f3983",
     "durationSec": 42.76,
     "passages": [
       {
@@ -6641,23 +6641,23 @@
     ]
   },
   {
-    "id": "finkel-3fba2aabcce751b2247a3dbb",
+    "id": "finkel-afe2df18ce3076014f1ac0f6",
     "voice": "josh-finkel",
     "title": "Torah practice · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-3fba2aabcce751b2247a3dbb",
-    "bytes": 315846,
-    "sha256": "3fba2aabcce751b2247a3dbbc1f38209f1b5d8c243f100a2021142ef46bb3447",
+    "audioPath": "/api/human-tracks/finkel-afe2df18ce3076014f1ac0f6",
+    "bytes": 315648,
+    "sha256": "afe2df18ce3076014f1ac0f6196de322ce98659d9680f63cd7b28652d25fa73d",
     "durationSec": 39.4
   },
   {
-    "id": "finkel-5bef4393718b676e236a69f7",
+    "id": "finkel-84ecd64400d9f860ac2018a9",
     "voice": "josh-finkel",
     "title": "Leviticus 4:3 · Chant and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-5bef4393718b676e236a69f7",
-    "bytes": 2734340,
-    "sha256": "5bef4393718b676e236a69f770b0c0c25f2df5ae24a85dc5551b73de64133292",
+    "audioPath": "/api/human-tracks/finkel-84ecd64400d9f860ac2018a9",
+    "bytes": 2734080,
+    "sha256": "84ecd64400d9f860ac2018a996fad84d11492a3c108e45546a64479e04122f3c",
     "durationSec": 341.7,
     "passages": [
       {
@@ -6670,13 +6670,13 @@
     ]
   },
   {
-    "id": "finkel-5345d3c14aa4e8919310a3e4",
+    "id": "finkel-0baf3efb8fda4c3cb236bfa6",
     "voice": "josh-finkel",
     "title": "Leviticus 4:3 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-5345d3c14aa4e8919310a3e4",
-    "bytes": 132116,
-    "sha256": "5345d3c14aa4e8919310a3e48ef2f11220c74cab531d382409bae9ac9495eb6d",
+    "audioPath": "/api/human-tracks/finkel-0baf3efb8fda4c3cb236bfa6",
+    "bytes": 131904,
+    "sha256": "0baf3efb8fda4c3cb236bfa60753b7f873d7b54c19c0b38fbf56c1a92ee6eea7",
     "durationSec": 16.42,
     "passages": [
       {
@@ -6689,33 +6689,33 @@
     ]
   },
   {
-    "id": "finkel-f7a4e31ec6c39bd2b7d3d56b",
+    "id": "finkel-54b012ba6b89b8cde453e98e",
     "voice": "josh-finkel",
     "title": "Torah practice · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-f7a4e31ec6c39bd2b7d3d56b",
-    "bytes": 459274,
-    "sha256": "f7a4e31ec6c39bd2b7d3d56b883ea227b4b01d56987aa6714a736c239c7ba984",
+    "audioPath": "/api/human-tracks/finkel-54b012ba6b89b8cde453e98e",
+    "bytes": 459072,
+    "sha256": "54b012ba6b89b8cde453e98e2e3ccba98c8591758147ae6b58897bf6e030fa84",
     "durationSec": 57.33
   },
   {
-    "id": "finkel-5535f3c929aff818bfdd465f",
+    "id": "finkel-83af93a56d493fbb59ddef13",
     "voice": "josh-finkel",
     "title": "Torah practice · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-5535f3c929aff818bfdd465f",
-    "bytes": 79892,
-    "sha256": "5535f3c929aff818bfdd465fb340abe07f54569f1738393bf20f781442770d6e",
+    "audioPath": "/api/human-tracks/finkel-83af93a56d493fbb59ddef13",
+    "bytes": 79680,
+    "sha256": "83af93a56d493fbb59ddef13b68c7b32e494688c6462c4753cc2b8b23f23929d",
     "durationSec": 9.91
   },
   {
-    "id": "finkel-dbc8ddb699c1fde976e7ee89",
+    "id": "finkel-939fcff06c734ec757b20fea",
     "voice": "josh-finkel",
     "title": "Leviticus 4:5 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-dbc8ddb699c1fde976e7ee89",
-    "bytes": 123462,
-    "sha256": "dbc8ddb699c1fde976e7ee896ae32fa7986b39450f46662a87a0dd37d29a4726",
+    "audioPath": "/api/human-tracks/finkel-939fcff06c734ec757b20fea",
+    "bytes": 123264,
+    "sha256": "939fcff06c734ec757b20fea7dbbb4083cbc62d9d16f5694797df385575a9ab6",
     "durationSec": 15.35,
     "passages": [
       {
@@ -6728,13 +6728,13 @@
     ]
   },
   {
-    "id": "finkel-d4fa6ea7f6f29c39c0a817a2",
+    "id": "finkel-6be879751f8bf95e298e1b3c",
     "voice": "josh-finkel",
     "title": "Leviticus 4:5 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-d4fa6ea7f6f29c39c0a817a2",
-    "bytes": 73364,
-    "sha256": "d4fa6ea7f6f29c39c0a817a28c24cdec6116c6a80c9e3d27d700e3dd053c31ec",
+    "audioPath": "/api/human-tracks/finkel-6be879751f8bf95e298e1b3c",
+    "bytes": 73152,
+    "sha256": "6be879751f8bf95e298e1b3c820612856c7674739996e524f6b539eb39939f03",
     "durationSec": 9.08,
     "passages": [
       {
@@ -6747,13 +6747,13 @@
     ]
   },
   {
-    "id": "finkel-3a0775df2b20c31b30bad914",
+    "id": "finkel-234c945503f96b766426ccc6",
     "voice": "josh-finkel",
     "title": "Leviticus 4:5–6 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-3a0775df2b20c31b30bad914",
-    "bytes": 172632,
-    "sha256": "3a0775df2b20c31b30bad9140fe035f309780e05d468eba182e0594641ae043c",
+    "audioPath": "/api/human-tracks/finkel-234c945503f96b766426ccc6",
+    "bytes": 172416,
+    "sha256": "234c945503f96b766426ccc63dbb65f7ff2c481e0b49f173e4125e8c87a1587f",
     "durationSec": 21.49,
     "passages": [
       {
@@ -6766,13 +6766,13 @@
     ]
   },
   {
-    "id": "finkel-024979eff8c18b8ec16a976d",
+    "id": "finkel-b66588d3c259a7b0d32b7f36",
     "voice": "josh-finkel",
     "title": "Leviticus 4:6 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-024979eff8c18b8ec16a976d",
-    "bytes": 219078,
-    "sha256": "024979eff8c18b8ec16a976ddad8cbf6058971f86d7eb3fe0f9544860d419579",
+    "audioPath": "/api/human-tracks/finkel-b66588d3c259a7b0d32b7f36",
+    "bytes": 218880,
+    "sha256": "b66588d3c259a7b0d32b7f36386c3ed4a1535baf7278e9f662937d685df53a7b",
     "durationSec": 27.29,
     "passages": [
       {
@@ -6785,13 +6785,13 @@
     ]
   },
   {
-    "id": "finkel-a6249c09a08ae72f23f6384d",
+    "id": "finkel-aa3a70805fc36c7c4bb9847f",
     "voice": "josh-finkel",
     "title": "Leviticus 4:6 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-a6249c09a08ae72f23f6384d",
-    "bytes": 149396,
-    "sha256": "a6249c09a08ae72f23f6384d67153fd04f9a51d67252e6556d93d93e9028160d",
+    "audioPath": "/api/human-tracks/finkel-aa3a70805fc36c7c4bb9847f",
+    "bytes": 149184,
+    "sha256": "aa3a70805fc36c7c4bb9847f8d9d67bb4a6af91a5d4aa64deff5ca7126cc6df4",
     "durationSec": 18.6,
     "passages": [
       {
@@ -6804,13 +6804,13 @@
     ]
   },
   {
-    "id": "finkel-cd12d24a8154d0153be942f7",
+    "id": "finkel-6da92b8bd893579b59a2901f",
     "voice": "josh-finkel",
     "title": "Leviticus 4:7 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-cd12d24a8154d0153be942f7",
-    "bytes": 295302,
-    "sha256": "cd12d24a8154d0153be942f75105e6349b902f23c79bc9991dd3d4abd1d7b327",
+    "audioPath": "/api/human-tracks/finkel-6da92b8bd893579b59a2901f",
+    "bytes": 295104,
+    "sha256": "6da92b8bd893579b59a2901f6066d5e1ec6a069bf359364e4f9dfc555a75be78",
     "durationSec": 36.84,
     "passages": [
       {
@@ -6823,13 +6823,13 @@
     ]
   },
   {
-    "id": "finkel-ce5f6968068b0ab610f8b05a",
+    "id": "finkel-46713b8297711b41d94586af",
     "voice": "josh-finkel",
     "title": "Leviticus 4:7 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-ce5f6968068b0ab610f8b05a",
-    "bytes": 378822,
-    "sha256": "ce5f6968068b0ab610f8b05ab151cefb0f995af5a33598b5c4734a3d3986969a",
+    "audioPath": "/api/human-tracks/finkel-46713b8297711b41d94586af",
+    "bytes": 378624,
+    "sha256": "46713b8297711b41d94586afd769966d7fe579cf5c23bb5c936bf24e0edd0471",
     "durationSec": 47.28,
     "passages": [
       {
@@ -6842,13 +6842,13 @@
     ]
   },
   {
-    "id": "finkel-57028fb46dce854e26ebc7dd",
+    "id": "finkel-a807d4d7fc1dd42b59d7952d",
     "voice": "josh-finkel",
     "title": "Leviticus 4:7 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-57028fb46dce854e26ebc7dd",
-    "bytes": 291670,
-    "sha256": "57028fb46dce854e26ebc7ddcd3ef7f52580c067166d553f4495e082c7739447",
+    "audioPath": "/api/human-tracks/finkel-a807d4d7fc1dd42b59d7952d",
+    "bytes": 291456,
+    "sha256": "a807d4d7fc1dd42b59d7952dcdf0a37ab1c06ddf1d6992cafd92dd5b61c54c75",
     "durationSec": 36.38,
     "passages": [
       {
@@ -6861,13 +6861,13 @@
     ]
   },
   {
-    "id": "finkel-9303c5f3600a0962553900e7",
+    "id": "finkel-dc609f046cbdeb6e80029da1",
     "voice": "josh-finkel",
     "title": "Numbers 11:30–32 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-9303c5f3600a0962553900e7",
-    "bytes": 1614570,
-    "sha256": "9303c5f3600a0962553900e721cfadf60035fc8a87b6186937aac6f2dd965e0d",
+    "audioPath": "/api/human-tracks/finkel-dc609f046cbdeb6e80029da1",
+    "bytes": 1614366,
+    "sha256": "dc609f046cbdeb6e80029da12e3fd7ad19b2b5612fcdb27f54553c00c26490a5",
     "durationSec": 201.73,
     "passages": [
       {
@@ -6880,13 +6880,13 @@
     ]
   },
   {
-    "id": "finkel-e9b52afecd39dd1ea75a378a",
+    "id": "finkel-b50d226367608de51132eca2",
     "voice": "josh-finkel",
     "title": "Numbers 11:30–32 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-e9b52afecd39dd1ea75a378a",
-    "bytes": 649100,
-    "sha256": "e9b52afecd39dd1ea75a378a2de46978d0f7d86de0c13faf8bb1b048ea6b1329",
+    "audioPath": "/api/human-tracks/finkel-b50d226367608de51132eca2",
+    "bytes": 648880,
+    "sha256": "b50d226367608de51132eca24f605990e92ccea335331181b66ef905816a2578",
     "durationSec": 81.04,
     "passages": [
       {
@@ -6899,13 +6899,13 @@
     ]
   },
   {
-    "id": "finkel-2dcdd32de13ad5f34384b9f7",
+    "id": "finkel-da3deeb18d0a27d85c0c03d8",
     "voice": "josh-finkel",
     "title": "Numbers 11:31 · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-2dcdd32de13ad5f34384b9f7",
-    "bytes": 1347334,
-    "sha256": "2dcdd32de13ad5f34384b9f70c7dd815a8994417e0cdd0db8bc4698b83da945e",
+    "audioPath": "/api/human-tracks/finkel-da3deeb18d0a27d85c0c03d8",
+    "bytes": 1347072,
+    "sha256": "da3deeb18d0a27d85c0c03d892877a63ab1b6bf57956d3676e1085d8c32183c6",
     "durationSec": 168.33,
     "passages": [
       {
@@ -6918,23 +6918,23 @@
     ]
   },
   {
-    "id": "finkel-198abc114721737f7d984b6a",
+    "id": "finkel-dc9836c6ba22d5671f0777cb",
     "voice": "josh-finkel",
     "title": "Torah practice · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-198abc114721737f7d984b6a",
-    "bytes": 357914,
-    "sha256": "198abc114721737f7d984b6abf9f0ec385735bea956dbf68ebd74b86998de929",
+    "audioPath": "/api/human-tracks/finkel-dc9836c6ba22d5671f0777cb",
+    "bytes": 357696,
+    "sha256": "dc9836c6ba22d5671f0777cbe4ebfd554b14c24a17cdbc6b958b591aaf9ac8e7",
     "durationSec": 44.66
   },
   {
-    "id": "finkel-70bb00f5f77e6a0e1cde60e5",
+    "id": "finkel-e4d3db3705a8c70f811e25cf",
     "voice": "josh-finkel",
     "title": "Numbers 13:17–20 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-70bb00f5f77e6a0e1cde60e5",
-    "bytes": 789727,
-    "sha256": "70bb00f5f77e6a0e1cde60e5969996025c961c6fc9eb48086656774bf88f6a12",
+    "audioPath": "/api/human-tracks/finkel-e4d3db3705a8c70f811e25cf",
+    "bytes": 789523,
+    "sha256": "e4d3db3705a8c70f811e25cff39b5ae44173d84a39b747d31321a155887518e1",
     "durationSec": 98.63,
     "passages": [
       {
@@ -6947,13 +6947,13 @@
     ]
   },
   {
-    "id": "finkel-c19fc3333dfc8c5d8c11ae1f",
+    "id": "finkel-7519e188eee259966110c253",
     "voice": "josh-finkel",
     "title": "Numbers 13:17–20 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-c19fc3333dfc8c5d8c11ae1f",
-    "bytes": 640112,
-    "sha256": "c19fc3333dfc8c5d8c11ae1f8cde2424965796a538f73daaf33e5778aafbf4fe",
+    "audioPath": "/api/human-tracks/finkel-7519e188eee259966110c253",
+    "bytes": 639894,
+    "sha256": "7519e188eee259966110c2531302de74c375ae8ace865d1298b47d5160f46bae",
     "durationSec": 79.91,
     "passages": [
       {
@@ -6966,13 +6966,13 @@
     ]
   },
   {
-    "id": "finkel-1f059589f9bfec5247b62336",
+    "id": "finkel-e8b9353a06de74f8b17ad429",
     "voice": "josh-finkel",
     "title": "Numbers 13:1–3 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-1f059589f9bfec5247b62336",
-    "bytes": 393512,
-    "sha256": "1f059589f9bfec5247b623366ad9d2d566ca718b8c34f909bdfaa6eff1e6ce7c",
+    "audioPath": "/api/human-tracks/finkel-e8b9353a06de74f8b17ad429",
+    "bytes": 393298,
+    "sha256": "e8b9353a06de74f8b17ad429bb03857df8117e8bf280175ac2a3fe2ea3ccf4f7",
     "durationSec": 49.09,
     "passages": [
       {
@@ -6985,13 +6985,13 @@
     ]
   },
   {
-    "id": "finkel-7eae7ba703adf16681fd6cde",
+    "id": "finkel-7500143dcee3b22879cf5bb4",
     "voice": "josh-finkel",
     "title": "Numbers 13:2–3 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-7eae7ba703adf16681fd6cde",
-    "bytes": 487957,
-    "sha256": "7eae7ba703adf16681fd6cde8e96475fb9c021fe900aebc3f4066a58b754673f",
+    "audioPath": "/api/human-tracks/finkel-7500143dcee3b22879cf5bb4",
+    "bytes": 487757,
+    "sha256": "7500143dcee3b22879cf5bb4e5610e7a6713fc9621a24171d680716ea1bfdb6c",
     "durationSec": 60.9,
     "passages": [
       {
@@ -7004,13 +7004,13 @@
     ]
   },
   {
-    "id": "finkel-e902cfa31ec9248d94296bc3",
+    "id": "finkel-fc4376b9489c6e8f3ceee2e5",
     "voice": "josh-finkel",
     "title": "Numbers 13:4–16 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-e902cfa31ec9248d94296bc3",
-    "bytes": 763617,
-    "sha256": "e902cfa31ec9248d94296bc34997a97314ba5f03909e527e238647089a488534",
+    "audioPath": "/api/human-tracks/finkel-fc4376b9489c6e8f3ceee2e5",
+    "bytes": 763401,
+    "sha256": "fc4376b9489c6e8f3ceee2e571725be916f2e780686c7345b70ea9acbc916ad2",
     "durationSec": 95.36,
     "passages": [
       {
@@ -7023,23 +7023,23 @@
     ]
   },
   {
-    "id": "finkel-af2e244d2d6e650729cdf38c",
+    "id": "finkel-e568e4873ad7c4286271f4a1",
     "voice": "josh-finkel",
     "title": "Torah practice · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-af2e244d2d6e650729cdf38c",
-    "bytes": 330490,
-    "sha256": "af2e244d2d6e650729cdf38ca425d2a93dfcc95454e81518cad2d2ebaf7f68fb",
+    "audioPath": "/api/human-tracks/finkel-e568e4873ad7c4286271f4a1",
+    "bytes": 330240,
+    "sha256": "e568e4873ad7c4286271f4a136a1853eb04786d7d97aa38ad1c095509d45ffa8",
     "durationSec": 41.22
   },
   {
-    "id": "finkel-0603c34d384bd8332dd24a88",
+    "id": "finkel-ac91be7ded9253a21ebeb26f",
     "voice": "josh-finkel",
     "title": "Numbers 15:1–2, Numbers 16:22–25 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-0603c34d384bd8332dd24a88",
-    "bytes": 575276,
-    "sha256": "0603c34d384bd8332dd24a88aa7c5ee654132ccdab14d878d7fbda1110f95e0a",
+    "audioPath": "/api/human-tracks/finkel-ac91be7ded9253a21ebeb26f",
+    "bytes": 575040,
+    "sha256": "ac91be7ded9253a21ebeb26f61017e286c35e67a57c9d6d94a7a340c21c06921",
     "durationSec": 71.81,
     "passages": [
       {
@@ -7059,33 +7059,33 @@
     ]
   },
   {
-    "id": "finkel-e2d3a0136b9f303a28896f3b",
+    "id": "finkel-80fdb67d2ace453b1332479d",
     "voice": "josh-finkel",
     "title": "Torah practice · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-e2d3a0136b9f303a28896f3b",
-    "bytes": 505222,
-    "sha256": "e2d3a0136b9f303a28896f3b95963ec44ee047895c8103c2ddf7692f51385b95",
+    "audioPath": "/api/human-tracks/finkel-80fdb67d2ace453b1332479d",
+    "bytes": 504960,
+    "sha256": "80fdb67d2ace453b1332479dcd8859a6cf824eca5d585d2f9544c484bd1b4762",
     "durationSec": 63.07
   },
   {
-    "id": "finkel-db4e326cb27241f034668f62",
+    "id": "finkel-6a2ffd8d6e9097187a8eef78",
     "voice": "josh-finkel",
     "title": "Torah practice · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-db4e326cb27241f034668f62",
-    "bytes": 805324,
-    "sha256": "db4e326cb27241f034668f62c3e1a690d34d8ed7415696ad4c32b71132b3dd5a",
+    "audioPath": "/api/human-tracks/finkel-6a2ffd8d6e9097187a8eef78",
+    "bytes": 805056,
+    "sha256": "6a2ffd8d6e9097187a8eef7899b4d0590eff98b99fa536cc5048dc8a2c58ba79",
     "durationSec": 100.58
   },
   {
-    "id": "finkel-ce738a4742f717b382b62fda",
+    "id": "finkel-7cfcbb4576c692e51a826b59",
     "voice": "josh-finkel",
     "title": "Numbers 15:30–31 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-ce738a4742f717b382b62fda",
-    "bytes": 372314,
-    "sha256": "ce738a4742f717b382b62fda3b92f7ba6445473db23f606e5aaadbaf7fd133f2",
+    "audioPath": "/api/human-tracks/finkel-7cfcbb4576c692e51a826b59",
+    "bytes": 372096,
+    "sha256": "7cfcbb4576c692e51a826b593b2a4f5a675e9373b386e51bbc7da9615082b2a9",
     "durationSec": 46.46,
     "passages": [
       {
@@ -7098,13 +7098,13 @@
     ]
   },
   {
-    "id": "finkel-2090713699a1bfc6c2cd6ac2",
+    "id": "finkel-834e4b57f2d644199692968e",
     "voice": "josh-finkel",
     "title": "Numbers 15:30–32 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-2090713699a1bfc6c2cd6ac2",
-    "bytes": 622476,
-    "sha256": "2090713699a1bfc6c2cd6ac23c58aa24af4f8b47cf69ffec447e3bda3a325c7b",
+    "audioPath": "/api/human-tracks/finkel-834e4b57f2d644199692968e",
+    "bytes": 622272,
+    "sha256": "834e4b57f2d644199692968ee558e3c6bd35e7706da976b43d03bd14a5a0322e",
     "durationSec": 77.72,
     "passages": [
       {
@@ -7117,13 +7117,13 @@
     ]
   },
   {
-    "id": "finkel-e759753904c8f1f9eff30ecb",
+    "id": "finkel-90155e010998aff37ecaf6f1",
     "voice": "josh-finkel",
     "title": "Numbers 15:30–32 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-e759753904c8f1f9eff30ecb",
-    "bytes": 411868,
-    "sha256": "e759753904c8f1f9eff30ecb3cf365c7f05bf26272bf362fb4df835fe7e5b00b",
+    "audioPath": "/api/human-tracks/finkel-90155e010998aff37ecaf6f1",
+    "bytes": 411648,
+    "sha256": "90155e010998aff37ecaf6f1f4499c89598af275cdc752ceb02fd5337f3bb19b",
     "durationSec": 51.4,
     "passages": [
       {
@@ -7136,13 +7136,13 @@
     ]
   },
   {
-    "id": "finkel-812ca03352fa05bb6f8a7143",
+    "id": "finkel-f6b7962675cc0c37db46e66c",
     "voice": "josh-finkel",
     "title": "Numbers 15:33–35 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-812ca03352fa05bb6f8a7143",
-    "bytes": 433356,
-    "sha256": "812ca03352fa05bb6f8a71433628046eb55c25241f3e407f8a36ea925e996e94",
+    "audioPath": "/api/human-tracks/finkel-f6b7962675cc0c37db46e66c",
+    "bytes": 433152,
+    "sha256": "f6b7962675cc0c37db46e66c850a37cb40c175232be020b7e546fded2a53e494",
     "durationSec": 54.08,
     "passages": [
       {
@@ -7155,23 +7155,23 @@
     ]
   },
   {
-    "id": "finkel-f545bed5b6244782a7785bf5",
+    "id": "finkel-f5a4730352d6e49089d157b5",
     "voice": "josh-finkel",
     "title": "Torah practice · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-f545bed5b6244782a7785bf5",
-    "bytes": 325658,
-    "sha256": "f545bed5b6244782a7785bf53d52c3bb16e0706f0a2bd10b9ec8040bd055e4de",
+    "audioPath": "/api/human-tracks/finkel-f5a4730352d6e49089d157b5",
+    "bytes": 325440,
+    "sha256": "f5a4730352d6e49089d157b5e0a3ad44ac78dea4a3be2e60a859f7a9cc909be4",
     "durationSec": 40.61
   },
   {
-    "id": "finkel-5fc31198f0addb3e82329c96",
+    "id": "finkel-65501f6f7ffaade2532997b9",
     "voice": "josh-finkel",
     "title": "Numbers 15:36–38 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-5fc31198f0addb3e82329c96",
-    "bytes": 540300,
-    "sha256": "5fc31198f0addb3e82329c965260e9fe1828c710fd58cd6b0dcddb4a27f86782",
+    "audioPath": "/api/human-tracks/finkel-65501f6f7ffaade2532997b9",
+    "bytes": 540096,
+    "sha256": "65501f6f7ffaade2532997b958f05380ef8d092b3d7aa8ae76a115f5142b33ac",
     "durationSec": 67.45,
     "passages": [
       {
@@ -7184,13 +7184,13 @@
     ]
   },
   {
-    "id": "finkel-8f5ba270ed21c2eb734a6002",
+    "id": "finkel-5526e2c7c72df02d64310b9b",
     "voice": "josh-finkel",
     "title": "Numbers 15:36–38 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-8f5ba270ed21c2eb734a6002",
-    "bytes": 369434,
-    "sha256": "8f5ba270ed21c2eb734a6002188f1fec7be341de43f6ce967dc66009da6c408f",
+    "audioPath": "/api/human-tracks/finkel-5526e2c7c72df02d64310b9b",
+    "bytes": 369216,
+    "sha256": "5526e2c7c72df02d64310b9bb292d0b437221cd0e6c78486b7e6d4a5ce54a680",
     "durationSec": 46.09,
     "passages": [
       {
@@ -7203,13 +7203,13 @@
     ]
   },
   {
-    "id": "finkel-d5a0802c974f56490c22ed15",
+    "id": "finkel-df7e40065432cc22c4e2f7f8",
     "voice": "josh-finkel",
     "title": "Numbers 15:39–41 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-d5a0802c974f56490c22ed15",
-    "bytes": 987276,
-    "sha256": "d5a0802c974f56490c22ed15ad370a57b099e30bb35e6c7e6089745d29dce448",
+    "audioPath": "/api/human-tracks/finkel-df7e40065432cc22c4e2f7f8",
+    "bytes": 987072,
+    "sha256": "df7e40065432cc22c4e2f7f83db47e325a02ca2ab20ba09dc3ff526e62186c78",
     "durationSec": 123.32,
     "passages": [
       {
@@ -7222,13 +7222,13 @@
     ]
   },
   {
-    "id": "finkel-7bf55032cfcc23f750efbde8",
+    "id": "finkel-31b5a4b9149ad536ae22cd23",
     "voice": "josh-finkel",
     "title": "Numbers 16:14–16 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-7bf55032cfcc23f750efbde8",
-    "bytes": 736524,
-    "sha256": "7bf55032cfcc23f750efbde8898b39615ab2c593b61ddf1e929a6e463bc7b43b",
+    "audioPath": "/api/human-tracks/finkel-31b5a4b9149ad536ae22cd23",
+    "bytes": 736320,
+    "sha256": "31b5a4b9149ad536ae22cd233d9abce8688360c8a87a564c4a671338865785bd",
     "durationSec": 91.97,
     "passages": [
       {
@@ -7241,13 +7241,13 @@
     ]
   },
   {
-    "id": "finkel-102630cd3478d811848c8f38",
+    "id": "finkel-ac925418c38816c2dc4408a8",
     "voice": "josh-finkel",
     "title": "Numbers 16:14–16 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-102630cd3478d811848c8f38",
-    "bytes": 437594,
-    "sha256": "102630cd3478d811848c8f38e80ab9957c9de6c979df90379f25ab892b482f12",
+    "audioPath": "/api/human-tracks/finkel-ac925418c38816c2dc4408a8",
+    "bytes": 437376,
+    "sha256": "ac925418c38816c2dc4408a841d92888bc5bf149215161aa1d562367281f24b7",
     "durationSec": 54.62,
     "passages": [
       {
@@ -7260,13 +7260,13 @@
     ]
   },
   {
-    "id": "finkel-190326571d8f7501454b67ce",
+    "id": "finkel-45cb7a1a047ec085bdcc8def",
     "voice": "josh-finkel",
     "title": "Numbers 16:17–19 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-190326571d8f7501454b67ce",
-    "bytes": 651468,
-    "sha256": "190326571d8f7501454b67ce72b0ceea3559398f429c748f8ee17bddb25d97f8",
+    "audioPath": "/api/human-tracks/finkel-45cb7a1a047ec085bdcc8def",
+    "bytes": 651264,
+    "sha256": "45cb7a1a047ec085bdcc8def2f93cff7dad0170642dbeb953ba7d0065833a365",
     "durationSec": 81.36,
     "passages": [
       {
@@ -7279,23 +7279,23 @@
     ]
   },
   {
-    "id": "finkel-dba528efe52abd9caa9d6944",
+    "id": "finkel-c72f4e110e0622f8c68c3a94",
     "voice": "josh-finkel",
     "title": "Torah practice · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-dba528efe52abd9caa9d6944",
-    "bytes": 428378,
-    "sha256": "dba528efe52abd9caa9d6944e64c368d59b7b513b497245e1049892f4c750c48",
+    "audioPath": "/api/human-tracks/finkel-c72f4e110e0622f8c68c3a94",
+    "bytes": 428160,
+    "sha256": "c72f4e110e0622f8c68c3a945987709b4a640ef499b3d918c6b5ae3120368cfc",
     "durationSec": 53.47
   },
   {
-    "id": "finkel-28b034181f9f43e0eee4d141",
+    "id": "finkel-55d08aa8f5767a4e65abc4db",
     "voice": "josh-finkel",
     "title": "Numbers 20:12–17 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-28b034181f9f43e0eee4d141",
-    "bytes": 1157004,
-    "sha256": "28b034181f9f43e0eee4d141a34a8b5b1a1e9075810e5900b7800052fed1c15f",
+    "audioPath": "/api/human-tracks/finkel-55d08aa8f5767a4e65abc4db",
+    "bytes": 1156800,
+    "sha256": "55d08aa8f5767a4e65abc4db00abbb595c836e843bb13eb432f42125d9b19105",
     "durationSec": 144.55,
     "passages": [
       {
@@ -7308,13 +7308,13 @@
     ]
   },
   {
-    "id": "finkel-2288aea4a99ff215995790f9",
+    "id": "finkel-6c3b1774ba117c0e7e85e8ff",
     "voice": "josh-finkel",
     "title": "Numbers 20:12–17 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-2288aea4a99ff215995790f9",
-    "bytes": 888218,
-    "sha256": "2288aea4a99ff215995790f9a40972cc0afaf2724a3b1d41b8da1bdf0882c756",
+    "audioPath": "/api/human-tracks/finkel-6c3b1774ba117c0e7e85e8ff",
+    "bytes": 888000,
+    "sha256": "6c3b1774ba117c0e7e85e8ff398548a6024e19201de8cc3e003e08d049733453",
     "durationSec": 110.93,
     "passages": [
       {
@@ -7327,13 +7327,13 @@
     ]
   },
   {
-    "id": "finkel-4939bb91ca2fd026f0923ce7",
+    "id": "finkel-6edaa3bc68027e0b79bb33d8",
     "voice": "josh-finkel",
     "title": "Numbers 20:18–21 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-4939bb91ca2fd026f0923ce7",
-    "bytes": 563148,
-    "sha256": "4939bb91ca2fd026f0923ce76613516afc467109fd1e65de073748fa04adf99c",
+    "audioPath": "/api/human-tracks/finkel-6edaa3bc68027e0b79bb33d8",
+    "bytes": 562944,
+    "sha256": "6edaa3bc68027e0b79bb33d8add659b843cfe118cd32f6555095f69d484cc7e4",
     "durationSec": 70.31,
     "passages": [
       {
@@ -7346,33 +7346,33 @@
     ]
   },
   {
-    "id": "finkel-1cfbfb19bea024e2c096f7a6",
+    "id": "finkel-9350b4a973597d42643a13d1",
     "voice": "josh-finkel",
     "title": "Torah practice · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-1cfbfb19bea024e2c096f7a6",
-    "bytes": 408026,
-    "sha256": "1cfbfb19bea024e2c096f7a6e04d41ebd1ed0cfb4e04c66fc81e4fdab05c823a",
+    "audioPath": "/api/human-tracks/finkel-9350b4a973597d42643a13d1",
+    "bytes": 407808,
+    "sha256": "9350b4a973597d42643a13d1fed5fa776e023e807bf67f50471cbf55cf499e97",
     "durationSec": 50.91
   },
   {
-    "id": "finkel-d10c42f7e63bb7a8f1964733",
+    "id": "finkel-3dd439932d8b58fa03c8048e",
     "voice": "josh-finkel",
     "title": "Torah practice · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-d10c42f7e63bb7a8f1964733",
-    "bytes": 576024,
-    "sha256": "d10c42f7e63bb7a8f19647337de7b4c7f8339673df2865bc436f44549fc00104",
+    "audioPath": "/api/human-tracks/finkel-3dd439932d8b58fa03c8048e",
+    "bytes": 575808,
+    "sha256": "3dd439932d8b58fa03c8048ef52c41833c90496e89747334b74743343d8fc8bf",
     "durationSec": 71.92
   },
   {
-    "id": "finkel-c97af9d8980f81fb9b01bb71",
+    "id": "finkel-54e5d19cc556e6d6991f2e00",
     "voice": "josh-finkel",
     "title": "Numbers 20:8–11 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-c97af9d8980f81fb9b01bb71",
-    "bytes": 827146,
-    "sha256": "c97af9d8980f81fb9b01bb71c36e7e46f6f399ed6a44efd7170a4b0d1724017f",
+    "audioPath": "/api/human-tracks/finkel-54e5d19cc556e6d6991f2e00",
+    "bytes": 826944,
+    "sha256": "54e5d19cc556e6d6991f2e00369062e19ae78a44217e55665c7feba41e192a23",
     "durationSec": 103.31,
     "passages": [
       {
@@ -7385,13 +7385,13 @@
     ]
   },
   {
-    "id": "finkel-801f2ba3a7016bf6aa15925d",
+    "id": "finkel-bdb935f2ff5e0b9115f57696",
     "voice": "josh-finkel",
     "title": "Numbers 30:2–5 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-801f2ba3a7016bf6aa15925d",
-    "bytes": 865160,
-    "sha256": "801f2ba3a7016bf6aa15925dff7d7986e7b84cecba3d023d8a7edf6fbd8bd3bc",
+    "audioPath": "/api/human-tracks/finkel-bdb935f2ff5e0b9115f57696",
+    "bytes": 864960,
+    "sha256": "bdb935f2ff5e0b9115f57696e11c723def7a05575240abdb48b0d7826ec72f63",
     "durationSec": 108.07,
     "passages": [
       {
@@ -7404,13 +7404,13 @@
     ]
   },
   {
-    "id": "finkel-4fc41dd5f11eaa372e750917",
+    "id": "finkel-f5b6b5153be2f19d32a392b0",
     "voice": "josh-finkel",
     "title": "Numbers 30:2–5 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-4fc41dd5f11eaa372e750917",
-    "bytes": 458902,
-    "sha256": "4fc41dd5f11eaa372e750917f4ddac50e3414ddd5f6801835ab08a2e0aa9b78c",
+    "audioPath": "/api/human-tracks/finkel-f5b6b5153be2f19d32a392b0",
+    "bytes": 458688,
+    "sha256": "f5b6b5153be2f19d32a392b0b9bee915c47c2995219680f332f438317bac0c8d",
     "durationSec": 57.28,
     "passages": [
       {
@@ -7423,13 +7423,13 @@
     ]
   },
   {
-    "id": "finkel-cf86205401bbd0bdd5ac83b0",
+    "id": "finkel-a161d3f8a390dbbd89ff8748",
     "voice": "josh-finkel",
     "title": "Numbers 30:5–13 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-cf86205401bbd0bdd5ac83b0",
-    "bytes": 1180248,
-    "sha256": "cf86205401bbd0bdd5ac83b08403d9cb8ed16435a12be904e27231776392c5df",
+    "audioPath": "/api/human-tracks/finkel-a161d3f8a390dbbd89ff8748",
+    "bytes": 1180032,
+    "sha256": "a161d3f8a390dbbd89ff874897fefc818c39ac01122a28889a3df795071e9c0e",
     "durationSec": 147.45,
     "passages": [
       {
@@ -7442,13 +7442,13 @@
     ]
   },
   {
-    "id": "finkel-c4120561c6962b501317564f",
+    "id": "finkel-147ddf18be2750afc6fb4206",
     "voice": "josh-finkel",
     "title": "Numbers 30:6–17 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-c4120561c6962b501317564f",
-    "bytes": 1590552,
-    "sha256": "c4120561c6962b501317564f373d27a435118f184d0c3cf38e38e42bf4cd5d15",
+    "audioPath": "/api/human-tracks/finkel-147ddf18be2750afc6fb4206",
+    "bytes": 1590336,
+    "sha256": "147ddf18be2750afc6fb4206d7b10083260cd3271fb569bd09c0a267b77a97a3",
     "durationSec": 198.73,
     "passages": [
       {
@@ -7461,13 +7461,13 @@
     ]
   },
   {
-    "id": "finkel-ead549cf323d428b3d1babb1",
+    "id": "finkel-ac5c17afe6daac38e3cf9205",
     "voice": "josh-finkel",
     "title": "Numbers 30:8–17 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-ead549cf323d428b3d1babb1",
-    "bytes": 2258314,
-    "sha256": "ead549cf323d428b3d1babb1de7e5accf74ab35e28bd6ee8405e3a698f4ea603",
+    "audioPath": "/api/human-tracks/finkel-ac5c17afe6daac38e3cf9205",
+    "bytes": 2258112,
+    "sha256": "ac5c17afe6daac38e3cf9205ba195b65d5b76510ccbe50d888bc77197a919967",
     "durationSec": 282.2,
     "passages": [
       {
@@ -7480,23 +7480,23 @@
     ]
   },
   {
-    "id": "finkel-9c75e61e70b217775269a6ef",
+    "id": "finkel-4c3e7f9c2d05b96b39ef598b",
     "voice": "josh-finkel",
     "title": "Torah practice · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-9c75e61e70b217775269a6ef",
-    "bytes": 2665375,
-    "sha256": "9c75e61e70b217775269a6ef2cbf24cf6d2b434b2643f02566474dd78839d0a6",
+    "audioPath": "/api/human-tracks/finkel-4c3e7f9c2d05b96b39ef598b",
+    "bytes": 2665115,
+    "sha256": "4c3e7f9c2d05b96b39ef598bcb74dfd0a43dae3012157db37172a57bec69833f",
     "durationSec": 333.08
   },
   {
-    "id": "finkel-bd6d095997a0273e84192dd6",
+    "id": "finkel-efcaf0e4c5b7cb6f01894ec7",
     "voice": "josh-finkel",
     "title": "Numbers 5:15–17 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-bd6d095997a0273e84192dd6",
-    "bytes": 781834,
-    "sha256": "bd6d095997a0273e84192dd63e590edf1c87c1d202469c6d34ccd5678065921b",
+    "audioPath": "/api/human-tracks/finkel-efcaf0e4c5b7cb6f01894ec7",
+    "bytes": 781632,
+    "sha256": "efcaf0e4c5b7cb6f01894ec7063efbe8a4df8ad3dd2be0bee56637956d471acc",
     "durationSec": 97.64,
     "passages": [
       {
@@ -7509,13 +7509,13 @@
     ]
   },
   {
-    "id": "finkel-94c38333dd4286a0bf1cacf4",
+    "id": "finkel-76aa95a8a1dceb5f8119659d",
     "voice": "josh-finkel",
     "title": "Numbers 5:15–17 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-94c38333dd4286a0bf1cacf4",
-    "bytes": 595608,
-    "sha256": "94c38333dd4286a0bf1cacf44dfcd361f6948a7128334e2808352d4df9936a62",
+    "audioPath": "/api/human-tracks/finkel-76aa95a8a1dceb5f8119659d",
+    "bytes": 595392,
+    "sha256": "76aa95a8a1dceb5f8119659d6f73d2d9d61319fbbcb87620a6a244b9c8d534d3",
     "durationSec": 74.36,
     "passages": [
       {
@@ -7528,13 +7528,13 @@
     ]
   },
   {
-    "id": "finkel-cabd94e5b4b6157367babcd7",
+    "id": "finkel-d5a7ae90cbd9b6e2aed837bc",
     "voice": "josh-finkel",
     "title": "Numbers 5:17 · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-cabd94e5b4b6157367babcd7",
-    "bytes": 1709921,
-    "sha256": "cabd94e5b4b6157367babcd7d67271d17bd4c325d4c1daa1234c88e001a840f8",
+    "audioPath": "/api/human-tracks/finkel-d5a7ae90cbd9b6e2aed837bc",
+    "bytes": 1709661,
+    "sha256": "d5a7ae90cbd9b6e2aed837bc8d1469ac6ac64451e0b8221c1683f78107beb144",
     "durationSec": 213.64,
     "passages": [
       {
@@ -7547,13 +7547,13 @@
     ]
   },
   {
-    "id": "finkel-2e0c421048f7cd307e003df0",
+    "id": "finkel-a4b72dbc9d368a0ce90dde05",
     "voice": "josh-finkel",
     "title": "Numbers 5:18–19 · Speak and repeat",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-2e0c421048f7cd307e003df0",
-    "bytes": 1711754,
-    "sha256": "2e0c421048f7cd307e003df0b1db97e79d11b9fbf4b0d26b8ff62712f12036f4",
+    "audioPath": "/api/human-tracks/finkel-a4b72dbc9d368a0ce90dde05",
+    "bytes": 1711488,
+    "sha256": "a4b72dbc9d368a0ce90dde052a023f2035358990906faa1a723e8ffb3c09a696",
     "durationSec": 213.87,
     "passages": [
       {
@@ -7566,23 +7566,23 @@
     ]
   },
   {
-    "id": "finkel-0c779872b0a9465f564c9be0",
+    "id": "finkel-e2c656431659f02e1b15ab9b",
     "voice": "josh-finkel",
     "title": "Torah practice · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-0c779872b0a9465f564c9be0",
-    "bytes": 873802,
-    "sha256": "0c779872b0a9465f564c9be0dc030dfdf11ef55467042a90f3e69700420c909f",
+    "audioPath": "/api/human-tracks/finkel-e2c656431659f02e1b15ab9b",
+    "bytes": 873600,
+    "sha256": "e2c656431659f02e1b15ab9bdd04ece0ed7e9474606ba6c0f056f2fc37527f42",
     "durationSec": 109.14
   },
   {
-    "id": "finkel-3dd6552a9f73eee58a3fe31d",
+    "id": "finkel-495bc4a50b56bf57082fec31",
     "voice": "josh-finkel",
     "title": "Numbers 5:18–20 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-3dd6552a9f73eee58a3fe31d",
-    "bytes": 659544,
-    "sha256": "3dd6552a9f73eee58a3fe31d3748f140ead1480e111bf89242d73a6a2c579646",
+    "audioPath": "/api/human-tracks/finkel-495bc4a50b56bf57082fec31",
+    "bytes": 659328,
+    "sha256": "495bc4a50b56bf57082fec310f00eebc78bacdc3c413ccad0ae45a6681e8521f",
     "durationSec": 82.35,
     "passages": [
       {
@@ -7595,13 +7595,13 @@
     ]
   },
   {
-    "id": "finkel-b408107e51a2d82aed83e3fc",
+    "id": "finkel-3835360d40e3078b4d18a0d9",
     "voice": "josh-finkel",
     "title": "Numbers 5:21–25 · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-b408107e51a2d82aed83e3fc",
-    "bytes": 1096522,
-    "sha256": "b408107e51a2d82aed83e3fc4bf8f32e417178a7c52ee3366578864cef2d57cc",
+    "audioPath": "/api/human-tracks/finkel-3835360d40e3078b4d18a0d9",
+    "bytes": 1096320,
+    "sha256": "3835360d40e3078b4d18a0d9430e66ffc7e24de3046d653489bd8ce86ebca068",
     "durationSec": 136.98,
     "passages": [
       {
@@ -7614,13 +7614,13 @@
     ]
   },
   {
-    "id": "finkel-76dfda9a506b2afba8a32e31",
+    "id": "finkel-92cc0b35c6c1d9b0e33f493a",
     "voice": "josh-finkel",
     "title": "Numbers 5:21–25 · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-76dfda9a506b2afba8a32e31",
-    "bytes": 827352,
-    "sha256": "76dfda9a506b2afba8a32e31111e8c916cdadbda483cda39a3db5a084891cc12",
+    "audioPath": "/api/human-tracks/finkel-92cc0b35c6c1d9b0e33f493a",
+    "bytes": 827136,
+    "sha256": "92cc0b35c6c1d9b0e33f493acff09eb29fa349ec8e19c08a1d7b1b021f5f7454",
     "durationSec": 103.34,
     "passages": [
       {
@@ -7633,23 +7633,23 @@
     ]
   },
   {
-    "id": "finkel-4599b4e6b92ff217ce79705d",
+    "id": "finkel-2b569299939dd57133b485b4",
     "voice": "josh-finkel",
     "title": "Torah practice · Chant",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-4599b4e6b92ff217ce79705d",
-    "bytes": 566218,
-    "sha256": "4599b4e6b92ff217ce79705ded03a65978e1bc0195819b95ec247d14671eb940",
+    "audioPath": "/api/human-tracks/finkel-2b569299939dd57133b485b4",
+    "bytes": 566016,
+    "sha256": "2b569299939dd57133b485b4d415fc79a16ff565b9bceaf8eaa6e71ccd23ef41",
     "durationSec": 70.69
   },
   {
-    "id": "finkel-54531e3ffbbffeab5fdbd14d",
+    "id": "finkel-9913d164866d30b3a7acd679",
     "voice": "josh-finkel",
     "title": "Numbers 5:26–28 · Chant, faster",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-54531e3ffbbffeab5fdbd14d",
-    "bytes": 536474,
-    "sha256": "54531e3ffbbffeab5fdbd14da9342280566de4733d8dfa42b21444ad1ae8192f",
+    "audioPath": "/api/human-tracks/finkel-9913d164866d30b3a7acd679",
+    "bytes": 536256,
+    "sha256": "9913d164866d30b3a7acd6797a9c4cfa08d2ee7454739abae4eaa4c9ac845932",
     "durationSec": 66.98,
     "passages": [
       {
@@ -7662,13 +7662,13 @@
     ]
   },
   {
-    "id": "finkel-3508acc5974d897565f9c9e1",
+    "id": "finkel-ee9fd07ef518dcaa33cdb875",
     "voice": "josh-finkel",
     "title": "Torah practice · Spoken reading",
     "kind": "torah",
-    "audioPath": "/api/human-tracks/finkel-3508acc5974d897565f9c9e1",
-    "bytes": 466392,
-    "sha256": "3508acc5974d897565f9c9e1b10a070d0dadc039cf23040b8f5dcf18308f9be2",
+    "audioPath": "/api/human-tracks/finkel-ee9fd07ef518dcaa33cdb875",
+    "bytes": 466176,
+    "sha256": "ee9fd07ef518dcaa33cdb875ce80f50536761b74544540068f8163bc8f606db2",
     "durationSec": 58.22
   }
 ]
