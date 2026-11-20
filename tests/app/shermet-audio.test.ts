@@ -26,9 +26,9 @@ describe("operator configured Shermet recordings", () => {
   it("limits public metadata to CRC and keeps local-only extras out of production and forks", async () => {
     const f = await fixture();
     // A local-only reference must stay outside the public pilot as it grows.
-    const localRef = "Genesis 1:2";
+    const localRef = "Ezekiel 48:1";
     expect(SHERMET_PILOT_RECORDINGS.some(entry => String(entry.ref) === localRef)).toBe(false);
-    await f.catalog([{ ...f.entry, ref: localRef }]);
+    await f.catalog([{ ...f.entry, kind: "haftarah", ref: localRef }]);
     const local = { BETTER_AUTH_URL: "http://localhost:3000", NODE_ENV: "development", SHERMET_AUDIO_DIR: f.dir };
     expect((await (await runtimeShermetAudio(local).catalog(request(localRef))).json()).refs).toContain(localRef);
     for (const env of [{ ...local, BETTER_AUTH_URL: "https://other.example.test" }, { ...local, BETTER_AUTH_URL: "https://torah.centralreform.org", NODE_ENV: "production" }]) {
@@ -49,7 +49,7 @@ describe("operator configured Shermet recordings", () => {
     expect(calls[0].url).toBe(`https://images.shulcloud.com/14396/${entry.sourceId}.mp3`);
     expect(calls[0].options).toMatchObject({ redirect: "error", credentials: "omit", cache: "no-store" });
     expect(calls[0].options?.headers).toBeUndefined();
-    await api.audio(request("Genesis 1:2")); expect(calls).toHaveLength(1);
+    await api.audio(request("Genesis 1:999")); expect(calls).toHaveLength(1);
   });
   it("is absent without configuration and only serves a verified canonical verse", async () => {
     expect((await createShermetAudio(undefined).audio(request("Genesis 1:1"))).status).toBe(404);
