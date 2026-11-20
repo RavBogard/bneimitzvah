@@ -4,6 +4,7 @@ import { promisify } from "node:util";
 import { extname, join } from "node:path";
 import { FONT_ASSETS, brandImageProblem, matchesAssetPin, reviewedFontAsset } from "./font-assets.mjs";
 import { privateBenchmarkProblem } from "./private-benchmark-policy.mjs";
+import { SHERMET_LIBRARY_FILE, shermetMetadataProblem } from "./shermet-metadata-policy.mjs";
 
 const run = promisify(execFile);
 const DATA = new Set([".json", ".csv", ".tsv", ".txt", ".jsonl", ".ndjson"]);
@@ -115,7 +116,8 @@ export function entryProblems(path, content = "") {
   if (KEYS.test(file) || /\.local\.json$/i.test(file)) problems.push("credential/config file");
   if (/(?:^|\/)\.env[^/]*$/i.test(file) && file !== ".env.example") problems.push("environment file");
   if (file === ".env.example" && text.split(/\r?\n/).some(line => !/^\s*(?:#|$)/.test(line) && !/^[A-Z][A-Z0-9_]*=\s*$/.test(line))) problems.push("environment example must contain names only");
-  if (data && !CONFIGS.has(file) && file !== "vercel.json" && !migrationMetadata && file !== SERVICE_COURSE_FILE && !SERVICE_COURSE_TENANT.test(file) && !/^(?:trope\/|tests\/fixtures\/(?:trope|portal)\/)/.test(file) && !/(?:^|\/)(?:LICENSE|OFL|PROVENANCE)(?:\.txt)?$/i.test(file)) problems.push("data file outside reviewed allow-list");
+  if (data && !CONFIGS.has(file) && file !== "vercel.json" && file !== SHERMET_LIBRARY_FILE && !migrationMetadata && file !== SERVICE_COURSE_FILE && !SERVICE_COURSE_TENANT.test(file) && !/^(?:trope\/|tests\/fixtures\/(?:trope|portal)\/)/.test(file) && !/(?:^|\/)(?:LICENSE|OFL|PROVENANCE)(?:\.txt)?$/i.test(file)) problems.push("data file outside reviewed allow-list");
+  if (file === SHERMET_LIBRARY_FILE) { const problem = shermetMetadataProblem(text); if (problem) problems.push(problem); }
   if (data && (file === SERVICE_COURSE_FILE || SERVICE_COURSE_TENANT.test(file))) { const problem = serviceCourseProblem(file, text); if (problem) problems.push(problem); }
   if (file === COURSE_DATA && COURSE_PRIVATE_FIELDS.test(text)) problems.push("private index field in course data");
   if (file === "vercel.json" && !reviewedServiceCron(text)) problems.push("deployment config must contain only the reviewed daily service drain cron");
