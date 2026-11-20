@@ -1,5 +1,7 @@
 # Beit Mitzvah Portal — mission brief
 
+**Amended November 20, 2026, additional recordings.** Daniel selected Hazan Rotem Cohen’s Egyptian Karaite recordings and Cantor Josh Finkel’s existing recordings as additional options. Keep Cantor Wendy Shermet first throughout CRC. Identify the Karaite tradition and preserve its own readings. Daniel directed CRC to assume permission for this integration and raised a possible future gift to the Karaite community.
+
 **Amended November 20, 2026.** Daniel confirmed permission for public CRC streaming, shared reading links and offline practice on learners’ devices. He selected Cantor Wendy Shermet of Temple Israel, Omaha as the default recorded voice throughout CRC. Integrate the full published collection. For a verse, word or exercise that needs another recording, credit the performer actually heard. A portal for Omaha remains a separate decision. [Implementation plan](../2026-11-20-shermet-recordings/PLAN.md).
 
 Filed 2026-10-15 from the kickoff interview in Cowork. This is the authority document for the project until a spec supersedes a section of it; a spec that changes a ruling here says so with a dated "Amended" note. Daniel's words are binding; everything else is Claude's read, approved by him in three rounds on 2026-10-15.

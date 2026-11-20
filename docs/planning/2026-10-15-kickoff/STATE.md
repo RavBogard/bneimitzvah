@@ -4,6 +4,8 @@ Updated 2026-11-20. This file is replaced, not appended: it says where the work 
 
 ## Released and live
 
+**Additional recordings, November 20 release candidate.** The `codex/karaite-finkel` branch adds 110 published performances by Hazan Rotem Cohen and 300 prepared CRC teaching tracks by Cantor Josh Finkel as optional full recordings. Shermet remains the default. Four Karaite tracks have unresolved passage boundaries. Finkel clips containing flagged speech remain private. The reader offers exact verse playback only when that performance has verified timing. Source and player changes are `116a9a4d` and `30be9d82`. Release checks cover native playback and offline copies, private Blob access, independent review and hosted CI.
+
 - **Site:** https://beitmitzvah.centralreform.org (canonical; `BETTER_AUTH_URL` selects it). The other CRC hostnames redirect there. The intended main address, torah.centralreform.org, is not switched yet (cutover "T7", below).
 - **Product name and state:** CRC Torah, in public beta since v2.0.0: "Beta" label in the header, `PUBLIC_INDEXING = true` in `src/lib/site/indexing.ts`. No real families have been invited; the pilot waits on Daniel ("I'll say when").
 - **November 20 production releases:** `c247ba7f` introduced the complete Shermet collection and `87005a17` introduced the faster teaching pace. Each fast-forward followed a green 15-job CI run and independent review. The last tag recorded is v2.2.0 (2026-10-28); nothing since is tagged.
