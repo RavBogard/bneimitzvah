@@ -1,7 +1,8 @@
 /** Scheduling only, never data authority. Claim synchronously before primer/play
  * or the first await. Deferred work checks its original ticket; never reclaims.
  * suspend must invalidate pending work and drop media, not merely pause it. */
-export type ReadingAudioSlot = "proposed" | "assigned" | "lifted" | "spoken" | "collection";
+export type CollectionAudioSlot = "proposed-collection" | "assigned-collection";
+export type ReadingAudioSlot = "proposed" | "assigned" | "lifted" | "spoken" | CollectionAudioSlot;
 const intentBrand: unique symbol = Symbol("reading audio intent");
 export type ReadingAudioIntent = Readonly<{ [intentBrand]: true; generation: number }>;
 export type ReadingAudioRegistration = Readonly<{
@@ -42,7 +43,7 @@ export function createReadingAudioCoordinator() {
   }
   return Object.freeze({
     register(slot: ReadingAudioSlot, suspend: () => void): ReadingAudioRegistration {
-      if (closed || blocked || transitioning || !["proposed", "assigned", "lifted", "spoken", "collection"].includes(slot) || typeof suspend !== "function") return inert;
+      if (closed || blocked || transitioning || !["proposed", "assigned", "lifted", "spoken", "proposed-collection", "assigned-collection"].includes(slot) || typeof suspend !== "function") return inert;
       const previous = registrations.get(slot);
       if (previous) {
         // Do not forget a potentially unstoppable old owner on replacement.

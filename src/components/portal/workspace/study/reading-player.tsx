@@ -106,6 +106,7 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
     <p role="status" className={styles.message}>{message}</p>
     {ready && !playback?.speedSupported && <p className={styles.message}>Pitch-preserving speed control isn’t available in this browser.{state?.source === "shermet" && " Playing at the original recorded tempo."}</p>}
     <details className={styles.credit}><summary>Recording credit</summary>{state?.source === "shermet" ? <p><a href="https://www.templeisraelomaha.com/cantors-classroom" target="_blank" rel="noreferrer">Cantor Wendy Shermet · Temple Israel, Omaha</a> · Human recording</p> : <p><a href="https://archive.org/details/PockettorahAudioFiles" target="_blank" rel="noreferrer">{SHORT_SOURCE_ATTRIBUTION.title}</a> · {SHORT_SOURCE_ATTRIBUTION.creator} · <a href={SHORT_SOURCE_ATTRIBUTION.licenseUrl} target="_blank" rel="noreferrer">{SHORT_SOURCE_ATTRIBUTION.license}</a> · {SHORT_SOURCE_ATTRIBUTION.changes}</p>}</details></div>
-    {audio && <ReadingCollectionPlayback tracks={collectionTracks} verseRef={selected?.ref} coordinator={audio.coordinator} enabled={active && enabled} expiresAt={expiresAt} />}
+    {audio && collectionTracks.length > 0 && <ReadingCollectionPlayback key={scopeKey} tracks={collectionTracks} verseRef={selected?.ref}
+      coordinator={audio.coordinator} slot={audio.slot === "assigned" ? "assigned-collection" : "proposed-collection"} enabled={active && enabled} expiresAt={expiresAt} />}
   </section>;
 }

@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { HUMAN_VOICES, humanTrackCoverage, humanTrackPath, karaiteTrackSource, offlineHumanTrackAvailable, offlineHumanTrackPath, type HumanTrack, type HumanTrackCut } from "../../lib/reference-audio/human-tracks";
 import { HUMAN_TRACK_SAVE_CHANGE, hasSavedHumanTrack, removeSavedHumanTrack, saveHumanTrack, supportsHumanTrackSave } from "../../lib/reference-audio/human-track-offline";
 import { readingAudioCurrent, watchReadingAudioDeadline } from "../portal/workspace/study/reading-player-intent";
-import type { ReadingAudioIntent, ReadingAudioRegistration, createReadingAudioCoordinator } from "../portal/workspace/study/reading-audio-coordinator";
+import type { CollectionAudioSlot, ReadingAudioIntent, ReadingAudioRegistration, createReadingAudioCoordinator } from "../portal/workspace/study/reading-audio-coordinator";
 import styles from "./human-tracks.module.css";
 
 export function HumanTrackCredit({ track }: { track: HumanTrack }) {
@@ -52,8 +52,8 @@ export function HumanTrackSave({ track }: { track: HumanTrack }) {
 
 type Clip = HumanTrackCut & { ref: string };
 
-export function HumanTrackPlayback({ track, clip, coordinator, enabled = true, expiresAt, autoPlay = false }: {
-  track: HumanTrack; clip?: Clip | null; coordinator?: ReturnType<typeof createReadingAudioCoordinator>; enabled?: boolean; expiresAt?: number; autoPlay?: boolean;
+export function HumanTrackPlayback({ track, clip, audio, enabled = true, expiresAt, autoPlay = false }: {
+  track: HumanTrack; clip?: Clip | null; audio?: { coordinator: ReturnType<typeof createReadingAudioCoordinator>; slot: CollectionAudioSlot }; enabled?: boolean; expiresAt?: number; autoPlay?: boolean;
 }) {
   const media = useRef<HTMLAudioElement | null>(null);
   const registration = useRef<ReadingAudioRegistration | null>(null);
@@ -74,7 +74,7 @@ export function HumanTrackPlayback({ track, clip, coordinator, enabled = true, e
     return () => { current = false; window.removeEventListener(HUMAN_TRACK_SAVE_CHANGE, update); };
   }, [track]);
   const allowed = () => enabled && readingAudioCurrent(expiresAt) && document.visibilityState === "visible";
-  const current = () => allowed() && (!coordinator || !!ticket.current && !!registration.current?.isCurrent(ticket.current));
+  const current = () => allowed() && (!audio || !!ticket.current && !!registration.current?.isCurrent(ticket.current));
   const stop = () => {
     writing.current++;
     ticket.current = null;
@@ -84,7 +84,7 @@ export function HumanTrackPlayback({ track, clip, coordinator, enabled = true, e
     setPlaying(false); setSelected(false); setBounded(false);
   };
   useLayoutEffect(() => {
-    const owned = coordinator?.register("collection", stop);
+    const owned = audio?.coordinator.register(audio.slot, stop);
     registration.current = owned ?? null;
     const hide = () => { if (document.visibilityState !== "visible") stop(); };
     document.addEventListener("visibilitychange", hide);
@@ -95,14 +95,14 @@ export function HumanTrackPlayback({ track, clip, coordinator, enabled = true, e
       if (owned) owned.dispose(); else stop();
       if (registration.current === owned) registration.current = null;
     };
-  }, [coordinator, track.id]);
+  }, [audio?.coordinator, audio?.slot, track.id]);
   useLayoutEffect(() => { if (!enabled) stop(); }, [enabled]);
   useEffect(() => expiresAt === undefined ? undefined : watchReadingAudioDeadline(expiresAt, () => true, stop), [expiresAt]);
 
   const begin = (part: Clip | null) => {
     const node = media.current;
     if (!node || !allowed()) return;
-    if (coordinator) { ticket.current = registration.current?.claim() ?? null; if (!ticket.current) return; }
+    if (audio) { ticket.current = registration.current?.claim() ?? null; if (!ticket.current) return; }
     const turn = ++writing.current;
     node.pause();
     mode.current = part;

@@ -1,12 +1,12 @@
 "use client";
 import { useId, useState } from "react";
 import { HUMAN_VOICES, humanTrackCoverage, humanTrackCut, type HumanTrack } from "../../lib/reference-audio/human-tracks";
-import type { createReadingAudioCoordinator } from "../portal/workspace/study/reading-audio-coordinator";
+import type { CollectionAudioSlot, createReadingAudioCoordinator } from "../portal/workspace/study/reading-audio-coordinator";
 import { HumanTrackCoverage, HumanTrackCredit, HumanTrackPlayback, HumanTrackSave } from "./human-track-playback";
 import styles from "./human-tracks.module.css";
 
-export function ReadingCollectionPlayback({ tracks, verseRef, coordinator, enabled, expiresAt }: {
-  tracks: readonly HumanTrack[]; verseRef?: string; coordinator: ReturnType<typeof createReadingAudioCoordinator>; enabled: boolean; expiresAt?: number;
+export function ReadingCollectionPlayback({ tracks, verseRef, coordinator, slot, enabled, expiresAt }: {
+  tracks: readonly HumanTrack[]; verseRef?: string; coordinator: ReturnType<typeof createReadingAudioCoordinator>; slot: CollectionAudioSlot; enabled: boolean; expiresAt?: number;
 }) {
   const select = useId();
   const [choice, setChoice] = useState("");
@@ -29,7 +29,7 @@ export function ReadingCollectionPlayback({ tracks, verseRef, coordinator, enabl
       <HumanTrackCoverage track={track} />
       <HumanTrackCredit track={track} />
       <p>Play the full source recording below. Taps in the Hebrew still use the verse player.</p>
-      <HumanTrackPlayback key={track.id} track={track} clip={cut && verseRef ? { ...cut, ref: verseRef } : null} coordinator={coordinator} enabled={enabled && open} expiresAt={expiresAt} />
+      <HumanTrackPlayback key={track.id} track={track} clip={cut && verseRef ? { ...cut, ref: verseRef } : null} audio={{ coordinator, slot }} enabled={enabled && open} expiresAt={expiresAt} />
       <HumanTrackSave key={track.id} track={track} />
     </>}
     <p><a href="/recordings">Browse all recordings</a></p>
