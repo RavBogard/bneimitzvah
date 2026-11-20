@@ -7,6 +7,7 @@ import { soundAnchors, soundStep, startSound, type SoundExample, type SoundStage
 import { tropeLabel } from "../../lib/learn/marks";
 import { AudioError, FamilyChip, phraseRequest, PlayTile, UnitsText } from "./bits";
 import { useLearnServices, usePlayerState } from "./services";
+import { RELATIVE_RECORDING_SPEEDS } from "../../lib/reference-audio/recording-tempo";
 import styles from "./learn.module.css";
 
 const prompts: Record<SoundStage, string> = {
@@ -45,7 +46,7 @@ export function SoundPractice({ lesson, verse, words, onExamples, onAnchors, onD
       <p className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></p>
     </div>
     {!silent && <label className={styles.preparationSpeed}>Model speed <select value={rate} onChange={event => { player.stop(); setRate(Number(event.target.value)); }}>
-      {[0.5, 0.75, 1].map(speed => <option key={speed} value={speed}>{speed}×</option>)}</select></label>}
+      {RELATIVE_RECORDING_SPEEDS.map(speed => <option key={speed} value={speed}>{speed}×</option>)}</select></label>}
     {silent && <p>The recording is off. Take your time; listen again when you choose to compare.</p>}
     {state.stage === "model" && <p>Follow the words and the tune. You can open a word for syllables and stress, or try the phrase directly if it is familiar.</p>}
     {state.stage === "compare" && <>

@@ -4,6 +4,7 @@ import type { AnalysedVerse } from "../../lib/learn/verse";
 import { independentPreparation, preparationJoin, preparationParts, preparationStep, startPreparation, type PreparationAction, type PreparationStage } from "../../lib/learn/preparation";
 import { AudioError, FamilyChip, phraseRequest, PlayTile, UnitsText } from "./bits";
 import { useLearnServices, usePlayerState } from "./services";
+import { RELATIVE_RECORDING_SPEEDS } from "../../lib/reference-audio/recording-tempo";
 import styles from "./learn.module.css";
 
 const prompts: Record<PreparationStage, string> = {
@@ -73,7 +74,7 @@ export function GuidedPreparation({ verse, lein, onDone, onAnother }: { verse: A
       <p className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></p>
     </div>}
     {showModel && <label className={styles.preparationSpeed}>Model speed <select value={rate} onChange={event => { player.stop(); setRate(Number(event.target.value)); }}>
-      {[0.5, 0.75, 1].map(speed => <option key={speed} value={speed}>{speed}×</option>)}</select></label>}
+      {RELATIVE_RECORDING_SPEEDS.map(speed => <option key={speed} value={speed}>{speed}×</option>)}</select></label>}
     {/* LD-03, as on main: the Your turn line, the same wherever Learn asks for an attempt without the recording. */}
     {(state.stage === "attempt" || state.stage === "whole-attempt") && <p>Chant it without the recording. Then hear the reader.</p>}
     {state.stage === "join-attempt" && <p>The recording is off. Use a comfortable voice, and open the model to compare when you're ready.</p>}

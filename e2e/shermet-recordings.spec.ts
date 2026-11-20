@@ -97,7 +97,7 @@ for (const [kind, ref] of [['torah', 'Exodus 35:1'], ['haftarah', 'Micah 7:18']]
   });
 }
 
-test('Learn replays Shermet at its baseline and keeps PocketTorah fallback independent', async ({ page }) => {
+test('Learn speed menus play Shermet faster and slower without completing practice or changing fallback', async ({ page }) => {
   await syntheticCourseRoutes().install(page);
   const audio = syntheticAudio();
   let covered = true;
@@ -124,6 +124,26 @@ test('Learn replays Shermet at its baseline and keeps PocketTorah fallback indep
   await expect.poll(nativeRate).toBe(1.25);
   await hear.click(); await hear.click(); await expect(hear).toHaveAttribute('data-state', 'playing');
   await expect.poll(nativeRate).toBe(1.25);
+  const speed = page.getByRole('combobox', { name: 'Model speed', exact: true });
+  for (const flow of ['preparation', 'sound']) {
+    if (flow === 'preparation') await page.goto('/learn/torah-first-verse');
+    else { await page.goto('/learn/torah-sof-pasuk'); await page.getByRole('button', { name: 'Try the sound', exact: true }).click(); }
+    await expect(speed).toHaveValue('1');
+    const model = page.getByRole('button', { name: flow === 'preparation' ? 'Hear the whole verse' : 'Hear this phrase', exact: true });
+    await speed.selectOption('1.25');
+    await model.click(); await expect(model).toHaveAttribute('data-state', 'playing');
+    await expect.poll(nativeRate).toBe(1.5625);
+    await speed.selectOption('0.75');
+    await expect(model).toHaveAttribute('data-state', 'idle');
+    expect(await page.evaluate(() => (window as unknown as { courseAudio: HTMLMediaElement }).courseAudio.paused)).toBe(true);
+    await model.click(); await expect(model).toHaveAttribute('data-state', 'playing');
+    await expect.poll(nativeRate).toBe(.9375);
+    await page.getByRole('button', { name: flow === 'preparation' ? 'Go straight to a whole-verse attempt' : 'Try this familiar phrase directly', exact: true }).click();
+    await expect(speed).toHaveCount(0);
+    expect(await page.evaluate(() => (window as unknown as { courseAudio: HTMLMediaElement }).courseAudio.paused)).toBe(true);
+    const lessons = await page.evaluate(() => (JSON.parse(localStorage.getItem('crc-torah:learn-progress/v1') ?? '{}') as { lessons?: Record<string, unknown> }).lessons ?? {});
+    expect(lessons['torah-first-verse']).toBeUndefined(); expect(lessons['torah-sof-pasuk']).toBeUndefined();
+  }
   covered = false;
   await page.reload(); await hear.click(); await expect(hear).toHaveAttribute('data-state', 'playing');
   await expect.poll(nativeRate).toBe(1);
