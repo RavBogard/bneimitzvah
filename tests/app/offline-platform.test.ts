@@ -44,7 +44,7 @@ test("iPhone and iPad are told apart (iPadOS reports MacIntel with touch points)
 });
 
 test("the strings are Daniel's, verbatim, with the congregation's productName", () => {
-  expect(PLAN.installHint("CRC Torah")).toBe("Install CRC Torah on this device to keep this week’s reading and recordings for use offline (up to about 40 MB).");
+  expect(PLAN.installHint("CRC Torah")).toBe("Install CRC Torah on this device to keep this week’s reading and recordings for offline practice. The download size depends on the reading.");
   expect(PLAN.iphoneSteps).toBe("In Safari, tap Share, then scroll to Add to Home Screen. If you don’t see Share, tap the menu button next to the address bar first. Keep Open as Web App on, then tap Add.");
   expect(PLAN.ipadSteps).toBe("In Safari, tap Share, then View More, then Add to Home Screen. Keep Open as Web App on, then tap Add.");
   expect(PLAN.androidMenu).toBe("In Chrome, open the menu and tap Install app or Add to Home screen.");

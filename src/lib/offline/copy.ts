@@ -8,7 +8,7 @@
  * are labels no ruling words yet; each is listed in its PR for Daniel.
  */
 export const PLAN = Object.freeze({
-  installHint: (productName: string) => `Install ${productName} on this device to keep this week’s reading and recordings for use offline (up to about 40 MB).`,
+  installHint: (productName: string) => `Install ${productName} on this device to keep this week’s reading and recordings for offline practice. The download size depends on the reading.`,
   iphoneSteps: "In Safari, tap Share, then scroll to Add to Home Screen. If you don’t see Share, tap the menu button next to the address bar first. Keep Open as Web App on, then tap Add.",
   ipadSteps: "In Safari, tap Share, then View More, then Add to Home Screen. Keep Open as Web App on, then tap Add.",
   /** Daniel approved this verbatim on 2026-10-23. */
