@@ -25,10 +25,14 @@ const request = (ref: string) => new Request(`http://localhost/api/shermet-audio
 describe("operator configured Shermet recordings", () => {
   it("limits public metadata to CRC and keeps local-only extras out of production and forks", async () => {
     const f = await fixture();
+    // A local-only reference must stay outside the public pilot as it grows.
+    const localRef = "Genesis 1:2";
+    expect(SHERMET_PILOT_RECORDINGS.some(entry => String(entry.ref) === localRef)).toBe(false);
+    await f.catalog([{ ...f.entry, ref: localRef }]);
     const local = { BETTER_AUTH_URL: "http://localhost:3000", NODE_ENV: "development", SHERMET_AUDIO_DIR: f.dir };
-    expect((await (await runtimeShermetAudio(local).catalog(request("Genesis 1:1"))).json()).refs).toContain("Genesis 1:1");
+    expect((await (await runtimeShermetAudio(local).catalog(request(localRef))).json()).refs).toContain(localRef);
     for (const env of [{ ...local, BETTER_AUTH_URL: "https://other.example.test" }, { ...local, BETTER_AUTH_URL: "https://torah.centralreform.org", NODE_ENV: "production" }]) {
-      expect((await (await runtimeShermetAudio(env).catalog(request("Genesis 1:1"))).json()).refs).toEqual([]);
+      expect((await (await runtimeShermetAudio(env).catalog(request(localRef))).json()).refs).toEqual([]);
     }
     const fork = runtimeShermetAudio({ BETTER_AUTH_URL: "https://other.example.test" });
     expect((await (await fork.catalog(new Request("http://localhost/catalog"))).json()).refs).toEqual([]);
@@ -38,14 +42,14 @@ describe("operator configured Shermet recordings", () => {
     const fetcher: typeof fetch = async (url, options) => { calls.push({ url: String(url), options }); return new Response("synthetic wrong bytes"); };
     const api = createShermetAudio(undefined, true, fetcher);
     const metadata = await (await api.catalog(new Request("http://localhost/catalog"))).json();
-    expect(metadata.refs).toHaveLength(9); expect(calls).toHaveLength(0);
+    expect(metadata.refs).toEqual(SHERMET_PILOT_RECORDINGS.map(entry => entry.ref)); expect(calls).toHaveLength(0);
     const entry = SHERMET_PILOT_RECORDINGS[0];
     expect((await api.audio(request(entry.ref))).status).toBe(404);
     expect(calls).toHaveLength(1);
     expect(calls[0].url).toBe(`https://images.shulcloud.com/14396/${entry.sourceId}.mp3`);
     expect(calls[0].options).toMatchObject({ redirect: "error", credentials: "omit", cache: "no-store" });
     expect(calls[0].options?.headers).toBeUndefined();
-    await api.audio(request("Genesis 1:1")); expect(calls).toHaveLength(1);
+    await api.audio(request("Genesis 1:2")); expect(calls).toHaveLength(1);
   });
   it("is absent without configuration and only serves a verified canonical verse", async () => {
     expect((await createShermetAudio(undefined).audio(request("Genesis 1:1"))).status).toBe(404);
@@ -101,3 +105,4 @@ describe("Shermet verse transport", () => {
     expect(player.state.playback.status).toBe("ready"); expect(player.state.suspended).toBe(true); expect(f.pauses).toBeGreaterThan(0);
   });
 });
+

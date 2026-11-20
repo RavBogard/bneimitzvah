@@ -11,7 +11,7 @@ Updated 2026-11-17. This file is replaced, not appended: it says where the work 
 
 ## In progress
 
-- **Cantor Wendy Shermet recordings, November 20:** Daniel confirmed public streaming on CRC and shared links. Nine full verses were matched, hashed and decoded off-repo, covering Exodus 35:1–6 and Micah 7:18–20. [Plan and source evidence](../2026-11-20-shermet-recordings/PLAN.md). Next coverage work starts with Omaha's verse inventory and performance-specific word timing.
+- **Cantor Wendy Shermet recordings, November 20:** Daniel confirmed public streaming on CRC and shared links. Twenty full verses were matched, hashed and decoded off-repo: Genesis 1:1, Genesis 1:27–30, Genesis 22:1–4, Exodus 35:1–6, Numbers 6:26–27 and Micah 7:18–20. Four repeatedly used curriculum references now have whole-verse reader recordings; lesson phrase playback and performance-specific word timing remain separate. The media cache stays bounded to nine entries and 32 MiB. Daniel subsequently authorized the full collection and default playback throughout the product; resumable public-source acquisition is underway. [Plan and source evidence](../2026-11-20-shermet-recordings/PLAN.md).
 
 - **Guide release and hold on the Guides page:** built, reviewed twice (adversarial, then a delta pass) and green in CI on the branch `claude/guides-web-release`. It waits for Daniel to apply migration 0058 to production: steps in `docs/planning/2026-11-17-guides-web-release/APPLY.md` on that branch. Then the branch is brought up to main (the migration file byte-identical), CI is run again, and main is fast-forwarded.
 - **Study guides:** every catalog key has a published base guide, origin claude, not yet reviewed. Daniel marks guides reviewed as he reads them. The ones flagged as sensitive for his read: yom-kippur-mincha (Lev 18), achrei-mot, i-samuel-15 (Zachor), ezekiel-37, nasso, behar. Plan: `docs/superpowers/plans/2026-10-28-replacing-the-study-guide-booklet.md`.
@@ -92,3 +92,4 @@ Small known follow-ups:
 - Builder brief: `docs/planning/AGENT-BRIEF.md`. Running a copy: `DEPLOYING.md`. Product and design: `PRODUCT.md`, `DESIGN.md`.
 - Live plans: 2.0 (`docs/planning/2026-10-24-release-2-0/`, kept because two tests read its `cowork/A3-DRAFTS/`), the booklet plan, the second-congregation copy, music-card details, People and tutors, the 2026-11-16 review.
 - Everything else: `docs/archive/`.
+
