@@ -135,8 +135,9 @@ it("opens a student's page with the staff tabs and verse sheet, and links to the
     const tab = await page(mobile); await navigate(tab, "/workspace/admin/students?tab=students");
     await safe(() => roster(tab).getByRole("link", { name: /^Synthetic Learner/ }).click());
     await ui(tab.getByRole("heading", { name: "Synthetic Learner", level: 1, exact: true })).toBeVisible();
-    // Decision 20: the admin's per-student reading page carries no tab bar.
-    await ui(tab.getByRole("navigation", { name: "Workspace", exact: true })).toHaveCount(0);
+    // Staff navigation stays in place when an admin opens a student from the roster.
+    const tabs = tab.getByRole("navigation", { name: "Workspace", exact: true });
+    await ui(tabs.getByRole("link", { name: "Students", exact: true })).toHaveAttribute("aria-current", "page");
     // Readings for everyone E2: no tabs; Service parts and Lessons follow the text, and every staff action is in Manage.
     expect(await tab.getByRole("tablist", { name: "Student page", exact: true }).count()).toBe(0);
     await ui(tab.getByRole("button", { name: "Manage reading", exact: true })).toBeVisible();
