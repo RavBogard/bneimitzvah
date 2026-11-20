@@ -199,8 +199,11 @@ function onFetch(event) {
   const request = event.request;
   let url;
   try { url = new URL(request.url); } catch { return; }
+  const libraryMedia = /^\?id=(sr_[a-f0-9]{32})&recording=[a-f0-9]{64}$/.exec(url.search);
+  if (url.origin === OWN_ORIGIN && ["GET", "HEAD"].includes(request.method) && url.pathname === "/api/shermet-library/media" && libraryMedia && (POLICY.shermetLibraryIds || []).includes(libraryMedia[1])) return event.respondWith(shermetClip(request, url));
   if (url.origin === OWN_ORIGIN && ["GET", "HEAD"].includes(request.method) && SHERMET_AUDIO_PATH.test(url.pathname) && /^\?ref=[A-Za-z0-9+%.-]{1,100}$/.test(url.search)) return event.respondWith(shermetClip(request, url));
   if (url.origin !== OWN_ORIGIN || request.method !== "GET" || request.headers.has("range")) return;
+  if (url.pathname === "/api/shermet-library" && (url.search === "?course=service" || /^\?lesson=[a-z-]{1,40}$/.test(url.search) && (POLICY.shermetLibraryLessons || []).includes(url.search.slice(8)))) return event.respondWith(packData(request, url));
   if (SHERMET_DATA_PATH.test(url.pathname) && (url.pathname.endsWith("/catalog") ? url.search === "" || url.search === "?format=manifest" : /^\?ref=[A-Za-z0-9+%.-]{1,100}$/.test(url.search))) return event.respondWith(packData(request, url));
   if (request.mode === "navigate") return event.respondWith(navigate(request, url));
   if (STATIC_PATH.test(url.pathname) && !STATIC_UNSAFE.test(url.pathname)) return event.respondWith(appCode(request));

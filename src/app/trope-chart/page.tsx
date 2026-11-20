@@ -11,6 +11,7 @@ import { publicRobots } from "../../lib/site/indexing";
 import { readPublicProductName } from "../../server/public-site/names";
 import { publicMetadataBase } from "../../lib/site/origin";
 import { SiteBar } from "../../components/site/site-bar";
+import { resolveIdentity } from "../../lib/site/identity";
 
 export const revalidate = 3600;
 export async function generateMetadata(): Promise<Metadata> {
@@ -37,6 +38,7 @@ export default function TropeChartPage() {
     <SiteBar className={styles.header} />
     <main id="trope-chart-main" className={styles.main}>
       <div className={styles.introduction}><h1 className={styles.title}>Trope chart</h1><p>Find the signs, their names and the phrase families used in your reading.</p><PrintChart /></div>
+      {resolveIdentity().crc && <p><Link href="/recordings?category=lesson">Listen to Cantor Wendy Shermet’s trope lessons</Link></p>}
       <section aria-labelledby="phrase-families-heading"><h2 id="phrase-families-heading" className={styles.sectionHeading}>Phrase families</h2><p className={styles.explanation}>Color belongs to a whole phrase, ending at its closing sign. It does not give every sign its own permanent color or melody.</p>
         <ol className={styles.families}>{PHRASE_FAMILIES.map(family => <li className={styles.family} key={family.id} data-chart-family={family.id} style={{ "--family-color": phraseFill(family.id) } as CSSProperties}>
           <h3><FamilyHeading family={family} /></h3><ul className={styles.marks}>{CHART_ACCENTS.filter(accent => accent.family === family.id).map(accent => <Mark key={accent.codepoint} accent={accent} />)}

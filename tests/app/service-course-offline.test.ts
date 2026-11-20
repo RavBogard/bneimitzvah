@@ -22,6 +22,8 @@ import { purgeOffline, readIndex, setOfflineState, sweep } from "../../src/lib/o
 import { pathRequest, readPathCopy, savePathCopy } from "../../src/lib/offline/path-copy";
 import { INDEX_KEY, OFFLINE_CACHE, PATH_COPY_KEY, SERVICE_PACK_KEY, TORAH_ORIGIN, WINDOW_MS, ownerOnlyAsset, packAssetAllowed, parsePackIndex, servicePackAssetAllowed } from "../../src/lib/offline/policy";
 import { SHELL_PAGES } from "../../src/lib/offline/shell";
+import { SHERMET_SERVICE_ITEMS } from "../../src/lib/reference-audio/shermet-library";
+import { createHash } from "node:crypto";
 import { workerSource } from "../../src/lib/offline/worker-source";
 import { OfflineShelfView, shelfRows } from "../../src/components/portal/offline/shelf";
 import type { Pack } from "../../src/lib/offline/policy";
@@ -69,8 +71,28 @@ function harness(owner: () => OwnerAnswer = () => ({ state: "signed-out" })) {
 const signal = () => new AbortController().signal;
 const UNIT_PATHS = [...SERVICE_TEXT_UNITS].sort().map(serviceTextPath);
 const VERSE_PATHS = [...new Set(SERVICE_COURSE.lessons.flatMap(lesson => lesson.read?.torahRef ? [versePath(lesson.read.torahRef)] : []))].sort();
+// Daniel authorized offline use of these exact public human recordings. Their
+// discovery rows remain present even when a source is temporarily unavailable.
+const RECORDING_PATHS = ["/api/shermet-library?course=service", ...Object.keys(SHERMET_SERVICE_ITEMS).map(lesson => `/api/shermet-library?${new URLSearchParams({ lesson })}`)];
 
 describe("the service-course pack (public lane only)", () => {
+  it("packs a matched prayer recording with its actual MIME, source hash and lesson lookup", async () => {
+    const h = harness(), real = h.io.fetch;
+    const sha256 = createHash("sha256").update("abc").digest("hex"), id = SHERMET_SERVICE_ITEMS.shma;
+    const item = { id, category: "blessing", title: "Synthetic blessings", label: "Synthetic prayer", pageUrl: "https://www.templeisraelomaha.com/traditional-blessings.html", status: "available", recordings: [{ sourceId: 123456, sha256, bytes: 3, duration: 1, mimeType: "audio/wav" }] };
+    (h.io as { fetch: typeof fetch }).fetch = (async (input, init) => {
+      const url = String(input);
+      const response = url.includes("/api/shermet-library/media?") ? new Response("abc", { headers: { "content-type": "audio/wav", "content-length": "3" } }) : url.endsWith("/api/shermet-library?course=service") ? Response.json({ items: [item], nextOffset: null }) : null;
+      return response ? Object.defineProperty(response, "url", { value: url }) : real(input, init);
+    }) as typeof fetch;
+    await renewPack(h.io, { type: "service" }, signal());
+    const pack = (await h.index()).packs.find(row => row.key === SERVICE_PACK_KEY)!;
+    const media = `/api/shermet-library/media?${new URLSearchParams({ id, recording: sha256 })}`;
+    expect(pack.assets).toContain(media); expect(pack.assets).toContain("/api/shermet-library?lesson=shma");
+    const cache = await h.caches.open(OFFLINE_CACHE), hit = await cache.match(origin + media);
+    expect(hit?.headers.get("content-type")).toBe("audio/wav"); expect(await hit?.text()).toBe("abc");
+    expect(servicePackCurrent(pack)).toBe(true);
+  });
   it("is every course unit's public text and the word card's verses: no evening unit, nothing of the licensed book, nothing private", () => {
     expect([...servicePackPaths()].sort()).toEqual([...UNIT_PATHS, ...VERSE_PATHS].sort());
     expect(UNIT_PATHS.length).toBe(30); expect(VERSE_PATHS.length).toBeGreaterThan(0);
@@ -84,11 +106,11 @@ describe("the service-course pack (public lane only)", () => {
     expect(await renewPack(h.io, { type: "service" }, signal())).toBe("saved");
     const pack = (await h.index()).packs.find(row => row.key === SERVICE_PACK_KEY)!;
     expect(pack).toMatchObject({ owner: "public", descriptor: { type: "service" }, renewedAt: NOW, expiresAt: NOW + WINDOW_MS });
-    expect([...pack.assets].sort()).toEqual([...servicePackPaths()].sort());
+    expect([...pack.assets].sort()).toEqual([...servicePackPaths(), ...RECORDING_PATHS].sort());
     expect(servicePackCurrent(pack)).toBe(true);
     for (const asset of pack.assets) expect(await (await h.caches.open(OFFLINE_CACHE)).match(origin + asset), asset).toBeTruthy();
     expect(h.requests.every(row => row.init.credentials === "omit" && row.init.referrerPolicy === "no-referrer")).toBe(true);
-    expect(h.requests.some(row => /evening-text|siddur\.|\/api\/(?!public\/)/.test(row.url))).toBe(false);
+    expect(h.requests.some(row => /evening-text|siddur\.|\/api\/(?!public\/|shermet-library\?course=service$)/.test(row.url))).toBe(false);
   });
   it("is never an owner's pack, and a unit that does not parse leaves the old pack as it was", async () => {
     const h = harness();
@@ -104,7 +126,7 @@ describe("the service-course pack (public lane only)", () => {
       ? Object.defineProperty(new Response(null, { status: 503 }), "url", { value: String(input) }) : real(input, init)) as typeof fetch;
     await renewPack(h.io, { type: "service" }, signal());
     const pack = (await h.index()).packs.find(row => row.key === SERVICE_PACK_KEY)!;
-    expect([...pack.assets].sort()).toEqual(UNIT_PATHS);
+    expect([...pack.assets].sort()).toEqual([...UNIT_PATHS, ...RECORDING_PATHS].sort());
     expect(servicePackCurrent(pack)).toBe(true);
     expect(servicePackCurrent({ assets: UNIT_PATHS.slice(1) })).toBe(false);
     expect(servicePackCurrent({ assets: [...UNIT_PATHS, "/api/public/text?ref=Genesis+1%3A1&kind=torah&offset=0"] })).toBe(false);

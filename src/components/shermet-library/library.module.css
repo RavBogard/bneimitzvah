@@ -1,0 +1,15 @@
+.filters { display: flex; flex-wrap: wrap; gap: 1rem; margin-block: 1.5rem; }
+.filters label { display: grid; gap: .35rem; flex: 1 1 15rem; }
+.filters input, .filters select { width: 100%; min-height: 44px; }
+.results section { margin-block: 2rem; }
+.results ul { padding: 0; list-style: none; }
+.results li { padding-block: 1.25rem; border-bottom: 1px solid var(--color-rule); overflow-wrap: anywhere; }
+.results h3 { margin: 0 0 .35rem; font-size: 1.1rem; }
+.results p { margin-block: .3rem; }
+.actions, .pagination { display: flex; flex-wrap: wrap; gap: .75rem; margin-block: .75rem; }
+.actions button, .pagination button { min-height: 44px; }
+.player { position: sticky; bottom: 0; padding: 1rem; background: var(--color-surface); border-top: 1px solid var(--color-rule); }
+.player h2 { font-size: 1rem; margin: 0; }
+.player p { margin-block: .35rem; }
+.player audio { display: block; width: 100%; }
+@media (prefers-reduced-motion: reduce) { .results { scroll-behavior: auto; } }

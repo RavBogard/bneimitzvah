@@ -12,6 +12,7 @@ import { pathLessons, useServiceProgress, type PathView } from "./progress";
 import { useCoursePath } from "./offline";
 import { CheckStep, KeyWordsStep, LessonWords, ReadStep, useCheckItems, useLessonText, type TextState } from "./read";
 import { FluencyLesson } from "./fluency";
+import { LessonRecording } from "../../shermet-library/lesson-recording";
 
 /**
  * The steps of a lesson (A4 3.2). A prayer with public text is About, Where, Read, Key words, Check and Done; a prayer without it
@@ -63,9 +64,9 @@ function LessonFlow({ lesson }: { lesson: Lesson }) {
     </header>
     <main id="lesson-main" ref={main} tabIndex={-1} className={learn.lesson} data-step={step} data-lesson={lesson.id} data-text={lesson.read ? state.status : undefined}>
       <LessonWords lesson={lesson} text={text}>
-        {step === "about" ? <><About lesson={lesson} slot={slot} />{forward()}</>
+        {step === "about" ? <><About lesson={lesson} slot={slot} /><LessonRecording lesson={lesson.id} morning={slot !== "havdalah"} />{forward()}</>
           : step === "where" ? <><Where lesson={lesson} slot={slot} />{forward()}</>
-          : step === "read" ? lesson.read ? <><ReadStep lesson={lesson} state={state} onRetry={retry} slot={slot} />{forward(!text)}</> : <><SiddurOnly lesson={lesson} slot={slot} />{forward()}</>
+          : step === "read" ? lesson.read ? <><ReadStep lesson={lesson} state={state} onRetry={retry} slot={slot} /><LessonRecording lesson={lesson.id} morning={slot !== "havdalah"} />{forward(!text)}</> : <><SiddurOnly lesson={lesson} slot={slot} /><LessonRecording lesson={lesson.id} morning={slot !== "havdalah"} />{forward()}</>
           : step === "words" && text ? <><KeyWordsStep lesson={lesson} text={text} />{forward()}</>
           : step === "check" && items ? <CheckStep key={seed} items={items as readonly CheckItem[]} seed={seed} onFinish={next} footer={children => <Footer>{children}</Footer>} />
           : step === "done" ? <Done lesson={lesson} state={state} complete={() => update(value => completeLesson(value, lesson, Date.now()), lesson.id)} progress={progress} pathView={pathView} slot={slot} />

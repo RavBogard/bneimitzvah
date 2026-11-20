@@ -1,4 +1,5 @@
 import { canonicalReadingRef } from "../readings/reading-ref";
+import { SHERMET_SERVICE_ITEMS } from "../reference-audio/shermet-library";
 /**
  * The installable app's offline policy (1.5 plan, A1, §3). One source for the page and the service worker:
  * the worker route writes `workerPolicy()` into the head of /sw.js, so the two can never drift.
@@ -94,6 +95,11 @@ const EXACT_QUERY: Readonly<Record<string, RegExp>> = Object.freeze({
 export function packAssetAllowed(asset: string): boolean {
   if (typeof asset !== "string" || !asset.startsWith("/") || asset.startsWith("//") || asset.length > 2048 || /[\s#\\]/.test(asset)) return false;
   const query = asset.indexOf("?"), path = query < 0 ? asset : asset.slice(0, query), search = query < 0 ? "" : asset.slice(query);
+  if (path === "/api/shermet-library") return search === "?course=service" || /^\?lesson=[a-z-]{1,40}$/.test(search) && Object.hasOwn(SHERMET_SERVICE_ITEMS, search.slice(8));
+  if (path === "/api/shermet-library/media") {
+    const match = /^\?id=(sr_[a-f0-9]{32})&recording=[a-f0-9]{64}$/.exec(search);
+    return Boolean(match && Object.values(SHERMET_SERVICE_ITEMS).includes(match[1]));
+  }
   if (path === "/api/shermet-audio/catalog") return search === "" || search === "?format=manifest";
   if (path === "/api/shermet-audio" || path === "/api/shermet-audio/timing") {
     const values = new URLSearchParams(search);
@@ -121,6 +127,7 @@ const SERVICE_VERSE_QUERY = /^\?ref=[A-Za-z0-9+%.-]{1,200}&kind=(?:torah|haftara
 export function servicePackAssetAllowed(asset: string): boolean {
   if (!packAssetAllowed(asset) || ownerOnlyAsset(asset)) return false;
   const query = asset.indexOf("?"), path = query < 0 ? asset : asset.slice(0, query), search = query < 0 ? "" : asset.slice(query);
+  if (path === "/api/shermet-library" || path === "/api/shermet-library/media") return true;
   if (path === "/api/public/service-text") return SERVICE_TEXT_QUERY.test(search);
   if (path === "/api/public/text") return SERVICE_VERSE_QUERY.test(search);
   return false;
@@ -215,6 +222,8 @@ export function workerPolicy(input: { build: string; enabled: boolean; shellPage
     staticPath: STATIC_PATH.source, staticUnsafe: STATIC_UNSAFE.source, clipPath: CLIP_PATH.source, packDataPath: PACK_DATA_PATH.source, ownerKey: OWNER_KEY.source,
     ownerOnlyPath: OWNER_ONLY_PATH.source,
     shermetAudioPath: "^/api/shermet-audio$", shermetDataPath: "^/api/shermet-audio/(?:catalog|timing)$",
+    shermetLibraryIds: Object.values(SHERMET_SERVICE_ITEMS),
+    shermetLibraryLessons: Object.keys(SHERMET_SERVICE_ITEMS),
   });
 }
 export type WorkerPolicy = ReturnType<typeof workerPolicy>;

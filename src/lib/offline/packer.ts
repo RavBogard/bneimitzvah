@@ -2,7 +2,8 @@ import { MELODIES } from "../learn/course";
 import { canonicalReadingRef } from "../readings/reading-ref";
 import { thisShabbat } from "../readings/public-shabbat";
 import { downloadShortReferenceAudio, shortAudioDigest } from "../reference-audio/short-playback";
-import { parseShermetManifest, shermetAudioPath, shermetTimingPath, SHERMET_CATALOG_PATH, SHERMET_MANIFEST_PATH, verifyShermetRecording, type ShermetRecording } from "../reference-audio/shermet-manifest";
+import { parseShermetManifest, shermetAudioPath, shermetTimingPath, SHERMET_CATALOG_PATH, SHERMET_MANIFEST_PATH, verifyShermetRecording, type ShermetRecording, type ShermetAsset } from "../reference-audio/shermet-manifest";
+import { parseShermetLibrary, SHERMET_SERVICE_ITEMS } from "../reference-audio/shermet-library";
 import { parseShermetTiming, shermetTextMatches } from "../reference-audio/shermet-timing";
 import { projectStudyVerse } from "../hebrew/study-tokens";
 import type { StudyVerse } from "../../components/portal/workspace/study/api";
@@ -90,7 +91,7 @@ export function ownerPackKey(kind: "torah" | "haftarah", ref: string): string {
   for (let i = 0; i < text.length; i++) { const c = text.charCodeAt(i); a = Math.imul(a ^ c, 0x01000193) >>> 0; b = Math.imul(b ^ c, 0x0100019d) >>> 0; }
   return `ref:${kind}:${a.toString(16).padStart(8, "0")}${b.toString(16).padStart(8, "0")}`;
 }
-type Plan = { label: string; json: Map<string, Response>; clips: Map<string, ShortReferenceSource>; bytes: number; verses?: Map<string, StudyVerse>; shermet?: Map<string, ShermetRecording> };
+type Plan = { label: string; json: Map<string, Response>; clips: Map<string, ShortReferenceSource>; bytes: number; verses?: Map<string, StudyVerse>; shermet?: Map<string, ShermetAsset> };
 
 const JSON_LIMIT = 2 * 1024 * 1024;
 async function fetchJson(io: PackerIo, path: string, signal: AbortSignal, plan: Plan | null, generation: number): Promise<unknown> {
@@ -272,7 +273,7 @@ const unitOf = (path: string) => path.startsWith("/api/public/service-text?") ? 
  */
 export function servicePackCurrent(pack: Pick<Pack, "assets">): boolean {
   const want = servicePackPaths(), have = new Set(pack.assets);
-  return want.every(path => unitOf(path) === null || have.has(path)) && pack.assets.every(asset => want.includes(asset));
+  return have.has("/api/shermet-library?course=service") && want.every(path => unitOf(path) === null || have.has(path)) && pack.assets.every(asset => want.includes(asset) || asset.startsWith("/api/shermet-library") && servicePackAssetAllowed(asset));
 }
 async function planService(io: PackerIo, signal: AbortSignal, generation: number): Promise<Plan> {
   const plan: Plan = { label: "", json: new Map(), clips: new Map(), bytes: 0 };
@@ -285,6 +286,24 @@ async function planService(io: PackerIo, signal: AbortSignal, generation: number
     if (unit !== null) { if (!parseServiceText(await fetchJson(io, path, signal, plan, generation), unit)) throw new PackStopped("failed"); }
     else if (verse) await optionalJson(io, path, signal, plan, generation, answer => parseVerse(answer, verse) !== null);
     else throw new PackStopped("failed");
+  }
+  let items: ReturnType<typeof parseShermetLibrary> = [];
+  try {
+    const body = await fetchJson(io, "/api/shermet-library?course=service", signal, null, generation) as { items: unknown };
+    items = parseShermetLibrary({ version: 1, items: body.items });
+  } catch (error) { if (!(error instanceof PackStopped) || error.reason !== "failed") throw error; }
+  const keep = (path: string, value: unknown) => {
+    const text = JSON.stringify(value); plan.json.set(path, new Response(text, { headers: { "Content-Type": "application/json" } })); plan.bytes += new TextEncoder().encode(text).length;
+  };
+  keep("/api/shermet-library?course=service", { items, nextOffset: null });
+  plan.shermet = new Map();
+  for (const [lesson, id] of Object.entries(SHERMET_SERVICE_ITEMS)) {
+    const item = items.find(item => item.id === id);
+    keep(`/api/shermet-library?${new URLSearchParams({ lesson })}`, { items: item ? [item] : [], nextOffset: null });
+    if (item?.status === "available") for (const recording of item.recordings) {
+      const path = `/api/shermet-library/media?${new URLSearchParams({ id, recording: recording.sha256 })}`;
+      if (servicePackAssetAllowed(path)) plan.shermet.set(path, recording);
+    }
   }
   return plan;
 }
@@ -311,7 +330,7 @@ export async function renewPack(io: PackerIo, descriptor: PackDescriptor, signal
   const cache = await io.caches.open(OFFLINE_CACHE);
   const missing: ShortReferenceSource[] = [];
   for (const source of plan.clips.values()) if (!await cache.match(io.origin + source.path)) missing.push(source);
-  const missingShermet: [string, ShermetRecording][] = [];
+  const missingShermet: [string, ShermetAsset][] = [];
   for (const [path, source] of plan.shermet ?? []) {
     const hit = await cache.match(io.origin + path);
     let verified = false;

@@ -47,7 +47,7 @@ const PUBLIC_SURFACES: Readonly<Record<string, string>> = {
 /** Files that name a cache header only to forbid caching (privateHeaders, no-store); a positive directive here still fails the first test. */
 // Shermet bytes and source-specific timing remain explicitly no-store. The
 // bounded process cache does not authorize browser or CDN caching.
-const NO_STORE_ONLY = new Set(["src/server/http/responses.ts", "src/server/http/page-views.ts", "src/lib/navigation/canonical.ts", "src/server/shermet-audio/service.ts", "src/app/api/shermet-audio/timing/route.ts"]);
+const NO_STORE_ONLY = new Set(["src/server/http/responses.ts", "src/server/http/page-views.ts", "src/lib/navigation/canonical.ts", "src/server/shermet-audio/service.ts", "src/server/shermet-audio/library.ts", "src/app/api/shermet-audio/timing/route.ts"]);
 /** Static public pages (the signed-out reader, the Readings index, print sheet, Learn course and trope chart, and their share images): no cookie, no session, built once. */
 const STATIC_PUBLIC = (file: string) => ["about", "learn", "read", "readings", "print", "trope-chart"].some(dir => file.startsWith(`src/app/${dir}/`)) || /^src\/app\/sw\.js\//.test(file);
 

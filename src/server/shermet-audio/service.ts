@@ -9,12 +9,13 @@ const MAX_AUDIO = 20 * 1024 * 1024;
 const MAX_CACHED_BYTES = 32 * 1024 * 1024;
 const MAX_CACHED_RECORDINGS = 9;
 const headers = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
-type PublicEntry = (typeof SHERMET_PILOT_RECORDINGS)[number];
+export type VerifiedShermetRecording = Readonly<{ sourceId: number; sha256: string; mimeType?: string }>;
 type PublicCache = { bytes: Map<string, Buffer>; pending: Map<string, Promise<Buffer | null>>; size: number };
 // The runtime creates a handler per request. Share only verified public bytes
 // across those handlers, with independent test fetchers in weakly held caches.
 const publicCaches = new WeakMap<typeof fetch, PublicCache>();
-async function publicRecording(entry: PublicEntry, fetcher: typeof fetch): Promise<Buffer | null> {
+export async function getVerifiedShermetMedia(entry: VerifiedShermetRecording, fetcher: typeof fetch = fetch): Promise<Buffer | null> {
+  if (!Number.isSafeInteger(entry.sourceId) || entry.sourceId <= 0 || !/^[a-f0-9]{64}$/.test(entry.sha256)) return null;
   let cache = publicCaches.get(fetcher);
   if (!cache) {
     cache = { bytes: new Map(), pending: new Map(), size: 0 };
@@ -130,7 +131,7 @@ export function createShermetAudio(directory: string | undefined, publicEnabled 
       }
       const entry = publicEntries.find(entry => entry.ref === ref);
       if (!entry || !singleVerse(entry.ref, entry.kind) || !/^[a-f0-9]{64}$/.test(entry.sha256) || !Number.isSafeInteger(entry.sourceId) || entry.sourceId <= 0) return null;
-      return await publicRecording(entry, fetcher);
+      return await getVerifiedShermetMedia(entry, fetcher);
     } catch { return null; }
   }
   return {
@@ -140,7 +141,7 @@ export function createShermetAudio(directory: string | undefined, publicEnabled 
         // extras are deliberately excluded from pack discovery.
         const recordings = publicEntries.flatMap(entry => {
           const bytes = "bytes" in entry ? entry.bytes : null;
-          return typeof bytes === "number" && Number.isSafeInteger(bytes) && bytes > 0 && bytes <= MAX_AUDIO ? [{ kind: entry.kind, ref: entry.ref, sha256: entry.sha256, bytes }] : [];
+          return typeof bytes === "number" && Number.isSafeInteger(bytes) && bytes > 0 && bytes <= MAX_AUDIO ? [{ kind: entry.kind, ref: entry.ref, sha256: entry.sha256, bytes, mimeType: "mimeType" in entry && entry.mimeType === "audio/wav" ? "audio/wav" : "audio/mpeg" }] : [];
         });
         return Response.json({ recordings }, { headers });
       }
@@ -158,17 +159,22 @@ export function createShermetAudio(directory: string | undefined, publicEnabled 
       const refs = new URL(request.url).searchParams.getAll("ref");
       const bytes = refs.length === 1 ? await recording(refs[0]) : null;
       if (!bytes) return new Response(null, { status: 404, headers });
-      const mediaHeaders = { ...headers, "Content-Type": "audio/mpeg", "Accept-Ranges": "bytes" };
-      // HEAD describes the complete GET representation. If-Range without a
-      // matching validator also requires the complete representation.
-      const rangeHeader = request.method === "GET" && !request.headers.has("if-range") ? request.headers.get("range") : null;
-      if (rangeHeader !== null) {
-        const range = byteRange(rangeHeader, bytes.length);
-        if (!range) return new Response(null, { status: 416, headers: { ...mediaHeaders, "Content-Range": `bytes */${bytes.length}`, "Content-Length": "0" } });
-        const body = bytes.subarray(range.start, range.end + 1);
-        return new Response(new Uint8Array(body), { status: 206, headers: { ...mediaHeaders, "Content-Length": String(body.length), "Content-Range": `bytes ${range.start}-${range.end}/${bytes.length}` } });
-      }
-      return new Response(request.method === "HEAD" ? null : new Uint8Array(bytes), { headers: { ...mediaHeaders, "Content-Length": String(bytes.length) } });
+      const entry = publicEntries.find(entry => entry.ref === refs[0]);
+      return shermetMediaResponse(request, bytes, entry && "mimeType" in entry && entry.mimeType === "audio/wav" ? "audio/wav" : "audio/mpeg");
     },
   };
+}
+
+export function shermetMediaResponse(request: Request, bytes: Buffer, mimeType = "audio/mpeg") {
+  const mediaHeaders = { ...headers, "Content-Type": mimeType, "Accept-Ranges": "bytes" };
+  // HEAD describes the complete GET representation. If-Range without a
+  // matching validator also requires the complete representation.
+  const rangeHeader = request.method === "GET" && !request.headers.has("if-range") ? request.headers.get("range") : null;
+  if (rangeHeader !== null) {
+    const range = byteRange(rangeHeader, bytes.length);
+    if (!range) return new Response(null, { status: 416, headers: { ...mediaHeaders, "Content-Range": `bytes */${bytes.length}`, "Content-Length": "0" } });
+    const body = bytes.subarray(range.start, range.end + 1);
+    return new Response(new Uint8Array(body), { status: 206, headers: { ...mediaHeaders, "Content-Length": String(body.length), "Content-Range": `bytes ${range.start}-${range.end}/${bytes.length}` } });
+  }
+  return new Response(request.method === "HEAD" ? null : new Uint8Array(bytes), { headers: { ...mediaHeaders, "Content-Length": String(bytes.length) } });
 }

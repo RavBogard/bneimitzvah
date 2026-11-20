@@ -14,6 +14,7 @@ import { icons, ServiceAppBar } from "./bits";
 import { pathLessons, useServiceProgress, type PathView } from "./progress";
 import { useCoursePath } from "./offline";
 import { savedDate, useOfflineWording } from "../../portal/offline/status";
+import { useIdentity } from "../../site/identity-context";
 
 /** One lesson row. Every row is a link, in every state: a lesson never locks, so nothing here is a bare span (DP-09). */
 function Row({ lesson, progress, next, page }: { lesson: Lesson; progress: Progress; next: Lesson | null; page?: number }) {
@@ -67,6 +68,7 @@ export function YourParts({ view, progress, next, savedAt = null }: { view: Path
 
 /** The course home: one next step, the links, the signed-in student's own parts, every unit of the Shabbat morning service in order, then (CRC, 2.0 SC7) Saturday evening and Havdalah. */
 export function ServiceHome() {
+  const identity = useIdentity();
   const { progress: loaded, account } = useServiceProgress();
   const { view, savedAt } = useCoursePath(account);
   const progress = loaded ?? emptyProgress(), ready = loaded !== null;
@@ -84,6 +86,7 @@ export function ServiceHome() {
         <div className={learn.homeLead}>
           <h1 className={learn.title}>{COPY.home.title}</h1>
           <p className={learn.intro}>{COPY.home.intro}</p>
+          {identity.crc && <p><a href="/recordings?category=blessing">Listen to Cantor Wendy Shermet’s blessings and prayers</a></p>}
           {!ready ? <p role="status" className={learn.state}>{COPY.state.homeLoading}</p>
             : courseDone(progress) ? <section className={learn.next} aria-labelledby="service-next"><h2 id="service-next" className={learn.nextTitle}>{COPY.home.done}</h2></section>
             : next && <section className={learn.next} aria-labelledby="service-next" data-next={next.id}>
