@@ -12,6 +12,7 @@ import { createReadingPlayerIntent, readingAudioCurrent, readingPlayerPreview, c
 import type { ReadingAudioSlot, createReadingAudioCoordinator } from "./reading-audio-coordinator";
 import styles from "./reading-player.module.css";
 const recordingPreferences = new WeakMap<ReturnType<typeof createReadingAudioCoordinator>, "pockettorah" | "shermet">();
+const speedPreferences = new WeakMap<ReturnType<typeof createReadingAudioCoordinator>, { shermet: number; pockettorah: number }>();
 export type ReadingPlayerHandle = { select(index: number, selection?: ReadingSelection): void; pause(): void; suspend(): void };
 /** Main-text activation chooses the verse; grammar retains the tapped word.
  * Explicit Practice/WordTools drills continue to use numeric selections. */
@@ -55,6 +56,7 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
       onState: (value: ReadingPlaybackState) => { if (current) setState(value); }, onActiveWord: (value: { verse: number; index: number } | null) => { if (current && (value === null || owned?.isCurrent() && targetCurrent())) callbacks.current.onActiveWord(value); },
     };
     const playback = createPreferredReadingPlayback({ ...common, preference: recording, available: () => callbacks.current.shermetRefs,
+      speeds: speedPreferences.get(audio.coordinator),
       resolveAvailability: getShermetRecordingRefs,
       timed: { timing: (index, signal) => timed.timing(verses[index].ref, verses[index].hebrew, signal), clip: (index, word, signal) => timed.clip(verses[index].ref, verses[index].hebrew, word, word, signal) },
       verses: verses.map(verse => { const projection = projectStudyVerse(verse.ref, verse.hebrew); return { ref: verse.ref, readingText: verse.hebrew.readingText, wordCount: projection.status === "ready" ? projection.projection.words.length : 0 }; }),
@@ -94,10 +96,10 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
         <button type="button" disabled={!audio || !actionable || !ready || held} aria-pressed={playback?.repeat ?? false} onClick={() => intent.current?.setRepeat(!playback?.repeat)}>Repeat</button></div></div>
     <div className={styles.panel}><div className={styles.options}>{shermetRefs.size > 0 && <div className={styles.field}><label htmlFor={`${id}-recording`}>Recording</label><select id={`${id}-recording`} value={recording} onChange={event => { intent.current?.suspend(); setSourcePreview(preview.index); const preference = event.target.value === "shermet" ? "shermet" : "pockettorah"; if (audio) recordingPreferences.set(audio.coordinator, preference); setRecording(preference); }}><option value="pockettorah">PocketTorah</option><option value="shermet">Cantor Wendy Shermet first</option></select></div>}<div className={styles.field}><label htmlFor={`${id}-selection`}>Practice</label><select id={`${id}-selection`} disabled={!audio || !actionable || !selected} value={String(preview.selection)} onChange={event => { if (preview.index !== null) choose(preview.index, event.target.value === "verse" ? "verse" : Number(event.target.value)); }}>
       <option value="verse">Whole verse</option>{words?.status === "ready" && words.projection.words.map(word => <option key={word.index} value={word.index}>Word {word.index + 1}: {word.text}</option>)}
-    </select></div><div className={styles.field}><label htmlFor={`${id}-speed`}>Speed</label><select id={`${id}-speed`} disabled={!audio || !actionable || !ready || !playback?.speedSupported} value={playback?.speed ?? 1} onChange={event => intent.current?.setSpeed(Number(event.target.value))}>{[0.5,0.75,1,1.25].map(speed => <option key={speed} value={speed}>{speed}×</option>)}</select></div></div>
+    </select></div><div className={styles.field}><label htmlFor={`${id}-speed`}>Speed</label><select id={`${id}-speed`} disabled={!audio || !actionable || !ready || !playback?.speedSupported} value={playback?.speed ?? 1} onChange={event => { const speed = Number(event.target.value); if (audio && state?.source) { const preferred = speedPreferences.get(audio.coordinator) ?? { shermet: 1, pockettorah: 1 }; speedPreferences.set(audio.coordinator, { ...preferred, [state.source]: speed }); } intent.current?.setSpeed(speed); }}>{[0.5,0.75,1,1.25].map(speed => <option key={speed} value={speed}>{speed}×</option>)}</select></div></div>
     {state?.fallback && <p className={styles.message}>{`PocketTorah supplies this selection${state.fallback === "timing" ? " because Shermet word timing is unavailable" : state.fallback === "failed" ? " because the Shermet recording could not load" : " because no Shermet recording is available"}.`}</p>}
     <p role="status" className={styles.message}>{message}</p>
-    {ready && !playback?.speedSupported && <p className={styles.message}>Pitch-preserving speed control isn’t available in this browser.</p>}
+    {ready && !playback?.speedSupported && <p className={styles.message}>Pitch-preserving speed control isn’t available in this browser.{state?.source === "shermet" && " Playing at the original recorded tempo."}</p>}
     <details className={styles.credit}><summary>Recording credit</summary>{state?.source === "shermet" ? <p><a href="https://www.templeisraelomaha.com/cantors-classroom" target="_blank" rel="noreferrer">Cantor Wendy Shermet · Temple Israel, Omaha</a> · Human recording</p> : <p><a href="https://archive.org/details/PockettorahAudioFiles" target="_blank" rel="noreferrer">{SHORT_SOURCE_ATTRIBUTION.title}</a> · {SHORT_SOURCE_ATTRIBUTION.creator} · <a href={SHORT_SOURCE_ATTRIBUTION.licenseUrl} target="_blank" rel="noreferrer">{SHORT_SOURCE_ATTRIBUTION.license}</a> · {SHORT_SOURCE_ATTRIBUTION.changes}</p>}</details></div>
   </section>;
 }

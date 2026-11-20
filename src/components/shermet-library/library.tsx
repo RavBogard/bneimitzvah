@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { SHERMET_CATEGORIES, parseShermetLibrary, shermetLibraryTitle, type ShermetLibraryItem } from "../../lib/reference-audio/shermet-library";
+import { applyRecordingTempo, recordingPitchSupported, RELATIVE_RECORDING_SPEEDS } from "../../lib/reference-audio/recording-tempo";
 import styles from "./library.module.css";
 type Page = { items: readonly ShermetLibraryItem[]; nextOffset: number | null };
 export function ShermetLibrary({ initialCategory = "" }: { initialCategory?: string }) {
@@ -39,18 +40,52 @@ export function ShermetLibrary({ initialCategory = "" }: { initialCategory?: str
     {selected && <ShermetLibraryPlayer item={selected.item} sha256={selected.sha256} />}
   </>;
 }
-/** Shared by the library and the actual matching prayer lesson. */
+let preferredSpeed = 1;
+const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+/** Shared by the library and the actual matching prayer lesson. Native controls
+ * include a raw-rate menu in some browsers, so all controls use relative rates. */
 export function ShermetLibraryPlayer({ item, sha256 }: { item: ShermetLibraryItem; sha256: string }) {
-  const [error, setError] = useState(false), media = useRef<HTMLAudioElement | null>(null);
+  const media = useRef<HTMLAudioElement | null>(null);
+  const [error, setError] = useState(false), [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState(preferredSpeed), [repeat, setRepeat] = useState(false);
+  const [position, setPosition] = useState(0), [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1), [muted, setMuted] = useState(false), [speedSupported, setSpeedSupported] = useState(true);
+  useLayoutEffect(() => {
+    const node = media.current;
+    if (!node) return;
+    applyRecordingTempo(node, "shermet", speed);
+    node.volume = volume; node.muted = muted;
+    setSpeedSupported(recordingPitchSupported(node));
+  }, [item.id, sha256, speed, volume, muted]);
   useEffect(() => {
-    setError(false);
+    setError(false); setPosition(0); setDuration(0); setPlaying(false);
     const selected = media.current;
     const stop = () => { if (document.visibilityState !== "visible") selected?.pause(); };
     document.addEventListener("visibilitychange", stop);
     return () => { selected?.pause(); document.removeEventListener("visibilitychange", stop); };
   }, [item.id, sha256]);
+  const play = () => {
+    const node = media.current;
+    if (!node) return;
+    if (!node.paused) { node.pause(); return; }
+    setError(false); applyRecordingTempo(node, "shermet", speed);
+    void node.play().catch(() => setError(true));
+  };
   return <section className={styles.player} aria-label="Selected recording"><h2>{shermetLibraryTitle(item)}</h2>{item.category === "source-conflict" && <p>Omaha’s original label: {item.label}{!item.ref && " · The text identity is unconfirmed."}</p>}<p>Cantor Wendy Shermet · Temple Israel, Omaha</p>
-    <audio key={`${item.id}:${sha256}`} ref={media} controls autoPlay preload="none" aria-label={shermetLibraryTitle(item)} src={`/api/shermet-library/media?${new URLSearchParams({ id: item.id, recording: sha256 })}`} onError={() => setError(true)} />
+    <audio key={`${item.id}:${sha256}`} ref={media} autoPlay loop={repeat} preload="none" aria-label={shermetLibraryTitle(item)} src={`/api/shermet-library/media?${new URLSearchParams({ id: item.id, recording: sha256 })}`}
+      onPlay={() => { if (media.current) applyRecordingTempo(media.current, "shermet", speed); setPlaying(true); }} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)}
+      onRateChange={() => { if (media.current) applyRecordingTempo(media.current, "shermet", speed); }}
+      onTimeUpdate={event => setPosition(event.currentTarget.currentTime)} onDurationChange={event => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
+      onVolumeChange={event => { setVolume(event.currentTarget.volume); setMuted(event.currentTarget.muted); }} onError={() => setError(true)} />
+    <div className={styles.controls}>
+      <button type="button" onClick={play}>{playing ? "Pause" : "Play"}</button>
+      <button type="button" aria-pressed={repeat} onClick={() => setRepeat(value => !value)}>Repeat</button>
+      <label>Speed<select disabled={!speedSupported} value={speed} onChange={event => { preferredSpeed = Number(event.target.value); setSpeed(preferredSpeed); }}>{RELATIVE_RECORDING_SPEEDS.map(rate => <option key={rate} value={rate}>{rate}×</option>)}</select></label>
+      <label className={styles.seek}>Recording position<input aria-label="Recording position" type="range" min="0" max={duration || 0} step="0.1" value={Math.min(position, duration)} disabled={!duration} aria-valuetext={`${clock(position)} of ${clock(duration)}`} onChange={event => { const at = Number(event.target.value); if (media.current) media.current.currentTime = at; setPosition(at); }} /><span>{clock(position)} / {clock(duration)}</span></label>
+      <button type="button" aria-pressed={muted} onClick={() => setMuted(value => !value)}>Mute</button>
+      <label>Volume<input type="range" min="0" max="1" step="0.05" value={volume} onChange={event => setVolume(Number(event.target.value))} /></label>
+    </div>
+    {!speedSupported && <p>This browser cannot preserve pitch at different speeds. Playing at the original recorded tempo.</p>}
     {error && <p role="alert">This recording couldn’t be loaded. Choose another recording or try again.</p>}
   </section>;
 }

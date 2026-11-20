@@ -7,14 +7,15 @@ type Transport = Pick<ReturnType<typeof createShortReadingPlayback>, "state" | "
 export function createPreferredReadingPlayback(input: PocketInput & {
   preference: "shermet" | "pockettorah"; available(): ReadonlySet<string>; canContinue(): boolean; timed?: ShermetPlaybackTiming;
   resolveAvailability?(): Promise<ReadonlySet<string>>;
+  speeds?: Readonly<{ shermet: number; pockettorah: number }>;
 }, factories = { pockettorah: createShortReadingPlayback, shermet: createShermetPlayback }) {
   let source: "shermet" | "pockettorah" = "pockettorah", fallback: ReadingPlaybackState["fallback"];
   let heard = false, closed = false;
   let selectionTurn = 0, resolvedAvailability: ReadonlySet<string> | null = null;
   let state: ReadingPlaybackState;
   const publish = (next: ReadingPlaybackState) => { state = { ...next, source, fallback }; input.onState(state); };
-  const pocket = factories.pockettorah({ ...input, canContinue: () => !closed && source === "pockettorah" && input.canContinue(), onState: next => { if (!closed && source === "pockettorah") publish(next); } });
-  const shermet = factories.shermet({ verses: input.verses, available: () => resolvedAvailability ?? input.available(), timed: input.timed,
+  const pocket = factories.pockettorah({ ...input, initialSpeed: input.speeds?.pockettorah, canContinue: () => !closed && source === "pockettorah" && input.canContinue(), onState: next => { if (!closed && source === "pockettorah") publish(next); } });
+  const shermet = factories.shermet({ verses: input.verses, available: () => resolvedAvailability ?? input.available(), timed: input.timed, initialSpeed: input.speeds?.shermet,
     canContinue: () => !closed && source === "shermet" && input.canContinue(), onActiveWord: input.onActiveWord,
     onState(next) {
       if (closed || source !== "shermet") return;

@@ -1,5 +1,6 @@
 import { shortSilentPrime } from "../../lib/reference-audio/short-playback";
 import type { PhraseAudio, PhraseClip, PhraseRequest } from "../../lib/learn/phrase-audio";
+import { applyRecordingTempo } from "../../lib/reference-audio/recording-tempo";
 
 /** One media element per course page. Word outlines follow its clock, never elapsed wall time. */
 export type PlayerState = Readonly<{ id: string | null; status: "idle" | "loading" | "playing" | "paused" | "error"; seconds: number; part: number;
@@ -62,7 +63,7 @@ export function createClipPlayer(audio: PhraseAudio, make: () => HTMLAudioElemen
     async play(id: string, requests: readonly PhraseRequest[], options: { rate?: number } = {}): Promise<boolean> {
       halt(); const mine = turn, signal = controller.signal;
       publish({ id, status: "loading", seconds: 0, part: 0 });
-      try { const node = attach(shortSilentPrime()); void node.play().catch(() => {}); } catch { /* The real clip reports unavailable media. */ }
+      try { const node = attach(shortSilentPrime()); applyRecordingTempo(node, undefined, 1); void node.play().catch(() => {}); } catch { /* The real clip reports unavailable media. */ }
       try {
         for (const [part, request] of requests.entries()) {
           const clip = await audio.phraseClip(request, signal);
@@ -70,9 +71,8 @@ export function createClipPlayer(audio: PhraseAudio, make: () => HTMLAudioElemen
           const rate = options.rate ?? 1;
           if (![0.5, 0.75, 1, 1.25].includes(rate)) throw new Error("Unsupported rate");
           const node = attach(clip.blob);
-          if (typeof node.preservesPitch === "boolean") node.preservesPitch = true;
-          node.playbackRate = rate; node.defaultPlaybackRate = rate;
-          const tracking = follow(node, clip, request, id, part, mine, signal, rate);
+          const effectiveRate = applyRecordingTempo(node, clip.source, rate);
+          const tracking = follow(node, clip, request, id, part, mine, signal, effectiveRate);
           try { await Promise.race([node.play(), tracking.finished]); tracking.start(); await tracking.finished; } finally { tracking.cancel(); }
           if (turn !== mine) return false;
           if (part < requests.length - 1) await new Promise<void>(resolve => {

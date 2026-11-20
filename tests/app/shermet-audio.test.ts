@@ -96,8 +96,11 @@ describe("Shermet verse transport", () => {
     await player.select(0);
     expect(player.state.playback.status).toBe("playing"); expect(player.state.playback.wordsReady).toBe(false);
     expect(f.audio.src).toContain("ref=Genesis+1%3A1");
+    expect(f.audio.playbackRate).toBe(1.25); expect(f.audio.preservesPitch).toBe(true);
+    player.setSpeed(0.75); expect(f.audio.playbackRate).toBe(0.9375); expect(player.state.playback.speed).toBe(0.75);
+    player.setSpeed(1.25); expect(f.audio.playbackRate).toBe(1.5625);
     player.setRepeat(true); f.ended(); await Promise.resolve();
-    expect(f.plays).toBe(2);
+    expect(f.plays).toBe(2); expect(f.audio.playbackRate).toBe(1.5625);
     await player.select(0, 0); expect(player.state.timingHeld).toBe(true); expect(f.plays).toBe(2);
     await player.select(1); expect(player.state.playback.status).toBe("unavailable"); expect(f.plays).toBe(2);
     await player.select(0); allowed = false; player.suspend();

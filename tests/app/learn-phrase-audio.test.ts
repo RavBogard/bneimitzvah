@@ -174,3 +174,25 @@ it("does not let a stale rejected resume stop replacement playback", async () =>
   expect(await first).toBe(false); expect(player.state.id).toBe("replacement"); expect(player.state.current?.word).toBe(4);
   player.stop(); expect(await replacement).toBe(false); player.dispose();
 });
+
+it.each([1, 0.75, 1.25])("scales only Shermet Learn clips at relative %s and follows unchanged native media time", async rate => {
+  const { audio } = rig(), media = new TestMedia();
+  const clip = await audio.phraseClip(phrase, signal());
+  let source: "shermet" | "pockettorah" = "shermet";
+  const player = createClipPlayer({ ...audio, phraseClip: async () => ({ ...clip, source }) }, () => media as unknown as HTMLAudioElement);
+  for (let repeat = 0; repeat < 2; repeat++) {
+    const done = player.play("example", [phrase], { rate });
+    await vi.waitFor(() => expect(player.state.status).toBe("playing"));
+    expect(media.playbackRate).toBe(rate * 1.25); expect(media.defaultPlaybackRate).toBe(rate * 1.25); expect(media.preservesPitch).toBe(true);
+    expect(player.state.seconds).toBe(clip.seconds / (rate * 1.25));
+    media.at(1.1); expect(player.state.current?.word).toBe(5);
+    media.at(1.8); expect(player.state.current).toBeNull();
+    player.pause(); await player.resume(); expect(media.playbackRate).toBe(rate * 1.25);
+    media.end(); expect(await done).toBe(true);
+  }
+  source = "pockettorah";
+  const fallback = player.play("fallback", [phrase], { rate });
+  await vi.waitFor(() => expect(player.state.status).toBe("playing"));
+  expect(media.playbackRate).toBe(rate); expect(player.state.seconds).toBe(clip.seconds / rate);
+  media.end(); await fallback; player.dispose();
+});

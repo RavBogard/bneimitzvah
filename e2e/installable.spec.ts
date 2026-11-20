@@ -1,4 +1,5 @@
 import { expect, test, type BrowserContext, type Page, type Route } from "@playwright/test";
+import { createHash } from "node:crypto";
 import { syntheticCourseRoutes } from "./learn-synthetic";
 import { finishLesson } from "./learn-drill";
 import { webManifest } from "../src/lib/offline/manifest";
@@ -220,4 +221,43 @@ test("offline within 14 days, a done service-course lesson's Read, Key words and
   // Never the siddur reader (the licensed book), never the evening text, never anything private from the worker.
   expect(asked.filter(url => /siddur\.centralreform\.org|\/api\/public\/evening-text/.test(url))).toEqual([]);
   expect(app.state.fromWorker.filter(path => path !== "/api/shermet-library" && /^\/api\/(?!public\/(?:service-text|text|manifest)$)/.test(path))).toEqual([]);
+});
+
+
+test("offline, a normally saved Shermet verse plays at its teaching tempo without a network media request", async ({ context, page }, testInfo) => {
+  test.skip(testInfo.project.name !== "phone", "one device is enough for the worker");
+  test.setTimeout(240_000);
+  const app = await installedApp(context), ref = "Genesis 12:1";
+  // Synthetic silent PCM, hash-bound by the ordinary pack manifest.
+  const body = Buffer.alloc(44 + 8000 * 12 * 2);
+  body.write("RIFF"); body.writeUInt32LE(body.length - 8, 4); body.write("WAVE", 8); body.write("fmt ", 12); body.writeUInt32LE(16, 16);
+  body.writeUInt16LE(1, 20); body.writeUInt16LE(1, 22); body.writeUInt32LE(8000, 24); body.writeUInt32LE(16000, 28); body.writeUInt16LE(2, 32); body.writeUInt16LE(16, 34); body.write("data", 36); body.writeUInt32LE(body.length - 44, 40);
+  const recording = { kind: "torah", ref, sha256: createHash("sha256").update(body).digest("hex"), bytes: body.length, mimeType: "audio/wav" };
+  let networkMedia = 0;
+  await context.route("**/api/shermet-audio/catalog*", route => app.state.offline ? route.abort("internetdisconnected") : route.fulfill({ json: new URL(route.request().url()).searchParams.get("format") === "manifest" ? { recordings: [recording] } : { refs: [ref] } }));
+  await context.route("**/api/shermet-audio?*", route => {
+    networkMedia++;
+    return app.state.offline ? route.abort("internetdisconnected") : route.fulfill({ contentType: "audio/wav", headers: { "content-length": String(body.length) }, body });
+  });
+  await context.addInitScript(() => {
+    const target = window as unknown as { savedShermet: HTMLMediaElement | null }; target.savedShermet = null;
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () { if (this.src.includes("/api/shermet-audio?")) target.savedShermet = this; return play.call(this); };
+  });
+  await saved(page);
+  expect((await packs(page)).find(pack => pack.key.startsWith("week:"))?.assets).toContain(`/api/shermet-audio?${new URLSearchParams({ ref })}`);
+  await page.goto("/read");
+  await expect(page.locator(`.study-verses [data-verse-ref="${ref}"]`)).toBeVisible();
+  const before = networkMedia; app.state.fromWorker.length = 0;
+  await app.offline(true); await page.goto("/read");
+  const row = page.locator(`.study-verses [data-verse-ref="${ref}"]`);
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  await row.locator('[data-word-index="0"]').first().click();
+  const player = page.getByRole("region", { name: "Reading playback", exact: true });
+  await expect(player.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  await expect(player.getByRole("combobox", { name: "Recording", exact: true })).toHaveValue("shermet");
+  await expect(player.getByRole("combobox", { name: "Speed", exact: true })).toHaveValue("1");
+  await expect.poll(() => page.evaluate(() => (window as unknown as { savedShermet: HTMLMediaElement | null }).savedShermet?.playbackRate)).toBe(1.25);
+  expect(networkMedia).toBe(before);
+  expect(app.state.fromWorker).toContain("/api/shermet-audio");
 });

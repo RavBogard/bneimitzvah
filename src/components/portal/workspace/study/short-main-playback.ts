@@ -17,6 +17,7 @@ const unavailable = () => new Error("Short reference playback unavailable");
 /** Unwired page owner. Private DTOs live only here; public media never confers
  * authority. Lifecycle invalidation must suspend/dispose this owner. */
 export function createShortReadingPlayback(input: {
+  initialSpeed?: number;
   verses: readonly { ref: string; readingText: string; wordCount: number }[];
   load(index: number, signal: AbortSignal): Promise<ReferenceShortResolution>;
   onState(state: ReadingPlaybackState): void;
@@ -32,7 +33,7 @@ export function createShortReadingPlayback(input: {
   let state: ReadingPlaybackState = Object.freeze({ verse: null, selection: "verse", playback: idle, timingHeld: false, suspended: false });
   let closed = false, turn = 0, wantsPlay = false, lastPlay = 0, frame: number | undefined, currentData: Data | undefined, asset: Asset | undefined, url: string | undefined;
   let selectionAbort = new AbortController(), context: { index: number; abort: AbortController; work: Promise<Data | null>; data?: Data } | undefined;
-  let bound: { key: string; frames: number; rate: number; offset: number; turn: number } | undefined, preferredSpeed = 1, preferredRepeat = false;
+  let bound: { key: string; frames: number; rate: number; offset: number; turn: number } | undefined, preferredSpeed = [0.5, 0.75, 1, 1.25].includes(input.initialSpeed ?? 1) ? input.initialSpeed ?? 1 : 1, preferredRepeat = false;
   let prime: { turn: number; url: string } | undefined;
   let activeVerse: number | null = null, activeIndex: number | null = null;
   type Job = { entry: Asset; live(): void; resolve(value: ShortDecodedAudio): void; reject(error: unknown): void };
