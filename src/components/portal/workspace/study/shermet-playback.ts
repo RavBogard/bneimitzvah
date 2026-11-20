@@ -3,7 +3,7 @@ import type { ReadingPlaybackState, ReadingSelection } from "./main-playback";
 
 /** Whole-verse human recordings. No PocketTorah timing is reused. */
 export function createShermetPlayback(input: {
-  verses: readonly { ref: string }[]; available: ReadonlySet<string>; canContinue(): boolean;
+  verses: readonly { ref: string }[]; available: ReadonlySet<string> | (() => ReadonlySet<string>); canContinue(): boolean;
   onState(state: ReadingPlaybackState): void; onActiveWord(value: null): void;
   audio?(): ReferenceAudioElement;
 }) {
@@ -33,7 +33,8 @@ export function createShermetPlayback(input: {
     if (!allowed() || !Number.isSafeInteger(index) || !input.verses[index]) return;
     drop();
     publish({ verse: index, selection, timingHeld: selection !== "verse", suspended: false }, { selection, status: "loading", retryPlay: false });
-    if (!input.available.has(input.verses[index].ref)) { publish({}, { status: "unavailable", repeat: false }); return; }
+    const available = typeof input.available === "function" ? input.available() : input.available;
+    if (!available.has(input.verses[index].ref)) { publish({}, { status: "unavailable", repeat: false }); return; }
     if (selection !== "verse") { publish({}, { status: "ready", repeat: false }); return; }
     media = input.audio?.() ?? new Audio();
     media.preload = "auto"; media.src = `/api/shermet-audio?${new URLSearchParams({ ref: input.verses[index].ref })}`;
