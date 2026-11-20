@@ -185,6 +185,9 @@ def main():
     model, feature, vocab = base.load_model(args.model)
     import numpy as np
     while True:
+        # The original corpus grows and source adjudications can add references;
+        # the operator atomically replaces this file for both running workers.
+        projection = base.read(args.projection)["verses"]
         audit_bytes = Path(args.independent_audit).read_bytes() if args.independent_audit else None
         audits = {(a["ref"], a["audioSha256"]): a for a in json.loads(audit_bytes)} if audit_bytes else {}
         audit_sha = base.sha(audit_bytes) if audit_bytes else None
@@ -205,7 +208,8 @@ def main():
             audit = audits.get((row["timing"]["ref"], row["timing"]["audioSha256"]))
             if prior and prior.get("rescueCodeVersion") == RESCUE_CODE and audit and prior.get("quality", {}).get("independentAsrAudit", {}).get("evidenceSha256") != audit_sha:
                 base.save(output / (key + ".json"), apply_independent_audit(prior, audit, audit_sha))
-            if not prior or prior.get("rescueCodeVersion") != RESCUE_CODE:
+            low_evidence_missing = prior and prior.get("status") == "candidate" and prior.get("quality", {}).get("minimumWordScore", 1) < .08 and prior.get("quality", {}).get("independentWhisper", {}).get("audioSha256") != row["timing"]["audioSha256"]
+            if not prior or prior.get("rescueCodeVersion") != RESCUE_CODE or low_evidence_missing:
                 available.append((row["timing"]["ref"] not in priorities, row, key))
         available.sort(key=lambda value: value[0])
         for _, row, key in available[:args.maximum]:

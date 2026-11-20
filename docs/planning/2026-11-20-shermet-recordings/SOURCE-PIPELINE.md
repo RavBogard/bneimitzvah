@@ -70,6 +70,8 @@ C:/private/shermet-alignment/word-rescues C:/private/shermet-alignment/asr-audit
 
 Deuteronomy 32:1–6 has an untimed linguistic target repair in `extra-packs/Shermet-Deuteronomy32-untimed-phones`. `shermet-phone-targets.mjs` uses the same read-only engine word parser and syllable-phone conversion without requesting an unsupported melody score. Twelve ordinary verses (153 words) matched the original trusted packs' word labels and all phones exactly. No note timeline, melody or generated audio is produced.
 
+The final frozen ordinary manifest has 7,434 recordings. Its exact current projection was staged separately and atomically installed with 7,433 ready bindings; II Kings 5:18 remains an unsupported-markup hold. All 24 final recorded Deuteronomy 23 references have exact word identity/count parity with their untimed phone targets. Both GPU paths reload the atomically replaced projection on each batch.
+
 ## Resume commands
 
 Do not start a duplicate worker while its PID is running. Source resume:
