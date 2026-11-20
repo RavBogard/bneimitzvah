@@ -79,6 +79,10 @@ test('holds equal audio bytes assigned distinct refs, then accepts only a digest
   assert.equal(mapInventory(inventory, media).recordings.length, 0);
   const decision = [{ sourceId: 123, sha256: 'a'.repeat(64), ref: 'Genesis 1:1', evidenceSha256: 'b'.repeat(64) }];
   assert.deepEqual(mapInventory(inventory, media, decision).recordings.map(r => r.ref), ['Genesis 1:1']);
+  const mislabeled = { ...a, rows: [{ ...a.rows[0], label: 'Genesis 1:2' }] };
+  const correction = mapInventory({ version: 1, pages: [mislabeled] }, media, decision).deferred[0];
+  assert.equal(correction.ref, 'Genesis 1:1');
+  assert.equal(correction.rowLabel, 'Genesis 1:2');
   decision[0].sha256 = 'c'.repeat(64);
   assert.equal(mapInventory(inventory, media, decision).recordings.length, 0);
 });

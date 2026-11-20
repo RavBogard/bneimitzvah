@@ -176,7 +176,7 @@ export function mapInventory(inventory, media = {}, adjudications = []) {
       if (target && match && target[2] === match[2] && target[3] === match[3] && titleMatches) {
         ref = qa.ref; match = target; audioCorrection = 'Independent SHA-bound ASR and phone contrast confirm the title/parent reference over the printed row book.';
       } else {
-        deferred.push({ pageUrl: page.url, pageTitle: page.title, rowLabel: row.label, parents, category: 'source-conflict', reason: 'Independent SHA-bound audio identity disagrees with the printed row reference', sources: row.sources, adjudicationSha256: qa.evidenceSha256 }); continue;
+        deferred.push({ pageUrl: page.url, pageTitle: page.title, rowLabel: row.label, parents, ...(target ? { ref: qa.ref, kind: TORAH_BOOKS.has(target[1]) ? 'torah' : 'haftarah' } : {}), category: 'source-conflict', reason: 'Independent SHA-bound audio identity disagrees with the printed row reference', sources: row.sources, adjudicationSha256: qa.evidenceSha256 }); continue;
       }
     }
     const book = match?.[1], kind = book ? TORAH_BOOKS.has(book) ? 'torah' : MEGILLOT.has(book) ? 'megillah' : 'haftarah' : undefined;
