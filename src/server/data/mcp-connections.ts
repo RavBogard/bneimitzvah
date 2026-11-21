@@ -1,4 +1,5 @@
 import "server-only";
+import { nameForMembership } from "../account-display-name/data";
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
@@ -9,7 +10,7 @@ const c = s.mcpConnection;
 /** Live (not revoked, not expired) Claude connections in the tenant, newest first; one membership's alone when given. Names and dates only. */
 export async function liveConnections<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, now: Date, membershipId?: string) {
   return tx.select({ id: c.id, membershipId: c.membershipId, role: c.role, scope: c.scope, unattended: c.unattended, clientName: c.clientName,
-    createdAt: c.createdAt, expiresAt: c.expiresAt, staffName: s.user.name })
+    createdAt: c.createdAt, expiresAt: c.expiresAt, staffName: nameForMembership(s.user.name, c.tenantId, c.membershipId) })
     .from(c).innerJoin(s.user, eq(s.user.id, c.userId))
     .where(and(eq(c.tenantId, tenantId), isNull(c.revokedAt), gt(c.expiresAt, now), ...(membershipId ? [eq(c.membershipId, membershipId)] : [])))
     .orderBy(desc(c.createdAt), desc(c.id)).limit(101);

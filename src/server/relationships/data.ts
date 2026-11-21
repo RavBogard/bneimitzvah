@@ -1,4 +1,5 @@
 import "server-only";
+import { nameForMembership } from "../account-display-name/data";
 import { and, asc, eq, gt, isNull } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction, Actor, LockIntent } from "../access/types";
@@ -32,7 +33,7 @@ export async function student<Q extends PgQueryResultHKT>(tx: AccessTransaction<
 }
 
 export async function eligibleTutors<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, afterId: string | undefined, limit: number) {
-  return tx.select({ grant: s.roleGrant, displayName: s.user.name }).from(s.roleGrant)
+  return tx.select({ grant: s.roleGrant, displayName: nameForMembership(s.user.name) }).from(s.roleGrant)
     .innerJoin(s.membership, and(eq(s.membership.tenantId, s.roleGrant.tenantId), eq(s.membership.id, s.roleGrant.membershipId)))
     .innerJoin(s.user, eq(s.user.id, s.membership.userId)).where(and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.role, "tutor"),
       isNull(s.roleGrant.revokedAt), isNull(s.membership.disabledAt), eq(s.user.emailVerified, true), afterId ? gt(s.roleGrant.id, afterId) : undefined))
@@ -69,15 +70,15 @@ export async function tutorLink<Q extends PgQueryResultHKT>(tx: AccessTransactio
 }
 
 export async function inspectLinks<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, studentId: string) {
-  const guardians = await tx.select({ link: s.guardian, membershipId: s.membership.id, revokedGrant: s.roleGrant.revokedAt, grantRevision: s.roleGrant.revision, disabledMembership: s.membership.disabledAt, verified: s.user.emailVerified, displayName: s.user.name }).from(s.guardian)
+  const guardians = await tx.select({ link: s.guardian, membershipId: s.membership.id, revokedGrant: s.roleGrant.revokedAt, grantRevision: s.roleGrant.revision, disabledMembership: s.membership.disabledAt, verified: s.user.emailVerified, displayName: nameForMembership(s.user.name) }).from(s.guardian)
     .innerJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.guardian.tenantId), eq(s.roleGrant.id, s.guardian.parentGrantId)))
     .innerJoin(s.membership, and(eq(s.membership.tenantId, s.roleGrant.tenantId), eq(s.membership.id, s.roleGrant.membershipId))).innerJoin(s.user, eq(s.user.id, s.membership.userId))
     .where(and(eq(s.guardian.tenantId, tenantId), eq(s.guardian.studentId, studentId), isNull(s.guardian.revokedAt))).orderBy(asc(s.guardian.id)).limit(501);
-  const identities = await tx.select({ link: s.studentIdentity, membershipId: s.membership.id, revokedGrant: s.roleGrant.revokedAt, grantRevision: s.roleGrant.revision, disabledMembership: s.membership.disabledAt, verified: s.user.emailVerified, displayName: s.user.name }).from(s.studentIdentity)
+  const identities = await tx.select({ link: s.studentIdentity, membershipId: s.membership.id, revokedGrant: s.roleGrant.revokedAt, grantRevision: s.roleGrant.revision, disabledMembership: s.membership.disabledAt, verified: s.user.emailVerified, displayName: nameForMembership(s.user.name) }).from(s.studentIdentity)
     .innerJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.studentIdentity.tenantId), eq(s.roleGrant.id, s.studentIdentity.roleGrantId)))
     .innerJoin(s.membership, and(eq(s.membership.tenantId, s.roleGrant.tenantId), eq(s.membership.id, s.roleGrant.membershipId))).innerJoin(s.user, eq(s.user.id, s.membership.userId))
     .where(and(eq(s.studentIdentity.tenantId, tenantId), eq(s.studentIdentity.studentId, studentId), isNull(s.studentIdentity.revokedAt))).orderBy(asc(s.studentIdentity.id)).limit(501);
-  const tutors = await tx.select({ link: s.tutorStudent, revokedGrant: s.roleGrant.revokedAt, grantRevision: s.roleGrant.revision, disabledMembership: s.membership.disabledAt, verified: s.user.emailVerified, displayName: s.user.name, isCantor: s.roleGrant.isCantor }).from(s.tutorStudent)
+  const tutors = await tx.select({ link: s.tutorStudent, revokedGrant: s.roleGrant.revokedAt, grantRevision: s.roleGrant.revision, disabledMembership: s.membership.disabledAt, verified: s.user.emailVerified, displayName: nameForMembership(s.user.name), isCantor: s.roleGrant.isCantor }).from(s.tutorStudent)
     .innerJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.tutorStudent.tenantId), eq(s.roleGrant.id, s.tutorStudent.tutorGrantId)))
     .innerJoin(s.membership, and(eq(s.membership.tenantId, s.roleGrant.tenantId), eq(s.membership.id, s.roleGrant.membershipId))).innerJoin(s.user, eq(s.user.id, s.membership.userId))
     .where(and(eq(s.tutorStudent.tenantId, tenantId), eq(s.tutorStudent.studentId, studentId), isNull(s.tutorStudent.revokedAt))).orderBy(asc(s.tutorStudent.id)).limit(501);

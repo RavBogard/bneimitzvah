@@ -1,4 +1,5 @@
 import "server-only";
+import { nameForMembership } from "../account-display-name/data";
 import { and, asc, countDistinct, desc, eq, exists, gt, gte, inArray, isNull, lt, lte, notExists, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction, ActiveMode, Actor } from "../access/types";
@@ -36,7 +37,7 @@ export async function liveRecipient<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenan
   const productName = await readProductName(tx, tenantId);
   const [member] = await tx.select().from(s.membership).where(and(eq(s.membership.tenantId, tenantId), eq(s.membership.id, membershipId))).for("share");
   if (!member || member.disabledAt) return null;
-  const [user] = await tx.select({ id: s.user.id, email: s.user.email, name: s.user.name, verified: s.user.emailVerified }).from(s.user).where(eq(s.user.id, member.userId)).for("share");
+  const [user] = await tx.select({ id: s.user.id, email: s.user.email, name: nameForMembership(s.user.name, tenantId, membershipId), verified: s.user.emailVerified }).from(s.user).where(eq(s.user.id, member.userId)).for("share");
   if (!user?.verified || !mailbox(user.email)) return null;
   const grant = await lockRoleGrant(tx, tenantId, member.id, role, "read");
   if (!grant || grant.revokedAt) return null;
@@ -131,7 +132,7 @@ export async function serviceSlot<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantI
 /** Current lesson-log entries dated in [fromDate, throughDate], newest first, as a parent's lesson page shows them. */
 export async function lessonsBetween<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, studentId: string, fromDate: string, throughDate: string, limit: number) {
   const t = s.lessonLog;
-  return tx.select({ lessonDate: t.lessonDate, summary: t.summary, name: s.user.name }).from(t).innerJoin(s.user, eq(s.user.id, t.creatorUserId))
+  return tx.select({ lessonDate: t.lessonDate, summary: t.summary, name: nameForMembership(s.user.name, t.tenantId, t.creatorMembershipId) }).from(t).innerJoin(s.user, eq(s.user.id, t.creatorUserId))
     .where(and(eq(t.tenantId, tenantId), eq(t.studentId, studentId), eq(t.deleted, false), gte(t.lessonDate, fromDate), lte(t.lessonDate, throughDate)))
     .orderBy(desc(t.lessonDate), desc(t.entryId)).limit(limit);
 }

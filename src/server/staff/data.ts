@@ -1,4 +1,5 @@
 import "server-only";
+import { nameForMembership } from "../account-display-name/data";
 import { and, asc, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
@@ -63,7 +64,7 @@ export async function handOverLinks<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenan
 
 /** A student's joined parents for the tutor's family line: display names only, never an address. */
 export async function joinedParents<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, studentId: string) {
-  return tx.select({ id: s.guardian.id, name: s.user.name }).from(s.guardian)
+  return tx.select({ id: s.guardian.id, name: nameForMembership(s.user.name) }).from(s.guardian)
     .innerJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.guardian.tenantId), eq(s.roleGrant.id, s.guardian.parentGrantId)))
     .innerJoin(s.membership, and(eq(s.membership.tenantId, s.roleGrant.tenantId), eq(s.membership.id, s.roleGrant.membershipId)))
     .innerJoin(s.user, eq(s.user.id, s.membership.userId))
@@ -120,12 +121,13 @@ export async function lockedAssignment<Q extends PgQueryResultHKT>(tx: Tx<Q>, te
 
 /** The live tutors' display names per student (the name staff already see on the People page; the service cleans it). */
 export async function tutorNames<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string) {
-  return tx.select({ studentId: s.tutorStudent.studentId, name: s.user.name }).from(s.tutorStudent)
+  const name = nameForMembership(s.user.name);
+  return tx.select({ studentId: s.tutorStudent.studentId, name }).from(s.tutorStudent)
     .innerJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.tutorStudent.tenantId), eq(s.roleGrant.id, s.tutorStudent.tutorGrantId)))
     .innerJoin(s.membership, and(eq(s.membership.tenantId, s.roleGrant.tenantId), eq(s.membership.id, s.roleGrant.membershipId)))
     .innerJoin(s.user, eq(s.user.id, s.membership.userId))
     .where(and(eq(s.tutorStudent.tenantId, tenantId), isNull(s.tutorStudent.revokedAt), isNull(s.roleGrant.revokedAt), isNull(s.membership.disabledAt)))
-    .orderBy(asc(s.user.name), asc(s.tutorStudent.tutorGrantId)).limit(LIMIT);
+    .orderBy(asc(name), asc(s.tutorStudent.tutorGrantId)).limit(LIMIT);
 }
 /**
  * Verses in each student's confirmed readings (total), how many the student has marked Got it, and (T2, 2026-11-17) per student the

@@ -1,4 +1,5 @@
 import "server-only";
+import { nameForMembership } from "../account-display-name/data";
 import { createHash, randomUUID } from "node:crypto";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { eq } from "drizzle-orm";
@@ -70,7 +71,8 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
     /** What the signed-in person can do about an account: already a member, waiting, or able to ask. */
     async requestState(request: Request) {
       return input.access.withVerifiedIdentity(request, { intent: "read" }, async (tx, identity) => {
-        const [account] = await tx.select({ name: s.user.name }).from(s.user).where(eq(s.user.id, identity.userId)).limit(1);
+        const name = identity.membership ? nameForMembership(s.user.name, identity.tenantId, identity.membership.id) : s.user.name;
+        const [account] = await tx.select({ name }).from(s.user).where(eq(s.user.id, identity.userId)).limit(1);
         // The account's own name, when it is a plain name rather than an address.
         const shown = account ? validate.shownName(account.name) : "", suggestedName = shown === "Portal member" ? "" : shown;
         const { productName } = await data.tenantNames(tx, identity.tenantId);

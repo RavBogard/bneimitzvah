@@ -1,4 +1,5 @@
 import "server-only";
+import { nameForMembership } from "../account-display-name/data";
 import { createHmac } from "node:crypto";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
@@ -29,7 +30,7 @@ export async function listInvitations<Q extends PgQueryResultHKT>(tx: AccessTran
  */
 export async function parentInvitationCandidates<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, now: Date) {
   // Approved, live members with a verified address.
-  const members = await tx.select({ memberId: s.tenantMember.id, membershipId: s.tenantMember.membershipId, name: s.tenantMember.displayName, email: s.user.email })
+  const members = await tx.select({ memberId: s.tenantMember.id, membershipId: s.tenantMember.membershipId, name: nameForMembership(s.tenantMember.displayName, s.tenantMember.tenantId, s.tenantMember.membershipId), email: s.user.email })
     .from(s.tenantMember).innerJoin(s.user, eq(s.user.id, s.tenantMember.userId))
     .where(and(eq(s.tenantMember.tenantId, tenantId), isNull(s.tenantMember.revokedAt), eq(s.user.emailVerified, true))).orderBy(s.tenantMember.id).limit(500);
   // Enabled students' roster parent contacts.

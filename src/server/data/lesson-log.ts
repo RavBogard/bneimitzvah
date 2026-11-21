@@ -1,4 +1,5 @@
 import "server-only";
+import { nameForMembership } from "../account-display-name/data";
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, lt, or } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
@@ -25,7 +26,7 @@ export function view(actor: LessonLogActor, row: LessonLogRow, name: string): Le
   return { entryId: row.entryId, lessonDate: row.lessonDate, summary: row.summary, beforeNext: row.beforeNext ?? null, version: row.version, displayName: safeDisplayName(name), canEdit: editable, canDelete: editable };
 }
 export async function page<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: LessonLogActor, before: LessonLogCursor | undefined) {
-  return tx.select({ row: t, name: s.user.name }).from(t).innerJoin(s.user, eq(s.user.id, t.creatorUserId))
+  return tx.select({ row: t, name: nameForMembership(s.user.name, t.tenantId, t.creatorMembershipId) }).from(t).innerJoin(s.user, eq(s.user.id, t.creatorUserId))
     .where(and(scope(actor), eq(t.deleted, false), before ? or(lt(t.lessonDate, before.lessonDate), and(eq(t.lessonDate, before.lessonDate), lt(t.entryId, before.entryId))) : undefined))
     .orderBy(desc(t.lessonDate), desc(t.entryId)).limit(51);
 }
@@ -41,7 +42,7 @@ export async function change<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q
   return changed ?? null;
 }
 export async function creatorName<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, row: LessonLogRow) {
-  const [found] = await tx.select({ name: s.user.name }).from(s.user).where(eq(s.user.id, row.creatorUserId));
+  const [found] = await tx.select({ name: nameForMembership(s.user.name, row.tenantId, row.creatorMembershipId) }).from(s.user).where(eq(s.user.id, row.creatorUserId));
   if (!found) throw new Error("Lesson unavailable"); return found.name;
 }
 export async function audit<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: LessonLogActor, action: "create" | "edit" | "delete", entryId: string) {

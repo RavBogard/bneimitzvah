@@ -1,15 +1,14 @@
 import "server-only";
-import { createHmac } from "node:crypto";
 import { AccessDenied, AccessUnavailable } from "../access/errors";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAccessService } from "../access/service";
-import type { ActiveMode, AccessRequest, AccessTransaction, VerifiedIdentity } from "../access/types";
+import type { ActiveMode, AccessRequest } from "../access/types";
 import type { createPracticeService } from "../practice/service";
 import type { PracticeContextView } from "../practice/types";
 import type { StudentView } from "../data/students";
-import { confirmedReadings, availableRoles, membershipOf } from "../data/portal";
+import { confirmedReadings, membershipOf } from "../data/portal";
 import { obtainMembership } from "../data/invitations";
-import { activeMember, approves } from "../accounts/data";
+import { summarizePortalSession } from "./session-summary";
 import { expandReadingRanges, parseCeremonyDate } from "../../lib/readings/ranges";
 import { assignmentNeedsReview } from "../../lib/readings/review";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
@@ -59,22 +58,8 @@ export function createPortalService<Q extends PgQueryResultHKT>(input: { access:
   /** What the door counts from: a student's own progress and the member's own saved readings, each through its service and its own checks. */
   door?: Readonly<{ progress: Pick<ReturnType<typeof createProgressService<Q>>, "page">; saved: Pick<SavedService, "list"> }> }) {
   if (typeof input.sessionBindingSecret !== "string" || input.sessionBindingSecret.length < 32) throw new AccessUnavailable();
-  /**
-   * One summary for both entrances. `saved`: this account keeps its own saved layer, which since readings for everyone
-   * (Daniel, 2026-10-27) is every live membership; `approver`: it may approve link requests. The Member role (an approved
-   * request) and approving are worked out live, never granted (accounts plan choice B).
-   */
-  async function summarize(tx: AccessTransaction<Q>, identity: VerifiedIdentity, membership: VerifiedIdentity["membership"]) {
-    const grants = membership ? await availableRoles(tx, identity.tenantId, membership.id) : [];
-    const member = membership ? await activeMember(tx, identity.tenantId, membership.id) : null;
-    const approver = membership ? await approves(tx, identity.tenantId, membership.id) : false;
-    const sessionBinding = createHmac("sha256", input.sessionBindingSecret).update(JSON.stringify(["session-ui-binding:v2", identity.origin, identity.tenantId, identity.userId,
-      identity.authSessionId, membership?.id ?? null, membership?.authorityRevision ?? null, grants.map(grant => [grant.role, grant.id, grant.revision]),
-      member?.id ?? null, approver])).digest("base64url");
-    return Object.freeze({ membershipAvailable: membership !== null, roles: Object.freeze(grants.map(grant => grant.role)), saved: membership !== null, approver, sessionBinding });
-  }
   async function sessionSummary(request: AccessRequest) {
-    return input.access.withVerifiedIdentity(request, { intent: "read" }, (tx, identity) => summarize(tx, identity, identity.membership));
+    return input.access.withVerifiedIdentity(request, { intent: "read" }, (tx, identity) => summarizePortalSession(tx, identity, identity.membership, input.sessionBindingSecret));
   }
   /**
    * The first sign-in's membership (plan D1): called once by the entry after a summary with no membership, under the
@@ -87,7 +72,7 @@ export function createPortalService<Q extends PgQueryResultHKT>(input: { access:
       const membershipId = await obtainMembership(tx, identity);
       const membership = await membershipOf(tx, identity.tenantId, membershipId);
       if (!membership || membership.disabledAt) throw new AccessDenied(403);
-      return summarize(tx, identity, Object.freeze({ id: membership.id, authorityRevision: membership.authorityRevision }));
+      return summarizePortalSession(tx, identity, Object.freeze({ id: membership.id, authorityRevision: membership.authorityRevision }), input.sessionBindingSecret);
     });
   }
   async function assignedReading(request: AccessRequest, selection: { mode: ActiveMode | "child-practice"; studentId: string }) {

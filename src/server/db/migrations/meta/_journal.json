@@ -463,6 +463,13 @@
       "when": 1795240973821,
       "tag": "0066_service_plan_lesson",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1795287318025,
+      "tag": "0067_account_display_name",
+      "breakpoints": true
     }
   ]
 }

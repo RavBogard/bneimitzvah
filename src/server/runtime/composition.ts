@@ -79,6 +79,7 @@ import { createSignInCodeBindings } from "../http/sign-in-code-binding";
 import { createSignInCodeCap } from "../auth/sign-in-code-cap";
 import { createNotificationDelivery, createNotificationPreferences } from "../notifications/service";
 import { createSavedService } from "../saved/service";
+import { createAccountDisplayNameService } from "../account-display-name/service";
 import { createPronounsService } from "../pronouns/service";
 import { createLearnersService } from "../learners/service";
 import { createOfflineService } from "../offline/service";
@@ -288,6 +289,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const portal = once("portal", () => createPortalService({ access: access(), practice: practice(), sessionBindingSecret: purposeSecret(config, "session-ui-binding"), door: { progress: progress(), saved: saved() } }));
   // Readings for everyone: the learner directory and tutor claims; counts come from the saved service's own directory read.
   const tutorSpoken = once("tutorSpoken", () => createTutorSpokenService({ access: access(), transport: createTutorSpokenTransport(config.deployment.environment === "production" ? config.tutorSpoken?.storeId : undefined) }));
+  const accountDisplayName = once("accountDisplayName", () => createAccountDisplayNameService({ access: access(), sessionBindingSecret: purposeSecret(config, "session-ui-binding") }));
   const pronouns = once("pronouns", () => createPronounsService({ access: access() }));
   const learners = once("learners", () => createLearnersService({ access: access(), saved: saved() }));
   const offline = once("offline", () => createOfflineService({ access: access(), portal: portal(), saved: saved(), ownerSecret: purposeSecret(config, "offline-owner") }));
@@ -330,7 +332,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     get portal() { return portal(); }, get relationships() { return relationships(); }, get pendingInvitations() { return pendingInvitations(); },
     get googleChallenges() { return googleChallenges(); }, get signInCodes() { return signInCodes(); }, get signInCodeCap() { return signInCodeCap(); }, get mcp() { return mcp(); },
     get notifications() { return notifications(); }, get notificationPreferences() { return notificationPreferences(); }, get saved() { return saved(); },
-    get pronouns() { return pronouns(); }, get tutorSpoken() { return tutorSpoken(); }, get learners() { return learners(); }, get offline() { return offline(); }, get courseProgress() { return courseProgress(); }, get verseReview() { return verseReview(); },
+    get accountDisplayName() { return accountDisplayName(); }, get pronouns() { return pronouns(); }, get tutorSpoken() { return tutorSpoken(); }, get learners() { return learners(); }, get offline() { return offline(); }, get courseProgress() { return courseProgress(); }, get verseReview() { return verseReview(); },
     get serviceCourseProgress() { return serviceCourseProgress(); }, get serviceCoursePath() { return serviceCoursePath(); }, get servicePartFinished() { return servicePartFinished(); },
     get practiceVisibility() { return practiceVisibility(); }, get staff() { return staff(); }, get ceremonyDone() { return ceremonyDone(); }, get accounts() { return accounts(); } });
   builtByRuntime.set(runtime, built);

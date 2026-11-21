@@ -1,4 +1,5 @@
 import "server-only";
+import { accountDisplayNameRouteMethods, handleAccountDisplayNameRequest } from "./account-display-name";
 import { pronounsRouteMethods, handlePronounsRequest } from "./pronouns";
 import { tutorSpokenRouteMethods, handleTutorSpokenRequest } from "./tutor-spoken";
 import { handleHonorsRequest, honorsRouteMethods } from "./honors";
@@ -56,6 +57,7 @@ type RouteModule = Readonly<{
  * read, signed-out reading and the page-view beacon are cookie-blind branches ahead of this table.
  */
 const routes: readonly RouteModule[] = [
+  { methods: accountDisplayNameRouteMethods, handle: handleAccountDisplayNameRequest },
   { methods: pronounsRouteMethods, handle: handlePronounsRequest },
   // Honoree management: its own failure site, and the captured session fence after runtime cleanup.
   { methods: honoreeManagementRouteMethods, handle: handleHonoreeRequest, site: "dispatch/honoree-management", finish: finishHonoreeManagementResponse },

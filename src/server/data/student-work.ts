@@ -1,4 +1,5 @@
 import "server-only";
+import { nameForMembership } from "../account-display-name/data";
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, lt } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
@@ -26,7 +27,7 @@ export function view(row: WorkRow) {
 }
 export async function history<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: WorkActor, stream: Stream, verseRef: string, before: number | undefined, limit: number) {
   const t = table(stream);
-  const rows = await tx.select({ row: t, displayName: s.user.name }).from(t)
+  const rows = await tx.select({ row: t, displayName: nameForMembership(s.user.name) }).from(t)
     .innerJoin(s.membership, and(eq(s.membership.tenantId, t.tenantId), eq(s.membership.id, t.actorMembershipId), eq(s.membership.userId, t.actorUserId)))
     .innerJoin(s.user, eq(s.user.id, s.membership.userId))
     .where(and(eq(t.tenantId, actor.tenantId), eq(t.studentId, actor.studentId), eq(t.verseRef, verseRef), before === undefined ? undefined : lt(t.version, before)))
@@ -35,7 +36,7 @@ export async function history<Q extends PgQueryResultHKT>(tx: AccessTransaction<
 }
 export async function receipt<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: WorkActor, stream: Stream, mutationId: string) {
   const t = table(stream);
-  const [found] = await tx.select({ row: t, displayName: s.user.name }).from(t)
+  const [found] = await tx.select({ row: t, displayName: nameForMembership(s.user.name) }).from(t)
     .innerJoin(s.membership, and(eq(s.membership.tenantId, t.tenantId), eq(s.membership.id, t.actorMembershipId), eq(s.membership.userId, t.actorUserId)))
     .innerJoin(s.user, eq(s.user.id, s.membership.userId))
     .where(and(eq(t.tenantId, actor.tenantId), eq(t.studentId, actor.studentId), eq(t.actorUserId, actor.userId), eq(t.mutationId, mutationId))).limit(1);

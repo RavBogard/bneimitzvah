@@ -1,4 +1,5 @@
 import "server-only";
+import { nameForMembership } from "../account-display-name/data";
 import { createHmac } from "node:crypto";
 import { and, asc, count, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
@@ -131,17 +132,18 @@ export async function markWelcome<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantI
 }
 
 export async function listMembers<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, limit: number) {
-  return tx.select({ id: s.tenantMember.id, name: s.tenantMember.displayName, since: s.tenantMember.createdAt }).from(s.tenantMember)
-    .where(and(eq(s.tenantMember.tenantId, tenantId), isNull(s.tenantMember.revokedAt))).orderBy(asc(s.tenantMember.displayName), asc(s.tenantMember.id)).limit(limit);
+  const name = nameForMembership(s.tenantMember.displayName, s.tenantMember.tenantId, s.tenantMember.membershipId);
+  return tx.select({ id: s.tenantMember.id, name, since: s.tenantMember.createdAt }).from(s.tenantMember)
+    .where(and(eq(s.tenantMember.tenantId, tenantId), isNull(s.tenantMember.revokedAt))).orderBy(asc(name), asc(s.tenantMember.id)).limit(limit);
 }
 /**
  * People with access (2026-11-03 spec): every enabled membership of the tenant (first sign-in makes one), one row each,
- * except someone whose Member row an admin ended and who holds no grant. The name is the Member row's display name, else
+ * except someone whose Member row an admin ended and who holds no grant. The edited name comes first, then the active Member label or
  * the account's name; "since" is the membership's creation. The email and whether it is verified are returned for the
  * admin to tell same-named people apart (adversarial review, 2026-11-03), as the request queue does. Writes nothing.
  */
 export async function listPeople<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, limit: number) {
-  const name = sql<string>`coalesce(${s.tenantMember.displayName}, ${s.user.name})`;
+  const name = nameForMembership(sql`coalesce(${s.tenantMember.displayName}, ${s.user.name})`);
   const grantRoles = sql<string[] | null>`array_agg(distinct ${s.roleGrant.role}::text) filter (where ${s.roleGrant.id} is not null)`;
   return tx.select({ membershipId: s.membership.id, memberId: s.tenantMember.id, name, roles: grantRoles, since: s.membership.createdAt, email: s.user.email, verified: s.user.emailVerified }).from(s.membership)
     .innerJoin(s.user, eq(s.user.id, s.membership.userId))
@@ -160,19 +162,20 @@ export async function endMember<Q extends PgQueryResultHKT>(tx: Tx<Q>, actor: Ac
 
 /** Active admins (named), live designations (named, by id) and the tutors who could be designated. */
 export async function approverView<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string) {
-  const admins = await tx.select({ membershipId: s.membership.id, name: s.user.name }).from(s.roleGrant)
+  const name = nameForMembership(s.user.name);
+  const admins = await tx.select({ membershipId: s.membership.id, name }).from(s.roleGrant)
     .innerJoin(s.membership, and(eq(s.membership.tenantId, s.roleGrant.tenantId), eq(s.membership.id, s.roleGrant.membershipId)))
     .innerJoin(s.user, eq(s.user.id, s.membership.userId))
-    .where(and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.role, "admin"), isNull(s.roleGrant.revokedAt), isNull(s.membership.disabledAt))).orderBy(asc(s.user.name)).limit(100);
-  const designated = await tx.select({ id: s.accountApprover.id, membershipId: s.accountApprover.membershipId, name: s.user.name }).from(s.accountApprover)
+    .where(and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.role, "admin"), isNull(s.roleGrant.revokedAt), isNull(s.membership.disabledAt))).orderBy(asc(name)).limit(100);
+  const designated = await tx.select({ id: s.accountApprover.id, membershipId: s.accountApprover.membershipId, name }).from(s.accountApprover)
     .innerJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.accountApprover.tenantId), eq(s.roleGrant.id, s.accountApprover.tutorGrantId)))
     .innerJoin(s.membership, and(eq(s.membership.tenantId, s.accountApprover.tenantId), eq(s.membership.id, s.accountApprover.membershipId)))
     .innerJoin(s.user, eq(s.user.id, s.membership.userId))
-    .where(and(eq(s.accountApprover.tenantId, tenantId), isNull(s.accountApprover.revokedAt), isNull(s.roleGrant.revokedAt), isNull(s.membership.disabledAt))).orderBy(asc(s.user.name)).limit(100);
-  const tutors = await tx.select({ tutorGrantId: s.roleGrant.id, membershipId: s.membership.id, name: s.user.name }).from(s.roleGrant)
+    .where(and(eq(s.accountApprover.tenantId, tenantId), isNull(s.accountApprover.revokedAt), isNull(s.roleGrant.revokedAt), isNull(s.membership.disabledAt))).orderBy(asc(name)).limit(100);
+  const tutors = await tx.select({ tutorGrantId: s.roleGrant.id, membershipId: s.membership.id, name }).from(s.roleGrant)
     .innerJoin(s.membership, and(eq(s.membership.tenantId, s.roleGrant.tenantId), eq(s.membership.id, s.roleGrant.membershipId)))
     .innerJoin(s.user, eq(s.user.id, s.membership.userId))
-    .where(and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.role, "tutor"), isNull(s.roleGrant.revokedAt), isNull(s.membership.disabledAt))).orderBy(asc(s.user.name)).limit(200);
+    .where(and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.role, "tutor"), isNull(s.roleGrant.revokedAt), isNull(s.membership.disabledAt))).orderBy(asc(name)).limit(200);
   const adminIds = new Set(admins.map(row => row.membershipId)), designatedIds = new Set(designated.map(row => row.membershipId));
   return { admins, designated, candidates: tutors.filter(row => !adminIds.has(row.membershipId) && !designatedIds.has(row.membershipId)) };
 }

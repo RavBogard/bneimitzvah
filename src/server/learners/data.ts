@@ -1,4 +1,5 @@
 import "server-only";
+import { nameForMembership } from "../account-display-name/data";
 import { and, asc, eq, isNull, sql, type SQL } from "drizzle-orm";
 import { studentCeremonyDone } from "../db/ceremony-done-schema";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
@@ -22,18 +23,19 @@ const escapeLike = (value: string) => value.replace(/[\\%_]/g, match => `\\${mat
  * displayName, so an address-shaped name is never shown. Never an email.
  */
 export async function listLearners<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, input: { exceptMembershipId: string; tutorGrantId?: string | null; q: string | null; after: string | null; limit: number }) {
+  const name = nameForMembership(s.user.name);
   let cursor: { name: string; id: string } | null = null;
   if (input.after) {
-    const [row] = await tx.select({ name: s.user.name, id: s.membership.id }).from(s.membership).innerJoin(s.user, eq(s.user.id, s.membership.userId))
+    const [row] = await tx.select({ name, id: s.membership.id }).from(s.membership).innerJoin(s.user, eq(s.user.id, s.membership.userId))
       .where(and(eq(s.membership.tenantId, tenantId), eq(s.membership.id, input.after))).limit(1);
     if (!row) return [];
     cursor = { name: row.name, id: row.id };
   }
-  return tx.select({ membershipId: s.membership.id, name: s.user.name }).from(s.membership).innerJoin(s.user, eq(s.user.id, s.membership.userId))
+  return tx.select({ membershipId: s.membership.id, name }).from(s.membership).innerJoin(s.user, eq(s.user.id, s.membership.userId))
     .where(and(eq(s.membership.tenantId, tenantId), isNull(s.membership.disabledAt), sql`${s.membership.id} <> ${input.exceptMembershipId}::uuid`, input.tutorGrantId ? sql`(${learnerOnly(tenantId)} or ${assignedTo(tenantId, input.tutorGrantId)})` : learnerOnly(tenantId),
-      input.q ? sql`lower(${s.user.name}) like ${escapeLike(input.q.toLowerCase()) + "%"} escape '\\'` : undefined,
-      cursor ? sql`(lower(${s.user.name}), ${s.membership.id}) > (lower(${cursor.name}), ${cursor.id}::uuid)` : undefined))
-    .orderBy(sql`lower(${s.user.name})`, asc(s.membership.id)).limit(input.limit);
+      input.q ? sql`lower(${name}) like ${escapeLike(input.q.toLowerCase()) + "%"} escape '\\'` : undefined,
+      cursor ? sql`(lower(${name}), ${s.membership.id}) > (lower(${cursor.name}), ${cursor.id}::uuid)` : undefined))
+    .orderBy(sql`lower(${name})`, asc(s.membership.id)).limit(input.limit);
 }
 
 /** Not ceremony-done (the raw-SQL form of notCeremonyDone in src/server/data/ceremony-done.ts). */
@@ -78,7 +80,7 @@ export async function liveClaimsOfGrant<Q extends PgQueryResultHKT>(tx: Tx<Q>, t
 }
 /** The account name behind a grant of this tenant, raw (the caller applies displayName), with the grant's membership and whether the grant is revoked; null for another tenant's grant. */
 export async function grantHolder<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, grantId: string) {
-  const [row] = await tx.select({ name: s.user.name, membershipId: s.membership.id, revokedAt: s.roleGrant.revokedAt, disabledAt: s.membership.disabledAt }).from(s.roleGrant)
+  const [row] = await tx.select({ name: nameForMembership(s.user.name), membershipId: s.membership.id, revokedAt: s.roleGrant.revokedAt, disabledAt: s.membership.disabledAt }).from(s.roleGrant)
     .innerJoin(s.membership, and(eq(s.membership.tenantId, s.roleGrant.tenantId), eq(s.membership.id, s.roleGrant.membershipId)))
     .innerJoin(s.user, eq(s.user.id, s.membership.userId)).where(and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.id, grantId))).limit(1);
   return row ?? null;

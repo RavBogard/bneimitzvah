@@ -10944,6 +10944,96 @@
   "body": true
  },
  {
+  "request": "GET /api/profile/name",
+  "status": 403,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/profile/name (signed out)",
+  "status": 401,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "POST /api/profile/name",
+  "status": 400,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "POST /api/profile/name (signed out)",
+  "status": 400,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "PUT /api/profile/name (wrong method)",
+  "status": 405,
+  "allow": "GET, POST",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "HEAD /api/profile/name",
+  "status": 405,
+  "allow": "GET, POST",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "OPTIONS /api/profile/name",
+  "status": 405,
+  "allow": "GET, POST",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/profile/name/ (trailing slash)",
+  "status": 404,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/profile/namex (near miss)",
+  "status": 404,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/profile/name?unexpected=1 (unexpected query)",
+  "status": 400,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
   "request": "GET /api/profile/pronouns",
   "status": 400,
   "allow": null,
