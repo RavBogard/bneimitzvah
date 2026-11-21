@@ -112,11 +112,11 @@ test("a member saves the passage on screen with its name and Shabbat filled in, 
 const syllables = ["אָבָ֑ג", "דֵּ֖ה", "וְזַ֥ח"];
 const verseOf = (ref: string) => { const text = `${syllables.join(" ")}׃`; return { ref, english: `Synthetic translation ${ref}`, hebrew: { text, readingText: text, paragraphAfter: null, segments: [{ kind: "text", text }] } }; };
 const RANGES = ["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"];
-async function openRef(page: Page) {
+async function openRef(page: Page, listening = false) {
   await page.route("**/api/public/**", route => {
     const url = new URL(route.request().url()), q = url.searchParams;
     if (url.pathname === "/api/public/reading" && q.get("ref") === "Genesis 1:1-3")
-      return json(route, 200, { ref: "Genesis 1:1-3", kind: "torah", passage: { kind: "torah", ranges: ["Genesis 1:1-3"], verseCount: 3, pages: [{ offset: 0, first: "Genesis 1:1", last: "Genesis 1:3" }] }, listening: { pocketTorah: false } });
+      return json(route, 200, { ref: "Genesis 1:1-3", kind: "torah", passage: { kind: "torah", ranges: ["Genesis 1:1-3"], verseCount: 3, pages: [{ offset: 0, first: "Genesis 1:1", last: "Genesis 1:3" }] }, listening: { pocketTorah: listening } });
     if (url.pathname === "/api/public/text" && q.get("ref") === "Genesis 1:1-3")
       return json(route, 200, { kind: "torah", ref: "Genesis 1:1-3", offset: 0, nextOffset: null, totalVerses: 3, translation: { key: "jps2023", status: "available" }, verses: RANGES.map(verseOf),
         chapters: studyRangePlan(["Genesis 1:1-3"], "torah", 0).chapters.map(chapter => ({ ref: chapter.ref, sefariaUrl: chapter.url, fetchedAt: 0, hash: "c".repeat(64), editions: [studyEditions.mam, studyEditions.jps2023] })) });
@@ -203,4 +203,94 @@ test("a saved reading that cannot be opened says why, and a malformed address is
   }
   await page.goto("/read?saved=not-a-reading");
   await expect(page.getByRole("heading", { level: 1, name: "Reading unavailable", exact: true })).toBeVisible();
+});
+
+test("an owner copies public passage snapshots and the included weekday survives signed-out reading and printing", async ({ page, browser, baseURL }) => {
+  const date = "2026-11-20";
+  let removed = false;
+  await openRef(page);
+  await page.route("**/api/saved/reading?*", route => removed ? json(route, 404, { error: "missing" }) : json(route, 200, pageOf({ ...savedRow, date })));
+  await page.route("**/api/saved/readings/remove", route => {
+    removed = true;
+    return json(route, 200, { ok: true, removed: savedRow.id });
+  });
+  await page.addInitScript(() => Object.defineProperty(navigator, "clipboard", { configurable: true, value: {
+    writeText: async (link: string) => {
+      if (new URL(link).searchParams.has("readingDate")) throw new Error("Clipboard unavailable");
+      sessionStorage.setItem("test-clipboard", link);
+    },
+  } }));
+  await page.goto(`/read?saved=${savedRow.id}`);
+  const share = page.getByRole("button", { name: "Share passage", exact: true });
+  await share.press("Enter");
+  const preview = page.getByRole("region", { name: "Share passage", exact: true });
+  await expect(preview.getByRole("heading")).toBeFocused();
+  await expect(preview).toContainText(/Genesis 1:1/);
+  await expect(preview).not.toContainText(savedRow.name);
+  const includeDate = preview.getByRole("checkbox", { name: /Include preparation date/ });
+  await expect(includeDate).not.toBeChecked();
+  const copy = preview.getByRole("button", { name: "Copy link", exact: true });
+  await copy.click();
+  await expect(preview.getByRole("status")).toBeVisible();
+  const withoutDate = new URL((await page.evaluate(() => sessionStorage.getItem("test-clipboard")))!);
+  expect([...withoutDate.searchParams.entries()]).toEqual([["ref", "Genesis 1:1-3"], ["kind", "torah"]]);
+  await includeDate.check();
+  await copy.click();
+  const manual = preview.getByRole("textbox", { name: "Copy this link", exact: true });
+  await expect(manual).toBeFocused();
+  const copied = new URL(await manual.inputValue());
+  expect(copied.pathname).toBe("/read");
+  expect([...copied.searchParams.entries()]).toEqual([["ref", "Genesis 1:1-3"], ["kind", "torah"], ["readingDate", date]]);
+  await share.press("Enter");
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByRole("button", { name: "Remove reading", exact: true }).click();
+  await page.getByRole("button", { name: "Remove", exact: true }).click();
+  await expect(page).toHaveURL(/\/mine$/);
+
+  const publicPage = await browser.newPage({ baseURL, viewport: page.viewportSize() ?? undefined });
+  try {
+    const accountRequests: string[] = [];
+    publicPage.on("request", request => { const path = new URL(request.url()).pathname; if (/^\/api\/(saved|session)/.test(path)) accountRequests.push(path); });
+    await openRef(publicPage, true);
+    await publicPage.goto(copied.href);
+    const expectedDate = publicPage.locator(`main time[datetime="${date}"]`);
+    await expect(expectedDate.first()).toContainText("Friday");
+    await expect(publicPage.getByTestId("verse-cue")).toBeVisible();
+    const first = publicPage.getByRole("button", { name: "Hear Genesis 1:1", exact: true });
+    await publicPage.getByRole("button", { name: "Start reading", exact: true }).click();
+    await expect(first).toBeFocused();
+    await expect(first).toBeInViewport();
+    await expect(publicPage.getByRole("button", { name: "Share passage", exact: true })).toHaveCount(0);
+    await publicPage.getByRole("group", { name: "Reading lens", exact: true }).getByRole("button", { name: "Study", exact: true }).click();
+    await expect(publicPage).toHaveURL(/readingDate=2026-11-20&lens=study$/);
+    await expect(expectedDate.first()).toBeVisible();
+    await publicPage.getByRole("link", { name: "Print", exact: true }).last().click();
+    await expect(publicPage).toHaveURL(/readingDate=2026-11-20$/);
+    await expect(expectedDate.first()).toBeVisible();
+    await publicPage.getByRole("link", { name: "Back to the reading", exact: true }).click();
+    await expect(expectedDate.first()).toBeVisible();
+    await publicPage.getByRole("group", { name: "Reading lens", exact: true }).getByRole("button", { name: "Lein", exact: true }).click();
+    const signIn = publicPage.getByRole("link", { name: "Sign in to save", exact: true });
+    await signIn.focus();
+    const saveReturn = new URL(await signIn.getAttribute("href") ?? "", copied.origin).searchParams.get("return") ?? "";
+    expect(new URL(saveReturn, copied.origin).searchParams.get("readingDate")).toBe(date);
+    expect(accountRequests).toEqual([]);
+
+    await seenSignedIn(publicPage);
+    await publicPage.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: [] }));
+    await publicPage.goto(copied.href);
+    await publicPage.getByRole("button", { name: "Save to My Readings", exact: true }).click();
+    const saveForm = publicPage.getByRole("form", { name: "Add this reading" });
+    const dateField = saveForm.locator('input[type="date"]');
+    await expect(dateField).toHaveValue(date);
+    await saveForm.getByRole("radio", { name: "Choose verses", exact: true }).click();
+    await publicPage.getByRole("button", { name: "Select Genesis 1:2", exact: true }).click();
+    const selection = publicPage.getByRole("region", { name: "Choose verses", exact: true });
+    const printSelection = new URL((await selection.getByRole("link", { name: "Print", exact: true }).getAttribute("href"))!, copied.origin);
+    expect([...printSelection.searchParams.entries()]).toEqual([["ref", "Genesis 1:2"], ["kind", "torah"], ["readingDate", date]]);
+    await selection.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(dateField).toHaveValue(date);
+  } finally {
+    await publicPage.close();
+  }
 });

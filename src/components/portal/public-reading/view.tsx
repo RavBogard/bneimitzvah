@@ -330,30 +330,31 @@ function ChosenReading({ target, verse, saveReturn }: { target: Extract<ReadTarg
   // Choose verses. A selection (an address with `mark`) is shown inside its whole portion with its verses marked, and the way back is one link;
   // any other passage of a parashah or haftarah offers its whole portion the same way. A named reading is whole already.
   const refTarget = target.mode === "ref" ? target : null;
+  const readingDate = refTarget?.readingDate;
   const portion = useMemo(() => {
     if (!refTarget || refTarget.mark) return null;
     const canonical = canonicalReadingRef(refTarget.ref, refTarget.kind), found = canonical && wholePortionFor(refTarget.kind, canonical.verses);
     return found && found.ref !== refTarget.ref ? found : null;
   }, [refTarget]);
-  const links = refTarget?.mark ? <PlaceLink place={place} base={readAddress({ mode: "ref", ref: refTarget.mark, kind: refTarget.kind }, { study })}
-      href={at => readAddress({ mode: "ref", ref: refTarget.mark!, kind: refTarget.kind }, { study, verse: selectionPlace(refTarget.mark!, refTarget.ref, refTarget.kind, at) })}>{CHOOSE_STRINGS.backToSelection}</PlaceLink>
-    : portion && refTarget ? <PlaceLink place={place} base={readAddress({ mode: "ref", ref: portion.ref, kind: portion.kind, mark: refTarget.ref }, { study })}
-      href={at => readAddress({ mode: "ref", ref: portion.ref, kind: portion.kind, mark: refTarget.ref }, { study, verse: positionInRef(portion.ref, portion.kind, at) })}>{CHOOSE_STRINGS.wholePortion}</PlaceLink> : null;
+  const links = refTarget?.mark ? <PlaceLink place={place} base={readAddress({ mode: "ref", ref: refTarget.mark, kind: refTarget.kind, readingDate }, { study })}
+      href={at => readAddress({ mode: "ref", ref: refTarget.mark!, kind: refTarget.kind, readingDate }, { study, verse: selectionPlace(refTarget.mark!, refTarget.ref, refTarget.kind, at) })}>{CHOOSE_STRINGS.backToSelection}</PlaceLink>
+    : portion && refTarget ? <PlaceLink place={place} base={readAddress({ mode: "ref", ref: portion.ref, kind: portion.kind, mark: refTarget.ref, readingDate }, { study })}
+      href={at => readAddress({ mode: "ref", ref: portion.ref, kind: portion.kind, mark: refTarget.ref, readingDate }, { study, verse: positionInRef(portion.ref, portion.kind, at) })}>{CHOOSE_STRINGS.wholePortion}</PlaceLink> : null;
   const shownPassage = sources[index]?.source.passage;
   const back = useReturn(saveReturn, at => readAddress(target.mode === "named" ? { mode: "named", slug: target.slug, passage: index + 1 } : target, { verse: at ?? linked, study }), shownPassage);
   const chooser = useRef<(() => void) | null>(null);
-  const chosen = sources[index] ? { title: named ? named.name : title, label: passages[index]?.label ?? null, kind: sources[index].source.passage.kind, ranges: sources[index].source.passage.ranges, date: null } : null;
+  const chosen = sources[index] ? { title: named ? named.name : title, label: passages[index]?.label ?? null, kind: sources[index].source.passage.kind, ranges: sources[index].source.passage.ranges, date: readingDate ?? null } : null;
   const save = useSaveReading({ passage: chosen, whole: portion ? portion.ref.split("; ") : chosen?.ranges, back: back.forSave(), offer: back.passageOffer, onChoose: () => chooser.current?.() });
   // Back from "Sign in to save" with a selection, choosing opens with it (in place of a marked selection's own verses).
   const choosePlan: ChoosePlan | undefined = sources.length > 0 ? { label: CHOOSE_STRINGS.choose, start: saveReturn.choose ?? (refTarget?.mark ? refTarget.mark.split("; ") : []), autoStart: Boolean(saveReturn.choose), marked: refTarget?.mark ? refTarget.mark.split("; ") : undefined,
-    extra: links, onPlace: ref => { place.current = ref; back.place.current = ref; }, onChoosing: setChoosing,
+    extra: links, readingDate, onPlace: ref => { place.current = ref; back.place.current = ref; }, onChoosing: setChoosing,
     register: begin => { chooser.current = begin; },
-    save: (selection, saved) => <SaveSelectionButton save={save} passage={{ title, label: selection.line, kind: selection.kind, ranges: selection.ranges, date: null }} onSaved={saved} back={back.forSave(selection.ranges)} offer={back.choiceOffer} /> } : undefined;
+    save: (selection, saved) => <SaveSelectionButton save={save} passage={{ title, label: selection.line, kind: selection.kind, ranges: selection.ranges, date: readingDate ?? null }} onSaved={saved} back={back.forSave(selection.ranges)} offer={back.choiceOffer} /> } : undefined;
   useHeadingFocus(loaded !== null);
   return <MoreScope><Shell title={title} back={back.here} settled={loaded !== null}>
     <ReadHeader name={loaded?.error ? "Reading unavailable" : title} loading={loaded === null} pills={choosing || !save.pill ? [] : [save.pill]} note={save.note}
       line={named ? <>{GROUP_EYEBROW[named.group]} · {passages.map((row, at) => <span key={at}>{at > 0 && " · "}{row.label} <bdi dir="ltr">{displayRange([row.ref])}</bdi></span>)}</>
-        : <>Any reading · {passages.map((row, at) => <span key={at}>{at > 0 && " · "}<bdi dir="ltr">{displayRange([row.ref])}</bdi></span>)}</>} />
+        : <>{readingDate ? <time dateTime={readingDate}>{longDate(readingDate)}</time> : "Any reading"} · {passages.map((row, at) => <span key={at}>{at > 0 && " · "}<bdi dir="ltr">{displayRange([row.ref])}</bdi></span>)}</>} />
     {save.sheet}
     <ReadingBlock reserve={!loaded?.error}>
     {loaded?.error && <div className="workspace-state" role="status"><h2>{loaded.error === 400 ? "That reading isn’t available" : "The reading didn’t load"}</h2>
@@ -577,15 +578,14 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     if (target >= 0 && target !== win) { pendingJump.current = ref; changeWin(target); }
   });
   useEffect(() => { const ref = pendingJump.current; if (page && ref && page.verses.some(row => row.ref === ref)) { pendingJump.current = null; scrollToVerse(ref); } }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Keep the passage's declared keyboard entry point stable while Shermet
-  // discovery runs. Early mounting of an optional transport must not replace
-  // the labelled reading container with a newly introduced verse button.
   const focusReading = () => {
     const anchor = textAnchor.current; if (!anchor) return;
-    anchor.scrollIntoView({ block: "start" });
-    const verseButton = source.listening ? anchor.querySelector<HTMLElement>(".study-verses [data-verse-ref] button[aria-label^='Hear ']:not([disabled])") : null;
-    const target = verseButton ?? anchor.querySelector<HTMLElement>(".study-verses") ?? anchor;
+    const text = anchor.querySelector<HTMLElement>(".study-verses");
+    const first = text?.querySelector("[data-verse-ref]");
+    const target = first?.querySelector<HTMLElement>("button[data-verse-number]:not([disabled])")
+      ?? first?.querySelector<HTMLElement>('[data-word-index][role="button"]') ?? text ?? anchor;
     target.focus({ preventScroll: true });
+    target.scrollIntoView({ block: "center", inline: "nearest" });
   };
   const start = useRef<() => void>(() => {}); start.current = () => { if (listening && page && !study) hear(0); focusReading(); };
   // The page the pager is taking the reader to: focus waits until that page's verses have rendered (the switch is a transition, 1.9 N16).
@@ -670,11 +670,17 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
           {study ? <>
             <CommentaryStatus works={workStatuses(works, corpus)} />
             <ReadingPlace refs={allVerses} pageKey={textKey} onJump={jumpTo} onHere={choose?.onPlace ? ref => onPlace.current?.(ref) : undefined} />
+            {!choice.view?.choosing && <p className={styles.verseCue} data-testid="verse-cue">Select a Hebrew word to explore it.</p>}
             <StudyRows verses={page.verses} assignment={assignment} group={group} showEnglish={lens.english} sections={labels}
               works={workStates} choice={choice.view}
               onPick={ref => { const at = page.verses.findIndex(row => row.ref === ref); if (at >= 0) release(() => setFocus(at)); }} />
-          </> : <FlowingStudyText verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={prefs.translation} englishHidden={drillVerse ? DRILL_STRINGS.hidden : undefined} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
-            sections={labels} linked={linkedVerse(leinLink, page.verses)} onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} choice={choice.view} />}
+          </> : <>
+            {!choice.view?.choosing && <p className={styles.verseCue} data-testid="verse-cue">
+              {listening ? "Select a verse number or Hebrew word to hear the verse." : "Select a Hebrew word to explore it."}
+            </p>}
+            <FlowingStudyText verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={prefs.translation} englishHidden={drillVerse ? DRILL_STRINGS.hidden : undefined} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
+            sections={labels} linked={linkedVerse(leinLink, page.verses)} onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} choice={choice.view} />
+          </>}
           {/* The end of the section (N3): the next one's first verse, faint, and the way on. */}
           {sections.length > 0 && nextWin !== null && <NextSection onNext={() => pagerTo(nextWin)} preview={preview} />}
           {listening && !study && <ReadingPlayer key={`player:${scopeKey}`} scopeKey={scopeKey} verses={page.verses} active={!lift} enabled={!lift} audio={{ coordinator: audio, slot: "proposed" }}

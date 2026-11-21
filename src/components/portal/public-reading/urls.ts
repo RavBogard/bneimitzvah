@@ -1,5 +1,7 @@
 import type { StudyKind } from "../workspace/study/api";
-import { canonicalReadingRef } from "../../../lib/readings/reading-ref";
+import { canonicalReadingRef, joinReadingRef } from "../../../lib/readings/reading-ref";
+import { parseCeremonyDate } from "../../../lib/readings/ranges";
+import { returnAddress } from "../../../lib/site/return-address";
 import { namedReading } from "../../../lib/readings/named-readings";
 import { isSaturday, shabbatOnOrAfter } from "../../../lib/readings/public-shabbat";
 import { isPortionPick, type PortionPick } from "../../../lib/print/portions";
@@ -36,6 +38,7 @@ export const selectorKey = (selector: ReadingSelector) => selector.by === "date"
  * - `/read?saved=<id>` (a member's own saved reading: its passage comes from the member's account, never the address), or
  *   `/read?saved=<id>&learner=<membershipId>` (that learner's reading as the tutor who claims them, or the rabbi, reads it, read-only; plan D7).
  *   A `learner` without `saved` means nothing and is dropped.
+ * A `ref` address may add `&readingDate=YYYY-MM-DD` (the preparation date, on any day of the week).
  * A `ref` address may add `&mark=<canonical ref>`: the verses of a selection, marked in the whole portion it came from (1.7).
  * Any of them may add `&verse=<n>` (1-based, within the passage shown: that verse opens selected, in the
  * player when recordings are on) and `&lens=study`.
@@ -44,7 +47,7 @@ export const selectorKey = (selector: ReadingSelector) => selector.by === "date"
  */
 export type ReadTarget = Readonly<{ mode: "week"; date: string | null; kind: StudyKind | null }>
   | Readonly<{ mode: "named"; slug: string; passage: number }>
-  | Readonly<{ mode: "ref"; ref: string; kind: StudyKind; mark?: string }>
+  | Readonly<{ mode: "ref"; ref: string; kind: StudyKind; mark?: string; readingDate?: string }>
   | Readonly<{ mode: "saved"; id: string; learner?: string }>;
 export type ReadAddress = Readonly<{ target: ReadTarget | null; verse: number | null; study: boolean; pick?: PortionPick }>;
 export const READ_VERSE_MAX = 1000;
@@ -52,6 +55,10 @@ export const READ_VERSE_MAX = 1000;
 const SAVED_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const kindOf = (value: string | null): StudyKind | null => value === "torah" || value === "haftarah" ? value : null;
 const positive = (value: string | null, max: number): number | null => value !== null && /^[1-9]\d{0,3}$/.test(value) && Number(value) <= max ? Number(value) : null;
+
+function validReadingDate(value: unknown): string | undefined {
+  try { return parseCeremonyDate(value); } catch { return undefined; }
+}
 
 /** Reads a /read query. `target` is null when the address names something that cannot be opened. */
 export function parseReadAddress(search: string): ReadAddress {
@@ -72,7 +79,9 @@ export function parseReadAddress(search: string): ReadAddress {
     // The marked selection must itself be a valid passage of the same kind inside this one; anything else is simply not marked.
     const markParam = params.get("mark"), marked = canonical && markParam !== null ? canonicalReadingRef(markParam, canonical.kind) : null;
     const inside = canonical && marked && marked.verses.every(item => canonical.verses.includes(item));
-    return { target: canonical ? { mode: "ref", ref: canonical.ref, kind: canonical.kind, ...inside ? { mark: marked.ref } : {} } : null, verse, study };
+    const dates = params.getAll("readingDate");
+    const readingDate = dates.length === 1 ? validReadingDate(dates[0]) : undefined;
+    return { target: canonical ? { mode: "ref", ref: canonical.ref, kind: canonical.kind, ...readingDate ? { readingDate } : {}, ...inside ? { mark: marked.ref } : {} } : null, verse, study };
   }
   const date = params.get("date");
   let shabbat: string | null = null;
@@ -93,10 +102,21 @@ export function readAddress(target: ReadTarget, options: { today?: string | null
     entries.push(["reading", target.slug]);
     if (target.passage !== 1) entries.push(["passage", String(target.passage)]);
   } else if (target.mode === "saved") { entries.push(["saved", target.id]); if (target.learner) entries.push(["learner", target.learner]); }
-  else entries.push(["ref", target.ref], ["kind", target.kind], ...target.mark ? [["mark", target.mark] as [string, string]] : []);
+  else {
+    entries.push(["ref", target.ref], ["kind", target.kind]);
+    const readingDate = validReadingDate(target.readingDate);
+    if (readingDate) entries.push(["readingDate", readingDate]);
+    if (target.mark) entries.push(["mark", target.mark]);
+  }
   if (options.verse) entries.push(["verse", String(options.verse)]);
   if (options.study) entries.push(["lens", "study"]);
   return entries.length ? `/read?${query(entries)}` : "/read";
+}
+
+/** Copy only the public passage and the date its owner chose to share. */
+export function sharePassagePath(ranges: string, kind: StudyKind, date?: string): string | null {
+  const canonical = canonicalReadingRef(ranges, kind);
+  return canonical && readAddress({ mode: "ref", ref: canonical.ref, kind: canonical.kind, readingDate: date });
 }
 
 /**
@@ -120,7 +140,18 @@ export function saveReturnAddress(address: string, ranges?: readonly string[]): 
   params.delete("save"); params.delete("choose");
   if (ranges?.length) params.set("choose", ranges.join("; "));
   params.set("save", "1");
-  return `${path}?${params.toString()}`;
+  const back = `${path}?${params.toString()}`;
+  if (path !== "/read" || returnAddress(back)) return back;
+
+  // Long custom passages can otherwise contain the same verses in both ref and choose.
+  // Return to the exact selection with its own Save offer, inside the existing sign-in limit.
+  const { target, study } = parseReadAddress(address.slice(path.length));
+  if (target?.mode !== "ref") return back;
+  const ref = ranges?.length ? joinReadingRef(ranges) : target.ref;
+  const compact = sharePassagePath(ref, target.kind, target.readingDate);
+  if (!compact) return back;
+  const compactStudy = study ? `${compact}&lens=study&save=1` : null;
+  return returnAddress(compactStudy) ?? `${compact}&save=1`;
 }
 /** The public calendar: no query at all (a closed keyset of none). */
 export const publicCalendarPath = () => "/api/public/calendar";

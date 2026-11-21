@@ -88,7 +88,7 @@ async function loadSheet(target: PrintTarget, today: string, signal: AbortSignal
   }
   if (target.mode === "ref") {
     const source = refSource(await fetchPublicRefReading(target.ref, target.kind, signal));
-    return { heading: { title: displayRange([target.ref]), passage: kindName(target.kind), date: null }, text: await loadText(source, signal), markers: new Map(), week: null, passage: passageOf(source) };
+    return { heading: { title: displayRange([target.ref]), passage: kindName(target.kind), date: target.readingDate ?? null }, text: await loadText(source, signal), markers: new Map(), week: null, passage: passageOf(source) };
   }
   // A member's own saved reading: its passage comes from the account, the text from the public routes.
   const list = await fetchSavedReadings(signal);

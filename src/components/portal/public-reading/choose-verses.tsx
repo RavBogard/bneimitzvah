@@ -32,6 +32,8 @@ export type ChoosePlan = Readonly<{
   start: readonly string[];
   /** Groups marked in the text while not choosing (a whole portion showing its selection). */
   marked?: readonly string[];
+  /** Preparation date of a passage carried through to its selected verses. */
+  readingDate?: string;
   /** Open already choosing (the saved reading's Change verses, once its whole portion is on screen). */
   autoStart?: boolean;
   /** The page takes the button itself (it must first show the whole portion); choosing starts when it comes back with autoStart. */
@@ -101,7 +103,7 @@ export function useVerseChoice(plan: ChoosePlan | undefined, order: readonly str
   const barView = plan && choosing ? <ChooseBar barRef={bar} label={plan.label} line={live} note={note} rangeMode={rangeMode} canRange={anchor !== null} empty={count < 1} count={count} saved={saved}
     onRange={() => setRangeMode(value => !value)} onClear={() => { change(new Set()); setAnchor(null); setRangeMode(false); setNote(""); }} onCancel={leave}
     save={count > 0 ? plan.save({ kind, ranges, count, line: selectionLine(ranges) }, () => setSaved(true)) : null}
-    print={count > 0 ? printAddress({ mode: "ref", ref: ranges.join("; "), kind }) : null} /> : null;
+    print={count > 0 ? printAddress({ mode: "ref", ref: ranges.join("; "), kind, readingDate: plan.readingDate }) : null} /> : null;
   return { view, button, extra: plan && !choosing ? plan.extra : null, bar: barView, choosing };
 }
 

@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useStudyLens } from "../workspace/study-lens";
 import { fetchPublicRefReading, refSource } from "../public-reading/api";
-import { readAddress } from "../public-reading/urls";
+import { readAddress, sharePassagePath } from "../public-reading/urls";
 import { printAddress } from "../../../lib/print/print-address";
 import { displayRange, go, longDate, PassageReading, replaceAddress, Shell, useStarter, type LabelledSource } from "../public-reading/view";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
@@ -17,6 +17,7 @@ import { useSavedOwnLayer, YoursRowView, type VerseWork } from "./yours";
 import { MoreScope, ReadHeader } from "../public-reading/read-header";
 import type { Pill } from "../public-reading/reader-title";
 import styles from "./saved.module.css";
+import { SharePassage } from "./share-passage";
 import { ReturnSignInLink } from "../return-sign-in-link";
 import { fetchLearner, fetchLearnerPage } from "../mine/api";
 import { NAMELESS_LEARNER } from "../../../lib/learner-name";
@@ -102,7 +103,8 @@ export function SavedVerseMarkReadOnly({ verseRef, mark }: { verseRef: string; m
  * through the read-only staff routes: no Edit, no Change verses, the marks and the Yours row shown and nothing writable.
  */
 export function SavedReadingPage({ id, verse, learner = null }: { id: string; verse: number | null; learner?: string | null }) {
-  const lens = useStudyLens(), starter = useStarter(), editId = useId();
+  const lens = useStudyLens(), starter = useStarter(), editId = useId(), shareId = useId();
+  const [sharing, setSharing] = useState(false);
   const [header, setHeader] = useState<Header>({ status: "loading" }), [retry, setRetry] = useState(0), [linked, setLinked] = useState(verse);
   const [text, setText] = useState<Text | null>(null), [textRetry, setTextRetry] = useState(0);
   const [edit, setEdit] = useState<EditStep>("closed"), [draft, setDraft] = useState({ name: "", date: "" }), [editNotice, setEditNotice] = useState("");
@@ -246,10 +248,10 @@ export function SavedReadingPage({ id, verse, learner = null }: { id: string; ve
   const ownRanges = reading ? reading.ranges.split("; ") : [];
   // A staff viewer never changes the learner's verses: no Choose verses plan at all.
   const plan: ChoosePlan | undefined = !reading || viewing ? undefined : view === "selection"
-    ? { label: CHOOSE_STRINGS.change, start: ownRanges, save: savedChoice, onPlace: ref => { place.current = ref; },
+    ? { label: CHOOSE_STRINGS.change, start: ownRanges, readingDate: reading.date ?? undefined, save: savedChoice, onPlace: ref => { place.current = ref; },
       onBegin: context ? () => enter("change") : undefined,
       extra: context?.whole ? <button type="button" className="button-secondary" onClick={() => enter("portion")}>{CHOOSE_STRINGS.wholePortion}</button> : null }
-    : { label: CHOOSE_STRINGS.change, start: ownRanges, marked: ownRanges, save: savedChoice, onPlace: ref => { place.current = ref; }, autoStart: view === "change",
+    : { label: CHOOSE_STRINGS.change, start: ownRanges, marked: ownRanges, readingDate: reading.date ?? undefined, save: savedChoice, onPlace: ref => { place.current = ref; }, autoStart: view === "change",
       onClose: view === "change" ? () => enter("selection") : undefined,
       extra: <button type="button" className="button-secondary" onClick={() => enter("selection")}>{CHOOSE_STRINGS.backToSelection}</button> };
   // In the whole portion only the selection's own verses are the reading's: marks and Yours belong to them alone.
@@ -292,10 +294,16 @@ export function SavedReadingPage({ id, verse, learner = null }: { id: string; ve
 
   // A staff viewer (plan D7) gets no Edit pill: the learner's reading is read-only to them.
   const editPill: Pill | null = reading && !viewing ? { key: "edit", label: "Edit", icon: "pencil", expanded: edit !== "closed", controls: edit !== "closed" ? editId : undefined, onClick: openEdit } : null;
+  const canShare = reading && !viewing && sharePassagePath(reading.ranges, reading.kind) !== null;
+  const sharePill: Pill | null = canShare ? { key: "share", label: "Share passage", icon: "link", expanded: sharing,
+    controls: sharing ? shareId : undefined, onClick: () => setSharing(value => !value) } : null;
+  const pills = [editPill, sharePill].filter((pill): pill is Pill => pill !== null);
   // The private name stays on the page; the tab title (and so browser history) only ever says "My reading", or "A learner's reading" for a staff viewer; the header line says whose it is.
   return <MoreScope><Shell title={viewing ? "A learner’s reading" : "My reading"} signedIn={header.status === "ready"}>
-    <ReadHeader name={reading ? reading.name : header.status === "loading" ? (viewing ? "Loading the reading" : "Loading your reading") : "Reading unavailable"} loading={header.status === "loading"} pills={editPill ? [editPill] : []}
+    <ReadHeader name={reading ? reading.name : header.status === "loading" ? (viewing ? "Loading the reading" : "Loading your reading") : "Reading unavailable"} loading={header.status === "loading"} pills={pills}
       line={reading ? <>{viewing && <>{learnerName && learnerName !== NAMELESS_LEARNER ? <><bdi dir="auto">{learnerName}</bdi>’s</> : "A learner’s"} reading · </>}{reading.date ? <time dateTime={reading.date}>{longDate(reading.date)}</time> : "No date"} · {kindName(reading.kind)} <bdi dir="ltr">{displayRange([reading.ranges])}</bdi></> : ""} />
+    {reading && canShare && sharing && <SharePassage key={JSON.stringify([reading.kind, reading.ranges, reading.date])}
+      id={shareId} kind={reading.kind} ranges={reading.ranges} date={reading.date} />}
     {reading && !viewing && <SavedReadingEdit step={edit} panelId={editId} name={draft.name} date={draft.date} notice={editNotice}
       onName={value => setDraft(current => ({ ...current, name: value }))} onDate={value => setDraft(current => ({ ...current, date: value }))}
       onSave={save} onCancel={() => { live.current?.abort(); setEdit("closed"); setEditNotice(""); }} onAskRemove={() => { setEditNotice(""); setEdit("confirm"); }} onRemove={remove} onKeep={() => setEdit("open")} />}

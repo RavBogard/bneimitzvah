@@ -9,11 +9,11 @@ import styles from "./public-reading.module.css";
  * reader, a member's saved reading and (later) the workspace reading panel share it, so the three read as one place.
  */
 export type Pill = Readonly<{
-  key: "change" | "save" | "edit" | "manage";
+  key: "change" | "save" | "edit" | "manage" | "share";
   label: string;
   /** Set when the visible label is not the whole name ("Save" is "Save to My Readings"). */
   accessibleName?: string;
-  icon: "chevron" | "bookmark" | "pencil" | "sliders";
+  icon: "chevron" | "bookmark" | "pencil" | "sliders" | "link";
   onClick(): void;
   disabled?: boolean;
   haspopup?: "dialog";
@@ -27,6 +27,7 @@ const paths: Record<Pill["icon"], string> = {
   chevron: "M6 9.5l6 6 6-6",
   bookmark: "M7 4.5h10v15l-5-3.5-5 3.5z",
   pencil: "M5 19l1-4 9.5-9.5 3 3L9 18z M14 7l3 3",
+  link: "M10 13.5l4-4m-6.5 6.5-1 .9a3 3 0 0 1-4.2-4.2l4.3-4.3a3 3 0 0 1 4.2 0m2.4 6.6a3 3 0 0 0 4.2 0l4.3-4.3a3 3 0 0 0-4.2-4.2l-1 .9",
   sliders: "M5 8h14M5 16h14M9 6v4M15 14v4",
 };
 const icon = (name: Pill["icon"]) => <svg className={styles.pillIcon} viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">

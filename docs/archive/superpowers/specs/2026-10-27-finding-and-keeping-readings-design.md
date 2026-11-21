@@ -21,6 +21,12 @@ Mockups: the "CRC Torah: finding and keeping readings" canvas of 2026-10-27 (nin
 - My readings already exists (save, rename, re-date, change verses, Still working / Got it, notes, translation, remove) but only parents, tutors, admins and approved members may use it, students cannot, and the list shows only on the home page after sign-in. A new account is sent to an approval queue ("Ask for an account").
 - Learn's Prepare a passage has a second chooser that does not know about the reader's.
 
+## Public reading updates, 2026-11-20
+
+A saved reading's owner can open Share passage and copy a public `/read` link. The preview shows the Torah or Haftarah ranges and offers to include the saved preparation date. The link contains the public passage reference, kind and chosen date. It opens without an account and keeps the copied passage and date after edits or removal. The date is displayed on its original weekday, carries through Lein, Study, Print and Save, and follows selected verses.
+
+The reader places a short instruction immediately before the first actionable verse. Start reading brings keyboard focus to the first verse action and scrolls that action into view. The title controls wrap while the title can still break at word boundaries.
+
 ## The model
 
 Three places and one shelf. The bar names them in the same words on every page.
