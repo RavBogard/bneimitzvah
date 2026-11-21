@@ -154,17 +154,18 @@ const active = (page: Page) => page.evaluate(() => {
   return { tag: node?.tagName ?? null, id: node?.id ?? null, reading: Boolean(node?.closest(".study-verses")), verse: node?.closest("[data-verse-ref]")?.getAttribute("data-verse-ref") ?? null };
 });
 
-test("Start reading focuses a visible word of the first verse in text-only Lein and Study", async ({ page }) => {
+test("Start reading focuses a visible action on the first verse in text-only Lein and Study", async ({ page }) => {
   await mock(page);
   await page.goto("/read");
   const start = page.getByRole("button", { name: "Start reading", exact: true });
-  const firstWord = page.locator('.study-verses [data-verse-ref="Genesis 1:1"]').getByRole("button", { name: word[0], exact: true });
+  const firstVerse = page.locator('.study-verses [data-verse-ref="Genesis 1:1"]');
   for (const lens of ["Lein", "Study"]) {
+    const firstAction = firstVerse.getByRole("button", { name: lens === "Study" ? "Choose Genesis 1:1" : word[0], exact: true });
     await page.getByRole("button", { name: lens, exact: true }).click();
     await start.click();
-    await expect(firstWord).toBeFocused();
-    await expect(firstWord).toBeInViewport();
-    expect(await firstWord.evaluate(node => {
+    await expect(firstAction).toBeFocused();
+    await expect(firstAction).toBeInViewport();
+    expect(await firstAction.evaluate(node => {
       const box = node.getBoundingClientRect();
       return node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
     })).toBe(true);
