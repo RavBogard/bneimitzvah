@@ -9,7 +9,7 @@ import { beforeNextLimit, beforeNextValue, LessonError, summaryBytes, summaryLim
 
 export type LessonSummarySnapshot = { scope: string; baseline: Assigned | null; generation: number; lesson: { status: "loading" } | { status: "unavailable" } | { status: "ready"; latest: Pick<LessonLogEntry, "lessonDate" | "displayName" | "summary" | "beforeNext"> | null } };
 /** `add` opens a new note from a button elsewhere on the page (the lesson card), with focus returning to that button. */
-export type LessonReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void>; snapshot?(publish: (value: LessonSummarySnapshot) => void): void; add?(origin: HTMLElement): void };
+export type LessonReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void>; snapshot?(publish: (value: LessonSummarySnapshot) => void): void; retry?(baseline: Assigned): void; add?(origin: HTMLElement): void };
 /** An open note: a new lesson (no base) or an edit of the saved version it started from. */
 type Draft = { entryId: string; base: LessonLogEntry | null; lessonDate: string; summary: string; beforeNext: string; changedElsewhere?: boolean; uncertain?: boolean };
 type List = { scope: string; page?: LessonPage; loading?: boolean; more?: boolean; error?: number };
@@ -95,7 +95,14 @@ export function LessonLog({ mode, studentId, register, tabbed, headingId, firstN
     departure.current?.(false); departure.current = null; setLeaving(false); clearList();
   }, [clearList]);
   const addElsewhere = useRef<(origin: HTMLElement) => void>(() => undefined);
-  useLayoutEffect(() => register({ clear: clearList, reload, snapshot: observe, add: origin => addElsewhere.current(origin) }), [register, clearList, reload, observe]);
+  const retry = useCallback((baseline = snapshotBaseline.current) => {
+    if (!baseline || baseline !== snapshotBaseline.current || baseline.mode !== mode || baseline.student.id !== studentId) return;
+    const controller = new AbortController();
+    // reload clears the previous request before starting the scoped replacement.
+    void reload(baseline, controller.signal).catch(() => undefined);
+    listRequest.current = controller;
+  }, [mode, studentId, reload]);
+  useLayoutEffect(() => register({ clear: clearList, reload, snapshot: observe, retry, add: origin => addElsewhere.current(origin) }), [register, clearList, reload, observe, retry]);
   useLayoutEffect(() => registerWork({
     pause() { listRequest.current?.abort(); publish({ status: "loading" }); setPaused(true); },
     clear: discardAll,
@@ -237,7 +244,6 @@ export function LessonLog({ mode, studentId, register, tabbed, headingId, firstN
       setList({ scope: selectedScope, page }); setListNotice("Couldn’t load earlier lessons. Try again.");
     }
   }
-  async function retry() { clearList(); const controller = new AbortController(); listRequest.current = controller; try { await fetchFirst(controller.signal); } catch (error) { if (!controller.signal.aborted && !authority(statusOf(error))) setList({ scope: scopeRef.current, error: statusOf(error) }); } }
 
   const current = list.scope === scope ? list : null, entries = current?.page?.entries ?? [], busy = Boolean(pending) || paused;
   const projectionTurn = listGeneration.current;

@@ -517,7 +517,8 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
       {!wide && card}
       {/* The parent's page is a This week page (the whole-screen rethink): the card with Practice with the child, then Lesson notes and Service parts as
           rows that open in place, then Family honors, and last the text behind "See Noa's reading". */}
-      {mode === "parent" && <ParentStudySummary store={parentSummary} baseline={authorizedReading ?? null} scope={parentScope} notice={congregation.consentNotice} action={practiceWith} readProgress={readProgress} refused={refreshSession} />}
+      {mode === "parent" && <ParentStudySummary store={parentSummary} baseline={authorizedReading ?? null} scope={parentScope} notice={congregation.consentNotice} action={practiceWith} readProgress={readProgress} refused={refreshSession}
+        retryLesson={baseline => lessons.current?.retry?.(baseline)} />}
       {!practiceOpen && !learner && readings.length > 0 && <AssignmentContext row={selectedReading} current staff={staff} />}
       </> : <>
       <h2 id="reading-heading"><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>

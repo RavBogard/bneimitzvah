@@ -5,6 +5,7 @@ import { PortalRequestError } from "../api";
 import { dayOrdinal, dayString, type PracticeDates } from "./practice-calendar/api";
 import { authorName, BeforeNext, type LessonSummarySnapshot } from "./lessons/panel";
 import { nextDateLine } from "./parent-week";
+import { Button } from "../../ui";
 import { deviceDate } from "./today/model";
 import { gotCount, readMarks } from "./today/today";
 import { lastSevenDays, sevenDayWindow } from "../../../lib/practice-calendar/seven-days";
@@ -41,6 +42,7 @@ export class ParentSummaryStore {
     const active = this.active; if (!active || !this.live(active.scope)) return;
     const turn = ++this.generation; this.controller.abort(); const request = new AbortController(); this.controller = request;
     const current = () => this.active === active && turn === this.generation && !request.signal.aborted && this.live(active.scope);
+    this.state = { ...this.state, dates: { status: "loading" } }; this.emit();
     try {
       const initial = this.deviceDay();
       let window = { fromDate: dayString(initial - 7), throughDate: dayString(initial + 1) };
@@ -112,7 +114,8 @@ function WeekDots({ serverDay, dates, name }: { serverDay: string; dates: readon
  * Everything on it is read through reads the parent already has (the child's dates, the practice calendar, the lesson notes, the marks).
  * notice: the congregation's consent notice from its settings (what is stored, who hears it, when it is deleted); nothing when unset.
  */
-export function ParentStudySummary({ store, baseline, scope, notice = null, action, readProgress, refused }: { store: ParentSummaryStore; baseline: Assigned | null; scope: string; notice?: string | null; action?: ReactNode;
+export function ParentStudySummary({ store, baseline, scope, notice = null, action, readProgress, refused, retryLesson }: { store: ParentSummaryStore; baseline: Assigned | null; scope: string; notice?: string | null; action?: ReactNode;
+  retryLesson?(baseline: Assigned): void;
   /** The parent's own progress read (the provider's), for what the child has got; without it the line is left out. */ readProgress?: ProgressRead;
   /** A refused read of the count: the workspace re-reads the session (provider `refresh`). */ refused?: () => void }) {
   const state = useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);
@@ -123,13 +126,19 @@ export function ParentStudySummary({ store, baseline, scope, notice = null, acti
     <h2>This week</h2>
     {next && <p className="parent-summary-next">{next}</p>}
     <div className="parent-summary-lesson">
-      {lesson.status === "loading" ? <p role="status">Loading the latest lesson…</p> : lesson.status === "unavailable" ? <p>The latest lesson couldn’t be loaded.</p> : !lesson.latest ? <p>No saved lesson yet.</p> : <>
+      {lesson.status === "loading" ? <p role="status">Loading the latest lesson…</p> : lesson.status === "unavailable" ? <>
+        <p>The latest lesson couldn’t be loaded.</p>
+        {retryLesson && <Button variant="quiet" onClick={() => { if (store.matches(baseline, scope)) retryLesson(baseline); }}>Retry latest lesson</Button>}
+      </> : !lesson.latest ? <p>No saved lesson yet.</p> : <>
         <p className="parent-summary-from"><time dateTime={lesson.latest.lessonDate}>{label(lesson.latest.lessonDate)}</time> · from <bdi dir="auto">{authorName(lesson.latest.displayName, "parent", first)}</bdi></p>
         {lesson.latest.beforeNext ? <BeforeNext text={lesson.latest.beforeNext} own={false} /> : <p className="parent-summary-note" dir="auto">{lesson.latest.summary}</p>}
       </>}
     </div>
     <div className="parent-summary-practiced">
-      {dates.status === "loading" ? <p role="status">Loading practice dates…</p> : dates.status === "unavailable" ? <p>Practice dates couldn’t be loaded.</p>
+      {dates.status === "loading" ? <p role="status">Loading practice dates…</p> : dates.status === "unavailable" ? <>
+        <p>Practice dates couldn’t be loaded.</p>
+        <Button variant="quiet" onClick={() => { if (store.matches(baseline, scope)) void store.loadDates(); }}>Retry practice dates</Button>
+      </>
         : dates.dates.length ? <WeekDots serverDay={dates.serverDay} dates={dates.dates} name={first} /> : <p>No practice dates recorded in these seven days.</p>}
     </div>
     {got && <p className="parent-summary-got" data-testid="parent-got">Verses <bdi dir="auto">{first}</bdi> has got: <span>{got.got} of {got.total}</span></p>}

@@ -41,6 +41,7 @@
 .footer button { min-height:48px; }
 .notice,.contextNotice,.review,.departure { border-block:1px solid var(--color-rule); padding:1rem 0; margin:1rem 0; line-height:1.55; overflow-wrap:anywhere; }
 .notice p,.departure p { margin:.25rem 0 .75rem; }
+.recovery summary { min-height:44px; padding-block:0.6rem; color:var(--color-action); cursor:pointer; font-weight:var(--weight-semibold); }
 .review { border-block-color:var(--color-control-rule); }
 .review h3 { margin:0 0 .5rem; font-size:1.15rem; }
 .review ol { padding-left:1.2rem; }

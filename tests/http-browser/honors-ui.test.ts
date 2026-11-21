@@ -156,6 +156,11 @@ it("lost committed response and unconfirmed receipt keep exact original UUID/bod
   const lost = async (route: Route) => { bodies.push(route.request().postData()!); const result = await route.fetch({ maxRedirects: 0, maxRetries: 0 }); expect(result.status()).toBe(200); await result.body(); await route.abort("failed"); };
   const exact = (url: URL) => url.origin === BROWSER_ORIGIN && url.pathname === path;
   const removeLost = registerPost(tab, exact, lost); await sheet(tab).getByRole("button", { name: "Save honors", exact: true }).click(); await ui(sheet(tab).getByRole("button", { name: "Check what saved", exact: true })).toBeVisible(); removeLost();
+  const recovery = sheet(tab).getByTestId("honors-save-recovery"), explanation = recovery.locator("details");
+  await ui(recovery.locator("button").first()).toHaveText("Check what saved");
+  await ui(explanation).not.toHaveAttribute("open", "");
+  await recovery.getByText("About this save", { exact: true }).click();
+  await ui(explanation).toHaveAttribute("open", "");
   await sheet(tab).getByRole("button", { name: "Close family honors", exact: true }).click(); await ui(sheet(tab).getByRole("heading", { name: "Leave with the save unconfirmed?", exact: true })).toBeVisible();
   const check = sheet(tab).getByRole("button", { name: "Check what saved", exact: true }), retryButton = sheet(tab).getByRole("button", { name: "Send the same save again", exact: true });
   await ui(check).toBeDisabled(); await ui(retryButton).toBeDisabled();

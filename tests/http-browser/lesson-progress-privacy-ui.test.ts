@@ -169,6 +169,38 @@ it("keeps selected-parent saved notes and server-day dates read-only, quiet, and
     await safe(() => tab.context().close()); await fixture.ownerDb.delete(s.lessonLog).where(eq(s.lessonLog.entryId, noteId)); await fixture.ownerDb.delete(s.practiceDay).where(eq(s.practiceDay.studentId, fixture.student.id));
   }
 });
+it("parent lesson and practice dates retry separately and an in-flight retry stays with its child", async () => {
+  const tab = await page("tutor");
+  const lessonPath = new RegExp(`/api/students/${fixture.student.id}/lesson-log\\?.*mode=parent`);
+  const datesPath = new RegExp(`/api/students/${fixture.student.id}/practice-calendar\\?`);
+  const fail = (route: Route) => route.abort("failed");
+  await tab.route(lessonPath, fail);
+  await tab.route(datesPath, fail);
+  await workspace(tab, "parent");
+  const summary = parentSummary(tab);
+  const lesson = summary.getByRole("button", { name: "Retry latest lesson" });
+  const dates = summary.getByRole("button", { name: "Retry practice dates" });
+  await ui(lesson).toBeVisible();
+  await ui(dates).toBeVisible();
+  await tab.unroute(lessonPath, fail);
+  await safe(() => lesson.click());
+  await ui(summary.getByText("No saved lesson yet.", { exact: true })).toBeVisible();
+  await ui(dates).toBeVisible();
+  await tab.unroute(datesPath, fail);
+  const pending = await held(tab, datesPath);
+  try {
+    await safe(() => dates.click());
+    await pending.ready();
+    await ui(summary.getByText("Loading practice dates…", { exact: true })).toBeVisible();
+    await ui(summary.getByText("No saved lesson yet.", { exact: true })).toBeVisible();
+    await safe(() => goChild(tab, sibling.id));
+    await ui(summary.getByText("No practice dates recorded in these seven days.", { exact: true })).toBeVisible();
+  } finally { pending.release(); }
+  await pending.remove();
+  await ui(dates).toHaveCount(0);
+  await ui(lesson).toHaveCount(0);
+});
+
 it("initial parent-calendar guardian denial clears the accepted selected-child view", async () => {
   const tab = await page("tutor"); let release!: () => void, ready = false, status = 0;
   const gate = new Promise<void>(resolve => { release = resolve; }), pattern = new RegExp(`/api/students/${fixture.student.id}/practice-calendar\\?`);
