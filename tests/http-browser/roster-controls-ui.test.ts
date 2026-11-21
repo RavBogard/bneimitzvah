@@ -74,6 +74,49 @@ beforeAll(async () => {
 }, 120_000);
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await cleanupBrowser?.(); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
 
+it("resumes a student's setup from the reading, slot editor and prepared invitation without sending mail", async () => {
+  const tab = await page("admin", true), studentId = await create(tab, "Checklist");
+  const path = `/workspace/admin/students/${studentId}/reading`;
+  const writes: string[] = [];
+  tab.on("request", request => {
+    const url = new URL(request.url());
+    if (request.method() === "POST" && url.pathname.startsWith("/api/admin/invitations")) writes.push(url.pathname);
+  });
+  await navigate(tab, path);
+  const checklist = tab.getByRole("region", { name: "Student setup" });
+  const row = (name: string) => checklist.getByRole("listitem").filter({ has: tab.getByRole("heading", { name, exact: true }) });
+  await ui(row("Ceremony date and service")).toHaveAttribute("data-setup-state", "Pending");
+  await checklist.getByRole("button", { name: "Open reading editor" }).click();
+  await ui(tab.getByRole("dialog", { name: "Set the assigned reading" })).toBeVisible();
+  await click(tab, "Close verse editor");
+  await checklist.getByRole("link", { name: "Open invitations" }).click();
+  await ui(tab.getByRole("region", { name: "Invite someone" }).getByLabel("Recipient email")).toHaveValue("synthetic-access@example.test");
+  await tab.getByRole("link", { name: "Back to student setup" }).click();
+  await checklist.getByRole("link", { name: "Set service slot" }).click();
+  await ui(tab.getByLabel("Service (needed to suggest the reading)", { exact: true })).toHaveValue("unknown");
+  await tab.getByLabel("Service (needed to suggest the reading)", { exact: true }).selectOption("morning");
+  await click(tab, "Save student");
+  await tab.getByRole("link", { name: "Back to student setup" }).click();
+  await ui(row("Ceremony date and service")).toHaveAttribute("data-setup-state", "Ready");
+  await checklist.getByRole("link", { name: "Open tutor assignments" }).click();
+  await ui(tab.getByTestId("people-tutors")).toBeVisible();
+  const [member] = await fixture.ownerDb.select().from(s.membership).where(eq(s.membership.userId, fixture.tutor.id));
+  const grants = await fixture.ownerDb.select().from(s.roleGrant).where(eq(s.roleGrant.membershipId, member.id));
+  const tutor = grants.find(grant => grant.role === "tutor")!;
+  await fixture.ownerDb.insert(s.tutorStudent).values({ tenantId: "crc", studentId, tutorGrantId: tutor.id });
+  await tab.getByRole("link", { name: "Back to student setup" }).click();
+  await ui(row("Tutor")).toHaveAttribute("data-setup-state", "Ready");
+  expect(writes).toEqual([]);
+  await capture(tab, "student-setup-390");
+  const tutorTab = await page("tutor");
+  await navigate(tutorTab, `/workspace/tutor/${studentId}`);
+  const tutorChecklist = tutorTab.getByRole("region", { name: "Student setup" });
+  await ui(tutorChecklist.getByRole("heading", { name: "Tutor", exact: true })).toBeVisible();
+  await ui(tutorChecklist.getByRole("button", { name: "Open reading editor" })).toBeVisible();
+  await ui(tutorChecklist.getByRole("heading", { name: "Contact and access" })).toHaveCount(0);
+  await ui(tutorChecklist.getByRole("link")).toHaveCount(0);
+});
+
 it("creates adults without parent contact, requires the contact for each kind and preserves explicit access across kind edits", async () => {
   const tab = await page(); await navigate(tab, "/workspace/admin/students?tab=students");
   await ui(tab.getByRole("button", { name: "Add student", exact: true })).toBeEnabled(); await click(tab, "Add student");

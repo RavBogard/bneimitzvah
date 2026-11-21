@@ -12,6 +12,7 @@ import { HonorsSheet } from "./honors/sheet";
 import { MavenLinkPanel } from "./maven-link";
 import { useSearchParams } from "next/navigation";
 import { staffApi } from "./staff/api";
+import { setupWorkspaceHref } from "./staff/student-setup-address";
 import { Button, PageHeader } from "../../ui";
 import { DocumentTitle } from "./document-title";
 import { byCeremony, isSunday, statusChips, studentFacts, weekCards, type NeedsYouStudent, type StudentStatus } from "./staff/model";
@@ -206,7 +207,9 @@ function Roster() {
   const openHonors = (student: NeedsYouStudent, event: { currentTarget: HTMLElement }) => { const row = rows.find(value => value.id === student.id); if (!row || pending || editing || honorsStudent) return; honorsOrigin.current = event.currentTarget as HTMLButtonElement; setHonorsStudent(row); };
   const openDetails = (student: NeedsYouStudent, event: { currentTarget: HTMLElement }) => { const row = rows.find(value => value.id === student.id); if (row) choose(row, event); };
   const reloadIcon = <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+  const setupTarget = params.get("from") === "setup" ? rows.find(row => row.id === editTarget) : undefined;
   return <section className="role-workspace admin-workspace">
+    {setupTarget && <div className="admin-crumbs"><WorkspaceLink href={setupWorkspaceHref(setupTarget.id)}>Back to student setup</WorkspaceLink></div>}
     {!(thisWeek && statuses) && <AccountRequestsLine mode="admin" />}
     {/* The screen is titled by the tab that opened it: This week (the default) or Students (?tab=students). */}
     <PageHeader title={thisWeek ? "This week" : "Students"} actions={thisWeek ? undefined : <Button ref={addButton} variant="primary" disabled={pending || loading || unavailable || conflict} onClick={event => choose(null, event)}>Add student</Button>} />{!thisWeek && <DocumentTitle heading="Students" />}

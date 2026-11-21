@@ -45,6 +45,8 @@ const owned: [string, string[]][] = [
   [`/api/students/${S}/study-word-aids`, ["GET"]], [`/api/students/${S}/study-sources`, ["GET"]], [`/api/students/${S}/study-word-details`, ["GET"]], [`/api/students/${S}/study-text`, ["GET"]],
   [`/api/students/${S}`, ["GET"]], [`/api/students/${S}/reading`, ["GET"]], [`/api/students/${S}/reading/prepare`, ["POST"]], [`/api/students/${S}/reading/confirm`, ["POST"]],
   [`/api/admin/students/${S}/relationships`, ["GET"]], [`/api/admin/students/${S}/relationships/tutors`, ["POST"]],
+  [`/api/admin/students/${S}/setup`, ["GET"]],
+  [`/api/students/${S}/setup`, ["GET"]],
   [`/api/admin/students/${S}/relationships/tutors/${L}/revoke`, ["POST"]], [`/api/admin/students/${S}/relationships/guardians/${L}/revoke`, ["POST"]],
   [`/api/admin/students/${S}/relationships/identities/${L}/revoke`, ["POST"]], [`/api/admin/students/${S}/relationships/guardians/${L}/practice`, ["POST"]],
   [`/api/admin/grants/${L}/revoke`, ["POST"]], [`/api/admin/tutors/${L}/cantor`, ["POST"]],

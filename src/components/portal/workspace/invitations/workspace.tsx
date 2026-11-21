@@ -9,6 +9,7 @@ import { InvitationForm } from "./form";
 import { InvitationList } from "./list";
 import { InvitationActionReview, type InvitationReview } from "./review";
 import { PageHeader } from "../../../ui";
+import { setupWorkspaceHref } from "../staff/student-setup-address";
 
 type Snapshot = { rows: Invitation[]; students: RosterStudent[] };
 function matches(review: InvitationReview, data: Snapshot): boolean {
@@ -45,11 +46,12 @@ function Invitations() {
   }, [review, snapshot, loading]);
   // "Invite a parent" from a student's People page arrives with ?student=…&role=…. The draft is filled once,
   // only for an active student in the loaded roster, with that record's contact email. Nothing is sent until reviewed.
-  const prefilled = useRef(false);
+  const prefilled = useRef(false), [setupTarget, setSetupTarget] = useState<string | null>(null);
   useEffect(() => {
     if (prefilled.current || !snapshot) return; prefilled.current = true;
     const query = new URLSearchParams(window.location.search), role = query.get("role"), row = snapshot.students.find(value => value.id === query.get("student") && !value.disabledAt && !value.ceremonyDoneAt);
     if (!row || (role !== "parent" && role !== "student")) return;
+    if (query.get("from") === "setup") setSetupTarget(row.id);
     // Never replace anything the admin has already started.
     setDraft(current => current.email || current.studentId || current.role !== "parent" ? current : { role, studentId: row.id, email: (role === "parent" ? row.parentEmail : row.ownEmail) ?? "" });
   }, [snapshot]);
@@ -165,6 +167,7 @@ function Invitations() {
     : outcome.receipt.delivery === "failed" ? "The email failed to send. Nothing is resent automatically; use Send again if you want to try once more."
     : "We couldn’t confirm whether the email went out. Nothing is resent automatically.");
   return <section className="role-workspace invitation-workspace admin-workspace"><PeopleNav />
+    {setupTarget && <div className="admin-crumbs"><WorkspaceLink href={setupWorkspaceHref(setupTarget)}>Back to student setup</WorkspaceLink></div>}
     <PageHeader title="Invitations" titleRef={pageHeading} actions={!blocked ? <button type="button" className="hero-icon roster-reload" aria-label="Reload invitations" disabled={pending || loading} onClick={() => void reloadExplicitly()}><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></button> : undefined} />
     <InvitationForm draft={draft} change={change} students={snapshot?.students ?? []} ready={Boolean(snapshot && !loading && !failure)} pending={pending} blocked={blocked} review={openIssue} />
     {message && !review && <p className={blocked ? "request-error roster-message" : "workspace-notice roster-message"} role={blocked ? "alert" : "status"}>{message}</p>}

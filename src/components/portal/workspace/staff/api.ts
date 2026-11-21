@@ -1,12 +1,29 @@
 import { PortalRequestError } from "../../api";
 import { call, identifier } from "../api";
 import type { FamilyState, StudentStatus } from "./model";
+import type { StudentSetup } from "../../../../server/staff/service";
 
 // Release 1.9 N14/N15 clients. Closed parsers: an unexpected key, an address-shaped name or a malformed id is refused whole.
 const bad = (): never => { throw new PortalRequestError(503); };
 function object(value: unknown, keys: string[]): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).length !== keys.length || Object.keys(value).some(key => !keys.includes(key))) return bad();
   return value as Record<string, unknown>;
+}
+export function parseStudentSetup(value: unknown, studentId: string, mode: "admin" | "tutor" = "admin"): StudentSetup {
+  const state = (value as { state?: unknown } | null)?.state;
+  if (state === "ended") {
+    const row = object(value, ["id", "state"]);
+    if (identifier(row.id) !== studentId) return bad();
+    return { id: studentId, state };
+  }
+  const keys = ["id", "state", "service", "reading", "tutor"];
+  const row = object(value, mode === "admin" ? [...keys, "kind", "contact", "access", "invitation"] : keys);
+  if (row.id !== studentId || state !== "active" || typeof row.tutor !== "boolean"
+    || !["ready", "unknown-slot"].includes(String(row.service)) || !["ready", "none", "review"].includes(String(row.reading))) return bad();
+  if (mode === "admin" && (!["child", "adult"].includes(String(row.kind)) || typeof row.contact !== "boolean"
+    || !["ready", "practice-off", "unlinked"].includes(String(row.access))
+    || !["none", "prepared", "sent", "failed", "expired", "accepted", "unneeded"].includes(String(row.invitation)))) return bad();
+  return row as StudentSetup;
 }
 const list = (value: unknown, max: number) => Array.isArray(value) && value.length <= max ? value : bad();
 const count = (value: unknown) => Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= 1000 ? Number(value) : bad();
@@ -58,6 +75,10 @@ export function parseNeeded(value: unknown): Set<string> {
 }
 
 export const staffApi = {
+  async setup(mode: "admin" | "tutor", studentId: string, signal?: AbortSignal) {
+    const id = identifier(studentId), prefix = mode === "admin" ? "/api/admin" : "/api";
+    return parseStudentSetup(await call(`${prefix}/students/${id}/setup`, undefined, undefined, signal), id, mode);
+  },
   async needed(signal?: AbortSignal) { return parseNeeded(await call("/api/admin/invitations/needed", undefined, undefined, signal)); },
   async status(signal?: AbortSignal) { return parseStatuses(await call("/api/admin/student-status", undefined, undefined, signal, 2 * 1024 * 1024)); },
   async teaching(signal?: AbortSignal) { return parseTeaching(await call("/api/admin/tutor-students", undefined, undefined, signal, 2 * 1024 * 1024)); },

@@ -47,6 +47,8 @@ import { ParentStudySummary, ParentSummaryStore } from "./parent-summary";
 import type { PracticeDates } from "./practice-calendar/api";
 import { serviceSlotName, serviceSlotTime } from "./service-slot";
 import { StaffStudentLines } from "./staff/student-lines";
+import { StudentSetupChecklist } from "./staff/student-setup";
+import { STUDENT_SETUP_ID } from "./staff/student-setup-address";
 import { NeedsWork } from "./staff/needs-work";
 import { TutorPracticeDays, TutorPracticeScope } from "./staff/practice";
 import { LiftNote } from "./staff/lift-note";
@@ -162,7 +164,7 @@ function AssignmentContext({ row, current = false, staff }: { row: Reading; curr
 
 /** The anchors the foot, the pinned card and the old tab addresses name: Service parts and Lessons follow the text on one page (Readings for everyone E2). */
 export const SECTION_IDS = Object.freeze({ service: "service-parts", lessons: "lessons", tutorLesson: "tutor-lesson-and-practice" });
-const sectionIds: readonly string[] = Object.values(SECTION_IDS);
+const sectionIds: readonly string[] = [...Object.values(SECTION_IDS), STUDENT_SETUP_ID];
 /** The sentence that says listening is not released yet: under the reading for staff and parents, and on a student's disabled Listen. */
 const LISTENING_OFF = "Listening isn’t available yet. You can still read, use word tools, and practice.";
 /** The parent's page has no Up close (practice is its own mode), so its line names only what the page offers (finding 15). */
@@ -547,6 +549,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
         {mode === "child-practice" && <ChildPracticeDisclosure name={student.firstName} place="child-practice" />}
         <ReaderTitle name={titleName(student)} headingId="reading-heading" level={mode === "child-practice" ? 2 : 1} line={titleLine} pills={pills} note={titleNote} hideName={mode === "child-practice"} />
         {!practiceOpen && staff && authorizedReading && <StaffStudentLines mode={mode} baseline={authorizedReading} />}
+        {!practiceOpen && (mode === "admin" || mode === "tutor") && authorizedReading && <StudentSetupChecklist mode={mode} baseline={authorizedReading} openReading={openSheet} />}
         {exploring || readings.length === 0 ? staff ? <StaffNextSteps mode={mode === "admin" ? "admin" : "tutor"} student={student} torahOnly={readings.length > 0} onAssign={openSheet} practiceAction={practiceAction} />
           : <div className="reading-empty"><h2 className="hero-reference hero-reference-empty">{exploring ? "Explore the full Torah portion" : "No reading has been assigned yet"}</h2><p className="hero-meta">{exploring ? "Read the portion while you and your tutor choose your verses." : "Your tutor or rabbi will add your verses here."}</p>
           {practiceAction && <div className="hero-actions">{practiceAction}</div>}</div> : <>

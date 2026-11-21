@@ -31,6 +31,10 @@ import * as data from "./data";
 type Access<Q extends PgQueryResultHKT> = Pick<ReturnType<typeof createAccessService<Q>>, "withAdminCapability" | "withStudentCapability">;
 export type FamilyState = "joined" | "invited" | "expiring" | "expired" | "none";
 export type StudentStatus = Readonly<{ id: string; tutors: number; family: FamilyState | null; reading: "none" | "confirmed" | "review"; honors: boolean; tutorName: string | null; got: number; total: number; solid: number | null }>;
+type SharedSetup = Readonly<{ id: string; state: "active"; service: "ready" | "unknown-slot"; reading: "ready" | "none" | "review"; tutor: boolean }>;
+type AdminSetup = SharedSetup & Readonly<{ kind: "child" | "adult"; contact: boolean; access: "ready" | "practice-off" | "unlinked";
+  invitation: "none" | "prepared" | "sent" | "failed" | "expired" | "accepted" | "unneeded" }>;
+export type StudentSetup = Readonly<{ id: string; state: "ended" }> | SharedSetup | AdminSetup;
 const DAY_MS = 86_400_000;
 const conflict = () => Object.freeze({ ok: false as const, code: "stale-state" as const });
 const tooMany = (rows: readonly unknown[]) => { if (rows.length > 20_000) throw new AccessDenied(403); };
@@ -68,6 +72,36 @@ export function createStaffService<Q extends PgQueryResultHKT>(input: { access: 
         return Object.freeze({ id: student.id, tutors: tutorCount.get(student.id) ?? 0, family, reading, honors: started.has(student.id),
           tutorName: firstTutor.get(student.id) ?? null, got: gotOf.get(student.id) ?? 0, total: totalOf.get(student.id) ?? 0, solid: solidOf.get(student.id) ?? null });
       }));
+    });
+  }
+
+  async function setup(request: AccessRequest, suppliedId: string, mode: "admin" | "tutor"): Promise<StudentSetup> {
+    const id = identifier(suppliedId);
+    return input.access.withStudentCapability(request, { mode, studentId: id, capability: "read" }, async (tx, actor, student) => {
+      if (await isCeremonyDone(tx, actor.tenantId, id)) return { id, state: "ended" };
+      const readings = (await Promise.all((["torah", "haftarah"] as const).map(kind => roster.currentAssignment(tx, actor.tenantId, id, kind))))
+        .filter(row => row?.status === "confirmed");
+      const review = readings.some(row => !row || assignmentNeedsReview(row.proposalSnapshot, student.ceremonyDate)
+        || row.proposalSnapshot?.serviceSlot !== student.serviceSlot);
+      const shared: SharedSetup = { id, state: "active", service: student.serviceSlot === "unknown" ? "unknown-slot" : "ready",
+        reading: !readings.length ? "none" : review ? "review" : "ready", tutor: true };
+      // Tutor read authority already requires an active assignment to this student.
+      if (mode === "tutor") return shared;
+      const contact = await data.setupContact(tx, actor.tenantId, id);
+      if (!contact) throw new AccessDenied(404);
+      const links = await relationships.inspectLinks(tx, actor.tenantId, id);
+      const live = (row: { revokedGrant: Date | null; disabledMembership: Date | null; verified: boolean }) => !row.revokedGrant && !row.disabledMembership && row.verified;
+      const guardians = links.guardians.filter(live), own = links.identities.some(live);
+      const child = contact.kind === "child", email = (child ? contact.parent : contact.own)?.trim().toLowerCase();
+      const hasAccess = own || (child && guardians.some(parent => parent.link.practiceEnabled));
+      const access = hasAccess ? "ready" : child && guardians.length ? "practice-off" : "unlinked";
+      const time = new Date(now());
+      const invite = email ? await data.setupInvitation(tx, actor.tenantId, id, child ? "parent" : "student", email, time) : null;
+      const invitedRoleLinked = child ? guardians.length > 0 : own;
+      const invitation = invitedRoleLinked ? invite?.acceptedAt ? "accepted" : "unneeded"
+        : !invite || invite.acceptedAt ? "none" : invite.expiresAt <= time ? "expired" : invite.delivery === "sent" ? "sent"
+          : invite.delivery === "failed" ? "failed" : "prepared";
+      return { ...shared, kind: contact.kind, contact: Boolean(email), access, tutor: links.tutors.some(live), invitation };
     });
   }
 
@@ -165,6 +199,6 @@ export function createStaffService<Q extends PgQueryResultHKT>(input: { access: 
     });
   }
 
-  return Object.freeze({ status, teaching, handOver, family, reconfirm });
+  return Object.freeze({ status, setup, teaching, handOver, family, reconfirm });
 }
 export type StaffService = ReturnType<typeof createStaffService>;

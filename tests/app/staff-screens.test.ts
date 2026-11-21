@@ -5,6 +5,7 @@ import * as s from "../../src/server/db/index";
 import { portalRoutesFixture } from "./portal-routes-fixture";
 import { createHttpDispatcher } from "../../src/server/http/dispatch";
 import { CHIP_TEXT, weekCards, studentFacts, type StudentStatus } from "../../src/components/portal/workspace/staff/model";
+import { parseStudentSetup } from "../../src/components/portal/workspace/staff/api";
 
 // Release 1.9 N14/N15 staff screens, server side. Synthetic people only. The fixture's "multi" is the tutor of Sibling A and the
 // parent of Siblings A and B; "learner" is Sibling A's own account; "recipient" becomes a second tutor here; students[3] and a
@@ -41,6 +42,53 @@ async function setup() {
   return { f, call, own, sibling, unrelated, other, secondTutor, foreignTutor, liveTutors, grantOf, revisionOf };
 }
 const isoIn = (days: number) => { const d = new Date(); d.setDate(d.getDate() + days); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+
+it("shows independent setup steps for a child and an adult from live records without sending an invitation", async () => {
+  const t = await setup(), date = isoIn(42), childEmail = "child-setup@example.test", childId = t.unrelated.id;
+  const load = async (id: string) => {
+    const result = await t.call(`/api/admin/students/${id}/setup`, "admin");
+    expect(result.status).toBe(200);
+    expect(result.text).not.toContain("@");
+    return parseStudentSetup(result.json, id);
+  };
+  await t.f.owner(() => t.f.db.update(s.student).set({ serviceSlot: "unknown", ceremonyDate: date, parentEmail: childEmail }).where(eq(s.student.id, childId)));
+  expect(await load(childId)).toEqual({ id: childId, state: "active", kind: "child", service: "unknown-slot", contact: true, access: "unlinked", tutor: false, reading: "none", invitation: "none" });
+  expect((await t.call(`/api/admin/students/${t.own.id}/setup`, "multi")).status).toBe(403);
+  const tutorSetup = await t.call(`/api/students/${t.own.id}/setup`, "multi");
+  expect(tutorSetup.status).toBe(200);
+  expect(parseStudentSetup(tutorSetup.json, t.own.id, "tutor")).toEqual({ id: t.own.id, state: "active", service: "ready", reading: "none", tutor: true });
+  expect((await t.call(`/api/students/${childId}/setup`, "multi")).status).toBe(404);
+  expect((await t.call(`/api/admin/students/${t.other.id}/setup`, "admin")).status).toBe(404);
+  expect((await t.call(`/api/admin/students/${childId}/setup?email=1`, "admin")).status).toBe(400);
+  const deliveries = t.f.deliveries.length;
+  const invite = await t.f.owner(async () => {
+    await t.f.db.insert(s.tutorStudent).values({ tenantId: "crc", studentId: childId, tutorGrantId: t.secondTutor.id });
+    const [row] = await t.f.db.insert(s.invite).values({ tenantId: "crc", studentId: childId, role: "parent", email: childEmail, tokenHash: "b".repeat(64),
+      inviterMembershipId: t.f.adminMember.id, expiresAt: new Date(Date.now() + 86400000) }).returning();
+    return row;
+  });
+  expect(await load(childId)).toMatchObject({ tutor: true, invitation: "prepared", access: "unlinked", service: "unknown-slot" });
+  await t.f.owner(async () => {
+    await t.f.db.update(s.student).set({ serviceSlot: "havdalah" }).where(eq(s.student.id, childId));
+    await t.f.db.insert(s.assignment).values({ tenantId: "crc", studentId: childId, kind: "haftarah", basis: "custom", ref: "Isaiah 1:1-2", status: "confirmed",
+      setByMembershipId: t.f.adminMember.id, proposalSnapshot: { confirmationDate: date, serviceSlot: "havdalah", slotProvenance: 1, needsReview: false } });
+    await t.f.db.insert(s.guardian).values({ tenantId: "crc", studentId: childId, parentGrantId: t.f.parentGrant.id, practiceEnabled: false, linkProvenance: "synthetic" });
+    await t.f.db.update(s.invite).set({ acceptedAt: new Date(), acceptedMembershipId: t.f.parentGrant.membershipId }).where(eq(s.invite.id, invite.id));
+  });
+  expect(await load(childId)).toMatchObject({ reading: "ready", invitation: "accepted", access: "practice-off", service: "ready" });
+  await t.f.owner(() => t.f.db.update(s.guardian).set({ practiceEnabled: true }).where(eq(s.guardian.studentId, childId)));
+  expect(await load(childId)).toMatchObject({ access: "ready" });
+  const adult = await t.call("/api/admin/students", "admin", { student: { firstName: "Synthetic", lastName: "Adult Setup", ceremonyDate: date, studentKind: "adult", ownEmail: "adult-setup@example.test", parentEmail: null, serviceSlot: "morning" } });
+  expect(adult.status).toBe(201);
+  const adultId = adult.json.id;
+  expect(await load(adultId)).toMatchObject({ kind: "adult", contact: true, service: "ready", access: "unlinked", invitation: "none" });
+  await t.f.owner(async () => {
+    const [grant] = await t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: t.secondTutor.membershipId, role: "student" }).returning();
+    await t.f.db.insert(s.studentIdentity).values({ tenantId: "crc", studentId: adultId, roleGrantId: grant.id });
+  });
+  expect(await load(adultId)).toMatchObject({ access: "ready", invitation: "unneeded" });
+  expect(t.f.deliveries).toHaveLength(deliveries);
+});
 
 describe("Needs you (N14)", () => {
   it("lists a ceremony six weeks out with no tutor as one row with one verb, from facts only an admin reads", async () => {

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
 import * as s from "../db/index";
@@ -84,6 +84,18 @@ export async function parentEverInvited<Q extends PgQueryResultHKT>(tx: Tx<Q>, t
 export async function studentKind<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, studentId: string) {
   const [row] = await tx.select({ kind: s.student.studentKind }).from(s.student).where(and(eq(s.student.tenantId, tenantId), eq(s.student.id, studentId)));
   return row?.kind;
+}
+/** Setup reads the current contact to select the applicable invite; it never projects the address. */
+export async function setupContact<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, studentId: string) {
+  const [row] = await tx.select({ kind: s.student.studentKind, parent: s.student.parentEmail, own: s.student.ownEmail }).from(s.student)
+    .where(and(eq(s.student.tenantId, tenantId), eq(s.student.id, studentId)));
+  return row;
+}
+export async function setupInvitation<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, studentId: string, role: "parent" | "student", email: string, now: Date) {
+  const [row] = await tx.select({ acceptedAt: s.invite.acceptedAt, expiresAt: s.invite.expiresAt, delivery: s.invite.deliveryStatus }).from(s.invite)
+    .where(and(eq(s.invite.tenantId, tenantId), eq(s.invite.studentId, studentId), eq(s.invite.role, role), eq(s.invite.email, email), isNull(s.invite.revokedAt)))
+    .orderBy(desc(sql`${s.invite.acceptedAt} is null and ${s.invite.expiresAt} > ${now.toISOString()}::timestamptz`), desc(s.invite.createdAt), desc(s.invite.id)).limit(1);
+  return row;
 }
 
 /** Marks a confirmed reading as reviewed for the current date and service, keeping its verses, basis and divisions. */

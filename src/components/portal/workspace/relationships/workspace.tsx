@@ -9,6 +9,7 @@ import { AccessReview } from "./review";
 import { staffApi, type Teaching } from "../staff/api";
 import { teachesLine } from "../staff/model";
 import { PageHeader } from "../../../ui";
+import { setupWorkspaceHref } from "../staff/student-setup-address";
 
 // teaching: on the Tutors page, each tutor's current students (1.9 N15, G11), or null where it isn't read or couldn't be.
 type Snapshot = { relationships: Relationships | null; tutors: Tutor[]; teaching: Map<string, Teaching["students"]> | null };
@@ -114,7 +115,8 @@ function Access({ studentId }: { studentId?: string }) {
     <div className="people-actions">{actions}</div>
   </li>;
   const calm = message === "Saved. Access is up to date." || message === "Access reloaded.";
-  return <section className="role-workspace access-workspace admin-workspace">{!studentId && <PeopleNav />}{studentId && <div className="admin-crumbs"><WorkspaceLink href={`/workspace/admin/students/${studentId}/reading`}>Student page</WorkspaceLink></div>}
+  return <section className="role-workspace access-workspace admin-workspace">{!studentId && <PeopleNav />}{studentId && <div className="admin-crumbs"><WorkspaceLink href={`/workspace/admin/students/${studentId}/reading`}>Student page</WorkspaceLink>
+    {data && <WorkspaceLink href={setupWorkspaceHref(studentId)}>Back to student setup</WorkspaceLink>}</div>}
     <PageHeader title={studentId ? "People and access" : "Tutors"} titleRef={pageHeading}
       description={data ? <><bdi dir="auto">{data.student.firstName} {data.student.lastName}</bdi> · <time dateTime={data.student.ceremonyDate}>{ceremonyCountdown(data.student.ceremonyDate).label}</time>{data.student.disabled && <> <span className="roster-chip">Disabled</span></>}</>
         : !studentId ? "Tutors join by invitation. Assign them to students from each student’s People page, or hand over a tutor’s students here." : undefined}

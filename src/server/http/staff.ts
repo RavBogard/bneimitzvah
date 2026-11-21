@@ -10,9 +10,13 @@ import { errorResponse, HttpBoundaryError, privateJson } from "./responses";
  * Release 1.9 N14/N15 staff-screen routes (src/server/staff/service.ts). Kept apart from portal.ts so the routes stay small and
  * closed. Every response is private and no-store (privateJson); bodies and queries are closed.
  */
-type Route = { kind: "status" | "teaching" | "hand-over" | "family" | "reconfirm"; methods: readonly string[]; id?: string };
+type Route = { kind: "status" | "setup" | "tutor-setup" | "teaching" | "hand-over" | "family" | "reconfirm"; methods: readonly string[]; id?: string };
 function route(pathname: string): Route | null {
   if (pathname === "/api/admin/student-status") return { kind: "status", methods: ["GET"] };
+  const setup = /^\/api\/admin\/students\/([^/]+)\/setup$/.exec(pathname);
+  if (setup) return { kind: "setup", methods: ["GET"], id: setup[1] };
+  const tutorSetup = /^\/api\/students\/([^/]+)\/setup$/.exec(pathname);
+  if (tutorSetup) return { kind: "tutor-setup", methods: ["GET"], id: tutorSetup[1] };
   if (pathname === "/api/admin/tutor-students") return { kind: "teaching", methods: ["GET"] };
   const handOver = /^\/api\/admin\/tutors\/([^/]+)\/hand-over$/.exec(pathname);
   if (handOver) return { kind: "hand-over", methods: ["POST"], id: handOver[1] };
@@ -35,6 +39,14 @@ export async function handleStaffRequest(request: Request, runtime: HttpRuntime)
         uniqueQuery(request.url, []);
         const rows = await runtime.staff.status(request, { mode: "admin" });
         return privateJson({ students: rows.map(row => ({ id: row.id, tutors: row.tutors, family: row.family, reading: row.reading, honors: row.honors, tutorName: row.tutorName, got: row.got, total: row.total, solid: row.solid })) });
+      }
+      case "setup":
+      case "tutor-setup": {
+        uniqueQuery(request.url, []);
+        const row = await runtime.staff.setup(request, found.id!, found.kind === "setup" ? "admin" : "tutor");
+        if (row.state === "ended") return privateJson({ state: row.state, id: row.id });
+        const shared = { id: row.id, state: row.state, service: row.service, reading: row.reading, tutor: row.tutor };
+        return privateJson(found.kind === "setup" && "kind" in row ? { ...shared, kind: row.kind, contact: row.contact, access: row.access, invitation: row.invitation } : shared);
       }
       case "teaching": {
         uniqueQuery(request.url, []);

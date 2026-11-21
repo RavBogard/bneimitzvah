@@ -4248,6 +4248,150 @@
   "body": true
  },
  {
+  "request": "GET /api/admin/students/{student}/setup",
+  "status": 403,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/admin/students/{student}/setup (signed out)",
+  "status": 401,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "POST /api/admin/students/{student}/setup (wrong method)",
+  "status": 405,
+  "allow": "GET",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "HEAD /api/admin/students/{student}/setup",
+  "status": 405,
+  "allow": "GET",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "OPTIONS /api/admin/students/{student}/setup",
+  "status": 405,
+  "allow": "GET",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/admin/students/{student}/setup/ (trailing slash)",
+  "status": 404,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/admin/students/{student}/setupx (near miss)",
+  "status": 404,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/admin/students/{student}/setup?unexpected=1 (unexpected query)",
+  "status": 400,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/students/{student}/setup",
+  "status": 200,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/students/{student}/setup (signed out)",
+  "status": 401,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "POST /api/students/{student}/setup (wrong method)",
+  "status": 405,
+  "allow": "GET",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "HEAD /api/students/{student}/setup",
+  "status": 405,
+  "allow": "GET",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "OPTIONS /api/students/{student}/setup",
+  "status": 405,
+  "allow": "GET",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/students/{student}/setup/ (trailing slash)",
+  "status": 404,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/students/{student}/setupx (near miss)",
+  "status": 404,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/students/{student}/setup?unexpected=1 (unexpected query)",
+  "status": 400,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
   "request": "POST /api/admin/students/{student}/relationships/tutors/{link}/revoke",
   "status": 400,
   "allow": null,
