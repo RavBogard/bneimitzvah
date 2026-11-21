@@ -1,4 +1,6 @@
 import { gatedFetch } from "../workspace/session-gate";
+import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
+import { expandReadingRanges, readingSegments } from "../../../lib/readings/ranges";
 /**
  * The browser side of a member's own saved readings (Release 1.4). Same-origin, cookie session,
  * no-store and bounded, like requestPortal, but kept apart from the signed-out reading's public
@@ -22,7 +24,7 @@ const RANGES = /^[\x20-\x7e]{1,1000}$/;
 const CONTROLS = /[\x00-\x1f\x7f-\x9f\u2028\u2029]/;
 
 type SavedPath = "/api/saved/readings" | "/api/saved/readings/create" | "/api/saved/readings/update" | "/api/saved/readings/remove" | "/api/saved/reading" | "/api/saved/mark"
-  | "/api/saved/work" | "/api/saved/stars" | "/api/saved/star";
+  | "/api/saved/work" | "/api/saved/stars" | "/api/saved/star" | "/api/saved/rehearsal" | "/api/saved/rehearsal/answer";
 async function request(path: SavedPath, body?: Record<string, unknown>, signal?: AbortSignal, search = "") {
   const controller = new AbortController(), abort = () => controller.abort();
   if (signal?.aborted) abort();
@@ -144,6 +146,44 @@ function change<T>(status: number, value: unknown, key: string, parse: (item: un
   if (status === 409) return row?.ok === false && row.code === "conflict" ? { ok: false, code: "conflict", current: row.current } : { ok: false, code: row?.ok === false && row.code === "limit" ? "limit" : "unavailable" };
   try { const parsed = status === 200 && row?.ok === true ? parse(row[key]) : null; return parsed === null ? { ok: false, code: "unavailable" } : { ok: true, value: parsed }; }
   catch { return { ok: false, code: "unavailable" }; }
+}
+
+export type RehearsalMark = Readonly<{ ref: string; retry: boolean; version: number }>;
+export type SavedRehearsal = Readonly<{ reading: SavedReading; verses: readonly string[]; marks: readonly RehearsalMark[] }>;
+const parseRehearsalMark = (value: unknown): RehearsalMark | null => {
+  const row = record(value, ["ref", "retry", "version"]);
+  return row && typeof row.ref === "string" && VERSE.test(row.ref) && typeof row.retry === "boolean"
+    && typeof row.version === "number" && Number.isSafeInteger(row.version) && row.version > 0 && row.version <= 2147483647
+    ? { ref: row.ref, retry: row.retry, version: row.version } : null;
+};
+export function parseSavedRehearsal(value: unknown, id: string): SavedRehearsal | null {
+  const row = record(value, ["reading", "marks"]), reading = parseSavedReading(row?.reading);
+  if (!reading?.date || reading.id !== id || !Array.isArray(row?.marks) || row.marks.length > reading.verseCount) return null;
+  let verses: string[];
+  try { verses = expandReadingRanges(readingSegments(reading.ranges), reading.kind, TANAKH_VERSE_COUNTS); } catch { return null; }
+  if (verses.length !== reading.verseCount) return null;
+  const refs = new Set(verses), marks: RehearsalMark[] = [];
+  for (const item of row.marks) {
+    const mark = parseRehearsalMark(item);
+    if (!mark || !refs.delete(mark.ref)) return null;
+    marks.push(mark);
+  }
+  return { reading, verses, marks };
+}
+export async function fetchSavedRehearsal(id: string, signal: AbortSignal): Promise<ChangeResult<SavedRehearsal>> {
+  if (!UUID.test(id)) return { ok: false, code: "missing" };
+  const { status, value } = await request("/api/saved/rehearsal", undefined, signal, `?${new URLSearchParams({ id })}`);
+  return change(status, value, "rehearsal", item => parseSavedRehearsal(item, id));
+}
+export async function answerSavedRehearsal(input: { readingId: string; readingRevision: number; verseRef: string; expectedVersion: number; retry: boolean }, signal: AbortSignal) {
+  const { status, value } = await request("/api/saved/rehearsal/answer", input, signal);
+  if (status === 409 && record(value, ["ok", "code"])?.code === "reading-changed") return { ok: false as const, code: "reading-changed" as const };
+  const parse = (item: unknown) => {
+    const mark = parseRehearsalMark(item);
+    return mark?.ref === input.verseRef ? mark : null;
+  };
+  const result = change(status, value, "mark", parse);
+  return !result.ok && result.code === "conflict" ? { ...result, current: parse(result.current) } : result;
 }
 /** Rename and re-date a reading and, with `ranges` ("; "-joined groups, at most 32), revise its verses; the server recounts them. Left out, the verses stay as saved. */
 export async function updateSavedReading(input: { id: string; revision: number; name: string; date: string | null; ranges?: string }, signal?: AbortSignal): Promise<ChangeResult<SavedReading>> {

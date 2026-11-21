@@ -38,15 +38,24 @@ export function VerseText({ verseRef, kind, hebrew, level }: { verseRef: string;
 export type RunVerse = Readonly<{ id: VerseCardId; ref: string; kind: Melody; hebrew: HebrewSource }>;
 /** One verse of a run: "Chant this verse", the help line, the text, then Clean or Stumbled in the footer. */
 export function VerseRunView({ verses, review, mode, onAnswer, onDone, frame }: { verses: readonly RunVerse[]; review: VerseReview | null; mode: "review" | "run-through";
-  onAnswer(id: VerseCardId, clean: boolean): void; onDone(run: VerseRun): void; frame(body: ReactNode, footer?: ReactNode): ReactElement }) {
+  onAnswer(id: VerseCardId, clean: boolean): void | Promise<boolean>; onDone(run: VerseRun): void; frame(body: ReactNode, footer?: ReactNode): ReactElement }) {
   const [run, setRun] = useState<VerseRun>(() => startVerseRun(verses.map(verse => verse.id)));
   const id = currentVerse(run), verse = verses.find(row => row.id === id) ?? null, card = id ? review?.cards[id] : undefined;
   const suggestion = suggestedHelp(card, mode), [level, setLevel] = useState<HelpLevel>(suggestion), heading = useRef<HTMLHeadingElement>(null);
   // Each verse opens at its own suggestion; the student may take more help or less at any time.
   useEffect(() => { setLevel(suggestion); heading.current?.focus({ preventScroll: true }); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (verseRunDone(run)) onDone(run); }, [run]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pending = useRef(false), [saving, setSaving] = useState(false);
   if (!verse) return frame(null);
-  const answer = (clean: boolean) => { onAnswer(verse.id, clean); setRun(value => answerVerseRun(value, clean ? "clean" : "stumbled")); window.scrollTo({ top: 0 }); };
+  const answer = (clean: boolean) => {
+    if (pending.current) return;
+    const advance = () => { setRun(value => answerVerseRun(value, clean ? "clean" : "stumbled")); window.scrollTo({ top: 0 }); };
+    const result = onAnswer(verse.id, clean);
+    if (!result) { advance(); return; }
+    pending.current = true;
+    setSaving(true);
+    void result.then(saved => { if (saved) advance(); }, () => undefined).finally(() => { pending.current = false; setSaving(false); });
+  };
   return frame(<section className={styles.runStep} aria-labelledby="verse-run-prompt" data-verse={verse.ref}>
     <h2 id="verse-run-prompt" ref={heading} tabIndex={-1} className={styles.prompt}>Chant this verse</h2>
     <p className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></p>
@@ -54,8 +63,8 @@ export function VerseRunView({ verses, review, mode, onAnswer, onDone, frame }: 
     {suggestion === "tikkun" && level !== "tikkun" && <p className={styles.runNote}>Try it in the tikkun.</p>}
     <VerseText verseRef={verse.ref} kind={verse.kind} hebrew={verse.hebrew} level={level} />
   </section>, <div className={styles.verseAnswers}>
-    <button type="button" className="button-secondary" onClick={() => answer(true)}>Clean</button>
-    <button type="button" className="button-secondary" onClick={() => answer(false)}>Stumbled</button>
+    <button type="button" className="button-secondary" disabled={saving} onClick={() => answer(true)}>Clean</button>
+    <button type="button" className="button-secondary" disabled={saving} onClick={() => answer(false)}>Stumbled</button>
   </div>);
 }
 

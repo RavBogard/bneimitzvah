@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useId, useState } from "react";
 import { fetchSavedReadings } from "../saved/api";
+import { savedRehearsalHref } from "../saved/rehearsal-address";
 import { sortOwnReadings, type OwnReadingsState } from "./model";
 import styles from "../saved/saved.module.css";
 
@@ -22,10 +23,10 @@ export function OwnReadingsView({ state, expanded, listId, onExpand, onRetry }: 
     {state.status === "failed" && <><p className={styles.mineLine} role="status">Your readings didn’t load.</p>
       <button type="button" className={`button-secondary ${styles.more}`} onClick={onRetry}>Try again</button></>}
     {shown.length > 0 && <ul id={listId} className={styles.list}>
-      {shown.map(reading => <li key={reading.id}><a className={styles.item} href={savedReadingHref(reading.id)}>
+      {shown.map(reading => <li key={reading.id} className={styles.shelfReading}><a className={styles.item} href={savedReadingHref(reading.id)}>
         <span className={styles.itemName}><bdi>{reading.name}</bdi></span>
         <span className={styles.itemMeta}>{reading.date ? <time dateTime={reading.date}>{longDate(reading.date)}</time> : "No date"} · {reading.kind === "torah" ? "Torah" : "Haftarah"} <bdi dir="ltr">{displayRange(reading.ranges)}</bdi></span>
-      </a></li>)}
+      </a>{reading.date && <a className={styles.rehearsalLink} href={savedRehearsalHref(reading.id)} aria-label={`Run-through for ${reading.name}`}>Run-through</a>}</li>)}
     </ul>}
     {readings.length > OWN_READINGS_FIRST && <button type="button" className={`button-secondary ${styles.more}`} aria-expanded={expanded} aria-controls={listId} onClick={onExpand}>
       {expanded ? "Fewer readings" : "All my readings"}</button>}

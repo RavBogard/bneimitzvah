@@ -18,6 +18,7 @@ import { MoreScope, ReadHeader } from "../public-reading/read-header";
 import type { Pill } from "../public-reading/reader-title";
 import styles from "./saved.module.css";
 import { SharePassage } from "./share-passage";
+import { savedRehearsalHref } from "./rehearsal-address";
 import { ReturnSignInLink } from "../return-sign-in-link";
 import { fetchLearner, fetchLearnerPage } from "../mine/api";
 import { NAMELESS_LEARNER } from "../../../lib/learner-name";
@@ -301,6 +302,7 @@ export function SavedReadingPage({ id, verse, learner = null }: { id: string; ve
   // The private name stays on the page; the tab title (and so browser history) only ever says "My reading", or "A learner's reading" for a staff viewer; the header line says whose it is.
   return <MoreScope><Shell title={viewing ? "A learner’s reading" : "My reading"} signedIn={header.status === "ready"}>
     <ReadHeader name={reading ? reading.name : header.status === "loading" ? (viewing ? "Loading the reading" : "Loading your reading") : "Reading unavailable"} loading={header.status === "loading"} pills={pills}
+      note={reading?.date && !viewing && <a className={styles.rehearsalLink} href={savedRehearsalHref(reading.id)}>Run-through</a>}
       line={reading ? <>{viewing && <>{learnerName && learnerName !== NAMELESS_LEARNER ? <><bdi dir="auto">{learnerName}</bdi>’s</> : "A learner’s"} reading · </>}{reading.date ? <time dateTime={reading.date}>{longDate(reading.date)}</time> : "No date"} · {kindName(reading.kind)} <bdi dir="ltr">{displayRange([reading.ranges])}</bdi></> : ""} />
     {reading && canShare && sharing && <SharePassage key={JSON.stringify([reading.kind, reading.ranges, reading.date])}
       id={shareId} kind={reading.kind} ranges={reading.ranges} date={reading.date} />}

@@ -25,6 +25,11 @@
 .item:hover .itemName { text-decoration: underline; text-underline-offset: 0.2em; }
 .itemName { color: var(--color-action); font-weight: 650; }
 .itemMeta { color: var(--color-muted); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.shelfReading { display: flex; flex-wrap: wrap; align-items: center; gap: 0 1rem; }
+.shelfReading .item { flex: 1 1 14rem; }
+.rehearsalLink { display: inline-flex; align-items: center; min-height: 44px; font-weight: var(--weight-semibold); }
+.rehearsalHeader { display: grid; justify-items: start; gap: 0.375rem; overflow-wrap: anywhere; }
+.rehearsalHeader > * { margin: 0; }
 .more { margin-top: 0.75rem; }
 
 @media (max-width: 640px) {

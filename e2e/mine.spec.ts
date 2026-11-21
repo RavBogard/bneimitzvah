@@ -26,7 +26,8 @@ test("a member's shelf: the title, My Readings current in the bar, no tab bar, f
     const own = page.getByRole("region", { name: "Also working on" });
     await expect(own).toBeVisible();
     await expect(own.getByRole("listitem")).toHaveCount(5);
-    await expect(own.getByRole("link", { name: /Synthetic reading 1\b/ })).toHaveAttribute("href", `/read?saved=${row(1).id}`);
+    await expect(own.getByRole("link", { name: /^Synthetic reading 1\b/ })).toHaveAttribute("href", `/read?saved=${row(1).id}`);
+    await expect(own.getByRole("link", { name: "Run-through for Synthetic reading 1" })).toHaveAttribute("href", `/mine/rehearse/${row(1).id}`);
     for (const height of await own.getByRole("link").evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height))) expect(height).toBeGreaterThanOrEqual(44);
     await own.getByRole("button", { name: "All my readings", exact: true }).click();
     await expect(own.getByRole("listitem")).toHaveCount(7);

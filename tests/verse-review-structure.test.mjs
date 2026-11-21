@@ -76,7 +76,8 @@ test("verse-review writes record no audit rows, and its routes are never public 
 });
 
 test("the Run-through and the verse cards play nothing: no player, no phrase audio, no recording, no audio element (G3)", () => {
-  for (const path of ["src/components/learn/run-through.tsx", "src/components/learn/verse-run.tsx", "src/app/learn/run-through/page.tsx", "src/lib/learn/verse-review.ts"]) {
+  for (const path of ["src/components/learn/run-through.tsx", "src/components/learn/verse-run.tsx", "src/app/learn/run-through/page.tsx", "src/lib/learn/verse-review.ts",
+    "src/components/portal/saved/rehearsal.tsx", "src/app/(portal)/mine/rehearse/[id]/page.tsx"]) {
     const text = source(path);
     for (const spec of importsOf(text)) assert.doesNotMatch(spec, /player|phrase-audio|reference-audio|recording|\/bits$|audio/i, `${path} imports ${spec}`);
     assert.doesNotMatch(text, /LearnServices|useLearnServices|usePlayerState|new Audio|<audio|\.play\(|PlayTile|AudioContext|speechSynthesis/, `${path} reaches audio`);

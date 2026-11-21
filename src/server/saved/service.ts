@@ -22,6 +22,8 @@ const readingView = (row: data.SavedReadingRow) => ({ id: row.id, name: row.name
   verseCount: row.verseCount, revision: row.revision, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() });
 const workView = (row: data.WorkRow) => ({ text: row.text, version: row.version, updatedAt: row.updatedAt.toISOString() });
 const markView = (row: data.MarkRow) => ({ state: row.state, version: row.version, updatedAt: row.updatedAt.toISOString() });
+const rehearsalMarkView = (row: { verseRef: string; retry: boolean; version: number }) =>
+  ({ ref: row.verseRef, retry: row.retry, version: row.version });
 const starView = (row: data.StarRow) => ({ work: row.work, verseRef: row.verseRef, comment: row.commentIndex });
 
 /**
@@ -51,8 +53,8 @@ export function createSavedService<Q extends PgQueryResultHKT>(input: { access: 
   // Every write takes the member's write lock first: caps and version checks see every earlier write of this member.
   const write = <T>(request: Request, action: (tx: AccessTransaction<Q>, owner: SavedOwner) => Promise<T>) =>
     withSavedOwner<T>(request, "data-write", async (tx, owner) => { await data.lockOwnerWrites(tx, owner); return action(tx, owner); });
-  const ownReading = async (tx: AccessTransaction<Q>, owner: SavedScope, id: string) => {
-    const row = await data.reading(tx, owner, id);
+  const ownReading = async (tx: AccessTransaction<Q>, owner: SavedScope, id: string, lock: "share" | null = null) => {
+    const row = await data.reading(tx, owner, id, lock);
     // Missing, another member's and another congregation's readings are the same 404.
     if (!row) throw new AccessDenied(404);
     return row;
@@ -101,7 +103,7 @@ export function createSavedService<Q extends PgQueryResultHKT>(input: { access: 
         if (value.ranges && value.ranges.kind !== current.kind) return { ok: false as const, code: "invalid-request" as const };
         // The verse count is always the server's own expansion of the canonical ranges, never a client's number. Translations,
         // notes and marks on verses a revision drops stay stored (keyed by reading and verse) and show again if the verse returns.
-        const verses = value.ranges ? { ranges: value.ranges.ranges, verseCount: value.ranges.verses.length } : undefined;
+        const verses = value.ranges ? { ranges: value.ranges.ranges, refs: value.ranges.verses } : undefined;
         const row = await data.updateReading(tx, owner, value.id, value.revision, { name: value.name, date: value.date, verses });
         if (!row) throw new Error("Saved reading unavailable");
         return { ok: true as const, reading: readingView(row) };
@@ -120,6 +122,37 @@ export function createSavedService<Q extends PgQueryResultHKT>(input: { access: 
     async reading(request: Request, suppliedId: unknown, suppliedOffset: unknown) {
       const id = validate.uuid(suppliedId), offset = validate.integer(suppliedOffset, 0, 999);
       return withSavedOwner(request, "read", (tx, owner) => pageOf(tx, owner, id, offset));
+    },
+    async rehearsal(request: Request, suppliedId: unknown) {
+      const id = validate.uuid(suppliedId);
+      return withSavedOwner(request, "read", async (tx, owner) => {
+        // The shared row lock keeps the reading and its marks consistent with edits and their pruning.
+        const row = await ownReading(tx, owner, id, "share");
+        if (!row.readingDate) throw new AccessDenied(404);
+        const marks = new Map((await data.rehearsalMarks(tx, owner, id)).map(mark => [mark.verseRef, mark]));
+        return { ok: true as const, rehearsal: { reading: readingView(row), marks: versesOf(row).flatMap(ref => {
+          const mark = marks.get(ref);
+          return mark ? [rehearsalMarkView(mark)] : [];
+        }) } };
+      });
+    },
+    async answerRehearsal(request: Request, supplied: unknown) {
+      const value = validate.rehearsalAnswer(supplied);
+      return write(request, async (tx, owner) => {
+        const row = await ownReading(tx, owner, value.readingId);
+        if (!row.readingDate) throw new AccessDenied(404);
+        if (row.revision !== value.readingRevision) return { ok: false as const, code: "reading-changed" as const };
+        requireVerse(row, value.verseRef);
+        const current = await data.rehearsalMark(tx, owner, row.id, value.verseRef);
+        if ((current?.version ?? 0) !== value.expectedVersion) {
+          if (current?.version === value.expectedVersion + 1 && current.retry === value.retry)
+            return { ok: true as const, mark: rehearsalMarkView(current) };
+          return { ok: false as const, code: "conflict" as const, current: current ? rehearsalMarkView(current) : null };
+        }
+        const mark = await data.putRehearsalMark(tx, owner, row.id, value.verseRef, value.expectedVersion, value.retry);
+        if (!mark) throw new Error("Rehearsal unavailable");
+        return { ok: true as const, mark: rehearsalMarkView(mark) };
+      });
     },
     /**
      * Readings for everyone (plan D4, D5): a learner's shelf as a staff viewer sees it, read-only, the same bodies as the owner's

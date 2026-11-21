@@ -12,6 +12,7 @@ import * as s from "../../src/server/db/index";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { createSefariaCommentaryReader } from "../../src/server/study/commentary";
 import { syntheticCommentaryFetch } from "../helpers/commentary";
+import { sharePassagePath } from "../../src/components/portal/public-reading/urls";
 vi.mock("server-only", () => ({}));
 
 // Release 1.4 saved readings end to end: the real dispatcher, cookie session, Origin check and
@@ -97,8 +98,7 @@ it("a tutor-and-parent saves this week's Torah from /read and finds it under My 
     expect(seen).toEqual(["GET /api/saved/readings", "POST /api/saved/readings/create"]);
     expect(await noHorizontalScroll(tab)).toBe(true);
     await tab.getByRole("status").filter({ hasText: "Saved to My Readings." }).getByRole("link", { name: "My Readings", exact: true }).click();
-    await ui(mine.getByRole("link", { name: new RegExp(`Creation at ${width}`) })).toBeVisible();
-    await ui(mine.getByRole("link", { name: new RegExp(`Creation at ${width}`) })).toContainText("Genesis 1:1–6:8");
+    await ui(mine.getByRole("link", { name: new RegExp(`^Creation at ${width}\\b`) })).toContainText("Genesis 1:1–6:8");
     expect(await noHorizontalScroll(tab)).toBe(true);
   }
   // Stored for that member only, in canonical form, with no audit row.
@@ -206,6 +206,60 @@ it("the member opens the saved reading from My Readings, marks a verse that stay
   // The member's saved-layer writes were exactly these four, and none of them reached the audit log.
   expect(seen.filter(row => row.startsWith("POST")).sort()).toEqual(["POST /api/saved/mark", "POST /api/saved/readings/create", "POST /api/saved/readings/remove", "POST /api/saved/readings/update"]);
   expect((await fixture.ownerDb.select().from(s.auditEvent).where(eq(s.auditEvent.targetType, "saved_reading"))).length).toBe(0);
+}, 240_000);
+
+it("an independent account can rehearse, resume after fresh sign-in, and share only the public passage", async () => {
+  const email = "pg-independent-rehearsal@example.test", date = "2027-01-02", name = "Synthetic independent rehearsal";
+  const { tab } = await visitor(360);
+  await signIn(tab, email);
+  const post = (page: Page, path: string, body: object) => page.evaluate(async ({ path, body }) => {
+    const response = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), cache: "no-store" });
+    if (!response.ok) throw new Error("Synthetic rehearsal request refused");
+    return response.json();
+  }, { path, body });
+  const { reading } = await post(tab, "/api/saved/readings/create", { name, date, kind: "torah", ranges: "Genesis 1:1-2" });
+  await tab.goto("/mine", { waitUntil: "domcontentloaded" });
+  const rehearsalLink = (page: Page) => page.getByRole("link", { name: `Run-through for ${name}` });
+  await rehearsalLink(tab).click();
+  await tab.getByRole("button", { name: "Start Run-through" }).click();
+  for (const ref of ["Genesis 1:1", "Genesis 1:2"]) {
+    await ui(tab.locator(`[data-verse="${ref}"]`)).toBeVisible();
+    await tab.getByRole("button", { name: "Stumbled" }).click();
+  }
+  await ui(tab.getByRole("button", { name: "Resume with marked verses" })).toBeVisible();
+  expect(await noHorizontalScroll(tab)).toBe(true);
+
+  await fixture.ownerDb.delete(rateLimit);
+  const { tab: fresh } = await visitor(390);
+  await signIn(fresh, email);
+  await fresh.goto("/mine", { waitUntil: "domcontentloaded" });
+  await rehearsalLink(fresh).click();
+  await fresh.getByRole("button", { name: "Resume with marked verses" }).click();
+  await ui(fresh.locator('[data-verse="Genesis 1:1"]')).toBeVisible();
+  await post(fresh, "/api/saved/readings/update", { id: reading.id, revision: reading.revision, name, date, ranges: "Genesis 1:2-3" });
+  await fresh.getByRole("button", { name: "Clean" }).click();
+  await ui(fresh.getByRole("status").filter({ hasText: "Run-through now uses the current verses" })).toBeVisible();
+  await fresh.getByRole("button", { name: "Resume with marked verses" }).click();
+  await ui(fresh.locator('[data-verse="Genesis 1:2"]')).toBeVisible();
+  await fresh.getByRole("button", { name: "Clean" }).click();
+  await ui(fresh.getByRole("status").filter({ hasText: "Run-through complete." })).toBeVisible();
+  await ui(fresh.getByRole("button", { name: "Resume with marked verses" })).toHaveCount(0);
+
+  const share = sharePassagePath("Genesis 1:2-3", "torah")!;
+  const { tab: guest, seen: guestRequests } = await visitor(390);
+  const { tab: other, seen: otherRequests } = await visitor(390);
+  await fixture.ownerDb.delete(rateLimit);
+  await signIn(other, "pg-tutor@example.test");
+  for (const page of [guest, other]) {
+    await page.goto(share, { waitUntil: "domcontentloaded" });
+    await ui(page.locator('[data-testid="study-verses"]')).toBeVisible();
+    await ui(page.getByText(name, { exact: true })).toHaveCount(0);
+    await ui(page.getByRole("link", { name: /Run-through/ })).toHaveCount(0);
+  }
+  expect([...guestRequests, ...otherRequests].filter(row => row.includes("/rehearsal"))).toEqual([]);
+  await other.goto(`/mine/rehearse/${reading.id}`, { waitUntil: "domcontentloaded" });
+  await ui(other.getByRole("status").filter({ hasText: "This saved reading is unavailable" })).toBeVisible();
+  await ui(other.getByText(name, { exact: true })).toHaveCount(0);
 }, 240_000);
 
 it("another member's saved reading id opens nothing", async () => {

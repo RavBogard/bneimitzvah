@@ -61,6 +61,32 @@ test("real PostgreSQL: owner_only keeps every saved row to its own member, casca
     }
     const { a, b, x } = members;
 
+    await t.test("rehearsal marks are visible only to the bound owner, including when staff can view the reading", async () => {
+      const linked = (await query(owner, "INSERT INTO saved_reading (tenant_id,membership_id,user_id,name,kind,ranges,verse_count) VALUES ('crc',$1,$2,'Synthetic rehearsal','torah','Genesis 1:1-3',3) RETURNING id", [a.member, a.user])).rows[0].id;
+      const client = await checkout();
+      try {
+        await begin(client, "crc", a.member);
+        assert.equal((await query(client, "INSERT INTO saved_rehearsal_mark (tenant_id,membership_id,saved_reading_id,verse_ref,retry) VALUES ('crc',$1,$2,'Genesis 1:2',true)", [a.member, linked])).rowCount, 1);
+        assert.equal((await query(client, "SELECT * FROM saved_rehearsal_mark")).rowCount, 1);
+        await rejects(client, "UPDATE saved_rehearsal_mark SET verse_ref='Genesis 1:3'", [], "42501");
+        await query(client, "COMMIT");
+        await begin(client, "crc", b.member);
+        await setting(client, "app.saved_viewer", a.member);
+        assert.equal((await query(client, "SELECT * FROM saved_reading WHERE id=$1", [linked])).rowCount, 1);
+        assert.equal((await query(client, "SELECT * FROM saved_rehearsal_mark")).rowCount, 0);
+        assert.equal((await query(client, "DELETE FROM saved_rehearsal_mark")).rowCount, 0);
+        await rejects(client, "INSERT INTO saved_rehearsal_mark (tenant_id,membership_id,saved_reading_id,verse_ref,retry) VALUES ('crc',$1,$2,'Genesis 1:3',true)", [a.member, linked], "42501");
+        await query(client, "ROLLBACK");
+        await begin(client, "test-other", a.member);
+        assert.equal((await query(client, "SELECT * FROM saved_rehearsal_mark")).rowCount, 0);
+        await query(client, "ROLLBACK");
+        await begin(client, "crc", a.member);
+        assert.equal((await query(client, "DELETE FROM saved_reading WHERE id=$1", [linked])).rowCount, 1);
+        assert.equal((await query(client, "SELECT * FROM saved_rehearsal_mark")).rowCount, 0);
+        await query(client, "COMMIT");
+      } finally { await query(client, "ROLLBACK"); client.release(); }
+    });
+
     await t.test("the tables are forced, owned by the migration role, with owner_only, the read-only staff_read and directory_read, and column-level UPDATE only", async () => {
       const rows = (await query(owner, "SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity, pg_get_userbyid(c.relowner) AS owner FROM pg_class c WHERE c.relname = ANY($1) ORDER BY c.relname", [TABLES])).rows;
       assert.equal(rows.length, 4);

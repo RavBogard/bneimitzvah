@@ -62,19 +62,21 @@ describe("the shelf's model", () => {
 describe("Also working on", () => {
   it("lists readings in date order, the undated one last, each opening the reading", () => {
     const some = view({ status: "ready", readings: [reading(1, { date: null }), reading(2, { date: "2026-12-05" }), reading(3, { date: "2026-10-31" })] });
-    expect(some.match(/<li>/g)).toHaveLength(3);
+    expect(some.match(/<li\b/g)).toHaveLength(3);
     expect(some.indexOf("Reading 3")).toBeLessThan(some.indexOf("Reading 2"));
     expect(some.indexOf("Reading 2")).toBeLessThan(some.indexOf("Reading 1"));
     expect(some).toContain(`href="${savedReadingHref(row(1).id)}"`);
     expect(savedReadingHref(row(1).id)).toBe(`/read?saved=${row(1).id}`);
     expect(some).toContain('data-testid="mine-own"');
     expect(some).toContain("No date");
+    expect(some).toContain('aria-label="Run-through for Reading 2"');
+    expect(some).not.toContain('aria-label="Run-through for Reading 1"');
     expect(some).not.toContain("All my readings");
   });
   it("shows five, and the rest inline on request", () => {
     const readings = Array.from({ length: 7 }, (_, i) => reading(i + 1));
-    expect(view({ status: "ready", readings }).match(/<li>/g)).toHaveLength(OWN_READINGS_FIRST);
-    expect(view({ status: "ready", readings }, true).match(/<li>/g)).toHaveLength(7);
+    expect(view({ status: "ready", readings }).match(/<li\b/g)).toHaveLength(OWN_READINGS_FIRST);
+    expect(view({ status: "ready", readings }, true).match(/<li\b/g)).toHaveLength(7);
     expect(view({ status: "ready", readings })).toContain('aria-expanded="false"');
   });
   it("says plainly when it is loading or fails, and is not there when refused", () => {

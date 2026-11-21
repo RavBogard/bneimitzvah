@@ -120,7 +120,7 @@ export function createMcpSavedReadings<Q extends PgQueryResultHKT>(mcp: Mcp<Q>) 
         if (ranges && ranges.kind !== current.kind) return invalid([`ranges must stay within this reading's corpus (${current.kind === "torah" ? "the Torah" : "the Prophets"}).`]);
         // The verse count is the server's own expansion of the canonical ranges. Work on verses a revision drops stays stored for its owner.
         const row = await data.updateReading(tx, owner, id, revision, { name: name ?? current.name, date: date === undefined ? current.readingDate : date,
-          verses: ranges ? { ranges: ranges.ranges, verseCount: ranges.verses.length } : undefined });
+          verses: ranges ? { ranges: ranges.ranges, refs: ranges.verses } : undefined });
         if (!row) throw new Error("Saved reading unavailable");
         return Object.freeze({ ok: true as const, reading: view(row) });
       });

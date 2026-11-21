@@ -22,10 +22,11 @@ const sources = await Promise.all([...await files("src"), ...await files("script
 assert.ok(sources.some(file => file.path.startsWith("scripts/")), "the scripts are scanned");
 const importsOf = text => [...text.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)].map(m => m[1]);
 
-test("only src/server/saved/access.ts and the 0036, 0041 and 0054 migrations name a saved setting, and each is set in exactly one statement", () => {
+test("only the saved access layer and its owning migrations name the saved settings, and each setting is bound once", () => {
   const naming = sources.filter(file => file.text.includes("app.saved_owner")).map(file => file.path).sort();
   // 0041 (release 1.7 M3b) puts the member's own preferences on the same owner binding; its own test pins its one policy.
-  assert.deepEqual(naming, ["src/server/db/migrations/0036_saved_layer.sql", "src/server/db/migrations/0041_account_preferences.sql", "src/server/saved/access.ts"]);
+  assert.deepEqual(naming, ["src/server/db/migrations/0036_saved_layer.sql", "src/server/db/migrations/0041_account_preferences.sql",
+    "src/server/db/migrations/0063_saved_rehearsal_marks.sql", "src/server/saved/access.ts"]);
   // Readings for everyone (0054, plan decision 3): the read-only viewer and directory settings, named by that migration and set only in access.ts.
   for (const name of ["app.saved_viewer", "app.saved_directory"]) {
     assert.deepEqual(sources.filter(file => file.text.includes(name)).map(file => file.path).sort(), ["src/server/db/migrations/0054_readings_for_everyone.sql", "src/server/saved/access.ts"], name);
@@ -113,10 +114,12 @@ test("no code outside the saved layer names the saved tables, and the MCP import
     // 0041 adds the member's own preferences to the saved layer (release 1.7 M3b).
     "src/server/db/migrations/0041_account_preferences.sql",
     // 0054 adds the read-only staff_read and directory_read policies (readings for everyone, plan decision 3); its own test pins them.
-    "src/server/db/migrations/0054_readings_for_everyone.sql"]);
+    "src/server/db/migrations/0054_readings_for_everyone.sql",
+    // 0063 adds the private Run-through mark table and no staff policy.
+    "src/server/db/migrations/0063_saved_rehearsal_marks.sql"]);
   for (const file of sources) {
     if (allowed.has(file.path) || /^src\/server\/db\/migrations\/meta\/\d{4}_snapshot\.json$/.test(file.path) && Number(file.path.match(/(\d{4})_snapshot/)[1]) > 36) continue;
-    assert.doesNotMatch(file.text, /\b(savedReading|savedVerseWork|savedVerseMark|starredComment|accountPreference)\b|\b(saved_reading|saved_verse_work|saved_verse_mark|starred_comment|account_preference)\b/, `${file.path} names a saved table`);
+    assert.doesNotMatch(file.text, /\b(savedReading|savedVerseWork|savedVerseMark|savedRehearsalMark|starredComment|accountPreference)\b|\b(saved_reading|saved_verse_work|saved_verse_mark|saved_rehearsal_mark|starred_comment|account_preference)\b/, `${file.path} names a saved table`);
   }
   // Release 1.7 M4: the one exception is saved-tools.ts importing ../saved/mcp, and tools.ts registering saved-tools.ts.
   const allowedImports = new Map([["src/server/mcp/saved-tools.ts", ["../saved/mcp"]], ["src/server/mcp/tools.ts", ["./saved-tools"]]]);

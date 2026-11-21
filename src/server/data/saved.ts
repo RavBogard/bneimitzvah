@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, notInArray, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
 import type { SavedOwner, SavedScope } from "../saved/access";
@@ -35,8 +35,9 @@ export async function listReadings<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner:
   return tx.select().from(s.savedReading).where(readingOwner(owner))
     .orderBy(sql`${s.savedReading.readingDate} desc nulls last`, desc(s.savedReading.createdAt), asc(s.savedReading.id)).limit(limit);
 }
-export async function reading<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedScope, id: string) {
-  const [row] = await tx.select().from(s.savedReading).where(and(readingOwner(owner), eq(s.savedReading.id, id))).limit(1);
+export async function reading<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedScope, id: string, lock: "share" | null = null) {
+  const query = tx.select().from(s.savedReading).where(and(readingOwner(owner), eq(s.savedReading.id, id))).limit(1);
+  const [row] = await (lock ? query.for(lock) : query);
   return row ?? null;
 }
 /** `id` is given only by the MCP create, which derives it from the owner and the caller's mutationId (src/server/saved/mcp.ts). */
@@ -45,12 +46,13 @@ export async function insertReading<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner
     name: value.name, readingDate: value.date, kind: value.kind, ranges: value.ranges, verseCount: value.verseCount }).returning();
   return row;
 }
-/** Rename, re-date and, with `verses`, revise the ranges and their server-counted verses (0040). Child rows are never touched. */
+/** Rename, re-date or revise. A verse change prunes only private rehearsal rows outside the new reading. */
 export async function updateReading<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, id: string, revision: number,
-  value: { name: string; date: string | null; verses?: { ranges: string; verseCount: number } }) {
-  const verses = value.verses ? { ranges: value.verses.ranges, verseCount: value.verses.verseCount } : {};
+  value: { name: string; date: string | null; verses?: { ranges: string; refs: readonly string[] } }) {
+  const verses = value.verses ? { ranges: value.verses.ranges, verseCount: value.verses.refs.length } : {};
   const [row] = await tx.update(s.savedReading).set({ name: value.name, readingDate: value.date, ...verses, revision: revision + 1, updatedAt: sql`now()` })
     .where(and(readingOwner(owner), eq(s.savedReading.id, id), eq(s.savedReading.revision, revision))).returning();
+  if (row && value.verses) await tx.delete(s.savedRehearsalMark).where(and(rehearsalScope(owner, id), notInArray(s.savedRehearsalMark.verseRef, [...value.verses.refs])));
   return row ?? null;
 }
 /** The member's own hard delete; the child rows go with it through the FK cascade. */
@@ -61,6 +63,22 @@ export async function deleteReading<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner
 
 const workOwner = (owner: SavedScope) => and(eq(s.savedVerseWork.tenantId, owner.tenantId), eq(s.savedVerseWork.membershipId, owner.membershipId));
 const markOwner = (owner: SavedScope) => and(eq(s.savedVerseMark.tenantId, owner.tenantId), eq(s.savedVerseMark.membershipId, owner.membershipId));
+const rehearsalScope = (owner: SavedOwner, readingId: string) => and(eq(s.savedRehearsalMark.tenantId, owner.tenantId),
+  eq(s.savedRehearsalMark.membershipId, owner.membershipId), eq(s.savedRehearsalMark.savedReadingId, readingId));
+export async function rehearsalMarks<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, readingId: string) {
+  return tx.select().from(s.savedRehearsalMark).where(rehearsalScope(owner, readingId));
+}
+export async function rehearsalMark<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, readingId: string, ref: string) {
+  const [row] = await tx.select().from(s.savedRehearsalMark).where(and(rehearsalScope(owner, readingId), eq(s.savedRehearsalMark.verseRef, ref)));
+  return row ?? null;
+}
+export async function putRehearsalMark<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, readingId: string, ref: string, expectedVersion: number, retry: boolean) {
+  const rows = expectedVersion === 0
+    ? await tx.insert(s.savedRehearsalMark).values({ tenantId: owner.tenantId, membershipId: owner.membershipId, savedReadingId: readingId, verseRef: ref, retry }).onConflictDoNothing().returning()
+    : await tx.update(s.savedRehearsalMark).set({ retry, version: expectedVersion + 1 })
+      .where(and(rehearsalScope(owner, readingId), eq(s.savedRehearsalMark.verseRef, ref), eq(s.savedRehearsalMark.version, expectedVersion))).returning();
+  return rows[0] ?? null;
+}
 export type WorkRow = typeof s.savedVerseWork.$inferSelect;
 export type MarkRow = typeof s.savedVerseMark.$inferSelect;
 

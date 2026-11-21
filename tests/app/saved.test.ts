@@ -52,6 +52,45 @@ async function setup() {
   return { f, extra, dispatch, request, call, create };
 }
 
+it("keeps a dated reading's rehearsal private, versioned and pruned across verse edits", async () => {
+  const t = await setup();
+  const { reading } = (await t.create("bare", "Genesis 1:1-3")).json;
+  const { reading: undated } = (await t.create("bare", "Genesis 1:1", "torah", "Undated synthetic reading", null)).json;
+  const route = `/api/saved/rehearsal?id=${reading.id}`, answer = "/api/saved/rehearsal/answer";
+  const row = (verseRef: string, retry: boolean, expectedVersion = 0, readingRevision = 1) => ({ readingId: reading.id, readingRevision, verseRef, expectedVersion, retry });
+  const read = async () => (await t.call(route, "bare")).json.rehearsal;
+  expect((await read()).marks).toEqual([]);
+  expect((await t.call(`/api/saved/rehearsal?id=${undated.id}`, "bare")).status).toBe(404);
+  expect((await t.call(route, "anonymous")).status).toBe(401);
+  expect((await t.call(route, "admin")).status).toBe(404);
+  expect((await t.call(answer, "admin", row("Genesis 1:1", true))).status).toBe(404);
+  expect((await t.call(answer, "bare", row("Genesis 1:1", true), { origin: "https://foreign.example.test" })).status).toBe(403);
+  expect((await t.call(answer, "bare", { ...row("Genesis 1:1", true), learner: t.extra.bare.membershipId })).status).toBe(400);
+  expect((await t.call(answer, "bare", row("Genesis 1:4", true))).status).toBe(404);
+
+  const first = row("Genesis 1:1", true), second = row("Genesis 1:2", true);
+  const saved = { ok: true, mark: { ref: "Genesis 1:1", retry: true, version: 1 } };
+  expect((await t.call(answer, "bare", first)).json).toEqual(saved);
+  expect((await t.call(answer, "bare", first)).json).toEqual(saved);
+  expect(await t.call(answer, "bare", { ...first, retry: false })).toEqual({ status: 409,
+    json: { ok: false, code: "conflict", current: saved.mark } });
+  expect((await t.call(answer, "bare", second)).status).toBe(200);
+  expect((await read()).marks).toEqual([saved.mark, { ref: "Genesis 1:2", retry: true, version: 1 }]);
+  const ordinary = await t.call(`/api/saved/learner/reading?learner=${t.extra.bare.membershipId}&id=${reading.id}`, "admin");
+  expect(ordinary.status).toBe(200);
+  expect(ordinary.json.verses).toEqual(["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"].map(ref => ({ ref, note: null, mark: null })));
+  expect(Object.keys(ordinary.json).sort()).toEqual(["nextOffset", "offset", "ok", "reading", "totalVerses", "verses"]);
+
+  const edit = (ranges: string, revision: number) => t.call("/api/saved/readings/update", "bare", { id: reading.id, revision, name: reading.name, date: reading.date, ranges });
+  expect((await edit("Genesis 1:2-3", 1)).status).toBe(200);
+  expect(await t.call(answer, "bare", first)).toEqual({ status: 409, json: { ok: false, code: "reading-changed" } });
+  expect((await edit("Genesis 1:1-3", 2)).status).toBe(200);
+  expect((await read()).marks).toEqual([{ ref: "Genesis 1:2", retry: true, version: 1 }]);
+  expect((await t.call(answer, "bare", row("Genesis 1:2", false, 1, 3))).json.mark).toEqual({ ref: "Genesis 1:2", retry: false, version: 2 });
+  expect((await t.call("/api/saved/readings/remove", "bare", { id: reading.id, revision: 3 })).status).toBe(200);
+  expect(await t.f.owner(() => t.f.db.select().from(s.savedRehearsalMark))).toEqual([]);
+});
+
 describe("the saved layer: who may use it", () => {
   it("is 401 signed out, 403 without a membership or with a disabled one, and open to every live membership: students, a revoked grant and a bare membership included", async () => {
     const t = await setup();

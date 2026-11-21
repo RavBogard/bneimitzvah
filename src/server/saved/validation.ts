@@ -104,6 +104,12 @@ export function mark(value: unknown): MarkInput {
   const row = closedObject(value, ["readingId", "verseRef", "expectedVersion", "state"]);
   return Object.freeze({ readingId: uuid(row.readingId), verseRef: verse(row.verseRef), expectedVersion: integer(row.expectedVersion, 0, 2147483646), state: markState(row.state) });
 }
+export function rehearsalAnswer(value: unknown) {
+  const row = closedObject(value, ["readingId", "readingRevision", "verseRef", "expectedVersion", "retry"]);
+  if (typeof row.retry !== "boolean") return invalid();
+  return { readingId: uuid(row.readingId), readingRevision: integer(row.readingRevision, 1, 2147483647), verseRef: verse(row.verseRef),
+    expectedVersion: integer(row.expectedVersion, 0, 2147483646), retry: row.retry };
+}
 export type StarInput = Readonly<{ work: string; verseRef: string; comment: number; starred: boolean }>;
 /** A star names a registered commentary work and a verse that work covers. */
 export function star(value: unknown): StarInput {

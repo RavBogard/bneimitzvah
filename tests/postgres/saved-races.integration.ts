@@ -61,3 +61,27 @@ test("turning off the membership a saved request holds waits for that request; g
   expect(await safe(f.savedB.list(f.request("tutor")))).toEqual({ denied: 403 });
   expect((await query(f.owner, "SELECT count(*)::int AS n FROM saved_reading WHERE membership_id=$1", [f.member.id])).rows[0].n).toBe(1);
 });
+
+test("two rehearsal sessions cannot silently replace the same verse, and each can save a different verse", async () => {
+  const f = await fixture();
+  const made = await f.savedA.create(f.mutation(), { ...body("Synthetic rehearsal race"), date: "2027-01-02" });
+  if (!made.ok) throw new Error("Synthetic rehearsal setup failed");
+  const input = { readingId: made.reading.id, readingRevision: made.reading.revision, verseRef: "Genesis 1:1", retry: true, expectedVersion: 0 };
+  const entered = deferred(), release = deferred();
+  const stop = await f.intercept("a", text => text.includes("pg_advisory_xact_lock"), async proceed => {
+    const result = await proceed(); entered.resolve(); await release.promise; return result;
+  });
+  const a = safe(f.savedA.answerRehearsal(f.mutation(), input));
+  let b: Promise<unknown> | undefined;
+  try {
+    await waitForEntry(entered.promise, a);
+    b = safe(f.savedB.answerRehearsal(f.mutation(), { ...input, retry: false }));
+    await f.waitForLock(f.pidB, f.pidA);
+  } finally { release.resolve(); stop(); }
+  const [first, second] = await Promise.all([a, b]);
+  const mark = { ref: "Genesis 1:1", retry: true, version: 1 };
+  expect(first).toEqual({ ok: true, mark });
+  expect(second).toEqual({ ok: false, code: "conflict", current: mark });
+  expect(await f.savedB.answerRehearsal(f.mutation(), { ...input, verseRef: "Genesis 1:2" })).toMatchObject({ ok: true });
+  expect(await f.savedA.rehearsal(f.request("tutor"), made.reading.id)).toMatchObject({ rehearsal: { marks: [mark, { ref: "Genesis 1:2", retry: true, version: 1 }] } });
+});

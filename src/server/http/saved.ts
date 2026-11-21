@@ -15,6 +15,7 @@ const routes = {
   "/api/saved/reading": ["GET"], "/api/saved/work": ["POST"], "/api/saved/mark": ["POST"], "/api/saved/stars": ["GET"], "/api/saved/star": ["POST"],
   // Release 1.7 M3b: the member's own preferred commentaries and reading settings.
   "/api/saved/preferences": ["GET"], "/api/saved/preferences/put": ["POST"],
+  "/api/saved/rehearsal": ["GET"], "/api/saved/rehearsal/answer": ["POST"],
   // Readings for everyone (plan D5): a learner's shelf as the tutor who claims them, or the rabbi, reads it; GET only, the same bodies.
   "/api/saved/learner/readings": ["GET"], "/api/saved/learner/reading": ["GET"], "/api/saved/learner/page": ["GET"],
 } as const;
@@ -37,6 +38,8 @@ export async function handleSavedRequest(request: Request, runtime: HttpRuntime)
       if (path === "/api/saved/reading") {
         const query = uniqueQuery(request.url, ["id", "offset"]);
         result = await saved.reading(request, query.get("id"), offset(query.get("offset")));
+      } else if (path === "/api/saved/rehearsal") {
+        result = await saved.rehearsal(request, uniqueQuery(request.url, ["id"]).get("id"));
       } else if (path === "/api/saved/learner/readings") {
         const query = uniqueQuery(request.url, ["learner"]);
         result = await saved.listReadingsOf(request, query.get("learner"));
@@ -59,6 +62,7 @@ export async function handleSavedRequest(request: Request, runtime: HttpRuntime)
         : path === "/api/saved/readings/remove" ? await saved.remove(request, body)
         : path === "/api/saved/work" ? await saved.work(request, body)
         : path === "/api/saved/mark" ? await saved.mark(request, body)
+        : path === "/api/saved/rehearsal/answer" ? await saved.answerRehearsal(request, body)
         : path === "/api/saved/preferences/put" ? await saved.putPreferences(request, body)
         : await saved.star(request, body);
     }

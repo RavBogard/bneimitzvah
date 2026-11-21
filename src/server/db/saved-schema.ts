@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, date, foreignKey, index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, date, foreignKey, index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import { membership, tenant } from "./tenant-schema";
 
 /**
@@ -38,6 +38,18 @@ export const savedReading = pgTable("saved_reading", {
   check("saved_reading_verse_count", sql`${t.verseCount} between 1 and 1000`),
   check("saved_reading_revision", sql`${t.revision} > 0`),
   check("saved_reading_instants", sql`isfinite(${t.createdAt}) and isfinite(${t.updatedAt})`),
+]);
+
+/** Run-through retry state stays private even when staff can view a saved reading and its ordinary marks. */
+export const savedRehearsalMark = pgTable("saved_rehearsal_mark", {
+  tenantId: tenantId(), membershipId: uuid("membership_id").notNull(), savedReadingId: uuid("saved_reading_id").notNull(),
+  verseRef: text("verse_ref").notNull(), retry: boolean("retry").notNull(), version: integer("version").default(1).notNull(),
+}, t => [
+  primaryKey({ name: "saved_rehearsal_mark_key", columns: [t.tenantId, t.membershipId, t.savedReadingId, t.verseRef] }),
+  foreignKey({ name: "saved_rehearsal_mark_reading_fk", columns: [t.tenantId, t.savedReadingId, t.membershipId],
+    foreignColumns: [savedReading.tenantId, savedReading.id, savedReading.membershipId] }).onDelete("cascade"),
+  check("saved_rehearsal_mark_verse", sql`char_length(${t.verseRef}) <= 100 and ${t.verseRef} ~ ${sql.raw(`'${verseRef}'`)}`),
+  check("saved_rehearsal_mark_version", sql`${t.version} > 0`),
 ]);
 
 /** My translation and My notes: one head row per (reading, verse, stream), changed in place under an optimistic version. */
