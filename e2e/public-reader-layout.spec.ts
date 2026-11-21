@@ -154,20 +154,21 @@ const active = (page: Page) => page.evaluate(() => {
   return { tag: node?.tagName ?? null, id: node?.id ?? null, reading: Boolean(node?.closest(".study-verses")), verse: node?.closest("[data-verse-ref]")?.getAttribute("data-verse-ref") ?? null };
 });
 
-test("Start reading moves focus into the reading, in Lein and in Study", async ({ page }) => {
+test("Start reading focuses a visible word of the first verse in text-only Lein and Study", async ({ page }) => {
   await mock(page);
   await page.goto("/read");
-  // Start reading is where the text begins (spec 6); it puts focus in the reading.
   const start = page.getByRole("button", { name: "Start reading", exact: true });
-  await expect(start).toBeEnabled();
-  await start.click();
-  await expect.poll(() => active(page).then(state => state.reading)).toBe(true);
-  expect(await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))).toBe("Hebrew reading");
-  await page.getByRole("button", { name: "Study", exact: true }).click();
-  await expect(page.locator("[data-study-rows]")).toBeVisible();
-  await page.getByRole("button", { name: "Start reading", exact: true }).click();
-  await expect.poll(() => active(page).then(state => state.reading)).toBe(true);
-  expect(await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))).toBe("Hebrew reading, verse by verse");
+  const firstWord = page.locator('.study-verses [data-verse-ref="Genesis 1:1"]').getByRole("button", { name: word[0], exact: true });
+  for (const lens of ["Lein", "Study"]) {
+    await page.getByRole("button", { name: lens, exact: true }).click();
+    await start.click();
+    await expect(firstWord).toBeFocused();
+    await expect(firstWord).toBeInViewport();
+    expect(await firstWord.evaluate(node => {
+      const box = node.getBoundingClientRect();
+      return node.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+    })).toBe(true);
+  }
 });
 
 test("the next text page puts focus at the start of the new text, and Previous returns to the start of the first", async ({ page }) => {
