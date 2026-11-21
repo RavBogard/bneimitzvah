@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
+import { createContext, useEffect, useMemo, useRef, useState, type ComponentProps, type RefObject } from "react";
 
 /**
  * One Tab stop for all the words of a passage (1.9 N4, F5). The words are a roving group: Tab lands on one of them (the word the reader
@@ -15,8 +15,9 @@ export const wordKey = (ref: string, index: number) => `${ref}#${index}`;
  * the passage that has one. If the word that held the stop leaves the page (a view change drew it away), the group falls back to
  * its first word, so there is always exactly one stop and the words are never unreachable from the keyboard.
  */
-export function WordGroup({ scope, first, children, ...rest }: { scope: string; first: string | null } & ComponentProps<"div">) {
-  const [state, setState] = useState<{ scope: string; stop: string } | null>(null), root = useRef<HTMLDivElement>(null);
+export function WordGroup({ scope, first, children, passageRef, ...rest }: { scope: string; first: string | null; passageRef?: RefObject<HTMLDivElement | null> } & ComponentProps<"div">) {
+  const [state, setState] = useState<{ scope: string; stop: string } | null>(null), localRoot = useRef<HTMLDivElement>(null);
+  const root = passageRef ?? localRoot;
   const stop = state && state.scope === scope ? state.stop : null;
   const value = useMemo<WordGroupValue>(() => ({ stop, first, setStop: key => setState({ scope, stop: key }) }), [stop, first, scope]);
   useEffect(() => {

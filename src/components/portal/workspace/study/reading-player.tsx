@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { SHORT_SOURCE_ATTRIBUTION } from "../../../../lib/reference-audio/short-source";
 import { projectStudyVerse } from "../../../../lib/hebrew/study-tokens";
 import type { ReferenceShortResolution } from "../../../../lib/reference-audio/short-resolution";
@@ -23,10 +24,10 @@ export function playMainVerseForWord(player: Pick<ReadingPlayerHandle, "select">
   if (!Number.isSafeInteger(verse) || verse < 0 || !Number.isSafeInteger(word) || word < 0) return;
   player?.select(verse, "verse"); tools?.select(verse, word);
 }
-export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expiresAt, audio, wordTools = true, target, load, register, onActiveWord, idleLabel = "Listen to your reading" }: {
+export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expiresAt, audio, wordTools = true, target, load, register, onActiveWord, passageRef }: {
   scopeKey: string; verses: readonly StudyVerse[]; active: boolean; enabled?: boolean; expiresAt?: number; wordTools?: boolean;
-  /** What the player says before anything is chosen; staff pages say "Listen to the reading" (project review 2026-11-16). */
-  idleLabel?: string;
+  /** The flowing text rendered by this same reader. Lifted practice renders its transport in its own dialog. */
+  passageRef?: RefObject<HTMLDivElement | null>;
   /** Missing composition renders inert controls; it never creates a local fallback. */
   /** Controlled modal target; changes are inert until explicit selection. */
   target?: { index: number; generation: number };
@@ -51,6 +52,7 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
   if (!targetOwner.current) targetOwner.current = createReadingPlayerTarget();
   const targetCurrent = () => targetOwner.current!.current(callbacks.current.target);
   const [state, setState] = useState<ReadingPlaybackState | null>(null);
+  const [request, setRequest] = useState<{ index: number; selection: ReadingSelection } | null>(null);
   const intent = useRef<ReturnType<typeof createReadingPlayerIntent> | null>(null);
   useLayoutEffect(() => {
     if (!audio) return; // No uncoordinated playback path.
@@ -60,6 +62,7 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
       canContinue: () => current && callbacks.current.active && callbacks.current.enabled && readingAudioCurrent(callbacks.current.expiresAt) && Boolean(owned?.isCurrent()) && targetCurrent(),
       onState: (value: ReadingPlaybackState) => { if (current) setState(value); }, onActiveWord: (value: { verse: number; index: number } | null) => { if (current && (value === null || owned?.isCurrent() && targetCurrent())) callbacks.current.onActiveWord(value); },
     };
+    let selectionTurn = 0;
     const playback = createPreferredReadingPlayback({ ...common, preference: recording, available: () => callbacks.current.shermetRefs,
       speeds: speedPreferences.get(audio.coordinator),
       resolveAvailability: getShermetRecordingRefs,
@@ -67,10 +70,19 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
       verses: verses.map(verse => { const projection = projectStudyVerse(verse.ref, verse.hebrew); return { ref: verse.ref, readingText: verse.hebrew.readingText, wordCount: projection.status === "ready" ? projection.projection.words.length : 0 }; }),
       load: async (index, signal) => { if (!owned?.isCurrent()) throw new Error("Reading intent replaced"); const result = await callbacks.current.load(index, signal); if (!owned?.isCurrent()) throw new Error("Reading intent replaced"); return result; },
     });
-    owned = createReadingPlayerIntent({ coordinator: audio.coordinator, slot: audio.slot, playback,
+    owned = createReadingPlayerIntent({ coordinator: audio.coordinator, slot: audio.slot, playback: {
+        ...playback,
+        async select(index, selection) {
+          const turn = ++selectionTurn;
+          setRequest({ index, selection });
+          try { await playback.select(index, selection); }
+          finally { if (current && turn === selectionTurn) setRequest(null); }
+        },
+        suspend() { selectionTurn++; if (current) setRequest(null); playback.suspend(); },
+      },
       enabled: () => current && callbacks.current.enabled && readingAudioCurrent(callbacks.current.expiresAt), active: () => callbacks.current.active,
       visible: () => document.visibilityState === "visible", frame: callback => requestAnimationFrame(callback), cancelFrame: cancelAnimationFrame });
-    const selectedIntent = owned; owner.current = playback; intent.current = selectedIntent; setState(playback.state);
+    const selectedIntent = owned; owner.current = playback; intent.current = selectedIntent; setState(playback.state); setRequest(null);
     register({ select: (index, selection) => { setSourcePreview(null); targetOwner.current!.select(callbacks.current.target); selectedIntent.select(index, selection); }, pause: selectedIntent.pause, suspend: () => { targetOwner.current!.clear(); selectedIntent.suspend(); } });
     const background = () => { if (document.visibilityState !== "visible") selectedIntent.suspend(); };
     const leave = () => selectedIntent.suspend();
@@ -82,11 +94,18 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
   }, [scopeKey, verses, register, audio?.coordinator, audio?.slot, recording]);
   useLayoutEffect(() => { if (!active || !enabled) intent.current?.suspend(); }, [active, enabled]);
   useLayoutEffect(() => { if (target) intent.current?.suspend(); }, [target?.index, target?.generation]);
-  const preview = readingPlayerPreview(state, target?.index ?? sourcePreview ?? undefined, targetCurrent());
+  const preview = request ? { ...request, current: false } : readingPlayerPreview(state, target?.index ?? sourcePreview ?? undefined, targetCurrent());
   const selected = preview.index === null ? null : verses[preview.index], playback = preview.current ? state?.playback : undefined;
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const selectedRef = selected?.ref;
+  useLayoutEffect(() => {
+    const slot = selectedRef && active ? passageRef?.current?.querySelector<HTMLElement>(`[data-verse-playback-slot="${CSS.escape(selectedRef)}"]`) : null;
+    setAnchor(slot ?? null);
+  }, [passageRef, selectedRef, active, scopeKey]);
   const choose = (index: number, selection: ReadingSelection = "verse") => { setSourcePreview(null); targetOwner.current!.select(callbacks.current.target); intent.current?.select(index, selection); };
   const play = () => { if (preview.index === null) return; if (!preview.current) choose(preview.index); else intent.current?.play(); };
-  const ready = playback?.status === "ready" || playback?.status === "playing", loading = playback?.status === "loading";
+  const ready = !state?.suspended && (playback?.status === "ready" || playback?.status === "playing");
+  const loading = Boolean(request) || playback?.status === "loading";
   const deadlineCurrent = readingAudioCurrent(expiresAt), actionable = enabled && deadlineCurrent;
   const held = preview.current && Boolean(state?.timingHeld), words = selected ? projectStudyVerse(selected.ref, selected.hebrew) : null;
   const message = !deadlineCurrent ? "Refresh the reading to listen again." : !selected ? "Tap a word or verse number to hear the whole verse. Choose a word in Practice for a word drill."
@@ -94,16 +113,27 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
       : loading ? "Loading recording…" : playback?.status === "unavailable" ? "A recording isn’t available for this selection."
         : playback?.status === "error" ? "The recording couldn’t be loaded. Try again." : playback?.retryPlay ? "Your browser needs another tap. Press Play to hear your selection."
           : state?.suspended ? "Playback paused. Tap the reading or press Play when you’re ready." : state?.source === "shermet" ? playback?.wordsReady ? "Cantor Wendy Shermet’s recording follows the words. Repeat keeps the current selection." : "Cantor Wendy Shermet’s recording plays a whole verse. Repeat keeps the current verse. Word timing isn’t available for this recording." : `Tapping the reading plays a whole verse. ${wordTools ? "Practice and Word tools offer" : "Practice offers"} word drills. Repeat keeps the current selection.`;
-  // The transport (what is chosen, Play or Pause, Repeat) stays in reach while the reader scrolls the passage; the rest of the player keeps its place after the text.
+  const transportStatus = !deadlineCurrent || loading || held || playback?.status === "unavailable" || playback?.status === "error" || playback?.retryPlay;
+  const transport = selected && active && <span className={styles.top} data-player-transport="" role="group" aria-label="Verse playback" aria-describedby={id + "-verse"} dir="ltr" lang="en">
+    <span className={styles.controls}>
+      <button type="button" disabled={!audio || !actionable} aria-disabled={loading || held || undefined} onClick={() => {
+        if (loading || held) return;
+        if (playback?.status === "playing") intent.current?.pause(); else play();
+      }}>{playback?.status === "playing" ? "Pause" : playback?.status === "error" ? "Try again" : "Play"}</button>
+      <button type="button" disabled={!audio || !actionable || !ready || held} aria-pressed={playback?.repeat ?? false} onClick={() => intent.current?.setRepeat(!playback?.repeat)}>Repeat</button>
+    </span>
+    {transportStatus && <span role="status" className={styles.transportStatus}>{message}</span>}
+  </span>;
   return <section className={styles.player} aria-label="Reading playback">
-    <div className={styles.top} data-player-transport=""><p className={styles.selection} data-testid="player-selection" data-selected-ref={selected?.ref} data-selected-part={selected ? String(preview.selection) : undefined}>{selected ? <><bdi>{selected.ref}</bdi> · {preview.selection === "verse" ? "Whole verse" : `Word ${(preview.selection as number) + 1}`}</> : idleLabel}</p>
-      <div className={styles.controls}><button type="button" disabled={!audio || !actionable || !selected || loading || held} onClick={() => playback?.status === "playing" ? intent.current?.pause() : play()}>{playback?.status === "playing" ? "Pause" : playback?.status === "error" ? "Try again" : "Play"}</button>
-        <button type="button" disabled={!audio || !actionable || !ready || held} aria-pressed={playback?.repeat ?? false} onClick={() => intent.current?.setRepeat(!playback?.repeat)}>Repeat</button></div></div>
+    {passageRef ? anchor?.dataset.versePlaybackSlot === selectedRef && anchor && transport && createPortal(transport, anchor) : transport}
+    {selected && <p id={id + "-verse"} className={styles.selection} data-testid="player-selection" data-selected-ref={selected.ref} data-selected-part={String(preview.selection)}>
+      <bdi>{selected.ref}</bdi> · {preview.selection === "verse" ? "Whole verse" : `Word ${(preview.selection as number) + 1}`}
+    </p>}
     <div className={styles.panel}><div className={styles.options}>{shermetRefs.size > 0 && <div className={styles.field}><label htmlFor={`${id}-recording`}>Recording</label><select id={`${id}-recording`} value={recording} onChange={event => { intent.current?.suspend(); setSourcePreview(preview.index); const preference = event.target.value === "shermet" ? "shermet" : "pockettorah"; if (audio) recordingPreferences.set(audio.coordinator, preference); setRecording(preference); }}><option value="pockettorah">PocketTorah</option><option value="shermet">Cantor Wendy Shermet first</option></select></div>}<div className={styles.field}><label htmlFor={`${id}-selection`}>Practice</label><select id={`${id}-selection`} disabled={!audio || !actionable || !selected} value={String(preview.selection)} onChange={event => { if (preview.index !== null) choose(preview.index, event.target.value === "verse" ? "verse" : Number(event.target.value)); }}>
       <option value="verse">Whole verse</option>{words?.status === "ready" && words.projection.words.map(word => <option key={word.index} value={word.index}>Word {word.index + 1}: {word.text}</option>)}
     </select></div><div className={styles.field}><label htmlFor={`${id}-speed`}>Speed</label><select id={`${id}-speed`} disabled={!audio || !actionable || !ready || !playback?.speedSupported} value={playback?.speed ?? 1} onChange={event => { const speed = Number(event.target.value); if (audio && state?.source) { const preferred = speedPreferences.get(audio.coordinator) ?? { shermet: 1, pockettorah: 1 }; speedPreferences.set(audio.coordinator, { ...preferred, [state.source]: speed }); } intent.current?.setSpeed(speed); }}>{[0.5,0.75,1,1.25].map(speed => <option key={speed} value={speed}>{speed}×</option>)}</select></div></div>
     {state?.fallback && <p className={styles.message}>{`PocketTorah supplies this selection${state.fallback === "timing" ? " because Shermet word timing is unavailable" : state.fallback === "failed" ? " because the Shermet recording could not load" : " because no Shermet recording is available"}.`}</p>}
-    <p role="status" className={styles.message}>{message}</p>
+    <p role={transportStatus && transport ? undefined : "status"} className={styles.message}>{message}</p>
     {ready && !playback?.speedSupported && <p className={styles.message}>Pitch-preserving speed control isn’t available in this browser.{state?.source === "shermet" && " Playing at the original recorded tempo."}</p>}
     <details className={styles.credit}><summary>Recording credit</summary>{state?.source === "shermet" ? <p><a href="https://www.templeisraelomaha.com/cantors-classroom" target="_blank" rel="noreferrer">Cantor Wendy Shermet · Temple Israel, Omaha</a> · Human recording</p> : <p><a href="https://archive.org/details/PockettorahAudioFiles" target="_blank" rel="noreferrer">{SHORT_SOURCE_ATTRIBUTION.title}</a> · {SHORT_SOURCE_ATTRIBUTION.creator} · <a href={SHORT_SOURCE_ATTRIBUTION.licenseUrl} target="_blank" rel="noreferrer">{SHORT_SOURCE_ATTRIBUTION.license}</a> · {SHORT_SOURCE_ATTRIBUTION.changes}</p>}</details></div>
     {audio && collectionTracks.length > 0 && <ReadingCollectionPlayback key={scopeKey} tracks={collectionTracks} verseRef={selected?.ref}

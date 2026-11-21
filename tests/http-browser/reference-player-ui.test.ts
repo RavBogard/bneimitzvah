@@ -104,13 +104,14 @@ async function page(mobile = false, who: "admin" | "tutor" = "admin", authentica
     idle: () => expect.poll(() => tab.evaluate(() => { const traffic = Reflect.get(window, "portalApiTraffic") as { inflight: number; last: number }; return traffic.inflight === 0 && performance.now() - traffic.last >= 300; }), POLL_OPTIONS).toBe(true) };
 }
 const player = (tab: Page) => tab.getByRole("region", { name: "Reading playback", exact: true });
+const transport = (tab: Page) => tab.getByRole("group", { name: "Verse playback", exact: true });
 /** What a tap on a word does, as a screen reader gets it: the text its aria-describedby names (the word's own name is its Hebrew; 1.9 N4). */
 const described = (target: import("playwright").Locator) => target.evaluate(node => (node.getAttribute("aria-describedby") ?? "").split(" ").map(id => document.getElementById(id)?.textContent ?? "").find(text => text !== "") ?? null);
 const word = (tab: Page, verse: number, index: number) => tab.locator(`.study-verses [data-verse-ref="Genesis 1:${verse}"] [data-word-index="${index}"]`).first();
 async function playing(tab: Page) {
   // The synchronous gesture primer can play before any authorized source loads.
   await expect.poll(async () => { const current = await native(tab); return (current.kind === "verse" || current.kind === "word") && current.paused === false && (current.readyState ?? 0) >= 2; }, POLL_OPTIONS).toBe(true);
-  await ui(player(tab).getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  await ui(transport(tab).getByRole("button", { name: "Pause", exact: true })).toBeVisible();
 }
 async function native(tab: Page) { return tab.evaluate(() => { const w = window as TrackedWindow, a = w.referenceAudios.at(-1); return { pageIssued: w.referencePageFetches.length, pageSuccessful: w.referencePageFetches.filter(fetch => fetch.success).length, pageAborted: w.referencePageFetches.filter(fetch => fetch.signal?.aborted).length, pageFailed: w.referencePageFetches.filter(fetch => fetch.failed).length, ordinalPageSuccessful: w.referencePageFetches.filter(fetch => fetch.success && fetch.ownerOrdinal === w.referenceAudios.length).length, count: w.referenceAudios.length, ordinal: a ? w.referenceAudios.indexOf(a) + 1 : 0, retiredClean: w.referenceAudios.slice(0, -1).every(audio => audio.paused && !audio.getAttribute("src")), allClean: w.referenceAudios.every(audio => audio.paused && !audio.getAttribute("src")), paused: a?.paused, readyState: a?.readyState, duration: a?.duration, kind: a?.src ? w.referenceBlobKinds[a.src] : undefined, currentTime: a?.currentTime, rate: a?.playbackRate, preservesPitch: a?.preservesPitch, src: a?.getAttribute("src"),
   revoked: w.referenceRevoked.filter(url => w.referenceBlobKinds[url] !== "prime").length, primeRevoked: w.referenceRevoked.filter(url => w.referenceBlobKinds[url] === "prime").length,
@@ -165,8 +166,8 @@ it("toggles adjacent English during main playback without replacing its owner or
   const { tab, state, owner } = await page();
   await word(tab, 1, 1).click(); await playing(tab); await sameOwner(tab, owner);
   // Natural EOF may occur while assertions run; keep the same whole verse looping.
-  await player(tab).getByRole("button", { name: "Repeat", exact: true }).click();
-  await ui(player(tab).getByRole("button", { name: "Repeat", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await transport(tab).getByRole("button", { name: "Repeat", exact: true }).click();
+  await ui(transport(tab).getByRole("button", { name: "Repeat", exact: true })).toHaveAttribute("aria-pressed", "true");
   const current = await native(tab), counts = { body: state.shortRequests, archive: state.archiveRequests, pages: state.pageRequests };
   const stillSelected = async () => {
     await sameOwner(tab, owner); await playing(tab);
@@ -202,14 +203,14 @@ it("plays whole verses from main-text words, verifies explicit word offsets/loop
   expect(state.sawCookie || state.sawReferer).toBe(false); await ui(tab.getByRole("dialog")).toHaveCount(0);
   await player(tab).getByLabel("Speed", { exact: true }).selectOption("0.5"); expect(await native(tab)).toMatchObject({ rate: 0.5, preservesPitch: true });
   await player(tab).getByLabel("Practice", { exact: true }).selectOption("1"); await playing(tab); expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(0); expect((await native(tab)).currentTime).toBeLessThan(1);
-  expect(Math.round((await native(tab)).duration! * 24000)).toBe(48000); expect((await native(tab)).kind).toBe("word"); await sameOwner(tab, owner); await player(tab).getByRole("button", { name: "Repeat", exact: true }).click();
+  expect(Math.round((await native(tab)).duration! * 24000)).toBe(48000); expect((await native(tab)).kind).toBe("word"); await sameOwner(tab, owner); await transport(tab).getByRole("button", { name: "Repeat", exact: true }).click();
   await tab.evaluate(() => { (window as TrackedWindow).referenceAudios.at(-1)!.currentTime = 1.96; });
   await expect.poll(async () => { const time = (await native(tab)).currentTime ?? 9; return time >= 0 && time < 0.6; }, POLL_OPTIONS).toBe(true);
   await sameOwner(tab, owner); await word(tab, 2, 0).click(); await playing(tab); await ui(player(tab)).toContainText("Genesis 1:2");
-  expect(state.requests).toBe(1); expect(state.pageRequests).toBe(issuedPages); const finalPageCounts = await native(tab); console.log("Reference page counters: " + JSON.stringify({ stage: "after-selection-reuse", pageIssued: finalPageCounts.pageIssued, pageSuccessful: finalPageCounts.pageSuccessful, pageAborted: finalPageCounts.pageAborted, pageFailed: finalPageCounts.pageFailed, networkIssued: state.pageRequests, audioOrdinal: finalPageCounts.ordinal })); expect(finalPageCounts).toMatchObject({ pageIssued: prepared.pageIssued, pageSuccessful: prepared.pageSuccessful }); expect(state.archiveRequests).toBe(0); expect(await native(tab)).toMatchObject({ ...owner, retiredClean: true, revoked: 2, rate: 0.5 }); await ui(player(tab).getByRole("button", { name: "Repeat", exact: true })).toHaveAttribute("aria-pressed", "true");
+  expect(state.requests).toBe(1); expect(state.pageRequests).toBe(issuedPages); const finalPageCounts = await native(tab); console.log("Reference page counters: " + JSON.stringify({ stage: "after-selection-reuse", pageIssued: finalPageCounts.pageIssued, pageSuccessful: finalPageCounts.pageSuccessful, pageAborted: finalPageCounts.pageAborted, pageFailed: finalPageCounts.pageFailed, networkIssued: state.pageRequests, audioOrdinal: finalPageCounts.ordinal })); expect(finalPageCounts).toMatchObject({ pageIssued: prepared.pageIssued, pageSuccessful: prepared.pageSuccessful }); expect(state.archiveRequests).toBe(0); expect(await native(tab)).toMatchObject({ ...owner, retiredClean: true, revoked: 2, rate: 0.5 }); await ui(transport(tab).getByRole("button", { name: "Repeat", exact: true })).toHaveAttribute("aria-pressed", "true");
   expect((await native(tab)).src !== firstNativeSrc).toBe(true); // Physical Word WAV replaced the first MP3 lease; the same Audio/body remain.
   await ui(word(tab, 2, 0)).toHaveAttribute("data-reference-active", "true");
-  await player(tab).getByRole("button", { name: "Pause", exact: true }).click(); expect((await native(tab)).paused).toBe(true);
+  await transport(tab).getByRole("button", { name: "Pause", exact: true }).click(); expect((await native(tab)).paused).toBe(true);
 });
 
 it("held student and child practice read directly, keep word tools and open optional practice without media", async () => {
@@ -279,7 +280,7 @@ it("advances synthetic main-text highlights on the native verse clock and repeat
   const { tab, state, owner } = await page();
   await word(tab, 1, 1).click(); await playing(tab); await sameOwner(tab, owner);
   await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse");
-  await ui(player(tab).getByRole("button", { name: "Repeat", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await ui(transport(tab).getByRole("button", { name: "Repeat", exact: true })).toHaveAttribute("aria-pressed", "false");
   const prepared = await native(tab), preparedRequests = state.pageRequests;
   expect(prepared.kind).toBe("verse"); expect(Math.round(prepared.duration! * 24000)).toBe(96000);
   expect(state.shortRequests).toBe(1); expect(state.archiveRequests).toBe(0);
@@ -329,9 +330,9 @@ it("advances synthetic main-text highlights on the native verse clock and repeat
   expect(first.ended).toBe(true); expect(first.paused).toBe(true); expect(first.sameSource).toBe(true);
   await ui(word(tab, 1, 0)).not.toHaveAttribute("data-reference-active", "true");
   await ui(word(tab, 1, 1)).not.toHaveAttribute("data-reference-active", "true");
-  await player(tab).getByRole("button", { name: "Play", exact: true }).click(); await playing(tab);
-  await player(tab).getByRole("button", { name: "Repeat", exact: true }).click();
-  await ui(player(tab).getByRole("button", { name: "Repeat", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await transport(tab).getByRole("button", { name: "Play", exact: true }).click(); await playing(tab);
+  await transport(tab).getByRole("button", { name: "Repeat", exact: true }).click();
+  await ui(transport(tab).getByRole("button", { name: "Repeat", exact: true })).toHaveAttribute("aria-pressed", "true");
   const repeated = await tab.evaluate(async () => {
     const media = window.referenceAudios.at(-1)!, proof = Reflect.get(window, "referenceMainClockProof") as { ended: number; playing: number; source: string };
     let previous = media.currentTime, reset = false, samples = 0;
@@ -353,7 +354,7 @@ it("advances synthetic main-text highlights on the native verse clock and repeat
   await sameOwner(tab, owner); expect((await native(tab)).src).toBe(prepared.src);
   expect(state.shortRequests).toBe(1); expect(state.archiveRequests).toBe(0); expect(state.pageRequests).toBe(preparedRequests);
   expect(await native(tab)).toMatchObject({ pageIssued: prepared.pageIssued, pageSuccessful: prepared.pageSuccessful, kind: "verse" });
-  await player(tab).getByRole("button", { name: "Pause", exact: true }).click(); expect((await native(tab)).paused).toBe(true);
+  await transport(tab).getByRole("button", { name: "Pause", exact: true }).click(); expect((await native(tab)).paused).toBe(true);
   await ui(word(tab, 1, 0)).not.toHaveAttribute("data-reference-active", "true");
 });
 
@@ -423,10 +424,10 @@ it("plays main verses without word timing but refuses explicit untimed word dril
   await word(tab, 1, 1).click(); await playing(tab); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse");
   await ui(tab.locator('.study-verses [data-reference-active="true"]')).toHaveCount(0);
   await player(tab).getByLabel("Practice", { exact: true }).selectOption("1"); await ui(player(tab).getByText(/Choose Whole verse to listen/)).toBeVisible(); expect((await native(tab)).paused).toBe(true);
-  await ui(player(tab).getByRole("button", { name: "Play", exact: true })).toBeDisabled(); await ui(player(tab).getByRole("button", { name: "Repeat", exact: true })).toBeDisabled();
+  await ui(transport(tab).getByRole("button", { name: "Play", exact: true })).toBeDisabled(); await ui(transport(tab).getByRole("button", { name: "Repeat", exact: true })).toBeDisabled();
   await player(tab).getByLabel("Practice", { exact: true }).selectOption("verse"); await playing(tab);
   await tab.getByRole("button", { name: "Word tools", exact: true }).click(); await tab.getByRole("button", { name: "Hear this word", exact: true }).click();
-  await expect.poll(async () => (await native(tab)).paused, POLL_OPTIONS).toBe(true); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("1"); await ui(player(tab).getByRole("button", { name: "Play", exact: true })).toBeDisabled(); await sameOwner(tab, untimedOwner);
+  await expect.poll(async () => (await native(tab)).paused, POLL_OPTIONS).toBe(true); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("1"); await ui(transport(tab).getByRole("button", { name: "Play", exact: true })).toBeDisabled(); await sameOwner(tab, untimedOwner);
 });
 
 
@@ -437,9 +438,9 @@ it("keeps one playback owner for the assigned reader and Practice, with explicit
   await sameOwner(tab, owner);
   expect(state.requests).toBe(0); expect(await native(tab)).toMatchObject({ paused: true, src: null, mediaBlobs: 0 });
   await practice.getByTestId("play-section-start").click(); await playing(tab); await sameOwner(tab, owner);
-  await player(tab).getByRole("button", { name: "Pause", exact: true }).click();
+  await transport(tab).getByRole("button", { name: "Pause", exact: true }).click();
   const halfway = 0.5; await tab.evaluate(value => { window.referenceAudios.at(-1)!.currentTime = value; }, halfway);
-  await player(tab).getByRole("button", { name: "Play", exact: true }).click(); await playing(tab);
+  await transport(tab).getByRole("button", { name: "Play", exact: true }).click(); await playing(tab);
   expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(halfway);
   await player(tab).getByLabel("Practice", { exact: true }).selectOption("1"); await playing(tab);
   expect(Math.round((await native(tab)).duration! * 24000)).toBe(48000);

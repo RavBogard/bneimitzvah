@@ -3,13 +3,9 @@ import { readFileSync } from "node:fs";
 
 const css = (path: string) => readFileSync(path, "utf8");
 
-test("the player's transport stays in reach while the passage scrolls: sticky above the dock, flat inside a full-screen practice view, and out of the Choose bar's way", () => {
+test("the player transport is in the document flow", () => {
   const player = css("src/components/portal/workspace/study/reading-player.module.css");
-  expect(player).toMatch(/\.player \{ display: contents;/);
-  expect(player).toMatch(/\.top \{ position: sticky; bottom: calc\(var\(--player-clear, var\(--dock-clear, 0px\)\) \+ 0\.5rem\);/);
-  expect(player).toMatch(/:global\(dialog\) \.top \{ --player-clear: 0px; \}/);
-  expect(player).toMatch(/:global\(html:has\(\[data-choose-bar\]\)\) \.top \{ position: static; \}/);
-  expect(readFileSync("src/components/portal/workspace/study/reading-player.tsx", "utf8")).toContain('className={styles.top} data-player-transport=""');
+  expect(player.match(/\.top \{([^}]+)\}/)?.[1]).not.toMatch(/position:\s*(?:sticky|fixed)/);
 });
 
 test("a phrase end is a wider space, never a drawn bar", () => {

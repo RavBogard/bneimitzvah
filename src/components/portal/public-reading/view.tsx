@@ -437,6 +437,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   const audioRef = useRef<ReturnType<typeof createReadingAudioCoordinator> | null>(null);
   if (!audioRef.current) audioRef.current = createReadingAudioCoordinator();
   const audio = audioRef.current;
+  const passageRef = useRef<HTMLDivElement>(null);
   const playback = useRef<ReadingPlayerHandle | null>(null), registerPlayback = useCallback((value: ReadingPlayerHandle | null) => { playback.current = value; }, []);
   const tools = useRef<WordToolsHandle | null>(null), registerTools = useCallback((value: WordToolsHandle | null) => { tools.current = value; }, []);
   const shortPages = useRef(new Map<string, Promise<PublicShortPage>>()), serverPages = useRef(new Map<string, Promise<StudyPage>>()), pendingPlace = useRef<{ key: string; ref: string; wordIndex: number } | null>(null);
@@ -678,12 +679,12 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
             {!choice.view?.choosing && <p className={styles.verseCue} data-testid="verse-cue">
               {listening ? "Select a word or verse number to listen." : "Select a Hebrew word to explore it."}
             </p>}
-            <FlowingStudyText verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={prefs.translation} englishHidden={drillVerse ? DRILL_STRINGS.hidden : undefined} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
+            <FlowingStudyText passageRef={listening ? passageRef : undefined} verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={prefs.translation} englishHidden={drillVerse ? DRILL_STRINGS.hidden : undefined} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
             sections={labels} linked={linkedVerse(leinLink, page.verses)} onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} choice={choice.view} />
           </>}
           {/* The end of the section (N3): the next one's first verse, faint, and the way on. */}
           {sections.length > 0 && nextWin !== null && <NextSection onNext={() => pagerTo(nextWin)} preview={preview} />}
-          {listening && !study && <ReadingPlayer key={`player:${scopeKey}`} scopeKey={scopeKey} verses={page.verses} active={!lift} enabled={!lift} audio={{ coordinator: audio, slot: "proposed" }}
+          {listening && !study && <ReadingPlayer key={`player:${scopeKey}`} scopeKey={scopeKey} passageRef={passageRef} verses={page.verses} active={!lift} enabled={!lift} audio={{ coordinator: audio, slot: "proposed" }}
             target={drillTarget ?? (linkedOnPage !== null ? { index: linkedOnPage, generation: 0 } : undefined)} register={registerPlayback} onActiveWord={setPlayingWord} load={loadShort} />}
           <WordTools key={`tools:${scopeKey}`} scopeKey={scopeKey} verses={page.verses} register={registerTools}
             readAids={(at, signal) => fetchPublicWordAids(source, page.offset + at, page.verses[at], signal)}

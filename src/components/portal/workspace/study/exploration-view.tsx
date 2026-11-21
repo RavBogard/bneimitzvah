@@ -22,7 +22,7 @@ export function ExplorationContent({ state, group, retry, page, refresh, audio, 
   state: ExplorationState; group: string; retry(): void; page(offset: number): void; refresh(): void;
   /** A tutor or admin: the line under the heading speaks to staff, not to the student (project review 2026-11-16). */
   staff?: boolean;
-  audio?: { activeWord: { verse: number; index: number } | null; onWord(verse: number, word: number): void; onVerse(verse: number): void; player: ReactNode };
+  audio?: { passageRef?: React.RefObject<HTMLDivElement | null>; activeWord: { verse: number; index: number } | null; onWord(verse: number, word: number): void; onVerse(verse: number): void; player: ReactNode };
 }) {
   const prefs = useReadingPrefs(), prepared = state.result?.status === "prepared" ? state.result : undefined;
   const current = state.page, unresolved = state.result?.status === "unresolved" ? state.result : undefined;
@@ -49,7 +49,7 @@ export function ExplorationContent({ state, group, retry, page, refresh, audio, 
           <CommentaryStatus works={works.map(row => ({ work: row.work, status: row.status, retry: row.retry, covers: true }))} />
           <StudyRows verses={current.verses} assignment={{ kind: "torah", confirmed: false, verses: [] }} group={group} toolsAvailable={false}
             showEnglish={lens.english} works={workStates} />
-        </> : <FlowingStudyText verses={current.verses} assignment={{ kind: "torah", confirmed: false, verses: [] }} group={group} toolsAvailable={false} activeWord={audio?.activeWord ?? null} onWord={audio?.onWord} onVerse={audio?.onVerse} showEnglish={prefs.translation} tikkun={prefs.tikkunView} linked={linkedVerse(leinLink, current.verses)} />}
+        </> : <FlowingStudyText passageRef={audio?.passageRef} verses={current.verses} assignment={{ kind: "torah", confirmed: false, verses: [] }} group={group} toolsAvailable={false} activeWord={audio?.activeWord ?? null} onWord={audio?.onWord} onVerse={audio?.onVerse} showEnglish={prefs.translation} tikkun={prefs.tikkunView} linked={linkedVerse(leinLink, current.verses)} />}
         {!study && audio?.player}
         <div className="study-verse-details">{current.verses.map(verse => <div key={verse.ref} className="study-verse-detail" data-testid="study-verse-detail" data-verse-ref={verse.ref}>
           <Apparatus verse={verse} learner />
@@ -100,6 +100,7 @@ export function ProposedTorahText({ baseline, reloadMetadata, authorityFailed, a
     document.addEventListener("visibilitychange", resume); return () => document.removeEventListener("visibilitychange", resume);
   }, [owner, permitted, active]);
   const prepared = state.result?.status === "prepared" ? state.result : undefined, currentPage = state.page;
+  const passageRef = useRef<HTMLDivElement>(null);
   const shortMetadata = useRef<ShortExplorationOwner | null>(null), playback = useRef<ReadingPlayerHandle | null>(null);
   const registerPlayback = useCallback((value: ReadingPlayerHandle | null) => { playback.current = value; }, []);
   const [activeWord, setActiveWord] = useState<{ verse: number; index: number } | null>(null), [expiredClaim, setExpiredClaim] = useState<string | null>(null);
@@ -143,9 +144,10 @@ export function ProposedTorahText({ baseline, reloadMetadata, authorityFailed, a
   }, [hearHandle, available, currentPage]);
   if (!permitted) return null;
   const reloadPage = (offset?: number) => { playback.current?.suspend(); shortMetadata.current?.suspend(); void owner.load(offset); };
+  const playerKey = JSON.stringify([scope, prepared?.binding, currentPage?.offset]);
   const hearing = audio && prepared && currentPage && listeningEnabled ? {
-    activeWord, onWord: (index: number) => playback.current?.select(index, "verse"), onVerse: (index: number) => playback.current?.select(index, "verse"),
-    player: <><ReadingPlayer scopeKey={JSON.stringify([scope, prepared.binding, currentPage.offset])} verses={currentPage.verses} active={active} enabled={available} expiresAt={deadline} wordTools={false}
+    passageRef, activeWord, onWord: (index: number) => playback.current?.select(index, "verse"), onVerse: (index: number) => playback.current?.select(index, "verse"),
+    player: <><ReadingPlayer key={playerKey} passageRef={passageRef} scopeKey={playerKey} verses={currentPage.verses} active={active} enabled={available} expiresAt={deadline} wordTools={false}
       audio={{ coordinator: audio, slot: "proposed" }} register={registerPlayback} onActiveWord={setActiveWord} load={async (index, signal) => {
         const now = view.current, owned = shortMetadata.current;
         if (signal.aborted || !owned || now.prepared !== prepared || now.page !== currentPage || !currentPage.verses[index] || now.scope !== scope || now.pending || now.error) throw new PortalRequestError(409);

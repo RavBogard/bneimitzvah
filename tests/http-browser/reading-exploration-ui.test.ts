@@ -241,13 +241,13 @@ async function audioState(tab: Page) {
 }
 async function heard(tab: Page, scope: ReturnType<Page["getByRole"]>) {
   try {
-    await ui(scope.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+    await ui(scope.getByRole("group", { name: "Verse playback", exact: true }).getByRole("button", { name: "Pause", exact: true })).toBeVisible();
     await expect.poll(async () => (await audioState(tab)).active).toBe(1); expect((await audioState(tab)).overlap).toBe(0);
   } finally {
     // Closed aggregate only: no DOM text, response bodies, signed bindings or errors.
     const statuses = await scope.getByRole("status").allTextContents().catch(() => []);
     const state = statuses.some(text => /unavailable/i.test(text)) ? "unavailable" : statuses.some(text => /failed|try again|could not|changed/i.test(text)) ? "error" : statuses.some(text => /loading|prepar/i.test(text)) ? "loading" : "other";
-    console.info("exploration-heard", { ...await audioState(tab), state, pauseVisible: await scope.getByRole("button", { name: "Pause", exact: true }).isVisible().catch(() => false) });
+    console.info("exploration-heard", { ...await audioState(tab), state, pauseVisible: await scope.getByRole("group", { name: "Verse playback", exact: true }).getByRole("button", { name: "Pause", exact: true }).isVisible().catch(() => false) });
   }
 }
 /** Observe original stream/signal events only. Promise reactions can perturb scheduling;
@@ -402,7 +402,7 @@ it("keeps proposed Torah and assigned Haftarah playback exclusive through Practi
     if (shortBodies.has(url.pathname)) bodies.add(url.pathname);
     if (/\/(study-text|study-word-aids|study-word-details|reference-audio(?:\/short\/page)?)$/.test(url.pathname) && url.searchParams.get("kind") === "torah") assignedTorah++; });
   const metadataReady = await shortMetadata(tab); await tutor(tab); await metadataReady();
-  const proposed = portion(tab).getByRole("region", { name: "Reading playback", exact: true });
+  const proposed = portion(tab);
   // Both readings are on the page together; how they are stacked is layout, and each hearing below proves its own player works.
   await ui(portion(tab)).toBeVisible(); await ui(tab.getByTestId("assigned-haftarah-heading")).toBeVisible(); await ui(tab.getByTestId("assigned-text")).toBeVisible();
   const practice = tab.locator("[data-assigned-practice]");
@@ -416,16 +416,34 @@ it("keeps proposed Torah and assigned Haftarah playback exclusive through Practi
       await heard(tab, proposed);
     } else if (slot === "assigned") {
       await tab.getByRole("button", { name: "Hear Haftarah", exact: true }).click();
-      await heard(tab, tab.getByTestId("assigned-text").getByRole("region", { name: "Reading playback", exact: true }));
+      await heard(tab, tab.getByTestId("assigned-text"));
     } else {
       await tab.getByRole("button", { name: "Practice Isaiah 1:1", exact: true }).click();
       await ui(practice).toBeVisible();
-      const player = practice.getByRole("region", { name: "Reading playback", exact: true });
       await practice.getByTestId("play-section-start").click();
-      await heard(tab, player);
+      await heard(tab, practice);
     }
   }
   expect(bodies.size).toBe(2); expect(archiveRequests).toBe(0); expect(assignedTorah).toBe(0);
+});
+
+it("starts the next proposed text page without controls after switching the recording", async () => {
+  const tab = await page();
+  await tab.route("**/api/shermet-audio/catalog", route => route.fulfill({ json: { refs: ["Genesis 1:1"] } }));
+  const metadataReady = await shortMetadata(tab);
+  await tutor(tab);
+  await metadataReady();
+  const proposed = portion(tab);
+  const source = proposed.getByRole("combobox", { name: "Recording", exact: true });
+  await source.selectOption("pockettorah");
+  await proposed.getByRole("button", { name: "Hear Genesis 1:1", exact: true }).click();
+  await heard(tab, proposed);
+  await source.selectOption("shermet");
+  const transport = proposed.getByRole("group", { name: "Verse playback", exact: true });
+  await ui(transport.getByRole("button", { name: "Play", exact: true })).toBeEnabled();
+  await proposed.getByRole("button", { name: "Next text page", exact: true }).click();
+  await position(tab, 101, 146, 146);
+  await ui(transport).toHaveCount(0);
 });
 
 it("cancels held proposed audio on page navigation and quiet return never starts or refetches audio", async () => {
@@ -491,13 +509,13 @@ it("an actual signed proposal deadline stops cached playback even before queued 
   const deadline = selected && typeof selected === "object" && "expiresAt" in selected ? selected.expiresAt : undefined;
   expect(typeof deadline === "number" && Number.isSafeInteger(deadline) && deadline > Date.now()).toBe(true);
   await portion(tab).getByRole("button", { name: "Hear Genesis 1:1", exact: true }).click();
-  await heard(tab, portion(tab).getByRole("region", { name: "Reading playback", exact: true }));
+  await heard(tab, portion(tab));
   await tab.clock.install();
   // Uses the genuine returned claim deadline, not a rewritten response or signature.
   // Server-clock expiration remains separately covered by actual service tests.
   await tab.clock.setSystemTime(Number(deadline) + 1);
   await tab.evaluate(() => { const target = window; for (const media of target.explorationAudios) media.dispatchEvent(new Event("timeupdate")); });
   expect(await audioState(tab)).toMatchObject({ active: 0, clean: true });
-  await ui(portion(tab).getByRole("region", { name: "Reading playback", exact: true }).getByRole("button", { name: "Play", exact: true })).toBeDisabled();
+  await ui(portion(tab).getByRole("group", { name: "Verse playback", exact: true }).getByRole("button", { name: "Play", exact: true })).toBeDisabled();
   expect(await audioState(tab)).toMatchObject({ active: 0, clean: true });
 });

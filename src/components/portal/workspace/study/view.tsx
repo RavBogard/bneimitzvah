@@ -89,6 +89,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const { readStudy, createShortReferenceOwner, readWordAids, readWordDetails, summary, epoch, guardDeparture: guardLeaving } = useWorkspace(), aidsGroup = useId(), prefs = useReadingPrefs();
   const lens = useStudyLens(), study = !practiceSurface && lens.lens === "study", leinLink = useCommentLink();
   const shortMetadata = useRef<ShortReferenceOwner | null>(null);
+  const passageRef = useRef<HTMLDivElement>(null);
   const playback = useRef<ReadingPlayerHandle | null>(null), registerPlayback = useCallback((value: ReadingPlayerHandle | null) => { playback.current = value; }, []);
   const tools = useRef<WordToolsHandle | null>(null), registerTools = useCallback((value: WordToolsHandle | null) => { tools.current = value; }, []);
   const [playingWord, setPlayingWord] = useState<{ verse: number; index: number } | null>(null);
@@ -374,15 +375,15 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
           sections={aliyahSections(kind, assignment!, livePage.verses)} works={workStates}
           additions={additionsOf} headings={headings} rabbiName={guideView?.additions?.label.rabbiName ?? guideView?.base?.label.rabbiName}
           onPick={ref => { setPicked(ref); onVisit?.(kind, ref); }} />
-      </> : <FlowingStudyText verses={livePage.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord} listening={listeningEnabled} showEnglish={songSession && prefs.translation} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
+      </> : <FlowingStudyText passageRef={listeningEnabled ? passageRef : undefined} verses={livePage.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord} listening={listeningEnabled} showEnglish={songSession && prefs.translation} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
         sections={aliyahSections(kind, assignment!, livePage.verses)} linked={linkedVerse(leinLink, livePage.verses)}
         onNumber={practicing ? (index, opener) => { openTools(livePage!.verses[index].ref, opener); onVisit?.(kind, livePage!.verses[index].ref); } : undefined} gotIt={gotIt ? ref => gotIt(kind, ref) : undefined}
         onVerse={listeningEnabled ? index => hear(livePage!, index) : undefined} onWord={(index, word) => { setPicked(livePage!.verses[index].ref); if (listeningEnabled) playMainVerseForWord(playback.current, tools.current, index, word); else { tools.current?.select(index, word); tools.current?.reveal(); } onVisit?.(kind, livePage!.verses[index].ref); }} />}
       {/* The end of the section (N3): the next one's first verse, faint, and the way on. The verse comes from the page already loaded, when it is on it. */}
       {sectionNow >= 0 && sectionNow + 1 < sections.length && livePage.nextOffset === null
         && <NextSection onNext={() => goSection(sectionNow + 1)} preview={rawPage?.verses[sections[sectionNow + 1].start - rawPage.offset]} />}
-      {listeningEnabled && !study && <ReadingPlayer key={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])}
-        scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])} idleLabel={learner ? undefined : "Listen to the reading"} verses={livePage.verses} active={active && !lift} enabled={!lift} expiresAt={baseline?.context ? Date.parse(baseline.context.expiresAt) : undefined} audio={audio ? { coordinator: audio, slot: "assigned" } : undefined}
+      {listeningEnabled && !study && <ReadingPlayer passageRef={passageRef} key={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])}
+        scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])} verses={livePage.verses} active={active && !lift} enabled={!lift} expiresAt={baseline?.context ? Date.parse(baseline.context.expiresAt) : undefined} audio={audio ? { coordinator: audio, slot: "assigned" } : undefined}
         register={registerPlayback} onActiveWord={setPlayingWord} load={async (index, signal) => {
           const value = baseline, page = livePage!, turn = generation.current;
           if (signal.aborted || metadata.current !== value || page !== livePage || !page.verses[index]) throw new PortalRequestError(409);

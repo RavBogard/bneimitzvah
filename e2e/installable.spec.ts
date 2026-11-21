@@ -145,7 +145,7 @@ test("offline on a phone, an exact owner-pack passage reopens from the built rea
   const before = await plays();
   await page.locator('.study-verses [data-verse-ref="Genesis 1:1"] [data-word-index="0"]').first().click();
   await expect.poll(plays, { timeout: 20_000 }).toBeGreaterThan(before);
-  await expect(page.getByRole("region", { name: "Reading playback", exact: true }).getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Verse playback", exact: true }).getByRole("button", { name: "Pause", exact: true })).toBeVisible();
   expect(app.state.fromWorker).toEqual(expect.arrayContaining(["/read", "/api/public/reading", "/api/public/text"]));
   expect(app.state.fromWorker.some(path => path.startsWith("/reference-audio/short-v1/"))).toBe(true);
   expect(app.state.fromWorker).not.toContain("/api/offline/packs");
@@ -290,7 +290,7 @@ test("offline, a normally saved Shermet verse plays at its teaching tempo withou
   await expect(row).toBeVisible({ timeout: 30_000 });
   await row.locator('[data-word-index="0"]').first().click();
   const player = page.getByRole("region", { name: "Reading playback", exact: true });
-  await expect(player.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Verse playback", exact: true }).getByRole("button", { name: "Pause", exact: true })).toBeVisible();
   await expect(player.getByRole("combobox", { name: "Recording", exact: true })).toHaveValue("shermet");
   await expect(player.getByRole("combobox", { name: "Speed", exact: true })).toHaveValue("1");
   await expect.poll(() => page.evaluate(() => (window as unknown as { savedShermet: HTMLMediaElement | null }).savedShermet?.playbackRate)).toBe(1.25);

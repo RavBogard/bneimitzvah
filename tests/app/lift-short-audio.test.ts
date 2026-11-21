@@ -32,6 +32,6 @@ test("controlled preview enables first explicit Play while uncomposed main playe
   expect(controlled).toContain('<button type="button">Play</button>');
   const main = renderToStaticMarkup(createElement(ReadingPlayer, { scopeKey: "synthetic-main", verses, active: true,
     load, register() {}, onActiveWord() {} }));
-  expect(main).toContain("Listen to your reading"); expect(main).toContain('disabled="">Play</button>');
+  expect(main).not.toContain("Listen to your reading"); expect(main).not.toContain("data-player-transport");
   expect(load).not.toHaveBeenCalled();
 });

@@ -73,8 +73,9 @@ async function page(mobile = false, who: "admin" | "tutor" | "student" = "admin"
   return { tab, state, hold() { state.held = { release, started }; return state.held; } };
 }
 const player = (tab: Page) => tab.getByRole("region", { name: "Reading playback", exact: true });
+const transport = (tab: Page) => tab.getByRole("group", { name: "Verse playback", exact: true });
 const word = (tab: Page, verse: number, index: number) => tab.locator(`.study-verses [data-verse-ref="Genesis 1:${verse}"] [data-word-index="${index}"]`).first();
-async function playing(tab: Page) { await expect.poll(async () => { const current = await native(tab); return (current.kind === "verse" || current.kind === "word") && current.paused === false && (current.readyState ?? 0) >= 2; }).toBe(true); await ui(player(tab).getByRole("button", { name: "Pause", exact: true })).toBeVisible(); }
+async function playing(tab: Page) { await expect.poll(async () => { const current = await native(tab); return (current.kind === "verse" || current.kind === "word") && current.paused === false && (current.readyState ?? 0) >= 2; }).toBe(true); await ui(transport(tab).getByRole("button", { name: "Pause", exact: true })).toBeVisible(); }
 async function native(tab: Page) { return tab.evaluate(() => { const a = (window as TrackedWindow).toolsAudios.at(-1); return { count: (window as TrackedWindow).toolsAudios.length, paused: a?.paused, kind: a?.src ? window.toolsBlobKinds[a.src] : undefined, readyState: a?.readyState, duration: a?.duration, currentTime: a?.currentTime, rate: a?.playbackRate, preservesPitch: a?.preservesPitch, src: a?.getAttribute("src"), revoked: (window as TrackedWindow).toolsRevoked.length }; }); }
 
 beforeAll(async () => {
@@ -127,7 +128,7 @@ it("keeps tools closed on primary word playback; explicit open remembers that wo
   await ui(tools(tab).getByRole("button", { name: "Word tools" })).toHaveAttribute("aria-expanded", "false");
   await word(tab, 1, 1).click(); await playing(tab);
   await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse"); expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(0); expect(Math.round((await native(tab)).duration! * 24000)).toBe(96000); expect((await native(tab)).kind).toBe("verse"); expect(state.shortRequests).toBe(1); expect(state.archiveRequests).toBe(0); expect((await native(tab)).currentTime).toBeLessThan(2);
-  await player(tab).getByRole("button", { name: "Repeat", exact: true }).click(); expect(requests).toBe(0);
+  await transport(tab).getByRole("button", { name: "Repeat", exact: true }).click(); expect(requests).toBe(0);
   await openTools(tab); await ui(tools(tab)).toContainText("Word 2 of 2"); await ui(tools(tab)).toContainText("Synthetic occurrence second");
   await tools(tab).getByRole("button", { name: "Next word", exact: true }).click(); await ui(tools(tab)).toContainText("Genesis 1:2"); await ui(tools(tab)).toContainText("Word 1 of 2");
   await ui(player(tab)).toContainText("Genesis 1:1"); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse");

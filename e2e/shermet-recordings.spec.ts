@@ -58,7 +58,7 @@ for (const [kind, ref] of [['torah', 'Exodus 35:1'], ['haftarah', 'Micah 7:18']]
     await row.locator('[data-word-index="0"]').first().click();
     releaseCatalog();
     await expect(source).toHaveValue('shermet');
-    await expect(player.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+    await expect(page.getByRole("group", { name: "Verse playback", exact: true }).getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
     await expect(player.getByTestId('player-selection')).toHaveAttribute('data-selected-ref', ref);
     await expect(player.getByRole('combobox', { name: 'Practice', exact: true })).toHaveValue('verse');
     const rate = () => page.evaluate(() => (window as unknown as { shermetAudio: HTMLMediaElement }).shermetAudio.playbackRate);
@@ -72,30 +72,68 @@ for (const [kind, ref] of [['torah', 'Exodus 35:1'], ['haftarah', 'Micah 7:18']]
     await expect(row.locator('[data-word-index="2"]').first()).toHaveAttribute('data-reference-active', 'true');
     await player.getByText('Recording credit', { exact: true }).click();
     await expect(player.getByRole('link', { name: /Cantor Wendy Shermet.*Temple Israel, Omaha/ })).toBeVisible();
-    const repeat = player.getByRole('button', { name: 'Repeat', exact: true });
+    const repeat = page.getByRole("group", { name: "Verse playback", exact: true }).getByRole('button', { name: 'Repeat', exact: true });
     await repeat.click(); await expect(repeat).toHaveAttribute('aria-pressed', 'true');
     // Exercise an actual playing loop even if a loaded runner let the fixture
     // finish while opening the credit and choosing Repeat.
-    const play = player.getByRole('button', { name: 'Play', exact: true });
+    const play = page.getByRole("group", { name: "Verse playback", exact: true }).getByRole('button', { name: 'Play', exact: true });
     if (await play.isVisible()) await play.click();
-    await expect(player.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+    await expect(page.getByRole("group", { name: "Verse playback", exact: true }).getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
     const before = await page.evaluate(() => (window as unknown as { shermetPlays: number }).shermetPlays);
     // Seek to the real synthetic media end, exercising its native ended event and replay.
     await page.evaluate(() => { const audio = (window as unknown as { shermetAudio: HTMLMediaElement }).shermetAudio; audio.currentTime = audio.duration - 0.05; });
     await expect.poll(() => page.evaluate(() => (window as unknown as { shermetPlays: number }).shermetPlays)).toBeGreaterThan(before);
     await expect.poll(rate).toBe(1.5625); await expect(speed).toHaveValue('1.25');
-    await player.getByRole('button', { name: 'Pause', exact: true }).click();
-    await player.getByRole('button', { name: 'Play', exact: true }).click();
-    await expect(player.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+    await page.getByRole("group", { name: "Verse playback", exact: true }).getByRole('button', { name: 'Pause', exact: true }).click();
+    await page.getByRole("group", { name: "Verse playback", exact: true }).getByRole('button', { name: 'Play', exact: true }).click();
+    await expect(page.getByRole("group", { name: "Verse playback", exact: true }).getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
     await source.selectOption('pockettorah');
-    await expect(player.getByRole('button', { name: 'Pause', exact: true })).toHaveCount(0);
+    await expect(page.getByRole("group", { name: "Verse playback", exact: true }).getByRole('button', { name: 'Pause', exact: true })).toHaveCount(0);
     await source.selectOption('shermet');
     await row.locator('[data-word-index="0"]').first().click();
-    await expect(player.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+    await expect(page.getByRole("group", { name: "Verse playback", exact: true }).getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
     await expect.poll(rate).toBe(1.5625); await expect(speed).toHaveValue('1.25');
     expect(requested.length).toBeGreaterThan(0); expect(requested.every(value => value === ref)).toBe(true);
   });
 }
+
+test("only the selected verse gets playback controls, including at 200% text", async ({ page }) => {
+  const firstRef = "Genesis 18:1", nextRef = "Genesis 18:2";
+  await page.setViewportSize({ width: 320, height: 568 });
+  await mockVayera(page, { mode: "none" });
+  await page.route("**/api/shermet-audio/catalog", route => route.fulfill({ json: { refs: [firstRef, nextRef] } }));
+  await page.route("**/api/shermet-audio?*", route => route.fulfill({ contentType: "audio/wav", body: syntheticAudio() }));
+  await page.goto("/read?" + new URLSearchParams({ ref: "Genesis 18:1-2", kind: "torah" }));
+  await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+  const verse = (ref: string) => page.getByTestId("study-verses").locator('[data-verse-ref="' + ref + '"]');
+  const playVerse = (ref: string) => verse(ref).getByRole("button", { name: "Hear " + ref, exact: true });
+  const transport = page.getByRole("group", { name: "Verse playback", exact: true });
+  const pause = transport.getByRole("button", { name: "Pause", exact: true });
+  const play = transport.getByRole("button", { name: "Play", exact: true });
+  const repeat = transport.getByRole("button", { name: "Repeat", exact: true });
+  await expect(playVerse(firstRef)).toBeVisible();
+  await expect(transport).toHaveCount(0);
+  await playVerse(firstRef).press("Enter");
+  await expect(playVerse(firstRef)).toBeFocused();
+  await expect(pause).toBeVisible();
+  await expect(verse(firstRef).getByRole("group", { name: "Verse playback", exact: true })).toBeVisible();
+  await expect(transport).toHaveCSS("position", "static");
+  await pause.press("Enter");
+  await expect(play).toBeFocused();
+  await play.press("Enter");
+  await expect(pause).toBeFocused();
+  await repeat.click();
+  await expect(repeat).toHaveAttribute("aria-pressed", "true");
+  await playVerse(nextRef).press("Enter");
+  await expect(verse(nextRef).getByRole("group", { name: "Verse playback", exact: true })).toBeVisible();
+  await expect(verse(firstRef).getByRole("group", { name: "Verse playback", exact: true })).toHaveCount(0);
+  await expect(transport).toHaveCount(1);
+  const controlsFit = await transport.evaluate(element => {
+    const box = element.getBoundingClientRect();
+    return box.left >= 0 && box.right <= innerWidth;
+  });
+  expect(controlsFit).toBe(true);
+});
 
 test('Learn speed menus play Shermet faster and slower without completing practice or changing fallback', async ({ page }) => {
   await syntheticCourseRoutes().install(page);
@@ -167,7 +205,7 @@ test("the public reader plays a full collection track on demand and returns to W
   await start.click();
   await expect(reader.getByRole("button", { name: "Pause collection recording" })).toBeVisible();
   await page.locator(`.study-verses [data-verse-ref="${ref}"] [data-word-index="0"]`).first().click();
-  await expect(reader.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Verse playback", exact: true }).getByRole("button", { name: "Pause", exact: true })).toBeVisible();
   await expect(start).toBeVisible();
   await expect(wendy).toHaveValue("shermet");
   await expect(reader.getByTestId("player-selection")).toHaveAttribute("data-selected-ref", ref);

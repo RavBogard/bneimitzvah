@@ -119,3 +119,7 @@
 .linked { text-decoration-line: underline; text-decoration-thickness: 0.07em; text-underline-offset: 0.5em; text-decoration-skip-ink: none; text-decoration-color: var(--lake-deep); }
 @media (prefers-color-scheme: dark) { .linked { text-decoration-color: var(--color-action); } }
 .gotIt { display: inline-flex; color: var(--color-action); }
+
+/* Only the verse with a transport adds a row to flowing Hebrew or tikkun. */
+.playbackSlot { display: block; grid-column: 1 / -1; min-width: 0; }
+.playbackSlot:empty { display: none; }

@@ -105,7 +105,7 @@ test("a deep link opens its verse selected in the player, on the right text page
   await expect(page).toHaveTitle("Genesis 1:1–6:8 | CRC Torah");
   const player = page.getByRole("region", { name: "Reading playback", exact: true });
   await expect(player.getByText(`${refs[119]} · Whole verse`, { exact: true })).toBeVisible();
-  await expect(player.getByRole("button", { name: "Play", exact: true })).toBeEnabled();
+  await expect(page.getByRole("group", { name: "Verse playback", exact: true }).getByRole("button", { name: "Play", exact: true })).toBeEnabled();
   await expect(page.getByRole("button", { name: `View ${refs[119]} up close`, exact: true })).toBeVisible();
   await expect(page).toHaveURL(/verse=120$/);
   await page.locator(`.study-verses [data-hebrew-ref="${refs[100]}"] [data-word-index="0"]`).click();
