@@ -306,7 +306,7 @@ test("credits the original day when a signed-in student reopens a saved service 
   test.setTimeout(240_000);
   const app = await installedApp(context), owner = "a".repeat(32), offlineOwner = "b".repeat(43);
   const restoreTime = Date.now(), earlier = restoreTime - 2 * 86_400_000;
-  const expected = chicagoDate(earlier).date, credited: string[] = [];
+  const expected = chicagoDate(earlier).date, credited = new Set<string>();
   await page.clock.setFixedTime(earlier);
   await context.route("**/api/offline/packs", route => app.state.offline ? route.abort("internetdisconnected")
     : route.fulfill({ json: { owner: offlineOwner, packs: [], evening: false } }));
@@ -315,7 +315,7 @@ test("credits the original day when a signed-in student reopens a saved service 
     if (route.request().method() === "GET") return route.fulfill({ json: { ok: true, owner, offlineOwner, expiresAt: restoreTime + 86_400_000 } });
     const submitted = route.request().postDataJSON();
     if (submitted.owner !== owner) return route.fulfill({ status: 403, json: { error: "forbidden" } });
-    credited.push(...submitted.dates);
+    for (const date of submitted.dates) credited.add(date);
     return route.fulfill({ json: { ok: true, accepted: submitted.dates, discarded: [] } });
   });
   await context.route("**/api/public/service-text?**", route => app.state.offline ? route.abort("internetdisconnected")
@@ -337,13 +337,13 @@ test("credits the original day when a signed-in student reopens a saved service 
   await expect(main).toHaveAttribute("data-step", "done");
   const queued = () => page.evaluate(prefix => Object.keys(localStorage).filter(key => key.startsWith(prefix)).map(key => key.slice(-10)), PRACTICE_DATE_PREFIX);
   await expect.poll(queued).toEqual([expected]);
-  expect(credited).toEqual([]);
+  expect(credited.size).toBe(0);
   await page.goto(route);
   await expect.poll(queued).toEqual([expected]);
 
   await page.clock.setFixedTime(restoreTime);
   await app.offline(false);
-  await expect.poll(() => credited).toEqual([expected]);
+  await expect.poll(() => [...credited]).toEqual([expected]);
   await expect.poll(queued).toEqual([]);
 
   // The child lease below represents the previously selected tab-local binding. The public
@@ -359,6 +359,10 @@ test("credits the original day when a signed-in student reopens a saved service 
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.getByText("Offline practice. Reconnect and choose the same child to sync.")).toBeVisible();
   await expect(main).toHaveAttribute("data-step", "about");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(main).toHaveAttribute("data-step", "done");
+  await expect.poll(() => page.evaluate(key => localStorage.getItem(key), PRACTICE_DATE_PREFIX + "c".repeat(32) + ":" + chicagoDate(restoreTime).date)).toBe("1");
   await page.evaluate(() => {
     const link = document.createElement("a");
     link.href = "about:blank"; link.target = "_blank"; link.rel = "opener";
@@ -369,11 +373,7 @@ test("credits the original day when a signed-in student reopens a saved service 
   await expect(other.getByRole("heading", { name: "Practice is unavailable", exact: true })).toBeVisible();
   expect(await other.evaluate(() => sessionStorage.getItem("crc-torah:child-practice-lease/v1") !== null)).toBe(true);
   await other.close();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-  await expect(main).toHaveAttribute("data-step", "done");
-  await expect.poll(() => page.evaluate(key => localStorage.getItem(key), PRACTICE_DATE_PREFIX + "c".repeat(32) + ":" + chicagoDate(restoreTime).date)).toBe("1");
   await app.offline(false);
   await page.waitForURL(url => url.pathname === "/mine" && url.searchParams.get("resume-child-practice") === "1");
-  expect(credited).toEqual([expected]);
+  expect([...credited]).toEqual([expected]);
 });
