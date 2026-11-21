@@ -2,6 +2,10 @@
 
 Updated 2026-11-20. This file is replaced, not appended: it says where the work stands today, in about a hundred lines. The full log up to 2026-11-16 (gate lines, merges, migrations, walk findings) is unchanged at `docs/archive/STATE-through-2026-11-16.md`. Daniel's binding rulings are indexed in `docs/planning/RULINGS.md`; `MISSION.md` beside this file is still the authority. Historical plans, returns and reviews are under `docs/archive/` with their old folder layout.
 
+## Approved feature gaps, November 20
+
+The [build plan](../2026-11-20-feature-gap-analysis/BUILD-PLAN.md) governs six milestones. Editor recording coverage is live at `acce5818`. Independent review verified the staff capability checks and response fields and corrected the handling of lost access. All [15 CI jobs](https://github.com/RavBogard/bneimitzvah/actions/runs/44869408757) passed. Production UI with synthetic tutor data showed the coverage summary and credited verse/word details at 390 and 1440 px.
+
 ## Usability release, November 20
 
 The [release note and acceptance walkthrough](../2026-11-20-usability/RETURN.md) cover playback, immutable shared passages, course return, staff decisions and family recovery. The [baseline review](../2026-11-20-usability-review/REVIEW.md) records the original issues. The first release, `b4a8d2b4`, passed all 15 [CI jobs](https://github.com/RavBogard/bneimitzvah/actions/runs/44852147763). Daniel approved removing the floating playback bar. The verse controls now belong beside the selected verse. He also approved an explicit command to play a whole assigned aliyah through its last verse and chose to keep the existing lesson note types.
