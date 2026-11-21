@@ -33,7 +33,10 @@ export const directLearningFetch: typeof fetch = (url, init) =>
 
 export function PracticeNavigationGuard() {
   const path = usePathname(), query = useSearchParams(), router = useRouter();
+  const previousPath = useRef(path);
   useEffect(() => {
+    const previous = previousPath.current;
+    previousPath.current = path;
     for (const listen of routeListeners) listen();
     const practice = tabPractice(), selection = practice.selection;
     if (!selection || path === `/workspace/practice/${selection.context.studentId}`) return;
@@ -43,6 +46,9 @@ export function PracticeNavigationGuard() {
       }
       return;
     }
+    // A selection can finish while the parent route is still rendering. Only
+    // a departure from practice may close it, never a query change on that route.
+    if (previous === path || !(previous.startsWith("/workspace/practice/") || isLearnPath(previous))) return;
     practice.invalidate();
     if (!practice.pending) void practice.exit().catch(() => undefined);
   }, [path, query, router]);

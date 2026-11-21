@@ -22,7 +22,7 @@ export function usePracticeMode({ router, pathname, currentPath, clearWork, bump
 }) {
   const practice = tabPractice();
   const [context, setContext] = useState<Context | null>(() => practice.selection?.context ?? null), [busy, setBusy] = useState(false), [notice, setNotice] = useState("");
-  const leaving = useRef<string | null>(null);
+  const leaving = useRef<string | null>(null), previousPath = useRef(pathname);
 
   /** Close the sitting on the server (best effort) and forget its handle. */
   const close = useCallback(() => { practice.invalidate(); setContext(null); if (!practice.pending) void practice.exit().catch(() => undefined); }, [practice]);
@@ -38,10 +38,13 @@ export function usePracticeMode({ router, pathname, currentPath, clearWork, bump
   useEffect(() => {
     if (!isParentPath(pathname)) setNotice("");
     if (pathname === "/mine" && new URLSearchParams(window.location.search).get(CHILD_LEARN_RESUME) === "1") setNotice(PRACTICE_ACCESS_CHANGED);
+    const previous = previousPath.current;
+    previousPath.current = pathname;
     const active = practice.selection;
-    if (active && pathname !== practicePath(active.context.studentId)) close();
+    if (previous !== pathname && previous.startsWith("/workspace/practice/")
+      && (!active || pathname !== practicePath(active.context.studentId))) setContext(null);
     if (leaving.current && pathname !== leaving.current) { leaving.current = null; setBusy(false); }
-  }, [pathname, practice, close]);
+  }, [pathname, practice]);
   // Expiry: the server ends the context after its lifetime; this tab ends the sitting at the same moment.
   useEffect(() => {
     if (!context) return;
@@ -62,7 +65,9 @@ export function usePracticeMode({ router, pathname, currentPath, clearWork, bump
     setBusy(true); setContext(null); setNotice(""); bump();
     try {
       const next = await practice.select(id);
-      if (next && currentPath.current === from) { bump(); setContext(next); router.push(practicePath(next.studentId)); }
+      if (!next) return;
+      if (currentPath.current !== from) { close(); return; }
+      bump(); setContext(next); router.push(practicePath(next.studentId));
     } catch {
       if (currentPath.current === from) {
         setNotice("Practice selection couldn’t be confirmed. Open your child’s reading again; no previous practice view has been restored.");
