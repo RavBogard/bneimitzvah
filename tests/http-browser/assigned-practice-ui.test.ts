@@ -121,7 +121,7 @@ it("plays the assigned aliyah in order, pauses and resumes, and stops at its rec
   let missing = false;
   await tab.route("**/api/shermet-audio?*", route => {
     const ref = new URL(route.request().url()).searchParams.get("ref")!;
-    if (missing && ref === "Genesis 1:1") return route.fulfill({ status: 404 });
+    if (missing && ref === "Genesis 1:3") return route.fulfill({ status: 404 });
     played.push(ref);
     return route.fulfill({ contentType: "audio/wav", body: wave });
   });
@@ -163,10 +163,12 @@ it("plays the assigned aliyah in order, pauses and resumes, and stops at its rec
 
   missing = true;
   await start.click();
+  await ui(pause).toBeVisible();
+  await finish();
   await ui(practice.getByText(/Playback stopped/)).toBeVisible();
   await ui(stop).toHaveCount(0);
   await ui(practice.getByText("Aliyah finished.", { exact: true })).toHaveCount(0);
-  await ui(practice.getByTestId("player-selection")).toHaveAttribute("data-selected-ref", "Genesis 1:1");
+  await ui(practice.getByTestId("player-selection")).toHaveAttribute("data-selected-ref", "Genesis 1:3");
 
   await practice.getByRole("button", { name: "Haftarah text", exact: true }).click();
   await ui(start).toHaveText("Play from first verse");
