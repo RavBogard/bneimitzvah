@@ -390,16 +390,33 @@ it("keeps the selected child's Learn, Run-through and service navigation in one 
     }
     await route.continue();
   });
-  const verseStatus: number[] = [];
-  tab.on("response", response => { if (new URL(response.url()).pathname === "/api/learn/verses") verseStatus.push(response.status()); });
+  const verseStatus: number[] = [], recent: string[] = [];
+  tab.on("response", response => {
+    const path = new URL(response.url()).pathname;
+    if (path === "/api/learn/verses") verseStatus.push(response.status());
+    const label = path.startsWith("/api/learn/") ? path : path.endsWith("/reading") ? "assigned reading" : null;
+    if (label) { recent.push(`${label} ${response.status()}`); if (recent.length > 8) recent.shift(); }
+  });
+  async function reached(path: string, heading: string) {
+    try {
+      // The isolated Next development server may be compiling this route on its first visit.
+      await tab.waitForURL(url => url.pathname === path, { timeout: 30_000 });
+      await ui(tab.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+    } catch {
+      const current = new URL(tab.url()).pathname.replace(/\/workspace\/practice\/[^/]+/, "/workspace/practice/{student}");
+      const accessState = await tab.getByTestId("child-learn-check").count() ? "child access check visible"
+        : await tab.getByTestId("workspace-notice").count() ? "workspace notice visible" : "no access notice";
+      throw new Error(`Opening ${path} did not show its heading. Current route ${current}. ${accessState}. Responses ${recent.join(", ") || "none"}.`);
+    }
+  }
   await activities.getByRole("link", { name: "Learn to lein" }).click();
-  await ui(tab.getByRole("heading", { name: "Learn to lein", exact: true })).toBeVisible();
+  await reached("/learn", "Learn to lein");
   await tab.locator("[data-run-through]").click();
-  await ui(tab.getByRole("heading", { name: "Run-through", exact: true })).toBeVisible();
+  await reached("/learn/run-through", "Run-through");
   await ui.poll(() => verseStatus).toContain(200);
   await tab.getByRole("link", { name: "Back to the path" }).first().click();
   await tab.locator("[data-service-course]").click();
-  await ui(tab.getByRole("heading", { name: "Learn the service", exact: true })).toBeVisible();
+  await reached("/learn/service", "Learn the service");
   await tab.reload({ waitUntil: "domcontentloaded" });
   await tab.waitForURL(url => url.pathname === "/mine" && url.searchParams.get("resume-child-practice") === "1");
   await ui(tab.getByTestId("workspace-notice")).toHaveAttribute("data-notice-kind", "practice-access-changed");
