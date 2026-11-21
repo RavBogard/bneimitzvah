@@ -12,30 +12,35 @@ const json = (route: Route, status: number, body: unknown) => route.fulfill({ st
 const noHorizontalScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 const syllables = ["אָבָ֑ג", "דֵּ֖ה", "וְזַ֥ח"];
 const verseOf = (ref: string) => { const text = `${syllables.join(" ")}׃`; return { ref, english: `Synthetic translation ${ref}`, hebrew: { text, readingText: text, paragraphAfter: null, segments: [{ kind: "text", text }] } }; };
-const verses = (ref: string) => expandReadingRanges(ref.split("; "), "torah", TANAKH_VERSE_COUNTS);
+const verses = (ref: string, kind: "torah" | "haftarah" = "torah") => expandReadingRanges(ref.split("; "), kind, TANAKH_VERSE_COUNTS);
 const base = { id: "00000000-0000-4000-8000-000000000042", name: "Synthetic selection", date: null as string | null, kind: "torah", ranges: "Deuteronomy 31:1-3; Deuteronomy 31:8-9", verseCount: 5, revision: 1,
   createdAt: "2026-10-22T00:00:00.000Z", updatedAt: "2026-10-22T00:00:00.000Z" };
-const readingOf = (ranges: string, revision: number) => ({ ...base, ranges, verseCount: verses(ranges).length, revision });
+const readingOf = (ranges: string, revision: number, kind: "torah" | "haftarah" = "torah") => ({ ...base, kind, ranges, verseCount: verses(ranges, kind).length, revision });
 
-/** The open routes for any ref of the Torah, from its own verses (one text page: at most 30 here). */
+/** The open routes for any tested ref, from its own verses (one text page: at most 30 here). */
 async function openRoutes(page: Page) {
   await page.route("**/api/public/**", route => {
-    const url = new URL(route.request().url()), q = url.searchParams, ref = q.get("ref");
-    if (!ref || q.get("kind") !== "torah") return json(route, 503, { error: "unavailable" });
-    const list = verses(ref);
+    const url = new URL(route.request().url()), q = url.searchParams, ref = q.get("ref"), kind = q.get("kind");
+    if (!ref || (kind !== "torah" && kind !== "haftarah")) return json(route, 503, { error: "unavailable" });
+    const list = verses(ref, kind);
     if (url.pathname === "/api/public/reading")
-      return json(route, 200, { ref, kind: "torah", passage: { kind: "torah", ranges: ref.split("; "), verseCount: list.length, pages: [{ offset: 0, first: list[0], last: list.at(-1) }] }, listening: { pocketTorah: false } });
+      return json(route, 200, { ref, kind, passage: { kind, ranges: ref.split("; "), verseCount: list.length, pages: [{ offset: 0, first: list[0], last: list.at(-1) }] }, listening: { pocketTorah: false } });
     if (url.pathname === "/api/public/text")
-      return json(route, 200, { kind: "torah", ref, offset: 0, nextOffset: null, totalVerses: list.length, translation: { key: "jps2023", status: "available" }, verses: list.map(verseOf),
-        chapters: studyRangePlan(ref.split("; "), "torah", 0).chapters.map(chapter => ({ ref: chapter.ref, sefariaUrl: chapter.url, fetchedAt: 0, hash: "c".repeat(64), editions: [studyEditions.mam, studyEditions.jps2023] })) });
+      return json(route, 200, { kind, ref, offset: 0, nextOffset: null, totalVerses: list.length, translation: { key: "jps2023", status: "available" }, verses: list.map(verseOf),
+        chapters: studyRangePlan(ref.split("; "), kind, 0).chapters.map(chapter => ({ ref: chapter.ref, sefariaUrl: chapter.url, fetchedAt: 0, hash: "c".repeat(64), editions: [studyEditions.mam, studyEditions.jps2023] })) });
     return json(route, 503, { error: "unavailable" });
   });
 }
-const pageOf = (reading: typeof base) => { const list = verses(reading.ranges).slice(0, 10);
+const pageOf = (reading: typeof base) => { const list = verses(reading.ranges, reading.kind === "haftarah" ? "haftarah" : "torah").slice(0, 10);
   return { ok: true, reading, offset: 0, totalVerses: reading.verseCount, nextOffset: reading.verseCount > 10 ? 10 : null, verses: list.map(ref => ({ ref, note: null, mark: null })) }; };
 const bar = (page: Page) => page.locator("[data-choose-bar]");
 const line = (page: Page) => bar(page).locator("[data-choose-line]");
 const verse = (page: Page, number: number) => page.getByRole("button", { name: `Select Deuteronomy 31:${number}`, exact: true });
+const edit = (page: Page) => page.getByRole("button", { name: "Edit", exact: true });
+async function changeSavedVerses(page: Page) {
+  await edit(page).click();
+  await page.getByRole("group", { name: "Edit", exact: true }).getByRole("button", { name: "Change verses", exact: true }).click();
+}
 
 async function minSize(page: Page, locators: ReturnType<Page["getByRole"]>[]) {
   for (const locator of locators) { const box = await locator.first().boundingBox(); expect(box && box.height >= 44 && box.width >= 44, "at least 44px").toBe(true); }
@@ -142,10 +147,14 @@ test("Change verses on a saved reading starts in the whole portion with its vers
     await expect(page.getByRole("heading", { level: 1, name: "Synthetic selection", exact: true })).toBeVisible();
     await expect(page.getByText("Torah Deuteronomy 31:1–3; Deuteronomy 31:8–9")).toBeVisible();
     await expect(page.locator(".study-verses [data-verse-ref]")).toHaveCount(5);
-    await (await openMore(page)).getByRole("button", { name: "Change verses", exact: true }).click(); // in the Change sheet
+    const sheet = await openMore(page);
+    await expect(sheet.getByRole("button", { name: "Change verses", exact: true })).toHaveCount(0);
+    await sheet.getByRole("button", { name: "Close", exact: true }).click();
+    await changeSavedVerses(page);
     // The whole portion, with the reading's verses selected.
     await expect(page.locator(".study-verses [data-verse-ref]")).toHaveCount(30);
     await expect(line(page)).toHaveText("5 verses: Deuteronomy 31:1–3; 31:8–9");
+    await expect(bar(page)).toBeFocused();
     await expect(verse(page, 1)).toHaveAttribute("aria-pressed", "true");
     await expect(verse(page, 4)).toHaveAttribute("aria-pressed", "false");
     await minSize(page, [verse(page, 4), bar(page).getByRole("button", { name: "Save", exact: true })]);
@@ -165,6 +174,7 @@ test("Change verses on a saved reading starts in the whole portion with its vers
     await expect(page.getByRole("status").filter({ hasText: "Saved." })).toBeVisible();
     expect(updates.at(-1)).toEqual({ id: base.id, revision: 5, name: "Synthetic selection", date: null, ranges: "Deuteronomy 31:1-3; Deuteronomy 31:8-10" });
     await expect(bar(page)).toHaveCount(0);
+    await expect(edit(page)).toBeFocused();
     await expect(page.getByText("Torah Deuteronomy 31:1–3; Deuteronomy 31:8–10")).toBeVisible();
     await expect(page.locator(".study-verses [data-verse-ref]")).toHaveCount(6);
   }
@@ -196,12 +206,50 @@ test("Whole portion marks the selection and Back to selection returns to it; Can
   // Change verses, then Cancel: back at the selection, nothing sent.
   const sent: string[] = [];
   page.on("request", request => { if (request.url().includes("/api/saved/readings/update")) sent.push(request.url()); });
-  await (await openMore(page)).getByRole("button", { name: "Change verses", exact: true }).click(); // in the Change sheet
+  await changeSavedVerses(page);
   await expect(page.locator("[data-study-rows] [data-verse-ref]")).toHaveCount(30);
   await verse(page, 20).click();
   await bar(page).getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(page.locator("[data-study-rows] [data-verse-ref]")).toHaveCount(5);
+  await expect(edit(page)).toBeFocused();
+  // Opening the editor from Whole portion goes back to that view on Cancel.
+  await (await openMore(page)).getByRole("button", { name: "Whole portion", exact: true }).click();
+  await changeSavedVerses(page);
+  await expect(bar(page)).toBeVisible();
+  await bar(page).getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.locator("[data-study-rows] [data-verse-marked]")).toHaveCount(5);
+  await expect(edit(page)).toBeFocused();
   expect(sent).toEqual([]);
+});
+
+test("Edit can narrow a cross-book selection and leaves details available for an unreadable range", async ({ page }) => {
+  await openRoutes(page);
+  const reading = readingOf("Isaiah 1:1; Hosea 1:1", 1, "haftarah");
+  let savedPage = pageOf(reading);
+  await page.route("**/api/saved/reading?*", route => json(route, 200, savedPage));
+  await page.route("**/api/session", route => json(route, 401, { error: "authentication-required" }));
+  await page.goto(`/read?saved=${base.id}`);
+  await changeSavedVerses(page);
+  const first = page.getByRole("button", { name: "Select Isaiah 1:1", exact: true });
+  await expect(first).toHaveAttribute("aria-pressed", "true");
+  await expect(bar(page)).toHaveAttribute("data-choose-count", "2");
+  await first.click();
+  await expect(bar(page)).toHaveAttribute("data-choose-count", "1");
+  await bar(page).getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(edit(page)).toBeFocused();
+
+  savedPage = { ...savedPage, reading: { ...reading, ranges: "Unknown 1:1" } };
+  await page.route("**/api/public/reading?*", route => json(route, 503, { error: "unavailable" }));
+  await page.reload();
+  await edit(page).click();
+  const choices = page.getByRole("group", { name: "Edit", exact: true });
+  const unavailable = choices.getByRole("button", { name: "Change verses", exact: true });
+  const details = choices.getByRole("button", { name: "Edit name and date", exact: true });
+  await expect(unavailable).toBeDisabled();
+  await expect(unavailable).toHaveAccessibleDescription("The verses aren’t available to edit.");
+  await expect(details).toBeFocused();
+  await details.press("Enter");
+  await expect(page.getByRole("form", { name: "Edit this reading" }).getByLabel("Name")).toBeFocused();
 });
 
 test("a selection opens inside its whole portion with the verses marked, and the way back opens the selection", async ({ page }) => {

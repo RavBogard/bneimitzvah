@@ -42,17 +42,32 @@ export function SavedReadingState({ status, onRetry }: { status: "signed-out" | 
 }
 
 export type EditStep = "closed" | "open" | "saving" | "confirm" | "removing";
-/** The Edit disclosure: rename, re-date, or remove with an inline confirmation. Never a dialog. */
+const focusField = (node: HTMLElement | null) => { node?.focus(); };
+
+function SavedReadingEditChoices({ panelId, canChangeVerses, onVerses, onDetails, onCancel }: {
+  panelId: string; canChangeVerses: boolean; onVerses(): void; onDetails(): void; onCancel(): void;
+}) {
+  return <div id={panelId} className={`${styles.panel} ${styles.editChoices}`} role="group" aria-label="Edit"
+    onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
+    <button type="button" className="button-secondary" ref={canChangeVerses ? focusField : undefined} disabled={!canChangeVerses}
+      aria-describedby={canChangeVerses ? undefined : `${panelId}-unavailable`} onClick={onVerses}>{CHOOSE_STRINGS.change}</button>
+    {!canChangeVerses && <p id={`${panelId}-unavailable`} className="field-help">The verses aren’t available to edit.</p>}
+    <button type="button" className="button-secondary" ref={!canChangeVerses ? focusField : undefined} onClick={onDetails}>Edit name and date</button>
+  </div>;
+}
+
+/** The name and date form, with its inline removal confirmation. */
 export function SavedReadingEdit({ step, panelId, name, date, notice, onName, onDate, onSave, onCancel, onAskRemove, onRemove, onKeep }: {
   step: EditStep; panelId: string; name: string; date: string; notice: string;
   onName(value: string): void; onDate(value: string): void; onSave(): void; onCancel(): void; onAskRemove(): void; onRemove(): void; onKeep(): void;
 }) {
   if (step === "closed") return notice ? <p className={styles.editNotice} role="status">{notice}</p> : null;
   const busy = step === "saving" || step === "removing";
-  return <div id={panelId} className={styles.panel} data-edit-step={step}>
+  return <div id={panelId} className={styles.panel} data-edit-step={step}
+    onKeyDown={event => { if (!busy && event.key === "Escape" && !event.defaultPrevented) { event.preventDefault(); onCancel(); } }}>
     <form className={styles.editForm} aria-label="Edit this reading" onSubmit={event => { event.preventDefault(); onSave(); }}>
       <div><label htmlFor={`${panelId}-name`}>Name</label>
-        <input id={`${panelId}-name`} name="name" value={name} maxLength={80} required autoComplete="off" disabled={busy} onChange={event => onName(event.target.value)} /></div>
+        <input ref={focusField} id={`${panelId}-name`} name="name" value={name} maxLength={80} required autoComplete="off" disabled={busy} onChange={event => onName(event.target.value)} /></div>
       <div><label htmlFor={`${panelId}-date`}>Date <span className={styles.optional}>(optional)</span></label>
         <input id={`${panelId}-date`} name="date" type="date" value={date} disabled={busy} onChange={event => onDate(event.target.value)} /></div>
       {notice && <p className="request-error" role="alert">{notice}</p>}
@@ -108,11 +123,13 @@ export function SavedReadingPage({ id, verse, learner = null }: { id: string; ve
   const [sharing, setSharing] = useState(false);
   const [header, setHeader] = useState<Header>({ status: "loading" }), [retry, setRetry] = useState(0), [linked, setLinked] = useState(verse);
   const [text, setText] = useState<Text | null>(null), [textRetry, setTextRetry] = useState(0);
-  const [edit, setEdit] = useState<EditStep>("closed"), [draft, setDraft] = useState({ name: "", date: "" }), [editNotice, setEditNotice] = useState("");
+  const [edit, setEdit] = useState<EditStep | "choices">("closed"), [draft, setDraft] = useState({ name: "", date: "" }), [editNotice, setEditNotice] = useState("");
+  const editButton = useRef<HTMLButtonElement>(null), restoreEditFocus = useRef(false);
   const [marks, setMarks] = useState<ReadonlyMap<string, SavedMark | null>>(new Map()), [pending, setPending] = useState<string | null>(null), [markNotice, setMarkNotice] = useState<{ ref: string; text: string } | null>(null);
   const [work, setWork] = useState<ReadonlyMap<string, VerseWork>>(new Map());
   const [view, setView] = useState<View>("selection"), [frame, setFrame] = useState<Portion | null>(null), [portionText, setPortionText] = useState<Text | null>(null), [portionVerse, setPortionVerse] = useState<number | null>(null);
   const place = useRef<string | null>(null);
+  const changeReturn = useRef<Exclude<View, "change">>("selection");
   const loadedPages = useRef(new Set<number>()), live = useRef<AbortController | null>(null);
   const reading = header.status === "ready" ? header.reading : null;
   // The learner view: the staff read of a learner's page, and the learner's name for the muted line.
@@ -209,12 +226,34 @@ export function SavedReadingPage({ id, verse, learner = null }: { id: string; ve
 
   // The whole portion that holds the selection, or the chapters it spans: where verses can be added as well as dropped.
   const context = useMemo(() => reading ? contextFor(reading.kind, verses) : null, [reading?.kind, verses]); // eslint-disable-line react-hooks/exhaustive-deps
-  const enter = (next: View) => {
+  const enter = (next: Exclude<View, "change">) => {
     if (!reading) return;
     if (next === "selection") { setLinked(frame ? selectionPlace(reading.ranges, frame.ref, reading.kind, place.current) : null); setView("selection"); return; }
     if (!context) return;
     setFrame(context); setPortionVerse(positionInRef(context.ref, context.kind, place.current)); setView(next);
   };
+  const changeVerses = () => {
+    if (!reading || !verses.length || view === "change") return;
+    // Cross-book selections or long chapter spans can still be narrowed to their saved verses.
+    const passage = context ?? { ref: reading.ranges, kind: reading.kind, name: null, whole: false };
+    changeReturn.current = view;
+    setFrame(passage);
+    setPortionVerse(positionInRef(passage.ref, passage.kind, place.current));
+    setEdit("closed");
+    setView("change");
+  };
+  const cancelChange = () => {
+    restoreEditFocus.current = true;
+    if (changeReturn.current === "portion" && frame) {
+      setPortionVerse(positionInRef(frame.ref, frame.kind, place.current));
+      setView("portion");
+    } else enter("selection");
+  };
+  useEffect(() => {
+    if (view === "change" || !restoreEditFocus.current) return;
+    restoreEditFocus.current = false;
+    editButton.current?.focus({ preventScroll: true });
+  }, [view]);
   useEffect(() => {
     if (view === "selection" || !frame) return;
     const controller = new AbortController(), key = JSON.stringify([frame.kind, frame.ref]);
@@ -232,6 +271,7 @@ export function SavedReadingPage({ id, verse, learner = null }: { id: string; ve
     const result = await updateSavedReading({ id: reading.id, revision: reading.revision, name: reading.name, date: reading.date, ranges: selection.ranges.join("; ") }, controller.signal);
     if (controller.signal.aborted) return null;
     if (result.ok) {
+      restoreEditFocus.current = true;
       setHeader({ status: "ready", reading: result.value }); setEditNotice("Saved."); setView("selection"); setLinked(frame ? selectionPlace(result.value.ranges, frame.ref, result.value.kind, place.current) : null);
       // The installed app's own pack of this reading is by its ranges: the old one goes and the revised one is kept.
       refreshOfflinePacks();
@@ -248,18 +288,21 @@ export function SavedReadingPage({ id, verse, learner = null }: { id: string; ve
   const savedChoice = (selection: ChosenSelection) => <ChangeVersesSave selection={selection} revise={revise} />;
   const ownRanges = reading ? reading.ranges.split("; ") : [];
   // A staff viewer never changes the learner's verses: no Choose verses plan at all.
-  const plan: ChoosePlan | undefined = !reading || viewing ? undefined : view === "selection"
-    ? { label: CHOOSE_STRINGS.change, start: ownRanges, readingDate: reading.date ?? undefined, save: savedChoice, onPlace: ref => { place.current = ref; },
-      onBegin: context ? () => enter("change") : undefined,
-      extra: context?.whole ? <button type="button" className="button-secondary" onClick={() => enter("portion")}>{CHOOSE_STRINGS.wholePortion}</button> : null }
-    : { label: CHOOSE_STRINGS.change, start: ownRanges, marked: ownRanges, readingDate: reading.date ?? undefined, save: savedChoice, onPlace: ref => { place.current = ref; }, autoStart: view === "change",
-      onClose: view === "change" ? () => enter("selection") : undefined,
-      extra: <button type="button" className="button-secondary" onClick={() => enter("selection")}>{CHOOSE_STRINGS.backToSelection}</button> };
+  const plan: ChoosePlan | undefined = !reading || viewing ? undefined : {
+    label: CHOOSE_STRINGS.change, start: ownRanges, hideButton: true, marked: view === "selection" ? undefined : ownRanges,
+    readingDate: reading.date ?? undefined, save: savedChoice, onPlace: ref => { place.current = ref; },
+    autoStart: view === "change", onClose: view === "change" ? cancelChange : undefined,
+    extra: view === "portion" ? <button type="button" className="button-secondary" onClick={() => enter("selection")}>{CHOOSE_STRINGS.backToSelection}</button>
+      : view === "selection" && context?.whole ? <button type="button" className="button-secondary" onClick={() => enter("portion")}>{CHOOSE_STRINGS.wholePortion}</button> : null,
+  };
   // In the whole portion only the selection's own verses are the reading's: marks and Yours belong to them alone.
   const portionOwn = useMemo<OwnLayer>(() => ({ stars: own.stars, yours: (verse, works) => inReading.has(verse.ref) ? own.yours(verse, works) : null }), [own, inReading]);
-  const openEdit = () => {
+  const dismissEdit = () => {
+    setEdit("closed"); setEditNotice("");
+    editButton.current?.focus();
+  };
+  const openDetails = () => {
     if (!reading) return;
-    if (edit !== "closed") { setEdit("closed"); setEditNotice(""); return; }
     setDraft({ name: reading.name, date: reading.date ?? "" }); setEditNotice(""); setEdit("open");
   };
   const conflictWith = (current: unknown) => {
@@ -274,7 +317,7 @@ export function SavedReadingPage({ id, verse, learner = null }: { id: string; ve
     const controller = begin(); setEdit("saving"); setEditNotice("");
     updateSavedReading({ id: reading.id, revision: reading.revision, name, date: draft.date || null }, controller.signal).then(result => {
       if (controller.signal.aborted) return;
-      if (result.ok) { setHeader({ status: "ready", reading: result.value }); setEdit("closed"); setEditNotice("Saved."); return; }
+      if (result.ok) { setHeader({ status: "ready", reading: result.value }); setEdit("closed"); setEditNotice("Saved."); editButton.current?.focus(); return; }
       if (result.code === "conflict") { conflictWith(result.current); return; }
       if (result.code === "signed-out" || result.code === "not-eligible" || result.code === "missing") { setEdit("closed"); setHeader({ status: result.code }); return; }
       setEdit("open"); setEditNotice(result.code === "invalid" ? "Use a name of 1 to 80 characters and a real date, or leave the date empty." : "The change didn’t save. Try again.");
@@ -294,7 +337,9 @@ export function SavedReadingPage({ id, verse, learner = null }: { id: string; ve
   useEffect(() => () => live.current?.abort(), []);
 
   // A staff viewer (plan D7) gets no Edit pill: the learner's reading is read-only to them.
-  const editPill: Pill | null = reading && !viewing ? { key: "edit", label: "Edit", icon: "pencil", expanded: edit !== "closed", controls: edit !== "closed" ? editId : undefined, onClick: openEdit } : null;
+  const editPill: Pill | null = reading && !viewing ? { key: "edit", label: "Edit", icon: "pencil", ref: editButton,
+    disabled: view === "change", expanded: edit !== "closed", controls: edit !== "closed" ? editId : undefined,
+    onClick: () => { if (edit === "closed") { setEditNotice(""); setEdit("choices"); } else dismissEdit(); } } : null;
   const canShare = reading && !viewing && sharePassagePath(reading.ranges, reading.kind) !== null;
   const sharePill: Pill | null = canShare ? { key: "share", label: "Share passage", icon: "link", expanded: sharing,
     controls: sharing ? shareId : undefined, onClick: () => setSharing(value => !value) } : null;
@@ -306,9 +351,11 @@ export function SavedReadingPage({ id, verse, learner = null }: { id: string; ve
       line={reading ? <>{viewing && <>{learnerName && learnerName !== NAMELESS_LEARNER ? <><bdi dir="auto">{learnerName}</bdi>’s</> : "A learner’s"} reading · </>}{reading.date ? <time dateTime={reading.date}>{longDate(reading.date)}</time> : "No date"} · {kindName(reading.kind)} <bdi dir="ltr">{displayRange([reading.ranges])}</bdi></> : ""} />
     {reading && canShare && sharing && <SharePassage key={JSON.stringify([reading.kind, reading.ranges, reading.date])}
       id={shareId} kind={reading.kind} ranges={reading.ranges} date={reading.date} />}
-    {reading && !viewing && <SavedReadingEdit step={edit} panelId={editId} name={draft.name} date={draft.date} notice={editNotice}
-      onName={value => setDraft(current => ({ ...current, name: value }))} onDate={value => setDraft(current => ({ ...current, date: value }))}
-      onSave={save} onCancel={() => { live.current?.abort(); setEdit("closed"); setEditNotice(""); }} onAskRemove={() => { setEditNotice(""); setEdit("confirm"); }} onRemove={remove} onKeep={() => setEdit("open")} />}
+    {reading && !viewing && (edit === "choices"
+      ? <SavedReadingEditChoices panelId={editId} canChangeVerses={verses.length > 0} onVerses={changeVerses} onDetails={openDetails} onCancel={dismissEdit} />
+      : <SavedReadingEdit step={edit} panelId={editId} name={draft.name} date={draft.date} notice={editNotice}
+        onName={value => setDraft(current => ({ ...current, name: value }))} onDate={value => setDraft(current => ({ ...current, date: value }))}
+        onSave={save} onCancel={dismissEdit} onAskRemove={() => { setEditNotice(""); setEdit("confirm"); }} onRemove={remove} onKeep={() => setEdit("open")} />)}
     {header.status !== "loading" && header.status !== "ready" && <SavedReadingState status={header.status} onRetry={() => setRetry(value => value + 1)} />}
     {reading && text?.key === textKey && text.error && <div className="workspace-state" role="status"><h2>The text didn’t load</h2><p>Check your connection and try again.</p>
       <button type="button" className="button-secondary" onClick={() => setTextRetry(value => value + 1)}>Try again</button></div>}
@@ -316,10 +363,11 @@ export function SavedReadingPage({ id, verse, learner = null }: { id: string; ve
       registerStart={starter.register} retry={textRetry} onRetry={() => setTextRetry(value => value + 1)} verseExtra={verseExtra} choose={plan} print={printAddress({ mode: "saved", id })} /></OwnLayerScope>}
     {reading && view !== "selection" && frame && portionSources && <OwnLayerScope value={portionOwn}><PassageReading key={`portion:${view}:${frame.ref}`} sources={portionSources} index={0} onIndex={() => {}} verse={portionVerse} onVerseLeft={() => setPortionVerse(null)}
       registerStart={starter.register} retry={textRetry} onRetry={() => setTextRetry(value => value + 1)} verseExtra={ref => inReading.has(ref) ? verseExtra(ref) : null} choose={plan} print={printAddress({ mode: "saved", id })} /></OwnLayerScope>}
-    {reading && view !== "selection" && frame && !portionSources && (portionText?.error
+    {reading && view !== "selection" && frame && !portionSources && (portionText?.key === JSON.stringify([frame.kind, frame.ref]) && portionText.error
       ? <div className="workspace-state" role="status"><h2>The text didn’t load</h2><p>Check your connection and try again.</p>
         <div className="hero-actions"><button type="button" className="button-secondary" onClick={() => setTextRetry(value => value + 1)}>Try again</button>
-          <button type="button" className="button-secondary" onClick={() => enter("selection")}>{CHOOSE_STRINGS.backToSelection}</button></div></div>
-      : <p role="status">Loading the text…</p>)}
+          <button type="button" className="button-secondary" onClick={view === "change" ? cancelChange : () => enter("selection")}>{view === "change" ? CHOOSE_STRINGS.cancel : CHOOSE_STRINGS.backToSelection}</button></div></div>
+      : <div><p role="status">Loading the text…</p>
+        {view === "change" && <button type="button" className="button-secondary" onClick={cancelChange}>{CHOOSE_STRINGS.cancel}</button>}</div>)}
   </Shell></MoreScope>;
 }

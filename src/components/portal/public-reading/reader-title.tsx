@@ -1,5 +1,5 @@
 "use client";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import { ReturnSignInLink } from "../return-sign-in-link";
 import styles from "./public-reading.module.css";
 
@@ -19,6 +19,7 @@ export type Pill = Readonly<{
   haspopup?: "dialog";
   expanded?: boolean;
   controls?: string;
+  ref?: Ref<HTMLButtonElement>;
   /** A pill that is a link to sign in and come back to this reading (the way back is read when it is used). */
   signIn?: () => string | null;
 }>;
@@ -45,7 +46,7 @@ export function ReaderTitle({ name, line, pills, loading, note, headingId = "pub
       <div className={styles.tools}>
         {pills.map(pill => pill.signIn
           ? <ReturnSignInLink key={pill.key} className={`button-hero-secondary ${styles.pill}`} back={pill.signIn}>{pill.label}{icon(pill.icon)}</ReturnSignInLink>
-          : <button key={pill.key} type="button" className={`button-hero-secondary ${styles.pill}`} data-pill={pill.key} data-more-button={pill.key === "change" ? "" : undefined}
+          : <button key={pill.key} ref={pill.ref} type="button" className={`button-hero-secondary ${styles.pill}`} data-pill={pill.key} data-more-button={pill.key === "change" ? "" : undefined}
             aria-label={pill.accessibleName} aria-haspopup={pill.haspopup} aria-expanded={pill.expanded} aria-controls={pill.controls} disabled={pill.disabled} onClick={pill.onClick}>{pill.label}{icon(pill.icon)}</button>)}
       </div>
     </div>

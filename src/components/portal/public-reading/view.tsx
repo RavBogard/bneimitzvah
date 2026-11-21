@@ -666,8 +666,11 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     <div className="reading-passage-layout" data-reading-text="" id={sections.length > 0 ? `${group}-section` : undefined} role={sections.length > 0 ? "tabpanel" : undefined} aria-label={sections.length > 0 ? sections[range.section]?.label : undefined} ref={textAnchor} tabIndex={-1}>
       <ReadingToolbar englishHidden={Boolean(drillVerse)} listeningEnabled={listening} tikkunAvailable={kind === "torah"} worksCorpus={corpus} onHear={listening && page ? () => hear(focus ?? 0) : undefined} />
       <section className="assigned-study" aria-label={kind === "torah" ? "Torah text" : "Haftarah text"} data-size={prefs.size}>
-        {!page ? text?.key === textKey && text.error ? <div role="status"><h4>Text unavailable</h4><p>{text.error === 429 ? RATE_LIMITED_MESSAGE : "The verses didn’t load. Check your connection and try again."}</p><button type="button" className="button-secondary" onClick={onRetry}>Reload text</button></div>
-          : <p role="status">Loading the text…</p> : <>
+        {!page ? <>
+          {text?.key === textKey && text.error ? <div role="status"><h4>Text unavailable</h4><p>{text.error === 429 ? RATE_LIMITED_MESSAGE : "The verses didn’t load. Check your connection and try again."}</p><button type="button" className="button-secondary" onClick={onRetry}>Reload text</button></div>
+            : <p role="status">Loading the text…</p>}
+          {choose?.autoStart && choose.onClose && <button type="button" className="button-secondary" onClick={choose.onClose}>{CHOOSE_STRINGS.cancel}</button>}
+        </> : <>
           {study ? <>
             <CommentaryStatus works={workStatuses(works, corpus)} />
             <ReadingPlace refs={allVerses} pageKey={textKey} onJump={jumpTo} onHere={choose?.onPlace ? ref => onPlace.current?.(ref) : undefined} />

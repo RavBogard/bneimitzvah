@@ -190,11 +190,13 @@ it("the member opens the saved reading from My Readings, marks a verse that stay
   await ui(tab.getByRole("group", { name: "How Genesis 1:2 is going" }).getByRole("button", { name: "Still working", exact: true })).toHaveAttribute("aria-pressed", "true");
   // Rename, then remove: the marks go with it.
   await tab.getByRole("button", { name: "Edit", exact: true }).click();
+  await tab.getByRole("button", { name: "Edit name and date", exact: true }).click();
   await tab.getByRole("form", { name: "Edit this reading" }).getByLabel("Name").fill("Admin creation, renamed");
   await tab.getByRole("button", { name: "Save changes", exact: true }).click();
   await ui(tab.getByRole("heading", { level: 1, name: "Admin creation, renamed", exact: true })).toBeVisible();
   expect(await noHorizontalScroll(tab)).toBe(true);
   await tab.getByRole("button", { name: "Edit", exact: true }).click();
+  await tab.getByRole("button", { name: "Edit name and date", exact: true }).click();
   await tab.getByRole("button", { name: "Remove reading", exact: true }).click();
   await tab.getByRole("button", { name: "Remove", exact: true }).click();
   // Removed, the reader goes back to the shelf, which no longer lists it (with nothing left it shows the empty shelf).

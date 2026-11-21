@@ -39,7 +39,10 @@
   .more { width: 100%; }
 }
 
-/* /read?saved=<id>: Edit opens inline under the hero; Remove asks once, in place. */
+/* /read?saved=<id>: the two Edit choices sit with the heading; Remove asks once, in place. */
+.editChoices { gap: 0.5rem; max-width: 18rem; }
+.editChoices > button { justify-content: flex-start; text-align: start; }
+.editChoices > p { margin: 0 0.25rem 0.25rem; }
 .editForm { display: grid; gap: 1rem; }
 .remove { display: grid; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--color-rule); }
 .confirmLine { margin: 0; }

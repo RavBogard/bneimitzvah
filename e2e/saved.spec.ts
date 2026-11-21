@@ -167,9 +167,30 @@ test("a saved reading opens with its name and date, keeps Still working and Got 
     await expect(page.getByRole("group", { name: "How Genesis 1:3 is going" }).getByRole("button", { name: "Still working", exact: true })).toHaveAttribute("aria-pressed", "false");
     await minSize(page, ["Edit", "Still working", "Got it"]);
     expect(await noHorizontalScroll(page)).toBe(true);
-    // Edit opens inline: rename, then remove with one confirmation.
-    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    // Edit opens a choice list; rename, then remove with one confirmation.
+    const edit = page.getByRole("button", { name: "Edit", exact: true });
+    const choices = page.getByRole("group", { name: "Edit", exact: true });
+    const changeVerses = choices.getByRole("button", { name: "Change verses", exact: true });
+    const details = choices.getByRole("button", { name: "Edit name and date", exact: true });
+    await edit.press("Enter");
+    await expect(edit).toHaveAttribute("aria-expanded", "true");
+    await expect(choices.getByRole("button").first()).toBeFocused();
+    await expect(changeVerses).toBeFocused();
+    await minSize(page, ["Change verses", "Edit name and date"]);
+    expect(await noHorizontalScroll(page)).toBe(true);
+    await changeVerses.press("Escape");
+    await expect(edit).toBeFocused();
+    await expect(choices).toHaveCount(0);
+    await edit.press("Space");
+    await page.keyboard.press("Tab");
+    await expect(details).toBeFocused();
+    await details.press("Enter");
     const form = page.getByRole("form", { name: "Edit this reading" });
+    await expect(form.getByLabel("Name")).toBeFocused();
+    await form.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(edit).toBeFocused();
+    await edit.click();
+    await details.click();
     await expect(form.getByLabel("Name")).toHaveValue("Synthetic reading 1");
     await expect(form.getByLabel("Date (optional)")).toHaveValue("2026-10-24");
     await minSize(page, ["Save changes", "Cancel", "Remove reading"]);
@@ -179,8 +200,10 @@ test("a saved reading opens with its name and date, keeps Still working and Got 
     await form.getByRole("button", { name: "Save changes", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Creation, first week", exact: true })).toBeVisible();
     await expect(page.getByRole("status").filter({ hasText: "Saved." })).toBeVisible();
+    await expect(edit).toBeFocused();
     expect(posts.update.at(-1)).toEqual({ id: savedRow.id, revision: 1, name: "Creation, first week", date: "2026-10-24" });
-    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    await edit.click();
+    await details.click();
     await page.getByRole("button", { name: "Remove reading", exact: true }).click();
     await expect(page.getByText("Removes this reading with its marks and notes. This can’t be undone.", { exact: true })).toBeVisible();
     await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -243,6 +266,7 @@ test("an owner copies public passage snapshots and the included weekday survives
   expect([...copied.searchParams.entries()]).toEqual([["ref", "Genesis 1:1-3"], ["kind", "torah"], ["readingDate", date]]);
   await share.press("Enter");
   await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByRole("button", { name: "Edit name and date", exact: true }).click();
   await page.getByRole("button", { name: "Remove reading", exact: true }).click();
   await page.getByRole("button", { name: "Remove", exact: true }).click();
   await expect(page).toHaveURL(/\/mine$/);

@@ -36,8 +36,8 @@ export type ChoosePlan = Readonly<{
   readingDate?: string;
   /** Open already choosing (the saved reading's Change verses, once its whole portion is on screen). */
   autoStart?: boolean;
-  /** The page takes the button itself (it must first show the whole portion); choosing starts when it comes back with autoStart. */
-  onBegin?(): void;
+  /** The page provides its own action to enter choosing. */
+  hideButton?: boolean;
   /** Choosing ended without a save (Cancel). */
   onClose?(): void;
   /** What Save is: the existing save flow for a new reading, the confirm for a revision. `saved` tells the bar to say Done. */
@@ -61,7 +61,7 @@ export function useVerseChoice(plan: ChoosePlan | undefined, order: readonly str
   const [choosing, setChoosing] = useState(Boolean(plan?.autoStart));
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => plan?.autoStart ? selectionFromRanges(plan.start, kind) ?? new Set() : new Set());
   const [anchor, setAnchor] = useState<string | null>(null), [rangeMode, setRangeMode] = useState(false), [note, setNote] = useState(""), [saved, setSaved] = useState(false);
-  const opener = useRef<HTMLButtonElement | null>(null), bar = useRef<HTMLElement | null>(null), restore = useRef(false), entered = useRef(false), more = useMore();
+  const opener = useRef<HTMLButtonElement | null>(null), restore = useRef(false), entered = useRef(false), more = useMore();
   const markedKey = plan?.marked?.join("; ") ?? "";
   const marked = useMemo(() => plan?.marked?.length ? selectionFromRanges(plan.marked, kind) ?? new Set<string>() : new Set<string>(), [markedKey, kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -78,14 +78,17 @@ export function useVerseChoice(plan: ChoosePlan | undefined, order: readonly str
 
   const begin = () => {
     if (!plan) return;
-    if (plan.onBegin) { plan.onBegin(); return; }
     change(selectionFromRanges(plan.start, kind) ?? new Set()); setAnchor(null); setRangeMode(false); setNote(""); setChoosing(true);
   };
   const registered = useRef(plan?.register); registered.current = plan?.register;
   useEffect(() => { registered.current?.(plan && !choosing ? begin : null); });
   useEffect(() => () => registered.current?.(null), []);
   const leave = () => { restore.current = true; setChoosing(false); setRangeMode(false); setNote(""); plan?.onClose?.(); };
-  useEffect(() => { if (choosing && !entered.current) { entered.current = true; bar.current?.focus({ preventScroll: true }); } if (!choosing) entered.current = false; }, [choosing]);
+  const focusBar = useCallback((node: HTMLElement | null) => {
+    // The passage can load after choosing starts. Focus once, when the bar is actually rendered.
+    if (node && !entered.current) { entered.current = true; node.focus({ preventScroll: true }); }
+  }, []);
+  useEffect(() => { if (!choosing) entered.current = false; }, [choosing]);
   // Back to the button that began it; with a More sheet that button is inside the closed sheet, so More itself takes the focus.
   useEffect(() => {
     if (choosing || !restore.current) return;
@@ -98,9 +101,9 @@ export function useVerseChoice(plan: ChoosePlan | undefined, order: readonly str
   useEffect(() => { told.current?.(choosing); return () => told.current?.(false); }, [choosing]);
   const view: VerseChoiceView | undefined = plan ? { choosing, selected, marked, onToggle } : undefined;
   // In the More sheet the sheet closes first, so the bar that opens is the one that takes focus.
-  const button = plan && !choosing ? <button type="button" ref={opener} className="button-secondary" onClick={() => more ? more.close(begin) : begin()}>{plan.label}</button> : null;
+  const button = plan && !plan.hideButton && !choosing ? <button type="button" ref={opener} className="button-secondary" onClick={() => more ? more.close(begin) : begin()}>{plan.label}</button> : null;
   const live = rangeMode && anchor !== null ? `${countLine(count, ranges)}. ${CHOOSE_STRINGS.rangeFrom}` : count < 1 ? CHOOSE_STRINGS.hint : countLine(count, ranges);
-  const barView = plan && choosing ? <ChooseBar barRef={bar} label={plan.label} line={live} note={note} rangeMode={rangeMode} canRange={anchor !== null} empty={count < 1} count={count} saved={saved}
+  const barView = plan && choosing ? <ChooseBar barRef={focusBar} label={plan.label} line={live} note={note} rangeMode={rangeMode} canRange={anchor !== null} empty={count < 1} count={count} saved={saved}
     onRange={() => setRangeMode(value => !value)} onClear={() => { change(new Set()); setAnchor(null); setRangeMode(false); setNote(""); }} onCancel={leave}
     save={count > 0 ? plan.save({ kind, ranges, count, line: selectionLine(ranges) }, () => setSaved(true)) : null}
     print={count > 0 ? printAddress({ mode: "ref", ref: ranges.join("; "), kind, readingDate: plan.readingDate }) : null} /> : null;
@@ -118,7 +121,8 @@ export function PlaceLink({ base, href, place, children }: { base: string; href(
 
 /** The bar that stays in view while choosing: the live count and references, range, clear, save and cancel. */
 function ChooseBar({ barRef, label, line, note, rangeMode, canRange, empty, count, saved, onRange, onClear, onCancel, save, print }: {
-  barRef: { current: HTMLElement | null }; label: string; line: string; note: string; rangeMode: boolean; canRange: boolean; empty: boolean; count: number; saved: boolean;
+  barRef(node: HTMLElement | null): void;
+  label: string; line: string; note: string; rangeMode: boolean; canRange: boolean; empty: boolean; count: number; saved: boolean;
   onRange(): void; onClear(): void; onCancel(): void; save: ReactNode;
   /** The print sheet of exactly the chosen verses (F4): /print names them by ref, so it prints those verses and nothing else. */
   print: string | null;
