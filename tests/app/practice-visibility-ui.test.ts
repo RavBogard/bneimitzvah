@@ -63,7 +63,7 @@ test("the student's disclosure renders only with the release gate open, the same
   expect(renderToStaticMarkup(createElement(PracticeDisclosure, { place: "learn", from: "2026-10-27" }))).toContain('data-practice-disclosure="learn"');
   // Account shows it to a student; Learn to a signed-in student; and the server's read path imports the same gate.
   expect(source("components/portal/account-page.tsx")).toMatch(/student && <PracticeDisclosure place="account" \/>/);
-  expect(source("components/learn/home.tsx")).toMatch(/<LearnPracticeDisclosure signedIn=\{account\.state === "synced"\} isStudent=\{isStudent\} \/>/);
+  expect(source("components/learn/home.tsx")).toMatch(/<LearnPracticeDisclosure signedIn=\{account\.state === "synced"\} isStudent=\{child \? selectedStudent : isStudent\} \/>/);
   expect(source("server/practice-visibility/service.ts")).toMatch(/import \{ practiceVisibilityFrom \} from "..\/..\/lib\/practice-visibility\/release"/);
   expect(source("components/portal/practice-visibility/disclosure.tsx")).toMatch(/import \{ PRACTICE_VISIBILITY_FROM, practiceVisibilityFrom \} from "..\/..\/..\/lib\/practice-visibility\/release"/);
 });

@@ -49,7 +49,7 @@ test("the gate is open, on a real date, and every disclosure placement renders w
   // And the app mounts each of them, with the default gate (no `from` passed anywhere in the app).
   expect(read("components/portal/account-page.tsx")).toMatch(/student && <PracticeDisclosure place="account" \/>/);
   expect(read("components/portal/account-page.tsx")).toMatch(/roles\.includes\("parent"\) && <ParentAccountDisclosure load=\{parentChildren\} \/>/);
-  expect(read("components/learn/home.tsx")).toMatch(/<LearnPracticeDisclosure signedIn=\{account\.state === "synced"\} isStudent=\{isStudent\} \/>/);
+  expect(read("components/learn/home.tsx")).toMatch(/<LearnPracticeDisclosure signedIn=\{account\.state === "synced"\} isStudent=\{child \? selectedStudent : isStudent\} \/>/);
   // The sitting's line moved from the bar to under the tutor's ask (parent walk 2026-10-28, finding 1).
   expect(read("components/portal/workspace/reading.tsx")).toMatch(/\{mode === "child-practice" && <ChildPracticeDisclosure name=\{student\.firstName\} place="child-practice" \/>\}/);
 });
