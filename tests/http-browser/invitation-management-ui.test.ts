@@ -14,6 +14,7 @@ vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined, failDelivery = false;
 const contexts: BrowserContext[] = [];
+let adminCookies: Awaited<ReturnType<BrowserContext["cookies"]>> | undefined;
 async function safe<T>(action: () => Promise<T>): Promise<T> { try { return await action(); } catch { throw new Error("Invitation management browser operation failed; private details withheld"); } }
 async function navigate(tab: Page, path: string) { await safe(() => tab.goto(path, { waitUntil: "domcontentloaded", timeout: 30_000 })); }
 async function api(tab: Page, path: string, body?: unknown) {
@@ -22,11 +23,17 @@ async function api(tab: Page, path: string, body?: unknown) {
     return { status: response.status, data: await response.json() };
   }, { path, body }));
 }
-async function page(role: "admin" | "tutor", mobile = false) {
+async function page(role: "admin" | "tutor", mobile = false, reuse = false) {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, serviceWorkers: "block", acceptDownloads: false, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 } }); contexts.push(context);
   await context.route("**/*", async route => { try { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); } catch { await route.abort(); } });
+  if (reuse && role === "admin" && adminCookies) {
+    await context.addCookies(adminCookies);
+    return context.newPage();
+  }
   const tab = await context.newPage(); await navigate(tab, "/"); const email = role === "admin" ? "pg-admin@example.test" : "pg-tutor@example.test";
-  expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status === 200).toBe(true); await openAuthMail(tab, fixture.takeMail(email)); return tab;
+  expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status === 200).toBe(true); await openAuthMail(tab, fixture.takeMail(email));
+  if (role === "admin") adminCookies = await context.cookies();
+  return tab;
 }
 const main = (tab: Page) => tab.locator("#workspace-main");
 const record = (tab: Page, id: string) => tab.locator(`article[aria-labelledby="invite-${id}"]`);
@@ -117,36 +124,9 @@ it("separates failed delivery from pending lifecycle and preserves unknown reiss
   await ui(tab.getByRole("status", { name: "Latest invitation action", exact: true })).toContainText("We couldn’t confirm whether the last action went through.");
 });
 
-it("retains same-session drafts, invalidates changed student targets, sends on an older session but revokes only on a fresh one, and discards drafts for a different session", async () => {
-  const tab = await page("admin"); await navigate(tab, "/workspace/admin/invitations"); await fill(tab, "synthetic-retained-draft@example.test"); await focusChecked(tab);
-  await ui(tab.getByLabel("Recipient email", { exact: true })).toHaveValue("synthetic-retained-draft@example.test"); await click(tab, "Review invitation");
-  const [student] = await fixture.ownerDb.select().from(s.student).where(eq(s.student.id, fixture.student.id));
-  await fixture.ownerDb.update(s.student).set({ revision: student.revision + 1, ceremonyDate: "2027-01-09" }).where(eq(s.student.id, student.id));
-  let targetPosts = 0; await tab.route("**/api/admin/invitations", async route => { if (route.request().method() === "POST") targetPosts++; await route.continue(); });
-  await focusChecked(tab); await ui(tab.getByRole("button", { name: "Send invitation", exact: true })).toBeEnabled();
-  await click(tab, "Send invitation"); await ui(main(tab).getByRole("alert")).toContainText("changed since you reviewed this"); expect(targetPosts).toBe(0); await tab.unroute("**/api/admin/invitations");
-  expect(await tab.getByRole("button", { name: "Send invitation", exact: true }).count()).toBe(0);
-  await click(tab, "Reload invitations"); await click(tab, "Review invitation");
-  await fixture.ownerDb.update(s.session).set({ createdAt: new Date(Date.now() - 60 * 60_000) }).where(eq(s.session.userId, fixture.admin.id));
-  // A2 (Daniel, 2026-11-16): sending an invitation needs only a live admin session; revoking one still needs a fresh sign-in.
-  await click(tab, "Send invitation");
-  const live = () => fixture.ownerDb.select({ id: s.invite.id }).from(s.invite).where(and(eq(s.invite.email, "synthetic-retained-draft@example.test"), isNull(s.invite.revokedAt)));
-  await expect.poll(async () => (await live()).length, { timeout: 30_000 }).toBe(1);
-  const [sent] = await live(); await click(tab, "Reload invitations");
-  await safe(() => record(tab, sent.id).getByRole("button", { name: /^Revoke invitation to / }).click()); await click(tab, "Revoke invitation");
-  await ui(main(tab).getByRole("alert")).toContainText("sign in again");
-  await ui(tab.getByRole("link", { name: "Check account and sign in again", exact: true })).toBeVisible();
-  expect(await live()).toHaveLength(1);
-  const tutor = await page("tutor"); await navigate(tutor, "/workspace/admin/invitations"); await ui(tutor.getByRole("heading", { name: "Role unavailable", exact: true })).toBeVisible();
-  expect(await tutor.getByLabel("Recipient email", { exact: true }).count()).toBe(0);
-  expect((await api(tutor, "/api/admin/invitations", { role: "tutor", email: "synthetic-denied@example.test" })).status === 403).toBe(true);
-  const fresh = await page("admin"); await tab.context().addCookies(await fresh.context().cookies()); await focusChecked(tab);
-  await ui(tab.getByLabel("Recipient email", { exact: true })).toHaveValue("");
-  expect(await tab.evaluate(() => !JSON.stringify({ local: { ...localStorage }, tab: { ...sessionStorage } }).includes("synthetic-retained-draft"))).toBe(true);
-});
-
 it("asks before replacing a link and allows manual copying of a single confirmed replacement", async () => {
-  const tab = await page("admin");
+  const tab = await page("admin", false, true);
+  await navigate(tab, "/workspace/admin/invitations");
   const issued = await api(tab, "/api/admin/invitations", { role: "tutor", email: "synthetic-copy@example.test" });
   expect(issued.status).toBe(200);
   const id = issued.data.inviteId;
@@ -177,4 +157,33 @@ it("asks before replacing a link and allows manual copying of a single confirmed
     return input.readOnly && input.selectionStart === 0 && input.selectionEnd === input.value.length;
   })).toBe(true);
   expect(writes).toBe(1);
+});
+
+
+it("retains same-session drafts, invalidates changed student targets, sends on an older session but revokes only on a fresh one, and discards drafts for a different session", async () => {
+  const tab = await page("admin"); await navigate(tab, "/workspace/admin/invitations"); await fill(tab, "synthetic-retained-draft@example.test"); await focusChecked(tab);
+  await ui(tab.getByLabel("Recipient email", { exact: true })).toHaveValue("synthetic-retained-draft@example.test"); await click(tab, "Review invitation");
+  const [student] = await fixture.ownerDb.select().from(s.student).where(eq(s.student.id, fixture.student.id));
+  await fixture.ownerDb.update(s.student).set({ revision: student.revision + 1, ceremonyDate: "2027-01-09" }).where(eq(s.student.id, student.id));
+  let targetPosts = 0; await tab.route("**/api/admin/invitations", async route => { if (route.request().method() === "POST") targetPosts++; await route.continue(); });
+  await focusChecked(tab); await ui(tab.getByRole("button", { name: "Send invitation", exact: true })).toBeEnabled();
+  await click(tab, "Send invitation"); await ui(main(tab).getByRole("alert")).toContainText("changed since you reviewed this"); expect(targetPosts).toBe(0); await tab.unroute("**/api/admin/invitations");
+  expect(await tab.getByRole("button", { name: "Send invitation", exact: true }).count()).toBe(0);
+  await click(tab, "Reload invitations"); await click(tab, "Review invitation");
+  await fixture.ownerDb.update(s.session).set({ createdAt: new Date(Date.now() - 60 * 60_000) }).where(eq(s.session.userId, fixture.admin.id));
+  // A2 (Daniel, 2026-11-16): sending an invitation needs only a live admin session; revoking one still needs a fresh sign-in.
+  await click(tab, "Send invitation");
+  const live = () => fixture.ownerDb.select({ id: s.invite.id }).from(s.invite).where(and(eq(s.invite.email, "synthetic-retained-draft@example.test"), isNull(s.invite.revokedAt)));
+  await expect.poll(async () => (await live()).length, { timeout: 30_000 }).toBe(1);
+  const [sent] = await live(); await click(tab, "Reload invitations");
+  await safe(() => record(tab, sent.id).getByRole("button", { name: /^Revoke invitation to / }).click()); await click(tab, "Revoke invitation");
+  await ui(main(tab).getByRole("alert")).toContainText("sign in again");
+  await ui(tab.getByRole("link", { name: "Check account and sign in again", exact: true })).toBeVisible();
+  expect(await live()).toHaveLength(1);
+  const tutor = await page("tutor"); await navigate(tutor, "/workspace/admin/invitations"); await ui(tutor.getByRole("heading", { name: "Role unavailable", exact: true })).toBeVisible();
+  expect(await tutor.getByLabel("Recipient email", { exact: true }).count()).toBe(0);
+  expect((await api(tutor, "/api/admin/invitations", { role: "tutor", email: "synthetic-denied@example.test" })).status === 403).toBe(true);
+  const fresh = await page("admin"); await tab.context().addCookies(await fresh.context().cookies()); await focusChecked(tab);
+  await ui(tab.getByLabel("Recipient email", { exact: true })).toHaveValue("");
+  expect(await tab.evaluate(() => !JSON.stringify({ local: { ...localStorage }, tab: { ...sessionStorage } }).includes("synthetic-retained-draft"))).toBe(true);
 });
