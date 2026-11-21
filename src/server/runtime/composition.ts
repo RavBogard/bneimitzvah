@@ -34,6 +34,9 @@ import { createSefariaStudyReader } from "../study/sefaria";
 import { createReferenceAudioService } from "../reference-audio/service";
 import { createShortReferenceAudioService } from "../reference-audio/short-service";
 import { createRuntimeShortMetadata } from "../reference-audio/runtime-short-metadata";
+import { createReadingCoverage } from "../reference-audio/reading-coverage";
+import { runtimeShermetAudio } from "../shermet-audio/service";
+import { getPublishedShermetTiming } from "../shermet-audio/timing-catalog";
 import { createShortExplorationService } from "../reference-audio/short-exploration-service";
 import { createReferenceCatalogLoader } from "../reference-audio/storage";
 import { ReferenceUnavailable, type ReferenceCatalog } from "../reference-audio/catalog";
@@ -269,7 +272,11 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const shortReferenceAudio = once("shortReferenceAudio", () => createShortReferenceAudioService({ access: access(), practice: practice(), loadText: loadText(), ...shortMetadata(), studentRelease: config.referenceAudio?.studentRelease }));
   const shortExplorationAudio = once("shortExplorationAudio", () => createShortExplorationService({ access: access(), practice: practice(), loadReading: loadReading(), loadText: loadText(), signingSecret: purposeSecret(config, "reading-exploration"),
     ...shortMetadata(), studentRelease: config.referenceAudio?.studentRelease }));
-  const readingPreview = once("readingPreview", () => createReadingPreviewService({ access: access(), loadReading: loadReading(), loadText: loadText(), signingSecret:purposeSecret(config,"reading-preview") }));
+  const readingPreview = once("readingPreview", () => createReadingPreviewService({
+    access: access(), loadReading: loadReading(), loadText: loadText(), signingSecret: purposeSecret(config, "reading-preview"),
+    recordingCoverage: createReadingCoverage({ ...shortMetadata(), loadText: loadText(), learnerRelease: shortReferenceAudio().listeningEnabled("student"),
+      shermetRecordings: runtimeShermetAudio().recordingIdentities, shermetTiming: getPublishedShermetTiming }),
+  }));
   const relationships = once("relationships", () => createRelationshipService({ access: access() }));
   // Release 1.4: a member's own readings, translation, notes, marks and stars, readable only by that member.
   const saved = once("saved", () => createSavedService({ access: access() }));

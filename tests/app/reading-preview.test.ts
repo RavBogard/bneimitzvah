@@ -27,7 +27,10 @@ async function fixture() {
       aliyot: [{ n: 1, ref: "Genesis 1:1-2:25" }, { n: 2, ref: "Genesis 3:1-6:8" }, { n: "M", ref: "Numbers 28:9-10", reason: "Synthetic special maftir" }], triennial: null }, haftarah: "Isaiah 1:1-31" } }));
   const fetch = vi.fn<typeof globalThis.fetch>(async url => syntheticResponse(decodeURIComponent(new URL(String(url)).pathname.split("/").at(-1)!)));
   const text = vi.fn(createSefariaStudyReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS }));
-  const service = createReadingPreviewService({ access: f.service, signingSecret: secret, loadReading: calendar, loadText: text, now: () => time });
+  const recordingCoverage = vi.fn(async ({ verses }: { verses: readonly string[] }) => ({
+    status: "checked" as const, verses: verses.map(ref => ({ ref, verse: "shermet" as const, word: "pockettorah" as const })),
+  }));
+  const service = createReadingPreviewService({ access: f.service, signingSecret: secret, loadReading: calendar, loadText: text, now: () => time, recordingCoverage });
   const runtime = { ...f.runtime, readingPreview: service }, id = f.students[0].id;
   const call = async (action: "prepare" | "page", body: unknown, options: Parameters<typeof f.request>[1] = {}) => {
     const response = await handlePortalRequest(f.request(`/api/students/${id}/reading/preview/${action}`, { body, ...options }), runtime);
@@ -37,8 +40,33 @@ async function fixture() {
     const response = await call("prepare", { mode: "tutor", kind, source, ...(source === "manual" ? { ranges: ["Genesis 1:1-3"] } : {}) });
     expect(response.status).toBe(200); return response.json();
   };
-  return { ...f, runtime, id, calendar, text, fetch, call, prepare, secret, advance: () => { time += 6 * 60000; }, now: () => time };
+  return { ...f, runtime, id, calendar, text, fetch, call, prepare, recordingCoverage, secret, advance: () => { time += 6 * 60000; }, now: () => time };
 }
+
+test("draft recording coverage authorizes staff before lookup and rechecks the relationship before projecting metadata", async () => {
+  const f = await fixture();
+  const body = { mode: "tutor", kind: "haftarah", ranges: ["Jeremiah 34:22", "Jeremiah 33:25-26"] };
+  const path = (id = f.id) => `/api/students/${id}/reading/recording-coverage`;
+  expect((await handlePortalRequest(f.request(path(), { body, who: "anonymous" }), f.runtime))?.status).toBe(401);
+  expect((await handlePortalRequest(f.request(path(), { body, headers: { origin: "https://foreign.example.test" } }), f.runtime))?.status).toBe(403);
+  expect((await handlePortalRequest(f.request(path(f.students[3].id), { body }), f.runtime))?.status).toBe(404);
+  expect((await handlePortalRequest(f.request(path(), { body: { ...body, asset: "synthetic-extra-property" } }), f.runtime))?.status).toBe(400);
+  expect((await handlePortalRequest(f.request(path(), { body: { ...body, ranges: ["Jeremiah 34:999"] } }), f.runtime))?.status).toBe(400);
+  expect(f.recordingCoverage).not.toHaveBeenCalled();
+
+  const response = await handlePortalRequest(f.request(path(), { body }), f.runtime);
+  expect(response?.status).toBe(200);
+  expect(response?.headers.get("cache-control")).toBe("private, no-store");
+  expect(await response?.json()).toEqual({ status: "checked", verses: ["Jeremiah 34:22", "Jeremiah 33:25", "Jeremiah 33:26"]
+    .map(ref => ({ ref, verse: "shermet", word: "pockettorah" })) });
+  f.recordingCoverage.mockImplementationOnce(async () => {
+    await f.owner(async () => { await f.db.update(s.tutorStudent).set({ revokedAt: new Date() }).where(eq(s.tutorStudent.studentId, f.id)); });
+    return { status: "checked", verses: [] };
+  });
+  const revoked = await handlePortalRequest(f.request(path(), { body }), f.runtime);
+  expect(revoked?.status).toBe(404);
+  expect(await revoked?.json()).toEqual({ error: "not-found" });
+});
 
 test("staff whole-portion preview is paginated, excludes extra maftir and round-trips canonical text/credits without changing assignments", async () => {
   const f = await fixture();

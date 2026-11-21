@@ -2,6 +2,7 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { SHORT_SOURCE_ATTRIBUTION } from "../../../../lib/reference-audio/short-source";
+import { DEFAULT_READING_RECORDING } from "../../../../lib/reference-audio/reading-coverage";
 import { projectStudyVerse } from "../../../../lib/hebrew/study-tokens";
 import type { ReferenceShortResolution } from "../../../../lib/reference-audio/short-resolution";
 import type { ReadingPlaybackState, ReadingSelection } from "./main-playback";
@@ -41,7 +42,7 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
   onActiveWord(value: { verse: number; index: number } | null): void;
 }) {
   const id = useId(), owner = useRef<ReturnType<typeof createPreferredReadingPlayback> | null>(null);
-  const [recording, setRecording] = useState<"pockettorah" | "shermet">(() => audio ? recordingPreferences.get(audio.coordinator) ?? "shermet" : "shermet");
+  const [recording, setRecording] = useState(() => (audio && recordingPreferences.get(audio.coordinator)) || DEFAULT_READING_RECORDING);
   const [sourcePreview, setSourcePreview] = useState<number | null>(null);
   const verseRefs = useMemo(() => verses.map(verse => verse.ref), [verses]);
   const shermetRefs = useShermetRecordings(verseRefs);
@@ -49,7 +50,7 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
   const collectionTracks = useMemo(() => crc && audio?.slot !== "lifted" ? humanTracksForVerses(verseRefs) : [], [crc, audio?.slot, verseRefs]);
   const timed = useMemo(() => createShermetTimedAudio(), [scopeKey, verses]);
   useEffect(() => {
-    setRecording(audio ? recordingPreferences.get(audio.coordinator) ?? "shermet" : "shermet");
+    setRecording((audio && recordingPreferences.get(audio.coordinator)) || DEFAULT_READING_RECORDING);
   }, [scopeKey, verses]);
   const callbacks = useRef({ load, onActiveWord, active, enabled, expiresAt, target, shermetRefs, onManualSelect, onVerseEnded, onVerseFailed, runActive }); callbacks.current = { load, onActiveWord, active, enabled, expiresAt, target, shermetRefs, onManualSelect, onVerseEnded, onVerseFailed, runActive };
   const targetOwner = useRef<ReturnType<typeof createReadingPlayerTarget> | null>(null);

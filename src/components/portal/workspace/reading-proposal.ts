@@ -4,10 +4,11 @@ import type { Assigned, Reading } from "./api";
 import { aliyahStarts } from "../../../lib/readings/aliyah-starts";
 import { expandReadingRanges,parseCeremonyDate } from "../../../lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
+import { selectTorah, type Leyning } from "../../../lib/readings/leyning.mjs";
 
 export type ReadingKind = "torah" | "haftarah";
 export type StaffMode = "admin" | "tutor";
-export type CalendarChoice = { pick: string; label: string; ref: string | null };
+export type CalendarChoice = { pick: string; label: string; ref: string | null; coverageRef?: string };
 export const fallbackLabels = {
   "unknown-slot": "The service slot is not yet set. Choose custom references; no calendar date has been assumed.",
   "calendar-date-out-of-range": "The following reading date is outside the supported date range. Choose custom references.",
@@ -88,13 +89,21 @@ export function parseReadingProposal(value: unknown, kind: ReadingKind, ceremony
   const choices: CalendarChoice[] = []; let parashah: string | null = null;
   if (snapshot.reading !== null) {
     const r = object(snapshot.reading, ["parashah", "type", "source", "aliyot", "triennial"]);
-    parashah = text(r.parashah); text(r.type); if (r.source !== "Hebcal") return bad();
+    parashah = text(r.parashah); const type = text(r.type); if (r.source !== "Hebcal") return bad();
     const rows = aliyot(r.aliyot);
+    const leyning: Leyning = { parashah, type, source: r.source, summary: "", aliyot: rows, triennial: null };
     if (metadata.manualFallback===null && rows.some(row => row.n !== "M")) choices.push({ pick: "full", label: "Full calendar reading", ref: null });
     if (r.triennial !== null) {
       const tri = object(r.triennial, ["year", "aliyot"]);
       if (tri.year !== null && ![1, 2, 3].includes(Number(tri.year))) return bad();
-      if (metadata.manualFallback===null && aliyot(tri.aliyot).some(row => row.n !== "M")) choices.push({ pick: "triennial", label: tri.year === null ? "Triennial reading" : `Triennial year ${tri.year}`, ref: null });
+      const divisions = aliyot(tri.aliyot);
+      leyning.triennial = { year: tri.year === null ? null : Number(tri.year), aliyot: divisions };
+      if (metadata.manualFallback===null && divisions.some(row => row.n !== "M")) choices.push({ pick: "triennial", label: tri.year === null ? "Triennial reading" : `Triennial year ${tri.year}`, ref: null });
+    }
+    for (const choice of choices) {
+      const pick = choice.pick;
+      if (pick !== "full" && pick !== "triennial") continue;
+      try { choice.coverageRef = selectTorah(leyning, { kind: pick }).ref; } catch { /* The assignment review validates the calendar choice independently. */ }
     }
     if(metadata.manualFallback===null)rows.forEach(row => choices.push({ pick: `aliyah:${row.n}`, label: row.n === "M" ? "Calendar maftir" : `Aliyah ${row.n}`, ref: row.ref }));
   }

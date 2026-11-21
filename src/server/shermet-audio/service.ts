@@ -116,25 +116,36 @@ export function createShermetAudio(directory: string | undefined, publicEnabled 
       return { root, entries: catalog.recordings as { kind: string; ref: string; file: string }[] };
     } catch { return null; }
   }
+  const published = new Map(publicEntries.map(entry => [entry.ref, entry]));
+  function selectRecording(ref: string, local: Awaited<ReturnType<typeof localCatalog>>) {
+    const matches = local?.entries.filter(entry => entry?.ref === ref) ?? [];
+    if (matches.length > 0) {
+      const entry = matches[0];
+      return matches.length === 1 && local && valid(entry)
+        ? { type: "local" as const, root: local.root, file: entry.file, sha256: entry.file.slice(0, -4) } : null;
+    }
+    const entry = published.get(ref);
+    if (!entry || !singleVerse(entry.ref, entry.kind) || !/^[a-f0-9]{64}$/.test(entry.sha256) || !Number.isSafeInteger(entry.sourceId) || entry.sourceId <= 0) return null;
+    return { type: "published" as const, entry, sha256: entry.sha256 };
+  }
   async function recording(ref: string) {
     if (!singleVerse(ref)) return null;
     try {
-      const local = await localCatalog();
-      const matches = local?.entries.filter(entry => entry?.ref === ref) ?? [];
-      if (matches.length > 0) {
-        if (matches.length !== 1) return null;
-        const entry = matches[0];
-        if (!valid(entry) || !local) return null;
-        const bytes = await file(local.root, entry.file, MAX_AUDIO);
-        if (createHash("sha256").update(bytes).digest("hex") !== entry.file.slice(0, -4)) return null;
-        return bytes;
-      }
-      const entry = publicEntries.find(entry => entry.ref === ref);
-      if (!entry || !singleVerse(entry.ref, entry.kind) || !/^[a-f0-9]{64}$/.test(entry.sha256) || !Number.isSafeInteger(entry.sourceId) || entry.sourceId <= 0) return null;
-      return await getVerifiedShermetMedia(entry, fetcher);
+      const selected = selectRecording(ref, await localCatalog());
+      if (!selected) return null;
+      if (selected.type === "published") return await getVerifiedShermetMedia(selected.entry, fetcher);
+      const bytes = await file(selected.root, selected.file, MAX_AUDIO);
+      return createHash("sha256").update(bytes).digest("hex") === selected.sha256 ? bytes : null;
     } catch { return null; }
   }
   return {
+    async recordingIdentities(refs: readonly string[]) {
+      const local = await localCatalog();
+      return new Map(refs.flatMap(ref => {
+        const selected = selectRecording(ref, local);
+        return selected ? [[ref, selected.sha256] as const] : [];
+      }));
+    },
     async catalog(request: Request) {
       if (new URL(request.url).searchParams.get("format") === "manifest") {
         // Offline permission is for published CRC assets only. Local operator

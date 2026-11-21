@@ -14,6 +14,7 @@ import { identifier } from "./validation";
 import { createBindings, digest } from "./bindings";
 import { actorBinding, calendarCustoms } from "./service";
 import { validatedSnapshot } from "./preparation";
+import type { createReadingCoverage } from "../reference-audio/reading-coverage";
 
 type Kind = "torah" | "haftarah";
 type Mode = "admin" | "tutor";
@@ -39,6 +40,7 @@ export function createReadingPreviewService<Q extends PgQueryResultHKT>(input: {
   access: ReturnType<typeof createAccessService<Q>>; signingSecret: string;
   loadReading(date: string, calendar: Calendar): Promise<{ snapshot: Snapshot; fetchedAt: number }>;
   loadText(request: StudyRequest): Promise<StudyPage>; now?: () => number;
+  recordingCoverage?: ReturnType<typeof createReadingCoverage>;
 }) {
   const now = input.now ?? Date.now, bindings = createBindings(input.signingSecret, now);
   const purpose = "reading-preview";
@@ -151,5 +153,15 @@ export function createReadingPreviewService<Q extends PgQueryResultHKT>(input: {
         expiresAt: Number(fresh.claim.expiresAt), page: text };
     });
   }
-  return Object.freeze({ prepare, page });
+  async function coverage(original: Request, args: { mode: Mode; studentId: string; kind: Kind; ranges: readonly string[] }) {
+    const request = fixed(original), { mode, studentId, kind } = args, ranges = [...args.ranges];
+    selection(mode, kind, studentId);
+    let planned: ReturnType<typeof previewPages>;
+    try { planned = previewPages(ranges, kind); } catch { throw new StudyUnavailable("invalid-request"); }
+    const before = await capture(request, mode, studentId, kind, context => digest(context));
+    if (!input.recordingCoverage) throw new AccessUnavailable();
+    const result = await input.recordingCoverage({ kind, ranges, verses: planned.verses, signal: request.signal }, planned.pages.map(page => page.offset));
+    return capture(request, mode, studentId, kind, context => digest(context) !== before ? stale() : { ok: true as const, ...result });
+  }
+  return Object.freeze({ prepare, page, coverage });
 }

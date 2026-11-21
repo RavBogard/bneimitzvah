@@ -1,5 +1,6 @@
 import { createShortReadingPlayback } from "./short-main-playback";
 import { createShermetPlayback, type ShermetPlaybackTiming } from "./shermet-playback";
+import { preferredReadingSource } from "../../../../lib/reference-audio/reading-coverage";
 import type { ReadingPlaybackState, ReadingSelection } from "./main-playback";
 
 type PocketInput = Parameters<typeof createShortReadingPlayback>[0];
@@ -48,7 +49,7 @@ export function createPreferredReadingPlayback(input: PocketInput & {
         if (closed || turn !== selectionTurn || !input.canContinue()) return;
       }
       const covered = (resolvedAvailability ?? input.available()).has(input.verses[index].ref);
-      const nextSource = input.preference === "shermet" && covered && (selection === "verse" || input.timed) ? "shermet" : "pockettorah";
+      const nextSource = preferredReadingSource(input.preference, covered && (selection === "verse" || Boolean(input.timed)));
       if (source !== nextSource) active().suspend();
       source = nextSource;
       fallback = input.preference === "shermet" && source === "pockettorah" ? covered ? "timing" : "missing" : undefined;

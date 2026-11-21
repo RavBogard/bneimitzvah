@@ -127,10 +127,10 @@ export function parseAssigned(value: unknown, mode: ReadingMode, studentId: stri
   return { student, mode, context, referenceListeningEnabled: row.referenceListeningEnabled === true, readings: readings.sort((a, b) => a.kind === b.kind ? 0 : a.kind === "torah" ? -1 : 1) };
 }
 
-export async function call(path: string, body?: object, handle?: string, signal?: AbortSignal, max = 256 * 1024): Promise<unknown> {
+export async function call(path: string, body?: object, handle?: string, signal?: AbortSignal, max = 256 * 1024, timeoutMs = 12_000): Promise<unknown> {
   const controller = new AbortController(), abort = () => controller.abort();
   if (signal?.aborted) abort(); signal?.addEventListener("abort", abort, { once: true });
-  const timeout = setTimeout(abort, 12_000);
+  const timeout = setTimeout(abort, timeoutMs);
   try {
     const headers = new Headers({ accept: "application/json" });
     if (body !== undefined) headers.set("content-type", "application/json");

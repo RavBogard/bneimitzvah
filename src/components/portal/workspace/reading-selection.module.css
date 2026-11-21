@@ -6,6 +6,15 @@
 .disclosure { margin-block: 1.5rem; }
 .disclosure > summary { cursor: pointer; padding-block: 0.75rem; font-weight: 600; }
 .summary { margin-block: 1.25rem; overflow-wrap: anywhere; }
+.coverage { border-block-start: 1px solid var(--color-rule); margin-block: 1rem 1.5rem; padding-block-start: 0.75rem; overflow-wrap: anywhere; }
+.coverage h3 { font-size: var(--text-heading); margin: 0 0 0.5rem; }
+.coverage p { margin: 0.3rem 0; }
+.coverage p strong { margin-inline-end: 0.4em; }
+.coverageDetails > summary { cursor: pointer; min-height: 44px; padding-block: 0.65rem; font-weight: 600; }
+.coverageVerses { list-style: none; padding: 0; margin: 0 0 0.75rem; }
+.coverageVerses li { display: grid; grid-template-columns: minmax(0, 0.8fr) repeat(2, minmax(0, 1.1fr)); gap: 0.25rem 0.75rem; border-block-start: 1px solid var(--color-rule); padding-block: 0.65rem; }
+.coveragePages { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+@media (max-width: 600px) { .coverageVerses li { grid-template-columns: minmax(0, 1fr); } }
 .context { margin-block: 1rem 1.5rem; }
 @media (max-width: 600px) { .endpoints { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .passages { margin-block: 1.5rem; }

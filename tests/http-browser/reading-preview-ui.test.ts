@@ -111,6 +111,60 @@ beforeAll(async () => {
 }, 120000);
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await isolation?.cleanup(); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120000);
 
+it("shows recording sources on a narrow editor, discards a stale refusal and clears the editor for a live refusal", async () => {
+  const tab = await page();
+  const { expandReadingRanges } = await import("../../src/lib/readings/ranges");
+  const { TANAKH_VERSE_COUNTS } = await import("../../src/lib/readings/catalog");
+  let release!: () => void, start!: () => void, finish!: () => void;
+  const started = new Promise<void>(resolve => { start = resolve; });
+  const delayed = new Promise<void>(resolve => { release = resolve; });
+  const finished = new Promise<void>(resolve => { finish = resolve; });
+  const audioRequests: string[] = [];
+  tab.on("request", request => {
+    const pathname = new URL(request.url()).pathname;
+    if (pathname.startsWith("/reference-audio/") || pathname === "/api/shermet-audio") audioRequests.push(pathname);
+  });
+  await tab.route("**/reading/recording-coverage", async route => {
+    const { ranges, kind } = route.request().postDataJSON();
+    const refs = expandReadingRanges(ranges, kind, TANAKH_VERSE_COUNTS);
+    const stale = ranges[0] === "Genesis 1:4";
+    if (stale) { start(); await delayed; }
+    try {
+      if (stale || ranges[0] === "Genesis 1:3") await route.fulfill({ status: 404, json: { error: "not-found" } });
+      else await route.fulfill({ json: { status: "checked", verses: refs.map((ref, index) => ({
+        ref, verse: index < 2 ? "shermet" : "missing", word: index === 0 ? "shermet" : index === 1 ? "pockettorah" : "missing",
+      })) } });
+    } catch (error) { if (!stale) throw error; }
+    finally { if (stale) finish(); }
+  });
+  const section = tab.getByRole("region", { name: "Recording coverage" });
+  const ranges = tab.getByLabel("Custom verse ranges", { exact: true });
+  try {
+    await reading(tab);
+    await tab.setViewportSize({ width: 320, height: 800 });
+    await ranges.fill("Genesis 1:4");
+    await started;
+    await ranges.fill("Genesis 1:5-6:8");
+    await ui(section.getByText("Recording details by verse")).toBeVisible();
+    await section.getByText("Recording details by verse").click();
+    const fallback = section.getByRole("listitem").filter({ hasText: "Genesis 1:6" });
+    await ui(fallback).toContainText("Cantor Wendy Shermet");
+    await ui(fallback).toContainText("PocketTorah");
+    await ui(section.getByRole("button", { name: "Next verses" })).toBeEnabled();
+    release();
+    await finished;
+    await ui(section.getByText("Genesis 1:5", { exact: true })).toBeVisible();
+    await ui(section.getByText("Genesis 1:4", { exact: true })).toHaveCount(0);
+    expect(await section.evaluate(el => el.scrollWidth <= el.clientWidth && document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await section.getByRole("button", { name: "Next verses" }).click();
+    await ui(section.getByText("Genesis 1:5", { exact: true })).toHaveCount(0);
+    await ui(tab.getByRole("button", { name: "Review assignment" })).toBeEnabled();
+    expect(audioRequests).toEqual([]);
+    await ranges.fill("Genesis 1:3");
+    await ui(tab.getByRole("dialog", { name: "Set the assigned reading" })).toHaveCount(0);
+  } finally { release(); }
+});
+
 it("previews a staff whole portion across pages and chapters while preserving custom draft and assignment, with desktop/mobile captures", async () => {
   const tab = await page(); await reading(tab);
   const draft = "Genesis 1:5-8"; await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill(draft));

@@ -18,7 +18,7 @@ import { closedObject, uniqueQuery } from "./query";
 import { requireCookieMutation } from "./mutations";
 import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
 
-type Kind = "short-explore-page" | "short-reference-page" | "explore-prepare" | "explore-page" | "preview-prepare" | "preview-page" | "session" | "session-begin" | "session-door" | "students" | "student" | "reading" | "study-text" | "study-word-aids" | "study-word-details" | "study-sources" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
+type Kind = "short-explore-page" | "short-reference-page" | "explore-prepare" | "explore-page" | "preview-prepare" | "preview-page" | "recording-coverage" | "session" | "session-begin" | "session-door" | "students" | "student" | "reading" | "study-text" | "study-word-aids" | "study-word-details" | "study-sources" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
   | "admin-students" | "edit" | "disable" | "ceremony-done" | "ceremony-reverse" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "invite-copy" | "invite-needed" | "pending" | "accept"
   | "eligible-tutors" | "relationships" | "tutor-assign" | "tutor-unassign" | "guardian-revoke" | "identity-revoke" | "guardian-practice" | "grant-revoke" | "cantor";
 type Route = { kind: Kind; methods: readonly string[]; id?: string; linkId?: string };
@@ -41,6 +41,8 @@ function route(pathname: string): Route | null {
   if (exploration) return { kind: exploration[2] === "prepare" ? "explore-prepare" : "explore-page", methods: ["POST"], id: exploration[1] };
   const preview = /^\/api\/students\/([^/]+)\/reading\/preview\/(prepare|page)$/.exec(pathname);
   if(preview)return {kind:preview[2]==="prepare"?"preview-prepare":"preview-page",methods:["POST"],id:preview[1]};
+  const coverage = /^\/api\/students\/([^/]+)\/reading\/recording-coverage$/.exec(pathname);
+  if (coverage) return { kind: "recording-coverage", methods: ["POST"], id: coverage[1] };
   const reference = /^\/api\/students\/([^/]+)\/reference-audio$/.exec(pathname);
   const shortReference = /^\/api\/students\/([^/]+)\/reference-audio\/short\/page$/.exec(pathname);
   if (shortReference) return { kind: "short-reference-page", methods: ["GET"], id: shortReference[1] };
@@ -250,6 +252,19 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
         catch(error){if(error instanceof StudyUnavailable && error.code==="invalid-request")throw new HttpBoundaryError();throw error;}
         if(!value.ok)return stale();
         return privateJson({studentId:value.studentId,studentRevision:value.studentRevision,mode:value.mode,kind:value.kind,expiresAt:value.expiresAt,...studyPageView(value.page)});
+      }
+      case "recording-coverage": {
+        uniqueQuery(request.url, []);
+        const body = await objectBody(request, ["mode", "kind", "ranges"]);
+        if ((body.kind !== "torah" && body.kind !== "haftarah") || !Array.isArray(body.ranges) || body.ranges.length < 1 || body.ranges.length > 32) throw new HttpBoundaryError();
+        try {
+          const value = await runtime.readingPreview.coverage(request, { mode: staffMode(body.mode), studentId: id!, kind: body.kind, ranges: body.ranges.map(ref => text(ref, 100)) });
+          if (!value.ok) return stale();
+          return privateJson(value.status === "checked" ? { status: value.status, verses: value.verses } : { status: value.status });
+        } catch (error) {
+          if (error instanceof StudyUnavailable && error.code === "invalid-request") throw new HttpBoundaryError();
+          throw error;
+        }
       }
       case "eligible-tutors": {
         const query = uniqueQuery(request.url, ["afterId", "limit"]), limit = query.get("limit");

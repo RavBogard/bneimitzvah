@@ -2,8 +2,9 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { workspaceApi, type Assigned } from "./api";
-import { customReadingRanges, readingBaseline, fallbackLabels, type ReadingKind, type PreparedReading, type NeedsSelection, type StaffMode } from "./reading-proposal";
+import { customReadingRanges, readingBaseline, fallbackLabels, type ReadingKind, type PreparedReading, type NeedsSelection, type StaffMode, type CalendarChoice } from "./reading-proposal";
 import { ReadingPreview } from "./reading-preview";
+import { ReadingRecordingCoverage, useReadingRecordingCoverage } from "./reading-recording-coverage";
 import { statusOf, useWorkspace } from "./provider";
 import { currentReadingDraft,draftCuts,emptyReadingDraft,type ReadingDraft } from "./reading-draft";
 import { aliyahStarts } from "../../../lib/readings/aliyah-starts";
@@ -192,7 +193,13 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open, de
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void prepare(method === "calendar" ? draft.calendarPick || undefined : undefined); }
   const proposal = review?.baseline === key ? review.proposal : null;
   const suggestions = active && calendar.key === key ? calendar.proposal : null;
-  const calendarChoices = suggestions ? kind === "torah" ? suggestions.choices : suggestions.manualFallback === null && suggestions.haftarah ? [{ pick: "calendar-haftarah", label: "Calendar haftarah", ref: suggestions.haftarah }] : [] : [];
+  const calendarChoices: CalendarChoice[] = suggestions ? kind === "torah" ? suggestions.choices : suggestions.manualFallback === null && suggestions.haftarah ? [{ pick: "calendar-haftarah", label: "Calendar haftarah", ref: suggestions.haftarah }] : [] : [];
+  const calendarChoice = calendarChoices.find(choice => choice.pick === draft.calendarPick);
+  const coverageSelection = proposal ? proposal.ranges.join("; ") : method === "custom"
+    ? draftVerses.length ? customReadingRanges(custom).join("; ") : ""
+    : calendarChoice?.ref ?? calendarChoice?.coverageRef ?? "";
+  const { requestKey, coverage } = useReadingRecordingCoverage(active ? key : null, baseline?.student.id, mode, kind, coverageSelection, denied);
+  const recordingCoverage = coverage && <ReadingRecordingCoverage key={requestKey} coverage={coverage} />;
   const label = kind === "torah" ? "Torah" : "Haftarah", ceremony = baseline?.student.ceremonyDate;
   let divisionStarts: string[] | null = null; try { divisionStarts = draftCuts(draft) ?? currentAssignment?.aliyahStarts ?? null; } catch { divisionStarts = null; }
   return <section className="reading-editor" aria-labelledby="reading-editor-title">
@@ -222,7 +229,8 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open, de
       </div>
       {method === "custom" && <ReadingPassageSelect custom={custom} kind={kind} disabled={pending !== null} onChange={ref => updateDraft({custom:ref,current:null})} />}
       {suggestions && !calendarChoices.length && <p className="field-help">No calendar selections are available. Choose your own verses.</p>}
-      <p className={styles.summary}><strong>Your selection:</strong> {method === "custom" ? custom.trim() ? `${custom.split(/\r?\n/).filter(Boolean).join("; ")}${draftVerses.length ? ` (${draftVerses.length} verses)` : ""}` : "Choose the first and last verse." : calendarChoices.find(choice => choice.pick === draft.calendarPick)?.label ?? "Choose a calendar selection."}</p>
+      <p className={styles.summary}><strong>Your selection:</strong> {method === "custom" ? custom.trim() ? `${custom.split(/\r?\n/).filter(Boolean).join("; ")}${draftVerses.length ? ` (${draftVerses.length} verses)` : ""}` : "Choose the first and last verse." : calendarChoice?.label ?? "Choose a calendar selection."}</p>
+      {!proposal && recordingCoverage}
       {method === "custom" && draft.current && <p className="field-help">This is the saved reading. Change the verses above, or adjust only its aliyah divisions.</p>}
       {currentDraftStale && <p className="request-error" role="status">The saved reading changed after you started. Your choices are kept. Choose Use current assignment under Advanced to start from the latest reading, or change the verses to replace it.</p>}
       {kind === "torah" && method === "custom" && <ReadingDivisions verses={draftVerses} starts={divisionStarts} edited={draft.cutsEdited} issue={cutIssue} disabled={pending !== null}
@@ -257,6 +265,7 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open, de
         {proposal.kind === "torah" && <><dt>Aliyot</dt><dd>{proposal.aliyahStarts === null ? "Not divided into aliyot yet." : proposal.aliyahStarts.length === 0 ? "One aliyah." : <>{proposal.aliyahStarts.length + 1} aliyot. Aliyah 1 starts at <bdi dir="ltr">{draftVerses[0] ?? proposal.ranges[0].split("-")[0]}</bdi>.<ol start={2}>{proposal.aliyahStarts.map(ref => <li key={ref}>Starts at <bdi dir="ltr">{ref}</bdi></li>)}</ol></>}</dd></>}
         <dt>{proposal.preparationMode === "current-assignment" ? "Changes" : "Replaces"}</dt><dd>{proposal.preparationMode === "current-assignment" ? "Only the aliyah divisions. The verses and calendar source stay the same." : currentAssignment ? `The current ${label} reading, ${currentAssignment.ranges.join("; ")}.` : `Nothing. No ${label} reading is assigned yet.`}</dd>
       </dl>
+      {recordingCoverage}
       {proposal.preparationMode === "current-assignment" && proposal.preserved && <div className="reading-preserved-context">
         <p>References unchanged. Existing confirmation date: {proposal.preserved.confirmationDate ?? "not recorded"}. {proposal.preserved.needsReview ? "The reading still needs review with the tutor or rabbi." : "The existing reading-review status is preserved."}</p>
       </div>}
