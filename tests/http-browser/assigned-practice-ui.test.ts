@@ -76,7 +76,7 @@ it(`starts with a closed tutor sidebar and returns from Practice and the editor 
   const rail = tab.getByTestId("lesson-rail"), disclosure = rail.getByTestId("lesson-rail-toggle");
   const history = rail.getByRole("heading", { name: "Lessons", exact: true });
   const note = rail.getByText("Synthetic tutor lesson for the shared reading.", { exact: true });
-  const upcoming = rail.getByText("Synthetic next practice.", { exact: false });
+  const upcoming = rail.getByTestId("lesson-since").getByText("Synthetic next practice.", { exact: true });
   const assertRight = async (button: import("playwright").Locator, bar: import("playwright").Locator) => {
     await ui(button).toBeInViewport();
     const close = (await button.boundingBox())!, frame = (await bar.boundingBox())!;
@@ -96,7 +96,7 @@ it(`starts with a closed tutor sidebar and returns from Practice and the editor 
   await tab.keyboard.press("Enter");
   await ui(history).toBeVisible();
   await ui(note).toBeVisible();
-  await ui(upcoming.first()).toBeVisible();
+  await ui(upcoming).toBeVisible();
   await ui(rail.locator(".lesson-log")).toHaveCount(1);
   if (viewport.width >= 1200) expect((await readingColumn.boundingBox())!.width).toBeLessThan(collapsedWidth);
   await ui(tab.locator("[data-staff-nav]")).toBeVisible();
@@ -171,6 +171,15 @@ it("keeps the student's passage, progress and existing player through Practice a
   await ui(surface(tab)).toBeVisible();
   await ui(surface(tab).getByTestId("assigned-text")).toHaveAttribute("data-practice-ref", "Genesis 1:3");
   await ui(surface(tab).getByRole("group", { name: "How Genesis 1:3 is going", exact: true })).toBeVisible();
+  await ui(tab.getByTestId("close-assigned-practice")).toBeFocused();
+  await tab.keyboard.press("Escape");
+  await ui(surface(tab)).toHaveCount(0);
+  const returnVerse = tab.locator('[data-verse-ref="Genesis 1:3"] button[data-verse-number]');
+  await ui(returnVerse).toBeFocused();
+  await ui(returnVerse).toBeInViewport();
+  await returnVerse.click();
+  await tab.getByTestId("study-verse-actions").getByRole("button").first().click();
+  await ui(surface(tab)).toBeVisible();
   await surface(tab).getByTestId("play-section-start").click();
   await ui(surface(tab).getByTestId("player-selection")).toHaveAttribute("data-selected-ref", "Genesis 1:1");
   await ui(surface(tab).getByRole("button", { name: "Repeat", exact: true })).toBeVisible();
