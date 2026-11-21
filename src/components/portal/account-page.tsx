@@ -15,6 +15,7 @@ import { rememberedRole, rememberRole } from "./shell/role-memory";
 import { TabBar, TabSkipLink } from "./shell/tab-bar";
 import { workspaceApi } from "./workspace/api";
 import { emailApi } from "./workspace/email/api";
+import { SETTINGS_PATH } from "./workspace/settings/navigation";
 import { SiteBar } from "../site/site-bar";
 import { Chip, List, ListRow, PageHeader } from "../ui";
 
@@ -40,7 +41,7 @@ export function AccountView({ summary, current, signingOut, problem, onRole, onS
       <List label="Your account">
         {roles.includes("admin") && <ListRow title="View as" meta="Explore other roles with sample data" href="/preview" fullDocument />}
         {(!student || emailOffered === true) && <ListRow title="Email settings" meta="choose which portal emails you get" href="/workspace/email" />}
-        {roles.includes("admin") && <ListRow title="Congregation settings" meta="the congregation’s name, dates and options" href="/workspace/admin/settings" />}
+        {roles.includes("admin") && <ListRow title="Congregation settings" meta="the congregation’s name, dates and options" href={SETTINGS_PATH} fullDocument />}
         {staff && <ListRow title="Claude connections" meta="see and end Claude’s access to the portal" href="/workspace/claude" />}
         {summary.approver && <ListRow title="Account requests" meta="approve accounts for people who ask" href="/workspace/accounts" />}
       </List>

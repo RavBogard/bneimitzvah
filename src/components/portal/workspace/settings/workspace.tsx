@@ -86,7 +86,12 @@ function CongregationSettingsPage() {
       dialog.current?.close();
       current.focus?.focus({ preventScroll: true });
     }
-    if (leave) editor.current.dirty = false;
+    if (leave) {
+      const saved = editor.current.view;
+      editor.current.dirty = false;
+      mutation.current = null;
+      if (saved) { setDraft(draftOf(saved.settings)); setSwitches(switchesOf(saved.settings)); }
+    }
     current.resolve(leave);
   }, []);
   const askDeparture = useCallback(() => {
@@ -100,19 +105,21 @@ function CongregationSettingsPage() {
   const clear = useCallback(() => {
     editor.current.dirty = false;
     alive.current = false; request.current?.abort(); mutation.current = null;
-    finishDeparture(false); setView(null); setDraft(null); setSwitches({ weeklyDigest: false, studentReminder: false });
+    finishDeparture(false);
+    setView(null); setDraft(null); setSwitches({ weeklyDigest: false, studentReminder: false });
+    setPending(false); setProblems([]); setMessage(null); setConflict(false); setFailure(false);
   }, [finishDeparture]);
   useEffect(() => registerDeparture(askDeparture), [askDeparture, registerDeparture]);
   useEffect(() => registerWork({ clear, pause() {}, settle: async () => {}, hasUnsaved: () => editor.current.dirty, reveal() {} }), [clear, registerWork]);
 
   useEffect(() => {
+    if (!dirty) return;
     const unload = (event: BeforeUnloadEvent) => {
       if (editor.current.dirty) { event.preventDefault(); event.returnValue = ""; }
     };
     window.addEventListener("beforeunload", unload);
     return () => window.removeEventListener("beforeunload", unload);
-  }, []);
-  useSettingsBackGuard(editor, askDeparture);
+  }, [dirty]);
 
   const load = useCallback(async (rebase = false) => {
     request.current?.abort(); const controller = new AbortController(); request.current = controller;
@@ -147,6 +154,23 @@ function CongregationSettingsPage() {
     alive.current = true; void load();
     return () => { alive.current = false; request.current?.abort(); finishDeparture(false); };
   }, [load, finishDeparture]);
+  useEffect(() => {
+    let departedWithDraft = false;
+    const departed = () => {
+      departedWithDraft = editor.current.dirty;
+      if (departedWithDraft) clear();
+    };
+    const restored = (event: PageTransitionEvent) => {
+      if (!event.persisted || !departedWithDraft) return;
+      departedWithDraft = false; alive.current = true; void load();
+    };
+    window.addEventListener("pagehide", departed);
+    window.addEventListener("pageshow", restored);
+    return () => {
+      window.removeEventListener("pagehide", departed);
+      window.removeEventListener("pageshow", restored);
+    };
+  }, [clear, load]);
 
   function change(field: Field, value: string) { setDraft(current => current && { ...current, [field]: value }); if (message?.tone === "status") setMessage(null); }
   function toggle(key: Switch, value: boolean) { setSwitches(current => ({ ...current, [key]: value })); if (message?.tone === "status") setMessage(null); }
@@ -242,7 +266,7 @@ function CongregationSettingsPage() {
             : <Button type="submit" variant="primary" disabled={locked}>{pending ? "Saving…" : "Save settings"}</Button>}
         </div>
       </form>}
-    <dialog ref={dialog} className="roster-sheet access-sheet" aria-labelledby="settings-departure-title"
+    <dialog ref={dialog} className="work-departure" aria-labelledby="settings-departure-title"
       onCancel={event => { event.preventDefault(); finishDeparture(false, true); }}>
       <h2 id="settings-departure-title">Leave with unsaved settings?</h2>
       <p>Your changes are only in this tab. Discard them to leave this page.</p>
@@ -252,40 +276,4 @@ function CongregationSettingsPage() {
       </div>
     </dialog>
   </section>;
-}
-
-function useSettingsBackGuard(editor: { current: { dirty: boolean } }, askDeparture: () => Promise<boolean>) {
-  useEffect(() => {
-    // Same-document Back updates the address before popstate. Restore this entry before Next handles it,
-    // then replay the original traversal if the admin discards the draft.
-    const settingsUrl = location.href;
-    const position = () => (window as Window & { navigation?: { currentEntry?: { index: number } } }).navigation?.currentEntry?.index;
-    const settingsPosition = position();
-    let restoring = false;
-    let bypass = false;
-    let distance = -1;
-    const onPop = (event: PopStateEvent) => {
-      if (bypass) { bypass = false; return; }
-      if (restoring) {
-        restoring = false;
-        event.stopImmediatePropagation();
-        const destination = distance;
-        void askDeparture().then(leave => {
-          if (!leave) return;
-          bypass = true;
-          history.go(destination);
-        });
-        return;
-      }
-      if (!editor.current.dirty || location.href === settingsUrl) return;
-      const destination = position();
-      distance = settingsPosition !== undefined && destination !== undefined && settingsPosition !== destination
-        ? destination - settingsPosition : -1;
-      event.stopImmediatePropagation();
-      restoring = true;
-      history.go(-distance);
-    };
-    window.addEventListener("popstate", onPop, true);
-    return () => window.removeEventListener("popstate", onPop, true);
-  }, [editor, askDeparture]);
 }

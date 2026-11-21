@@ -85,7 +85,7 @@ it("an admin opens Congregation settings from More, fixes a refused link, saves,
   expect((await api(tab, "/api/admin/congregation-settings", { expectedVersion: 1, settings: { ...saved.data.view.settings, rabbiDisplayName: "Rabbi Elsewhere" }, mutationId: randomUUID() })).status).toBe(200);
   await safe(() => tab.getByLabel("Music link", { exact: true }).fill("https://centralreform.live/"));
   await safe(() => tab.getByRole("button", { name: "Save settings", exact: true }).click());
-  await ui(main(tab).getByRole("alert")).toContainText("Someone saved these settings after you opened this page.");
+  await ui(main(tab).getByRole("alert")).toContainText("Someone saved these settings after you opened this page");
   await ui(tab.getByRole("button", { name: "Save settings", exact: true })).toHaveCount(0);
   await ui(tab.getByLabel("Music link", { exact: true })).toBeDisabled();
   expect((await api(tab, "/api/admin/congregation-settings")).data.view.version).toBe(2);
@@ -99,12 +99,12 @@ it("an admin opens Congregation settings from More, fixes a refused link, saves,
   await ui(tab.getByTestId("settings-dirty")).toBeEmpty();
 });
 
-it("guards workspace links, browser Back, and reload while keeping the current draft on cancel", async () => {
+it("guards workspace links and reload while keeping the current draft on cancel", async () => {
   const tab = await page("admin");
   await navigate(tab, "/workspace/admin/students?tab=students");
   const more = tab.getByRole("navigation", { name: "Workspace", exact: true }).getByRole("link", { name: "More", exact: true });
   await safe(() => more.click());
-  const origin = new URL(tab.url()).pathname;
+  await ui(main(tab).getByRole("heading", { name: "More", exact: true })).toBeVisible();
   await safe(() => main(tab).getByRole("link", { name: "Settings", exact: true }).click());
   const name = tab.getByLabel("Name on study guides", { exact: true });
   const digest = tab.getByRole("checkbox", { name: "Weekly updates for parents" });
@@ -118,21 +118,43 @@ it("guards workspace links, browser Back, and reload while keeping the current d
   expect(await warns()).toBe(true);
   const keep = tab.getByRole("button", { name: "Keep editing" });
   const discard = tab.getByRole("button", { name: "Discard changes" });
-  await safe(() => more.click());
-  await ui(keep).toBeFocused();
+  const students = tab.getByRole("navigation", { name: "Workspace", exact: true }).getByRole("link", { name: "Students", exact: true });
+  await safe(() => students.click());
+  await ui(keep, "workspace link opens the guard").toBeFocused();
   await safe(() => keep.click());
-  await ui(more).toBeFocused();
+  await ui(students).toBeFocused();
   await ui(name).toHaveValue("Synthetic draft");
-  await safe(() => name.focus());
-  await safe(() => tab.evaluate(() => history.back()));
-  await ui(keep).toBeFocused();
-  await safe(() => keep.click());
-  await ui(name).toBeFocused();
-  await ui(name).toHaveValue("Synthetic draft");
-  await safe(() => tab.evaluate(() => history.back()));
+  await safe(() => students.click());
   await ui(discard).toBeVisible();
   await safe(() => discard.click());
+  await ui(tab).toHaveURL(url => url.pathname === "/workspace/admin/students");
+});
+
+it("Back keeps the draft on cancel and discards it before returning to the previous page", async () => {
+  const tab = await page("admin");
+  await navigate(tab, "/workspace/more");
+  const origin = new URL(tab.url()).pathname;
+  await safe(() => main(tab).getByRole("link", { name: "Settings", exact: true }).click());
+  const name = tab.getByLabel("Name on study guides", { exact: true });
+  await safe(() => name.click());
+  const savedName = await name.inputValue();
+  await safe(() => name.fill("Synthetic Back draft"));
+  await ui(tab.getByTestId("settings-dirty")).toHaveText("Unsaved changes");
+  const goBack = async (accept: boolean) => {
+    const confirmation = tab.waitForEvent("dialog").then(async dialog => {
+      expect(dialog.type()).toBe("beforeunload");
+      await (accept ? dialog.accept() : dialog.dismiss());
+    });
+    await tab.evaluate(() => history.back());
+    await confirmation;
+  };
+  await goBack(false);
+  await ui(name).toHaveValue("Synthetic Back draft");
+  await goBack(true);
   await ui(tab).toHaveURL(url => url.pathname === origin);
+  await tab.goForward();
+  await ui(name).toHaveValue(savedName);
+  await ui(tab.getByTestId("settings-dirty")).toBeEmpty();
 });
 
 it("fits a phone without sideways scrolling, and a tutor can neither open nor write the settings", async () => {

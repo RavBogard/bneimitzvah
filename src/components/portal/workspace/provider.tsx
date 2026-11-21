@@ -15,6 +15,7 @@ import { SiteBar } from "../../site/site-bar";
 import { rememberSignedIn } from "../signed-in-hint";
 import { rolePaths } from "../shell/role-home";
 import { StaffNav } from "../shell/staff-nav";
+import { SETTINGS_PATH } from "./settings/navigation";
 
 export { rolePaths, statusOf };
 type WorkLifecycle = { pause(): void; clear(): void; settle(): Promise<void>; hasUnsaved(): boolean; reveal(): void };
@@ -95,7 +96,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [pathname, phase]);
   const controlledLink = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    event.preventDefault(); void guardDeparture().then(leave => { if (leave) { clearWork(); router.push(href); } });
+    event.preventDefault(); void guardDeparture().then(leave => {
+      if (!leave) return;
+      clearWork();
+      if (pathname === SETTINGS_PATH) window.location.assign(href);
+      else router.push(href);
+    });
   };
 
   const shellShown = Boolean(summary) && phase === "ready";
@@ -140,14 +146,14 @@ function arrivedWithinSite() {
 }
 
 export function WorkspaceLink({ href, children, onAccepted, fullDocument, prefetch, ...rest }: { href: string; children: ReactNode; onAccepted?: () => void; fullDocument?: boolean; prefetch?: boolean } & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "onClick">) {
-  const { guardDeparture } = useWorkspace(), router = useRouter();
+  const { guardDeparture } = useWorkspace(), router = useRouter(), pathname = usePathname();
   const navigate = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     void guardDeparture().then(leave => {
       if (!leave) return;
       onAccepted?.();
-      if (fullDocument) window.location.assign(href);
+      if (fullDocument || (pathname === SETTINGS_PATH)) window.location.assign(href);
       else router.push(href);
     });
   };

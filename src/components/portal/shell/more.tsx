@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { List, ListRow, PageHeader } from "../../ui";
 import { useWorkspace } from "../workspace/provider";
+import { SETTINGS_PATH } from "../workspace/settings/navigation";
 import { rememberedRole } from "./role-memory";
 import { RedirectTo } from "./redirect-to";
 import { MINE_HREF } from "./role-home";
@@ -12,7 +13,7 @@ import styles from "./shell.module.css";
 // The destinations that have no tab of their own. The words are the ones these pages already use.
 const email = { href: "/workspace/email", title: "Email settings", meta: "choose which portal emails you get" };
 const claude = { href: "/workspace/claude", title: "Claude connections", meta: "see and end Claude’s access to the portal" };
-const adminRows = [{ href: "/workspace/admin/settings", title: "Settings" }, email, claude, { href: "/workspace/admin/guides", title: "Guides", meta: "see, approve and withdraw study content" }, { href: "/workspace/admin/guide-sharing", title: "Share guides" }];
+const adminRows = [{ href: SETTINGS_PATH, title: "Settings" }, email, claude, { href: "/workspace/admin/guides", title: "Guides", meta: "see, approve and withdraw study content" }, { href: "/workspace/admin/guide-sharing", title: "Share guides" }];
 
 /** More, for the admin: settings, email, Claude and guide sharing, all one tap from the tab bar. Anyone else is sent to /mine. */
 export function MoreWorkspace() {
@@ -22,7 +23,8 @@ export function MoreWorkspace() {
   const rows = adminRows;
   return <section className="role-workspace">
     <PageHeader title="More" />
-    <List label="More">{rows.map(row => <ListRow key={row.href} href={row.href} title={row.title} meta={"meta" in row ? row.meta : undefined} />)}</List>
+    <List label="More">{rows.map(row => <ListRow key={row.href} href={row.href} title={row.title} meta={"meta" in row ? row.meta : undefined}
+      fullDocument={row.href === SETTINGS_PATH} />)}</List>
     {/* Discussions, guides and portion summaries are written through Claude; the Guides page lists them and can withdraw or approve. */}
     <p className={styles.moreNote} data-testid="more-curation-note">Discussions and insights are curated through Claude connections.</p>
   </section>;
