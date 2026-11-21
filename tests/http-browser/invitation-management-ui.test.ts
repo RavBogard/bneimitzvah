@@ -144,3 +144,37 @@ it("retains same-session drafts, invalidates changed student targets, sends on a
   await ui(tab.getByLabel("Recipient email", { exact: true })).toHaveValue("");
   expect(await tab.evaluate(() => !JSON.stringify({ local: { ...localStorage }, tab: { ...sessionStorage } }).includes("synthetic-retained-draft"))).toBe(true);
 });
+
+it("asks before replacing a link and allows manual copying of a single confirmed replacement", async () => {
+  const tab = await page("admin");
+  const issued = await api(tab, "/api/admin/invitations", { role: "tutor", email: "synthetic-copy@example.test" });
+  expect(issued.status).toBe(200);
+  const id = issued.data.inviteId;
+  await tab.addInitScript(() => {
+    const deny = () => Promise.reject(new Error("Clipboard unavailable"));
+    Object.defineProperty(navigator, "clipboard", { value: { write: deny, writeText: deny } });
+  });
+  await navigate(tab, "/workspace/admin/invitations");
+  const opener = record(tab, id).getByTestId("invite-copy-link");
+  const dialog = tab.getByRole("dialog");
+  let writes = 0;
+  await tab.route(`**/api/admin/invitations/${id}/copy`, async route => { writes++; await route.continue(); });
+  await safe(() => opener.click());
+  await ui(dialog).toContainText("The previous link will stop working");
+  await click(tab, "Cancel");
+  await ui(opener).toBeFocused();
+  await ui(status(tab, id)).toHaveText("Not accepted yet");
+  expect(writes).toBe(0);
+  await safe(() => opener.click());
+  await safe(() => dialog.getByRole("button", { name: "Replace and copy link" }).click());
+  await ui(dialog).toBeHidden();
+  const manual = tab.getByTestId("invite-copied-link");
+  await ui(manual).toBeVisible();
+  await ui(status(tab, id)).toHaveText("Revoked");
+  await safe(() => manual.focus());
+  expect(await manual.evaluate(node => {
+    const input = node as HTMLInputElement;
+    return input.readOnly && input.selectionStart === 0 && input.selectionEnd === input.value.length;
+  })).toBe(true);
+  expect(writes).toBe(1);
+});
