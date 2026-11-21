@@ -116,7 +116,7 @@ export function ServiceHome() {
           <nav className={learn.links} aria-label={COPY.home.nav}><a href="/learn">{COPY.home.lein}</a><a href="/learn/service/about">{COPY.home.about}</a></nav>
           {/* Until the account holds the progress (synced), it is on this device, so the line stays: also when the account cannot be
               reached at all, as on a server with no database. Learn to lein's home does the same. */}
-          {account.state !== "synced" && <p className={learn.saved} data-saved="device">{COPY.home.saved} <a href={signInAddress("/learn/service")}>Sign in</a> to return to Learn the service.</p>}
+          {account.state !== "synced" && <p className={learn.saved} data-saved="device">{COPY.home.saved} <a href={signInAddress("/learn/service")}>Sign in</a> with Google or an email code to return to Learn the service.</p>}
         </div>
         <div className={learn.paths}>
           <YourParts view={view} progress={progress} next={next} savedAt={savedAt} />

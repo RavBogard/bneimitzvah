@@ -255,6 +255,16 @@ test("a pending invitation only changes where the code sends the person; it neve
   expect(await f.db.select().from(schema.membership)).toHaveLength(0);
 });
 
+test("email codes keep the exact course-home return in their sign-in binding", async () => {
+  const f = await fixture();
+  for (const back of ["/learn", "/learn/service"]) {
+    const asked = await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "course-code@example.test", return: back }));
+    expect(asked.status).toBe(200);
+    const signed = await f.enter(f.messages.at(-1)!.code, f.bindingOf(asked));
+    expect(await signed.json()).toEqual({ ok: true, next: back });
+  }
+});
+
 test("a return address asked with the email is sealed with the address and is where the right code lands; a refused one is a 400 (N20)", async () => {
   for (const origin of ["http://localhost:3000", "https://bneimitzvah.centralreform.org"]) {
     const f = await fixture(origin);

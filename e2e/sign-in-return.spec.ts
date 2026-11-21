@@ -207,12 +207,13 @@ for (const [course, title] of [["/learn", "Learn to lein"], ["/learn/service", "
       await page.getByRole("main").getByRole("link", { name: "Sign in", exact: true }).click();
       await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
       expect(new URL(page.url()).searchParams.get("return")).toBe(course);
-      await expect(page.getByText(`After signing in, you’ll return to ${title}.`)).toBeVisible();
+      await expect(page.getByText(`Use Google or the 6-digit code from your email to return to ${title}.`)).toBeVisible();
     };
     await followCourseSignIn();
     const address = "course-reader@example.test";
     await page.getByLabel("Email address").fill(address);
     await page.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
+    await expect(page.getByLabel("Sign-in code")).toHaveAccessibleDescription(/The link in the email opens My Readings or a pending invitation/);
     await page.getByLabel("Sign-in code").fill("123456");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page).toHaveURL(new URL(course, baseURL).href);
@@ -223,5 +224,9 @@ for (const [course, title] of [["/learn", "Learn to lein"], ["/learn/service", "
     await expect(page).toHaveURL(new URL(course, baseURL).href);
     await expect(page.getByRole("heading", { level: 1, name: title, exact: true })).toBeVisible();
     expect(posted).toEqual([{ email: address, return: course }, { return: course }]);
+    await page.goto(`/sign-in?return=${encodeURIComponent(course)}`);
+    await expect(page).toHaveURL(new URL(course, baseURL).href);
+    await expect(page.getByRole("heading", { level: 1, name: title, exact: true })).toBeVisible();
+    expect(posted).toHaveLength(2);
   });
 }

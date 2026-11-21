@@ -197,12 +197,14 @@ export function PortalEntry({ invitation = false, authenticationError = false, i
               <label htmlFor="entry-code" className="entry-code-label">{SIGN_IN_CODE_COPY.label}</label>
               <input id="entry-code" name="code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" minLength={6} maxLength={6} required spellCheck={false}
                 value={code} onChange={event => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} disabled={pending !== null} aria-describedby="entry-code-help" />
-              <p className="field-help" id="entry-code-help">{SIGN_IN_CODE_COPY.help}</p>
+              <p className="field-help" id="entry-code-help">{course
+                ? `Enter the 6-digit code to return to ${course}. The code works on this device for 5 minutes. The link in the email opens My Readings or a pending invitation.`
+                : SIGN_IN_CODE_COPY.help}</p>
               <button type="submit" className="button-primary" data-testid="entry-code-submit" disabled={pending !== null}>{pending === "code" ? SIGN_IN_CODE_COPY.pending : SIGN_IN_CODE_COPY.submit}</button>
             </form>
             <p>Don’t see it? Check your spam folder, or wait a minute before requesting another link.</p>{resendReady && <button type="button" className="button-secondary" disabled={pending !== null} onClick={sendNewCode}>{pending === "email" ? "Sending link…" : "Send a new code"}</button>}<button type="button" className="button-secondary" disabled={pending !== null} onClick={() => { lastEmail.current = ""; focusNext.current = true; setLinkRequested(false); setCode(""); rememberCodeRequest(false); setMessage(""); }}>Use a different email</button></>
           : <><p>{invitation ? "Sign in with the email address that received this invitation."
-            : course ? `After signing in, you’ll return to ${course}.` : "Your readings, marks and notes stay with your account."}</p>
+            : course ? `Use Google or the 6-digit code from your email to return to ${course}.` : "Your readings, marks and notes stay with your account."}</p>
             {inlineGoogle ? <GoogleContinue key={authGeneration} next={googleIntent === "account" ? "account" : undefined} returnTo={back} disabled={pending !== null} onBegin={() => {
               if (gate.current) return false;
               gate.current = "google"; setPending("google"); setMessage(""); setAttemptedSignIn(true); return true;

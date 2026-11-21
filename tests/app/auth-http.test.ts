@@ -381,7 +381,7 @@ test("redirect-mode Google carries a checked return address only in its own stor
     const f = await fixture(origin); googleTokenEndpoint();
     // Refused before the SDK: any scheme, host, backslash, encoded host, fragment, control, other page or shape, and a return beside a fixed word.
     for (const value of ["//evil.example", "//evil.example/read", "https://evil.example/read", "/\\evil.example", "/%2F%2Fevil.example", "javascript:alert(1)", "/read#x",
-      "/read?x=%00", "/read\n", "/sign-in", "/connect", "/workspace/admin", "/learn", ["/read"], 1, null, ""])
+      "/read?x=%00", "/read\n", "/sign-in", "/connect", "/workspace/admin", "/learn/intro", "/learn?x=1", "/learn/service#havdalah", ["/read"], 1, null, ""])
       expect((await f.dispatch(f.request("/api/auth/google/redirect", { return: value }))).status, JSON.stringify(value)).toBe(400);
     for (const body of [{ next: "account", return: "/read" }, { next: "connect", return: "/read" }]) expect((await f.dispatch(f.request("/api/auth/google/redirect", body))).status).toBe(400);
     expect(f.sdk.mock.calls.length).toBe(0);
@@ -405,6 +405,17 @@ test("redirect-mode Google carries a checked return address only in its own stor
       expect(projected.headers.getSetCookie().some(value => value.includes("session_token"))).toBe(false);
     }
     vi.unstubAllGlobals();
+  }
+});
+
+test("the Google callback returns to each exact course home", async () => {
+  const f = await fixture();
+  googleTokenEndpoint();
+  for (const back of ["/learn", "/learn/service"]) {
+    const started = await startGoogle(f, { return: back });
+    const response = await f.dispatch(f.request(callbackPath(started.state), undefined, { cookie: started.cookie }));
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe(back);
   }
 });
 

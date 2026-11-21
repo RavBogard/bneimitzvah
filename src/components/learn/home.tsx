@@ -107,7 +107,7 @@ export function CourseHome() {
           <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a>{mine && <a href="/mine">My Readings</a>}</nav>
           {/* 1.9 N23: what the tutor sees of Learn, told to the student; behind the same release gate as the tutor's lines. */}
           <LearnPracticeDisclosure signedIn={account.state === "synced"} isStudent={isStudent} />
-          {account.state !== "synced" && <p className={styles.saved} data-testid="learn-saved-note">Progress is saved on this device. <a href={signInAddress("/learn")}>Sign in</a> to return to Learn to lein.</p>}
+          {account.state !== "synced" && <p className={styles.saved} data-testid="learn-saved-note">Progress is saved on this device. <a href={signInAddress("/learn")}>Sign in</a> with Google or an email code to return to Learn to lein.</p>}
         </div>
         <div className={styles.paths}>{paths}</div>
       </div>

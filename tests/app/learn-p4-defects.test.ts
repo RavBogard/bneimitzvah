@@ -102,7 +102,7 @@ describe("F6 finding 10: every lesson on the path is a link, and Next still reco
 describe("F6 finding 20: the Sign in in /learn's saved line is a link", () => {
   it("keeps the sentence and links its two words", () => {
     const html = renderToStaticMarkup(createElement(CourseHome));
-    expect(html).toContain('Progress is saved on this device. <a href="/sign-in?return=%2Flearn">Sign in</a> to return to Learn to lein.');
+    expect(html).toContain('Progress is saved on this device. <a href="/sign-in?return=%2Flearn">Sign in</a> with Google or an email code to return to Learn to lein.');
   });
 });
 
