@@ -66,6 +66,12 @@ typography:
     fontWeight: 400
     lineHeight: 1.9
     fontFeature: "\"mark\", \"mkmk\""
+  hebrew-teaching:
+    fontFamily: "CRC Taamey Frank, Taamey Frank CLM, CRC Noto Hebrew Fallback, Noto Serif Hebrew, Times New Roman, serif"
+    fontSize: "2.75rem"
+    fontWeight: 400
+    lineHeight: 2
+    fontFeature: "\"mark\", \"mkmk\""
 rounded:
   control: "12px"
   object: "16px"
@@ -215,8 +221,12 @@ Screen-print inks: one saturated blue that owns the frame, one warm yellow for t
 ### Dark mode
 Same roles on night-lake navy: `night-canvas` page, `night-surface` cards, `night-ink` and `night-muted` text, `night-rule` hairlines, `night-action` for links and text actions, `night-action-fill` behind white text on buttons, `night-forest` for settled. The app bar, toolbar and lifted sheet use `night-lake`; marigold becomes the focus ring everywhere.
 
+The Learn word-card scrim uses `rgb(19 32 47 / 0.32)` in light mode and `rgb(0 0 0 / 0.5)` in dark mode to quiet the underlying passage while keeping the card distinct.
+
 ### Phrase family colors
 The lifted line and the verse cards print trope phrases with the pastel family colors already defined by the trope chart catalog (`src/lib/trope/chart-catalog`), always with Ink text and a 0.18em corner. They are content data shared with the chart, not shell colors, and are always paired with a named legend chip and word range so color never carries meaning alone.
+
+Learn uses the same 0.18em corner around phrase highlights, current playback words and word-card marks. Exercise word targets use a 0.22em corner on their larger hit area. Both scale with Hebrew type independently of the control radii. The lesson progress rail has 3px ends on a 6px track. The compact speed selector retains its 0.5rem corner.
 
 ### Named Rules
 **The Marigold Is Never Text Rule.** Marigold appears as a fill behind Ink type, a ring, or a rail mark. It is never a text or icon color.
@@ -227,6 +237,8 @@ The lifted line and the verse cards print trope phrases with the pastel family c
 
 **Display and UI Font:** Bricolage Grotesque 1.001, self-hosted variable (optical size 12–96, weight 200–800, width 75–100) with `font-optical-sizing: auto`, falling back to system-ui
 **Scripture Font:** CRC Noto Serif Hebrew (Noto Serif Hebrew 2.004, self-hosted), then Noto Serif Hebrew, Times New Roman, serif
+
+**Learn Hebrew teaching face:** CRC Taamey Frank (Taamey Frank CLM, self-hosted) with CRC Noto Hebrew Fallback. Vowels and cantillation use `mark` and `mkmk`, with no font synthesis. Continuous exercise text is 2rem with a 1.625rem step for tighter passages. Enlarged examples are 2.75rem, with 3.125rem available to the wide phrase stage and 2.5rem used for the phone stage and word example. Isolated mark samples are 1.875rem. The enlarged sheet uses 3.2rem and drops to 2.6rem on phones.
 
 **Character:** A characterful humanist grotesque with ink-trap personality at large sizes and plain legibility at small ones, against a classical Hebrew serif. The English is loud only where it is a heading; the Hebrew is always the most important text on the page. Provenance and licenses for both fonts are in `public/fonts/PROVENANCE.md`.
 
