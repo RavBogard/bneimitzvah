@@ -47,7 +47,7 @@ beforeAll(async()=>{
   }catch(error){await browser?.close().catch(()=>undefined);await stop?.().catch(()=>undefined);await fixture?.close().catch(()=>undefined);await isolation?.cleanup();restore?.();throw new Error(`Synthetic service ecosystem browser setup failed at ${stage}${stage==="Next server"&&error instanceof Error?`: ${error.message}`:""}`);}
 },120000);
 afterAll(async()=>{await Promise.all(contexts.map(context=>context.close().catch(()=>undefined)));await browser?.close().catch(()=>undefined);await stop?.().catch(()=>undefined);await fixture?.close().catch(()=>undefined);await isolation?.cleanup();restore?.();},120000);
-async function page(role:"student"|"admin"|"parent"){
+async function page(role:"student"|"admin"|"parent", connected = true){
   const context=await browser.newContext({baseURL:BROWSER_ORIGIN,serviceWorkers:"block",acceptDownloads:false,viewport:{width:390,height:844}});contexts.push(context);
   await context.route("**/*",async route=>{if(new URL(route.request().url()).origin===BROWSER_ORIGIN)await route.continue();else await route.abort();});
   const tab=await context.newPage();await tab.goto("/",{waitUntil:"domcontentloaded"});
@@ -56,7 +56,8 @@ async function page(role:"student"|"admin"|"parent"){
   await openAuthMail(tab,fixture.takeMail(email));await tab.goto(role==="student"?"/workspace/student?tab=reading":role==="parent"?"/workspace/parent":`/workspace/admin/students/${fixture.student.id}/reading`,{waitUntil:"domcontentloaded"});
   if(role==="parent"){await goChild(tab, fixture.student.id);await tab.getByRole("button",{name:"Practice with Synthetic",exact:true}).click();await ui(tab.getByRole("button",{name:"Done",exact:true})).toBeVisible();}
   await toSection(tab, "service");
-  await ui(tab.locator("[data-my-service]").getByRole("heading",{name:"My service",exact:true})).toBeVisible();return tab;
+  if (connected) await ui(tab.locator("[data-my-service]").getByRole("heading",{name:"My service",exact:true})).toBeVisible();
+  return tab;
 }
 async function captures(tab:Page){
   const directory=join(process.cwd(),".impeccable","review","service-ecosystem");await mkdir(directory,{recursive:true});
@@ -115,7 +116,7 @@ it("saves the fallback tutor-plan part through its scoped lesson and returns to 
   await fixture.ownerDb.delete(s.studentCeremony).where(eq(s.studentCeremony.studentId, fixture.student.id));
   const [plan] = await fixture.ownerDb.insert(s.studentServicePlan).values({ tenantId: "crc", studentId: fixture.student.id, catalogId: catalog.id,
     catalogIdentity: catalog.identity, selectedIds: [fallbackUnit], reviewedDate: fixture.student.ceremonyDate, reviewedSlot: "morning", setByMembershipId: staff.id }).returning();
-  const tab = await page("student");
+  const tab = await page("student", false);
   const part = tab.locator(`[data-service-row="${fallbackUnit}"]`);
   await part.getByRole("link", { name: "Open lesson" }).click();
   const next = tab.getByRole("button", { name: "Next", exact: true });
