@@ -106,6 +106,7 @@ export function ServiceLearningPanel({ id, headingId, mode, studentId, baseline,
             </div>
             {lesson ? <LessonRecording lesson={lesson.id} morning={!unit.id.endsWith("@bm-maariv")} showAvailability />
               : <p className={styles.note}>No practice recording is available for this part.</p>}
+            {lesson && unit.finished && <p className={styles.note}>Lesson finished.</p>}
             {current?.selected === unit.id && (current?.unitLoading ? <p role="status">Loading the selected service part…</p>
               : current.material && <ServiceUnitView material={current.material} />)}
           </li>;

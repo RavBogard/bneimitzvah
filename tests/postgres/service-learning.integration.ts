@@ -24,19 +24,45 @@ async function sqlState(operation: PromiseLike<unknown>) {
     return "unknown";
   }
 }
-async function fixture() {
-  const f = await postgresAccessFixture(); fixtures.push(f); const payload = syntheticServiceCatalog(), catalogId = randomUUID();
+async function fixture(standard = false) {
+  const f = await postgresAccessFixture(); fixtures.push(f); const payload = syntheticServiceCatalog("one", { standard }), catalogId = randomUUID();
   await f.ownerDb.update(s.student).set({ serviceSlot: "morning" }).where(eq(s.student.id, f.student.id));
   await f.ownerDb.insert(s.serviceCatalog).values({ id: catalogId, tenantId: "crc", identity: payload.identity, feedBytes: payload.feedBytes, provenanceBytes: payload.provenanceBytes, pins: payload.pins });
   const [lifecycle] = await f.ownerDb.insert(s.serviceCatalogLifecycle).values({ tenantId: "crc", catalogId, state: "active" }).returning();
   const a = createServiceLearningService({ access: f.a, practice: createPracticeService({ access: f.a }), signingSecret: "synthetic-service-learning-review-secret" });
   const b = createServiceLearningService({ access: f.b, practice: createPracticeService({ access: f.b }), signingSecret: "synthetic-service-learning-review-secret" });
   const request = () => ({ ...f.request("tutor"), method: "POST", headers: new Headers({ ...Object.fromEntries(f.request("tutor").headers), origin: "http://localhost:3000" }) });
-  const selection = { mode: "tutor" as const, studentId: f.student.id, expectedStudentRevision: 1, expectedPlanRevision: 0, catalogId, catalogIdentity: payload.identity, selectedIds: [payload.first] };
+  const selection = { mode: "tutor" as const, studentId: f.student.id, expectedStudentRevision: 1, expectedPlanRevision: 0, catalogId, catalogIdentity: payload.identity, selectedIds: [standard ? payload.standard.vahavta : payload.first] };
   async function prepare() { const value = await a.prepare(request(), selection); if (!value.ok) throw new Error("Synthetic service review missing"); return value; }
   async function save() { const review = await prepare(), value = await a.confirm(request(), { mode: "tutor", studentId: f.student.id, binding: review.binding }); if (!value.ok) throw new Error("Synthetic service plan missing"); return value; }
   return { ...f, payload, catalogId, lifecycle, aService: a, bService: b, serviceRequest: request, selection, prepare, save };
 }
+
+for (const barrier of ["reassignment", "child switch"] as const) test(`a pending assigned lesson cannot credit the same lesson after ${barrier}`, async () => {
+  const f = await fixture(true), saved = await f.save(), family = await f.practice();
+  const child = await family.a.enter(family.request(), { studentId: f.student.id });
+  const oldRequest = family.request(child.handle);
+  const target = { mode: "child-practice" as const, studentId: f.student.id, planId: saved.planId, planRevision: 1,
+    catalogIdentity: f.payload.identity, unitId: f.payload.standard.vahavta, lessonId: "vahavta" };
+  const review = await f.bService.prepare(f.serviceRequest(), { ...f.selection, expectedPlanRevision: 1 });
+  if (!review.ok) throw new Error("Synthetic replacement missing");
+  const entered = deferred(), release = deferred();
+  const stop = await f.intercept("b", text => text.startsWith(`update "${barrier === "reassignment" ? "student_service_plan" : "practice_context"}"`), async proceed => {
+    const result = await proceed(); entered.resolve(); await release.promise; return result;
+  });
+  const winner = barrier === "reassignment"
+    ? safe(f.bService.confirm(f.serviceRequest(), { mode: "tutor", studentId: f.student.id, binding: review.binding }))
+    : safe(family.b.switch(oldRequest, { studentId: family.sibling.id }));
+  let pending: Promise<unknown> | undefined;
+  try {
+    await waitForEntry(entered.promise, winner);
+    pending = safe(f.aService.completeLesson(oldRequest, target));
+    await f.waitForLock(f.pidA, f.pidB);
+  } finally { release.resolve(); stop(); await Promise.all([winner, pending]); }
+  expect(await pending).toEqual(barrier === "reassignment" ? { ok: false, code: "stale-revision" } : { denied: 404 });
+  const [plan] = await f.ownerDb.select().from(s.studentServicePlan);
+  expect(plan).toMatchObject({ revision: barrier === "reassignment" ? 2 : 1, completedIds: [], selectedIds: [target.unitId] });
+});
 
 test("restricted role has only catalog SELECT and immutable lifecycle lock-ID UPDATE, with forced cross-tenant RLS", async () => {
   const f = await fixture();

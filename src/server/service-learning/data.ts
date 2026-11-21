@@ -24,15 +24,22 @@ export async function context<Q extends PgQueryResultHKT>(tx: AccessTransaction<
 }
 export async function persist<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: StudentActor, studentId: string, expected: number,
   values: { catalogId: string; catalogIdentity: string; selectedIds: string[]; reviewedDate: string; reviewedSlot: "morning" | "havdalah" }): Promise<typeof s.studentServicePlan.$inferSelect | null> {
-  const data = { ...values, needsReview: false, setByMembershipId: actor.membershipId };
+  const data = { ...values, completedIds: [], needsReview: false, setByMembershipId: actor.membershipId };
   const [row] = expected === 0
     ? await tx.insert(s.studentServicePlan).values({ ...data, tenantId: actor.tenantId, studentId }).onConflictDoNothing({ target: [s.studentServicePlan.tenantId, s.studentServicePlan.studentId] }).returning()
     : await tx.update(s.studentServicePlan).set({ ...data, revision: expected + 1 }).where(and(eq(s.studentServicePlan.tenantId, actor.tenantId), eq(s.studentServicePlan.studentId, studentId), eq(s.studentServicePlan.revision, expected))).returning();
   return row ?? null;
 }
 export async function markForReview<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, studentId: string) {
-  await tx.update(s.studentServicePlan).set({ needsReview: true, revision: sql`${s.studentServicePlan.revision} + 1` })
+  await tx.update(s.studentServicePlan).set({ completedIds: [], needsReview: true, revision: sql`${s.studentServicePlan.revision} + 1` })
     .where(and(eq(s.studentServicePlan.tenantId, tenantId), eq(s.studentServicePlan.studentId, studentId)));
+}
+export async function markLessonComplete<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, plan: typeof s.studentServicePlan.$inferSelect, unitId: string) {
+  if (plan.completedIds.includes(unitId)) return true;
+  const [row] = await tx.update(s.studentServicePlan).set({ completedIds: [...plan.completedIds, unitId] })
+    .where(and(eq(s.studentServicePlan.tenantId, plan.tenantId), eq(s.studentServicePlan.id, plan.id), eq(s.studentServicePlan.revision, plan.revision)))
+    .returning({ id: s.studentServicePlan.id });
+  return !!row;
 }
 export async function audit<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: StudentActor, studentId: string, planId: string) {
   await tx.insert(s.auditEvent).values({ tenantId: actor.tenantId, actorUserId: actor.userId, actorMembershipId: actor.membershipId,

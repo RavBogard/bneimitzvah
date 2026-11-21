@@ -8,7 +8,7 @@ import { requireCookieMutation } from "./mutations";
 import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
 
 function route(path: string) {
-  const match = /^\/api\/students\/([^/]+)\/service-plan(?:\/(catalog|prepare|confirm|unit))?$/.exec(path);
+  const match = /^\/api\/students\/([^/]+)\/service-plan(?:\/(catalog|prepare|confirm|unit|lesson))?$/.exec(path);
   return match ? { studentId: match[1], operation: match[2] ?? "metadata" } : null;
 }
 export function serviceLearningRouteMethods(path: string): readonly string[] | null {
@@ -73,8 +73,8 @@ export function material(value: ServiceUnitMaterial): JsonValue {
 type Service = HttpRuntime["serviceLearning"];
 type Plan = NonNullable<Awaited<ReturnType<Service["metadata"]>> extends infer R ? R extends { plan: infer P } ? P : never : never>;
 const plan = (value: Plan) => pick(value, ["id", "revision", "needsReview", "catalogId", "catalogIdentity", "catalogState"]);
-type Summary = { id: string; name: string; caption?: string; section: ServiceSectionHeading; page?: number };
-const summary = (value: Summary) => ({ ...pick(value, ["id", "name", "caption"]), section: section(value.section), ...pick(value, ["page"]) });
+type Summary = { id: string; name: string; caption?: string; section: ServiceSectionHeading; page?: number; finished?: true };
+const summary = (value: Summary) => ({ ...pick(value, ["id", "name", "caption"]), section: section(value.section), ...pick(value, ["page", "finished"]) });
 
 export async function handleServiceLearningRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
   const found = route(new URL(request.url).pathname); if (!found) return null;
@@ -91,7 +91,7 @@ export async function handleServiceLearningRequest(request: Request, runtime: Ht
       requireCookieMutation(request, runtime.origin);
       const operation = found.operation;
       const required = operation === "catalog" ? ["mode"] : operation === "prepare" ? ["mode", "expectedStudentRevision", "expectedPlanRevision", "catalogId", "catalogIdentity", "selectedIds"] : operation === "confirm" ? ["mode", "binding"] : ["mode", "planId", "planRevision", "catalogIdentity", "unitId"];
-      const body = closedObject(await readJsonBody(request, operation === "confirm" ? "binding" : operation === "prepare" ? "work" : "ordinary"), required);
+      const body = closedObject(await readJsonBody(request, operation === "confirm" ? "binding" : operation === "prepare" ? "work" : "ordinary"), operation === "lesson" ? [...required, "lessonId"] : required);
       const selection = { studentId, mode: mode(body.mode, staff) };
       if (operation === "catalog") {
         const result = await runtime.serviceLearning.catalog(request, { ...selection, mode: selection.mode as ActiveMode });
@@ -107,6 +107,11 @@ export async function handleServiceLearningRequest(request: Request, runtime: Ht
         const result = await runtime.serviceLearning.confirm(request, { ...selection, mode: selection.mode as ActiveMode, binding: body.binding });
         if (!result.ok) return privateJson({ ok: false, code: "stale-revision" }, 409);
         output = { ok: true, planId: result.planId, revision: result.revision, cleared: result.cleared };
+      } else if (operation === "lesson") {
+        if (typeof body.lessonId !== "string" || !/^[a-z0-9][a-z0-9-]{0,63}$/.test(body.lessonId)) throw new HttpBoundaryError();
+        const result = await runtime.serviceLearning.completeLesson(request, { ...selection, planId: uuid(body.planId), planRevision: integer(body.planRevision), catalogIdentity: identity(body.catalogIdentity), unitId: unitId(body.unitId), lessonId: body.lessonId });
+        if (!result.ok) return privateJson({ ok: false, code: "stale-revision" }, 409);
+        output = { ok: true, slot: result.slot };
       } else {
         const result = await runtime.serviceLearning.unit(request, { ...selection, planId: uuid(body.planId), planRevision: integer(body.planRevision), catalogIdentity: identity(body.catalogIdentity), unitId: unitId(body.unitId) });
         if (result.state === "stale") return privateJson({ ok: false, code: "stale-revision" }, 409);

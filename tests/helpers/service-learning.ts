@@ -2,10 +2,10 @@ import { createHash } from "node:crypto";
 import { parseServiceFeed, type ServiceFeedPins } from "../../src/server/service-learning/feed";
 /** standard: also carry units under the feed's stable ids for two standard parts (morning) and one (evening).
  * firstPage: the printed page of the first unit, each later unit one page on (default 1); false: no unit has a printed page. */
-export function syntheticServiceCatalog(seed = "one", options: { standard?: boolean; firstPage?: number | false } = {}) {
+export function syntheticServiceCatalog(seed = "one", options: { standard?: boolean; firstPage?: number | false; extraUnits?: string[] } = {}) {
   const family = "bm-shacharit", first = `sample.first@${family}`, hidden = `sample.hidden@${family}`, second = `sample.second@${family}`, evening = "sample.evening@bm-maariv";
   const standard = { torahBefore: `torah.blessing-before-the-torah-reading@${family}`, vahavta: `shma.vahavta@${family}`, eveningShma: "shma.the-shma@bm-maariv" };
-  const ids = options.standard ? [first, standard.vahavta, hidden, second, standard.torahBefore, evening, standard.eveningShma] : [first, hidden, second, evening];
+  const ids = [...(options.standard ? [first, standard.vahavta, hidden, second, standard.torahBefore, evening, standard.eveningShma] : [first, hidden, second, evening]), ...options.extraUnits ?? []];
   const firstPage = options.firstPage ?? 1, pages = Math.max(8, firstPage === false ? 0 : firstPage + ids.length);
   const units = ids.map((id, index) => ({ id, name: `Synthetic part ${index}`, section: id.endsWith("@bm-maariv") ? 1 : 0,
     caption: `Synthetic caption ${index}`, group: null, folios: [index + 1], ...(firstPage === false ? {} : { printedFolio: firstPage + index }),

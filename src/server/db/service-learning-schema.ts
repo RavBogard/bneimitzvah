@@ -37,6 +37,7 @@ export const studentServicePlan = pgTable("student_service_plan", {
   id: id(), tenantId: tenantId(), studentId: uuid("student_id").notNull(),
   catalogId: uuid("catalog_id").notNull(), catalogIdentity: text("catalog_identity").notNull(),
   selectedIds: text("selected_ids").array().notNull(), revision: integer("revision").default(1).notNull(),
+  completedIds: text("completed_ids").array().default(sql`ARRAY[]::text[]`).notNull(),
   needsReview: boolean("needs_review").default(false).notNull(),
   reviewedDate: date("reviewed_date").notNull(), reviewedSlot: text("reviewed_slot").$type<"morning" | "havdalah">().notNull(),
   setByMembershipId: uuid("set_by_membership_id").notNull(), createdAt: createdAt(),
@@ -47,6 +48,7 @@ export const studentServicePlan = pgTable("student_service_plan", {
   foreignKey({ name: "student_service_plan_author_fk", columns: [t.tenantId, t.setByMembershipId], foreignColumns: [membership.tenantId, membership.id] }),
   check("student_service_plan_revision", sql`${t.revision} > 0`),
   check("student_service_plan_slot", sql`${t.reviewedSlot} in ('morning','havdalah')`),
+  check("student_service_plan_completion", sql`${t.completedIds} <@ ${t.selectedIds} and cardinality(${t.completedIds}) <= 256 and array_position(${t.completedIds}, null) is null`),
   check("student_service_plan_selection", sql`cardinality(${t.selectedIds}) <= 256 and
     (cardinality(${t.selectedIds}) = 0 or (array_ndims(${t.selectedIds}) = 1 and array_lower(${t.selectedIds},1) = 1))
     and array_position(${t.selectedIds}, null) is null and octet_length(array_to_string(${t.selectedIds}, '|')) <= 16384`),

@@ -19,6 +19,7 @@ import { goChild, toSection } from "./reading-nav";
 vi.mock("server-only",()=>({}));
 let fixture:Awaited<ReturnType<typeof browserFixture>>,browser:Browser,stop:(()=>Promise<void>)|undefined,restore:(()=>void)|undefined,isolation:Awaited<ReturnType<typeof isolatedEnv>>|undefined;
 const contexts:BrowserContext[]=[];let revoked=false;
+const fallbackUnit = "torah.hakafot@bm-shacharit";
 const projection:MusicProjection={setlistId:"synthetic-service",sourceRevision:"synthetic-revision-1",localDate:"2027-01-02",ceremonyType:"morning",operatorLinks:{music:"https://music.example.test/setlists/synthetic-service",review:"https://music.example.test/beit-mitzvah/synthetic"},rows:[
   {rowId:"synthetic-opening",order:0,title:"Synthetic opening part",prayerId:"synthetic-prayer",arrangement:{songId:"synthetic-song"},liturgyRef:{book:"synthetic-book",folio:2,serviceViewId:"synthetic-view"},resources:[{resourceId:"synthetic-score",kind:"score",label:"Practice score"},{resourceId:"synthetic-held-audio",kind:"audio",label:"Held recording"}]},
   {rowId:"synthetic-closing",order:1,title:"Synthetic closing part",catalogUnitId:"torah.hakafot@bm-shacharit",resources:[]},
@@ -35,7 +36,7 @@ beforeAll(async()=>{
     await fixture.ownerDb.insert(s.studentIdentity).values({tenantId:"crc",studentId:fixture.student.id,roleGrantId:grant.id});
     await fixture.ownerDb.update(s.student).set({serviceSlot:"morning"}).where(eq(s.student.id,fixture.student.id));
     await fixture.ownerDb.update(s.guardian).set({practiceEnabled:true,revision:2}).where(eq(s.guardian.studentId,fixture.student.id));
-    stage="catalog and ceremony";const content=syntheticServiceCatalog(),catalogId=randomUUID(),ceremonyId=randomUUID();
+    stage="catalog and ceremony";const content=syntheticServiceCatalog("one", { extraUnits: [fallbackUnit] }),catalogId=randomUUID(),ceremonyId=randomUUID();
     await fixture.ownerDb.insert(s.serviceCatalog).values({id:catalogId,tenantId:"crc",identity:content.identity,feedBytes:content.feedBytes,provenanceBytes:content.provenanceBytes,pins:content.pins});
     await fixture.ownerDb.insert(s.serviceCatalogLifecycle).values({tenantId:"crc",catalogId,state:"active"});
     await fixture.ownerDb.insert(s.serviceCeremony).values({id:ceremonyId,tenantId:"crc",localDate:"2027-01-02",ceremonyType:"morning",requestedDate:"2027-01-02",requestedType:"morning",scheduleKey:"2027-01-02-morning",state:"linked",setlistId:projection.setlistId,projection});
@@ -106,4 +107,28 @@ it("opens My service in selected child practice on a phone with guardian request
   await region.getByRole("button",{name:"Read Synthetic opening part",exact:true}).first().click();await ui(region.locator(".service-unit-hebrew").first()).toBeVisible();
   await region.getByText("Ask about this part",{exact:true}).first().click();await region.getByLabel("What would you like to change?",{exact:true}).first().fill("Synthetic guardian question");await region.getByRole("button",{name:"Send request",exact:true}).first().click();await ui(region.getByText("Part requests (1 pending)",{exact:true})).toBeVisible();
   await tab.emulateMedia({colorScheme:"light"});await tab.evaluate(async()=>{await document.fonts.ready;});const directory=join(process.cwd(),".impeccable","review","service-ecosystem");await mkdir(directory,{recursive:true});await region.screenshot({path:join(directory,"my-service-guardian-390-light.png")});
+});
+
+it("saves the fallback tutor-plan part through its scoped lesson and returns to that part", async () => {
+  const [catalog] = await fixture.ownerDb.select().from(s.serviceCatalog);
+  const [staff] = await fixture.ownerDb.select().from(s.membership).where(eq(s.membership.userId, fixture.admin.id));
+  await fixture.ownerDb.delete(s.studentCeremony).where(eq(s.studentCeremony.studentId, fixture.student.id));
+  const [plan] = await fixture.ownerDb.insert(s.studentServicePlan).values({ tenantId: "crc", studentId: fixture.student.id, catalogId: catalog.id,
+    catalogIdentity: catalog.identity, selectedIds: [fallbackUnit], reviewedDate: fixture.student.ceremonyDate, reviewedSlot: "morning", setByMembershipId: staff.id }).returning();
+  const tab = await page("student");
+  const part = tab.locator(`[data-service-row="${fallbackUnit}"]`);
+  await part.getByRole("link", { name: "Open lesson" }).click();
+  const next = tab.getByRole("button", { name: "Next", exact: true });
+  await ui(tab.locator('[data-lesson="torah-service"][data-step="about"]').getByRole("button", { name: "Next", exact: true })).toBeEnabled();
+  await next.click();
+  const completed = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/service-plan/lesson"));
+  await next.click();
+  expect((await completed).status()).toBe(200);
+  await ui(tab.getByRole("status").filter({ hasText: "Lesson finished." })).toBeVisible();
+  await tab.getByRole("link", { name: "My assigned parts", exact: true }).click();
+  await ui(part.getByRole("heading")).toBeFocused();
+  await ui(part.getByText("Lesson finished.")).toBeVisible();
+  const [stored] = await fixture.ownerDb.select().from(s.studentServicePlan).where(eq(s.studentServicePlan.id, plan.id));
+  expect(stored.completedIds).toEqual([fallbackUnit]);
+  expect(await fixture.ownerDb.select().from(s.servicePartFinished)).toHaveLength(0);
 });

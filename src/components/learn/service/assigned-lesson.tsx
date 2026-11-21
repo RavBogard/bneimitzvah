@@ -22,6 +22,7 @@ export async function checkAssignedLesson(target: AssignedLessonTarget, lessonId
     if (result?.ok !== true || result.slot !== "morning" && result.slot !== "havdalah") throw new PortalRequestError(503);
     return result.slot;
   }
+  if (complete) return serviceApi.completeLesson(mode, target.studentId, { planId: target.planId, planRevision: target.revision, catalogIdentity: target.catalogIdentity, unitId: target.unitId, lessonId }, signal, child);
   const result = await serviceApi.metadata(mode, target.studentId, signal, child);
   if (result.state !== "assigned" || result.plan.id !== target.planId || result.plan.revision !== target.revision
     || result.plan.catalogIdentity !== target.catalogIdentity || result.plan.needsReview
@@ -33,7 +34,8 @@ export function useAssignedServiceLesson(lessonId: string) {
   const child = useChildLearning();
   const hash = useSyncExternalStore(subscribe, () => window.location.hash, () => "");
   const target = useMemo(() => assignedLessonTarget(hash), [hash]);
-  const [reply, setReply] = useState<{ target: AssignedLessonTarget; status: Status }>();
+  const scope = useMemo(() => ({ target, child, lessonId }), [target, child, lessonId]);
+  const [reply, setReply] = useState<{ scope: typeof scope; status: Status }>();
   const [attempt, setAttempt] = useState(0);
   const check = useCallback((complete: boolean, signal: AbortSignal) => target
     ? checkAssignedLesson(target, lessonId, complete, signal, child?.selection)
@@ -42,15 +44,15 @@ export function useAssignedServiceLesson(lessonId: string) {
     if (!target) return;
     const controller = new AbortController();
     void check(false, controller.signal).then(slot => {
-      if (!controller.signal.aborted) setReply({ target, status: { state: "ready", slot } });
+      if (!controller.signal.aborted) setReply({ scope, status: { state: "ready", slot } });
     }, error => {
-      if (!controller.signal.aborted) setReply({ target, status: {
+      if (!controller.signal.aborted) setReply({ scope, status: {
         state: error instanceof PortalRequestError && [401, 403, 404, 409].includes(error.status) ? "changed" : "failed",
       } });
     });
     return () => controller.abort();
-  }, [attempt, check, target]);
+  }, [attempt, check, scope, target]);
   if (!target) return null;
-  const status: Status = reply?.target === target ? reply.status : { state: "loading" };
-  return { status, source: target.source, check, retry: () => { setReply(undefined); setAttempt(n => n + 1); }, back: assignedPartsHref(child?.selection.context.studentId, target) };
+  const status: Status = reply?.scope === scope ? reply.status : { state: "loading" };
+  return { status, scope, check, retry: () => { setReply(undefined); setAttempt(n => n + 1); }, back: assignedPartsHref(child?.selection.context.studentId, target) };
 }

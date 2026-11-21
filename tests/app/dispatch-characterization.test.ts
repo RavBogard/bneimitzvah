@@ -56,7 +56,7 @@ const owned: [string, string[]][] = [
   [`/api/students/${S}/work`, ["GET"]], [`/api/students/${S}/work/history`, ["GET"]], [`/api/students/${S}/work/receipt`, ["GET"]],
   [`/api/students/${S}/work/recovery`, ["POST"]], [`/api/students/${S}/work/note`, ["POST"]],
   // service learning
-  [`/api/students/${S}/service-plan`, ["GET"]], ...["catalog", "prepare", "confirm", "unit"].map((op): [string, string[]] => [`/api/students/${S}/service-plan/${op}`, ["POST"]]),
+  [`/api/students/${S}/service-plan`, ["GET"]], ...["catalog", "prepare", "confirm", "unit", "lesson"].map((op): [string, string[]] => [`/api/students/${S}/service-plan/${op}`, ["POST"]]),
   // progress
   [`/api/students/${S}/progress`, ["GET"]], [`/api/students/${S}/progress/self-check`, ["POST"]], [`/api/students/${S}/progress/assessment`, ["POST"]],
   // study guides

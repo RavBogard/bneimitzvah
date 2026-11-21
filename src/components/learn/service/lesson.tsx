@@ -49,33 +49,36 @@ function LessonFlow({ lesson }: { lesson: Lesson }) {
   const [seed] = useState(() => Math.floor(Math.random() * 2 ** 31));
   const items = useCheckItems(lesson, text, seed);
   const steps = useMemo(() => lessonSteps(lesson, items ? items.length : null), [lesson, items]);
-  const [at, setAt] = useState(0);
+  const scope = assigned?.scope, activeScope = useRef(scope); activeScope.current = scope;
+  const [position, setPosition] = useState<{ scope: typeof scope; at: number }>();
   const child = useChildLearning(), { progress, account, update } = useServiceProgress(), completeDay = usePracticeCompleted();
   // A signed-in student's own slot picks the evening teaching and pages for a prayer the evening repeats (2.0 SC7); signed out, the morning.
   // Offline, the device's last copy of the student's parts (2.0 SC6), so the slot and Next of your parts hold.
   const pathView = useCoursePath(account).view, slot: ServiceSlot = assigned?.status.state === "ready" ? assigned.status.slot : pathView.status === "ready" ? pathView.path.slot : child?.assigned.student.serviceSlot ?? "morning";
-  const [partSave, setPartSave] = useState<"saving" | "saved" | "changed" | "failed">();
+  const [partSave, setPartSave] = useState<{ scope: NonNullable<typeof scope>; status: "saving" | "saved" | "changed" | "failed" }>();
   const completion = useRef<AbortController | null>(null);
-  useEffect(() => () => completion.current?.abort(), []);
-  // Music has its own part/version receipt. An unrelated plan can use the same course lesson.
+  useEffect(() => () => completion.current?.abort(), [scope]);
+  // Assigned parts record completion through the checked assignment. Course progress still syncs separately.
   const saveLesson = () => {
-    update(value => completeLesson(value, lesson, Date.now()), assigned?.source === "music" ? undefined : lesson.id);
+    update(value => completeLesson(value, lesson, Date.now()), assigned ? undefined : lesson.id);
     completeDay();
   };
   function complete() {
     if (!assigned) { saveLesson(); return; }
     completion.current?.abort();
     const controller = new AbortController(); completion.current = controller;
-    setPartSave("saving");
+    const scope = assigned.scope;
+    const current = () => !controller.signal.aborted && activeScope.current === scope;
+    setPartSave({ scope, status: "saving" });
     void assigned.check(true, controller.signal).then(() => {
-      if (!controller.signal.aborted) { saveLesson(); setPartSave("saved"); }
+      if (current()) { saveLesson(); setPartSave({ scope, status: "saved" }); }
     }, error => {
-      if (!controller.signal.aborted) setPartSave(error instanceof Error && "status" in error && [401, 403, 404, 409].includes(Number(error.status)) ? "changed" : "failed");
+      if (current()) setPartSave({ scope, status: error instanceof Error && "status" in error && [401, 403, 404, 409].includes(Number(error.status)) ? "changed" : "failed" });
     });
   }
   const main = useRef<HTMLElement>(null);
-  const go = useCallback((next: number) => { setAt(next); window.scrollTo({ top: 0 }); main.current?.focus({ preventScroll: true }); }, []);
-  const index = Math.min(at, steps.length - 1), step = steps[index];
+  const go = useCallback((next: number) => { setPosition({ scope, at: next }); window.scrollTo({ top: 0 }); main.current?.focus({ preventScroll: true }); }, [scope]);
+  const index = Math.min(position?.scope === scope ? position?.at ?? 0 : 0, steps.length - 1), step = steps[index];
   const next = () => go(Math.min(steps.length - 1, index + 1));
   const forward = (disabled = false) => <Footer><button type="button" className="button-start" disabled={disabled} onClick={next}>{COPY.frame.next}</button></Footer>;
   return <div className={`portal-shell ${learn.shell}`}>
@@ -98,7 +101,7 @@ function LessonFlow({ lesson }: { lesson: Lesson }) {
           : step === "words" && text ? <><KeyWordsStep lesson={lesson} text={text} />{forward()}</>
           : step === "check" && items ? <CheckStep key={seed} items={items as readonly CheckItem[]} seed={seed} onFinish={next} footer={children => <Footer>{children}</Footer>} />
           : step === "done" ? <Done lesson={lesson} state={state} complete={complete} progress={progress} pathView={pathView} slot={slot}
-            assignedBack={assigned?.back} partSave={partSave} />
+            assignedBack={assigned?.back} partSave={partSave?.scope === scope ? partSave?.status : undefined} />
           : <p role="status" className={styles.note}>{COPY.state.lessonLoading}</p>}
       </LessonWords>}
     </main>

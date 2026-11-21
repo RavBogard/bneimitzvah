@@ -15,9 +15,12 @@ import type { ServiceUnit, ServiceUnitMaterial, ServiceSectionHeading } from "..
 import * as stored from "./data";
 import type { PracticeTarget } from "../../lib/practice-calendar/types";
 import { causedBy } from "../logging/failure";
+import { lessonForUnit, tenantFile } from "../../lib/service-course/path";
+import { lessonById, lessonOpen } from "../../lib/service-course/course";
 
 type Mode = ActiveMode | "child-practice";
 type ReadSelection = { mode: Mode; studentId: string };
+type UnitSelection = ReadSelection & { planId: string; planRevision: number; catalogIdentity: string; unitId: string };
 type Plan = NonNullable<Awaited<ReturnType<typeof stored.currentPlan>>>;
 type Lifecycle = NonNullable<Awaited<ReturnType<typeof stored.lifecycle>>>;
 const stale = () => ({ ok: false as const, code: "stale-revision" as const });
@@ -77,11 +80,11 @@ async function readStoredFeed<Q extends PgQueryResultHKT>(data: typeof stored, t
     return parsed;
   } catch (error) { throw causedBy(new AccessUnavailable(), error); }
 }
-async function readStoredPlan<Q extends PgQueryResultHKT>(data: typeof stored, tx: AccessTransaction<Q>, actor: StudentActor | PracticeActor, student: StudentView, check: () => void) {
+async function readStoredPlan<Q extends PgQueryResultHKT>(data: typeof stored, tx: AccessTransaction<Q>, actor: StudentActor | PracticeActor, student: StudentView, check: () => void, lock: "share" | "update" = "share") {
   const baseline = await data.currentPlan(tx, actor.tenantId, student.id); check(); if (!baseline) return null;
   // Shared material composition preserves lifecycle-before-plan lock order.
   const lifecycle = await data.lifecycle(tx, actor.tenantId, baseline.catalogId); check(); if (!lifecycle) throw new AccessUnavailable();
-  const plan = await data.currentPlan(tx, actor.tenantId, student.id, "share"); check();
+  const plan = await data.currentPlan(tx, actor.tenantId, student.id, lock); check();
   if (!plan || plan.id !== baseline.id || plan.revision !== baseline.revision || plan.catalogId !== baseline.catalogId) return { stale: true as const };
   const context = await data.context(tx, actor.tenantId, student.id); check(); if (!context) throw new AccessDenied(404);
   const selected = ids(plan.selectedIds), needsReview = plan.needsReview || student.ceremonyDate !== plan.reviewedDate || context.serviceSlot !== plan.reviewedSlot;
@@ -110,17 +113,17 @@ export function createServiceLearningService<Q extends PgQueryResultHKT>(input: 
 }) {
   const data = input.data ?? stored, bindings = createBindings(input.signingSecret, input.now ?? Date.now);
   const feed = (tx: AccessTransaction<Q>, tenantId: string, catalogId: string) => readStoredFeed(data, tx, tenantId, catalogId, () => undefined);
-  const withRead = <T>(request: AccessRequest, selection: ReadSelection, action: (tx: AccessTransaction<Q>, actor: StudentActor | PracticeActor, student: StudentView) => Promise<T>) => {
+  const withAuthority = <T>(request: AccessRequest, selection: ReadSelection, capability: "read" | "practice-write", action: (tx: AccessTransaction<Q>, actor: StudentActor | PracticeActor, student: StudentView) => Promise<T>) => {
     identifier(selection.studentId);
     return selection.mode === "child-practice"
-      ? input.practice.withPracticeCapability(request, { ...selection, mode: "child-practice", capability: "read" }, action)
-      : input.access.withStudentCapability(request, { ...selection, mode: selection.mode, capability: "read" }, action);
+      ? input.practice.withPracticeCapability(request, { ...selection, mode: "child-practice", capability }, action)
+      : input.access.withStudentCapability(request, { ...selection, mode: selection.mode, capability }, action);
   };
   const readPlan = (tx: AccessTransaction<Q>, actor: StudentActor | PracticeActor, student: StudentView) => readStoredPlan(data, tx, actor, student, () => live(actor));
   const planView = (value: { plan: Plan; lifecycle: Lifecycle; needsReview: boolean }) => ({ id: value.plan.id, revision: value.plan.revision,
     needsReview: value.needsReview, catalogId: value.plan.catalogId, catalogIdentity: value.plan.catalogIdentity, catalogState: value.lifecycle.state });
   async function metadata(request: AccessRequest, selection: ReadSelection) {
-    return withRead(request, selection, async (tx, actor, student) => {
+    return withAuthority(request, selection, "read", async (tx, actor, student) => {
       const value = await readPlan(tx, actor, student);
       if (!value) return { state: "no-plan" as const };
       if ("stale" in value) return { state: "stale" as const };
@@ -130,14 +133,15 @@ export function createServiceLearningService<Q extends PgQueryResultHKT>(input: 
       const loaded = await feed(tx, actor.tenantId, value.plan.catalogId);
       const selected = canonical(loaded, value.selected, value.plan.reviewedSlot);
       if (loaded.identity !== value.plan.catalogIdentity || digest(selected) !== digest(value.selected)) throw new AccessUnavailable();
-      const units = selected.map(id => summary(loaded, loaded.units.find(unit => unit.id === id)!));
+      const completed = !value.needsReview && (selection.mode === "student" || selection.mode === "child-practice") ? new Set(value.plan.completedIds) : null;
+      const units = selected.map(id => ({ ...summary(loaded, loaded.units.find(unit => unit.id === id)!), ...(completed?.has(id) ? { finished: true as const } : {}) }));
       const start = serviceStart(loaded, value.plan.reviewedSlot);
       const result = bounded({ state: "assigned" as const, plan, units, ...(start !== undefined ? { serviceStart: start } : {}) }); live(actor); return result;
     });
   }
-  async function unit(request: AccessRequest, selection: ReadSelection & { planId: string; planRevision: number; catalogIdentity: string; unitId: string }) {
+  async function unit(request: AccessRequest, selection: UnitSelection) {
     identifier(selection.planId); positive(selection.planRevision); identity(selection.catalogIdentity); const [unitId] = ids([selection.unitId]);
-    return withRead(request, selection, async (tx, actor, student) => {
+    return withAuthority(request, selection, "read", async (tx, actor, student) => {
       const value = await readPlan(tx, actor, student); if (!value) throw new AccessDenied(404);
       if ("stale" in value) return { state: "stale" as const };
       if (value.plan.id !== selection.planId || value.plan.revision !== selection.planRevision || value.plan.catalogIdentity !== selection.catalogIdentity) { live(actor); return { state: "stale" as const }; }
@@ -148,6 +152,26 @@ export function createServiceLearningService<Q extends PgQueryResultHKT>(input: 
       if (loaded.identity !== value.plan.catalogIdentity || digest(selected) !== digest(value.selected)) throw new AccessUnavailable();
       const result = bounded({ state: "assigned" as const, plan: planView(value), material: material(loaded, loaded.units.find(unit => unit.id === unitId)!) });
       live(actor); return result;
+    });
+  }
+  async function completeLesson(request: CookieMutationRequest, selection: UnitSelection & { lessonId: string }) {
+    if (selection.mode !== "student" && selection.mode !== "child-practice") throw new AccessDenied(403);
+    identifier(selection.planId); positive(selection.planRevision); identity(selection.catalogIdentity); const [unitId] = ids([selection.unitId]);
+    return withAuthority(request, selection, "practice-write", async (tx, actor, student) => {
+      requireCookieMutation(request, actor.origin);
+      const check = () => live(actor);
+      const value = await readStoredPlan(data, tx, actor, student, check, "update");
+      if (!value || "stale" in value || value.plan.id !== selection.planId || value.plan.revision !== selection.planRevision ||
+        value.plan.catalogIdentity !== selection.catalogIdentity || value.needsReview || value.lifecycle.state === "withdrawn") return stale();
+      const loaded = await readStoredFeed(data, tx, actor.tenantId, value.plan.catalogId, check);
+      const selected = canonical(loaded, value.selected, value.plan.reviewedSlot);
+      if (loaded.identity !== value.plan.catalogIdentity || digest(selected) !== digest(value.selected)) throw new AccessUnavailable();
+      const tenant = tenantFile(actor.tenantId);
+      const lesson = lessonById(selection.lessonId);
+      if (!tenant || !lesson || !lessonOpen(lesson, undefined, tenant) || !selected.includes(unitId) || lessonForUnit(tenant, unitId) !== lesson.id) throw new AccessDenied(404);
+      const saved = await data.markLessonComplete(tx, value.plan, unitId);
+      check();
+      return saved ? { ok: true as const, slot: value.plan.reviewedSlot } : stale();
     });
   }
   async function catalog(request: CookieMutationRequest, selection: { mode: ActiveMode; studentId: string }) {
@@ -221,7 +245,7 @@ export function createServiceLearningService<Q extends PgQueryResultHKT>(input: 
     if(!input.resolveCeremonyUnit)throw new AccessUnavailable();
     // Resolve source approval before opening the material authority transaction.
     const mapping=await input.resolveCeremonyUnit(request,selection);
-    return withRead(request,selection,async(tx,actor)=>{
+    return withAuthority(request,selection,"read",async(tx,actor)=>{
       const lifecycle=await data.lifecycle(tx,actor.tenantId,mapping.catalogId);if(!lifecycle || lifecycle.state==="withdrawn")throw new AccessUnavailable();
       const loaded=await feed(tx,actor.tenantId,lifecycle.catalogId);
       if(loaded.identity!==mapping.catalogIdentity)throw new AccessUnavailable();
@@ -230,5 +254,5 @@ export function createServiceLearningService<Q extends PgQueryResultHKT>(input: 
       live(actor);return bounded(material(loaded,found));
     });
   }
-  return Object.freeze({ catalog, prepare, confirm, metadata, unit, ceremonyUnit });
+  return Object.freeze({ catalog, prepare, confirm, metadata, unit, completeLesson, ceremonyUnit });
 }

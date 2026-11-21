@@ -225,6 +225,36 @@ test("linked-child read parity rechecks handle/guardian state and clears after r
   expect(await denied(() => f.serviceLearning.metadata(request, { mode: "child-practice", studentId: f.selection.studentId }), 404)).toBe(true);
 });
 
+test("only the learner or current child context can finish the exact plan unit for the reviewed lesson", async () => {
+  const f = await fixture({ standard: true }), staff = { mode: "admin" as const, studentId: f.selection.studentId };
+  const review = await f.serviceLearning.prepare(f.mutation(), { ...f.selection, selectedIds: [f.content.standard.vahavta, f.content.standard.torahBefore] });
+  if (!review.ok) throw new Error("Synthetic service review missing");
+  const saved = await f.serviceLearning.confirm(f.mutation(), { ...staff, binding: review.binding });
+  if (!saved.ok) throw new Error("Synthetic service plan missing");
+  const target = { studentId: staff.studentId, planId: saved.planId, planRevision: saved.revision, catalogIdentity: f.content.identity,
+    unitId: f.content.standard.vahavta, lessonId: "vahavta" };
+  const direct = { ...target, mode: "student" as const };
+  expect(await denied(() => f.serviceLearning.completeLesson(f.mutation("learner"), { ...direct, lessonId: "shma" }), 404)).toBe(true);
+  expect(await denied(() => f.serviceLearning.completeLesson(f.mutation(), { ...target, mode: "admin" }), 403)).toBe(true);
+  expect(await denied(() => f.serviceLearning.completeLesson(f.mutation("learner", "https://foreign.example.test"), direct), 403)).toBe(true);
+  expect(await f.serviceLearning.completeLesson(f.mutation("learner"), direct)).toEqual({ ok: true, slot: "morning" });
+  const child = await f.practice.enter(f.mutation("multi"), { studentId: staff.studentId });
+  const request = f.mutation("multi"); request.headers.set("X-Practice-Context", child.handle);
+  const linkedTarget = { ...target, mode: "child-practice" as const };
+  expect(await f.serviceLearning.completeLesson(request, linkedTarget)).toEqual({ ok: true, slot: "morning" });
+  const metadata = await f.serviceLearning.metadata(request, linkedTarget);
+  if (metadata.state !== "assigned") throw new Error("Synthetic service plan missing");
+  expect(metadata.units.map(unit => [unit.id, unit.finished])).toEqual([[f.content.standard.vahavta, true], [f.content.standard.torahBefore, undefined]]);
+  const admin = await f.serviceLearning.metadata(f.request("admin"), staff);
+  if (admin.state !== "assigned") throw new Error("Synthetic service plan missing");
+  expect(admin.units.every(unit => unit.finished === undefined)).toBe(true);
+  const replacement = await f.serviceLearning.prepare(f.mutation(), { ...f.selection, expectedPlanRevision: 1, selectedIds: [target.unitId] });
+  if (!replacement.ok) throw new Error("Synthetic service review missing");
+  expect(await f.serviceLearning.confirm(f.mutation(), { ...staff, binding: replacement.binding })).toMatchObject({ ok: true, revision: 2 });
+  expect(await f.serviceLearning.completeLesson(request, linkedTarget)).toEqual({ ok: false, code: "stale-revision" });
+  expect((await f.owner(() => f.db.select().from(s.studentServicePlan)))[0].completedIds).toEqual([]);
+});
+
 test("catalog content is immutable/SELECT-only, lifecycle grants permit SHARE but no mutation, and tenant RLS denies other catalogs", async () => {
   const f = await fixture();
   await withTenantTransaction(f.db, { tenantId: "crc" }, async tx => { expect(await data.lifecycle(tx, "crc", f.catalogId)).not.toBeNull(); });

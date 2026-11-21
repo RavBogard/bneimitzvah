@@ -4,7 +4,7 @@ import { identifier, type ReadingMode, type Selection } from "../api";
 import type { ServiceBlock, ServiceSpan, ServiceUnitMaterial, ServiceSectionHeading } from "../../../../lib/service-learning/types";
 
 export type ServicePlan = { id: string; revision: number; needsReview: boolean; catalogId: string; catalogIdentity: string; catalogState: "active" | "superseded" | "withdrawn" };
-export type UnitSummary = { id: string; name: string; caption?: string; section: ServiceSectionHeading; /** Printed siddur page, when the server knows it. */ page?: number };
+export type UnitSummary = { id: string; name: string; caption?: string; section: ServiceSectionHeading; /** Printed siddur page, when the server knows it. */ page?: number; finished?: true };
 export type ServiceMetadata = { state: "no-plan" } | { state: "cleared" | "withdrawn"; plan: ServicePlan } | { state: "assigned"; plan: ServicePlan; units: UnitSummary[]; /** Printed siddur page where the service starts, when the server knows it. */ serviceStart?: number };
 export type ServiceUnitResponse = { state: "withdrawn"; plan: ServicePlan } | { state: "assigned"; plan: ServicePlan; material: ServiceUnitMaterial };
 export type Catalog = { state: "unknown-slot" | "unavailable" } | { state: "available"; studentRevision: number; ceremonyDate: string; serviceSlot: "morning" | "havdalah"; expectedPlanRevision: number; catalogId: string; catalogIdentity: string; lifecycleRevision: number; units: UnitSummary[];
@@ -34,7 +34,13 @@ function section(value: unknown): ServiceSectionHeading {
   return out;
 }
 function summaries(value: unknown): UnitSummary[] {
-  const result = array(value, 256).map(value => { const row = closed(value, ["id", "name", "section"], ["caption", "page"]); return { id: unitId(row.id), name: nonempty(row.name, 16_384), section: section(row.section), ...(Object.hasOwn(row, "caption") ? { caption: string(row.caption) } : {}), ...(Object.hasOwn(row, "page") ? { page: integer(row.page) } : {}) }; });
+  const result = array(value, 256).map(value => {
+    const row = closed(value, ["id", "name", "section"], ["caption", "page", "finished"]);
+    if (Object.hasOwn(row, "finished") && row.finished !== true) return bad();
+    return { id: unitId(row.id), name: nonempty(row.name, 16_384), section: section(row.section),
+      ...(Object.hasOwn(row, "caption") ? { caption: string(row.caption) } : {}), ...(Object.hasOwn(row, "page") ? { page: integer(row.page) } : {}),
+      ...(row.finished === true ? { finished: true as const } : {}) };
+  });
   if (new Set(result.map(row => row.id)).size !== result.length) return bad(); return result;
 }
 function plan(value: unknown): ServicePlan {
@@ -119,8 +125,9 @@ export function parseServiceUnit(value: unknown, expected: ServicePlan, selected
   const result = material(row.material); if (result.unit.id !== selected || result.source.catalogIdentity !== current.catalogIdentity) return bad();
   return { state: "assigned", plan: current, material: result };
 }
-async function request(mode: ReadingMode, studentId: string, action: "metadata" | "unit" | "catalog" | "prepare" | "confirm" | "finished", body: Record<string, unknown> | undefined, signal: AbortSignal, selection?: Selection): Promise<unknown> {
-  if (!["student", "parent", "tutor", "admin", "child-practice"].includes(mode) || action !== "metadata" && action !== "unit" && mode !== "admin" && mode !== "tutor") return bad();
+async function request(mode: ReadingMode, studentId: string, action: "metadata" | "unit" | "catalog" | "prepare" | "confirm" | "finished" | "lesson", body: Record<string, unknown> | undefined, signal: AbortSignal, selection?: Selection): Promise<unknown> {
+  if (!["student", "parent", "tutor", "admin", "child-practice"].includes(mode)) return bad();
+  if (action === "lesson" ? mode !== "student" && mode !== "child-practice" : action !== "metadata" && action !== "unit" && mode !== "admin" && mode !== "tutor") return bad();
   const read = action === "metadata" || action === "finished";
   const id = identifier(studentId);
   if (mode === "child-practice" && (!selection || selection.context.studentId !== id || Date.parse(selection.context.expiresAt) <= Date.now() || !/^[A-Za-z0-9_-]{43}$/.test(selection.handle))) return bad();
@@ -155,6 +162,11 @@ export function parseFinished(value: unknown): FinishedPart[] {
   return parts;
 }
 export const serviceApi = {
+  async completeLesson(mode: "student" | "child-practice", id: string, body: { planId: string; planRevision: number; catalogIdentity: string; unitId: string; lessonId: string }, signal: AbortSignal, selection?: Selection) {
+    const row = closed(await request(mode, id, "lesson", body, signal, selection), ["ok", "slot"]);
+    if (row.ok !== true) return bad();
+    return slot(row.slot);
+  },
   async finished(mode: "admin" | "tutor", id: string, signal: AbortSignal) { return parseFinished(await request(mode, id, "finished", undefined, signal)); },
   async metadata(mode: ReadingMode, id: string, signal: AbortSignal, selection?: Selection) { return parseServiceMetadata(await request(mode, id, "metadata", undefined, signal, selection)); },
   async unit(mode: ReadingMode, id: string, expected: ServicePlan, selected: string, signal: AbortSignal, selection?: Selection) { return parseServiceUnit(await request(mode, id, "unit", { planId: expected.id, planRevision: expected.revision, catalogIdentity: expected.catalogIdentity, unitId: selected }, signal, selection), expected, selected); },
