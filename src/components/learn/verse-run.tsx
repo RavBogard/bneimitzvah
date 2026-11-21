@@ -1,4 +1,5 @@
 "use client";
+import { usePracticeCompleted } from "../portal/offline/practice-completion";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 import { familyColor, type Melody } from "../../lib/learn/course";
 import { analyseVerse } from "../../lib/learn/verse";
@@ -94,12 +95,13 @@ export function useVerseTexts(ids: readonly VerseCardId[] | null, retry = 0): Lo
 /** Due verse cards inside Review: each answer moves its card (up once per review when Clean, down when Stumbled). */
 export function VerseReviewStage({ ids, review, until, update, onDone, frame }: { ids: readonly VerseCardId[]; review: VerseReview | null; until: string | null;
   update(change: (value: VerseReview) => VerseReview): void; onDone(): void; frame(body: ReactNode, footer?: ReactNode): ReactElement }) {
+  const completeDay = usePracticeCompleted();
   const [retry, setRetry] = useState(0), texts = useVerseTexts(ids, retry), moved = useRef(new Set<string>()), today = useRef(localDay(Date.now()));
   const empty = texts.status === "ready" && !texts.verses.length;
   useEffect(() => { if (empty) onDone(); }, [empty]); // eslint-disable-line react-hooks/exhaustive-deps
   if (texts.status === "loading" || empty) return frame(<p role="status" className={styles.state}>Loading the review…</p>);
   if (texts.status === "error") return frame(<div className={styles.state}><button type="button" className="button-secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></div>,
     <button type="button" className="button-secondary" onClick={onDone}>Next</button>);
-  return <VerseRunView verses={texts.verses} review={review} mode="review" frame={frame} onDone={() => onDone()}
+  return <VerseRunView verses={texts.verses} review={review} mode="review" frame={frame} onDone={() => { completeDay(); onDone(); }}
     onAnswer={(id, clean) => update(value => recordVerse(value, id, clean, today.current, { moved: moved.current, until }))} />;
 }

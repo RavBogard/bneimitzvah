@@ -67,6 +67,8 @@ import { createCongregationSettingsService } from "../settings/service";
 import { createClaudeConnectionsService } from "../connections/service";
 import { createMavenLinkService } from "../students/maven-links";
 import { createPracticeCalendarService } from "../practice-calendar/service";
+import { createPracticeCompletion } from "../practice-calendar/completion";
+import { createPracticeSweep } from "../practice-calendar/scheduler";
 import { createPublicStudyCoalescer, type PublicStudyCoalescer } from "../study/coalescing";
 import { resolveTenantHost } from "../tenancy/resolve";
 import { createTenantHostDirectory } from "../data/tenant-hosts";
@@ -253,6 +255,8 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const claudeConnections = once("claudeConnections", () => createClaudeConnectionsService({ access: access() }));
   const mavenLinks = once("mavenLinks", () => createMavenLinkService({ access: access() }));
   const practiceCalendar = once("practiceCalendar", () => createPracticeCalendarService({ access: access(), practice: practice() }));
+  const practiceCompletion = once("practiceCompletion", () => createPracticeCompletion({ access: access(), practice: practice(), offlineSecret: purposeSecret(config, "offline-owner") }));
+  const practiceSweep = once("practiceSweep", () => createPracticeSweep({ db, cronSecret: config.serviceCronSecret }));
   const loadText = once("loadText", () => createSefariaStudyReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS, cache: createPersistentStudyCache(db), coalescer: studyTasks }));
   const study = once("study", () => createStudyService({ access: access(), practice: practice(), load: loadText() }));
   const readingExploration = once("readingExploration", () => createReadingExplorationService({ access: access(), practice: practice(), loadReading: loadReading(), loadText: loadText(), signingSecret: purposeSecret(config, "reading-exploration") }));
@@ -321,7 +325,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     get shortExplorationAudio() { return shortExplorationAudio(); }, get readingPreview() { return readingPreview(); }, get studentWork() { return studentWork(); },
     get progress() { return progress(); }, get studyGuides() { return studyGuides(); }, get guideShare() { return guideShare(); }, get guideAdmin() { return guideAdmin(); },
     get congregationSettings() { return congregationSettings(); }, get claudeConnections() { return claudeConnections(); }, get mavenLinks() { return mavenLinks(); },
-    get lessonLog() { return lessonLog(); }, get practiceCalendar() { return practiceCalendar(); }, get serviceLearning() { return serviceLearning(); },
+    get lessonLog() { return lessonLog(); }, get practiceCalendar() { return practiceCalendar(); }, get practiceCompletion() { return practiceCompletion(); }, get practiceSweep() { return practiceSweep(); }, get serviceLearning() { return serviceLearning(); },
     get serviceEcosystem() { return serviceEcosystem(); }, get serviceScheduler() { return serviceScheduler(); }, get honors() { return honors(); }, get honoree() { return honoree(); },
     get portal() { return portal(); }, get relationships() { return relationships(); }, get pendingInvitations() { return pendingInvitations(); },
     get googleChallenges() { return googleChallenges(); }, get signInCodes() { return signInCodes(); }, get signInCodeCap() { return signInCodeCap(); }, get mcp() { return mcp(); },

@@ -2,13 +2,13 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { personalStudyHref, PERSONAL_STUDY_HEADER, PERSONAL_STUDY_PARAM } from "../../lib/learn/child-practice";
-import { useChildLearning, useLearningSearch, type LearningTransport } from "./child-practice";
+import { useChildLearning, useOfflineChildLearning, useLearningSearch, type LearningTransport } from "./child-practice";
 
 const Context = createContext<LearningTransport | null>(null);
 export const usePersonalLearning = () => useContext(Context);
 export function useLearningTransport() {
-  const child = useChildLearning(), personal = usePersonalLearning();
-  return child ?? personal;
+  const child = useChildLearning(), offline = useOfflineChildLearning(), personal = usePersonalLearning();
+  return child ?? offline?.transport ?? personal;
 }
 
 const personalFetch: typeof fetch = (url, init) => {
@@ -32,10 +32,10 @@ function personalTransport(): LearningTransport {
 }
 
 export function PersonalLearningBoundary({ children }: { children: ReactNode }) {
-  const path = usePathname(), search = useLearningSearch(), router = useRouter(), child = useChildLearning();
+  const path = usePathname(), search = useLearningSearch(), router = useRouter(), child = useChildLearning(), offline = useOfflineChildLearning();
   const [mounted, setMounted] = useState(false), [scope, setScope] = useState<LearningTransport | null>(null);
   useEffect(() => setMounted(true), []);
-  const marked = !child && mounted && new URLSearchParams(search).get(PERSONAL_STUDY_PARAM) === "1";
+  const marked = !child && !offline && mounted && new URLSearchParams(search).get(PERSONAL_STUDY_PARAM) === "1";
   useEffect(() => {
     if (!marked) return;
     const transport = personalTransport();

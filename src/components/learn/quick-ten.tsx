@@ -1,4 +1,5 @@
 "use client";
+import { usePracticeCompleted } from "../portal/offline/practice-completion";
 import { useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode, type RefObject } from "react";
 import type { FamilyId } from "../../lib/trope/chart-catalog";
 import { COURSE, practiceById, type Practice } from "../../lib/learn/course";
@@ -47,6 +48,7 @@ function QuickTen({ practice }: { practice: Practice }) {
 
 function QuickTenRun({ practice, families, pools, frame, main, back }: { practice: Practice; families: readonly FamilyId[]; pools: Pools;
   frame(body: ReactNode, footer?: ReactNode): ReactElement; main: RefObject<HTMLElement | null>; back: ReactNode }) {
+  const completeDay = usePracticeCompleted();
   const { update, until } = useProgress(), { player } = useLearnServices(), state = usePlayerState(), cardOpen = useWordCardOpen();
   const seed = useRef(Math.floor(Math.random() * 2 ** 31));
   const items = useMemo(() => drillItems(quickTenDrill(practice, families), pools, { melody: practice.melody, focus: null }, seededRandom(seed.current)), [practice, families, pools]);
@@ -55,7 +57,7 @@ function QuickTenRun({ practice, families, pools, frame, main, back }: { practic
   const rng = useRef(seededRandom(seed.current + 1)), moved = useRef(new Set<string>()), none = useRef<HTMLButtonElement>(null);
   const advance = () => {
     player.stop();
-    if (runDone(run)) { setFinished(true); return; }
+    if (runDone(run)) { completeDay(); setFinished(true); return; }
     setShown(value => ({ item: currentItem(run), n: value.n + 1 })); setAnswered(false);
     window.scrollTo({ top: 0 }); main.current?.focus({ preventScroll: true });
   };

@@ -1,4 +1,5 @@
 "use client";
+import { usePracticeCompleted } from "../portal/offline/practice-completion";
 import { useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import type { Melody } from "../../lib/learn/course";
 import { localDay } from "../../lib/learn/progress";
@@ -43,6 +44,7 @@ export function RunThroughScreen({ kind }: { kind: Melody | null }) {
 
 function RunThroughReading({ verses, kind, frame, back, nav, verseCards }: { verses: readonly string[]; kind: Melody; frame(body: ReactNode, footer?: ReactNode): ReactElement;
   back: ReactNode; nav: ReactNode; verseCards: ReturnType<typeof useVerseReview> }) {
+  const completeDay = usePracticeCompleted();
   const ids = useMemo(() => verses.map(ref => verseCardId(kind, ref)), [verses, kind]);
   const [retry, setRetry] = useState(0), texts = useVerseTexts(ids, retry), [done, setDone] = useState<VerseRun | null>(null), today = useRef(localDay(Date.now()));
   const state = verseCards.state, review = state.status === "ready" ? state.review : null, until = state.status === "ready" ? state.until : null;
@@ -53,6 +55,6 @@ function RunThroughReading({ verses, kind, frame, back, nav, verseCards }: { ver
     return frame(<>{line && <p className={styles.doneLine} data-run-summary>{line}</p>}{nav}</>, back);
   }
   if (!texts.verses.length) return frame(<><div className={styles.state} data-run-empty><p>{RUN_THROUGH_EMPTY.text}</p><button type="button" className="button-secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></div>{nav}</>, back);
-  return <VerseRunView verses={texts.verses} review={review} mode="run-through" frame={frame} onDone={setDone}
+  return <VerseRunView verses={texts.verses} review={review} mode="run-through" frame={frame} onDone={run => { completeDay(); setDone(run); }}
     onAnswer={(id, clean) => verseCards.update(value => recordVerse(value, id, clean, today.current, { until }))} />;
 }

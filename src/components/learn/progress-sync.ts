@@ -68,7 +68,7 @@ function refusedOwner(value: unknown): string | null {
 export type SyncLocks = Readonly<{ request(name: string, callback: () => unknown): Promise<unknown> }>;
 export type SyncIo = Readonly<{
   fetch: typeof fetch; storage(): Pick<Storage, "getItem" | "setItem" | "removeItem"> | null; store: ProgressStore;
-  accountOnly?: boolean;
+  accountOnly?: boolean; ownerScoped?: boolean;
   onProgress(progress: Progress): void; onAccount(account: Account): void;
   timer?: (callback: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void;
   /** Defaults to `navigator.locks` where it exists. */
@@ -211,7 +211,9 @@ export function createProgressSync(io: SyncIo) {
       const marker = readMarker(io.storage());
       // First sign-in in this browser: merge its progress into the account's.
       if (!marker) {
-        if (io.accountOnly) await settle(remote, null);
+        const here = io.store.load();
+        const scopedWork = io.ownerScoped && (Object.keys(here.lessons).length || Object.keys(here.cards).length);
+        if (io.accountOnly && !scopedWork) await settle(remote, null);
         else await merge(null);
         return;
       }

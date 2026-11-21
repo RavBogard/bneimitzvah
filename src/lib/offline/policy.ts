@@ -140,6 +140,7 @@ export function servicePackAssetAllowed(asset: string): boolean {
  * sign-out purge, Remove saved readings and an account switch all remove it with the cache (pack-index.ts, path-copy.ts).
  */
 export const PATH_COPY_KEY = "/__crc_offline__/path";
+export const PRACTICE_LEASE_KEY = "/__crc_offline__/practice-date-lease";
 
 /**
  * A2: the private endpoint that names the signed-in person's own readings (descriptors only). The worker never

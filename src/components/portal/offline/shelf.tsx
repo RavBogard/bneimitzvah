@@ -7,6 +7,7 @@ import { WINDOW_MS, type Pack } from "../../../lib/offline/policy";
 import { readAddress } from "../public-reading/urls";
 import { savedDate, useOfflinePacks, useOnline, usePlatform, useProductName } from "./status";
 import styles from "./offline.module.css";
+import { usePracticeCompleted } from "./practice-completion";
 import { SiteBar } from "../../site/site-bar";
 
 /**
@@ -40,6 +41,7 @@ export function shelfRows(packs: readonly Pack[]): readonly Pack[] {
 
 export function OfflineShelf() {
   const platform = usePlatform(), live = platform?.origin === true;
+  const completeDay = usePracticeCompleted(undefined, "ref");
   const [packs, setPacks] = useState<readonly Pack[] | null>(null), [removed, setRemoved] = useState(false), productName = useProductName(live);
   const { ownerChecked, week, course, service: serviceState } = useOfflinePacks(), online = useOnline(), showOwn = ownerChecked || !online;
   useEffect(() => {
@@ -49,6 +51,7 @@ export function OfflineShelf() {
   }, [live, showOwn, week, course, serviceState]);
   return <OfflineShelfView live={platform === null ? null : live} packs={packs} removed={removed} productName={productName}
     online={online} installed={platform?.installed === true}
+    onOpen={pack => { if (pack.descriptor.type === "ref" && pack.owner !== "public" && !pack.label) completeDay(); }}
     onRemove={() => void purgeOffline().then(() => { setRemoved(true); setPacks([]); })} />;
 }
 
@@ -57,7 +60,7 @@ export function OfflineShelf() {
  * that keeps nothing, true on an offline origin. The heading is always there; the empty line shows wherever nothing is saved.
  */
 export function OfflineShelfView(props: Readonly<{ live: boolean | null; packs: readonly Pack[] | null; removed: boolean; productName: string | null;
-  online: boolean; installed: boolean; onRemove(): void }>) {
+  online: boolean; installed: boolean; onRemove(): void; onOpen?(pack: Pack): void }>) {
   const { live, packs, removed, productName, online, installed } = props;
   const identity = useIdentity();
   const empty = <p className={styles.shelfEmpty} role="status" data-testid="offline-empty">{removed ? APPROVED.removed : APPROVED.nothingSaved}</p>;
@@ -71,7 +74,7 @@ export function OfflineShelfView(props: Readonly<{ live: boolean | null; packs: 
       {packs !== null && (packs.length ? <ul className={styles.shelf}>{shelfRows(packs).map(pack => <li key={pack.key} data-pack={pack.descriptor.type}>
         <span className={styles.shelfLabel}><bdi dir="auto">{label(pack)}</bdi></span>
         <span className={styles.shelfDate}>{APPROVED.savedUntil(savedDate(Math.min(pack.expiresAt, pack.renewedAt + WINDOW_MS)))}</span>
-        <a className="button-secondary" href={target(pack)}>{PLAN.open}</a>
+        <a className="button-secondary" href={target(pack)} onClick={() => props.onOpen?.(pack)}>{PLAN.open}</a>
       </li>)}</ul> : <>{empty}
         <p className="field-help" role="status" data-testid="offline-recovery">{online ? installed ? NEW.saveThisWeek : NEW.installToSave : NEW.reconnectToSave}</p>
         {online && <div className={styles.shelfActions}>

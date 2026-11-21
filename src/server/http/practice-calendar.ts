@@ -11,10 +11,28 @@ function route(pathname: string) {
   return match ? { studentId: match[1], calendar: match[2] === "practice-calendar" } : null;
 }
 export function practiceCalendarRouteMethods(pathname: string): readonly string[] | null {
+  if (pathname === "/api/learn/practice-days") return ["GET", "POST"];
+  if (pathname === "/api/internal/practice-calendar/sweep") return ["GET"];
   const found = route(pathname); return found ? found.calendar ? ["GET"] : ["GET", "POST"] : null;
 }
 export async function handlePracticeCalendarRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
-  const found = route(new URL(request.url).pathname); if (!found) return null;
+  const pathname = new URL(request.url).pathname;
+  if (pathname === "/api/internal/practice-calendar/sweep") {
+    try {
+      uniqueQuery(request.url, []);
+      const { tenantId } = await runtime.resolveHost(request);
+      return privateJson(await runtime.practiceSweep.cron(request, tenantId));
+    } catch (error) { return errorResponse(error); }
+  }
+  if (pathname === "/api/learn/practice-days") {
+    try {
+      uniqueQuery(request.url, []);
+      if (request.method === "GET") return privateJson(await runtime.practiceCompletion.owner(request));
+      requireCookieMutation(request, runtime.origin);
+      return privateJson(await runtime.practiceCompletion.record(request, await readJsonBody(request)));
+    } catch (error) { return errorResponse(error); }
+  }
+  const found = route(pathname); if (!found) return null;
   try {
     const mutation = request.method === "POST", query = uniqueQuery(request.url, mutation ? [] : found.calendar ? ["mode", "fromDate", "throughDate"] : ["mode", "beforeReceivedAt", "beforeId"]);
     let result;

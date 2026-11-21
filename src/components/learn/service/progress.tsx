@@ -23,7 +23,7 @@ function progressHub(child: LearningTransport | null) {
   const store = browserProgressStore(storage), listeners = new Set<() => void>();
   const made = { state: UNLOADED, listeners, store, sync: null as unknown as ProgressSync };
   const set = (patch: Partial<State>) => { made.state = Object.freeze({ ...made.state, ...patch }); for (const listener of listeners) listener(); };
-  made.sync = createProgressSync({ fetch: child?.fetch ?? directLearningFetch, storage, store,
+  made.sync = createProgressSync({ fetch: child?.fetch ?? directLearningFetch, storage, store, ownerScoped: child?.ownerScoped,
     onProgress: progress => set({ progress }), onAccount: account => set({ account }) });
   made.state = Object.freeze({ progress: made.sync.load(), account: made.state.account });
   if (child) childHubs.set(child, made); else hub = made;

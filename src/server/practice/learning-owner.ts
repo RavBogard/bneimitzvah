@@ -41,6 +41,16 @@ export function childLearningSelection(request: AccessRequest) {
   return child ? { mode: "child-practice" as const, studentId: child } : null;
 }
 
+export async function directLearningStudent<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, membershipId: string, intent: Intent) {
+  const grant = await lockRoleGrant(tx, tenantId, membershipId, "student", intent);
+  if (!grant) return undefined;
+  const [link] = await tx.select({ studentId: studentIdentity.studentId }).from(studentIdentity)
+    .where(and(eq(studentIdentity.tenantId, tenantId), eq(studentIdentity.roleGrantId, grant.id), isNull(studentIdentity.revokedAt))).limit(1);
+  const current = link ? await lockStudent(tx, tenantId, link.studentId, intent) : undefined;
+  return current && !current.disabledAt && await lockStudentRelationship(tx, tenantId, current.id, grant.id, "student", intent)
+    ? { id: current.id, ceremonyDate: current.ceremonyDate, roleGrantId: grant.id } : undefined;
+}
+
 /** The student scope is installed only after the live self link or guardian context has been locked. */
 export function createLearningOwnerAccess<Q extends PgQueryResultHKT>(input: LearningAccess<Q>, kind: StudentLearningKind,
   memberScope: (tx: AccessTransaction<Q>, tenantId: string, membershipId: string, legacy: boolean) => Promise<void>) {
@@ -89,12 +99,7 @@ export function createLearningOwnerAccess<Q extends PgQueryResultHKT>(input: Lea
     return input.access.withVerifiedIdentity(request, { intent, mutation: intent !== "read" }, async (tx, identity) => {
       if (!identity.membership) throw new AccessDenied(403);
       const { tenantId, userId } = identity, membershipId = identity.membership.id;
-      const grant = personal ? undefined : await lockRoleGrant(tx, tenantId, membershipId, "student", intent);
-      const [link] = grant ? await tx.select({ studentId: studentIdentity.studentId }).from(studentIdentity)
-        .where(and(eq(studentIdentity.tenantId, tenantId), eq(studentIdentity.roleGrantId, grant.id), isNull(studentIdentity.revokedAt))).limit(1) : [];
-      const current = link ? await lockStudent(tx, tenantId, link.studentId, intent) : undefined;
-      const student = grant && current && !current.disabledAt && await lockStudentRelationship(tx, tenantId, current.id, grant.id, "student", intent)
-        ? { id: current.id, ceremonyDate: current.ceremonyDate, roleGrantId: grant.id } : undefined;
+      const student = personal ? undefined : await directLearningStudent(tx, tenantId, membershipId, intent);
       return run(tx, { tenantId, membershipId, userId, student, sessionExpiresAt: identity.sessionExpiresAt.getTime() });
     });
   };

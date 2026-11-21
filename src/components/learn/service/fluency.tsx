@@ -1,4 +1,5 @@
 "use client";
+import { usePracticeCompleted } from "../../portal/offline/practice-completion";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CRC_TENANT, SERVICE_COURSE, lessonById, presentGoal, type Lesson } from "../../../lib/service-course/course";
 import { COPY, fill } from "../../../lib/service-course/copy";
@@ -40,7 +41,7 @@ export function FluencyLesson({ lesson }: { lesson: Lesson }) {
 }
 
 function FluencyRun({ lesson, intro, steps, seed }: { lesson: Lesson; intro: readonly IntroRow[] | null; steps: readonly FluencyStep[]; seed: number }) {
-  const { progress, update } = useServiceProgress();
+  const { progress, update } = useServiceProgress(), completeDay = usePracticeCompleted();
   const [phase, setPhase] = useState<"intro" | "run" | "done">(intro ? "intro" : "run");
   const [run, setRun] = useState(() => startCheck(steps));
   const rng = useRef(seeded(seed ^ 0x5bd1e995)), moved = useRef(new Set<string>()), main = useRef<HTMLElement>(null);
@@ -59,7 +60,7 @@ function FluencyRun({ lesson, intro, steps, seed }: { lesson: Lesson; intro: rea
     <RunBar title={lesson.title} rail={{ at, total }} />
     <main id="lesson-main" ref={main} tabIndex={-1} className={learn.lesson} data-lesson={lesson.id} data-step={phase === "run" ? step?.kind : phase}>
       {phase === "intro" && intro ? <Intro lesson={lesson} rows={intro} onNext={() => { setPhase("run"); move(); }} />
-        : phase === "done" || !step ? <FluencyDone lesson={lesson} complete={() => update(value => completeLesson(value, lesson, Date.now()), lesson.id)}
+        : phase === "done" || !step ? <FluencyDone lesson={lesson} complete={() => { update(value => completeLesson(value, lesson, Date.now()), lesson.id); completeDay(); }}
             nextId={(() => { const order = SERVICE_COURSE.lessons.filter(row => row.kind === "fluency"), after = order[order.findIndex(row => row.id === lesson.id) + 1]; return after?.id ?? (progress ? nextLesson(completeLesson(progress, lesson, Date.now()), CRC_TENANT)?.id ?? null : null); })()} />
         : step.kind === "item" ? <ItemView key={`${step.key}:${run.at}`} step={step} again={(run.misses.get(step.key) ?? 0) < CHECK_REASKS} onAnswer={record} onNext={right => advance(right)} />
         : step.kind === "word" ? <WordView key={`${step.key}:${run.at}`} step={step} onNext={() => advance(true)} />

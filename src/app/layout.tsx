@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 import "./globals.css";
+import { PracticeDateReplay } from "../components/portal/offline/practice-completion";
 import { OfflineRuntime } from "../components/portal/offline/runtime";
 import { PracticeNavigationGuard } from "../components/learn/child-practice";
 import { IdentityProvider } from "../components/site/identity-context";
@@ -21,5 +22,5 @@ export const metadata: Metadata = identityMetadata();
 export default function RootLayout({ children }: { children: ReactNode }) {
   // CRC's identity is fixed by its origin, so CRC's pages stay static; only a fork renders per request.
   // The site's one footer: the congregation line and Daniel's standard credit. No page draws a second.
-  return <html lang="en"><body><IdentityProvider identity={identity}>{!identity.crc && <PerRequest />}{children}<Suspense fallback={null}><PracticeNavigationGuard /></Suspense><OfflineRuntime /><SiteFooter /></IdentityProvider></body></html>;
+  return <html lang="en"><body><IdentityProvider identity={identity}>{!identity.crc && <PerRequest />}{children}<Suspense fallback={null}><PracticeNavigationGuard /></Suspense><PracticeDateReplay /><OfflineRuntime /><SiteFooter /></IdentityProvider></body></html>;
 }

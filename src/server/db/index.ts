@@ -34,3 +34,4 @@ export * from "./tutor-spoken-schema";
 
 export * from "./pronouns-schema";
 export * from "./student-learning-schema";
+export * from "./practice-sweep-schema";

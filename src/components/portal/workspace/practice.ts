@@ -1,3 +1,4 @@
+import { forgetChildPracticeLease } from "../../../lib/offline/practice-lease";
 import { PortalRequestError } from "../api";
 import { workspaceApi, type Selection } from "./api";
 
@@ -14,7 +15,7 @@ export class PracticeCoordinator {
   get pending() { return this.busy; }
   get selection() { return this.active; }
   pause() { this.epoch++; }
-  invalidate() { this.epoch++; if (this.active) this.cleanup = this.active; this.active = null; }
+  invalidate() { forgetChildPracticeLease(); this.epoch++; if (this.active) this.cleanup = this.active; this.active = null; }
   private async close(selection: Selection) {
     try { const result = await this.transport.exit(selection.handle); if (result.contextId !== selection.context.id) throw new PortalRequestError(503); }
     catch (error) { if (!(error instanceof PortalRequestError) || ![401, 404].includes(error.status)) throw error; }
@@ -22,6 +23,7 @@ export class PracticeCoordinator {
   async select(studentId: string) {
     if (this.busy) throw new PortalRequestError(409);
     this.busy = true;
+    forgetChildPracticeLease();
     const previous = this.active, token = ++this.epoch; this.active = null;
     if (previous) this.cleanup = previous;
     try {

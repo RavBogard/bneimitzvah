@@ -99,7 +99,7 @@ function refusedOwner(value: unknown): string | null {
 
 export type SyncIo = Readonly<{
   fetch: typeof fetch; storage(): Pick<Storage, "getItem" | "setItem" | "removeItem"> | null; store: ProgressStore;
-  onProgress(progress: Progress): void; onAccount(account: Account): void;
+  onProgress(progress: Progress): void; onAccount(account: Account): void; ownerScoped?: boolean;
   timer?: (callback: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void; now?: () => number;
   /** Runs `action` holding the named lock across tabs; defaults to the Web Locks API, or the action alone where there is none. */
   lock?: <T>(name: string, action: () => Promise<T>) => Promise<T>;
@@ -206,6 +206,17 @@ export function createProgressSync(io: SyncIo) {
       // Another tab signed in while this answer was out. Another account's: that tab owns the device, and this answer is stale.
       if (marker) { if (marker.owner === remote.owner) return false; displaced(); return true; }
       const here = io.store.load();
+      if (io.ownerScoped && !blank(here)) {
+        const combined = mergeProgress(remote.progress ?? emptyProgress(), here);
+        if (!io.store.save(combined) || !writeMarker(io.storage(), { owner: remote.owner, version: remote.version, dirty: true })) {
+          setAccount({ state: "unknown" });
+          return true;
+        }
+        io.onProgress(combined);
+        setAccount({ state: "synced", until: remote.until });
+        queueMicrotask(() => { void push(); });
+        return true;
+      }
       if (!blank(here) && !guest.save(mergeProgress(guest.load(), here))) { setAccount({ state: "unknown" }); return true; }
       adopt(remote, null);
       return true;

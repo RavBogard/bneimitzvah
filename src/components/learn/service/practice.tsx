@@ -1,4 +1,5 @@
 "use client";
+import { usePracticeCompleted } from "../../portal/offline/practice-completion";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { COPY } from "../../../lib/service-course/copy";
 import { CHECK_REASKS, answerCheck, checkDone, currentCheck, seeded, startCheck } from "../../../lib/service-course/check";
@@ -85,7 +86,9 @@ function Run({ title, step, items, seed, end, auto = false, onAnswer, finish }: 
   onAnswer(item: ChoiceItem, right: boolean): void; finish(missed: boolean): ReactNode }) {
   const [run, setRun] = useState(() => startCheck(items)), [answer, setAnswer] = useState<number | null>(null), [stopped, setStopped] = useState(false);
   const rng = useRef(seeded(seed + 7)), main = useRef<HTMLElement>(null);
-  const item = currentCheck(run), finished = stopped || checkDone(run);
+  const completeDay = usePracticeCompleted();
+  const item = currentCheck(run), completed = checkDone(run), finished = stopped || completed;
+  useEffect(() => { if (completed && items.length) completeDay(); }, [completed, items.length, completeDay]);
   const advance = () => {
     if (!item || answer === null) return;
     setRun(answerCheck(run, answer === item.right, rng.current, { at: end })); setAnswer(null);

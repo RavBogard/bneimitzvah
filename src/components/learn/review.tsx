@@ -1,4 +1,5 @@
 "use client";
+import { usePracticeCompleted } from "../portal/offline/practice-completion";
 import { useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import type { FamilyId } from "../../lib/trope/chart-catalog";
 import { COURSE, MELODY_FAMILIES, type Drill, type Melody } from "../../lib/learn/course";
@@ -86,7 +87,7 @@ function ReviewRun({ slots, pools, progress, seed, today, until, update, frame, 
   const slotOf = useMemo(() => new Map(items.map(row => [row.item.key, row.slot])), [items]);
   const [run, setRun] = useState<Run>(() => startRun(items.map(row => row.item))), [shown, setShown] = useState<{ item: DrillItem | null; n: number }>(() => ({ item: items[0]?.item ?? null, n: 0 }));
   const [answered, setAnswered] = useState(false), [finished, setFinished] = useState(false), rng = useRef(seededRandom(seed + 7)), moved = useRef(new Set<string>()), nextButton = useRef<HTMLButtonElement>(null);
-  const { player } = useLearnServices();
+  const { player } = useLearnServices(), completeDay = usePracticeCompleted();
   if (!items.length) return after ?? (versesDone ? finish([]) : frame(<p className={styles.doneLine}>No supported review questions yet. Revisit a sound or prepare a verse.</p>,
     <a className={styles.backLink} href="/learn">Back to the path</a>));
   if (finished || !shown.item) return after ?? finish(slots.map(slot => slot.card));
@@ -100,7 +101,7 @@ function ReviewRun({ slots, pools, progress, seed, today, until, update, frame, 
     moved.current.add(slot.card);
     update(value => recordAnswer(value, slot.card, right, today, { until }));
   };
-  const advance = () => { player.stop(); if (runDone(run)) { setFinished(true); return; } setShown({ item: currentItem(run), n: shown.n + 1 }); setAnswered(false); window.scrollTo({ top: 0 }); };
+  const advance = () => { player.stop(); if (runDone(run)) { completeDay(); setFinished(true); return; } setShown({ item: currentItem(run), n: shown.n + 1 }); setAnswered(false); window.scrollTo({ top: 0 }); };
   const props = { pools, melody: slot.melody, contrast, onAnswer: answer }, key = `${item.key}:${shown.n}`;
   return frame(item.type === "hear-and-name" ? <HearAndName key={key} item={item} {...props} /> : item.type === "same-or-different" ? <SameOrDifferent key={key} item={item} {...props} />
     : item.type === "tap-the-phrase" ? <TapThePhrase key={key} item={item} {...props} /> : item.type === "where-does-it-end" ? <WhereDoesItEnd key={key} item={item} {...props} /> : null,

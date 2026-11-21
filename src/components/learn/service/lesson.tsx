@@ -1,4 +1,5 @@
 "use client";
+import { usePracticeCompleted } from "../../portal/offline/practice-completion";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CRC_TENANT, SERVICE_COURSE, lessonById, lessonOpen, mapSections, pageOf, phaseOf, presentGoal, sectionLessons, serviceNeighbours, teachingOf, unitById, type Lesson, type ServiceSlot } from "../../../lib/service-course/course";
 import { COPY, emphasised, fill, typographic } from "../../../lib/service-course/copy";
@@ -47,7 +48,7 @@ function LessonFlow({ lesson }: { lesson: Lesson }) {
   const items = useCheckItems(lesson, text, seed);
   const steps = useMemo(() => lessonSteps(lesson, items ? items.length : null), [lesson, items]);
   const [at, setAt] = useState(0);
-  const child = useChildLearning(), { progress, account, update } = useServiceProgress();
+  const child = useChildLearning(), { progress, account, update } = useServiceProgress(), completeDay = usePracticeCompleted();
   // A signed-in student's own slot picks the evening teaching and pages for a prayer the evening repeats (2.0 SC7); signed out, the morning.
   // Offline, the device's last copy of the student's parts (2.0 SC6), so the slot and Next of your parts hold.
   const pathView = useCoursePath(account).view, slot: ServiceSlot = pathView.status === "ready" ? pathView.path.slot : child?.assigned.student.serviceSlot ?? "morning";
@@ -70,7 +71,7 @@ function LessonFlow({ lesson }: { lesson: Lesson }) {
           : step === "read" ? lesson.read ? <><ReadStep lesson={lesson} state={state} onRetry={retry} slot={slot} /><LessonRecording lesson={lesson.id} morning={slot !== "havdalah"} />{forward(!text)}</> : <><SiddurOnly lesson={lesson} slot={slot} /><LessonRecording lesson={lesson.id} morning={slot !== "havdalah"} />{forward()}</>
           : step === "words" && text ? <><KeyWordsStep lesson={lesson} text={text} />{forward()}</>
           : step === "check" && items ? <CheckStep key={seed} items={items as readonly CheckItem[]} seed={seed} onFinish={next} footer={children => <Footer>{children}</Footer>} />
-          : step === "done" ? <Done lesson={lesson} state={state} complete={() => update(value => completeLesson(value, lesson, Date.now()), lesson.id)} progress={progress} pathView={pathView} slot={slot} />
+          : step === "done" ? <Done lesson={lesson} state={state} complete={() => { update(value => completeLesson(value, lesson, Date.now()), lesson.id); completeDay(); }} progress={progress} pathView={pathView} slot={slot} />
           : <p role="status" className={styles.note}>{COPY.state.lessonLoading}</p>}
       </LessonWords>
     </main>

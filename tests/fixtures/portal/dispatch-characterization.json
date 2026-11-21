@@ -12744,6 +12744,168 @@
   "body": true
  },
  {
+  "request": "GET /api/learn/practice-days",
+  "status": 403,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/learn/practice-days (signed out)",
+  "status": 401,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "POST /api/learn/practice-days",
+  "status": 400,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "POST /api/learn/practice-days (signed out)",
+  "status": 400,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "PUT /api/learn/practice-days (wrong method)",
+  "status": 405,
+  "allow": "GET, POST",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "HEAD /api/learn/practice-days",
+  "status": 405,
+  "allow": "GET, POST",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "OPTIONS /api/learn/practice-days",
+  "status": 405,
+  "allow": "GET, POST",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/learn/practice-days/ (trailing slash)",
+  "status": 404,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/learn/practice-daysx (near miss)",
+  "status": 404,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/learn/practice-days?unexpected=1 (unexpected query)",
+  "status": 400,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/internal/practice-calendar/sweep",
+  "status": 503,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/internal/practice-calendar/sweep (signed out)",
+  "status": 503,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "POST /api/internal/practice-calendar/sweep (wrong method)",
+  "status": 405,
+  "allow": "GET",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "HEAD /api/internal/practice-calendar/sweep",
+  "status": 405,
+  "allow": "GET",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "OPTIONS /api/internal/practice-calendar/sweep",
+  "status": 405,
+  "allow": "GET",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/internal/practice-calendar/sweep/ (trailing slash)",
+  "status": 404,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/internal/practice-calendar/sweepx (near miss)",
+  "status": 404,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/internal/practice-calendar/sweep?unexpected=1 (unexpected query)",
+  "status": 400,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
   "request": "POST /api/students/{student}/honoree-links",
   "status": 400,
   "allow": null,

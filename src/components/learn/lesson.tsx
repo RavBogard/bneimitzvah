@@ -1,4 +1,5 @@
 "use client";
+import { usePracticeCompleted } from "../portal/offline/practice-completion";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { FamilyId } from "../../lib/trope/chart-catalog";
 import { ALWAYS_RUN, drillSkill, familyName, lessonById, type Drill, type Lesson, type Melody, type ThisWeek as ThisWeekActivity } from "../../lib/learn/course";
@@ -38,7 +39,7 @@ function LessonFlow({ id }: { id: string }) {
   const sources = useMemo(() => lesson.id === "intro-phrases" ? [lesson] : lessonSources(lesson), [lesson]), extra = useMemo(() => lessonExtraRefs(lesson).map(ref => ({ kind: lesson.melody, ref })), [lesson]);
   const data = useCourseVerses(steps[0].kind === "first-verse" ? [] : sources, retry, extra);
   const { player } = useLearnServices();
-  const { progress, update, until } = useProgress();
+  const { progress, update, until } = useProgress(), completeDay = usePracticeCompleted();
   const main = useRef<HTMLElement>(null), moved = useRef(new Set<string>()), stopped = useRef(false);
   const go = useCallback((next: number) => { player.stop(); setAt(next); window.scrollTo({ top: 0 }); main.current?.focus({ preventScroll: true }); }, [player]);
   const step = steps[at];
@@ -73,7 +74,7 @@ function LessonFlow({ id }: { id: string }) {
     </header>
     <main id="lesson-main" ref={main} tabIndex={-1} className={styles.lesson} data-step={step.kind}>
       {step.kind === "first-verse" ? <FirstVerse lesson={lesson} onDone={() => go(doneIndex)} />
-        : step.kind === "done" ? <Done lesson={lesson} fallback={data.status === "ready" ? data.examples.get(lesson.id) ?? [] : []} complete={() => update(value => completeLesson(value, lesson, Date.now(), until))} nextId={progress ? recommendedLesson(completeLesson(progress, lesson, Date.now()))?.id ?? null : null} />
+        : step.kind === "done" ? <Done lesson={lesson} fallback={data.status === "ready" ? data.examples.get(lesson.id) ?? [] : []} complete={() => { update(value => completeLesson(value, lesson, Date.now(), until)); completeDay(); }} nextId={progress ? recommendedLesson(completeLesson(progress, lesson, Date.now()))?.id ?? null : null} />
         : data.status === "loading" ? <p role="status" className={styles.state}>Loading the lesson…</p>
         : data.status === "error" || !(data.examples.get(lesson.id)?.length) ? <LoadFailure rateLimited={data.status === "error" && data.rateLimited} onRetry={() => setRetry(n => n + 1)} />
         : step.kind === "hear" ? <HearIt lesson={lesson} examples={data.examples.get(lesson.id) ?? []} onNext={() => go(at + 1)} />

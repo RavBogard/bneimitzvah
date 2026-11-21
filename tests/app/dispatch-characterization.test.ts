@@ -99,6 +99,7 @@ const owned: [string, string[]][] = [
   // lesson log, practice calendar
   [`/api/students/${S}/lesson-log`, ["GET", "POST"]], [`/api/students/${S}/lesson-log/${L}/edit`, ["POST"]], [`/api/students/${S}/lesson-log/${L}/delete`, ["POST"]],
   [`/api/students/${S}/practice-calendar`, ["GET"]], [`/api/students/${S}/practice-events`, ["GET", "POST"]],
+  ["/api/learn/practice-days", ["GET", "POST"]], ["/api/internal/practice-calendar/sweep", ["GET"]],
   // honoree management (UUID student only) and the guest read
   [`/api/students/${S}/honoree-links`, ["POST"]], [`/api/students/${S}/honoree-links/receipt`, ["POST"]], [`/api/students/${S}/honoree-links/status`, ["POST"]],
   ["/api/honoree/read", ["POST"]],

@@ -172,7 +172,7 @@ function PinnedReady({ slices, assigned, headingId }: { slices: TodaySlices; ass
           <span className="practice-day-dot" aria-hidden="true" />
           <span className="sr-only">{weekdayNames[day.weekday]}{day.today ? ", today" : ""}: {day.practiced ? "practiced" : "not practiced"}</span>
         </li>)}</ol>
-      <p id={caption} className={styles.caption}>Days you practiced · a day fills when you open Practice</p>
+      <p id={caption} className={styles.caption}>Days you practiced · Open Practice or finish a lesson, review, Run-through or service activity.</p>
     </div>}
     {readings.length > 0 && dates.status === "unavailable" && <p className={styles.caption}>Practice days couldn’t be loaded.</p>}
     {dates.status === "loading" && <div className={styles.holdCalendar} aria-hidden="true" />}

@@ -2,6 +2,9 @@ import { expect, test, type BrowserContext, type Page, type Route } from "@playw
 import { createHash } from "node:crypto";
 import { syntheticCourseRoutes } from "./learn-synthetic";
 import { finishLesson } from "./learn-drill";
+import { PRACTICE_LEASE_KEY } from "../src/lib/offline/policy";
+import { PRACTICE_DATE_PREFIX } from "../src/lib/practice-calendar/completion-queue";
+import { chicagoDate } from "../src/lib/practice-calendar/day";
 import { webManifest } from "../src/lib/offline/manifest";
 import { SHERMET_SERVICE_ITEMS } from "../src/lib/reference-audio/shermet-library";
 
@@ -296,4 +299,77 @@ test("offline, a normally saved Shermet verse plays at its teaching tempo withou
   await expect.poll(() => page.evaluate(() => (window as unknown as { savedShermet: HTMLMediaElement | null }).savedShermet?.playbackRate)).toBe(1.25);
   expect(networkMedia).toBe(before);
   expect(app.state.fromWorker).toContain("/api/shermet-audio");
+});
+
+test("credits the original day when a signed-in student reopens a saved service lesson fully offline", async ({ context, page }, testInfo) => {
+  test.skip(testInfo.project.name !== "phone", "one device is enough for the worker");
+  test.setTimeout(240_000);
+  const app = await installedApp(context), owner = "a".repeat(32), offlineOwner = "b".repeat(43);
+  const restoreTime = Date.now(), earlier = restoreTime - 2 * 86_400_000;
+  const expected = chicagoDate(earlier).date, credited: string[] = [];
+  await page.clock.setFixedTime(earlier);
+  await context.route("**/api/offline/packs", route => app.state.offline ? route.abort("internetdisconnected")
+    : route.fulfill({ json: { owner: offlineOwner, packs: [], evening: false } }));
+  await context.route("**/api/learn/practice-days", async route => {
+    if (app.state.offline) return route.abort("internetdisconnected");
+    if (route.request().method() === "GET") return route.fulfill({ json: { ok: true, owner, offlineOwner, expiresAt: restoreTime + 86_400_000 } });
+    const submitted = route.request().postDataJSON();
+    if (submitted.owner !== owner) return route.fulfill({ status: 403, json: { error: "forbidden" } });
+    credited.push(...submitted.dates);
+    return route.fulfill({ json: { ok: true, accepted: submitted.dates, discarded: [] } });
+  });
+  await context.route("**/api/public/service-text?**", route => app.state.offline ? route.abort("internetdisconnected")
+    : route.fulfill({ json: syntheticServiceText(new URL(route.request().url()).searchParams.get("unit") ?? "") }));
+  const route = "/learn/service/torah-service", main = page.locator("main#lesson-main");
+  await page.goto(route);
+  await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null), { timeout: 90_000 }).toBe(true);
+  await expect.poll(async () => (await packs(page)).some(row => row.key === "service-course"), { timeout: 90_000 }).toBe(true);
+  await expect.poll(() => page.evaluate(async ([cache, lease]) => Boolean(await (await caches.open(cache)).match(lease)), [OFFLINE_CACHE, PRACTICE_LEASE_KEY] as const)).toBe(true);
+  await page.goto(route);
+  await expect(main).toHaveAttribute("data-step", "about");
+
+  await app.offline(true);
+  await page.goto(route);
+  await expect(main).toHaveAttribute("data-step", "about", { timeout: 30_000 });
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(main).toHaveAttribute("data-step", "where");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(main).toHaveAttribute("data-step", "done");
+  const queued = () => page.evaluate(prefix => Object.keys(localStorage).filter(key => key.startsWith(prefix)).map(key => key.slice(-10)), PRACTICE_DATE_PREFIX);
+  await expect.poll(queued).toEqual([expected]);
+  expect(credited).toEqual([]);
+  await page.goto(route);
+  await expect.poll(queued).toEqual([expected]);
+
+  await page.clock.setFixedTime(restoreTime);
+  await app.offline(false);
+  await expect.poll(() => credited).toEqual([expected]);
+  await expect.poll(queued).toEqual([]);
+
+  // The child lease below represents the previously selected tab-local binding. The public
+  // pack and parent's opaque pack owner are shared by two tabs, but the selection is not.
+  await page.evaluate(async ([cache, key, route]) => {
+    const binding = await (await (await caches.open(cache)).match(key))!.json(), tab = crypto.randomUUID();
+    sessionStorage.setItem("crc-torah:child-practice-lease/v1", JSON.stringify({
+      ...binding, owner: "c".repeat(32), partition: `crc-torah:child-learning/v1:${"d".repeat(64)}:`, tab,
+    }));
+    history.replaceState({ ...history.state, crcChildPracticeTab: tab }, "", route + "?child-practice=1");
+  }, [OFFLINE_CACHE, PRACTICE_LEASE_KEY, route] as const);
+  await app.offline(true);
+  await page.reload();
+  await expect(page.getByText("Offline practice. Reconnect and choose the same child to sync.")).toBeVisible();
+  await expect(main).toHaveAttribute("data-step", "about");
+  const opened = context.waitForEvent("page");
+  await page.evaluate(href => { window.open(href, "_blank"); }, route + "?child-practice=1");
+  const other = await opened;
+  await expect(other.getByRole("heading", { name: "Practice is unavailable", exact: true })).toBeVisible();
+  expect(await other.evaluate(() => sessionStorage.getItem("crc-torah:child-practice-lease/v1") !== null)).toBe(true);
+  await other.close();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(main).toHaveAttribute("data-step", "done");
+  await expect.poll(() => page.evaluate(key => localStorage.getItem(key), PRACTICE_DATE_PREFIX + "c".repeat(32) + ":" + chicagoDate(restoreTime).date)).toBe("1");
+  await app.offline(false);
+  await page.waitForURL(url => url.pathname === "/mine" && url.searchParams.get("resume-child-practice") === "1");
+  expect(credited).toEqual([expected]);
 });

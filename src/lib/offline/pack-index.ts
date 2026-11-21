@@ -1,4 +1,4 @@
-import { EMPTY_INDEX, INDEX_KEY, OFFLINE_CACHE, OWNER_KEY, packLive, PATH_COPY_KEY, WINDOW_MS, parsePackIndex, type Pack, type PackIndex } from "./policy";
+import { EMPTY_INDEX, INDEX_KEY, OFFLINE_CACHE, OWNER_KEY, packLive, PATH_COPY_KEY, PRACTICE_LEASE_KEY, WINDOW_MS, parsePackIndex, type Pack, type PackIndex } from "./policy";
 
 /**
  * The page's side of the pack index (§3.3–§3.5): read, write, sweep, inspect and purge. Small and import-free of
@@ -64,6 +64,12 @@ export async function sweep(cache: Cache, now: number, keep: (pack: Pack) => boo
   const listed = new Set(packs.flatMap(pack => pack.assets));
   // 2.0 SC6: the last copy of a student's parts stays only beside an index of its own owner, and only inside the 14 days.
   if (nextOwner !== null && await pathCopyOwner(cache, now) === nextOwner) listed.add(PATH_COPY_KEY);
+  if (nextOwner !== null) {
+    try {
+      const record = await (await cache.match(PRACTICE_LEASE_KEY))?.json();
+      if (readPracticeLeaseRecord(record, nextOwner, now)) listed.add(PRACTICE_LEASE_KEY);
+    } catch { /* An invalid lease is removed with unused cache keys. */ }
+  }
   for (const request of await cache.keys()) {
     const key = assetKey(request.url);
     if (key !== INDEX_KEY && !listed.has(key)) await cache.delete(request);
@@ -133,4 +139,14 @@ export async function pathCopyOwner(cache: Cache, now: number): Promise<string |
     if (!value || typeof value !== "object" || typeof value.owner !== "string" || !OWNER_KEY.test(value.owner) || !Number.isSafeInteger(value.savedAt)) return null;
     return packLive({ renewedAt: value.savedAt as number, expiresAt: (value.savedAt as number) + WINDOW_MS }, now) ? value.owner : null;
   } catch { return null; }
+}
+
+export type PracticeLeaseRecord = Readonly<{ owner: string; offlineOwner: string; savedAt: number; expiresAt: number }>;
+export function readPracticeLeaseRecord(value: unknown, offlineOwner: string, now: number): PracticeLeaseRecord | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  if (record.offlineOwner !== offlineOwner || !OWNER_KEY.test(offlineOwner) || typeof record.owner !== "string" || !/^[a-f0-9]{32}$/.test(record.owner)
+    || !Number.isSafeInteger(record.savedAt) || !Number.isSafeInteger(record.expiresAt)) return null;
+  const renewedAt = record.savedAt as number, expiresAt = record.expiresAt as number;
+  return packLive({ renewedAt, expiresAt }, now) ? { owner: record.owner, offlineOwner, savedAt: renewedAt, expiresAt: Math.min(expiresAt, renewedAt + WINDOW_MS) } : null;
 }

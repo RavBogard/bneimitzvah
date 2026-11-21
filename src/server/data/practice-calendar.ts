@@ -18,7 +18,7 @@ export async function events<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q
     before ? or(lt(e.receivedAt, new Date(before.receivedAt)), and(eq(e.receivedAt, new Date(before.receivedAt)), lt(e.eventId, before.eventId))) : undefined))
     .orderBy(desc(e.receivedAt), desc(e.eventId)).limit(51);
 }
-export async function ensureDay<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: CalendarActor, practiceDay: string) {
+export async function ensureDay<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: { tenantId: string; studentId: string }, practiceDay: string) {
   await tx.insert(d).values({ tenantId: actor.tenantId, studentId: actor.studentId, practiceDay }).onConflictDoNothing();
 }
 export async function lockDay<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: CalendarActor, practiceDay: string) {

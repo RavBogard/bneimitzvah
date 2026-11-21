@@ -107,7 +107,7 @@ describe("routing is the complete allowlist", () => {
   test("private API routes, sign-in, non-GET, Range, cross-origin and unknown paths pass through untouched", async () => {
     const w = await load({ fetch: async () => json({}) });
     await seed(w.caches, [pack(Date.now(), [DATA, CLIP])]);
-    for (const path of ["/api/session", "/api/auth/sign-out", "/api/auth/sign-in/magic-link", "/api/students/s1/recordings", "/api/learn/progress", "/api/offline/packs", "/api/mcp",
+    for (const path of ["/api/session", "/api/auth/sign-out", "/api/auth/sign-in/magic-link", "/api/students/s1/recordings", "/api/learn/progress", "/api/learn/practice-days", "/api/offline/packs", "/api/mcp",
       "/api/public/word-aids?date=2026-10-24&kind=torah&verse=0", "/api/public/commentary?work=rashi&chapter=Genesis+1", "/api/public/text", "/api/public/reference/finkel/clips",
       "/api/workspace/reference-review", "/reference-audio/generated/" + "a".repeat(64) + ".mp3", "/reference-audio/short-v1/" + "a".repeat(64) + ".mp3?x=1",
       "/reference-audio/voice/alto.mp3", "/workspace/student/recordings.json", "/sw.js", INDEX_KEY]) {
@@ -326,7 +326,7 @@ describe("N24: the beitmitzvah origin (decision 14) works exactly like torah", (
     }
     expect((await w.request(CLIP))!.headers.get(OFFLINE_HEADER)).toBe("1");
     // The private endpoint that names the learner's readings, and every other signed-in route, are the browser's own business.
-    for (const path of ["/api/offline/packs", "/api/session", "/api/students", "/api/learn/progress", "/api/portion-summary?reading=vayera"]) expect(await w.request(path), path).toBeNull();
+    for (const path of ["/api/offline/packs", "/api/session", "/api/students", "/api/learn/progress", "/api/learn/practice-days", "/__crc_offline__/practice-date-lease", "/api/portion-summary?reading=vayera"]) expect(await w.request(path), path).toBeNull();
   });
   test("with the network cut, This week's aliyot and approved portion summary open from the public pack", async () => {
     const ALIYOT = "/api/public/aliyot?date=2026-10-24", SUMMARY = "/api/public/portion-summary?reading=vayera";

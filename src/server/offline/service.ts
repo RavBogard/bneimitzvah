@@ -1,5 +1,5 @@
 import "server-only";
-import { createHmac } from "node:crypto";
+import { offlineOwnerName } from "./owner";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { AccessDenied, AccessUnavailable } from "../access/errors";
 import type { createAccessService } from "../access/service";
@@ -37,7 +37,7 @@ export function createOfflineService<Q extends PgQueryResultHKT>(input: {
 }) {
   if (typeof input.ownerSecret !== "string" || input.ownerSecret.length < 32) throw new AccessUnavailable();
   const now = input.now ?? Date.now;
-  const ownerKey = (tenantId: string, userId: string) => createHmac("sha256", input.ownerSecret).update(JSON.stringify(["offline-owner:v1", tenantId, userId])).digest("base64url");
+
 
   async function packs(request: AccessRequest): Promise<OfflinePacks> {
     // One verified read: who this is in the host's tenant, and which of the two owner kinds apply now.
@@ -78,7 +78,7 @@ export function createOfflineService<Q extends PgQueryResultHKT>(input: {
         .slice(0, OFFLINE_MEMBER_UPCOMING);
       for (const row of upcoming) add(row.kind, row.ranges, row.name);
     }
-    return Object.freeze({ owner: ownerKey(who.tenantId, who.userId), packs: Object.freeze(out), evening: who.evening });
+    return Object.freeze({ owner: offlineOwnerName(input.ownerSecret, who.tenantId, who.userId), packs: Object.freeze(out), evening: who.evening });
   }
   return Object.freeze({ packs });
 }
