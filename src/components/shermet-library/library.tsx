@@ -149,7 +149,7 @@ export function ShermetLibraryPlayer({ item, sha256, compact }: { item: ShermetL
     </div>
     {!speedSupported && <p>This browser cannot preserve pitch at different speeds. Playing at the original recorded tempo.</p>}
   </>;
-  const errorMessage = error && <p role="alert">This recording couldn’t be loaded. Choose another recording or try again.</p>;
+  const errorMessage = error && <p role="alert">This recording couldnâ€™t be loaded. Choose another recording or try again.</p>;
   if (compact) return <section ref={compact.player} className={styles.compactPlayer} aria-label="Selected recording">
     <h2>{shermetLibraryTitle(item)}</h2>
     <div className={styles.compactActions}>
@@ -168,8 +168,8 @@ export function ShermetLibraryPlayer({ item, sha256, compact }: { item: ShermetL
   </section>;
   return <section className={styles.player} aria-label="Selected recording">
     <h2>{shermetLibraryTitle(item)}</h2>
-    {item.category === "source-conflict" && <p>Omaha’s original label: {item.label}{!item.ref && " · The text identity is unconfirmed."}</p>}
-    <p>Cantor Wendy Shermet · Temple Israel, Omaha</p>
+    {item.category === "source-conflict" && <p>Omahaâ€™s original label: {item.label}{!item.ref && " Â· The text identity is unconfirmed."}</p>}
+    <p>Cantor Wendy Shermet Â· Temple Israel, Omaha</p>
     {audio}
     {controls}
     {errorMessage}
