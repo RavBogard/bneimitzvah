@@ -128,7 +128,7 @@ it("asks before replacing a link and allows manual copying of a single confirmed
   const tab = await page("admin", false, true);
   await navigate(tab, "/workspace/admin/invitations");
   const issued = await api(tab, "/api/admin/invitations", { role: "tutor", email: "synthetic-copy@example.test" });
-  expect(issued.status).toBe(200);
+  expect(issued.status).toBe(201);
   const id = issued.data.inviteId;
   await tab.addInitScript(() => {
     const deny = () => Promise.reject(new Error("Clipboard unavailable"));
