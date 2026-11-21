@@ -4,7 +4,7 @@ Updated 2026-11-20. This file is replaced, not appended: it says where the work 
 
 ## Usability release, November 20
 
-The [release note and acceptance walkthrough](../2026-11-20-usability/RETURN.md) cover playback, immutable shared passages, course return, staff decisions and family recovery. The [baseline review](../2026-11-20-usability-review/REVIEW.md) records the original issues. The first release, `b4a8d2b4`, passed all 15 [CI jobs](https://github.com/RavBogard/bneimitzvah/actions/runs/44852147763). Daniel’s Torah and haftarah walkthrough will inform any further changes to the reading dock.
+The [release note and acceptance walkthrough](../2026-11-20-usability/RETURN.md) cover playback, immutable shared passages, course return, staff decisions and family recovery. The [baseline review](../2026-11-20-usability-review/REVIEW.md) records the original issues. The first release, `b4a8d2b4`, passed all 15 [CI jobs](https://github.com/RavBogard/bneimitzvah/actions/runs/44852147763). Daniel approved removing the floating playback bar. The verse controls now belong beside the selected verse. He also approved an explicit command to play a whole assigned aliyah through its last verse and chose to keep the existing lesson note types.
 
 ## Released and live
 
