@@ -348,6 +348,7 @@ test("credits the original day when a signed-in student reopens a saved service 
 
   // The child lease below represents the previously selected tab-local binding. The public
   // pack and parent's opaque pack owner are shared by two tabs, but the selection is not.
+  await app.offline(true);
   await page.evaluate(async ([cache, key, route]) => {
     const binding = await (await (await caches.open(cache)).match(key))!.json(), tab = crypto.randomUUID();
     sessionStorage.setItem("crc-torah:child-practice-lease/v1", JSON.stringify({
@@ -355,13 +356,15 @@ test("credits the original day when a signed-in student reopens a saved service 
     }));
     history.replaceState({ ...history.state, crcChildPracticeTab: tab }, "", route + "?child-practice=1");
   }, [OFFLINE_CACHE, PRACTICE_LEASE_KEY, route] as const);
-  await app.offline(true);
-  await page.reload();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.getByText("Offline practice. Reconnect and choose the same child to sync.")).toBeVisible();
   await expect(main).toHaveAttribute("data-step", "about");
-  const opened = context.waitForEvent("page", { timeout: 10_000 });
-  await page.evaluate(() => { window.open("about:blank", "_blank"); });
-  const other = await opened;
+  await page.evaluate(() => {
+    const link = document.createElement("a");
+    link.href = "about:blank"; link.target = "_blank"; link.rel = "opener";
+    link.textContent = "Open test tab"; document.body.prepend(link);
+  });
+  const [other] = await Promise.all([page.waitForEvent("popup", { timeout: 10_000 }), page.getByRole("link", { name: "Open test tab" }).click()]);
   await other.goto(route + "?child-practice=1");
   await expect(other.getByRole("heading", { name: "Practice is unavailable", exact: true })).toBeVisible();
   expect(await other.evaluate(() => sessionStorage.getItem("crc-torah:child-practice-lease/v1") !== null)).toBe(true);

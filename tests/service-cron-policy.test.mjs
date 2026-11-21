@@ -9,5 +9,7 @@ test("the exact reviewed daily cron config is permitted with ordinary JSON forma
 });
 test("cron exception refuses secrets, data, extra keys/jobs, arbitrary paths/cadence and duplicate JSON members",()=>{
   const invalid=["", "null", "[]", "{}",JSON.stringify({crons:[cron,mail]}),JSON.stringify({crons:[cron,mail,{...practice,schedule:"43 * * * *"}]}),JSON.stringify({crons:[cron,mail,practice],env:{SYNTHETIC:"not-allowed"}}),JSON.stringify({crons:[cron,sheet,mail]}),JSON.stringify({crons:[cron,sheet]}),JSON.stringify({crons:[cron,{...mail,schedule:"5 * * * *"}]}),JSON.stringify({crons:[cron,mail,sheet]}),JSON.stringify({crons:[cron,cron]}),JSON.stringify({crons:[cron]}),JSON.stringify({crons:[sheet,cron]}),JSON.stringify({crons:[cron,sheet,sheet]}),JSON.stringify({crons:[{...cron,notes:"Synthetic student data"}]}),JSON.stringify({crons:[{...cron,path:"/api/other"}]}),JSON.stringify({crons:[{...cron,schedule:"* * * * *"}]}),JSON.stringify({crons:[null]}),`{"crons":[],"crons":[${JSON.stringify(cron)}]}`,`{"crons":[{"path":"synthetic-private-data","path":"${cron.path}","schedule":"${cron.schedule}"}]}`];
+  invalid.push(JSON.stringify({crons:[cron,mail,{...practice,path:practice.path+"-copy"}]}),
+    `{"crons":[${JSON.stringify(cron)},${JSON.stringify(mail)},{"path":"${practice.path}","schedule":"${practice.schedule}","schedule":"${practice.schedule}"}]}`);
   for(const value of invalid)assert.ok(entryProblems("vercel.json",value).includes("deployment config must contain only the reviewed daily jobs"));
 });

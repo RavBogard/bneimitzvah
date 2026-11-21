@@ -8,20 +8,19 @@ import { offlineState, purgeGeneration, subscribeOfflineState } from "../../../l
 import { servedOffline } from "../../../lib/offline/signal";
 import { directLearningFetch, useChildLearning, useOfflineChildLearning, waitingForLearningScope } from "../../learn/child-practice";
 import { usePersonalLearning } from "../../learn/scoped-learning";
+import { SIGNED_IN_HINT } from "../signed-in-hint";
 import { tabPractice } from "../workspace/practice";
 import type { Selection } from "../workspace/api";
 
 const storage = () => { try { return window.localStorage; } catch { return null; } };
 type Queue = ReturnType<typeof createPracticeDateQueue>;
 const queues = new WeakMap<Selection, Queue>();
-let direct: Queue | null = null;
 
 function directQueue() {
   const generation = purgeGeneration();
   return createPracticeDateQueue({ fetch: directLearningFetch, storage, onBinding: proof => { void savePracticeLease(proof, generation); } });
 }
-function currentQueue(selection: Selection | null) {
-  if (!selection) return direct ??= directQueue();
+function currentQueue(selection: Selection) {
   const existing = queues.get(selection);
   if (existing) return existing;
   const current = () => tabPractice().selection?.context.id === selection.context.id;
@@ -55,20 +54,38 @@ export function usePracticeCompleted(workspace?: WorkspaceLearner, saved?: "ref"
     const selection = child?.selection ?? (mode === "child-practice" ? tabPractice().selection : null);
     if (!offlineChild && !selection && (mode === "child-practice" || waitingForLearningScope())) return;
     if (studentId && selection && selection.context.studentId !== studentId) return;
-    const queue = offlineChild ? createPracticeDateQueue({ fetch: async () => new Response(null, { status: 503 }), storage }) : currentQueue(selection);
+    const queue = offlineChild ? createPracticeDateQueue({ fetch: async () => new Response(null, { status: 503 }), storage }) : selection ? currentQueue(selection) : directQueue();
     const activity = { queue, lease: offlineChild ? Promise.resolve(offlineChild.lease) : readPracticeLease(selection ? "child" : "direct", pack) };
     held.current = activity;
-    if (!offlineChild) void queue.verifyAndReplay();
-    return () => { if (held.current === activity) held.current = null; };
-  }, [child, offlineChild, personal, mode, studentId, pack]);
+    if (servedOffline()) void activity.lease.then(lease => {
+      if (lease && purgeGeneration() === lease.generation) queue.pinOffline(lease);
+    });
+    const verify = () => { if (!offlineChild) void queue.verifyAndReplay(); };
+    const visible = () => { if (document.visibilityState === "visible") verify(); };
+    const identityChanged = (event: StorageEvent) => { if (event.key === null || event.key === SIGNED_IN_HINT) verify(); };
+    verify();
+    window.addEventListener("online", verify);
+    window.addEventListener("storage", identityChanged);
+    document.addEventListener("visibilitychange", visible);
+    return () => {
+      if (held.current === activity) held.current = null;
+      window.removeEventListener("online", verify);
+      window.removeEventListener("storage", identityChanged);
+      document.removeEventListener("visibilitychange", visible);
+    };
+  }, [child, offlineChild, personal, mode, studentId, pack, path]);
 
   return useCallback(() => {
     const activity = held.current;
     if (!activity) return;
     const instant = Date.now();
-    if (activity.queue.complete(instant) || !servedOffline()) return;
+    if (!servedOffline()) { void activity.queue.completeOnline(instant); return; }
+    if (activity.queue.complete(instant)) return;
     void activity.lease.then(lease => {
-      if (lease && purgeGeneration() === lease.generation) activity.queue.completeOffline(lease, instant);
+      if (lease && purgeGeneration() === lease.generation) {
+        activity.queue.pinOffline(lease);
+        activity.queue.completeOffline(lease, instant);
+      }
     });
   }, []);
 }
