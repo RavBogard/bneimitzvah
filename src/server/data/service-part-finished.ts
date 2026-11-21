@@ -1,9 +1,10 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
 import * as s from "../db/index";
+import type { PracticeActor } from "../practice/types";
 
 /**
  * Per-part finished-mark queries (2.0 SC5, A4 9). Imported only from src/server/service-course/finished.ts (a structural test
@@ -13,19 +14,12 @@ import * as s from "../db/index";
 type Tx<Q extends PgQueryResultHKT> = AccessTransaction<Q>;
 
 /** Names the reader for 0048's policies, transaction-locally: a role grant the caller has just checked live. */
-export async function setReader<Q extends PgQueryResultHKT>(tx: Tx<Q>, roleGrantId: string) {
-  await tx.execute(sql`select set_config('app.service_part_reader', ${roleGrantId}, true)`);
+export async function setReader<Q extends PgQueryResultHKT>(tx: Tx<Q>, roleGrantId: string, contextId = "") {
+  await tx.execute(sql`select set_config('app.service_part_reader', ${roleGrantId}, true), set_config('app.service_part_context', ${contextId}, true)`);
 }
 /** Clears the reader again before the transaction goes on to anything else. */
 export async function clearReader<Q extends PgQueryResultHKT>(tx: Tx<Q>) {
-  await tx.execute(sql`select set_config('app.service_part_reader', '', true)`);
-}
-
-/** The one live student link of a live student grant (a grant names at most one student), or null. */
-export async function studentOfGrant<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, roleGrantId: string) {
-  const rows = await tx.select({ studentId: s.studentIdentity.studentId }).from(s.studentIdentity)
-    .where(and(eq(s.studentIdentity.tenantId, tenantId), eq(s.studentIdentity.roleGrantId, roleGrantId), isNull(s.studentIdentity.revokedAt))).limit(2);
-  return rows.length === 1 ? rows[0].studentId : null;
+  await tx.execute(sql`select set_config('app.service_part_reader', '', true), set_config('app.service_part_context', '', true)`);
 }
 
 /** The student's service plan's selected unit ids (feed ids, in service order), share-locked; null with no plan. */
@@ -54,8 +48,8 @@ export async function insertFinished<Q extends PgQueryResultHKT>(tx: Tx<Q>, tena
 }
 
 /** One audit row per newly finished part, in the student's own name. */
-export async function auditFinished<Q extends PgQueryResultHKT>(tx: Tx<Q>, actor: { tenantId: string; userId: string; membershipId: string; roleGrantId: string }, studentId: string, lessonIds: readonly string[]) {
+export async function auditFinished<Q extends PgQueryResultHKT>(tx: Tx<Q>, actor: { tenantId: string; userId: string; membershipId: string; roleGrantId: string }, studentId: string, lessonIds: readonly string[], delegated?: PracticeActor) {
   if (!lessonIds.length) return;
   await tx.insert(s.auditEvent).values(lessonIds.map(lessonId => ({ tenantId: actor.tenantId, actorUserId: actor.userId, actorMembershipId: actor.membershipId,
-    roleGrantId: actor.roleGrantId, mode: "student" as const, actingStudentId: studentId, action: "service-part.finish", targetType: "service-part", targetId: lessonId, requestId: randomUUID() })));
+    roleGrantId: actor.roleGrantId, mode: delegated ? "child-practice" as const : "student" as const, actingStudentId: studentId, guardianId: delegated?.relationshipId, action: "service-part.finish", targetType: "service-part", targetId: lessonId, requestId: randomUUID() })));
 }

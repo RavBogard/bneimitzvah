@@ -33,7 +33,8 @@ function parseConflict(value: unknown): Remote | null {
 }
 const same = (a: VerseReview, b: VerseReview) => serializeVerseReview(a) === serializeVerseReview(b);
 
-export type VerseSyncIo = Readonly<{ fetch: typeof fetch; onState(state: VerseState): void; timer?: (callback: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void }>;
+export type PendingVerseReview = Readonly<{ version: number; review: VerseReview }>;
+export type VerseSyncIo = Readonly<{ pending?: { load(owner: string): PendingVerseReview | undefined; save(owner: string, review: PendingVerseReview | null): void }; fetch: typeof fetch; onState(state: VerseState): void; timer?: (callback: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void }>;
 export function createVerseReviewSync(io: VerseSyncIo) {
   let state: VerseState = { status: "unknown" }, owner: string | null = null, version = 0, writing = false, again = false, conflicts = 0, pending: unknown = null;
   let started: Promise<void> | null = null, generation = 0;
@@ -69,10 +70,16 @@ export function createVerseReviewSync(io: VerseSyncIo) {
         if (answer.status === 200) {
           conflicts = 0;
           // A change made while this write was out is kept and sent next.
-          if (same(state.review, sent)) set({ status: "ready", review: remote.review ?? emptyVerseReview(), until: remote.until }); else again = true;
+          if (same(state.review, sent)) {
+            const saved = io.pending?.load(owner);
+            if (saved && same(saved.review, sent)) io.pending?.save(owner, null);
+            set({ status: "ready", review: remote.review ?? emptyVerseReview(), until: remote.until });
+          } else again = true;
         } else if (conflicts < CONFLICTS) {
           conflicts++;
-          set({ status: "ready", review: mergeVerseReview(remote.review ?? emptyVerseReview(), state.review), until: remote.until });
+          const review = mergeVerseReview(remote.review ?? emptyVerseReview(), state.review);
+          io.pending?.save(owner, { review, version });
+          set({ status: "ready", review, until: remote.until });
           again = true;
         }
       } else if (answer.status === 401 || answer.status === 403) drop({ status: "unavailable" });
@@ -89,22 +96,28 @@ export function createVerseReviewSync(io: VerseSyncIo) {
         const remote = answer.status === 200 ? parseVerseRemote(answer.value) : null;
         if (!remote) { set({ status: "unavailable" }); return; }
         owner = remote.owner; version = remote.version;
-        set({ status: "ready", review: remote.review ?? emptyVerseReview(), until: remote.until });
-      })();
+        const saved = io.pending?.load(owner), server = remote.review ?? emptyVerseReview();
+        const review = !saved ? server : saved.version === remote.version ? saved.review : mergeVerseReview(server, saved.review);
+        set({ status: "ready", review, until: remote.until });
+        if (saved) void push();
+      })().finally(() => { if (io.pending && state.status === "unavailable") started = null; });
       return started;
     },
     /** Change the cards in memory and write them back shortly. Nothing happens before the account has answered. */
     update(change: (review: VerseReview) => VerseReview) {
-      if (state.status !== "ready") return;
+      if (state.status !== "ready" || owner === null) return;
       const next = change(state.review);
       if (same(next, state.review) || serializeVerseReview(next) === null) return;
       conflicts = 0;
+      io.pending?.save(owner, { review: next, version });
       set({ status: "ready", review: next, until: state.until });
       cancel();
       pending = (io.timer ?? setTimeout)(() => { pending = null; void push(); }, VERSE_SYNC_DELAY_MS);
     },
     /** Write now (the page is hiding). */
-    flush() { if (pending !== null) { cancel(); void push(); } },
+    flush() {
+      if (pending !== null || owner !== null && io.pending?.load(owner)) { cancel(); void push(); }
+    },
     /** The page is no longer signed in as a student: drop the cards, write nothing, and read afresh on the next start. */
     reset() { if (state.status !== "unknown" || started) drop({ status: "unknown" }); },
   });

@@ -1,6 +1,6 @@
 import "server-only";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
-import type { createAccessService } from "../access/service";
+import type { LearningAccess } from "../practice/learning-owner";
 import type { AccessRequest, AccessTransaction } from "../access/types";
 import * as data from "../data/service-course-progress";
 import { mergeProgress, parseProgress, serializeProgress, type Progress } from "../../lib/service-course/progress";
@@ -23,7 +23,7 @@ function stored(row: data.ServiceCourseProgressRow): Progress {
 const view = (owner: ServiceCourseOwner, row: data.ServiceCourseProgressRow | null, until: string | null) =>
   ({ ok: true as const, owner: serviceCourseOwnerName(owner), progress: row ? stored(row) : null, version: row?.version ?? 0, until });
 
-export function createServiceCourseProgressService<Q extends PgQueryResultHKT>(input: { access: Pick<ReturnType<typeof createAccessService<Q>>, "withVerifiedIdentity"> }) {
+export function createServiceCourseProgressService<Q extends PgQueryResultHKT>(input: LearningAccess<Q>) {
   const withOwner = createServiceCourseProgressAccess<Q>(input);
   // Every write takes the member's write lock first, so a merge sees every earlier write of this member.
   // A write names the account the browser holds progress for; another account's (a tab whose session changed underneath it on a
@@ -37,13 +37,13 @@ export function createServiceCourseProgressService<Q extends PgQueryResultHKT>(i
   return Object.freeze({
     /** 401 signed out, 403 without a membership or a live grant: the browser learns its own state from this. */
     async get(request: Request) {
-      return withOwner(request, "read", async (tx, owner) => view(owner, await data.progressRow(tx, owner), await data.ownCeremonyDate(tx, owner)));
+      return withOwner(request, "read", async (tx, owner) => view(owner, await data.progressRow(tx, owner), (owner.student?.ceremonyDate ?? null)));
     },
     /** Replace the document under its version; a stale version is a 409 conflict carrying the current one. */
     async put(request: Request, supplied: unknown) {
       const value = validate.put(supplied);
       return write(request, value.owner, async (tx, owner) => {
-        const current = await data.progressRow(tx, owner), until = await data.ownCeremonyDate(tx, owner);
+        const current = await data.progressRow(tx, owner), until = (owner.student?.ceremonyDate ?? null);
         if ((current?.version ?? 0) !== value.expectedVersion) return { ok: false as const, code: "conflict" as const, current: view(owner, current, until) };
         // A put never drops a lesson the account has done (2.0 SC5a review): a browser that read the account's copy wrongly (an older
         // bundle, a corrupt read) is answered as a conflict, so it merges instead and loses nothing.
@@ -63,7 +63,7 @@ export function createServiceCourseProgressService<Q extends PgQueryResultHKT>(i
     async merge(request: Request, supplied: unknown) {
       const value = validate.merge(supplied);
       return write(request, value.owner, async (tx, owner) => {
-        const current = await data.progressRow(tx, owner), until = await data.ownCeremonyDate(tx, owner);
+        const current = await data.progressRow(tx, owner), until = (owner.student?.ceremonyDate ?? null);
         const merged = current ? mergeProgress(stored(current), value.progress) : value.progress;
         // Two valid documents can merge into one the parser refuses (more cards, or more bytes, than one document holds): never
         // store what a later read would refuse; answer 409 with the account's copy, and the browser keeps its own.

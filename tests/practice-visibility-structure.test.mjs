@@ -21,6 +21,7 @@ const sources = await Promise.all([...await files("src"), ...await files("script
 const importsOf = text => [...text.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)].map(m => m[1]);
 const text = path => { const file = sources.find(item => item.path === path); assert.ok(file, path); return file.text; };
 const MIGRATION = "src/server/db/migrations/0052_practice_visibility.sql", SERVICE = "src/server/practice-visibility/service.ts";
+const CHILD_MIGRATION = "src/server/db/migrations/0062_student_learning.sql";
 const DATA = "src/server/data/practice-visibility.ts", HTTP = "src/server/http/practice-visibility.ts";
 
 test("only the data module sets app.practice_reader, and the service names it only inside withStudentCapability as the tutor", () => {
@@ -38,7 +39,9 @@ test("only the data module sets app.practice_reader, and the service names it on
 
 test("the views are named only by the migration and the data module; the data module only by the service; the service only by the composition", () => {
   for (const view of ["practice_visibility_opened", "practice_visibility_marks", "practice_visibility_learn", "portal_practice_reader_sees"]) {
-    assert.deepEqual(sources.filter(file => file.text.includes(view)).map(file => file.path).sort(), (view === "portal_practice_reader_sees" ? [MIGRATION] : [DATA, MIGRATION]).sort(), view);
+    const allowed = view === "portal_practice_reader_sees" ? [MIGRATION, CHILD_MIGRATION]
+      : view === "practice_visibility_learn" ? [DATA, MIGRATION, CHILD_MIGRATION] : [DATA, MIGRATION];
+    assert.deepEqual(sources.filter(file => file.text.includes(view)).map(file => file.path).sort(), allowed.sort(), view);
   }
   assert.deepEqual(sources.filter(file => file.path !== DATA && importsOf(file.text).some(spec => /data\/practice-visibility$/.test(spec))).map(file => file.path), [SERVICE]);
   assert.deepEqual(sources.filter(file => file.path !== SERVICE && importsOf(file.text).some(spec => /practice-visibility\/service$/.test(spec))).map(file => file.path), ["src/server/runtime/composition.ts"]);
@@ -81,6 +84,10 @@ test("no duration, time of day, action or play count is selectable through the r
   // The Learn view gives lesson ids and boxes only: never the done instants or the due dates.
   assert.match(migration, /jsonb_object_keys\(c\.progress->'lessons'\)/);
   assert.match(migration, /card\.value->'box'/);
+  const replacement = text(CHILD_MIGRATION).split("CREATE OR REPLACE VIEW practice_visibility_learn")[1];
+  assert.doesNotMatch(replacement, /->\s*'(due|done)'/);
+  assert.match(replacement, /jsonb_object_keys\(l\.document->'lessons'\)/);
+  assert.match(replacement, /card\.value->'box'/);
 });
 
 test("only migration and schema files name a mark's instant, and nothing selects or returns a whole verse_self_check row", () => {

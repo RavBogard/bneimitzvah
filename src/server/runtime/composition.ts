@@ -291,12 +291,12 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const accounts = once("accounts", () => createAccountsService({ db, access: access(), throttleSecret: purposeSecret(config, "account-throttle"),
     send: createAccountMailTransport({ ...config.mail, origin: config.origin, fetch, enabled: config.deployment.environment === "production" }) }));
   // Learn to lein, slice 3: a member's own course progress, readable only by that member.
-  const courseProgress = once("courseProgress", () => createCourseProgressService({ access: access() }));
+  const courseProgress = once("courseProgress", () => createCourseProgressService({ access: access(), practice: practice() }));
   // 1.9 N19: a student's own verse review cards, readable only by that student.
-  const verseReview = once("verseReview", () => createVerseReviewService({ access: access() }));
+  const verseReview = once("verseReview", () => createVerseReviewService({ access: access(), practice: practice() }));
   // Release 2.0 SC4: a member's own service-course progress, readable only by that member, and a student's own path through the course.
-  const serviceCourseProgress = once("serviceCourseProgress", () => createServiceCourseProgressService({ access: access() }));
-  const serviceCoursePath = once("serviceCoursePath", () => createServiceCoursePath({ access: access(), serviceLearning: serviceLearning() }));
+  const serviceCourseProgress = once("serviceCourseProgress", () => createServiceCourseProgressService({ access: access(), practice: practice() }));
+  const serviceCoursePath = once("serviceCoursePath", () => createServiceCoursePath({ access: access(), practice: practice(), serviceLearning: serviceLearning() }));
   // Release 2.0 SC5: the per-part finished mark, read only by a student's assigned tutors and admins (A4 9).
   const servicePartFinished = once("servicePartFinished", () => createServicePartFinished({ access: access() }));
   // 1.9 N23: practice visibility for the assigned tutor and parent counts, refused until its release gate is set.

@@ -190,7 +190,7 @@ export function mergeProgress(a: Progress, b: Progress): Progress {
 
 /** Browser storage for signed-out learners: one key, every access guarded; corrupt or missing means fresh. */
 export type ProgressStore = Readonly<{ load(): Progress; save(progress: Progress): boolean }>;
-export function browserProgressStore(storage: () => Storage | null = () => { try { return window.localStorage; } catch { return null; } }): ProgressStore {
+export function browserProgressStore(storage: () => Pick<Storage, "getItem" | "setItem" | "removeItem"> | null = () => { try { return window.localStorage; } catch { return null; } }): ProgressStore {
   return Object.freeze({
     load() {
       try {

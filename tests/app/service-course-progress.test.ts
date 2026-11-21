@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
 import { portalRoutesFixture } from "./portal-routes-fixture";
 import { createHttpDispatcher } from "../../src/server/http/dispatch";
@@ -164,7 +164,7 @@ describe("signed-in service-course progress", () => {
       expect(seen.json).toMatchObject({ ok: true, progress: null, version: 0 });
       expect(seen.json.owner).not.toBe(learnerOwner);
     }
-    expect(await t.f.owner(async () => (await t.f.db.select().from(s.serviceCourseProgressTable).where(eq(s.serviceCourseProgressTable.membershipId, t.f.learnerMember.id))).length)).toBe(1);
+    expect(await t.f.owner(async () => (await t.f.db.select().from(s.studentLearning).where(and(eq(s.studentLearning.kind, "service"), eq(s.studentLearning.studentId, t.f.students[0].id)))).length)).toBe(1);
   });
 
   it("keeps the evening and Havdalah lessons' progress (2.0 SC7) under the same owner-only rules, the owner check included", async () => {

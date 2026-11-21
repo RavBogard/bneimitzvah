@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
-import { createVerseReviewSync, parseVerseRemote, type VerseState } from "../../src/components/learn/verse-review-sync";
+import { createVerseReviewSync, parseVerseRemote, type PendingVerseReview, type VerseState } from "../../src/components/learn/verse-review-sync";
 import { addVerseCards, emptyVerseReview, recordVerse, verseCardId, VERSE_REVIEW_SCHEMA } from "../../src/lib/learn/verse-review";
 
 vi.mock("server-only", () => ({}));
@@ -160,4 +160,25 @@ describe("Got it and Solid marks become cards", () => {
     expect(await markedVerses(assigned("tutor"), "torah", new AbortController().signal, read as never)).toEqual([]);
     expect(read).not.toHaveBeenCalled();
   });
+});
+
+it("replays a pending stumble only for its verified owner and preserves the lower box when the version still matches", async () => {
+  const original = doc({ [NOA]: [3, "2026-11-05"] }), changed = doc({ [NOA]: [1, "2026-11-02"] });
+  const pending = new Map<string, PendingVerseReview>([[A, { review: parseVerseRemote(ok(A, changed, 4))!.review!, version: 4 }]]);
+  const calls: unknown[] = [];
+  const remote = (owner: string) => createVerseReviewSync({
+    fetch: (async (_path, init) => {
+      if (!init?.body) return json(ok(owner, original, 4));
+      calls.push(JSON.parse(String(init.body)));
+      return json(ok(owner, changed, 5));
+    }) as typeof fetch,
+    onState() {},
+    pending: { load: name => pending.get(name), save: (name, value) => { if (value) pending.set(name, value); else pending.delete(name); } },
+  });
+  await remote(B).start();
+  expect(calls).toEqual([]);
+  const own = remote(A);
+  await own.start();
+  expect(own.state).toMatchObject({ status: "ready", review: changed });
+  expect(calls).toEqual([{ expectedOwner: A, expectedVersion: 4, review: changed }]);
 });

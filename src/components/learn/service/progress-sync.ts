@@ -49,7 +49,7 @@ type Remote = Readonly<{ owner: string; progress: Progress | null; version: numb
 const OWNER = /^[a-f0-9]{32}$/, DATE = /^\d{4}-\d{2}-\d{2}$/, LIMIT = 128 * 1024;
 export const SYNC_DELAY_MS = 1200;
 
-function readMarker(storage: Storage | null): Marker | null {
+function readMarker(storage: Pick<Storage, "getItem" | "setItem" | "removeItem"> | null): Marker | null {
   try {
     const text = storage?.getItem(SYNC_KEY); if (!text || text.length > 512) return null;
     const value = JSON.parse(text) as Record<string, unknown>;
@@ -58,14 +58,14 @@ function readMarker(storage: Storage | null): Marker | null {
     return { owner: value.owner, version: value.version as number, dirty: value.dirty };
   } catch { return null; }
 }
-function writeMarker(storage: Storage | null, marker: Marker): boolean { try { storage?.setItem(SYNC_KEY, JSON.stringify(marker)); return !!storage; } catch { return false; } }
-function dropMarker(storage: Storage | null) { try { storage?.removeItem(SYNC_KEY); } catch { /* Nothing to clear. */ } }
+function writeMarker(storage: Pick<Storage, "getItem" | "setItem" | "removeItem"> | null, marker: Marker): boolean { try { storage?.setItem(SYNC_KEY, JSON.stringify(marker)); return !!storage; } catch { return false; } }
+function dropMarker(storage: Pick<Storage, "getItem" | "setItem" | "removeItem"> | null) { try { storage?.removeItem(SYNC_KEY); } catch { /* Nothing to clear. */ } }
 const same = (a: Progress, b: Progress) => serializeProgress(a) === serializeProgress(b);
-function dropGuest(storage: Storage | null) { try { storage?.removeItem(GUEST_KEY); } catch { /* Nothing to clear. */ } }
+function dropGuest(storage: Pick<Storage, "getItem" | "setItem" | "removeItem"> | null) { try { storage?.removeItem(GUEST_KEY); } catch { /* Nothing to clear. */ } }
 const blank = (progress: Progress) => !Object.keys(progress.lessons).length && !Object.keys(progress.cards).length;
 type Stamps = Readonly<{ owner: string; synced: number | null; lessons: Readonly<Record<string, number>> }>;
 const instant = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) >= 0;
-function readStamps(storage: Storage | null): Stamps | null {
+function readStamps(storage: Pick<Storage, "getItem" | "setItem" | "removeItem"> | null): Stamps | null {
   try {
     const text = storage?.getItem(STAMPS_KEY); if (!text || text.length > 16 * 1024) return null;
     const value = JSON.parse(text) as Record<string, unknown>;
@@ -76,8 +76,8 @@ function readStamps(storage: Storage | null): Stamps | null {
     return { owner: value.owner, synced: value.synced as number | null, lessons: Object.fromEntries(lessons) as Record<string, number> };
   } catch { return null; }
 }
-function writeStamps(storage: Storage | null, stamps: Stamps) { try { storage?.setItem(STAMPS_KEY, JSON.stringify(stamps)); } catch { /* A stamp not kept counts for nobody. */ } }
-function dropStamps(storage: Storage | null) { try { storage?.removeItem(STAMPS_KEY); } catch { /* Nothing to clear. */ } }
+function writeStamps(storage: Pick<Storage, "getItem" | "setItem" | "removeItem"> | null, stamps: Stamps) { try { storage?.setItem(STAMPS_KEY, JSON.stringify(stamps)); } catch { /* A stamp not kept counts for nobody. */ } }
+function dropStamps(storage: Pick<Storage, "getItem" | "setItem" | "removeItem"> | null) { try { storage?.removeItem(STAMPS_KEY); } catch { /* Nothing to clear. */ } }
 
 /** The account's answer, strictly: anything unexpected is no answer. */
 export function parseRemote(value: unknown): Remote | null {
@@ -98,7 +98,7 @@ function refusedOwner(value: unknown): string | null {
 }
 
 export type SyncIo = Readonly<{
-  fetch: typeof fetch; storage(): Storage | null; store: ProgressStore;
+  fetch: typeof fetch; storage(): Pick<Storage, "getItem" | "setItem" | "removeItem"> | null; store: ProgressStore;
   onProgress(progress: Progress): void; onAccount(account: Account): void;
   timer?: (callback: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void; now?: () => number;
   /** Runs `action` holding the named lock across tabs; defaults to the Web Locks API, or the action alone where there is none. */

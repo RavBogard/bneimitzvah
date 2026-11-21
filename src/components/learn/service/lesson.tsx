@@ -4,6 +4,7 @@ import { CRC_TENANT, SERVICE_COURSE, lessonById, lessonOpen, mapSections, pageOf
 import { COPY, emphasised, fill, typographic } from "../../../lib/service-course/copy";
 import { completeLesson, lessonAfter, nextOnPath, type Progress } from "../../../lib/service-course/progress";
 import type { CheckItem } from "../../../lib/service-course/check";
+import { useChildLearning } from "../child-practice";
 import { WordCardScope } from "../word-card";
 import learn from "../learn.module.css";
 import styles from "./service.module.css";
@@ -46,10 +47,10 @@ function LessonFlow({ lesson }: { lesson: Lesson }) {
   const items = useCheckItems(lesson, text, seed);
   const steps = useMemo(() => lessonSteps(lesson, items ? items.length : null), [lesson, items]);
   const [at, setAt] = useState(0);
-  const { progress, account, update } = useServiceProgress();
+  const child = useChildLearning(), { progress, account, update } = useServiceProgress();
   // A signed-in student's own slot picks the evening teaching and pages for a prayer the evening repeats (2.0 SC7); signed out, the morning.
   // Offline, the device's last copy of the student's parts (2.0 SC6), so the slot and Next of your parts hold.
-  const pathView = useCoursePath(account).view, slot: ServiceSlot = pathView.status === "ready" ? pathView.path.slot : "morning";
+  const pathView = useCoursePath(account).view, slot: ServiceSlot = pathView.status === "ready" ? pathView.path.slot : child?.assigned.student.serviceSlot ?? "morning";
   const main = useRef<HTMLElement>(null);
   const go = useCallback((next: number) => { setAt(next); window.scrollTo({ top: 0 }); main.current?.focus({ preventScroll: true }); }, []);
   const index = Math.min(at, steps.length - 1), step = steps[index];

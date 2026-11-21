@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { browserProgressStore, emptyProgress, PROGRESS_KEY, type Progress, type ProgressStore } from "../../../lib/service-course/progress";
 import { parsePath, type Path } from "../../../lib/service-course/path";
+import { directLearningFetch, waitingForLearningScope, type LearningTransport } from "../child-practice";
+import { useLearningTransport, usePersonalLearning } from "../scoped-learning";
 import { createProgressSync, GUEST_KEY, SYNC_KEY, type Account, type ProgressSync } from "./progress-sync";
 
 /**
@@ -11,23 +13,39 @@ import { createProgressSync, GUEST_KEY, SYNC_KEY, type Account, type ProgressSyn
  */
 type State = Readonly<{ progress: Progress | null; account: Account }>;
 const UNLOADED: State = Object.freeze({ progress: null, account: Object.freeze({ state: "unknown" as const }) });
-let hub: { state: State; listeners: Set<() => void>; store: ProgressStore; sync: ProgressSync } | null = null;
-function progressHub() {
-  if (hub) return hub;
-  const store = browserProgressStore(), listeners = new Set<() => void>();
+type Hub = { state: State; listeners: Set<() => void>; store: ProgressStore; sync: ProgressSync };
+let hub: Hub | null = null;
+const childHubs = new WeakMap<LearningTransport, Hub>();
+function progressHub(child: LearningTransport | null) {
+  const existing = child ? childHubs.get(child) : hub;
+  if (existing) return existing;
+  const storage = child?.storage ?? (() => { try { return window.localStorage; } catch { return null; } });
+  const store = browserProgressStore(storage), listeners = new Set<() => void>();
   const made = { state: UNLOADED, listeners, store, sync: null as unknown as ProgressSync };
   const set = (patch: Partial<State>) => { made.state = Object.freeze({ ...made.state, ...patch }); for (const listener of listeners) listener(); };
-  made.sync = createProgressSync({ fetch: (...args) => fetch(...args), storage: () => { try { return window.localStorage; } catch { return null; } }, store,
+  made.sync = createProgressSync({ fetch: child?.fetch ?? directLearningFetch, storage, store,
     onProgress: progress => set({ progress }), onAccount: account => set({ account }) });
   made.state = Object.freeze({ progress: made.sync.load(), account: made.state.account });
-  hub = made;
+  if (child) childHubs.set(child, made); else hub = made;
   void made.sync.start();
-  const hide = () => { if (document.visibilityState !== "visible") made.sync.flush(); };
-  document.addEventListener("visibilitychange", hide); window.addEventListener("pagehide", () => made.sync.flush());
-  // Back online: the account's copy and this device's meet again.
-  window.addEventListener("online", () => { void made.sync.start(); });
-  // Another tab saved: show what it saved, unless another account owns the device now (then this tab is frozen).
-  window.addEventListener("storage", event => { if ((event.key === null || event.key === PROGRESS_KEY || event.key === SYNC_KEY || event.key === GUEST_KEY) && made.sync.writable) set({ progress: made.sync.load() }); });
+  const flush = () => made.sync.flush();
+  const hide = () => { if (document.visibilityState !== "visible") flush(); };
+  const reconnect = () => { void made.sync.start(); };
+  const key = child?.storageKey ?? ((name: string) => name);
+  const changed = (event: StorageEvent) => {
+    if (made.sync.writable && (event.key === null || [PROGRESS_KEY, SYNC_KEY, GUEST_KEY].map(key).includes(event.key))) set({ progress: made.sync.load() });
+  };
+  document.addEventListener("visibilitychange", hide);
+  window.addEventListener("pagehide", flush);
+  window.addEventListener("online", reconnect);
+  window.addEventListener("storage", changed);
+  child?.onClose(() => {
+    flush();
+    document.removeEventListener("visibilitychange", hide);
+    window.removeEventListener("pagehide", flush);
+    window.removeEventListener("online", reconnect);
+    window.removeEventListener("storage", changed);
+  });
   return made;
 }
 /**
@@ -47,14 +65,16 @@ export function writeLocal(store: ProgressStore, sync: Pick<ProgressSync, "writa
   return next;
 }
 export function useServiceProgress() {
-  const { progress, account } = useSyncExternalStore(listener => { const h = progressHub(); h.listeners.add(listener); return () => { h.listeners.delete(listener); }; }, () => progressHub().state, () => UNLOADED);
+  const child = useLearningTransport();
+  const { progress, account } = useSyncExternalStore(listener => { if (!child && waitingForLearningScope()) return () => {}; const h = progressHub(child); h.listeners.add(listener); return () => { h.listeners.delete(listener); }; }, () => !child && waitingForLearningScope() ? UNLOADED : progressHub(child).state, () => UNLOADED);
   /** `completed`: the lesson this change finishes, so it can count for the account (2.0 SC5a). */
   const update = useCallback((change: (value: Progress) => Progress, completed?: string) => {
-    const h = progressHub(), next = writeLocal(h.store, h.sync, change, completed);
+    if (!child && waitingForLearningScope()) return;
+    const h = progressHub(child), next = writeLocal(h.store, h.sync, change, completed);
     if (!next) return;
     h.state = Object.freeze({ ...h.state, progress: next });
     for (const listener of h.listeners) listener();
-  }, []);
+  }, [child]);
   return { progress, account, update, fresh: emptyProgress };
 }
 
@@ -77,15 +97,16 @@ export async function loadPath(fetcher: typeof fetch = (...args) => fetch(...arg
   } catch { return { status: "error" }; }
 }
 export function useServicePath(account: Account): PathView {
+  const child = useLearningTransport(), personal = usePersonalLearning();
   const [view, setView] = useState<PathView>({ status: "idle" });
   const synced = account.state === "synced";
   useEffect(() => {
-    if (!synced) { setView({ status: "idle" }); return; }
+    if (!synced || personal) { setView({ status: "idle" }); return; }
     let live = true;
     setView({ status: "loading" });
-    void loadPath().then(next => { if (live) setView(next); });
+    void loadPath(child?.fetch).then(next => { if (live) setView(next); });
     return () => { live = false; };
-  }, [synced]);
+  }, [synced, child, personal]);
   return view;
 }
 /** The lesson ids of a student's own path, when the home lists one (assigned, or the default six when there is no plan). */

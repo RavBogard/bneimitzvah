@@ -12,6 +12,8 @@ import { firstVerseOf, ownAssigned, useOwnReading, type OwnReading } from "./own
 import { LearnPracticeDisclosure } from "../portal/practice-visibility/disclosure";
 import { useProgress } from "./services";
 import { useVerseReview } from "./own-verses";
+import { PersonalStudyLink } from "./scoped-learning";
+import { useChildLearning } from "./child-practice";
 import { LearningStart } from "./learning-start";
 import styles from "./learn.module.css";
 import { signInAddress } from "../../lib/site/return-address";
@@ -24,6 +26,7 @@ export function LearnAppBar() {
 
 /** 1.9 N23: a signed-in student is one whose own workspace answers with their assignment (the student API refuses everyone else). */
 const isStudent = async () => (await ownAssigned()) !== null;
+const selectedStudent = async () => true;
 
 /** The unit each path's "First phrase of your verse" row follows: the endings (the haftarah path opens with them inside its first unit). */
 const ENDINGS_UNIT: Record<Melody, string> = { torah: "u1-the-two-endings", haftarah: "u5-haftarah-same-phrases-new-tune" };
@@ -68,7 +71,7 @@ export function QuickTenLinks({ progress }: { progress: Progress }) {
 
 /** The course home: one next step, the review line when anything is due, the two paths, and what you can hear. */
 export function CourseHome() {
-  const { progress: loaded, account, until } = useProgress();
+  const child = useChildLearning(), { progress: loaded, account, until } = useProgress();
   const progress = loaded ?? emptyProgress(), ready = loaded !== null;
   const next = recommendedLesson(progress), review = ready ? reviewSummary(progress, localDay(Date.now()), until) : null;
   const haftarahOpen = isUnlocked(progress, pathLessons("haftarah")[0]);
@@ -89,7 +92,8 @@ export function CourseHome() {
         <div className={styles.homeLead}>
           <h1 className={styles.title}>Learn to lein</h1>
           <p className={styles.intro} data-testid="learn-intro">Hear a phrase, chant it yourself, then connect it to a reading. Return to words, sounds and joins whenever you need help.</p>
-          {mine && <p className={styles.ownLink}><a href="/mine/reading" data-testid="learn-open-reading">Open my reading</a></p>}
+          {mine && !child && <p className={styles.ownLink}><a href="/mine/reading" data-testid="learn-open-reading">Open my reading</a></p>}
+          {account.state === "synced" && !child && <PersonalStudyLink course="learn" eligible={isStudent} />}
           {courseDone(progress) ? <section className={styles.next} aria-labelledby="learn-next"><h2 id="learn-next" className={styles.nextTitle}>Keep preparing readings</h2><p><a href="/learn/prepare">Prepare a passage</a> or revisit a lesson below.</p></section>
             : next && <section className={styles.next} aria-labelledby="learn-next" data-next={next.id}>
               <div className={styles.nextTop}><span className={styles.nextLabel}>Next</span>{next.family && <FamilyChip family={next.family} melody={next.melody} />}</div>
@@ -106,8 +110,8 @@ export function CourseHome() {
           <LearningStart />
           <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a>{mine && <a href="/mine">My Readings</a>}</nav>
           {/* 1.9 N23: what the tutor sees of Learn, told to the student; behind the same release gate as the tutor's lines. */}
-          <LearnPracticeDisclosure signedIn={account.state === "synced"} isStudent={isStudent} />
-          {account.state !== "synced" && <p className={styles.saved} data-testid="learn-saved-note">Progress is saved on this device. <a href={signInAddress("/learn")}>Sign in</a> with Google or an email code to return to Learn to lein.</p>}
+          <LearnPracticeDisclosure signedIn={account.state === "synced"} isStudent={child ? selectedStudent : isStudent} />
+          {!child && account.state !== "synced" && <p className={styles.saved} data-testid="learn-saved-note">Progress is saved on this device. <a href={signInAddress("/learn")}>Sign in</a> with Google or an email code to return to Learn to lein.</p>}
         </div>
         <div className={styles.paths}>{paths}</div>
       </div>

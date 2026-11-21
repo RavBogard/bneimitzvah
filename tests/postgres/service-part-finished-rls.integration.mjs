@@ -21,7 +21,7 @@ async function rejects(client, text, values, code) {
   await query(client, "ROLLBACK TO SAVEPOINT probe");
 }
 
-test("real PostgreSQL: the finished mark is read only by the ruled readers and written only by the student", { timeout: 120000 }, async t => {
+test("real PostgreSQL: the finished mark is read only by the ruled readers and written by the student or an authorized child-practice session", { timeout: 120000 }, async t => {
   const config = disposableConfig();
   const suffix = randomBytes(6).toString("hex"), database = `portal_finished_${suffix}`, login = `portal_finished_${suffix}`, password = randomBytes(32).toString("hex");
   const anchor = new pg.Client(config);
@@ -70,10 +70,11 @@ test("real PostgreSQL: the finished mark is read only by the ruled readers and w
       return rows;
     };
 
-    await t.test("the table is forced, owned by the migration role, with the restrictive tenant policy, one reader policy and one writer policy", async () => {
+    await t.test("the table is forced, owned by the migration role, with the restrictive tenant policy, one reader policy and two writer policies", async () => {
       const [row] = (await query(owner, "SELECT c.relrowsecurity, c.relforcerowsecurity, pg_get_userbyid(c.relowner) AS owner FROM pg_class c WHERE c.relname = 'service_part_finished'")).rows;
       assert.equal(row.relrowsecurity, true); assert.equal(row.relforcerowsecurity, true); assert.notEqual(row.owner, "portal_runtime"); assert.notEqual(row.owner, login);
       assert.deepEqual((await query(owner, "SELECT policyname, cmd, permissive, roles::text[] AS roles FROM pg_policies WHERE tablename = 'service_part_finished' ORDER BY policyname")).rows, [
+        { policyname: "child_practice_writer", cmd: "INSERT", permissive: "PERMISSIVE", roles: ["portal_runtime"] },
         { policyname: "ruled_readers", cmd: "SELECT", permissive: "PERMISSIVE", roles: ["portal_runtime"] },
         { policyname: "student_writer", cmd: "INSERT", permissive: "PERMISSIVE", roles: ["portal_runtime"] },
         { policyname: "tenant_isolation", cmd: "ALL", permissive: "RESTRICTIVE", roles: ["portal_runtime"] }]);
@@ -116,7 +117,7 @@ test("real PostgreSQL: the finished mark is read only by the ruled readers and w
       } finally { client.release(); }
     });
 
-    await t.test("only the student inserts, only for their own student and only the three columns; nobody updates, deletes or truncates", async () => {
+    await t.test("the student and child practice insert only for their own student and only the three columns; nobody updates, deletes or truncates", async () => {
       const client = await checkout();
       try {
         await begin(client, "crc", learner.grant);
@@ -128,10 +129,17 @@ test("real PostgreSQL: the finished mark is read only by the ruled readers and w
           await rejects(client, statement, [], "42501");
         await query(client, "COMMIT");
         for (const reader of [admin.grant, tutor.grant, parent.grant, stranger.grant]) {
-          await begin(client, "crc", reader, reader === parent.grant ? ownContext : undefined);
+          await begin(client, "crc", reader);
           await rejects(client, "INSERT INTO service_part_finished (tenant_id,student_id,lesson_id) VALUES ('crc',$1,'haftarah-before')", [own], "42501");
           await query(client, "ROLLBACK");
         }
+        await begin(client, "crc", parent.grant, ownContext);
+        assert.equal((await query(client, "INSERT INTO service_part_finished (tenant_id,student_id,lesson_id) VALUES ('crc',$1,'haftarah-before') RETURNING lesson_id", [own])).rows.length, 1);
+        await rejects(client, "INSERT INTO service_part_finished (tenant_id,student_id,lesson_id) VALUES ('crc',$1,'haftarah-after')", [sibling], "42501");
+        await query(client, "ROLLBACK");
+        await begin(client, "crc", parent.grant, expired);
+        await rejects(client, "INSERT INTO service_part_finished (tenant_id,student_id,lesson_id) VALUES ('crc',$1,'haftarah-after')", [own], "42501");
+        await query(client, "ROLLBACK");
         await begin(client, "test-other", learner.grant);
         await rejects(client, "INSERT INTO service_part_finished (tenant_id,student_id,lesson_id) VALUES ('crc',$1,'haftarah-after')", [own], "42501");
         await query(client, "ROLLBACK");

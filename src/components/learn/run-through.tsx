@@ -3,6 +3,7 @@ import { useMemo, useRef, useState, type ReactElement, type ReactNode } from "re
 import type { Melody } from "../../lib/learn/course";
 import { localDay } from "../../lib/learn/progress";
 import { practiceAgain, recordVerse, stumbledRefs, verseCardId, type VerseRun } from "../../lib/learn/verse-review";
+import { useChildLearning } from "./child-practice";
 import { useOwnReading } from "./own-reading";
 import { useVerseReview } from "./own-verses";
 import { useVerseTexts, VerseRunView } from "./verse-run";
@@ -12,7 +13,7 @@ import styles from "./learn.module.css";
  * 1.9 N19: the Run-through. A signed-in student chants their own reading verse by verse with no audio and the colours off,
  * and marks each verse Clean or Stumbled. A stumble feeds review (the verse becomes a card, or its card drops); the summary
  * names the stumbled verses, "Practice verses 3 and 8 again.", with no tally. Nothing here plays, and nothing is shown to
- * a tutor, a parent or anyone else: the results live only in the student's own verse cards.
+ * a tutor or the parent view: the results live in the student's own verse cards.
  * Anyone without an own reading (signed out, a tutor, a parent, an admin) sees only the way back.
  */
 export const RUN_THROUGH_EMPTY = Object.freeze({
@@ -21,7 +22,7 @@ export const RUN_THROUGH_EMPTY = Object.freeze({
 });
 const close = <svg viewBox="0 0 24 24" width={22} height={22} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>;
 export function RunThroughScreen({ kind }: { kind: Melody | null }) {
-  const own = useOwnReading(), verseCards = useVerseReview();
+  const child = useChildLearning(), own = useOwnReading(), verseCards = useVerseReview();
   const frame = (body: ReactNode, footer?: ReactNode) => <div className={`portal-shell ${styles.shell}`}>
     <header className={styles.bar}><a className={styles.close} href="/learn" aria-label="Back to the path">{close}</a><h1 className={styles.barTitle}>Run-through</h1><span /></header>
     <main className={styles.lesson}>{body}{footer && <div className={styles.footer}><div className={styles.footerInner}>{footer}</div></div>}</main>
@@ -31,6 +32,9 @@ export function RunThroughScreen({ kind }: { kind: Melody | null }) {
   const reading = own.status === "ready" ? (kind ? own[kind] : null) ?? own.torah ?? own.haftarah : null;
   // Signed out, staff, a parent, or a student whose reading is waiting on the office's review: say so rather than show an empty page (2026-11-16 walkthrough).
   if (!reading) return frame(<p className={styles.state} data-run-empty>{RUN_THROUGH_EMPTY.none}</p>, back);
+  if (child && verseCards.state.status !== "ready") {
+    return frame(<p role="status" className={styles.state}>{verseCards.state.status === "unavailable" ? "Verse review is unavailable" : "Checking verse review access"}</p>, back);
+  }
   const both = own.status === "ready" && own.torah && own.haftarah;
   return <RunThroughReading key={`${reading.kind}:${reading.id}:${reading.revision}`} verses={reading.verses} kind={reading.kind} frame={frame} back={back} verseCards={verseCards}
     nav={both ? <nav className={styles.links} aria-label="Reading"><a href="/learn/run-through" aria-current={reading.kind === "torah" ? "page" : undefined}>Torah</a>

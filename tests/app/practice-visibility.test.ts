@@ -90,8 +90,8 @@ describe("the assigned tutor's view", () => {
     await t.f.owner(() => t.f.db.update(s.verseSelfCheck).set({ sourceMode: "child-practice", state: "working", version: 2 }).where(eq(s.verseSelfCheck.verseRef, "Exodus 23:6")));
     // Learn: tevir and etnachta taught on the Torah path, each with a card dropped to box 0 or 1 by a miss.
     const lessons = pathLessons("torah").filter(lesson => lesson.family === "tevir" || lesson.family === "etnachta").map(lesson => lesson.id);
-    await t.f.owner(() => t.f.db.insert(s.courseProgressTable).values({ tenantId: "crc", membershipId: t.f.learnerMember.id, userId: t.f.identities.learner.id,
-      progress: { schema: "learn-progress/v1", lessons: Object.fromEntries(lessons.map(id => [id, { done: "2026-10-01T10:00:00.000Z" }])), cards: { "tevir:torah:name": { box: 0, due: "2026-10-02" }, "etnachta:torah:name": { box: 1, due: "2026-10-03" } } } }));
+    await t.f.owner(() => t.f.db.insert(s.studentLearning).values({ tenantId: "crc", studentId: t.own.id, kind: "learn",
+      document: { schema: "learn-progress/v1", lessons: Object.fromEntries(lessons.map(id => [id, { done: "2026-10-01T10:00:00.000Z" }])), cards: { "tevir:torah:name": { box: 0, due: "2026-10-02" }, "etnachta:torah:name": { box: 1, due: "2026-10-03" } } } }));
     await t.f.owner(() => t.f.db.insert(s.lessonLog).values({ tenantId: "crc", studentId: t.own.id, entryId: randomUUID(), creatorMembershipId: t.f.multiMember.id, creatorUserId: t.f.identities.multi.id, lessonDate: addDays(t.today, -2), summary: "Synthetic lesson", version: 1 }));
 
     const answer = await t.read("multi", t.own.id);
@@ -190,7 +190,11 @@ describe("the database shows the views to the reader alone", () => {
   it("returns no row of any view, nor anyone's course progress, without the reader, or with a parent's, an admin's or another tutor's grant", async () => {
     const t = await setup();
     await t.event(t.own.id, t.assignment.id, "Exodus 23:1"); await t.mark("Exodus 23:4", "got-it");
-    await t.f.owner(() => t.f.db.insert(s.courseProgressTable).values({ tenantId: "crc", membershipId: t.f.learnerMember.id, userId: t.f.identities.learner.id, progress: { schema: "learn-progress/v1", lessons: {}, cards: {} } }));
+    await t.f.owner(async () => {
+      const { id: membershipId, userId } = t.f.learnerMember;
+      await t.f.db.insert(s.studentLearningLegacy).values({ tenantId: "crc", studentId: t.own.id, membershipId, userId });
+      await t.f.db.insert(s.courseProgressTable).values({ tenantId: "crc", membershipId, userId, progress: { schema: "learn-progress/v1", lessons: {}, cards: {} } });
+    });
     const counts = (tenantId: string, reader: string | null) => withTenantTransaction(t.f.db, { tenantId }, async (tx: AccessTransaction<PgliteQueryResultHKT>) => {
       if (reader !== null) await tx.execute(sql`select set_config('app.practice_reader', ${reader}, true)`);
       const n = async (table: string) => Number(((await tx.execute(sql.raw(`select count(*)::int as n from ${table}`))) as unknown as { rows: { n: number }[] }).rows[0].n);

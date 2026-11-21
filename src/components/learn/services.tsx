@@ -6,6 +6,8 @@ import { createProgressSync, SYNC_KEY, type Account, type ProgressSync } from ".
 import { createClipPlayer, type ClipPlayer, type PlayerState } from "./player";
 import { createVerseLoader, type VerseLoader } from "./verses-api";
 import { WordCardScope } from "./word-card";
+import { directLearningFetch, waitingForLearningScope, type LearningTransport } from "./child-practice";
+import { useLearningTransport } from "./scoped-learning";
 
 /** One loader, one phrase cache and one audio element per course page; stopped when the page hides. The page's one word card lives here too. */
 type Services = Readonly<{ loader: VerseLoader; audio: PhraseAudio; player: ClipPlayer }>;
@@ -45,38 +47,54 @@ export function usePlayerState(): PlayerState {
  * (progress-sync.ts). One store and one sync per page, shared by every component that asks.
  */
 type ProgressState = Readonly<{ progress: Progress | null; account: Account }>;
-let shared: { state: ProgressState; listeners: Set<() => void>; store: ProgressStore; sync: ProgressSync } | null = null;
+type ProgressHub = { state: ProgressState; listeners: Set<() => void>; store: ProgressStore; sync: ProgressSync };
+let shared: ProgressHub | null = null;
+const childHubs = new WeakMap<LearningTransport, ProgressHub>();
 const UNLOADED: ProgressState = Object.freeze({ progress: null, account: Object.freeze({ state: "unknown" as const }) });
-function progressHub() {
-  if (shared) return shared;
-  const store = browserProgressStore(), listeners = new Set<() => void>();
+function progressHub(child: LearningTransport | null) {
+  const existing = child ? childHubs.get(child) : shared;
+  if (existing) return existing;
+  const storage = child?.storage ?? (() => { try { return window.localStorage; } catch { return null; } });
+  const store = browserProgressStore(storage), listeners = new Set<() => void>();
   const hub = { state: UNLOADED, listeners, store, sync: null as unknown as ProgressSync };
   const set = (patch: Partial<ProgressState>) => { hub.state = Object.freeze({ ...hub.state, ...patch }); for (const listener of listeners) listener(); };
-  hub.sync = createProgressSync({ fetch: (...args) => fetch(...args), storage: () => { try { return window.localStorage; } catch { return null; } }, store,
+  hub.sync = createProgressSync({ fetch: child?.fetch ?? directLearningFetch, storage, store, accountOnly: child !== null,
     onProgress: progress => set({ progress }), onAccount: account => set({ account }) });
   hub.state = Object.freeze({ progress: store.load(), account: hub.state.account });
-  shared = hub;
+  if (child) childHubs.set(child, hub); else shared = hub;
   void hub.sync.start();
-  const hide = () => { if (document.visibilityState !== "visible") hub.sync.flush(); };
-  document.addEventListener("visibilitychange", hide); window.addEventListener("pagehide", () => hub.sync.flush());
-  // Back online (the installed app used offline, 1.5 A1): the account's copy and this device's meet again.
-  window.addEventListener("online", () => { void hub.sync.start(); });
-  // Another tab saved: show what it saved, unless this tab is frozen (the browser's copy is another account's now).
-  window.addEventListener("storage", event => { if (!hub.sync.frozen && (event.key === null || event.key === PROGRESS_KEY || event.key === SYNC_KEY)) set({ progress: store.load() }); });
+  const flush = () => hub.sync.flush();
+  const hide = () => { if (document.visibilityState !== "visible") flush(); };
+  const reconnect = () => { void hub.sync.start(); };
+  const key = child?.storageKey ?? ((name: string) => name);
+  const changed = (event: StorageEvent) => {
+    if (!hub.sync.frozen && (event.key === null || event.key === key(PROGRESS_KEY) || event.key === key(SYNC_KEY))) set({ progress: store.load() });
+  };
+  document.addEventListener("visibilitychange", hide);
+  window.addEventListener("pagehide", flush);
+  window.addEventListener("online", reconnect);
+  window.addEventListener("storage", changed);
+  child?.onClose(() => {
+    flush();
+    document.removeEventListener("visibilitychange", hide);
+    window.removeEventListener("pagehide", flush);
+    window.removeEventListener("online", reconnect);
+    window.removeEventListener("storage", changed);
+  });
   return hub;
 }
-function useProgressState(): ProgressState {
-  return useSyncExternalStore(listener => { const hub = progressHub(); hub.listeners.add(listener); return () => { hub.listeners.delete(listener); }; },
-    () => progressHub().state, () => UNLOADED);
-}
 export function useProgress() {
-  const { progress, account } = useProgressState();
+  const child = useLearningTransport();
+  const { progress, account } = useSyncExternalStore(
+    listener => { if (!child && waitingForLearningScope()) return () => {}; const hub = progressHub(child); hub.listeners.add(listener); return () => { hub.listeners.delete(listener); }; },
+    () => !child && waitingForLearningScope() ? UNLOADED : progressHub(child).state, () => UNLOADED);
   const update = useCallback((change: (value: Progress) => Progress) => {
     // The stored copy is the working copy: another tab may have saved since this one last read it. A frozen tab (the
     // browser's copy is another account's now) keeps its change on this page only and saves nothing into that copy.
-    const hub = progressHub(), next = change(hub.sync.frozen ? hub.state.progress ?? emptyProgress() : hub.store.load());
+    if (!child && waitingForLearningScope()) return;
+    const hub = progressHub(child), next = change(hub.sync.frozen ? hub.state.progress ?? emptyProgress() : hub.store.load());
     hub.sync.record(next); hub.state = Object.freeze({ ...hub.state, progress: next }); for (const listener of hub.listeners) listener();
-  }, []);
+  }, [child]);
   /** A signed-in student's ceremony: review gaps close in on it. */
   const until = account.state === "synced" ? account.until : null;
   return { progress, update, account, until, today: () => localDay(Date.now()), fresh: emptyProgress };

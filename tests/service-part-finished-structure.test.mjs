@@ -21,21 +21,25 @@ const sources = await Promise.all([...await files("src"), ...await files("script
 const importsOf = text => [...text.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)].map(m => m[1]);
 const text = path => { const file = sources.find(item => item.path === path); assert.ok(file, path); return file.text; };
 const MIGRATION = "src/server/db/migrations/0048_service_part_finished.sql", SCHEMA = "src/server/db/service-part-finished-schema.ts";
+const CHILD_MIGRATION = "src/server/db/migrations/0062_student_learning.sql";
 const SERVICE = "src/server/service-course/finished.ts", DATA = "src/server/data/service-part-finished.ts", HTTP = "src/server/http/service-part-finished.ts";
 
-test("only the data module sets app.service_part_reader, the finished module alone calls it, and nothing sets the child-practice context yet", () => {
+test("only the data module sets app.service_part_reader, the finished module alone calls it, and it sets child-practice context only for verified delegated completion", () => {
   const naming = sources.filter(file => file.text.includes("app.service_part_reader")).map(file => file.path).sort();
-  assert.deepEqual(naming, [DATA, MIGRATION, SCHEMA, SERVICE].sort());
+  assert.deepEqual(naming, [DATA, MIGRATION, CHILD_MIGRATION, SCHEMA, SERVICE].sort());
   assert.deepEqual(sources.filter(file => /set_config\(\s*'app\.service_part/.test(file.text)).map(file => file.path), [DATA]);
   const data = text(DATA);
   assert.equal(data.match(/set_config\('app\.service_part_reader'/g)?.length, 2, "one statement names the reader, one clears it");
   assert.match(data, /set_config\('app\.service_part_reader', '', true\)/);
   assert.match(data, /set_config\('app\.service_part_reader', \$\{roleGrantId\}, true\)/, "transaction-local, a grant id only");
-  // app.service_part_context is read by 0048's policy only; no code sets it until a reviewed child-practice reader exists.
-  assert.deepEqual(sources.filter(file => file.text.includes("app.service_part_context")).map(file => file.path).sort(), [MIGRATION, SCHEMA, SERVICE].sort());
+  // A verified delegated write sets the context in the same transaction as the reader grant.
+  assert.deepEqual(sources.filter(file => file.text.includes("app.service_part_context")).map(file => file.path).sort(), [DATA, MIGRATION, CHILD_MIGRATION, SCHEMA].sort());
   const service = text(SERVICE);
   // The writer names the reader only after the student grant, the student and the link are share-locked, and the staff read only inside withStudentCapability.
-  assert.match(service, /lockRoleGrant\(sp, owner\.tenantId, owner\.membershipId, "student", "read"\)[\s\S]*lockStudent\(sp[\s\S]*lockStudentRelationship\(sp[\s\S]*data\.setReader\(sp, grant\.id\)/);
+  assert.match(service, /const student = owner\.student;[\s\S]*data\.setReader\(sp, student\.roleGrantId, student\.delegated\?\.context\?\.id\)/);
+  const childAccess = text("src/server/practice/learning-owner.ts");
+  assert.match(childAccess, /withPracticeCapability\(request[\s\S]*delegated: actor/);
+  assert.match(childAccess, /lockRoleGrant\(tx[\s\S]*lockStudent\(tx[\s\S]*lockStudentRelationship\(tx/);
   assert.match(service, /withStudentCapability\(request, \{ mode: selection\.mode, studentId: selection\.studentId, capability: "read" \}[\s\S]*data\.setReader\(tx, actor\.roleGrantId\)/);
   assert.match(service, /if \(selection\.mode !== "tutor" && selection\.mode !== "admin"\) throw new AccessDenied\(403\)/);
 });
@@ -48,7 +52,7 @@ test("the data module is imported only by the finished module, and the finished 
 });
 
 test("no code outside the layer names the table, and no MCP, export, Sheet, notification or other staff service reaches it", () => {
-  const allowed = new Set([SCHEMA, DATA, MIGRATION, "src/server/db/index.ts"]);
+  const allowed = new Set([SCHEMA, DATA, MIGRATION, CHILD_MIGRATION, "src/server/db/index.ts"]);
   for (const file of sources) {
     if (allowed.has(file.path) || /^src\/server\/db\/migrations\/meta\/\d{4}_snapshot\.json$/.test(file.path)) continue;
     assert.doesNotMatch(file.text, /\bs\.servicePartFinished\b|import[^;]*\bservicePartFinished\b[^;]*db|\bservice_part_finished\b/, `${file.path} names the finished table`);

@@ -4,14 +4,13 @@ import type { Melody } from "../../lib/learn/course";
 import { workspaceApi, type Assigned, type Reading } from "../portal/workspace/api";
 import { signedInHint } from "../portal/signed-in-hint";
 import { useProgress } from "./services";
+import { usePersonalLearning } from "./scoped-learning";
+import { useChildLearning, type ChildLearning } from "./child-practice";
 
 /**
- * The signed-in student's own assigned readings, for Learn (1.9 N17). They come from the workspace API the student's own
- * Reading screen already uses: GET /api/students?mode=student, then GET /api/students/{id}/reading?mode=student. Nothing is
- * added to what the browser may read, and nothing is asked unless Learn's progress sync says this browser is signed in with
- * a live course grant (account "synced"). A signed-out visitor, a parent, a tutor and an admin all get "none": they
- * either never ask, or are refused and read as no assignment, so Learn behaves exactly as it did before.
- * A reading the office has flagged for review is not used; Learn then falls back to this week's reading.
+ * A directly signed-in student uses the workspace's own-student lookup. A guardian's
+ * selection supplies the same reading view after child-practice authority is confirmed.
+ * Learn uses assignments that have cleared the office's review.
  */
 export type OwnReadings = Readonly<{ torah: Reading | null; haftarah: Reading | null }>;
 export type OwnReading = Readonly<{ status: "pending" } | { status: "none" } | ({ status: "ready" } & OwnReadings)>;
@@ -24,7 +23,8 @@ let cached: Promise<OwnReadings | null> | null = null, assignedCache: Promise<As
  * The student's own assignment, once per page, as the student's own Reading screen reads it. 1.9 N19's verse cards take the
  * student's own Got it and Solid marks from it (through the same workspace progress API), so nothing new is asked.
  */
-export function ownAssigned(): Promise<Assigned | null> {
+export function ownAssigned(child?: ChildLearning | null): Promise<Assigned | null> {
+  if (child) return Promise.resolve(child.assigned);
   assignedCache ??= (async () => {
     try {
       const students = await workspaceApi.students("student");
@@ -47,17 +47,18 @@ async function fetchOwn(): Promise<OwnReadings | null> {
 }
 
 export function useOwnReading(): OwnReading {
-  const { account } = useProgress(), state = account.state;
+  const child = useChildLearning(), personal = usePersonalLearning(), { account } = useProgress(), state = account.state;
   const [hint, setHint] = useState<boolean | null>(null), [grace, setGrace] = useState(false), [offline, setOffline] = useState(false);
   const [answer, setAnswer] = useState<{ value: OwnReadings | null } | null>(null);
   useEffect(() => { setHint(signedInHint()); setOffline(typeof navigator !== "undefined" && navigator.onLine === false); }, []);
   useEffect(() => {
+    if (child || personal) return;
     if (state !== "synced") { cached = null; assignedCache = null; setAnswer(null); return; }
     let live = true;
     cached ??= fetchOwn();
     void cached.then(value => { if (live) setAnswer({ value }); });
     return () => { live = false; };
-  }, [state]);
+  }, [state, child, personal]);
   // Until the progress check answers, the account is unknown: the page waits briefly (a signed-in student must not first see this week's verse),
   // and stops waiting when offline or when the check never answers. A signed-out visitor is answered "signed out" and asks for nothing.
   useEffect(() => {
@@ -65,6 +66,11 @@ export function useOwnReading(): OwnReading {
     const timer = setTimeout(() => setGrace(true), hint ? GRACE_SIGNED_IN_MS : GRACE_MS);
     return () => clearTimeout(timer);
   }, [state, hint]);
+  if (personal) return { status: "none" };
+  if (child) {
+    const torah = usableReading(child.assigned, "torah"), haftarah = usableReading(child.assigned, "haftarah");
+    return torah || haftarah ? { status: "ready", torah, haftarah } : { status: "none" };
+  }
   if (state === "synced") return answer ? answer.value ? { status: "ready", ...answer.value } : { status: "none" } : { status: "pending" };
   if (state === "unknown") return hint === null || !offline && !grace ? { status: "pending" } : { status: "none" };
   return { status: "none" };

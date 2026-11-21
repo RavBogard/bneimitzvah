@@ -10,6 +10,7 @@ import { routeUnitTap, unitWordParts } from "../../lib/learn/word-tap";
 import "../../styles/hebrew-font.module.css";
 import { usePlayerState, useLearnServices } from "./services";
 import { useOwnReading } from "./own-reading";
+import { useChildLearning } from "./child-practice";
 import { RATE_LIMITED_MESSAGE } from "../portal/public-reading/rate-limited";
 import { useWordCard } from "./word-card";
 import { activeLessonWord, type PlaybackBinding } from "./player";
@@ -101,8 +102,8 @@ export function LoadFailure({ rateLimited = false, onRetry }: { rateLimited?: bo
 }
 /** Ways out of a failed screen: back to the course, and for a signed-in student with an assigned reading, on to that reading. */
 function LoadFailureLinks() {
-  const own = useOwnReading();
-  return <p className={styles.failureLinks}><a href="/learn" data-testid="learn-back">Back to Learn</a>{own.status === "ready" && <a href="/mine/reading" data-testid="learn-open-reading">Open my reading</a>}</p>;
+  const child = useChildLearning(), own = useOwnReading();
+  return <p className={styles.failureLinks}><a href="/learn" data-testid="learn-back">Back to Learn</a>{own.status === "ready" && <a href={child ? `/workspace/practice/${child.selection.context.studentId}` : "/mine/reading"} data-testid="learn-open-reading">Open my reading</a>}</p>;
 }
 /** After an answer: bring the revealed answer fully into view above the thumb's band, then hand focus to Next. */
 export function revealAnswer(next: { current: HTMLButtonElement | null }) {

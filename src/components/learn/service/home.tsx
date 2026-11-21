@@ -15,6 +15,8 @@ import { pathLessons, useServiceProgress, type PathView } from "./progress";
 import { useCoursePath } from "./offline";
 import { savedDate, useOfflineWording } from "../../portal/offline/status";
 import { signInAddress } from "../../../lib/site/return-address";
+import { PersonalStudyLink } from "../scoped-learning";
+import { useChildLearning } from "../child-practice";
 import { useIdentity } from "../../site/identity-context";
 
 /** One lesson row. Every row is a link, in every state: a lesson never locks, so nothing here is a bare span (DP-09). */
@@ -82,7 +84,7 @@ function CourseUnit({ unit, progress, next }: { unit: Unit; progress: Progress; 
 /** The course home: one next step, the links, the signed-in student's own parts, every unit of the Shabbat morning service in order, then (CRC, 2.0 SC7) Saturday evening and Havdalah. */
 export function ServiceHome() {
   const identity = useIdentity();
-  const { progress: loaded, account } = useServiceProgress();
+  const child = useChildLearning(), { progress: loaded, account } = useServiceProgress();
   const { view, savedAt } = useCoursePath(account);
   const progress = loaded ?? emptyProgress(), ready = loaded !== null;
   if (!CRC_TENANT.enabled) return <div className={`portal-shell ${learn.shell}`}><ServiceAppBar /><main className={learn.main}><p role="status">{COPY.state.tenantOff}</p></main></div>;
@@ -102,6 +104,7 @@ export function ServiceHome() {
           <h1 className={learn.title}>{COPY.home.title}</h1>
           <p className={learn.intro}>{evening.length ? COPY.home.introWithEvening : COPY.home.intro}</p>
           {identity.crc && <p><a href="/recordings?category=blessing">Listen to Cantor Wendy Shermet’s blessings and prayers</a></p>}
+          {view.status === "ready" && !child && <PersonalStudyLink course="service" />}
           {!ready ? <p role="status" className={learn.state}>{COPY.state.homeLoading}</p>
             : courseDone(progress) ? <section className={learn.next} aria-labelledby="service-next"><h2 id="service-next" className={learn.nextTitle}>{COPY.home.done}</h2></section>
             : next && <section className={learn.next} aria-labelledby="service-next" data-next={next.id}>
@@ -116,7 +119,7 @@ export function ServiceHome() {
           <nav className={learn.links} aria-label={COPY.home.nav}><a href="/learn">{COPY.home.lein}</a><a href="/learn/service/about">{COPY.home.about}</a></nav>
           {/* Until the account holds the progress (synced), it is on this device, so the line stays: also when the account cannot be
               reached at all, as on a server with no database. Learn to lein's home does the same. */}
-          {account.state !== "synced" && <p className={learn.saved} data-saved="device">{COPY.home.saved} <a href={signInAddress("/learn/service")}>Sign in</a> with Google or an email code to return to Learn the service.</p>}
+          {!child && account.state !== "synced" && <p className={learn.saved} data-saved="device">{COPY.home.saved} <a href={signInAddress("/learn/service")}>Sign in</a> with Google or an email code to return to Learn the service.</p>}
         </div>
         <div className={learn.paths}>
           <YourParts view={view} progress={progress} next={next} savedAt={savedAt} />

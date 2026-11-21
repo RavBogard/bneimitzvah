@@ -33,7 +33,7 @@ type Remote = Readonly<{ owner: string; progress: Progress | null; version: numb
 const OWNER = /^[a-f0-9]{32}$/, DATE = /^\d{4}-\d{2}-\d{2}$/, LIMIT = 128 * 1024;
 export const SYNC_DELAY_MS = 1200;
 
-function readMarker(storage: Storage | null): Marker | null {
+function readMarker(storage: Pick<Storage, "getItem" | "setItem" | "removeItem"> | null): Marker | null {
   try {
     const text = storage?.getItem(SYNC_KEY); if (!text || text.length > 512) return null;
     const value = JSON.parse(text) as Record<string, unknown>;
@@ -42,8 +42,8 @@ function readMarker(storage: Storage | null): Marker | null {
     return { owner: value.owner, version: value.version as number, dirty: value.dirty };
   } catch { return null; }
 }
-function writeMarker(storage: Storage | null, marker: Marker): boolean { try { storage?.setItem(SYNC_KEY, JSON.stringify(marker)); return !!storage; } catch { return false; } }
-function dropMarker(storage: Storage | null) { try { storage?.removeItem(SYNC_KEY); } catch { /* Nothing to clear. */ } }
+function writeMarker(storage: Pick<Storage, "getItem" | "setItem" | "removeItem"> | null, marker: Marker): boolean { try { storage?.setItem(SYNC_KEY, JSON.stringify(marker)); return !!storage; } catch { return false; } }
+function dropMarker(storage: Pick<Storage, "getItem" | "setItem" | "removeItem"> | null) { try { storage?.removeItem(SYNC_KEY); } catch { /* Nothing to clear. */ } }
 const same = (a: Progress, b: Progress) => serializeProgress(a) === serializeProgress(b);
 
 /** The account's answer, strictly: anything unexpected is no answer. */
@@ -67,7 +67,8 @@ function refusedOwner(value: unknown): string | null {
 /** The part of the Web Locks API the sync uses; `null` means the browser has none. */
 export type SyncLocks = Readonly<{ request(name: string, callback: () => unknown): Promise<unknown> }>;
 export type SyncIo = Readonly<{
-  fetch: typeof fetch; storage(): Storage | null; store: ProgressStore;
+  fetch: typeof fetch; storage(): Pick<Storage, "getItem" | "setItem" | "removeItem"> | null; store: ProgressStore;
+  accountOnly?: boolean;
   onProgress(progress: Progress): void; onAccount(account: Account): void;
   timer?: (callback: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void;
   /** Defaults to `navigator.locks` where it exists. */
@@ -209,7 +210,11 @@ export function createProgressSync(io: SyncIo) {
       owner = remote.owner;
       const marker = readMarker(io.storage());
       // First sign-in in this browser: merge its progress into the account's.
-      if (!marker) { await merge(null); return; }
+      if (!marker) {
+        if (io.accountOnly) await settle(remote, null);
+        else await merge(null);
+        return;
+      }
       // Another account's copy (a shared device): take this account's, fold nothing in.
       if (marker.owner !== remote.owner) { await settle(remote, null); return; }
       if (marker.dirty) {

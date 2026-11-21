@@ -29,7 +29,7 @@ test("only progress-access.ts and the 0046 migration name app.service_course_own
   assert.deepEqual(naming, [MIGRATION, ACCESS]);
   const access = text(ACCESS);
   assert.equal(access.match(/set_config\('app\.service_course_owner'/g)?.length, 1, "the owner is set in exactly one statement");
-  assert.match(access, /serviceCourseEligibility\(tx, identity\.tenantId, identity\.membership\.id\)[\s\S]*set_config\('app\.service_course_owner', \$\{identity\.membership\.id\}, true\)/,
+  assert.match(access, /if \(!legacy && !await serviceCourseEligibility\(tx, tenantId, membershipId\)\)[\s\S]*set_config\('app\.service_course_owner', \$\{membershipId\}, true\)/,
     "the owner is the verified membership, set transaction-locally, after the eligibility check");
   // Learn to lein's owner setting stays where it was: the two courses never share an owner.
   assert.doesNotMatch(access, /app\.course_owner/);
@@ -74,17 +74,18 @@ test("its writes record no audit rows, and its routes are never public or cachea
   assert.doesNotMatch(migration, /GRANT[^;]*(DELETE|TRUNCATE|ALL)[^;]*ON service_course_progress|GRANT[^;(]*UPDATE ON/i);
 });
 
-test("the path never carries a unit's name or caption: it copies lesson ids and pages by name, through the student-mode reads only", () => {
+test("the path never carries a unit's name or caption: it copies lesson ids and pages by name, through the verified student or selected-child reads", () => {
   const path = text("src/server/service-course/path.ts"), lib = text("src/lib/service-course/path.ts"), http = text("src/server/http/service-course-progress.ts");
   for (const [where, value] of [["path.ts", path], ["lib path.ts", lib]]) assert.doesNotMatch(value, /\.name\b|\.caption\b/, `${where} reads a unit's name or caption`);
   assert.match(path, /listStudents\(request, \{ mode: "student", limit: 2 \}\)/, "the student is the signed-in account's own, in student mode");
   assert.match(path, /mode: "student" as const/, "the plan is read in student mode");
-  assert.doesNotMatch(path, /mode: "(admin|tutor|parent|child-practice)"/);
+  assert.doesNotMatch(path, /mode: "(admin|tutor|parent)"/);
+  assert.match(path, /childLearningSelection\(request\)[\s\S]*input\.practice\.read\(request, child\)/);
   // It is handed the metadata read; it imports nothing of the licensed catalog's side itself.
   for (const spec of importsOf(path)) assert.doesNotMatch(spec, /service-learning|service-ecosystem|siddur\/|booklet/, `path.ts imports ${spec}`);
   // The composition builds services lazily (2026-11-17): the path is still handed exactly the access gate and the service plan's
   // metadata read, now through their per-request getters, and nothing else.
-  assert.match(text("src/server/runtime/composition.ts"), /createServiceCoursePath\(\{ access: access\(\), serviceLearning: serviceLearning\(\) \}\)/);
+  assert.match(text("src/server/runtime/composition.ts"), /createServiceCoursePath\(\{ access: access\(\), practice: practice\(\), serviceLearning: serviceLearning\(\) \}\)/);
   // The wire shape is copied field by field.
   assert.match(http, /function pathJson\(path: Path\): JsonValue/);
   assert.doesNotMatch(http, /privateJson\(await runtime\.serviceCoursePath\.read/);

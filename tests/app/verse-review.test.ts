@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
 import { portalRoutesFixture } from "./portal-routes-fixture";
 import { createHttpDispatcher } from "../../src/server/http/dispatch";
@@ -95,7 +95,7 @@ describe("a student's own verse cards", () => {
     }
     expect((await t.call("/api/learn/verses", "sibling")).json).toEqual({ ok: true, owner: sibling, review: null, version: 0, until: "2027-01-02" });
     expect((await t.call("/api/learn/verses", "learner")).json).toMatchObject({ version: 1, review: mine });
-    expect(await t.f.owner(async () => (await t.f.db.select().from(s.verseReviewTable)).length)).toBe(1);
+    expect(await t.f.owner(async () => (await t.f.db.select().from(s.studentLearning).where(eq(s.studentLearning.kind, "verses"))).length)).toBe(1);
   });
 
   it("are never read by another account: another student, the parent, the tutor and the admin each see only their own answer, never the cards", async () => {
@@ -117,8 +117,8 @@ describe("a student's own verse cards", () => {
     // The parent acting for the child (a practice context) never reaches them either.
     expect((await t.call("/api/learn/verses", "multi", undefined, { "x-practice-context": "00000000-0000-4000-8000-000000000000" })).status).toBe(403);
     expect((await t.call("/api/learn/verses", "learner", undefined, { "x-practice-context": "00000000-0000-4000-8000-000000000000" })).status).toBe(403);
-    expect(await t.f.owner(async () => (await t.f.db.select().from(s.verseReviewTable)).length)).toBe(2);
-    expect(await t.f.owner(async () => (await t.f.db.select().from(s.verseReviewTable).where(eq(s.verseReviewTable.membershipId, t.f.learnerMember.id))).length)).toBe(1);
+    expect(await t.f.owner(async () => (await t.f.db.select().from(s.studentLearning).where(eq(s.studentLearning.kind, "verses"))).length)).toBe(2);
+    expect(await t.f.owner(async () => (await t.f.db.select().from(s.studentLearning).where(and(eq(s.studentLearning.kind, "verses"), eq(s.studentLearning.studentId, t.f.students[0].id)))).length)).toBe(1);
   });
 
   it("refuses bad documents, extra keys, a bad owner, a foreign Origin, queries and other methods, echoing nothing", async () => {

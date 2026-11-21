@@ -27,7 +27,7 @@ test("only src/server/course-progress/access.ts and the course-progress migratio
   assert.deepEqual(naming, ["src/server/course-progress/access.ts", MIGRATION]);
   const access = sources.find(file => file.path === "src/server/course-progress/access.ts").text;
   assert.equal(access.match(/set_config\('app\.course_owner'/g)?.length, 1, "the owner is set in exactly one statement");
-  assert.match(access, /courseEligibility\(tx, identity\.tenantId, identity\.membership\.id\)[\s\S]*set_config\('app\.course_owner', \$\{identity\.membership\.id\}, true\)/,
+  assert.match(access, /if \(!legacy && !await courseEligibility\(tx, tenantId, membershipId\)\)[\s\S]*set_config\('app\.course_owner', \$\{membershipId\}, true\)/,
     "the owner is the verified membership, set transaction-locally, after the eligibility check");
 });
 
@@ -39,7 +39,7 @@ test("the course-progress data module is imported only from src/server/course-pr
 
 test("no code outside the layer names the table, and no staff-facing service reaches it", () => {
   // 1.9 N23: 0052 adds the one SELECT policy for the assigned tutor reader (tests/practice-visibility-structure.test.mjs guards its reader).
-  const allowed = new Set(["src/server/db/course-progress-schema.ts", "src/server/data/course-progress.ts", MIGRATION, "src/server/db/migrations/0052_practice_visibility.sql"]);
+  const allowed = new Set(["src/server/db/course-progress-schema.ts", "src/server/data/course-progress.ts", MIGRATION, "src/server/db/migrations/0052_practice_visibility.sql", "src/server/db/migrations/0062_student_learning.sql"]);
   for (const file of sources) {
     if (allowed.has(file.path) || /^src\/server\/db\/migrations\/meta\/\d{4}_snapshot\.json$/.test(file.path)) continue;
     assert.doesNotMatch(file.text, /\bcourseProgressTable\b|\bcourse_progress\b/, `${file.path} names the course-progress table`);

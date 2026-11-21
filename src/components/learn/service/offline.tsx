@@ -4,6 +4,7 @@ import { PLAN } from "../../../lib/offline/copy";
 import { pathRequest, readPathCopy, savePathCopy } from "../../../lib/offline/path-copy";
 import { useOfflinePacks, useOfflineWording } from "../../portal/offline/status";
 import { SiddurLink } from "../../portal/siddur-link";
+import { useLearningTransport } from "../scoped-learning";
 import type { Account } from "./progress-sync";
 import { loadPath, useServicePath, type PathView } from "./progress";
 
@@ -31,21 +32,21 @@ export function SiddurOrOffline({ href, page, className, children }: { href: str
 export function useCoursePath(account: Account): { view: PathView; savedAt: number | null } {
   const view = useServicePath(account), offline = useOfflineWording(), { ownerChecked, ownerKey } = useOfflinePacks();
   const [copy, setCopy] = useState<Awaited<ReturnType<typeof readPathCopy>>>(null);
-  const synced = account.state === "synced";
+  const child = useLearningTransport(), synced = account.state === "synced";
   useEffect(() => {
-    if (!synced || offline) return;
+    if (child || !synced || offline) return;
     const request = pathRequest();
     if (!request) return;
     let current = true;
     void loadPath().then(next => { if (current && next.status === "ready") void savePathCopy(next.path, request); });
     return () => { current = false; };
-  }, [synced, offline, ownerChecked, ownerKey]);
+  }, [child, synced, offline, ownerChecked, ownerKey]);
   const live = view.status === "ready";
   useEffect(() => {
-    if (!offline || live) { setCopy(null); return; }
+    if (child || !offline || live) { setCopy(null); return; }
     let current = true;
     void readPathCopy().then(value => { if (current) setCopy(value); });
     return () => { current = false; };
-  }, [offline, live]);
-  return copy && offline && !live ? { view: { status: "ready", path: copy.path }, savedAt: copy.savedAt } : { view, savedAt: null };
+  }, [child, offline, live]);
+  return !child && copy && offline && !live ? { view: { status: "ready", path: copy.path }, savedAt: copy.savedAt } : { view, savedAt: null };
 }

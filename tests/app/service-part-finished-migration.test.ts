@@ -73,6 +73,9 @@ test("0048 adds only the service_part_finished table and one audit action, leave
     const rls = await client.query("select relname, relrowsecurity, relforcerowsecurity from pg_class where relname = $1 and relkind='r'", [TABLE]);
     expect(rls.rows).toEqual([{ relname: TABLE, relrowsecurity: true, relforcerowsecurity: true }]);
     const policies = await client.query<{ policyname: string; cmd: string; permissive: string; roles: string[]; qual: string | null; with_check: string | null }>("select policyname, cmd, permissive, roles::text[] as roles, qual, with_check from pg_policies where tablename = $1 order by policyname", [TABLE]);
+    // This test applies all migrations. Check 0048's three policies here; 0062 adds the delegated writer.
+    expect(policies.rows.find(p => p.policyname === "child_practice_writer")?.with_check).toContain("practice_context");
+    policies.rows.splice(policies.rows.findIndex(p => p.policyname === "child_practice_writer"), 1);
     expect(policies.rows.map(p => [p.policyname, p.cmd, p.permissive, p.roles])).toEqual([
       ["ruled_readers", "SELECT", "PERMISSIVE", ["portal_runtime"]], ["student_writer", "INSERT", "PERMISSIVE", ["portal_runtime"]], ["tenant_isolation", "ALL", "RESTRICTIVE", ["portal_runtime"]]]);
     const tenant = "(tenant_id = NULLIF(current_setting('app.tenant_id'::text, true), ''::text))";

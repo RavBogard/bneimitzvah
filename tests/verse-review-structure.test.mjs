@@ -28,7 +28,7 @@ test("only src/server/verse-review/access.ts and migration 0047 name app.verse_r
   assert.deepEqual(naming, [MIGRATION, "src/server/verse-review/access.ts"]);
   const access = source("src/server/verse-review/access.ts");
   assert.equal(access.match(/set_config\('app\.verse_review_owner'/g)?.length, 1, "the owner is set in exactly one statement");
-  assert.match(access, /verseReviewEligibility\(tx, identity\.tenantId, identity\.membership\.id\)[\s\S]*set_config\('app\.verse_review_owner', \$\{identity\.membership\.id\}, true\)/,
+  assert.match(access, /if \(!legacy && !await verseReviewEligibility\(tx, tenantId, membershipId\)\)[\s\S]*set_config\('app\.verse_review_owner', \$\{membershipId\}, true\)/,
     "the owner is the verified membership, set transaction-locally, after the live student grant check");
   assert.match(source("src/server/data/verse-review.ts"), /eq\(s\.roleGrant\.role, "student"\), isNull\(s\.roleGrant\.revokedAt\)\)/, "only a live student grant keeps verse cards");
 });

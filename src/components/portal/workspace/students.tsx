@@ -1,4 +1,5 @@
 "use client";
+import { childLearnHref } from "../../../lib/learn/child-practice";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -140,6 +141,12 @@ export function PracticeWorkspace({ studentId }: { studentId: string }) {
   if (!context || context.studentId !== studentId) return <section className="workspace-state"><h1>Open your child’s reading</h1><p>This tab does not have a matching practice selection. Reloading never restores a practice handle.</p><Link href="/mine">Open your child’s reading</Link></section>;
   return <RequireRole role="parent"><section className="role-workspace">
     <StudentSelection mode="parent" switching />
+    <nav className="reading-foot" aria-label="Practice activities">
+      <WorkspaceLink href={childLearnHref("/learn")}>Learn to lein</WorkspaceLink>
+      <WorkspaceLink href={childLearnHref("/learn/run-through")}>Run-through</WorkspaceLink>
+      <WorkspaceLink href={childLearnHref("/learn/review")}>Review</WorkspaceLink>
+      <WorkspaceLink href={childLearnHref("/learn/service")}>Learn the service</WorkspaceLink>
+    </nav>
     <ReadingPanel mode="child-practice" studentId={studentId} />
   </section></RequireRole>;
 }

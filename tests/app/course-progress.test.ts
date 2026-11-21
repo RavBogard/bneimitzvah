@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
 import { portalRoutesFixture } from "./portal-routes-fixture";
 import { createHttpDispatcher } from "../../src/server/http/dispatch";
@@ -111,7 +111,7 @@ describe("signed-in course progress", () => {
     }
     expect((await t.call("/api/learn/progress", "multi")).json).toMatchObject({ progress: null, version: 0 });
     expect((await t.call("/api/learn/progress", "learner")).json).toMatchObject({ version: 1, progress: kept });
-    expect(await t.f.owner(async () => (await t.f.db.select().from(s.courseProgressTable)).length)).toBe(1);
+    expect(await t.f.owner(async () => (await t.f.db.select().from(s.studentLearning).where(eq(s.studentLearning.kind, "learn"))).length)).toBe(1);
   });
 
   it("refuses a missing or malformed owner with a closed 400 on put and on merge, as a browser on an older bundle sends", async () => {
@@ -149,7 +149,7 @@ describe("signed-in course progress", () => {
       expect(seen.json).toMatchObject({ ok: true, progress: null, version: 0 });
       expect(seen.json.owner).not.toBe((await t.call("/api/learn/progress", "learner")).json.owner);
     }
-    expect(await t.f.owner(async () => (await t.f.db.select().from(s.courseProgressTable).where(eq(s.courseProgressTable.membershipId, t.f.learnerMember.id))).length)).toBe(1);
+    expect(await t.f.owner(async () => (await t.f.db.select().from(s.studentLearning).where(and(eq(s.studentLearning.kind, "learn"), eq(s.studentLearning.studentId, t.f.students[0].id)))).length)).toBe(1);
   });
 
   it("lets an approved Member with no role read and write only their own progress", async () => {
@@ -175,7 +175,8 @@ describe("signed-in course progress", () => {
     expect(endedOwner).toMatch(/^[a-f0-9]{32}$/);
     expect([empty.json.owner, (await t.call("/api/learn/progress", "learner")).json.owner]).not.toContain(endedOwner);
     for (const who of ["recipient", "disabled", "anonymous"] as const) expect(Object.keys((await t.call("/api/learn/progress", who)).json), who).toEqual(["error"]);
-    expect(await t.f.owner(async () => (await t.f.db.select().from(s.courseProgressTable)).length)).toBe(3);
+    expect(await t.f.owner(async () => (await t.f.db.select().from(s.courseProgressTable)).length)).toBe(2);
+    expect(await t.f.owner(async () => (await t.f.db.select().from(s.studentLearning).where(eq(s.studentLearning.kind, "learn"))).length)).toBe(1);
   });
 
   it("gives a signed-in student their own ceremony date for the known-date cap, and nobody else a date", async () => {

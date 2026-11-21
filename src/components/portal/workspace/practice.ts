@@ -43,3 +43,10 @@ export class PracticeCoordinator {
     finally { this.busy = false; }
   }
 }
+
+let browserPractice: PracticeCoordinator | null = null;
+/** The client router can move between course and workspace layouts without serializing the handle. */
+export function tabPractice() {
+  if (typeof window === "undefined") return new PracticeCoordinator();
+  return browserPractice ??= new PracticeCoordinator();
+}

@@ -364,6 +364,49 @@ it("blocks an uncertain old save through recovery outages until explicit authori
   expect(bodies).toHaveLength(2); expect(bodies[1].mutationId).not.toBe(bodies[0].mutationId); expect(bodies[1].assignmentRevision).toBeGreaterThan(bodies[0].assignmentRevision);
 });
 
+it("keeps the selected child's Learn, Run-through and service navigation in one tab, and rechecks authority after reload", async () => {
+  const admin = await page("admin");
+  await navigate(admin, "/mine");
+  const reading = `/api/students/${fixture.student.id}/reading`;
+  const prepared = await api(admin, reading + "/prepare", { mode: "admin", ranges: ["Genesis 1:1-15"] });
+  expect(prepared.status).toBe(200);
+  expect((await api(admin, reading + "/confirm", { mode: "admin", binding: prepared.data.binding })).status).toBe(200);
+  const tab = await page("tutor");
+  await navigate(tab, "/workspace/parent");
+  await safe(() => goChild(tab, fixture.student.id));
+  await loaded(tab);
+  await click(tab, "Practice with Synthetic");
+  await tab.waitForURL(/\/workspace\/practice\//);
+  const activities = tab.getByRole("navigation", { name: "Practice activities" });
+  await ui(activities).toBeVisible();
+  const oldKey = "crc-torah:learn-progress/v1", draft = JSON.stringify({ schema: "learn-progress/v1", lessons: { "torah-etnachta": { done: "2026-11-20T12:00:00.000Z" } }, cards: {} });
+  await tab.evaluate(({ oldKey, draft }) => { localStorage.setItem(oldKey, draft); }, { oldKey, draft });
+  const unscoped: string[] = [];
+  await tab.route("**/api/learn/**", async route => {
+    const request = route.request(), path = new URL(request.url()).pathname;
+    if (/\/progress|\/verses/.test(path) && !(await request.allHeaders())["x-practice-context"]) {
+      const page = new URL(tab.url());
+      unscoped.push(`${request.method()} ${path} from ${page.pathname.startsWith("/learn") ? page.pathname + page.search : "outside Learn"}`);
+    }
+    await route.continue();
+  });
+  const verseStatus: number[] = [];
+  tab.on("response", response => { if (new URL(response.url()).pathname === "/api/learn/verses") verseStatus.push(response.status()); });
+  await activities.getByRole("link", { name: "Learn to lein" }).click();
+  await ui(tab.getByRole("heading", { name: "Learn to lein", exact: true })).toBeVisible();
+  await tab.locator("[data-run-through]").click();
+  await ui(tab.getByRole("heading", { name: "Run-through", exact: true })).toBeVisible();
+  await ui.poll(() => verseStatus).toContain(200);
+  await tab.getByRole("link", { name: "Back to the path" }).first().click();
+  await tab.locator("[data-service-course]").click();
+  await ui(tab.getByRole("heading", { name: "Learn the service", exact: true })).toBeVisible();
+  await tab.reload({ waitUntil: "domcontentloaded" });
+  await tab.waitForURL(url => url.pathname === "/mine" && url.searchParams.get("resume-child-practice") === "1");
+  await ui(tab.getByTestId("workspace-notice")).toHaveAttribute("data-notice-kind", "practice-access-changed");
+  expect(unscoped).toEqual([]);
+  expect(await tab.evaluate(key => localStorage.getItem(key), oldKey)).toBe(draft);
+});
+
 it("an expired SDK session clears an unsent note without any departure choice", async () => {
   const writer = await page("admin"); await staff(writer); const own = await tools(writer, "Genesis 1:6"); await safe(() => own.getByRole("textbox").fill("Synthetic discarded on expiry"));
   await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(Date.now() - 60_000) }).where(eq(s.session.userId, fixture.admin.id));

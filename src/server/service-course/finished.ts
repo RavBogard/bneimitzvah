@@ -3,7 +3,7 @@ import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAccessService } from "../access/service";
 import type { AccessRequest, AccessTransaction } from "../access/types";
 import { AccessDenied } from "../access/errors";
-import { lockRoleGrant, lockStudent, lockStudentRelationship } from "../data/authority";
+import type { LearningOwner } from "../practice/learning-owner";
 import * as data from "../data/service-part-finished";
 import { lessonForUnit, tenantFile } from "../../lib/service-course/path";
 import type { Tenant } from "../../lib/service-course/course";
@@ -20,14 +20,14 @@ import type { Progress } from "../../lib/service-course/progress";
  *   grant after the grant, student and link are share-locked in the house order;
  * - `read`, the staff read behind `GET /api/students/{id}/service-finished`, with the tutor's or admin's grant after
  *   withStudentCapability has checked the live grant and, for a tutor, the live tutor_student row.
- * Nothing sets `app.service_part_context` yet: the course carries no practice context (SC4 item 7), so no parent in child practice
- * reads or writes here; 0048's policy admits one only with a live child-practice context naming that child.
+ * When a child practices under a parent's sign-in, the verified context names the same student as the progress document.
+ * The parent grant and context are both required by the database policy.
  */
 type Access<Q extends PgQueryResultHKT> = Pick<ReturnType<typeof createAccessService<Q>>, "withStudentCapability">;
 export type FinishedPart = Readonly<{ lesson: string; finished: string | null }>;
 export type FinishedParts = Readonly<{ parts: readonly FinishedPart[] }>;
 /** The member whose progress was just saved: the owner of the service-course progress document, fixed for one request. */
-type Owner = Readonly<{ tenantId: string; membershipId: string; userId: string }>;
+type Owner = LearningOwner;
 
 /** The plan's parts as course lessons, in service order, each once; a unit no lesson teaches is left out (A4 6.3 step 4). */
 export function assignedLessons(tenant: Tenant, unitIds: readonly string[]): string[] {
@@ -46,23 +46,17 @@ export function assignedLessons(tenant: Tenant, unitIds: readonly string[]): str
  */
 export async function markFinishedParts<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, owner: Owner, progress: Progress, stamps: readonly string[]): Promise<readonly string[]> {
   const tenant = tenantFile(owner.tenantId), done = stamps.filter(id => Object.hasOwn(progress.lessons, id));
-  if (!tenant || !done.length) return [];
+  const student = owner.student;
+  if (!tenant || !done.length || !student) return [];
   try {
     return await tx.transaction(async sp => {
-      const grant = await lockRoleGrant(sp, owner.tenantId, owner.membershipId, "student", "read");
-      if (!grant || grant.revokedAt) return [];
-      const studentId = await data.studentOfGrant(sp, owner.tenantId, grant.id);
-      if (!studentId) return [];
-      const student = await lockStudent(sp, owner.tenantId, studentId, "read");
-      if (!student || student.disabledAt) return [];
-      if (!await lockStudentRelationship(sp, owner.tenantId, student.id, grant.id, "student", "read")) return [];
       const units = await data.planUnits(sp, owner.tenantId, student.id);
       const parts = new Set(assignedLessons(tenant, units ?? []));
       const due = done.filter(lesson => parts.has(lesson));
       if (!due.length) return [];
-      await data.setReader(sp, grant.id);
+      await data.setReader(sp, student.roleGrantId, student.delegated?.context?.id);
       const marked = await data.insertFinished(sp, owner.tenantId, student.id, due);
-      await data.auditFinished(sp, { tenantId: owner.tenantId, userId: owner.userId, membershipId: owner.membershipId, roleGrantId: grant.id }, student.id, marked);
+      await data.auditFinished(sp, { ...owner, roleGrantId: student.roleGrantId }, student.id, marked, student.delegated);
       await data.clearReader(sp);
       return marked;
     });
