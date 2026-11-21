@@ -2,6 +2,10 @@
 
 Updated 2026-11-21. This file is replaced, not appended: it says where the work stands today, in about a hundred lines. The full log up to 2026-11-16 (gate lines, merges, migrations, walk findings) is unchanged at `docs/archive/STATE-through-2026-11-16.md`. Daniel's binding rulings are indexed in `docs/planning/RULINGS.md`; `MISSION.md` beside this file is still the authority. Historical plans, returns and reviews are under `docs/archive/` with their old folder layout.
 
+## Saved-reading editing, November 21
+
+Daniel approved one **Edit** button on a personally saved reading. **Change verses** opens the existing selection, and **Edit name and date** opens the details form. Daniel deferred changes to child sign-in until a later evaluation.
+
 ## Feature gap release, November 21
 
 All six milestones in the [approved plan](../2026-11-20-feature-gap-analysis/BUILD-PLAN.md) are live. The [feature gap analysis](../2026-11-20-feature-gap-analysis/REPORT.md) records the original findings. Tutors see recording coverage and credited voices. A child learning through a parent keeps their own progress. Coursework and assigned Practice credit one Chicago calendar day, including saved work synced later. Adults can resume privately marked verses in a dated reading. Service lessons credit the exact assigned part, and staff can resume setup from current records.
