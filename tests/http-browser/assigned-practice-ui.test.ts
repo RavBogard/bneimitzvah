@@ -131,14 +131,14 @@ it(`starts with a closed tutor sidebar and returns from Practice and the editor 
   else await disclosure.click();
   await ui(note).toBeVisible();
 
-  const manage = tab.getByRole("button", { name: "Manage reading", exact: true });
+  const manageButton = tab.getByRole("button", { name: "Manage reading", exact: true });
   await openVerseEditor(tab);
   const editor = tab.getByRole("dialog", { name: "Set the assigned reading" });
   const editorClose = editor.getByRole("button", { name: "Close verse editor" });
   await assertRight(editorClose, editor.locator(".sheet-bar"));
   if (viewport.width < 640) await tab.keyboard.press("Escape"); else await editorClose.click();
   await ui(editor).toBeHidden();
-  await ui(manage).toBeFocused();
+  await ui(manageButton).toBeFocused();
   await tab.goto(`/workspace/tutor/${fixture.student.id}`);
   await ui(disclosure).toBeVisible();
   await ui(rail).not.toHaveAttribute("open", "");
