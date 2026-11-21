@@ -32,7 +32,7 @@ export function hasPracticeDates(storage: PracticeDateStorage | null): boolean {
 
 export function createPracticeDateQueue(io: { fetch: typeof fetch; storage(): PracticeDateStorage | null; now?: () => number; onBinding?(proof: DayProof): void }) {
   const now = io.now ?? Date.now;
-  let proof: Binding | null = null, blocked = false, pending: Promise<Binding | null> | null = null;
+  let proof: Binding | null = null, boundOwner: string | null = null, blocked = false, pending: Promise<Binding | null> | null = null;
   let flushing: Promise<void> | null = null, repeat = false;
   const memory = new Set<string>();
   const prefix = (owner: string) => PRACTICE_DATE_PREFIX + owner + ":";
@@ -45,8 +45,8 @@ export function createPracticeDateQueue(io: { fetch: typeof fetch; storage(): Pr
       if (!response.ok) return null;
       const next = binding(await response.json());
       if (!next || next.expiresAt <= now()) return null;
-      if (proof && proof.owner !== next.owner) { blocked = true; return null; }
-      proof = next; blocked = false;
+      if (boundOwner && boundOwner !== next.owner) { blocked = true; return null; }
+      boundOwner = next.owner; proof = next; blocked = false;
       io.onBinding?.(next);
       return next;
     } catch { return null; }
@@ -113,13 +113,25 @@ export function createPracticeDateQueue(io: { fetch: typeof fetch; storage(): Pr
   };
   return Object.freeze({
     async verifyAndReplay() { if (await check()) await flush(); },
+    async completeOnline(instant = now()) {
+      const verified = await (boundOwner ? check() : pending);
+      if (verified) queue(verified, instant);
+    },
     complete(instant = now()) {
-      if (live(proof)) { queue(proof, instant); return true; }
-      if (!proof && !blocked && pending) void pending.then(value => { if (value) queue(value, instant); });
+      if (!pending && live(proof)) { queue(proof, instant); return true; }
       return false;
     },
+    pinOffline(lease: Binding) {
+      if (lease.expiresAt <= now()) return;
+      if (boundOwner && boundOwner !== lease.owner) blocked = true;
+      boundOwner = lease.owner;
+    },
     completeOffline(lease: Binding, instant = now()) {
-      if (live(lease) && lease.expiresAt > instant && (!proof || proof.owner === lease.owner)) store(lease.owner, instant);
+      const retain = () => {
+        if (live(lease) && lease.expiresAt > instant && boundOwner === lease.owner) store(lease.owner, instant);
+      };
+      if (pending) void pending.then(retain);
+      else retain();
     },
   });
 }

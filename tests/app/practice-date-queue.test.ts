@@ -55,3 +55,50 @@ it("uses Chicago midnight before and after daylight-saving changes", () => {
   expect(practiceDateOrdinal("2026-02-30")).toBeNull();
   expect(practiceDateOrdinal("2028-02-29")).not.toBeNull();
 });
+
+
+it("pins a held completion through an A to B change and starts the next activity for B in the same document", async () => {
+  const device = memory();
+  const now = () => Date.parse("2026-03-12T20:00:00Z");
+  const posted: string[] = [];
+  let owner = A, network = true;
+  let release: (() => void) | undefined, wait: Promise<void> | null = null;
+  const fetcher: typeof fetch = async (_request, init) => {
+    if (!network) throw new TypeError("offline");
+    if (!init?.body) {
+      if (wait) await wait;
+      return Response.json({ ok: true, owner, expiresAt: now() + 60_000 });
+    }
+    const body = JSON.parse(String(init.body));
+    if (body.owner !== owner) return new Response(null, { status: 403 });
+    posted.push(body.owner);
+    return Response.json({ ok: true, accepted: body.dates, discarded: [] });
+  };
+  const activity = () => createPracticeDateQueue({ ...device, fetch: fetcher, now });
+  const first = activity();
+  await first.verifyAndReplay();
+  network = false;
+  first.complete();
+  network = true;
+  wait = new Promise<void>(resolve => { release = resolve; });
+  const held = first.completeOnline();
+  owner = B;
+  release!(); await held;
+  wait = null;
+  expect(posted).toEqual([]);
+  expect([...device.rows.keys()]).toEqual([PRACTICE_DATE_PREFIX + A + ":2026-03-12"]);
+  const coldA = activity();
+  coldA.pinOffline({ owner: A, expiresAt: now() + 60_000 });
+  await coldA.completeOnline();
+  expect(posted).toEqual([]);
+  const second = activity();
+  await second.verifyAndReplay();
+  await second.completeOnline();
+  await second.verifyAndReplay();
+  expect(posted).toEqual([B]);
+  expect([...device.rows.keys()]).toEqual([PRACTICE_DATE_PREFIX + A + ":2026-03-12"]);
+  owner = A;
+  await activity().verifyAndReplay();
+  expect(posted).toEqual([B, A]);
+  expect(device.rows.size).toBe(0);
+});
