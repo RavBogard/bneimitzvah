@@ -2,6 +2,10 @@
 
 Updated 2026-11-20. This file is replaced, not appended: it says where the work stands today, in about a hundred lines. The full log up to 2026-11-16 (gate lines, merges, migrations, walk findings) is unchanged at `docs/archive/STATE-through-2026-11-16.md`. Daniel's binding rulings are indexed in `docs/planning/RULINGS.md`; `MISSION.md` beside this file is still the authority. Historical plans, returns and reviews are under `docs/archive/` with their old folder layout.
 
+## Usability release, November 20
+
+The [release note and acceptance walkthrough](../2026-11-20-usability/RETURN.md) cover playback, immutable shared passages, course return, staff decisions and family recovery. The [baseline review](../2026-11-20-usability-review/REVIEW.md) records the original issues. The first release, `b4a8d2b4`, passed all 15 [CI jobs](https://github.com/RavBogard/bneimitzvah/actions/runs/44852147763). Daniel’s Torah and haftarah walkthrough will inform any further changes to the reading dock.
+
 ## Released and live
 
 **Additional recordings, November 20 release candidate.** The `codex/karaite-finkel` branch adds 110 Egyptian Karaite recordings by Hazan Rotem Cohen and 300 CRC teaching tracks by Cantor Josh Finkel as optional full recordings. Shermet remains the default for verse practice. Four Karaite tracks have unresolved passage boundaries. Twenty-two prepared Finkel clips with speech flags remain private. The 300 selected performances have tag-free public derivatives with identical decoded audio (`45f828e1`), totaling 189 MB in the existing private store. The legacy copies remain private. Explicit device saves last 14 days. Daniel closed the search for additional traditions after reviewing the listening options.
