@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
 import { AccessDenied } from "../../src/server/access/errors";
-import { createServiceCourseProgressService, serviceCourseOwnerName } from "../../src/server/service-course/progress-service";
+import { createServiceCourseProgressService } from "../../src/server/service-course/progress-service";
 import { createServicePartFinished } from "../../src/server/service-course/finished";
 import { postgresAccessFixture } from "./access-fixture";
 import { query } from "./disposable.mjs";
@@ -34,7 +34,7 @@ test("a student's sync marks only their assigned parts on real PostgreSQL, and o
 
   const course = createServiceCourseProgressService({ access: f.a }), finished = createServicePartFinished({ access: f.b });
   const mutation = () => { const value = f.request("tutor"); value.headers.set("origin", "http://localhost:3000"); return { ...value, method: "POST" }; };
-  const owner = serviceCourseOwnerName({ tenantId: "crc", membershipId: member.id });
+  const { owner } = await course.get(f.request("tutor"));
   expect(await course.merge(mutation(), { progress: doc("vahavta", "shma", "f1"), owner, stamps: ["vahavta", "shma", "f1"] })).toMatchObject({ ok: true, version: 1 });
   expect(await course.put(mutation(), { progress: doc("vahavta", "shma", "f1", "torah-before"), expectedVersion: 1, owner, stamps: ["vahavta", "shma", "f1", "torah-before"] })).toMatchObject({ ok: true, version: 2 });
   const rows = (await query(f.owner, "SELECT lesson_id FROM service_part_finished WHERE student_id = $1 ORDER BY lesson_id", [f.student.id])).rows as { lesson_id: string }[];

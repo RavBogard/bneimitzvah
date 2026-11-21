@@ -41,6 +41,7 @@ describe("course progress merge re-validation", () => {
     broken.on = false;
     const after = await (await dispatch(new Request(`${ORIGIN}/api/learn/progress`, { headers: { cookie } }))).json();
     expect(after).toMatchObject({ ok: true, version: 1, progress: first });
-    expect(await f.owner(async () => (await f.db.select().from(s.courseProgressTable)).length)).toBe(1);
+    expect(await f.owner(() => f.db.select().from(s.studentLearning))).toMatchObject([{ kind: "learn", version: 1, document: first }]);
+    expect(await f.owner(() => f.db.select().from(s.courseProgressTable))).toHaveLength(0);
   });
 });

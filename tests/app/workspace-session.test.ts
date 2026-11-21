@@ -76,7 +76,7 @@ beforeEach(() => {
   host.portal.mockReset().mockResolvedValue(session()); host.reading.mockReset().mockResolvedValue(baseline); host.calendar.mockReset().mockResolvedValue({ practiceDay: "2026-10-17" });
   host.enter.mockReset().mockImplementation(async (id: string) => sitting(id)); host.exit.mockReset().mockResolvedValue({ contextId });
   host.shortPage.mockReset(); host.explorePage.mockReset(); host.router.push.mockClear(); host.router.replace.mockClear();
-  vi.stubGlobal("window", target());
+  vi.stubGlobal("window", Object.assign(target(), { location: new URL("http://localhost:3000" + host.path) }));
   vi.stubGlobal("document", { get visibilityState() { return host.visibility; }, ...target() });
 });
 afterEach(() => { host.cleanups.splice(0).forEach(cleanup => cleanup()); vi.unstubAllGlobals(); vi.useRealTimers(); });
