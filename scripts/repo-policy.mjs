@@ -45,12 +45,13 @@ function siddurFeedProblem(text) {
 }
 const CONFIGS = new Set(["package.json", "package-lock.json", "tsconfig.json", ".impeccable/config.json", ".impeccable/design.json", COURSE_DATA]);
 const DRIZZLE_METADATA = /^src\/server\/db\/migrations\/meta\/(?:_journal|[0-9]{4}_snapshot)\.json$/;
-function reviewedServiceCron(text) {
+function reviewedCrons(text) {
   try {
     if (Buffer.byteLength(text) > 2048) return false;
     const value = JSON.parse(text), keys = text.match(/"(?:[^"\\]|\\.)*"\s*:/g) ?? [];
     // Exactly these reviewed jobs, in order; the key count also refuses hidden duplicate JSON members.
-    const reviewed = [["/api/internal/service-ecosystem/drain", "17 10 * * *"], ["/api/internal/notifications/run", "5 14 * * *"]];
+    const reviewed = [["/api/internal/service-ecosystem/drain", "17 10 * * *"], ["/api/internal/notifications/run", "5 14 * * *"],
+      ["/api/internal/practice-calendar/sweep", "43 11 * * *"]];
     if (!value || Array.isArray(value) || Object.keys(value).length !== 1 || !Array.isArray(value.crons) || value.crons.length !== reviewed.length || keys.length !== 1 + 2 * reviewed.length) return false;
     return value.crons.every((cron, i) => cron && !Array.isArray(cron) && Object.keys(cron).length === 2 && cron.path === reviewed[i][0] && cron.schedule === reviewed[i][1]);
   } catch { return false; }
@@ -122,7 +123,7 @@ export function entryProblems(path, content = "") {
   if (file === SHERMET_LIBRARY_FILE) { const problem = shermetMetadataProblem(text); if (problem) problems.push(problem); }
   if (data && (file === SERVICE_COURSE_FILE || SERVICE_COURSE_TENANT.test(file))) { const problem = serviceCourseProblem(file, text); if (problem) problems.push(problem); }
   if (file === COURSE_DATA && COURSE_PRIVATE_FIELDS.test(text)) problems.push("private index field in course data");
-  if (file === "vercel.json" && !reviewedServiceCron(text)) problems.push("deployment config must contain only the reviewed daily service drain cron");
+  if (file === "vercel.json" && !reviewedCrons(text)) problems.push("deployment config must contain only the reviewed daily jobs");
   if (migrationMetadata) {
     try {
       const metadata = JSON.parse(text);
