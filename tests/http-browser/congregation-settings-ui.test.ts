@@ -85,16 +85,54 @@ it("an admin opens Congregation settings from More, fixes a refused link, saves,
   expect((await api(tab, "/api/admin/congregation-settings", { expectedVersion: 1, settings: { ...saved.data.view.settings, rabbiDisplayName: "Rabbi Elsewhere" }, mutationId: randomUUID() })).status).toBe(200);
   await safe(() => tab.getByLabel("Music link", { exact: true }).fill("https://centralreform.live/"));
   await safe(() => tab.getByRole("button", { name: "Save settings", exact: true }).click());
-  await ui(main(tab).getByRole("alert")).toContainText("Someone saved these settings after you opened this page, so your changes weren’t saved.");
+  await ui(main(tab).getByRole("alert")).toContainText("Someone saved these settings after you opened this page.");
   await ui(tab.getByRole("button", { name: "Save settings", exact: true })).toHaveCount(0);
   await ui(tab.getByLabel("Music link", { exact: true })).toBeDisabled();
   expect((await api(tab, "/api/admin/congregation-settings")).data.view.version).toBe(2);
   await safe(() => tab.getByRole("button", { name: "Reload settings", exact: true }).click());
   await ui(tab.getByLabel("Name on study guides", { exact: true })).toHaveValue("Rabbi Elsewhere");
-  await ui(tab.getByLabel("Music link", { exact: true })).toHaveValue("");
+  await ui(tab.getByLabel("Music link", { exact: true })).toHaveValue("https://centralreform.live/");
+  await ui(tab.getByTestId("settings-dirty")).toHaveText("Unsaved changes");
   await ui(tab.getByRole("button", { name: "Save settings", exact: true })).toBeEnabled();
   await safe(() => tab.getByRole("button", { name: "Save settings", exact: true }).click());
-  await ui(main(tab).getByRole("status").filter({ hasText: "Nothing changed, so nothing was saved." })).toBeVisible();
+  await ui(main(tab).getByRole("status").filter({ hasText: "Settings saved." })).toBeVisible();
+  await ui(tab.getByTestId("settings-dirty")).toBeEmpty();
+});
+
+it("guards workspace links, browser Back, and reload while keeping the current draft on cancel", async () => {
+  const tab = await page("admin");
+  await navigate(tab, "/workspace/admin/students?tab=students");
+  const more = tab.getByRole("navigation", { name: "Workspace", exact: true }).getByRole("link", { name: "More", exact: true });
+  await safe(() => more.click());
+  const origin = new URL(tab.url()).pathname;
+  await safe(() => main(tab).getByRole("link", { name: "Settings", exact: true }).click());
+  const name = tab.getByLabel("Name on study guides", { exact: true });
+  const digest = tab.getByRole("checkbox", { name: "Weekly updates for parents" });
+  const dirty = tab.getByTestId("settings-dirty");
+  await safe(() => digest.check());
+  await ui(dirty).toHaveText("Unsaved changes");
+  await safe(() => digest.uncheck());
+  await ui(dirty).toBeEmpty();
+  await safe(() => name.fill("Synthetic draft"));
+  const warns = () => tab.evaluate(() => !window.dispatchEvent(new Event("beforeunload", { cancelable: true })));
+  expect(await warns()).toBe(true);
+  const keep = tab.getByRole("button", { name: "Keep editing" });
+  const discard = tab.getByRole("button", { name: "Discard changes" });
+  await safe(() => more.click());
+  await ui(keep).toBeFocused();
+  await safe(() => keep.click());
+  await ui(more).toBeFocused();
+  await ui(name).toHaveValue("Synthetic draft");
+  await safe(() => name.focus());
+  await safe(() => tab.evaluate(() => history.back()));
+  await ui(keep).toBeFocused();
+  await safe(() => keep.click());
+  await ui(name).toBeFocused();
+  await ui(name).toHaveValue("Synthetic draft");
+  await safe(() => tab.evaluate(() => history.back()));
+  await ui(discard).toBeVisible();
+  await safe(() => discard.click());
+  await ui(tab).toHaveURL(url => url.pathname === origin);
 });
 
 it("fits a phone without sideways scrolling, and a tutor can neither open nor write the settings", async () => {

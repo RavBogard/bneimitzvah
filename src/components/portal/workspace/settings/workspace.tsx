@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "../provider";
+import { RequireRole, statusOf, useWorkspace, useWorkspaceModal } from "../provider";
 import { validateSettings, SETTINGS_LIMITS, type CongregationSettings, type NotificationSettings, type ServiceSetting } from "../../../../server/settings/validation";
 import { settingsApi, type SettingsView } from "./api";
 import { resetCongregationRead } from "./links";
@@ -61,50 +61,125 @@ function notificationsOf(draft: Draft, switches: Switches): NotificationSettings
 
 export function CongregationSettingsWorkspace() { return <RequireRole role="admin"><CongregationSettingsPage /></RequireRole>; }
 function CongregationSettingsPage() {
-  const { registerReload } = useWorkspace();
+  const { registerReload, registerDeparture, registerWork, serviceAuthorityFailed } = useWorkspace();
   const [switches, setSwitches] = useState<Switches>({ weeklyDigest: false, studentReminder: false });
   const [view, setView] = useState<SettingsView | null>(null), [draft, setDraft] = useState<Draft | null>(null), [loading, setLoading] = useState(true), [failure, setFailure] = useState(false);
   const [pending, setPending] = useState(false), [problems, setProblems] = useState<string[]>([]), [message, setMessage] = useState<{ text: string; tone: "status" | "alert" } | null>(null);
-  const [conflict, setConflict] = useState(false), [accessError, setAccessError] = useState(false);
+  const [conflict, setConflict] = useState(false);
   const request = useRef<AbortController | null>(null), alive = useRef(true), mutation = useRef<{ key: string; id: string } | null>(null);
   // G21 (AD-13): after a refused save, focus moves to the first field that needs a change.
   const form = useRef<HTMLFormElement>(null), [focusTurn, setFocusTurn] = useState(0);
   useEffect(() => { if (focusTurn) form.current?.querySelector<HTMLElement>("[aria-invalid=\"true\"]")?.focus(); }, [focusTurn]);
-  const load = useCallback(async () => {
-    request.current?.abort(); const controller = new AbortController(); request.current = controller;
-    setLoading(true); setFailure(false);
-    try { const value = await settingsApi.read(controller.signal); if (controller.signal.aborted) return; setView(value); setDraft(draftOf(value.settings)); setSwitches(switchesOf(value.settings)); setProblems([]); setConflict(false); }
-    catch { if (!controller.signal.aborted) { setView(null); setFailure(true); } }
-    finally { if (!controller.signal.aborted) setLoading(false); }
+  const dirty = Boolean(view && draft && (
+    JSON.stringify(draft) !== JSON.stringify(draftOf(view.settings)) || JSON.stringify(switches) !== JSON.stringify(switchesOf(view.settings))
+  ));
+  const editor = useRef({ view, draft, switches, dirty }); editor.current = { view, draft, switches, dirty };
+  const [departure, setDeparture] = useState(false);
+  const dialog = useRef<HTMLDialogElement>(null), keepButton = useRef<HTMLButtonElement>(null);
+  const decision = useRef<{ resolve(leave: boolean): void; focus: HTMLElement | null } | null>(null);
+  useWorkspaceModal(dialog, departure);
+  useEffect(() => { if (departure) keepButton.current?.focus(); }, [departure]);
+  const finishDeparture = useCallback((leave: boolean, restoreFocus = false) => {
+    const current = decision.current; if (!current) return;
+    decision.current = null; setDeparture(false);
+    if (restoreFocus) {
+      dialog.current?.close();
+      current.focus?.focus({ preventScroll: true });
+    }
+    if (leave) editor.current.dirty = false;
+    current.resolve(leave);
   }, []);
-  useEffect(() => registerReload(async () => { await load(); }), [registerReload, load]);
-  useEffect(() => { alive.current = true; void load(); return () => { alive.current = false; request.current?.abort(); }; }, [load]);
+  const askDeparture = useCallback(() => {
+    if (decision.current) return Promise.resolve(false);
+    if (!editor.current.dirty) return Promise.resolve(true);
+    return new Promise<boolean>(resolve => {
+      decision.current = { resolve, focus: document.activeElement instanceof HTMLElement ? document.activeElement : null };
+      setDeparture(true);
+    });
+  }, []);
+  const clear = useCallback(() => {
+    editor.current.dirty = false;
+    alive.current = false; request.current?.abort(); mutation.current = null;
+    finishDeparture(false); setView(null); setDraft(null); setSwitches({ weeklyDigest: false, studentReminder: false });
+  }, [finishDeparture]);
+  useEffect(() => registerDeparture(askDeparture), [askDeparture, registerDeparture]);
+  useEffect(() => registerWork({ clear, pause() {}, settle: async () => {}, hasUnsaved: () => editor.current.dirty, reveal() {} }), [clear, registerWork]);
+
+  useEffect(() => {
+    const unload = (event: BeforeUnloadEvent) => {
+      if (editor.current.dirty) { event.preventDefault(); event.returnValue = ""; }
+    };
+    window.addEventListener("beforeunload", unload);
+    return () => window.removeEventListener("beforeunload", unload);
+  }, []);
+  useSettingsBackGuard(editor, askDeparture);
+
+  const load = useCallback(async (rebase = false) => {
+    request.current?.abort(); const controller = new AbortController(); request.current = controller;
+    if (rebase || !editor.current.view) setLoading(true);
+    setFailure(false);
+    try {
+      const value = await settingsApi.read(controller.signal);
+      if (controller.signal.aborted) return;
+      const current = editor.current;
+      if (current.dirty && current.view && current.draft) {
+        if (!rebase) return;
+        const original = draftOf(current.view.settings), originalSwitches = switchesOf(current.view.settings);
+        const latest = draftOf(value.settings), latestSwitches = switchesOf(value.settings);
+        for (const key of Object.keys(original) as Field[]) if (current.draft[key] !== original[key]) latest[key] = current.draft[key];
+        for (const key of Object.keys(originalSwitches) as Switch[]) if (current.switches[key] !== originalSwitches[key]) latestSwitches[key] = current.switches[key];
+        setDraft(latest); setSwitches(latestSwitches); mutation.current = null;
+      } else {
+        setDraft(draftOf(value.settings)); setSwitches(switchesOf(value.settings));
+      }
+      setView(value); setProblems([]); setConflict(false);
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      const status = statusOf(error);
+      if (status === 401 || status === 403 || status === 404) serviceAuthorityFailed(status);
+      else if (!editor.current.view) setFailure(true);
+      else if (rebase) setMessage({ text: "The latest settings couldn’t be loaded. You can try again.", tone: "alert" });
+    }
+    finally { if (!controller.signal.aborted) setLoading(false); }
+  }, [serviceAuthorityFailed]);
+  useEffect(() => registerReload(load), [registerReload, load]);
+  useEffect(() => {
+    alive.current = true; void load();
+    return () => { alive.current = false; request.current?.abort(); finishDeparture(false); };
+  }, [load, finishDeparture]);
 
   function change(field: Field, value: string) { setDraft(current => current && { ...current, [field]: value }); if (message?.tone === "status") setMessage(null); }
   function toggle(key: Switch, value: boolean) { setSwitches(current => ({ ...current, [key]: value })); if (message?.tone === "status") setMessage(null); }
-  async function reload() { setMessage(null); setAccessError(false); await load(); }
+  async function reload() { setMessage(null); await load(true); }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!view || !draft || pending || conflict) return;
+    if (!view || !draft || pending || conflict || loading || departure) return;
     const settings = settingsOf(draft, switches), checked = validateSettings(settings);
     if (!checked.ok) { setProblems(checked.problems); setFocusTurn(turn => turn + 1); setMessage({ text: "Some settings need a change before they can be saved.", tone: "alert" }); return; }
     // One mutation id per exact request, so a retry after a lost reply is recognised rather than saved twice.
     const key = JSON.stringify([view.version, settings]);
     if (mutation.current?.key !== key) mutation.current = { key, id: crypto.randomUUID() };
-    setPending(true); setProblems([]); setMessage(null); setAccessError(false);
+    setPending(true); setProblems([]); setMessage(null);
     try {
       const outcome = await settingsApi.save({ expectedVersion: view.version, settings, mutationId: mutation.current.id });
       if (!alive.current) return;
-      if (outcome.ok) { mutation.current = null; resetCongregationRead(); setMessage({ text: "Settings saved.", tone: "status" }); await load(); return; }
+      if (outcome.ok) {
+        const nextView = { ...view, version: outcome.version, settings: checked.value };
+        const nextDraft = draftOf(checked.value), nextSwitches = switchesOf(checked.value);
+        editor.current = { view: nextView, draft: nextDraft, switches: nextSwitches, dirty: false };
+        setView(nextView); setDraft(nextDraft); setSwitches(nextSwitches);
+        mutation.current = null; resetCongregationRead(); setMessage({ text: "Settings saved.", tone: "status" });
+        await load(); return;
+      }
       mutation.current = null;
       if (outcome.code === "no-change") setMessage({ text: "Nothing changed, so nothing was saved.", tone: "status" });
       else if (outcome.code === "invalid") { setProblems(outcome.problems); setFocusTurn(turn => turn + 1); setMessage({ text: "Some settings need a change before they can be saved.", tone: "alert" }); }
-      else { setConflict(true); setMessage({ text: "Someone saved these settings after you opened this page, so your changes weren’t saved. Reload to see the latest, then make your changes again.", tone: "alert" }); }
+      else { setConflict(true); setMessage({ text: "Someone saved these settings after you opened this page, so your changes weren’t saved. Reload to review the latest settings with your changes still in place.", tone: "alert" }); }
     } catch (error) {
       if (!alive.current) return;
       const status = statusOf(error);
-      setAccessError(status === 401 || status === 403);
-      setMessage({ text: status === 401 || status === 403 ? "This isn’t allowed right now. You may need to sign in again." : "We couldn’t confirm the save. Reload to see what was kept.", tone: "alert" });
+      if (status === 401 || status === 403 || status === 404) serviceAuthorityFailed(status);
+      else setMessage({ text: "We couldn’t confirm the save. Your changes are still here. Try saving again to check.", tone: "alert" });
     } finally { if (alive.current) setPending(false); }
   }
 
@@ -161,11 +236,56 @@ function CongregationSettingsPage() {
             {WEEKDAYS.map((day, index) => <option key={day} value={String(index)}>{day}</option>)}</select>, "Updates go out that morning, Central time.")}
         </section>
         {message && <p className={message.tone === "alert" ? "request-error roster-message" : "workspace-notice roster-message"} role={message.tone}>{message.text}</p>}
-        {accessError && <p><WorkspaceLink href="/">Check account and sign in again</WorkspaceLink></p>}
         <div className="form-actions settings-actions">
+          <span role="status" data-testid="settings-dirty">{dirty ? "Unsaved changes" : ""}</span>
           {conflict ? <Button variant="primary" disabled={loading} onClick={() => void reload()}>Reload settings</Button>
             : <Button type="submit" variant="primary" disabled={locked}>{pending ? "Saving…" : "Save settings"}</Button>}
         </div>
       </form>}
+    <dialog ref={dialog} className="roster-sheet access-sheet" aria-labelledby="settings-departure-title"
+      onCancel={event => { event.preventDefault(); finishDeparture(false, true); }}>
+      <h2 id="settings-departure-title">Leave with unsaved settings?</h2>
+      <p>Your changes are only in this tab. Discard them to leave this page.</p>
+      <div className="form-actions">
+        <Button ref={keepButton} variant="primary" onClick={() => finishDeparture(false, true)}>Keep editing</Button>
+        <Button disabled={pending} onClick={() => finishDeparture(true)}>Discard changes</Button>
+      </div>
+    </dialog>
   </section>;
+}
+
+function useSettingsBackGuard(editor: { current: { dirty: boolean } }, askDeparture: () => Promise<boolean>) {
+  useEffect(() => {
+    // Same-document Back updates the address before popstate. Restore this entry before Next handles it,
+    // then replay the original traversal if the admin discards the draft.
+    const settingsUrl = location.href;
+    const position = () => (window as Window & { navigation?: { currentEntry?: { index: number } } }).navigation?.currentEntry?.index;
+    const settingsPosition = position();
+    let restoring = false;
+    let bypass = false;
+    let distance = -1;
+    const onPop = (event: PopStateEvent) => {
+      if (bypass) { bypass = false; return; }
+      if (restoring) {
+        restoring = false;
+        event.stopImmediatePropagation();
+        const destination = distance;
+        void askDeparture().then(leave => {
+          if (!leave) return;
+          bypass = true;
+          history.go(destination);
+        });
+        return;
+      }
+      if (!editor.current.dirty || location.href === settingsUrl) return;
+      const destination = position();
+      distance = settingsPosition !== undefined && destination !== undefined && settingsPosition !== destination
+        ? destination - settingsPosition : -1;
+      event.stopImmediatePropagation();
+      restoring = true;
+      history.go(-distance);
+    };
+    window.addEventListener("popstate", onPop, true);
+    return () => window.removeEventListener("popstate", onPop, true);
+  }, [editor, askDeparture]);
 }
