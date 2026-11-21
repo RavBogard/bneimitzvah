@@ -104,19 +104,12 @@ it("keeps the student's passage, progress and existing player through Practice a
 it("plays the assigned aliyah in order, pauses and resumes, and stops at its recorded boundary on a phone", async () => {
   const { tab } = await practiceReading("student", 390, 844);
   const played: string[] = [];
-  const frames = 8000 * 6;
+  const frames = 8000 * 4;
   const wave = Buffer.alloc(44 + 2 * frames);
   wave.write("RIFF"); wave.writeUInt32LE(wave.length - 8, 4); wave.write("WAVEfmt ", 8);
   wave.writeUInt32LE(16, 16); wave.writeUInt16LE(1, 20); wave.writeUInt16LE(1, 22);
   wave.writeUInt32LE(8000, 24); wave.writeUInt32LE(16000, 28); wave.writeUInt16LE(2, 32);
   wave.writeUInt16LE(16, 34); wave.write("data", 36); wave.writeUInt32LE(2 * frames, 40);
-  await tab.addInitScript(() => {
-    const original = HTMLMediaElement.prototype.play;
-    HTMLMediaElement.prototype.play = function () {
-      if (new URL(this.src, location.href).pathname === "/api/shermet-audio") Object.assign(window, { sectionAudio: this });
-      return original.call(this);
-    };
-  });
   await tab.route("**/api/shermet-audio/catalog", route => route.fulfill({ json: { refs: ["Genesis 1:1", "Genesis 1:3", "Genesis 1:4", "Isaiah 1:1", "Isaiah 1:2"] } }));
   let missing = false;
   await tab.route("**/api/shermet-audio?*", route => {
@@ -125,17 +118,16 @@ it("plays the assigned aliyah in order, pauses and resumes, and stops at its rec
     played.push(ref);
     return route.fulfill({ contentType: "audio/wav", body: wave });
   });
+  // This tab is already on /mine/reading. The hash-based Practice entry
+  // is read once at document startup.
+  await tab.goto("about:blank");
   await tab.goto("/mine/reading#practice");
   const practice = surface(tab), parts = practice.getByRole("tablist", { name: "Reading sections" });
+  await ui(practice).toBeVisible();
   const start = practice.getByTestId("play-section-start");
   const stop = practice.getByRole("button", { name: "Stop aliyah", exact: true });
   const transport = practice.getByRole("group", { name: "Verse playback", exact: true });
   const pause = transport.getByRole("button", { name: "Pause", exact: true });
-  const finish = () => tab.evaluate(() => {
-    const media = (window as unknown as { sectionAudio: HTMLMediaElement }).sectionAudio;
-    media.currentTime = media.duration - 0.05;
-  });
-
   await parts.getByRole("tab", { name: "Aliyah 2", exact: true }).click();
   await ui(practice.getByTestId("assigned-text")).toHaveAttribute("data-practice-ref", "Genesis 1:4");
   await parts.getByRole("tab", { name: "Aliyah 1", exact: true }).click();
@@ -148,11 +140,9 @@ it("plays the assigned aliyah in order, pauses and resumes, and stops at its rec
   expect([...new Set(played)]).toEqual(["Genesis 1:1"]);
   await transport.getByRole("button", { name: "Play", exact: true }).click();
   await ui(pause).toBeVisible();
-  await finish();
-  await ui(practice.getByTestId("player-selection")).toHaveAttribute("data-selected-ref", "Genesis 1:3");
+  await ui(practice.getByTestId("player-selection")).toHaveAttribute("data-selected-ref", "Genesis 1:3", { timeout: 15_000 });
   await ui(pause).toBeVisible();
-  await finish();
-  await ui(stop).toHaveCount(0);
+  await ui(stop).toHaveCount(0, { timeout: 15_000 });
   await ui(practice.getByText("Aliyah finished.", { exact: true })).toBeVisible();
   expect([...new Set(played)]).toEqual(["Genesis 1:1", "Genesis 1:3"]);
   await start.click();
@@ -164,8 +154,7 @@ it("plays the assigned aliyah in order, pauses and resumes, and stops at its rec
   missing = true;
   await start.click();
   await ui(pause).toBeVisible();
-  await finish();
-  await ui(practice.getByText(/Playback stopped/)).toBeVisible();
+  await ui(practice.getByText(/Playback stopped/)).toBeVisible({ timeout: 15_000 });
   await ui(stop).toHaveCount(0);
   await ui(practice.getByText("Aliyah finished.", { exact: true })).toHaveCount(0);
   await ui(practice.getByTestId("player-selection")).toHaveAttribute("data-selected-ref", "Genesis 1:3");
@@ -175,8 +164,7 @@ it("plays the assigned aliyah in order, pauses and resumes, and stops at its rec
   await start.click();
   await ui(pause).toBeVisible();
   await ui(transport.getByRole("button", { name: "Repeat", exact: true })).toBeEnabled();
-  await finish();
-  await ui(pause).toHaveCount(0);
+  await ui(pause).toHaveCount(0, { timeout: 15_000 });
   await ui(practice.getByTestId("player-selection")).toHaveAttribute("data-selected-ref", "Isaiah 1:1");
   expect(played).not.toContain("Isaiah 1:2");
 });
