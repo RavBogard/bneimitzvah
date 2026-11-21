@@ -132,11 +132,21 @@ export function ChildPracticeLearn({ children }: { children: ReactNode }) {
       if (!servedOffline()) { watchPurge(); end(); return; }
       setUnavailable(false);
       void openOffline();
-      window.addEventListener("online", end);
+      const online = () => navigator.onLine !== false;
+      const reconnected = async () => {
+        if (!online() || !current()) return;
+        // An online event can fire as the browser changes focus or switches networks.
+        // A private, network-only endpoint proves that reselection can actually work.
+        try {
+          const response = await fetch("/api/learn/practice-days", { cache: "no-store", credentials: "same-origin", redirect: "error" });
+          if (response.status < 500 && current() && online()) end();
+        } catch { /* Stay on the saved course until the network is reachable. */ }
+      };
+      window.addEventListener("online", reconnected);
       document.addEventListener("click", navigateOffline, true);
       return () => {
         live = false; watchPurge(); clearTimeout(offlineExpiry);
-        window.removeEventListener("online", end); document.removeEventListener("click", navigateOffline, true);
+        window.removeEventListener("online", reconnected); document.removeEventListener("click", navigateOffline, true);
         for (const action of close) action();
         setOffline(null);
       };
@@ -149,7 +159,7 @@ export function ChildPracticeLearn({ children }: { children: ReactNode }) {
       void assigned().catch(error => { if (error instanceof PortalRequestError && denied(error.status)) end(); });
     };
     let openedOnline = false;
-    const reconnect = () => { if (openedOnline) confirm(); else if (current()) setRetry(value => value + 1); };
+    const reconnect = () => { if (navigator.onLine === false) return; if (openedOnline) confirm(); else if (current()) setRetry(value => value + 1); };
     const expiry = setTimeout(end, Math.max(0, Date.parse(expiresAt) - Date.now()));
     const refresh = setInterval(confirm, 60_000);
     document.addEventListener("visibilitychange", confirm);
