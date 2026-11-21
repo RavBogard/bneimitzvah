@@ -341,18 +341,22 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   useEffect(() => {
     if (practiceOpen || !restoreStaffPanels.current) return;
     const expected = restoreStaffPanels.current;
-    restoreStaffPanels.current = null;
-    if (expected !== authorizedReading) return;
+    if (expected !== authorizedReading) { restoreStaffPanels.current = null; return; }
     const request = new AbortController();
-    void Promise.all([
-      service.current?.reload(expected, request.signal),
-      lessons.current?.reload(expected, request.signal),
-    ]).catch(error => {
-      if (!request.signal.aborted && actionScope.current.reading === expected) {
-        request.abort(); studyDenied(statusOf(error));
-      }
+    // Wait for the newly mounted panels' layout registrations and cleanup to settle.
+    const frame = requestAnimationFrame(() => {
+      if (request.signal.aborted || actionScope.current.reading !== expected) return;
+      restoreStaffPanels.current = null;
+      void Promise.all([
+        service.current?.reload(expected, request.signal),
+        lessons.current?.reload(expected, request.signal),
+      ]).catch(error => {
+        if (!request.signal.aborted && actionScope.current.reading === expected) {
+          request.abort(); studyDenied(statusOf(error));
+        }
+      });
     });
-    return () => request.abort();
+    return () => { cancelAnimationFrame(frame); request.abort(); };
   }, [practiceOpen, authorizedReading, studyDenied]);
   useEffect(() => { if (!authorizedReading || (current?.error !== undefined && [401, 403, 404].includes(current.error))) setPracticeOpen(false); }, [authorizedReading, current?.error]);
   useEffect(() => {

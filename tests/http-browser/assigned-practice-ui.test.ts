@@ -89,7 +89,7 @@ it(`starts with a closed tutor sidebar and returns from Practice and the editor 
   await ui(rail).not.toHaveAttribute("open", "");
   await ui(history).toBeHidden();
   await ui(note).toBeHidden();
-  await ui(upcoming).toBeHidden();
+  await ui(rail.getByText("Synthetic next practice.", { exact: true }).filter({ visible: true })).toHaveCount(0);
   const readingColumn = tab.getByTestId("staff-layout").locator(".staff-main");
   const collapsedWidth = (await readingColumn.boundingBox())!.width;
   await disclosure.focus();
@@ -116,12 +116,16 @@ it(`starts with a closed tutor sidebar and returns from Practice and the editor 
   const close = tab.getByTestId("close-assigned-practice");
   await assertRight(close, surface(tab).locator("header").first());
   await ui(close).toBeFocused();
+  const serviceRead = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/service-plan") && response.request().method() === "GET");
   if (viewport.width < 640) await close.click(); else await tab.keyboard.press("Escape");
   await ui(surface(tab)).toHaveCount(0);
   const returned = tab.locator(":focus");
   await ui(returned).toBeInViewport();
   expect(await returned.evaluate(node => node.matches(".reading-practice-action") || !!node.closest('[data-verse-ref="Genesis 1:1"]'))).toBe(true);
-  await ui(tab.getByText("No service parts have been assigned yet.", { exact: true })).toBeVisible();
+  expect((await serviceRead).status()).toBe(200);
+  const serviceParts = tab.getByRole("region", { name: "Service parts", exact: true });
+  await ui(serviceParts).toBeVisible();
+  await ui(serviceParts.getByText("Checking assigned service parts…", { exact: true })).toHaveCount(0);
   await ui(rail).not.toHaveAttribute("open", "");
   await ui(note).toBeHidden();
   if (viewport.width < 640) {
