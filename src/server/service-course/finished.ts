@@ -5,8 +5,7 @@ import type { AccessRequest, AccessTransaction } from "../access/types";
 import { AccessDenied } from "../access/errors";
 import type { LearningOwner } from "../practice/learning-owner";
 import * as data from "../data/service-part-finished";
-import { lessonForUnit, tenantFile } from "../../lib/service-course/path";
-import type { Tenant } from "../../lib/service-course/course";
+import { lessonForUnit, tenantFile, type Tenant } from "../../lib/service-course/course";
 import type { Progress } from "../../lib/service-course/progress";
 
 /**

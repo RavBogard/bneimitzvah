@@ -15,8 +15,7 @@ import type { ServiceUnit, ServiceUnitMaterial, ServiceSectionHeading } from "..
 import * as stored from "./data";
 import type { PracticeTarget } from "../../lib/practice-calendar/types";
 import { causedBy } from "../logging/failure";
-import { lessonForUnit, tenantFile } from "../../lib/service-course/path";
-import { lessonById, lessonOpen } from "../../lib/service-course/course";
+import { lessonById, lessonForUnit, lessonOpen, tenantFile } from "../../lib/service-course/course";
 
 type Mode = ActiveMode | "child-practice";
 type ReadSelection = { mode: Mode; studentId: string };

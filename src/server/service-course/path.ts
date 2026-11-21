@@ -6,7 +6,8 @@ import { AccessDenied, AccessUnavailable } from "../access/errors";
 import { PERSONAL_STUDY_HEADER } from "../../lib/learn/child-practice";
 import { childLearningSelection } from "../practice/learning-owner";
 import type { createPracticeService } from "../practice/service";
-import { assignedItems, defaultItems, tenantFile, type Path, type PathPlan } from "../../lib/service-course/path";
+import { tenantFile } from "../../lib/service-course/course";
+import { assignedItems, defaultItems, type Path, type PathPlan } from "../../lib/service-course/path";
 
 /**
  * The student's service path, composed from a live self link or child-practice selection

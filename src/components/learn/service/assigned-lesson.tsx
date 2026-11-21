@@ -1,8 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { assignedLessonTarget, assignedPartsHref, type AssignedLessonTarget } from "../../../lib/service-course/assigned-parts";
-import { CRC_TENANT, type ServiceSlot } from "../../../lib/service-course/course";
-import { lessonForUnit } from "../../../lib/service-course/path";
+import { CRC_TENANT, lessonForUnit, type ServiceSlot } from "../../../lib/service-course/course";
 import { PortalRequestError } from "../../portal/api";
 import { serviceApi } from "../../portal/workspace/service-learning/api";
 import { serviceRequest } from "../../portal/workspace/service-learning/ecosystem-api";

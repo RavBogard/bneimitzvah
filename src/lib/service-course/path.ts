@@ -1,4 +1,4 @@
-import { TENANTS, lessonById, type Tenant } from "./course";
+import { lessonById, lessonForUnit, type Tenant } from "./course";
 
 /**
  * A signed-in student's own path through the service course (2.0 SC4, A4 6.3): their tutor's service plan (0015), or the six
@@ -13,21 +13,6 @@ export type PathPlan = Readonly<{ id: string; revision: number; catalogId: strin
 export type Path = Readonly<{ ok: true; state: PathState; slot: Slot; review: boolean; items: readonly PathItem[]; serviceStart?: number; plan?: PathPlan }>;
 export const PATH_LIMITS = Object.freeze({ items: 96, page: 9999 });
 
-/** The congregation's course file, or null when it has none (A4 12: the course is not offered there). */
-export const tenantFile = (tenantId: string): Tenant | null => TENANTS.find(tenant => tenant.tenant === tenantId && tenant.enabled) ?? null;
-
-/** The base of a Beit Mitzvah unit id, without its service family ("@bm-shacharit" / "@bm-maariv", feed.ts). */
-const FAMILY = /@bm-(?:shacharit|maariv)$/;
-export function baseUnitId(unitId: string): string | null {
-  return FAMILY.test(unitId) ? unitId.replace(FAMILY, "") : null;
-}
-/** The lesson that teaches a Beit Mitzvah unit, through the congregation file's `bm` ids; null for a unit no lesson teaches. */
-export function lessonForUnit(tenant: Tenant, unitId: string): string | null {
-  const base = baseUnitId(unitId);
-  if (!base) return null;
-  for (const [id, row] of Object.entries(tenant.lessons)) if (row.bm?.includes(base) && lessonById(id)) return id;
-  return null;
-}
 /**
  * The plan's units as lessons, in the plan's (service) order: a unit with no lesson is left out silently (A4 6.3 step 4), a lesson
  * two units map to is listed once, and each keeps the printed page of its first unit.

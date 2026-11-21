@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { CRC_TENANT } from "../../src/lib/service-course/course";
-import { assignedItems, baseUnitId, defaultItems, lessonForUnit, parsePath, tenantFile, type Path } from "../../src/lib/service-course/path";
+import { CRC_TENANT, baseUnitId, lessonById, lessonForUnit, tenantFile } from "../../src/lib/service-course/course";
+import { assignedItems, defaultItems, parsePath, type Path } from "../../src/lib/service-course/path";
 import { completeLesson, emptyProgress, nextLesson, nextOnPath } from "../../src/lib/service-course/progress";
-import { lessonById } from "../../src/lib/service-course/course";
 import { COPY } from "../../src/lib/service-course/copy";
 import { YourParts } from "../../src/components/learn/service/home";
 import { loadPath, pathLessons, type PathView } from "../../src/components/learn/service/progress";

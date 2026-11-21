@@ -16,8 +16,7 @@ import type { MusicBroker, MusicProjection, MusicRow } from "./contract";
 import { verifyCeremonyMaterialMapping } from "../service-learning/service";
 import { ensureIntent } from "./intent";
 import { scheduleCeremony } from "./scheduling";
-import { lessonForUnit, tenantFile } from "../../lib/service-course/path";
-import { lessonById, lessonOpen } from "../../lib/service-course/course";
+import { lessonById, lessonForUnit, lessonOpen, tenantFile } from "../../lib/service-course/course";
 
 type Selection = { studentId: string; mode: ActiveMode|"child-practice" };
 const bounded = (value: unknown, max: number, empty = true) => {

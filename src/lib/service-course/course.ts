@@ -328,6 +328,23 @@ const BY_ID = new Map(SERVICE_COURSE.lessons.map(lesson => [lesson.id, lesson]))
 const UNIT_BY_ID = new Map(SERVICE_COURSE.units.map(unit => [unit.id, unit]));
 export const lessonById = (id: string): Lesson | null => BY_ID.get(id) ?? null;
 export const unitById = (id: string): Unit | null => UNIT_BY_ID.get(id) ?? null;
+
+/** The congregation's published course file, if it offers the course. */
+export const tenantFile = (tenantId: string): Tenant | null => TENANTS.find(tenant => tenant.tenant === tenantId && tenant.enabled) ?? null;
+
+const BM_FAMILY = /@bm-(?:shacharit|maariv)$/;
+/** The base of a Beit Mitzvah unit ID, without its service family. */
+export function baseUnitId(unitId: string): string | null {
+  return BM_FAMILY.test(unitId) ? unitId.replace(BM_FAMILY, "") : null;
+}
+/** Match a Beit Mitzvah unit to the lesson that teaches it in the published course. */
+export function lessonForUnit(tenant: Tenant, unitId: string): string | null {
+  const base = baseUnitId(unitId);
+  if (!base) return null;
+  for (const [id, row] of Object.entries(tenant.lessons)) if (row.bm?.includes(base) && lessonById(id)) return id;
+  return null;
+}
+
 export type Phase = "morning" | "evening";
 export type ServiceSlot = "morning" | "havdalah" | "unknown";
 /** An evening lesson (2.0 SC7): its section is one of the Saturday-evening units, so it reads the siddur's own evening text. */
