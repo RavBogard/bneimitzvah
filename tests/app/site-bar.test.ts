@@ -53,7 +53,8 @@ test("signed in, the right side is the My Readings control, with a bookmark icon
   // Beta hides below the width where disc, name, Beta, Read, Learn and the icon-only account fit on one line (368px measured; 375px set).
   expect(css).toMatch(/@media \(max-width: 374\.98px\) \{ \.site-bar \.site-beta \{ display: none; \} \}/);
   expect(css).not.toMatch(/\.site-bar \.portal-brand[^}]*display: none|\.site-bar-mark[^}]*display: none/);
-  expect(css).toMatch(/\.site-bar \{ flex-wrap: nowrap/);
+  // At enlarged text the site actions wrap below the brand before the page overflows.
+  expect(css).toMatch(/\.site-bar \{ flex-wrap: wrap/);
 });
 
 test("the current link: Read on /read*, Learn on /learn* and the trope chart, My Readings on /mine*, nothing elsewhere (Account has no site link)", () => {

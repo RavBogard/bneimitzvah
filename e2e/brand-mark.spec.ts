@@ -61,3 +61,23 @@ test("from 320px the bar is one line with the disc and the name always shown; th
     await expect(page.locator("[data-site-bar] a.portal-brand img")).toBeVisible();
   }
 });
+
+test("the shared brand and footer links keep 44px targets with a narrow, enlarged header", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.goto("/offline");
+  await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+  const brand = page.getByTestId("site-brand");
+  const footer = page.getByRole("contentinfo");
+  await expect(brand).toHaveAttribute("href", "/");
+  for (const link of [brand, footer.getByRole("link", { name: "About", exact: true }), footer.getByRole("link", { name: "Rabbi Daniel Bogard", exact: true })]) {
+    const box = (await link.boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.x + box.width).toBeLessThanOrEqual(320);
+  }
+  await page.goto("/recordings");
+  await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+  const nav = page.getByRole("navigation", { name: "Site", exact: true });
+  await expect(nav.getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+});

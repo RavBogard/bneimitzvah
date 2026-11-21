@@ -406,10 +406,11 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .app-bar :focus-visible { outline-color: var(--marigold); }
 /* ===== The site row (SiteBar): brand, Beta, Read, Learn, and Sign in or Account. One header on every page; the tab bar or rail is the role row beneath it. ===== */
 :root { --site-bar-h: calc(44px + 1.5rem); }
-.site-bar { flex-wrap: nowrap; gap: 0.5rem; --site-bar-pad: 0.75rem; }
-.site-bar .portal-brand { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.site-bar { flex-wrap: wrap; gap: 0.5rem; --site-bar-pad: 0.75rem; }
+.site-bar .portal-brand-group { max-width: 100%; }
+.site-bar .portal-brand { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; min-width: 44px; overflow-wrap: anywhere; }
 .site-bar-mark { flex: none; width: 28px; height: 28px; border-radius: 50%; }
-.site-bar-nav { display: flex; align-items: center; gap: 0.25rem; margin-inline-start: auto; flex: none; }
+.site-bar-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; margin-inline-start: auto; flex: none; max-width: 100%; }
 .site-bar-link { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 44px; min-width: 44px; padding-inline: var(--site-bar-pad); border-radius: 999px; text-decoration: none; font-size: var(--text-callout); font-weight: 600; white-space: nowrap; }
 .site-bar-link:hover { background: rgb(255 255 255 / 0.14); color: #fff; }
 /* The current page: a 2px underline under the word, 4px off it. */
@@ -1138,7 +1139,7 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .site-footer { margin: 0; padding: 1.25rem 16px 1.5rem; text-align: center; font-size: 0.8125rem; color: var(--color-muted); }
 .site-footer p { margin-inline: auto; max-width: none; }
 .site-footer p + p { margin-top: 0.25rem; }
-.site-footer a { color: inherit; text-decoration: underline; text-underline-offset: 0.2em; text-decoration-color: var(--color-rule); }
+.site-footer a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; color: inherit; text-decoration: underline; text-underline-offset: 0.2em; text-decoration-color: var(--color-rule); }
 .site-footer a:hover { color: var(--color-ink); }
 .site-footer a:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
 
