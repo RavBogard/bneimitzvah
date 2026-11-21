@@ -215,7 +215,7 @@ describe("wording", () => {
   });
   test("Account", () => {
     const markup = renderToStaticMarkup(createElement(AccountView, { summary: summary(["tutor"], { approver: true }), current: "tutor", signingOut: false, problem: "", onRole: () => undefined, onSignOut: () => undefined }));
-    expect(words(markup)).toEqual(["Account", "You’re signed in", "Email settings", "choose which portal emails you get",
+    expect(words(markup)).toEqual(["Account", "You’re signed in", "Display name", "Loading name…", "Email settings", "choose which portal emails you get",
       "Claude connections", "see and end Claude’s access to the portal", "Account requests", "approve accounts for people who ask",
       // Readings for everyone, decision 16 (plan D8): the one sentence under the N23 line.
       "Readings you keep, with their marks and notes, can be seen by tutors and the rabbi.",

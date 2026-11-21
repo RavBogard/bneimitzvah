@@ -125,13 +125,13 @@ export function parseAcceptance(value: unknown) {
 
 // A closed endpoint set prevents callers from turning this helper into an
 // arbitrary fetch/redirect surface. No response diagnostics cross the boundary.
-type Endpoint = "/api/profile/pronouns" | `/api/profile/pronouns?${string}` | "/api/session" | "/api/session/begin" | "/api/session/door" | "/api/auth/sign-in/social" | "/api/auth/google/challenge" | "/api/auth/google/redirect" | "/api/auth/sign-in/magic-link" | "/api/auth/sign-in/code" | "/api/auth/sign-out" | "/api/invitations/pending" | "/api/invitations/accept";
-const endpoints = new Set<string>(["/api/session", "/api/session/begin", "/api/session/door", "/api/auth/sign-in/social", "/api/auth/google/challenge", "/api/auth/google/redirect", "/api/auth/sign-in/magic-link", "/api/auth/sign-in/code", "/api/auth/sign-out", "/api/invitations/pending", "/api/invitations/accept"]);
-export async function requestPortal(endpoint: Endpoint, body?: Record<string, unknown>, signal?: AbortSignal): Promise<unknown> {
+type Endpoint = "/api/profile/name" | `/api/profile/name?${string}` | "/api/profile/pronouns" | `/api/profile/pronouns?${string}` | "/api/session" | "/api/session/begin" | "/api/session/door" | "/api/auth/sign-in/social" | "/api/auth/google/challenge" | "/api/auth/google/redirect" | "/api/auth/sign-in/magic-link" | "/api/auth/sign-in/code" | "/api/auth/sign-out" | "/api/invitations/pending" | "/api/invitations/accept";
+const endpoints = new Set<string>(["/api/profile/name", "/api/session", "/api/session/begin", "/api/session/door", "/api/auth/sign-in/social", "/api/auth/google/challenge", "/api/auth/google/redirect", "/api/auth/sign-in/magic-link", "/api/auth/sign-in/code", "/api/auth/sign-out", "/api/invitations/pending", "/api/invitations/accept"]);
+export async function requestPortal(endpoint: Endpoint, body?: Record<string, unknown>, signal?: AbortSignal, sessionBinding?: string): Promise<unknown> {
   // Profile reads deliberately carry a subject query; writes use only the exact
   // private path. A query can never broaden the helper into another path/origin.
   const profileEndpoint = typeof endpoint === "string" && (body === undefined
-    ? endpoint.startsWith("/api/profile/pronouns?") && !/[\x00-\x20#\\]/.test(endpoint)
+    ? (endpoint.startsWith("/api/profile/pronouns?") || endpoint.startsWith("/api/profile/name?")) && !/[\x00-\x20#\\]/.test(endpoint)
     : endpoint === "/api/profile/pronouns");
   if (!endpoints.has(endpoint) && !profileEndpoint) return unavailable();
   const controller = new AbortController(), abort = () => controller.abort();
@@ -139,8 +139,11 @@ export async function requestPortal(endpoint: Endpoint, body?: Record<string, un
   signal?.addEventListener("abort", abort, { once: true });
   const timeout = setTimeout(abort, 12_000);
   try {
+    const headers: Record<string, string> = { accept: "application/json" };
+    if (body !== undefined) headers["content-type"] = "application/json";
+    if (sessionBinding && (endpoint === "/api/profile/name" || endpoint.startsWith("/api/profile/name?"))) headers["X-Session-Binding"] = sessionBinding;
     const response = await fetch(endpoint, { method: body === undefined ? "GET" : "POST", credentials: "same-origin", cache: "no-store", redirect: "error",
-      referrerPolicy: "no-referrer", signal: controller.signal, headers: body === undefined ? { accept: "application/json" } : { accept: "application/json", "content-type": "application/json" },
+      referrerPolicy: "no-referrer", signal: controller.signal, headers,
       body: body === undefined ? undefined : JSON.stringify(body) });
     if (!response.ok) throw new PortalRequestError([400, 401, 403, 404, 409, 429, 503].includes(response.status) ? response.status : 503);
     if (!response.headers.get("content-type")?.toLowerCase().startsWith("application/json")) return unavailable();

@@ -6,6 +6,7 @@ import { Button, PageHeader } from "../../../ui";
 import { DocumentTitle } from "../document-title";
 import { accountsApi, type AccountRequest, type ApproverMode, type ApproversView, type Person, type PersonRole, type StudentOption } from "./api";
 import { linkRequestLine } from "../staff/model";
+import { DisplayNameEditor, EditNameButton, useInlineNameEdit } from "../../profile/display-name";
 
 /** Daniel's approved approver help line (F1, wording approved 2026-10-23). */
 export const APPROVER_HELP_LINE = "Anyone who asks in good faith can have an account, member or not. Decline only spam or abuse.";
@@ -49,11 +50,12 @@ export function AccountsWorkspace() {
   const { summary } = useWorkspace();
   const admin = summary.roles.includes("admin");
   if (!summary.approver) return <section className="workspace-state" data-testid="role-unavailable"><h1>Role unavailable</h1><p>Link requests are for administrators and the tutors they choose to approve them.</p><a href="/workspace">Go to your home page</a></section>;
-  return <AccountsPage mode={admin ? "admin" : "tutor"} />;
+  return <AccountsPage key={admin ? "admin" : "tutor"} mode={admin ? "admin" : "tutor"} />;
 }
 
 function AccountsPage({ mode }: { mode: ApproverMode }) {
-  const { registerReload } = useWorkspace();
+  const { registerReload, summary } = useWorkspace();
+  const { id: editing, open: openName, close: closeName } = useInlineNameEdit();
   const admin = mode === "admin";
   const [requests, setRequests] = useState<readonly AccountRequest[] | null>(null), [productName, setProductName] = useState<string | null>(null), [people, setPeople] = useState<readonly Person[] | null>(null), [approvers, setApprovers] = useState<ApproversView | null>(null);
   // The students an approver may link to, and the one chosen per request (the request's own named student first).
@@ -76,6 +78,7 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
   }, [mode, admin]);
   useEffect(() => registerReload(async () => { setConfirming(null); await load(); }), [registerReload, load]);
   useEffect(() => { alive.current = true; void load(); return () => { alive.current = false; request.current?.abort(); }; }, [load]);
+  useEffect(() => { if (editing && (broken || !people?.some(row => row.id === editing))) closeName(); }, [editing, closeName, people, broken]);
 
   async function act(run: () => Promise<Message>, action: string) {
     if (gate.current) return;
@@ -174,8 +177,13 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
             </div>
           </li>)}</ul> : <p className="people-empty">No link requests are waiting.</p>}
         </section>
-        {admin && people && <PeopleWithAccessCard people={people} confirming={confirming} pending={pending} onConfirming={next => { setMessage(null); setConfirming(next); }}
-          onMakeTutor={row => void makeTutor(row)} onRemoveTutor={row => void removeTutor(row)} onEnd={row => void end(row)} />}
+        {admin && people && <PeopleWithAccessCard people={people} confirming={confirming} pending={pending} sessionBinding={summary.sessionBinding} editing={editing} onNameOpen={openName} onNameClose={closeName}
+          onConfirming={next => { setMessage(null); setConfirming(next); }} onMakeTutor={row => void makeTutor(row)} onRemoveTutor={row => void removeTutor(row)} onEnd={row => void end(row)}
+          onNameSave={(id, name) => {
+            closeName();
+            setPeople(current => current?.map(person => person.id === id ? { ...person, name } : person) ?? null);
+            setMessage({ text: "Name saved.", tone: "status" }); void load();
+          }} />}
         {admin && approvers && <section className="people-card" aria-labelledby="accounts-approvers"><div className="people-card-head"><h2 id="accounts-approvers">Approvers</h2>
           <p>Admins approve requests. You can also choose tutors to approve them.</p></div>
           {approvers.designated.length ? <ul className="people-list">{approvers.designated.map(row => <li key={row.id} className="people-row">
@@ -197,13 +205,15 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
   </section>;
 }
 
-type PeopleCardProps = Readonly<{ people: readonly Person[]; confirming: string | null; pending: boolean; onConfirming: (next: string | null) => void; onMakeTutor: (row: Person) => void; onRemoveTutor: (row: Person) => void; onEnd: (row: Person) => void }>;
+type PeopleCardProps = Readonly<{ people: readonly Person[]; confirming: string | null; pending: boolean; sessionBinding: string; editing: string | null;
+  onConfirming: (next: string | null) => void; onMakeTutor: (row: Person) => void; onRemoveTutor: (row: Person) => void; onEnd: (row: Person) => void;
+  onNameOpen: (id: string, trigger: HTMLButtonElement) => void; onNameClose: () => void; onNameSave: (id: string, name: string) => void }>;
 /**
  * People with access (2026-11-03 spec), admins only: everyone signed in here (a membership is made at first sign-in), their chips and since when. Make
  * tutor takes two steps, as End membership does, and is offered to anyone with a verified address who is not a tutor (a student may be
  * one too, SPEC-2.md). Remove tutor takes the same two steps on every row with the Tutor chip.
  */
-export function PeopleWithAccessCard({ people, confirming, pending, onConfirming, onMakeTutor, onRemoveTutor, onEnd }: PeopleCardProps) {
+export function PeopleWithAccessCard({ people, confirming, pending, sessionBinding, editing, onConfirming, onMakeTutor, onRemoveTutor, onEnd, onNameOpen, onNameClose, onNameSave }: PeopleCardProps) {
   return <section className="people-card" aria-labelledby="accounts-people" data-testid="people-with-access"><div className="people-card-head"><h2 id="accounts-people">{PEOPLE_HEADING}</h2>
     <p>{PEOPLE_INTRO}</p></div>
     {people.length ? <ul className="people-list">{people.map(row => <li key={row.id} className="people-row" data-testid="person-row">
@@ -221,11 +231,13 @@ export function PeopleWithAccessCard({ people, confirming, pending, onConfirming
           <button type="button" className="roster-action roster-danger" aria-label={`End membership now: ${row.name}`} disabled={pending} onClick={() => onEnd(row)}>End membership</button>
           <button type="button" className="roster-action" aria-label={`Keep membership: ${row.name}`} disabled={pending} onClick={() => onConfirming(null)}>Keep</button>
         </> : <>
+          <EditNameButton name={row.name} expanded={editing === row.id} disabled={pending || confirming !== null || (editing !== null && editing !== row.id)} onOpen={trigger => onNameOpen(row.id, trigger)} />
           {row.email && !row.roles.includes("tutor") && <button type="button" className="roster-action" aria-label={`Make tutor: ${row.name}`} disabled={pending || confirming !== null} onClick={() => onConfirming(`tutor:${row.id}`)}>Make tutor</button>}
           {row.roles.includes("tutor") && <button type="button" className="roster-action people-danger" aria-label={`Remove tutor: ${row.name}`} disabled={pending || confirming !== null} onClick={() => onConfirming(`untutor:${row.id}`)}>Remove tutor</button>}
           {row.memberId && <button type="button" className="roster-action people-danger" aria-label={`End membership: ${row.name}`} disabled={pending || confirming !== null} onClick={() => onConfirming(`end:${row.id}`)}>End membership</button>}
         </>}
       </div>
+      {editing === row.id && <DisplayNameEditor target={{ membershipId: row.id }} sessionBinding={sessionBinding} onCancel={onNameClose} onSave={next => onNameSave(row.id, next.name)} />}
     </li>)}</ul> : <p className="people-empty">{PEOPLE_EMPTY}</p>}
   </section>;
 }

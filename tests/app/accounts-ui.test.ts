@@ -99,7 +99,8 @@ describe("people with access", () => {
     { id: ID4, memberId: null, name: "Ruth", email: null, roles: [], since: stamp },
   ];
   type Props = Parameters<typeof PeopleWithAccessCard>[0];
-  const props = (over: Partial<Props> = {}): Props => ({ people: rows, confirming: null, pending: false, onConfirming: () => {}, onMakeTutor: () => {}, onRemoveTutor: () => {}, onEnd: () => {}, ...over });
+  const props = (over: Partial<Props> = {}): Props => ({ people: rows, confirming: null, pending: false, sessionBinding: "A".repeat(43), editing: null,
+    onConfirming: () => {}, onMakeTutor: () => {}, onRemoveTutor: () => {}, onEnd: () => {}, onNameOpen: () => {}, onNameClose: () => {}, onNameSave: () => {}, ...over });
   const card = (over: Partial<Props> = {}) => renderToStaticMarkup(createElement(PeopleWithAccessCard, props(over)));
   const plain = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
   /** The buttons of the rendered tree, by aria-label (the card is a plain function of its props). */
@@ -108,7 +109,7 @@ describe("people with access", () => {
     if (!isValidElement(node)) return out;
     const element = node as { type: unknown; props: Record<string, unknown> };
     if (typeof element.type === "function") return buttons((element.type as (p: unknown) => ReactNode)(element.props), out);
-    if (element.type === "button") out.set(String(element.props["aria-label"]), { onClick: element.props.onClick as () => void, disabled: Boolean(element.props.disabled), text: String(element.props.children) });
+    if (element.type === "button" && element.props["aria-expanded"] === undefined) out.set(String(element.props["aria-label"]), { onClick: element.props.onClick as () => void, disabled: Boolean(element.props.disabled), text: String(element.props.children) });
     buttons(element.props.children as ReactNode, out);
     return out;
   }

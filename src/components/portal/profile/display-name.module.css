@@ -1,0 +1,29 @@
+.accountName {
+  border-block-end: 1px solid var(--color-rule);
+  padding-block-end: 0.75rem;
+}
+
+.accountNameRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 0.75rem;
+}
+
+.accountNameRow > div { min-inline-size: 0; }
+.accountNameRow h2 { margin: 0; font-size: var(--text-heading); }
+.accountNameRow p { margin: 0.125rem 0; overflow-wrap: anywhere; }
+
+.editor { min-inline-size: 0; max-inline-size: 26rem; margin-block: 0.5rem 0.25rem; }
+.rowEditor { grid-column: 2 / -1; }
+.editor input { border-radius: var(--radius-control); }
+.editor p, p.feedback { margin-block: 0.5rem 0; }
+.editor p { overflow-wrap: anywhere; }
+.feedback:empty { margin: 0; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; margin-block-start: 0.625rem; }
+.trigger { white-space: nowrap; }
+
+@media (max-width: 640px) {
+  .rowEditor { grid-column: 1 / -1; }
+}

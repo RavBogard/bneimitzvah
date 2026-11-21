@@ -1,5 +1,6 @@
 "use client";
 import { OwnPronounsSettings } from "./profile/pronouns";
+import { AccountDisplayName } from "./profile/display-name";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { parseSession, PortalRequestError, requestPortal, roleNames, roleTasks, type Role, type SessionSummary } from "./api";
@@ -32,6 +33,7 @@ export function AccountView({ summary, current, signingOut, problem, onRole, onS
   const { roles } = summary, staff = roles.includes("admin") || roles.includes("tutor"), student = roles.includes("student");
   return <>
     <PageHeader title="Account" description="You’re signed in" />
+    <AccountDisplayName key={summary.sessionBinding} sessionBinding={summary.sessionBinding} />
     {/* An account with one role has nothing to choose between here (2026-11-16 walkthrough); My Readings is in the site bar. */}
     {roles.length > 1 && <section className="account-section" aria-labelledby="account-roles">
       <h2 id="account-roles">Roles</h2>
