@@ -1,7 +1,7 @@
 "use client";
 import { useIdentity } from "../../site/identity-context";
 import { useEffect, useState } from "react";
-import { APPROVED, PLAN } from "../../../lib/offline/copy";
+import { APPROVED, NEW, PLAN } from "../../../lib/offline/copy";
 import { purgeOffline, savedPacks } from "../../../lib/offline/pack-index";
 import { WINDOW_MS, type Pack } from "../../../lib/offline/policy";
 import { readAddress } from "../public-reading/urls";
@@ -48,6 +48,7 @@ export function OfflineShelf() {
     return () => { current = false; };
   }, [live, showOwn, week, course, serviceState]);
   return <OfflineShelfView live={platform === null ? null : live} packs={packs} removed={removed} productName={productName}
+    online={online} installed={platform?.installed === true}
     onRemove={() => void purgeOffline().then(() => { setRemoved(true); setPacks([]); })} />;
 }
 
@@ -55,8 +56,9 @@ export function OfflineShelf() {
  * What /offline draws. `live`: null before the platform is known (the server render, and so the shell copy), false on a host
  * that keeps nothing, true on an offline origin. The heading is always there; the empty line shows wherever nothing is saved.
  */
-export function OfflineShelfView(props: Readonly<{ live: boolean | null; packs: readonly Pack[] | null; removed: boolean; productName: string | null; onRemove(): void }>) {
-  const { live, packs, removed, productName } = props;
+export function OfflineShelfView(props: Readonly<{ live: boolean | null; packs: readonly Pack[] | null; removed: boolean; productName: string | null;
+  online: boolean; installed: boolean; onRemove(): void }>) {
+  const { live, packs, removed, productName, online, installed } = props;
   const identity = useIdentity();
   const empty = <p className={styles.shelfEmpty} role="status" data-testid="offline-empty">{removed ? APPROVED.removed : APPROVED.nothingSaved}</p>;
   return <div className="portal-shell">
@@ -70,7 +72,13 @@ export function OfflineShelfView(props: Readonly<{ live: boolean | null; packs: 
         <span className={styles.shelfLabel}><bdi dir="auto">{label(pack)}</bdi></span>
         <span className={styles.shelfDate}>{APPROVED.savedUntil(savedDate(Math.min(pack.expiresAt, pack.renewedAt + WINDOW_MS)))}</span>
         <a className="button-secondary" href={target(pack)}>{PLAN.open}</a>
-      </li>)}</ul> : empty)}
+      </li>)}</ul> : <>{empty}
+        <p className="field-help" role="status" data-testid="offline-recovery">{online ? installed ? NEW.saveThisWeek : NEW.installToSave : NEW.reconnectToSave}</p>
+        {online && <div className={styles.shelfActions}>
+          <a className="button-primary" href="/read">{NEW.openThisWeek}</a>
+          <a className="button-secondary" href="/about#about-install">{NEW.installHelp}</a>
+        </div>}
+      </>)}
       {productName && <p className="field-help">{PLAN.expiry(productName)}</p>}
       {packs !== null && packs.length > 0 && <button type="button" className="button-secondary" onClick={props.onRemove}>{PLAN.remove}</button>}</>}
     </main>

@@ -57,13 +57,19 @@ test("the strings are Daniel's, verbatim, with the congregation's productName", 
 });
 
 test("/offline is never empty (D20): its heading always, and the approved empty line wherever nothing is saved", () => {
-  const view = (live: boolean | null, packs: [] | null, removed = false) => renderToStaticMarkup(createElement(OfflineShelfView, { live, packs, removed, productName: null, onRemove: () => {} }));
+  const view = (live: boolean | null, packs: [] | null, removed = false, online = true) =>
+    renderToStaticMarkup(createElement(OfflineShelfView, { live, packs, removed, productName: null, online, installed: false, onRemove: () => {} }));
   const heading = /<h1[^>]*>Saved on this device<\/h1>/, empty = /data-testid="offline-empty"[^>]*>Nothing is saved on this device yet\.</;
   // Before the platform is known (the server render, so the installed shell's copy): the heading.
   expect(view(null, null)).toMatch(heading);
   // A host that keeps nothing (a preview or an alias), and an offline origin with nothing saved: the heading and the line.
   for (const markup of [view(false, null), view(true, [])]) { expect(markup).toMatch(heading); expect(markup).toMatch(empty); }
   expect(view(true, [], true)).toContain(APPROVED.removed);
+  expect(view(true, [])).toContain('href="/read"');
+  expect(view(true, [])).toContain('href="/about#about-install"');
+  expect(view(false, null)).not.toContain('data-testid="offline-recovery"');
+  expect(view(true, [], false, false)).toContain(NEW.reconnectToSave);
+  expect(view(true, [], false, false)).not.toMatch(/href="\/(read|about#about-install)"/);
   // No Remove button when there is nothing to remove.
   expect(view(true, [])).not.toContain(PLAN.remove);
 });

@@ -31,7 +31,7 @@ export function UnsubscribePage() {
     <SiteBar mode="minimal" />
     <main id="portal-main" className="entry-layout">
       <section className="entry-task" aria-labelledby="unsubscribe-title" aria-busy={view.kind === "pending"}>
-        <h2 id="unsubscribe-title" ref={heading} tabIndex={-1}>{title}</h2>
+        <h1 id="unsubscribe-title" ref={heading} tabIndex={-1}>{title}</h1>
         {(view.kind === "ready" || view.kind === "pending") && <><p>You’ll stop getting this kind of email from the portal. Other portal emails, and sign-in links you ask for, are not affected.</p>
           <button type="button" className="button-primary" disabled={view.kind === "pending"} onClick={() => void confirm()}>{view.kind === "pending" ? "Unsubscribing…" : "Unsubscribe"}</button></>}
         {view.kind === "done" && <p role="status">You won’t get {names[view.stopped]} any more. You can turn them back on any time in your email settings after you sign in.</p>}

@@ -43,5 +43,10 @@ export const APPROVED = Object.freeze({
   servicePackLabel: "Learn the service",
 });
 
-/** Wording no ruling gives yet. Each is one named constant, flagged for Daniel. A2 added none. */
-export const NEW = Object.freeze({});
+export const NEW = Object.freeze({
+  reconnectToSave: "Reconnect to open this week’s reading in the installed app and save it for offline practice.",
+  saveThisWeek: "Open this week’s reading while connected to save it for offline practice.",
+  installToSave: "Install the app to keep this week’s reading for offline practice.",
+  openThisWeek: "Open this week’s reading",
+  installHelp: "Installation help",
+});

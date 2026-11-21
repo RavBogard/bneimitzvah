@@ -234,7 +234,7 @@ describe("the shell and /offline", () => {
     const service = row({ type: "service" }, SERVICE_PACK_KEY), evening = row({ type: "evening" }, EVENING_PACK_KEY, OWNER);
     expect(shelfRows([service, evening])).toEqual([service]);
     expect(shelfRows([evening])).toEqual([evening]);
-    const html = renderToStaticMarkup(createElement(OfflineShelfView, { live: true, packs: [service, evening], removed: false, productName: null, onRemove: () => {} }));
+    const html = renderToStaticMarkup(createElement(OfflineShelfView, { live: true, packs: [service, evening], removed: false, productName: null, online: true, installed: true, onRemove: () => {} }));
     expect(html.match(/data-pack="/g)).toHaveLength(1);
     expect(html).toMatch(/<li data-pack="service">.*href="\/learn\/service"/);
   });

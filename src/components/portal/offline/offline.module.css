@@ -26,6 +26,7 @@
 .shelfDate { color: var(--color-muted); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
 .shelf li > :global(.button-secondary) { min-height: 44px; }
 .shelfEmpty { margin-top: 1.25rem; color: var(--color-muted); }
+.shelfActions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-block: 1rem 1.5rem; }
 .shelfMain > :global(.button-secondary) { margin-top: 1.5rem; }
 
 @media (max-width: 640px) {
