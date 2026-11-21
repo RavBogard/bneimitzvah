@@ -90,7 +90,7 @@ test("recording library searches original labels, filters categories, and plays 
     const hit = document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
     return Boolean(hit && focused.contains(hit));
   });
-  const largeText = await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+  await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
   for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(viewport);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
@@ -106,5 +106,4 @@ test("recording library searches original labels, filters categories, and plays 
     await expect(listen).toBeFocused();
     await expect.poll(focusedControlIsUncovered).toBe(true);
   }
-  await largeText.evaluate(style => style.remove());
 });
