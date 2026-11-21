@@ -359,9 +359,10 @@ test("credits the original day when a signed-in student reopens a saved service 
   await page.reload();
   await expect(page.getByText("Offline practice. Reconnect and choose the same child to sync.")).toBeVisible();
   await expect(main).toHaveAttribute("data-step", "about");
-  const opened = context.waitForEvent("page");
-  await page.evaluate(href => { window.open(href, "_blank"); }, route + "?child-practice=1");
+  const opened = context.waitForEvent("page", { timeout: 10_000 });
+  await page.evaluate(() => { window.open("about:blank", "_blank"); });
   const other = await opened;
+  await other.goto(route + "?child-practice=1");
   await expect(other.getByRole("heading", { name: "Practice is unavailable", exact: true })).toBeVisible();
   expect(await other.evaluate(() => sessionStorage.getItem("crc-torah:child-practice-lease/v1") !== null)).toBe(true);
   await other.close();
