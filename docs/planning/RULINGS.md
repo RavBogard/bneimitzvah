@@ -20,6 +20,8 @@ Source keys:
 
 ## 1. What the product is
 
+Daniel approved the [six-milestone learning and staff workflow plan](2026-11-20-feature-gap-analysis/BUILD-PLAN.md) and authorized implementation and deployment. Its decisions table governs selected-child learning, practice-day credit and visibility, recording coverage in the editor, saved-reading rehearsal, assigned service parts and staff setup.
+
 - CRC's place to lein and learn to lein, for everyone at CRC, not only Beit Mitzvah students; also Daniel's own weekly preparation. 2026-10-22. M "Current 1.0 scope", amendment of 2026-10-22 evening.
 - A study and learning companion, not a source-sheet builder: members collect nothing; only a rabbi curates. 2026-10-24. P19 "Earlier rulings".
 - "The app is just for study": D'var Torah, family logistics and mitzvah projects are out of the app entirely. 2026-10-24. P20 "Cut". Replaces the D'var plans of 2026-10-16 (PR 30) and 2026-10-24 (Batch 1 Q1).
