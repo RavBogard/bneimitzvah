@@ -18,4 +18,4 @@
 .progress { max-width: 18rem; }
 .order { margin-top: 1rem; }
 .staff { margin-top: 1.5rem; border-top: 1px solid var(--color-control-rule); padding-top: 0.75rem; }
-@media (max-width: 640px) { .actions > button { max-width: 100%; white-space: normal; text-align: start; } .service { margin-block: 0.75rem 1.5rem; } }
+@media (max-width: 640px) { .actions > :is(button, a) { max-width: 100%; white-space: normal; text-align: start; } .service { margin-block: 0.75rem 1.5rem; } }

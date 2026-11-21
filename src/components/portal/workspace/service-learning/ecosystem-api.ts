@@ -7,7 +7,7 @@ import { material } from "./api";
 
 export type MyService = Awaited<ReturnType<ReturnType<typeof createServiceEcosystemService>["view"]>>;
 export type ConnectedService = Extract<MyService, { parts: unknown }>;
-export async function serviceRequest(mode: ReadingMode, studentId: string, action: "view" | "synchronize" | "assign" | "progress" | "request" | "respond" | "resource" | "material"|"separate"|"resolve-original", body: Record<string, unknown> = {}, signal?: AbortSignal,selection?:Selection): Promise<unknown> {
+export async function serviceRequest(mode: ReadingMode, studentId: string, action: "view" | "synchronize" | "assign" | "progress" | "request" | "respond" | "resource" | "material"|"separate"|"resolve-original"|"lesson", body: Record<string, unknown> = {}, signal?: AbortSignal,selection?:Selection): Promise<unknown> {
   identifier(studentId);
   if(mode==="child-practice"&&(!selection || selection.context.studentId!==studentId || Date.parse(selection.context.expiresAt)<=Date.now() || !/^[A-Za-z0-9_-]{43}$/.test(selection.handle)))throw new PortalRequestError(404);
   const path = `/api/students/${studentId}/my-service${action === "view" ? `?mode=${mode}` : `/${action}`}`;

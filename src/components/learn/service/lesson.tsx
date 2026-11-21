@@ -6,6 +6,7 @@ import { COPY, emphasised, fill, typographic } from "../../../lib/service-course
 import { completeLesson, lessonAfter, nextOnPath, type Progress } from "../../../lib/service-course/progress";
 import type { CheckItem } from "../../../lib/service-course/check";
 import { useChildLearning } from "../child-practice";
+import { useAssignedServiceLesson } from "./assigned-lesson";
 import { WordCardScope } from "../word-card";
 import learn from "../learn.module.css";
 import styles from "./service.module.css";
@@ -41,6 +42,7 @@ export function ServiceLesson({ id }: { id: string }) {
   return <WordCardScope><LessonFlow lesson={lesson} /></WordCardScope>;
 }
 function LessonFlow({ lesson }: { lesson: Lesson }) {
+  const assigned = useAssignedServiceLesson(lesson.id);
   const { state, retry } = useLessonText(lesson);
   const text = state.status === "ready" ? state.text : null;
   // One seed per visit: the Check's order is fixed while the lesson is open and different the next time.
@@ -51,7 +53,26 @@ function LessonFlow({ lesson }: { lesson: Lesson }) {
   const child = useChildLearning(), { progress, account, update } = useServiceProgress(), completeDay = usePracticeCompleted();
   // A signed-in student's own slot picks the evening teaching and pages for a prayer the evening repeats (2.0 SC7); signed out, the morning.
   // Offline, the device's last copy of the student's parts (2.0 SC6), so the slot and Next of your parts hold.
-  const pathView = useCoursePath(account).view, slot: ServiceSlot = pathView.status === "ready" ? pathView.path.slot : child?.assigned.student.serviceSlot ?? "morning";
+  const pathView = useCoursePath(account).view, slot: ServiceSlot = assigned?.status.state === "ready" ? assigned.status.slot : pathView.status === "ready" ? pathView.path.slot : child?.assigned.student.serviceSlot ?? "morning";
+  const [partSave, setPartSave] = useState<"saving" | "saved" | "changed" | "failed">();
+  const completion = useRef<AbortController | null>(null);
+  useEffect(() => () => completion.current?.abort(), []);
+  // Music has its own part/version receipt. An unrelated plan can use the same course lesson.
+  const saveLesson = () => {
+    update(value => completeLesson(value, lesson, Date.now()), assigned?.source === "music" ? undefined : lesson.id);
+    completeDay();
+  };
+  function complete() {
+    if (!assigned) { saveLesson(); return; }
+    completion.current?.abort();
+    const controller = new AbortController(); completion.current = controller;
+    setPartSave("saving");
+    void assigned.check(true, controller.signal).then(() => {
+      if (!controller.signal.aborted) { saveLesson(); setPartSave("saved"); }
+    }, error => {
+      if (!controller.signal.aborted) setPartSave(error instanceof Error && "status" in error && [401, 403, 404, 409].includes(Number(error.status)) ? "changed" : "failed");
+    });
+  }
   const main = useRef<HTMLElement>(null);
   const go = useCallback((next: number) => { setAt(next); window.scrollTo({ top: 0 }); main.current?.focus({ preventScroll: true }); }, []);
   const index = Math.min(at, steps.length - 1), step = steps[index];
@@ -60,20 +81,26 @@ function LessonFlow({ lesson }: { lesson: Lesson }) {
   return <div className={`portal-shell ${learn.shell}`}>
     <a className="skip-link" href="#lesson-main">{COPY.frame.skip}</a>
     <header className={learn.bar}>
-      <a className={learn.close} href="/learn/service" aria-label={COPY.frame.close}>{icons.close}</a>
+      <a className={learn.close} href={assigned?.back ?? "/learn/service"} aria-label={assigned ? "Back to My assigned parts" : COPY.frame.close}>{icons.close}</a>
       <p className={learn.barTitle}>{lesson.title}</p>
       <ol className={learn.rail} aria-label={fill(COPY.frame.rail, { n: index + 1, total: steps.length })}>{steps.map((_, i) => <li key={i} data-state={i < index ? "past" : i === index ? "current" : undefined} />)}</ol>
     </header>
     <main id="lesson-main" ref={main} tabIndex={-1} className={learn.lesson} data-step={step} data-lesson={lesson.id} data-text={lesson.read ? state.status : undefined}>
-      <LessonWords lesson={lesson} text={text}>
+      {assigned && assigned.status.state !== "ready" ? <div className={learn.state}>
+        <p role="status">{assigned.status.state === "loading" ? "Checking this assigned part…" : assigned.status.state === "changed"
+          ? "This part has changed. Return to My assigned parts for the current lesson." : "The assigned part couldn’t be checked."}</p>
+        {assigned.status.state === "failed" && <button type="button" className="button-secondary" onClick={assigned.retry}>Try again</button>}
+        <a className={learn.backLink} href={assigned.back}>My assigned parts</a>
+      </div> : <LessonWords lesson={lesson} text={text}>
         {step === "about" ? <><About lesson={lesson} slot={slot} /><LessonRecording lesson={lesson.id} morning={slot !== "havdalah"} />{forward()}</>
           : step === "where" ? <><Where lesson={lesson} slot={slot} />{forward()}</>
           : step === "read" ? lesson.read ? <><ReadStep lesson={lesson} state={state} onRetry={retry} slot={slot} /><LessonRecording lesson={lesson.id} morning={slot !== "havdalah"} />{forward(!text)}</> : <><SiddurOnly lesson={lesson} slot={slot} /><LessonRecording lesson={lesson.id} morning={slot !== "havdalah"} />{forward()}</>
           : step === "words" && text ? <><KeyWordsStep lesson={lesson} text={text} />{forward()}</>
           : step === "check" && items ? <CheckStep key={seed} items={items as readonly CheckItem[]} seed={seed} onFinish={next} footer={children => <Footer>{children}</Footer>} />
-          : step === "done" ? <Done lesson={lesson} state={state} complete={() => { update(value => completeLesson(value, lesson, Date.now()), lesson.id); completeDay(); }} progress={progress} pathView={pathView} slot={slot} />
+          : step === "done" ? <Done lesson={lesson} state={state} complete={complete} progress={progress} pathView={pathView} slot={slot}
+            assignedBack={assigned?.back} partSave={partSave} />
           : <p role="status" className={styles.note}>{COPY.state.lessonLoading}</p>}
-      </LessonWords>
+      </LessonWords>}
     </main>
   </div>;
 }
@@ -132,24 +159,28 @@ function SiddurOnly({ lesson, slot }: { lesson: Lesson; slot: ServiceSlot }) {
  * End of a lesson: what you can now do, where it is in the siddur, the next step. Done marks the lesson when it opens, and a lesson
  * with a Read only once its text has loaded (A4 3.2: a prayer whose text failed is never marked done).
  */
-function Done({ lesson, state, complete, progress, pathView, slot }: { lesson: Lesson; state: TextState; complete(): void; progress: Progress | null; pathView: PathView; slot: ServiceSlot }) {
+function Done({ lesson, state, complete, progress, pathView, slot, assignedBack, partSave }: { lesson: Lesson; state: TextState; complete(): void;
+  progress: Progress | null; pathView: PathView; slot: ServiceSlot; assignedBack?: string; partSave?: "saving" | "saved" | "changed" | "failed" }) {
   const ready = !lesson.read || state.status === "ready";
   useEffect(() => { if (ready) complete(); }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
   // A signed-in student with parts goes on to the next of their own parts (2.0 SC4, done.nextMine); everyone else to the next lesson.
   const path = pathLessons(pathView);
   const after = progress ? completeLesson(progress, lesson, Date.now()) : null;
   const mine = after && path ? nextOnPath(after, path) : null;
-  const next = mine ?? (after ? lessonAfter(after, lesson.id, CRC_TENANT) : null);
+  const next = assignedBack ? null : mine ?? (after ? lessonAfter(after, lesson.id, CRC_TENANT) : null);
   return <>
     <div className={learn.doneHead}><h1 className={learn.doneTitle}>{lesson.title}</h1><p className={learn.doneWord}>{COPY.done.word}</p></div>
     {lesson.goal && <p className={learn.doneLine}>{presentGoal(lesson.goal)}</p>}
     <LessonSiddurLink lessonId={lesson.id} slot={slot} />
     {next && <p className={learn.nextName}>{fill(mine ? COPY.done.nextMine : COPY.done.nextName, { lesson: next.title })}</p>}
     {/* 2.0 SC5: on an assigned part's Done screen, the student is told their tutor can see it (A7 tu.student.line). */}
-    {pathView.status === "ready" && pathView.path.state === "assigned" && pathView.path.items.some(item => item.lesson === lesson.id) && <p className={learn.doneLine} data-finished-line>{COPY.tutor.studentLine}</p>}
+    {!assignedBack && pathView.status === "ready" && pathView.path.state === "assigned" && pathView.path.items.some(item => item.lesson === lesson.id) && <p className={learn.doneLine} data-finished-line>{COPY.tutor.studentLine}</p>}
+    {assignedBack && partSave && <p role="status">{partSave === "saving" ? "Saving this part…" : partSave === "saved" ? "Lesson finished."
+      : partSave === "changed" ? "This part changed before the lesson finished. Check My assigned parts." : "This part couldn’t be saved. Try again."}</p>}
     <Footer>
+      {partSave === "failed" && <button type="button" className="button-secondary" onClick={complete}>Try again</button>}
       {next && <a className="button-start" href={`/learn/service/${next.id}`}>{COPY.done.startNext}</a>}
-      <a className={learn.backLink} href="/learn/service">{COPY.done.back}</a>
+      <a className={learn.backLink} href={assignedBack ?? "/learn/service"}>{assignedBack ? "My assigned parts" : COPY.done.back}</a>
     </Footer>
   </>;
 }

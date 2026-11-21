@@ -449,6 +449,13 @@
       "when": 1795239159694,
       "tag": "0064_practice_sweep",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1795239726258,
+      "tag": "0065_service_part_lesson",
+      "breakpoints": true
     }
   ]
 }

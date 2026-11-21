@@ -2,7 +2,7 @@
 
 import { useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 import type { Assigned,ReadingMode } from "../api";
-import { useWorkspace } from "../provider";
+import { useWorkspace, WorkspaceLink } from "../provider";
 import { ServiceUnitView } from "../../service-learning/unit-view";
 import type { ServiceUnitMaterial } from "../../../../lib/service-learning/types";
 import { type ConnectedService, type MyService } from "./ecosystem-api";
@@ -13,15 +13,19 @@ import { serviceSlotLine } from "../service-slot";
 import { useCongregation } from "../settings/links";
 import { siddurPageLink } from "../../../../lib/siddur/link";
 import { SiddurLink } from "../../siddur-link";
+import { assignedLessonHref } from "../../../../lib/service-course/assigned-parts";
+import { LessonRecording } from "../../../shermet-library/lesson-recording";
+import { useAssignedPartReturn } from "./part-return";
 
 type Draft = Record<string, string>;
-export function MyServicePanel({ mode, studentId, baseline,onConnected }: { mode:ReadingMode; studentId: string; baseline: Assigned | null;onConnected?(connected:boolean):void }) {
+export function MyServicePanel({ mode, studentId, baseline,onConnected }: { mode:ReadingMode; studentId: string; baseline: Assigned | null;onConnected?(connected:boolean, checked:boolean):void }) {
   const { summary, epoch,context,registerWork,readMyService,readMyServiceMaterial,requestMyService } = useWorkspace(), id = useId();
   const scope = JSON.stringify([summary.sessionBinding, epoch, mode, studentId,context?.id]), scopeRef = useRef(scope); scopeRef.current = scope;
   const [state, setState] = useState<{ scope: string; view?: MyService; error?: string; busy?: boolean; material?: ServiceUnitMaterial; selected?: string;resourceLink?:{url:string;expiresAt:string} }>({ scope });
   const [drafts, setDrafts] = useState<Record<string, Draft>>({}), dirty = useRef(false), generation = useRef(0), controller = useRef<AbortController | null>(null), region = useRef<HTMLDivElement>(null);
   const [catalog,setCatalog]=useState<Catalog|null>(null);
   const staff = mode === "admin" || mode === "tutor";
+  const learner = mode === "student" || mode === "child-practice";
   const parentName = mode === "parent" ? baseline?.student.firstName ?? null : null;
   const congregation = useCongregation(Boolean(baseline));
   const clear = useCallback(() => { generation.current++; controller.current?.abort(); setState({ scope: scopeRef.current });setCatalog(null); }, []);
@@ -34,7 +38,9 @@ export function MyServicePanel({ mode, studentId, baseline,onConnected }: { mode
   useLayoutEffect(() => registerWork({ pause: clear, clear: () => { clear(); dirty.current = false; setDrafts({}); }, settle: async () => {}, hasUnsaved: () => dirty.current, reveal: () => region.current?.scrollIntoView({ block: "start" }) }), [registerWork, clear]);
   useLayoutEffect(() => { clear(); setDrafts({}); dirty.current = false; if (baseline) void reload(); return clear; }, [scope, baseline, clear, reload]);
   const current = state.scope === scope ? state : undefined, view = current?.view, linked = view && "parts" in view ? view : undefined;
-  const connected=Boolean(view&&"ceremony"in view);useLayoutEffect(()=>{onConnected?.(connected);},[onConnected,connected]);
+  const connected=learner ? Boolean(linked) : Boolean(view&&"ceremony"in view), checked = Boolean(view || current?.error);
+  useLayoutEffect(()=>{onConnected?.(connected, checked);},[onConnected,connected,checked]);
+  useAssignedPartReturn(region, learner && Boolean(linked), "music");
   function draft(key: string, field: string, value: string) { dirty.current = true; setDrafts(current => ({ ...current, [key]: { ...current[key], [field]: value } })); }
   function fail(error:unknown,message:string){
     if(error instanceof PortalRequestError && [401,403,404].includes(error.status)){dirty.current=false;setDrafts({});setState({scope:scopeRef.current,error:"This service is no longer available in this view."});}
@@ -70,20 +76,28 @@ export function MyServicePanel({ mode, studentId, baseline,onConnected }: { mode
   function part(row: ConnectedService["rows"][number], full = false) {
     const assigned = linked?.parts.find(part => part.rowId === row.rowId), siddurLink = row.liturgyRef ? siddurPageLink(congregation.links.siddurUrl, row.liturgyRef.book, row.liturgyRef.folio, row.liturgyRef.serviceViewId) : null, key = `part-${row.rowId}`, requestKey = `request-${row.rowId}`;
     const selectedUnit=drafts[key]?.catalogUnitId??assigned?.catalogUnitId??"";
-    return <li key={row.rowId} className={styles.part}>
-      <div className={styles.partHeading}><h4>{row.title}</h4>{assigned?.leads && full && <span>You lead</span>}</div>
+    const lesson = assigned?.lesson;
+    const audio = row.resources.some(resource => resource.kind === "audio");
+    return <li key={row.rowId} className={styles.part} data-service-row={row.rowId}>
+      <div className={styles.partHeading}><h4 tabIndex={learner ? -1 : undefined}>{row.title}</h4>{assigned?.leads && full && <span>You lead</span>}</div>
       {row.biblicalRef && <p>{row.biblicalRef}{row.edition ? ` · ${row.edition}` : ""}</p>}
       {!row.arrangementResolved && <p className={styles.note}>Your tutor will confirm the melody.</p>}
       {row.sharedDirections && <p className={styles.directions}>{row.sharedDirections}</p>}
       {assigned?.directions && <p className={styles.directions}>{assigned.directions}</p>}
       {assigned?.privateFeedback && <p className={styles.directions}><strong>Feedback for you:</strong> {assigned.privateFeedback}</p>}
       {assigned?.resourceNeedsReview && <p className="reading-review">This part changed. Your tutor needs to review the practice resources.</p>}
+      {learner && !assigned?.resourceNeedsReview && !audio && (lesson
+        ? <LessonRecording lesson={lesson.id} morning={linked?.ceremony.type !== "havdalah"} showAvailability />
+        : <p className={styles.note}>No practice recording is available for this part.</p>)}
+      {learner && lesson?.finished && <p className={styles.note}>Lesson finished.</p>}
+      {learner && linked?.requests.some(request => request.rowId === row.rowId && request.state === "pending") && <p className={styles.note}>Request pending.</p>}
       <div className={styles.actions}>
+        {learner && lesson && <WorkspaceLink className="button-secondary" href={assignedLessonHref(lesson.id, { source: "music", studentId, rowId: row.rowId, key: lesson.key }, mode === "child-practice")}>Open lesson</WorkspaceLink>}
         {row.catalogUnitId && <button type="button" className="button-secondary" disabled={current?.busy} onClick={() => void openMaterial(row.rowId)}>Read {row.title}</button>}
         {!assigned?.resourceNeedsReview && row.resources.map(resource => <button key={resource.resourceId} type="button" className="button-secondary" disabled={current?.busy} onClick={() => void openResource(row.rowId, resource.resourceId)}>{resource.kind === "score" ? "Score" : "Listen"}: {resource.label}</button>)}
         {siddurLink && row.liturgyRef && <SiddurLink href={siddurLink}>Open in the siddur, page {row.liturgyRef.folio}</SiddurLink>}
       </div>
-      {mode === "student" && assigned?.leads && <label className={styles.progress}>My progress<select aria-label={`Progress for ${row.title}`} value={assigned.progress} disabled={current?.busy} onChange={event => void mutate("progress", { rowId: row.rowId, expectedRevision: assigned.revision, progress: event.target.value })}><option value="not-started">Not started</option><option value="practicing">Practicing</option><option value="ready">Ready</option></select></label>}
+      {mode === "student" && assigned?.leads && !assigned.resourceNeedsReview && <label className={styles.progress}>My progress<select aria-label={`Progress for ${row.title}`} value={assigned.progress} disabled={current?.busy} onChange={event => void mutate("progress", { rowId: row.rowId, expectedRevision: assigned.revision, progress: event.target.value })}><option value="not-started">Not started</option><option value="practicing">Practicing</option><option value="ready">Ready</option></select></label>}
       {!staff && <details><summary>Ask about this part</summary><form onSubmit={event => { event.preventDefault(); void mutate("request", { rowId: row.rowId, message: drafts[requestKey]?.message ?? "" }, requestKey); }}><label>What would you like to change?<textarea maxLength={2000} required value={drafts[requestKey]?.message ?? ""} onChange={event => draft(requestKey, "message", event.target.value)} /></label><button className="button-primary" disabled={current?.busy}>Send request</button></form></details>}
       {staff && <details onToggle={event=>{if(event.currentTarget.open && !catalog){const selectedScope=scopeRef.current;void serviceApi.catalog(mode as "admin"|"tutor",studentId,new AbortController().signal).then(value=>{if(selectedScope===scopeRef.current)setCatalog(value);}).catch(()=>undefined);}}}><summary>{assigned?.leads ? "Edit this student’s part" : "Assign this part"}</summary><form onSubmit={event => { event.preventDefault(); void mutate("assign", { rowId: row.rowId, expectedRevision: assigned?.revision ?? 0, expectedStudentRevision:baseline?.student.revision,sourceRevision:linked?.sourceRevision,
         leads: drafts[key]?.leads === undefined ? assigned?.leads ?? true : drafts[key].leads === "true", directions: drafts[key]?.directions ?? assigned?.directions ?? "", privateFeedback: drafts[key]?.privateFeedback ?? assigned?.privateFeedback ?? "",
@@ -111,10 +125,12 @@ export function MyServicePanel({ mode, studentId, baseline,onConnected }: { mode
     {!view && !current?.busy && <button type="button" className="button-secondary" onClick={() => void reload()}>{parentName || !staff ? "Try again" : "Load my service"}</button>}
     {view && view.state !== "linked" && <p>{view.state === "ambiguous" ? "More than one service matches. Your tutor will connect the right one." : view.state === "review_required" ? "Your service is connected. Your tutor is reviewing the parts and resources." : staff ? "Your service connection is queued and retries automatically. The daily fallback may take until tomorrow; your roster and practice work are saved." : parentName ? <><bdi dir="auto">{parentName}</bdi>'s service parts aren't ready yet. The tutor is setting them up.</> : "Your service parts aren't ready yet. Your tutor is setting them up."}</p>}
     {linked && <>
-      <h3>Parts I lead</h3>
+      <h3 data-assigned-parts-heading={learner || undefined} tabIndex={learner ? -1 : undefined}>{learner ? "My assigned parts" : "Parts I lead"}</h3>
       {linked.parts.some(p => p.leads && !p.unresolved) ? <ol className={styles.parts}>{linked.rows.filter(row => linked.parts.some(p => p.rowId === row.rowId && p.leads)).map(row => part(row))}</ol> : <p>Your tutor will help you choose the parts you lead.</p>}
-      {linked.parts.filter(p => p.unresolved).map(p => <p key={p.rowId} className="reading-review">An assigned part was removed from the service. Your progress is saved; ask your tutor about its replacement.</p>)}
-      <details className={styles.order}><summary>Full order of service</summary><ol className={styles.parts}>{linked.rows.map(row => part(row, true))}</ol></details>
+      {linked.parts.filter(p => p.unresolved && (!learner || p.leads)).map(p => <p key={p.rowId} className="reading-review">An assigned part was removed from the service. Your progress is saved; ask your tutor about its replacement.</p>)}
+      <details className={styles.order}><summary>Full order of service</summary><ol className={styles.parts}>{linked.rows.map(row => learner
+        ? <li key={row.rowId} className={styles.part}>{row.title}{linked.parts.some(p => p.rowId === row.rowId && p.leads) && <span className={styles.note}> · You lead</span>}</li>
+        : part(row, true))}</ol></details>
       {linked.requests.length > 0 && <details className={styles.order}><summary>Part requests ({linked.requests.filter(r => r.state === "pending").length} pending)</summary><ul className={styles.parts}>{linked.requests.map(request => { const key = `response-${request.id}`; return <li key={request.id} className={styles.part}><strong>{linked.rows.find(row => row.rowId === request.rowId)?.title ?? "Removed service part"}</strong><p>{request.message}</p><p>{request.state === "pending" ? "Waiting for staff" : request.state === "accepted" ? "Accepted" : "Declined"}{request.response ? ` · ${request.response}` : ""}</p>{staff && request.state === "pending" && <form onSubmit={event => { event.preventDefault(); void mutate("respond", { requestId: request.id, expectedRevision: request.revision, state: "accepted", response: drafts[key]?.response ?? "" }, key); }}><label>Response<textarea maxLength={2000} value={drafts[key]?.response ?? ""} onChange={event => draft(key, "response", event.target.value)} /></label><p className={styles.note}>Make and approve musical changes in Music first. Refresh here, then accept.</p><div className={styles.actions}><button className="button-primary" disabled={current?.busy}>Verify change and accept</button><button type="button" className="button-secondary" disabled={current?.busy} onClick={() => void mutate("respond", { requestId: request.id, expectedRevision: request.revision, state: "declined", response: drafts[key]?.response ?? "" }, key)}>Decline with response</button></div></form>}</li>; })}</ul></details>}
     </>}
     {view&&"previousWork"in view&&view.previousWork.length>0&&<details><summary>Previous service work · needs review</summary><p>These parts are no longer current. Your saved work is here to review with your tutor.</p><ul>{view.previousWork.map(work=><li key={work.id}>Previous service part · {work.progress==="ready"?"Ready":work.progress==="practicing"?"Practicing":"Not started"}{work.directions&&<p className={styles.directions}>{work.directions}</p>}{work.privateFeedback&&<p className={styles.directions}>Private feedback: {work.privateFeedback}</p>}</li>)}</ul></details>}

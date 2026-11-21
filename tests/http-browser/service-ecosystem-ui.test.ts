@@ -21,7 +21,7 @@ let fixture:Awaited<ReturnType<typeof browserFixture>>,browser:Browser,stop:(()=
 const contexts:BrowserContext[]=[];let revoked=false;
 const projection:MusicProjection={setlistId:"synthetic-service",sourceRevision:"synthetic-revision-1",localDate:"2027-01-02",ceremonyType:"morning",operatorLinks:{music:"https://music.example.test/setlists/synthetic-service",review:"https://music.example.test/beit-mitzvah/synthetic"},rows:[
   {rowId:"synthetic-opening",order:0,title:"Synthetic opening part",prayerId:"synthetic-prayer",arrangement:{songId:"synthetic-song"},liturgyRef:{book:"synthetic-book",folio:2,serviceViewId:"synthetic-view"},resources:[{resourceId:"synthetic-score",kind:"score",label:"Practice score"},{resourceId:"synthetic-held-audio",kind:"audio",label:"Held recording"}]},
-  {rowId:"synthetic-closing",order:1,title:"Synthetic closing part",resources:[]},
+  {rowId:"synthetic-closing",order:1,title:"Synthetic closing part",catalogUnitId:"torah.hakafot@bm-shacharit",resources:[]},
 ]};
 const response=async():Promise<MusicResult>=>revoked?{version:1,status:"review_required",setlistId:projection.setlistId,sourceRevision:projection.sourceRevision,projection:{...projection,rows:[]}}:{version:1,status:"linked",setlistId:projection.setlistId,sourceRevision:projection.sourceRevision,projection};
 const broker:MusicBroker={ensure:response,projection:response,details:response,resource:async()=>{throw new Error("Synthetic resource access not requested");}};
@@ -41,6 +41,7 @@ beforeAll(async()=>{
     await fixture.ownerDb.insert(s.serviceCeremony).values({id:ceremonyId,tenantId:"crc",localDate:"2027-01-02",ceremonyType:"morning",requestedDate:"2027-01-02",requestedType:"morning",scheduleKey:"2027-01-02-morning",state:"linked",setlistId:projection.setlistId,projection});
     await fixture.ownerDb.insert(s.studentCeremony).values({tenantId:"crc",studentId:fixture.student.id,ceremonyId});
     await fixture.ownerDb.insert(s.studentServicePart).values({tenantId:"crc",studentId:fixture.student.id,ceremonyId,rowId:"synthetic-opening",resourceIdentity:resourceIdentity(projection.rows[0]),directions:"Practice this synthetic phrase.",privateFeedback:"Synthetic feedback for the student.",catalogId,catalogIdentity:content.identity,catalogUnitId:content.first});
+    await fixture.ownerDb.insert(s.studentServicePart).values({tenantId:"crc",studentId:fixture.student.id,ceremonyId,rowId:"synthetic-closing",resourceIdentity:resourceIdentity(projection.rows[1])});
     stage="Next server";stop=await startBrowserServer(fixture.withRuntime);stage="Chromium";isolation=await isolatedEnv();browser=await chromium.launch({headless:true,env:isolation.env});
   }catch(error){await browser?.close().catch(()=>undefined);await stop?.().catch(()=>undefined);await fixture?.close().catch(()=>undefined);await isolation?.cleanup();restore?.();throw new Error(`Synthetic service ecosystem browser setup failed at ${stage}${stage==="Next server"&&error instanceof Error?`: ${error.message}`:""}`);}
 },120000);
@@ -66,13 +67,29 @@ async function captures(tab:Page){
 }
 it("shows ceremony and individual parts on a phone, opens exact approved Hebrew, saves progress and sends a per-part request",async()=>{
   const tab=await page("student"),region=tab.locator("[data-my-service]");
-  await ui(region.getByRole("heading",{name:"Parts I lead",exact:true})).toBeVisible();await ui(region.getByText("Practice this synthetic phrase.",{exact:true}).first()).toBeVisible();
+  await ui(region.getByRole("heading",{name:"My assigned parts",exact:true})).toBeVisible();await ui(region.getByText("Practice this synthetic phrase.",{exact:true}).first()).toBeVisible();
   expect(await region.getByRole("button",{name:/Listen/}).count()).toBe(0);await region.getByRole("button",{name:"Read Synthetic opening part",exact:true}).first().click();
   await ui(region.locator(".service-unit-hebrew").first()).toBeVisible();await tab.getByLabel("Progress for Synthetic opening part",{exact:true}).first().selectOption("ready");
   await ui(tab.getByLabel("Progress for Synthetic opening part",{exact:true}).first()).toHaveValue("ready");
   await region.getByText("Ask about this part",{exact:true}).first().click();await region.getByLabel("What would you like to change?",{exact:true}).first().fill("Synthetic practice question");
   await region.getByRole("button",{name:"Send request",exact:true}).first().click();await ui(region.getByText("Part requests (1 pending)",{exact:true})).toBeVisible();
   await region.getByRole("button",{name:"Read Synthetic opening part",exact:true}).first().click();await ui(region.locator(".service-unit-hebrew").first()).toBeVisible();await captures(tab);
+});
+it("opens the lesson from its exact part, saves completion there, and returns to the ordered list", async () => {
+  const tab = await page("student");
+  const part = tab.locator('[data-service-row="synthetic-closing"]');
+  await ui(part.getByText("No practice recording is available for this part.")).toBeVisible();
+  await ui(tab.locator("[data-service-row] h4")).toHaveText(["Synthetic opening part", "Synthetic closing part"]);
+  await part.getByRole("link", { name: "Open lesson" }).click();
+  const next = tab.getByRole("button", { name: "Next", exact: true });
+  await ui(tab.locator('[data-lesson="torah-service"][data-step="about"]').getByRole("button", { name: "Next", exact: true })).toBeEnabled();
+  await next.click();
+  await next.click();
+  await ui(tab.getByRole("status").filter({ hasText: "Lesson finished." })).toBeVisible();
+  await tab.getByRole("link", { name: "My assigned parts", exact: true }).click();
+  await ui(part.getByText("Lesson finished.")).toBeVisible();
+  await ui(part.getByRole("heading", { name: "Synthetic closing part" })).toBeFocused();
+  await ui(tab.locator('[data-service-row="synthetic-opening"]').getByText("Lesson finished.")).toHaveCount(0);
 });
 it("lets staff answer a request without claiming a source edit and removes revoked resources on refresh",async()=>{
   const pending=await fixture.ownerDb.select().from(s.servicePartRequest);if(!pending.length){const [link]=await fixture.ownerDb.select().from(s.studentCeremony);await fixture.ownerDb.insert(s.servicePartRequest).values({tenantId:"crc",studentId:fixture.student.id,ceremonyId:link.ceremonyId,rowId:"synthetic-opening",message:"Synthetic practice question",sourceRevision:projection.sourceRevision,requestedResourceIdentity:resourceIdentity(projection.rows[0])});}
@@ -84,8 +101,8 @@ it("lets staff answer a request without claiming a source edit and removes revok
 });
 it("opens My service in selected child practice on a phone with guardian requests and no progress/private feedback controls",async()=>{
   revoked=false;const tab=await page("parent"),region=tab.locator("[data-my-service]");
-  await ui(region.getByRole("heading",{name:"Parts I lead",exact:true})).toBeVisible();expect(await region.getByText("Synthetic feedback for the student.",{exact:false}).count()).toBe(0);expect(await region.getByLabel("Progress for Synthetic opening part",{exact:true}).count()).toBe(0);expect(await region.getByRole("button",{name:/Listen/}).count()).toBe(0);
-  expect(await tab.locator(".service-additional-practice").getByText("No service parts have been assigned yet.",{exact:true}).isVisible()).toBe(false);await ui(tab.getByText("Additional practice",{exact:true})).toBeVisible();
+  await ui(region.getByRole("heading",{name:"My assigned parts",exact:true})).toBeVisible();expect(await region.getByText("Synthetic feedback for the student.",{exact:false}).count()).toBe(0);expect(await region.getByLabel("Progress for Synthetic opening part",{exact:true}).count()).toBe(0);expect(await region.getByRole("button",{name:/Listen/}).count()).toBe(0);
+  await ui(tab.getByText("Additional practice",{exact:true})).toHaveCount(0);
   await region.getByRole("button",{name:"Read Synthetic opening part",exact:true}).first().click();await ui(region.locator(".service-unit-hebrew").first()).toBeVisible();
   await region.getByText("Ask about this part",{exact:true}).first().click();await region.getByLabel("What would you like to change?",{exact:true}).first().fill("Synthetic guardian question");await region.getByRole("button",{name:"Send request",exact:true}).first().click();await ui(region.getByText("Part requests (1 pending)",{exact:true})).toBeVisible();
   await tab.emulateMedia({colorScheme:"light"});await tab.evaluate(async()=>{await document.fonts.ready;});const directory=join(process.cwd(),".impeccable","review","service-ecosystem");await mkdir(directory,{recursive:true});await region.screenshot({path:join(directory,"my-service-guardian-390-light.png")});

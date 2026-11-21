@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, sql,ne,isNull } from "drizzle-orm";
+import { and, eq, inArray, sql,ne,isNull } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAccessService } from "../access/service";
@@ -16,6 +16,8 @@ import type { MusicBroker, MusicProjection, MusicRow } from "./contract";
 import { verifyCeremonyMaterialMapping } from "../service-learning/service";
 import { ensureIntent } from "./intent";
 import { scheduleCeremony } from "./scheduling";
+import { lessonForUnit, tenantFile } from "../../lib/service-course/path";
+import { lessonById, lessonOpen } from "../../lib/service-course/course";
 
 type Selection = { studentId: string; mode: ActiveMode|"child-practice" };
 const bounded = (value: unknown, max: number, empty = true) => {
@@ -24,6 +26,17 @@ const bounded = (value: unknown, max: number, empty = true) => {
 };
 export const resourceIdentity = (row: MusicRow) => digest([row.prayerId,row.momentId, row.biblicalRef, row.edition, row.textIdentity, row.catalogUnitId, row.liturgyRef, row.arrangement, row.resources]);
 const stale = () => ({ ok: false as const, code: "stale-revision" as const });
+type ServicePart = typeof s.studentServicePart.$inferSelect;
+function partLesson(tenantId: string, projection: MusicProjection, part: ServicePart, row: MusicRow | undefined, availableCatalogs: ReadonlySet<string>) {
+  if (!row || !part.leads || resourceIdentity(row) !== part.resourceIdentity || part.catalogId && !availableCatalogs.has(part.catalogId)) return null;
+  const tenant = tenantFile(tenantId), unit = part.catalogUnitId ?? row.catalogUnitId;
+  if (!unit?.endsWith(projection.ceremonyType === "havdalah" ? "@bm-maariv" : "@bm-shacharit")) return null;
+  const id = tenant && unit ? lessonForUnit(tenant, unit) : null, lesson = id ? lessonById(id) : null;
+  if (!tenant || !lesson || !lessonOpen(lesson, undefined, tenant)) return null;
+  const key = digest(["service-part-lesson/v1", part.id, part.ceremonyId, row.rowId, projection.sourceRevision,
+    projection.ceremonyType, part.resourceIdentity, part.catalogId, part.catalogIdentity, unit, lesson.id]);
+  return { id: lesson.id, key, finished: part.lessonFinishedFor === key };
+}
 export function createServiceEcosystemService<Q extends PgQueryResultHKT>(input: { access: ReturnType<typeof createAccessService<Q>>;practice?:ReturnType<typeof createPracticeService<Q>>;broker: MusicBroker; studentAudioRelease?: boolean;dispatchScheduled?:()=>void|Promise<void> }) {
   const withStudent = <T>(request: AccessRequest, selection: Selection, staff: boolean, action:(tx:AccessTransaction<Q>,actor:StudentActor|PracticeActor,student:StudentView)=>Promise<T>):Promise<T> => {
     identifier(selection.studentId);
@@ -43,6 +56,13 @@ export function createServiceEcosystemService<Q extends PgQueryResultHKT>(input:
       .where(and(eq(s.studentCeremony.tenantId, tenantId), eq(s.studentCeremony.studentId, studentId)));
     const [value]=await(lockLink?query.for("update",{of:s.studentCeremony}):query);
     return value ?? null;
+  }
+  async function availableCatalogs(tx: AccessTransaction<Q>, tenantId: string, parts: readonly ServicePart[]) {
+    const ids = [...new Set(parts.flatMap(part => part.catalogId ? [part.catalogId] : []))];
+    if (!ids.length) return new Set<string>();
+    const rows = await tx.select({ id: s.serviceCatalogLifecycle.catalogId }).from(s.serviceCatalogLifecycle)
+      .where(and(eq(s.serviceCatalogLifecycle.tenantId, tenantId), inArray(s.serviceCatalogLifecycle.catalogId, ids), ne(s.serviceCatalogLifecycle.state, "withdrawn"))).for("share");
+    return new Set(rows.map(row => row.id));
   }
   async function synchronize(request: CookieMutationRequest, selection: Selection & { explicitSetlistId?: string }) {
     const baseline = await withStudent(request, selection, true, async (tx, actor) => {
@@ -108,19 +128,45 @@ export function createServiceEcosystemService<Q extends PgQueryResultHKT>(input:
       const assigned = await tx.select().from(s.studentServicePart).where(and(eq(s.studentServicePart.tenantId, actor.tenantId), eq(s.studentServicePart.studentId, selection.studentId), eq(s.studentServicePart.ceremonyId, value.ceremony.id)));
       const requests = await tx.select().from(s.servicePartRequest).where(and(eq(s.servicePartRequest.tenantId, actor.tenantId), eq(s.servicePartRequest.studentId, selection.studentId), eq(s.servicePartRequest.ceremonyId, value.ceremony.id)));
       const projection = live.projection;
+      const learning = (actor.mode === "student" || actor.mode === "child-practice") && matches && !value.ceremony.scheduleConflict;
+      const catalogs = learning ? await availableCatalogs(tx, actor.tenantId, assigned) : new Set<string>();
       const parts = assigned.map(part => { const row = projection.rows.find(row => row.rowId === part.rowId); return {
         rowId: part.rowId, leads: part.leads, directions: part.directions, progress: part.progress, revision: part.revision,
         catalogId:part.catalogId,catalogIdentity:part.catalogIdentity,catalogUnitId:part.catalogUnitId,
         ...(staff || actor.mode === "student" ? { privateFeedback: part.privateFeedback } : {}),
         resourceNeedsReview: !row || resourceIdentity(row) !== part.resourceIdentity, unresolved: !row,
+        ...(learning ? { lesson: partLesson(actor.tenantId, projection, part, row, catalogs) } : {}),
       }; });
       return { ...base, state: "linked" as const, sourceRevision: projection.sourceRevision,
-        rows: projection.rows.map(row => ({ rowId: row.rowId, title: row.title, order: row.order, prayerId: row.prayerId, biblicalRef: row.biblicalRef, edition: row.edition,
+        rows: [...projection.rows].sort((a, b) => a.order - b.order).map(row => ({ rowId: row.rowId, title: row.title, order: row.order, prayerId: row.prayerId, biblicalRef: row.biblicalRef, edition: row.edition,
           catalogUnitId: assigned.find(part=>part.rowId===row.rowId && part.resourceIdentity===resourceIdentity(row))?.catalogUnitId ?? undefined, liturgyRef: row.liturgyRef, sharedDirections: row.sharedDirections,
           resources: row.resources.filter(r => r.kind !== "audio" || staff || input.studentAudioRelease), arrangementResolved: Boolean(row.arrangement?.songId || row.arrangement?.fileId) })),
         parts,requests: requests.map(r => ({ id: r.id, rowId: r.rowId, message: r.message, response: r.response, state: r.state, revision: r.revision })),
         ...(staff ? { operatorLinks: projection.operatorLinks } : {}),
       };
+    });
+  }
+  async function lesson(request: CookieMutationRequest, selection: Selection & { rowId: string; key: string; lessonId: string; complete: boolean }) {
+    if (selection.mode !== "student" && selection.mode !== "child-practice" || !/^[0-9a-f]{64}$/.test(selection.key)) throw new AccessDenied(403);
+    const rowId = bounded(selection.rowId, 128, false);
+    const live = await loadLive(request, selection);
+    return withStudent(request, selection, false, async (tx, actor, student) => {
+      requireCookieMutation(request, actor.origin);
+      const currentService = await current(tx, actor.tenantId, student.id, selection.complete);
+      const projection = live.projection;
+      if (!currentService || live.state !== "linked" || !projection || currentService.ceremony.id !== live.baseline?.ceremony.id
+        || currentService.ceremony.revision !== live.baseline.ceremony.revision || currentService.ceremony.scheduleConflict
+        || projection.localDate !== student.ceremonyDate || projection.ceremonyType !== student.serviceSlot) return stale();
+      const where = and(eq(s.studentServicePart.tenantId, actor.tenantId), eq(s.studentServicePart.studentId, student.id),
+        eq(s.studentServicePart.ceremonyId, currentService.ceremony.id), eq(s.studentServicePart.rowId, rowId));
+      const query = tx.select().from(s.studentServicePart).where(where);
+      const [part] = await (selection.complete ? query.for("update") : query.for("share"));
+      const row = projection.rows.find(row => row.rowId === rowId);
+      if (!part) return stale();
+      const target = partLesson(actor.tenantId, projection, part, row, await availableCatalogs(tx, actor.tenantId, [part]));
+      if (!target || target.id !== selection.lessonId || target.key !== selection.key) return stale();
+      if (selection.complete && !target.finished) await tx.update(s.studentServicePart).set({ lessonFinishedFor: target.key }).where(where);
+      return { ok: true as const, slot: projection.ceremonyType };
     });
   }
   async function assign(request: CookieMutationRequest, selection: Selection & { rowId: string; expectedRevision: number; expectedStudentRevision:number; sourceRevision:string; leads: boolean; directions: string; privateFeedback: string; material?:{catalogId:string;catalogIdentity:string;unitId:string}|null }) {
@@ -137,7 +183,8 @@ export function createServiceEcosystemService<Q extends PgQueryResultHKT>(input:
         ...(selection.material===undefined ? {} : {catalogId:selection.material?.catalogId??null,catalogIdentity:selection.material?.catalogIdentity??null,catalogUnitId:selection.material?.unitId??null}) };
       const where = and(eq(s.studentServicePart.tenantId, actor.tenantId), eq(s.studentServicePart.studentId, selection.studentId), eq(s.studentServicePart.ceremonyId, value.ceremony.id), eq(s.studentServicePart.rowId, rowId));
       const [saved] = expected === 0 ? await tx.insert(s.studentServicePart).values({ ...values, tenantId: actor.tenantId, studentId: selection.studentId, ceremonyId: value.ceremony.id, rowId }).onConflictDoNothing().returning()
-        : await tx.update(s.studentServicePart).set({ ...values, revision: expected + 1 }).where(and(where, eq(s.studentServicePart.revision, expected))).returning();
+        : await tx.update(s.studentServicePart).set({ ...values, revision: expected + 1,
+          ...(!selection.leads ? { lessonFinishedFor: null } : {}) }).where(and(where, eq(s.studentServicePart.revision, expected))).returning();
       return saved ? { ok: true as const } : stale();
     });
   }
@@ -239,5 +286,5 @@ export function createServiceEcosystemService<Q extends PgQueryResultHKT>(input:
     if(result.ok)try{await input.dispatchScheduled?.();}catch{/* Original intent remains queued for the daily drain. */}
     return result;
   }
-  return Object.freeze({ synchronize, view, assign, progress, requestChange, respond, resource, materialMapping,separate,resolveOriginal });
+  return Object.freeze({ synchronize, view, lesson, assign, progress, requestChange, respond, resource, materialMapping,separate,resolveOriginal });
 }

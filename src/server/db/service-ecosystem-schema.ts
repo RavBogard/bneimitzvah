@@ -48,6 +48,7 @@ export const studentServicePart = pgTable("student_service_part", {
   progress: text("progress").$type<"not-started" | "practicing" | "ready">().default("not-started").notNull(),
   resourceIdentity: text("resource_identity").notNull(), revision: integer("revision").default(1).notNull(),
   catalogId: uuid("catalog_id"), catalogIdentity: text("catalog_identity"), catalogUnitId: text("catalog_unit_id"),
+    lessonFinishedFor: text("lesson_finished_for"),
 }, t => [unique("student_service_part_key").on(t.tenantId, t.studentId, t.ceremonyId, t.rowId),
   foreignKey({ name: "service_part_student_fk", columns: [t.tenantId, t.studentId], foreignColumns: [student.tenantId, student.id] }),
   foreignKey({ name: "service_part_ceremony_fk", columns: [t.tenantId, t.ceremonyId], foreignColumns: [serviceCeremony.tenantId, serviceCeremony.id] }),
@@ -55,6 +56,7 @@ export const studentServicePart = pgTable("student_service_part", {
   check("service_part_material_shape",sql`(${t.catalogId} is null and ${t.catalogIdentity} is null and ${t.catalogUnitId} is null) or (${t.catalogId} is not null and ${t.catalogIdentity} is not null and ${t.catalogUnitId} is not null and length(${t.catalogUnitId}) between 1 and 128)`),
   check("service_part_bound", sql`length(${t.rowId}) between 1 and 128 and length(${t.directions}) <= 4000 and length(${t.privateFeedback}) <= 4000 and ${t.revision} > 0`),
   check("service_part_progress", sql`${t.progress} in ('not-started','practicing','ready')`),
+    check("service_part_lesson_finished_for", sql`${t.lessonFinishedFor} is null or ${t.lessonFinishedFor} ~ '^[0-9a-f]{64}$'`),
 ]);
 export const servicePartRequest = pgTable("service_part_request", {
   id: id(), tenantId: tenantId(), studentId: uuid("student_id").notNull(), ceremonyId: uuid("ceremony_id").notNull(), rowId: text("row_id").notNull(),

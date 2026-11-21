@@ -864,6 +864,78 @@
   "body": true
  },
  {
+  "request": "POST /api/students/{student}/my-service/lesson",
+  "status": 400,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "POST /api/students/{student}/my-service/lesson (signed out)",
+  "status": 400,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "GET /api/students/{student}/my-service/lesson (wrong method)",
+  "status": 405,
+  "allow": "POST",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "HEAD /api/students/{student}/my-service/lesson",
+  "status": 405,
+  "allow": "POST",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "OPTIONS /api/students/{student}/my-service/lesson",
+  "status": 405,
+  "allow": "POST",
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "POST /api/students/{student}/my-service/lesson/ (trailing slash)",
+  "status": 404,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "POST /api/students/{student}/my-service/lessonx (near miss)",
+  "status": 404,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
+  "request": "POST /api/students/{student}/my-service/lesson?unexpected=1 (unexpected query)",
+  "status": 400,
+  "allow": null,
+  "cacheControl": "private, no-store",
+  "contentType": "application/json; charset=utf-8",
+  "location": null,
+  "body": true
+ },
+ {
   "request": "GET /api/students/{student}/honors",
   "status": 400,
   "allow": null,

@@ -23,7 +23,7 @@ const owned: [string, string[]][] = [
   // service-ecosystem, including its internal cron path
   ["/api/internal/service-ecosystem/drain", ["GET"]],
   [`/api/students/${S}/my-service`, ["GET"]],
-  ...["synchronize", "assign", "progress", "request", "respond", "resource", "material", "separate", "resolve-original"].map((op): [string, string[]] => [`/api/students/${S}/my-service/${op}`, ["POST"]]),
+  ...["synchronize", "assign", "progress", "request", "respond", "resource", "material", "separate", "resolve-original", "lesson"].map((op): [string, string[]] => [`/api/students/${S}/my-service/${op}`, ["POST"]]),
   // honors
   [`/api/students/${S}/honors`, ["GET", "POST"]], [`/api/students/${S}/honors/receipt`, ["POST"]],
   // source content and source assignments
@@ -153,6 +153,6 @@ test("characterization: every route module answers exactly as recorded", { timeo
     await drive("", "/api/auth/sign-out", { method: "POST", body: {} });
     const json = `${JSON.stringify(rows, null, 1)}\n`;
     if (process.env.UPDATE_DISPATCH_CHARACTERIZATION === "1") writeFileSync(FIXTURE, json);
-    expect(json).toBe(readFileSync(FIXTURE, "utf8"));
+    expect(json).toBe(readFileSync(FIXTURE, "utf8").replace(/\r\n/g, "\n"));
   } finally { network.mockRestore(); await f.client.close(); }
 });

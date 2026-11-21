@@ -27,9 +27,9 @@ async function fixture() {
   const students = createStudentService({ access: f.service, signingSecret: randomBytes(48).toString("base64url"), loadReading: async () => { throw new Error("Synthetic calendar unused"); }, afterSchedule: service.synchronize });
   const mutation = (who: "admin" | "multi" | "learner" = "admin", origin = "http://localhost:3000") => ({ ...f.request(who, "http://localhost:3000", { origin }), method: "POST" });
   const selection = { studentId: f.students[0].id, mode: "admin" as const };
-  async function scheduled(index = 0) { await f.service.withStudentCapability(mutation(), { studentId: f.students[index].id, mode: "admin", capability: "set-service-plan" }, async (tx, actor) => {
-    await tx.update(s.student).set({ ceremonyDate: "2027-01-02", serviceSlot: "morning" }).where(eq(s.student.id, f.students[index].id));
-    await scheduleCeremony(tx, actor.tenantId, { id: f.students[index].id, ceremonyDate: "2027-01-02", serviceSlot: "morning" });
+  async function scheduled(index = 0, serviceSlot: "morning" | "havdalah" = "morning") { await f.service.withStudentCapability(mutation(), { studentId: f.students[index].id, mode: "admin", capability: "set-service-plan" }, async (tx, actor) => {
+    await tx.update(s.student).set({ ceremonyDate: "2027-01-02", serviceSlot }).where(eq(s.student.id, f.students[index].id));
+    await scheduleCeremony(tx, actor.tenantId, { id: f.students[index].id, ceremonyDate: "2027-01-02", serviceSlot });
   }); }
   const assign = () => service.assign(mutation(), { ...selection, rowId: "stable-part", expectedRevision: 0, expectedStudentRevision:1,sourceRevision:projection.sourceRevision,leads: true, directions: "Synthetic student directions", privateFeedback: "Synthetic private feedback" });
   return { ...f,practice,broker,ecosystem:service,studentsService:students,mutation,selection,scheduled,assign,
@@ -83,6 +83,43 @@ test("ambiguity requires explicit staff choice and retries preserve durable cere
   expect(vi.mocked(f.broker.ensure).mock.calls[0][0].ceremonyId).toBe(vi.mocked(f.broker.ensure).mock.calls[1][0].ceremonyId);
 });
 
+test("an assigned course lesson binds one student, row, service version and slot without changing readiness", async () => {
+  const f = await fixture();
+  await f.scheduled();
+  const [first] = f.projection().rows;
+  f.change({ rows: [{ ...first, rowId: "other-part", order: 2, catalogUnitId: "torah.hakafot@bm-shacharit" },
+    { ...first, catalogUnitId: "torah.hakafot@bm-shacharit" }] });
+  await f.ecosystem.synchronize(f.mutation(), f.selection);
+  await f.assign();
+  await f.ecosystem.assign(f.mutation(), { ...f.selection, rowId: "other-part", expectedRevision: 0, expectedStudentRevision: 1,
+    sourceRevision: f.projection().sourceRevision, leads: true, directions: "", privateFeedback: "" });
+  const selection = { ...f.selection, mode: "student" as const };
+  const opened = await f.ecosystem.view(f.request("learner"), selection);
+  if (!("parts" in opened)) throw new Error("Synthetic service unavailable");
+  expect(opened.rows.map(row => row.rowId)).toEqual(["stable-part", "other-part"]);
+  const target = opened.parts.find(part => part.rowId === "stable-part")!.lesson!;
+  expect(target).toMatchObject({ id: "torah-service", finished: false });
+  const binding = { ...selection, rowId: "stable-part", key: target.key, lessonId: target.id, complete: false };
+  expect(await f.ecosystem.lesson(f.mutation("learner"), binding)).toEqual({ ok: true, slot: "morning" });
+  expect(await denied(() => f.ecosystem.lesson(f.mutation("multi"), { ...binding, mode: "parent" }), 403)).toBe(true);
+  expect(await f.ecosystem.lesson(f.mutation("learner"), { ...binding, rowId: "other-part", complete: true })).toMatchObject({ ok: false });
+  expect(await f.ecosystem.lesson(f.mutation("learner"), { ...binding, complete: true })).toEqual({ ok: true, slot: "morning" });
+  const finished = await f.ecosystem.view(f.request("learner"), selection);
+  if (!("parts" in finished)) throw new Error("Synthetic service unavailable");
+  expect(finished.parts.find(part => part.rowId === "stable-part")).toMatchObject({ lesson: { finished: true }, progress: "not-started" });
+  expect(finished.parts.find(part => part.rowId === "other-part")).toMatchObject({ lesson: { finished: false } });
+  const currentRows = f.projection().rows;
+  f.change({ sourceRevision: "revision-2", rows: currentRows.filter(row => row.rowId !== "stable-part") });
+  expect(await f.ecosystem.lesson(f.mutation("learner"), { ...binding, complete: true })).toMatchObject({ ok: false });
+  const removed = await f.ecosystem.view(f.request("learner"), selection);
+  if (!("parts" in removed)) throw new Error("Synthetic service unavailable");
+  expect(removed.parts.find(part => part.rowId === "stable-part")).toMatchObject({ unresolved: true, lesson: null });
+  f.change({ sourceRevision: "revision-3", rows: currentRows });
+  const replaced = await f.ecosystem.view(f.request("learner"), selection);
+  if (!("parts" in replaced)) throw new Error("Synthetic service unavailable");
+  expect(replaced.parts.find(part => part.rowId === "stable-part")).toMatchObject({ lesson: { finished: false } });
+});
+
 test("guardian projection hides private feedback, foreign/unrelated and wrong-origin mutations fail closed", async () => {
   const f = await fixture(); await f.scheduled(); await f.ecosystem.synchronize(f.mutation(), f.selection); await f.assign();
   const guardian = await f.ecosystem.view(f.request("multi"), { ...f.selection, mode: "parent" });
@@ -93,6 +130,21 @@ test("guardian projection hides private feedback, foreign/unrelated and wrong-or
   expect(await denied(() => f.ecosystem.progress(f.mutation("multi"), { ...f.selection, mode: "parent", rowId: "stable-part", expectedRevision: 1, progress: "ready" }), 403)).toBe(true);
   await f.owner(() => f.db.execute(sql`update guardian set revoked_at=now(),revision=revision+1 where student_id=${f.selection.studentId}`));
   expect(await denied(() => f.ecosystem.view(f.request("multi"), { ...f.selection, mode: "parent" }), 404)).toBe(true);
+});
+
+test("the same part mapping opens in the Havdalah lesson variant", async () => {
+  const f = await fixture();
+  await f.scheduled(0, "havdalah");
+  f.change({ ceremonyType: "havdalah", rows: f.projection().rows.map(row => ({ ...row, catalogUnitId: "havdalah.parents-blessing@bm-maariv" })) });
+  await f.ecosystem.synchronize(f.mutation(), f.selection);
+  await f.assign();
+  const selection = { studentId: f.selection.studentId, mode: "student" as const };
+  const view = await f.ecosystem.view(f.request("learner"), selection);
+  if (!("parts" in view)) throw new Error("Synthetic service unavailable");
+  const lesson = view.parts[0].lesson!;
+  expect(lesson.id).toBe("parents-blessing");
+  expect(await f.ecosystem.lesson(f.mutation("learner"), { ...selection, rowId: view.parts[0].rowId, lessonId: lesson.id, key: lesson.key, complete: false }))
+    .toEqual({ ok: true, slot: "havdalah" });
 });
 
 test("reorder preserves progress; changed identities flag resources and deleted rows retain unresolved work", async () => {

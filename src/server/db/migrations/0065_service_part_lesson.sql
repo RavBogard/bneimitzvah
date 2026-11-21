@@ -1,0 +1,2 @@
+ALTER TABLE "student_service_part" ADD COLUMN "lesson_finished_for" text;--> statement-breakpoint
+ALTER TABLE "student_service_part" ADD CONSTRAINT "service_part_lesson_finished_for" CHECK ("student_service_part"."lesson_finished_for" is null or "student_service_part"."lesson_finished_for" ~ '^[0-9a-f]{64}$');

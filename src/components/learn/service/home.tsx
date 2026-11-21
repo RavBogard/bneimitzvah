@@ -18,6 +18,7 @@ import { signInAddress } from "../../../lib/site/return-address";
 import { PersonalStudyLink } from "../scoped-learning";
 import { useChildLearning } from "../child-practice";
 import { useIdentity } from "../../site/identity-context";
+import { assignedPartsHref } from "../../../lib/service-course/assigned-parts";
 
 /** One lesson row. Every row is a link, in every state: a lesson never locks, so nothing here is a bare span (DP-09). */
 function Row({ lesson, progress, next, page }: { lesson: Lesson; progress: Progress; next: Lesson | null; page?: number }) {
@@ -104,6 +105,7 @@ export function ServiceHome() {
           <h1 className={learn.title}>{COPY.home.title}</h1>
           <p className={learn.intro}>{evening.length ? COPY.home.introWithEvening : COPY.home.intro}</p>
           {identity.crc && <p><a href="/recordings?category=blessing">Listen to Cantor Wendy Shermet’s blessings and prayers</a></p>}
+          {view.status === "ready" && <p><a href={assignedPartsHref(child?.selection.context.studentId)}>My assigned parts</a></p>}
           {view.status === "ready" && !child && <PersonalStudyLink course="service" />}
           {!ready ? <p role="status" className={learn.state}>{COPY.state.homeLoading}</p>
             : courseDone(progress) ? <section className={learn.next} aria-labelledby="service-next"><h2 id="service-next" className={learn.nextTitle}>{COPY.home.done}</h2></section>

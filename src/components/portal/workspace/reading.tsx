@@ -511,7 +511,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   // Arriving at /mine/reading#lessons (or an old ?tab= address the redirect turned into a hash): once the reading is shown, bring that section forward, once.
   useEffect(() => {
     if (hashed.current === key || !authorizedReading) return;
-    const id = decodeURIComponent(window.location.hash.slice(1)); hashed.current = key;
+    const id = decodeURIComponent(window.location.hash.slice(1).split("?", 1)[0]); hashed.current = key;
     if (sectionIds.includes(id)) requestAnimationFrame(() => toSection(id));
   }, [authorizedReading, key, toSection]);
   const serviceBlock = tabPanel("service", <><ServiceLearningPanel id={serviceId} headingId={SECTION_IDS.service} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} onDepartureActive={setServiceDepartureActive} onVisit={(plan, unitId) => { calendar.visitUnit(plan, unitId); completeDay(); }} />
