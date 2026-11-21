@@ -48,9 +48,9 @@ type Activity = { queue: Queue; lease: Promise<PracticeLease | null> };
 export function usePracticeCompleted(workspace?: WorkspaceLearner, saved?: "ref") {
   const child = useChildLearning(), offlineChild = useOfflineChildLearning(), personal = usePersonalLearning(), path = usePathname();
   const held = useRef<Activity | null>(null), mode = workspace?.mode, studentId = workspace?.studentId;
-  const pack = saved || mode ? "ref" : path === "/learn/service" || path.startsWith("/learn/service/") ? "service" : "course";
+  const pack = saved || mode ? "ref" : path === "/learn/service" || path?.startsWith("/learn/service/") ? "service" : "course";
   useEffect(() => {
-    if (personal || mode && mode !== "student" && mode !== "child-practice") return;
+    if (!path || personal || mode && mode !== "student" && mode !== "child-practice") return;
     const selection = child?.selection ?? (mode === "child-practice" ? tabPractice().selection : null);
     if (!offlineChild && !selection && (mode === "child-practice" || waitingForLearningScope())) return;
     if (studentId && selection && selection.context.studentId !== studentId) return;
@@ -94,7 +94,7 @@ export function usePracticeCompleted(workspace?: WorkspaceLearner, saved?: "ref"
 export function PracticeDateReplay() {
   const path = usePathname();
   useEffect(() => {
-    if (path === "/preview" || path.startsWith("/preview/")) return;
+    if (!path || path === "/preview" || path.startsWith("/preview/")) return;
     const replay = (renewLease = false) => {
       if (!renewLease && !hasPracticeDates(storage())) return;
       const selection = tabPractice().selection;
