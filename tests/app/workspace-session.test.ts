@@ -12,7 +12,7 @@ vi.mock("react", async load => {
   const actual = await load<typeof import("react")>();
   return { ...actual,
     useRef: (value: unknown) => { const i = host.cursor++; return host.slots[i] ??= { current: value }; },
-    useState: (value: unknown) => { const i = host.cursor++; if (!(i in host.slots)) host.slots[i] = value; return [host.slots[i], (next: unknown) => { host.slots[i] = typeof next === "function" ? next(host.slots[i]) : next; }]; },
+    useState: (value: unknown) => { const i = host.cursor++; if (!(i in host.slots)) host.slots[i] = typeof value === "function" ? value() : value; return [host.slots[i], (next: unknown) => { host.slots[i] = typeof next === "function" ? next(host.slots[i]) : next; }]; },
     useCallback: (callback: unknown, deps: unknown[]) => { const i = host.cursor++, previous = host.slots[i] as { deps: unknown[]; callback: unknown } | undefined; if (!previous || deps.some((value, index) => value !== previous.deps[index])) host.slots[i] = { deps, callback }; return (host.slots[i] as { callback: unknown }).callback; },
     useEffect: (effect: () => void | (() => void), deps: unknown[]) => {
       const i = host.cursor++, previous = host.slots[i] as unknown[] | undefined;
@@ -21,7 +21,7 @@ vi.mock("react", async load => {
     },
   };
 });
-vi.mock("next/navigation", () => ({ usePathname: () => host.path, useRouter: () => host.router }));
+vi.mock("next/navigation", () => ({ usePathname: () => host.path, useRouter: () => host.router, useSearchParams: () => new URL(window.location.href).searchParams }));
 vi.mock("next/link", () => ({ default: () => null }));
 vi.mock("../../src/components/portal/api", async load => ({ ...await load<typeof import("../../src/components/portal/api")>(), requestPortal: host.portal }));
 vi.mock("../../src/components/portal/workspace/api", async load => {
@@ -37,6 +37,7 @@ vi.mock("../../src/components/portal/workspace/study/short-exploration-api", asy
   ...await load<typeof import("../../src/components/portal/workspace/study/short-exploration-api")>(), checkShortExplorationExpectation: () => undefined, fetchShortExplorationPage: host.shortPage }));
 // The owner's own caching and expiry are tested elsewhere; here its provider-supplied read is exercised directly.
 vi.mock("../../src/components/portal/workspace/study/short-exploration-owner", () => ({ createShortExplorationOwner: (input: unknown) => input }));
+import { PracticeNavigationGuard } from "../../src/components/learn/child-practice";
 import { WorkspaceProvider } from "../../src/components/portal/workspace/provider";
 import { RETURN_RECHECK_MS } from "../../src/components/portal/workspace/session";
 import { PRACTICE_ACCESS_CHANGED } from "../../src/components/portal/workspace/practice-mode";
@@ -61,7 +62,7 @@ function walk(node: ReactNode, visit: (props: Props, element: ReactElement<Props
   const element = node as ReactElement<Props>; visit(element.props, element); walk(element.props.children, visit);
 }
 let tree: ReactNode = null;
-function render(effects = true) { host.cursor = 0; tree = WorkspaceProvider({ children: "Synthetic private subtree" }); if (effects) host.effects.splice(0).forEach(effect => effect()); return workspace(); }
+function render(effects = true) { host.cursor = 0; PracticeNavigationGuard(); tree = WorkspaceProvider({ children: "Synthetic private subtree" }); if (effects) host.effects.splice(0).forEach(effect => effect()); return workspace(); }
 function workspace() { let found: Workspace | undefined; walk(tree, props => { if (props.value?.readPracticeCalendar) found ??= props.value; }); return found; }
 function providerKey() { let key: string | null | undefined; walk(tree, (props, element) => { if (props.value?.readPracticeCalendar) key = element.key; }); return key; }
 function shellState() { let state: string | undefined; walk(tree, props => { if (props["data-testid"] === "workspace-state") state = props["data-workspace-state"]; }); return state; }
