@@ -23,7 +23,10 @@ async function fixture() {
   const linked = (): MusicResult => { if (!available) throw new AccessUnavailable(); return { version: 1, status: "linked", setlistId: projection.setlistId, sourceRevision: projection.sourceRevision, projection: structuredClone(projection) }; };
   const broker: MusicBroker = { ensure: vi.fn(async (input): Promise<MusicResult> => { if (!available) throw new AccessUnavailable(); if (ambiguous && !input.explicitSetlistId) return { version: 1, status: "ambiguous", candidates: [{ setlistId: "synthetic-set" }, { setlistId: "synthetic-other" }] }; return linked(); }),
     projection: vi.fn(async () => linked()), details: vi.fn(async () => linked()), resource: vi.fn(async (_ceremony, _row, resourceId) => { if (!available) throw new AccessUnavailable(); return { resourceId, kind: "score" as const, url: "https://music.example.test/api/scoped/synthetic", expiresAt: new Date(Date.now() + 60000).toISOString() }; }) };
-  const practice=createPracticeService({access:f.service}),service=createServiceEcosystemService({access:f.service,practice,broker});
+  const practice = createPracticeService({ access: f.service });
+  const directCapability = vi.fn(f.service.withStudentCapability), childCapability = vi.fn(practice.withPracticeCapability);
+  const service = createServiceEcosystemService({ access: { ...f.service, withStudentCapability: directCapability as typeof f.service.withStudentCapability },
+    practice: { ...practice, withPracticeCapability: childCapability as typeof practice.withPracticeCapability }, broker });
   const students = createStudentService({ access: f.service, signingSecret: randomBytes(48).toString("base64url"), loadReading: async () => { throw new Error("Synthetic calendar unused"); }, afterSchedule: service.synchronize });
   const mutation = (who: "admin" | "multi" | "learner" = "admin", origin = "http://localhost:3000") => ({ ...f.request(who, "http://localhost:3000", { origin }), method: "POST" });
   const selection = { studentId: f.students[0].id, mode: "admin" as const };
@@ -32,7 +35,7 @@ async function fixture() {
     await scheduleCeremony(tx, actor.tenantId, { id: f.students[index].id, ceremonyDate: "2027-01-02", serviceSlot });
   }); }
   const assign = () => service.assign(mutation(), { ...selection, rowId: "stable-part", expectedRevision: 0, expectedStudentRevision:1,sourceRevision:projection.sourceRevision,leads: true, directions: "Synthetic student directions", privateFeedback: "Synthetic private feedback" });
-  return { ...f,practice,broker,ecosystem:service,studentsService:students,mutation,selection,scheduled,assign,
+  return { ...f,practice,broker,ecosystem:service,studentsService:students,mutation,selection,scheduled,assign,directCapability,childCapability,
     unavailable: () => { available = false; }, restore: () => { available = true; }, ambiguous: () => { ambiguous = true; }, change: (next: Partial<MusicProjection>) => { projection = { ...projection, ...next }; }, projection: () => structuredClone(projection) };
 }
 async function denied(action: () => Promise<unknown>, status: number) { try { await action(); return false; } catch (error) { return error instanceof AccessDenied && error.status === status; } }
@@ -100,10 +103,14 @@ test("an assigned course lesson binds one student, row, service version and slot
   const target = opened.parts.find(part => part.rowId === "stable-part")!.lesson!;
   expect(target).toMatchObject({ id: "torah-service", finished: false });
   const binding = { ...selection, rowId: "stable-part", key: target.key, lessonId: target.id, complete: false };
+  f.directCapability.mockClear();
   expect(await f.ecosystem.lesson(f.mutation("learner"), binding)).toEqual({ ok: true, slot: "morning" });
+  expect(f.directCapability.mock.calls.map(([, request]) => request.capability)).toEqual(["read", "read"]);
   expect(await denied(() => f.ecosystem.lesson(f.mutation("multi"), { ...binding, mode: "parent" }), 403)).toBe(true);
   expect(await f.ecosystem.lesson(f.mutation("learner"), { ...binding, rowId: "other-part", complete: true })).toMatchObject({ ok: false });
+  f.directCapability.mockClear();
   expect(await f.ecosystem.lesson(f.mutation("learner"), { ...binding, complete: true })).toEqual({ ok: true, slot: "morning" });
+  expect(f.directCapability.mock.calls.map(([, request]) => request.capability)).toEqual(["read", "practice-write"]);
   const finished = await f.ecosystem.view(f.request("learner"), selection);
   if (!("parts" in finished)) throw new Error("Synthetic service unavailable");
   expect(finished.parts.find(part => part.rowId === "stable-part")).toMatchObject({ lesson: { finished: true }, progress: "not-started" });
@@ -311,17 +318,29 @@ test("a never-linked joint conflict can explicitly finish its original connectio
 });
 
 test("selected child practice permits linked guardian viewing and requests, with no private feedback, progress/staff authority or sibling leakage",async()=>{
-  const f=await fixture();await f.scheduled();await f.ecosystem.synchronize(f.mutation(),f.selection);await f.assign();
+  const f=await fixture();await f.scheduled();
+  f.change({ rows: f.projection().rows.map(row => ({ ...row, catalogUnitId: "torah.hakafot@bm-shacharit" })) });
+  await f.ecosystem.synchronize(f.mutation(),f.selection);await f.assign();
   await f.owner(()=>f.db.update(s.guardian).set({practiceEnabled:true,revision:2}));
   const selected=await f.practice.enter(f.mutation("multi"),{studentId:f.selection.studentId});
   const request={...f.mutation("multi"),headers:new Headers({...Object.fromEntries(f.mutation("multi").headers),"X-Practice-Context":selected.handle})};
   const child={...f.selection,mode:"child-practice"as const},view=await f.ecosystem.view(request,child);
   expect(view.state).toBe("linked");expect(JSON.stringify(view)).not.toContain("private feedback");expect(JSON.stringify(view)).not.toContain("operatorLinks");
+  if (!("parts" in view)) throw new Error("Synthetic service unavailable");
+  const target = view.parts[0].lesson!;
+  const completion = { ...child, rowId: view.parts[0].rowId, lessonId: target.id, key: target.key, complete: true };
+  f.childCapability.mockClear();
+  expect(await f.ecosystem.lesson(request, { ...completion, complete: false })).toMatchObject({ ok: true });
+  expect(f.childCapability.mock.calls.map(([, selection]) => selection.capability)).toEqual(["read", "read"]);
+  f.childCapability.mockClear();
+  expect(await f.ecosystem.lesson(request, completion)).toMatchObject({ ok: true });
+  expect(f.childCapability.mock.calls.map(([, selection]) => selection.capability)).toEqual(["read", "practice-write"]);
   expect((await f.ecosystem.requestChange(request,{...child,rowId:"stable-part",message:"Synthetic parent practice request"})).ok).toBe(true);
   expect(await denied(()=>f.ecosystem.progress(request,{...child,rowId:"stable-part",expectedRevision:1,progress:"ready"}),403)).toBe(true);
   expect(await denied(()=>f.ecosystem.synchronize(request,child),403)).toBe(true);
   expect(await denied(()=>f.ecosystem.view(request,{...child,studentId:f.students[1].id}),404)).toBe(true);
   await f.practice.switch(request,{studentId:f.students[1].id});expect(await denied(()=>f.ecosystem.view(request,child),404)).toBe(true);
+  expect(await denied(() => f.ecosystem.lesson(request, completion), 404)).toBe(true);
 });
 
 test("an in-flight scheduler result cannot overwrite a newer durable roster schedule intent",async()=>{

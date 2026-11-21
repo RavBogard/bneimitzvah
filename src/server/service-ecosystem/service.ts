@@ -38,13 +38,14 @@ function partLesson(tenantId: string, projection: MusicProjection, part: Service
   return { id: lesson.id, key, finished: part.lessonFinishedFor === key };
 }
 export function createServiceEcosystemService<Q extends PgQueryResultHKT>(input: { access: ReturnType<typeof createAccessService<Q>>;practice?:ReturnType<typeof createPracticeService<Q>>;broker: MusicBroker; studentAudioRelease?: boolean;dispatchScheduled?:()=>void|Promise<void> }) {
-  const withStudent = <T>(request: AccessRequest, selection: Selection, staff: boolean, action:(tx:AccessTransaction<Q>,actor:StudentActor|PracticeActor,student:StudentView)=>Promise<T>):Promise<T> => {
+  const withStudent = <T>(request: AccessRequest, selection: Selection, staff: boolean, action:(tx:AccessTransaction<Q>,actor:StudentActor|PracticeActor,student:StudentView)=>Promise<T>, practiceWrite = false):Promise<T> => {
     identifier(selection.studentId);
+    const capability = practiceWrite ? "practice-write" : "read";
     if(selection.mode==="child-practice"){
       if(staff || !input.practice)throw new AccessDenied(403);
-      return input.practice.withPracticeCapability<T>(request,{...selection,mode:"child-practice",capability:"read"},async(tx,actor,student)=>{if(actor.tenantId!=="crc")throw new AccessDenied(404);return action(tx,actor,student);});
+      return input.practice.withPracticeCapability<T>(request,{...selection,mode:"child-practice",capability},async(tx,actor,student)=>{if(actor.tenantId!=="crc")throw new AccessDenied(404);return action(tx,actor,student);});
     }
-    return input.access.withStudentCapability<T>(request, { studentId:selection.studentId,mode:selection.mode,capability: staff ? "set-service-plan" : "read" }, async (tx, actor, student) => {
+    return input.access.withStudentCapability<T>(request, { studentId:selection.studentId,mode:selection.mode,capability: staff ? "set-service-plan" : capability }, async (tx, actor, student) => {
       // The dedicated source credential is bound to CRC, never to arbitrary tenant membership.
       if (actor.tenantId !== "crc") throw new AccessDenied(404);
       return action(tx, actor, student);
@@ -167,7 +168,7 @@ export function createServiceEcosystemService<Q extends PgQueryResultHKT>(input:
       if (!target || target.id !== selection.lessonId || target.key !== selection.key) return stale();
       if (selection.complete && !target.finished) await tx.update(s.studentServicePart).set({ lessonFinishedFor: target.key }).where(where);
       return { ok: true as const, slot: projection.ceremonyType };
-    });
+    }, selection.complete);
   }
   async function assign(request: CookieMutationRequest, selection: Selection & { rowId: string; expectedRevision: number; expectedStudentRevision:number; sourceRevision:string; leads: boolean; directions: string; privateFeedback: string; material?:{catalogId:string;catalogIdentity:string;unitId:string}|null }) {
     const rowId = bounded(selection.rowId, 128, false), expected = selection.expectedRevision;
