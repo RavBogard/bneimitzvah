@@ -303,7 +303,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   const practicingMode = mode === "student" || mode === "child-practice", practicing = practicingMode && Boolean(student) && readings.length > 0 && !exploring;
   // Tutors and admins teach from the same Song session reading, and keep the staff assignment details.
   const staff = mode === "tutor" || mode === "admin", song = learner || staff, editorId = `${serviceId}-editor`;
-  const reloadTutorLessons = useRef(false);
+  const restoreStaffPanels = useRef<Assigned | null>(null);
   const practiceClose = useRef<HTMLButtonElement>(null);
   const practiceOrigin = useRef<{ element: HTMLElement | null; target: "dock" | "hero" | "verse" }>({ element: null, target: "verse" });
   const enterPractice = () => {
@@ -316,7 +316,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   };
   const closePractice = () => {
     const passage = readingPanel.current?.querySelector<HTMLElement>("[data-practice-ref]")?.dataset.practiceRef;
-    reloadTutorLessons.current = mode === "tutor";
+    restoreStaffPanels.current = staff ? authorizedReading ?? null : null;
     setPracticeOpen(false);
     requestAnimationFrame(() => {
       const verse = passage ? readingPanel.current?.querySelector<HTMLElement>(`[data-verse-ref="${CSS.escape(passage)}"]`) : null;
@@ -339,11 +339,18 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
     close?.focus({ preventScroll: true });
   }, [practiceOpen]);
   useEffect(() => {
-    if (practiceOpen || !reloadTutorLessons.current || !authorizedReading) return;
-    reloadTutorLessons.current = false;
+    if (practiceOpen || !restoreStaffPanels.current) return;
+    const expected = restoreStaffPanels.current;
+    restoreStaffPanels.current = null;
+    if (expected !== authorizedReading) return;
     const request = new AbortController();
-    void lessons.current?.reload(authorizedReading, request.signal).catch(error => {
-      if (!request.signal.aborted) studyDenied(statusOf(error));
+    void Promise.all([
+      service.current?.reload(expected, request.signal),
+      lessons.current?.reload(expected, request.signal),
+    ]).catch(error => {
+      if (!request.signal.aborted && actionScope.current.reading === expected) {
+        request.abort(); studyDenied(statusOf(error));
+      }
     });
     return () => request.abort();
   }, [practiceOpen, authorizedReading, studyDenied]);

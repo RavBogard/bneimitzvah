@@ -121,6 +121,7 @@ it(`starts with a closed tutor sidebar and returns from Practice and the editor 
   const returned = tab.locator(":focus");
   await ui(returned).toBeInViewport();
   expect(await returned.evaluate(node => node.matches(".reading-practice-action") || !!node.closest('[data-verse-ref="Genesis 1:1"]'))).toBe(true);
+  await ui(tab.getByText("No service parts have been assigned yet.", { exact: true })).toBeVisible();
   await ui(rail).not.toHaveAttribute("open", "");
   await ui(note).toBeHidden();
   if (viewport.width < 640) {
