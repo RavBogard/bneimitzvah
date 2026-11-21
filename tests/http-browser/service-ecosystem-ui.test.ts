@@ -82,9 +82,20 @@ it("opens the lesson from its exact part, saves completion there, and returns to
   const part = tab.locator('[data-service-row="synthetic-closing"]');
   await ui(part.getByText("No practice recording is available for this part.")).toBeVisible();
   await ui(tab.locator("[data-service-row] h4")).toHaveText(["Synthetic opening part", "Synthetic closing part"]);
-  await part.getByRole("link", { name: "Open lesson" }).click();
+  const openPath = `/api/students/${fixture.student.id}/my-service/lesson`;
+  const [, opened] = await Promise.all([
+    tab.waitForURL(url => url.pathname === "/learn/service/torah-service" && url.hash.startsWith("#assigned-part="),
+      { waitUntil: "domcontentloaded", timeout: 30_000 }),
+    tab.waitForResponse(response => new URL(response.url()).pathname === openPath && response.request().method() === "POST",
+      { timeout: 30_000 }),
+    part.getByRole("link", { name: "Open lesson" }).click(),
+  ]);
+  expect(opened.request().postDataJSON()).toMatchObject({ mode: "student", rowId: "synthetic-closing", lessonId: "torah-service", complete: false });
+  expect(opened.status(), "the scoped lesson open request should succeed").toBe(200);
+  expect(await opened.json()).toMatchObject({ ok: true, slot: "morning" });
   const next = tab.getByRole("button", { name: "Next", exact: true });
-  await ui(tab.locator('[data-lesson="torah-service"][data-step="about"]').getByRole("button", { name: "Next", exact: true })).toBeEnabled();
+  await ui(tab.locator('[data-lesson="torah-service"][data-step="about"]').getByRole("button", { name: "Next", exact: true }),
+    "the approved lesson should enable Next on its first step").toBeEnabled();
   await next.click();
   await next.click();
   await ui(tab.getByRole("status").filter({ hasText: "Lesson finished." })).toBeVisible();
