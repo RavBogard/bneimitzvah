@@ -91,14 +91,15 @@ export function createStaffService<Q extends PgQueryResultHKT>(input: { access: 
       if (!contact) throw new AccessDenied(404);
       const links = await relationships.inspectLinks(tx, actor.tenantId, id);
       const live = (row: { revokedGrant: Date | null; disabledMembership: Date | null; verified: boolean }) => !row.revokedGrant && !row.disabledMembership && row.verified;
-      const guardians = links.guardians.filter(live), own = links.identities.some(live);
+      const guardians = links.guardians.filter(live), identities = links.identities.filter(live);
       const child = contact.kind === "child", email = (child ? contact.parent : contact.own)?.trim().toLowerCase();
-      const hasAccess = own || (child && guardians.some(parent => parent.link.practiceEnabled));
+      const hasAccess = identities.length > 0 || (child && guardians.some(parent => parent.link.practiceEnabled));
       const access = hasAccess ? "ready" : child && guardians.length ? "practice-off" : "unlinked";
       const time = new Date(now());
       const invite = email ? await data.setupInvitation(tx, actor.tenantId, id, child ? "parent" : "student", email, time) : null;
-      const invitedRoleLinked = child ? guardians.length > 0 : own;
-      const invitation = invitedRoleLinked ? invite?.acceptedAt ? "accepted" : "unneeded"
+      const recipient = email ? await data.setupContactMembership(tx, actor.tenantId, email) : undefined;
+      const invitedRoleLinked = recipient !== undefined && (child ? guardians : identities).some(link => link.membershipId === recipient);
+      const invitation = invitedRoleLinked ? invite?.acceptedAt && invite.acceptedMembershipId === recipient ? "accepted" : "unneeded"
         : !invite || invite.acceptedAt ? "none" : invite.expiresAt <= time ? "expired" : invite.delivery === "sent" ? "sent"
           : invite.delivery === "failed" ? "failed" : "prepared";
       return { ...shared, kind: contact.kind, contact: Boolean(email), access, tutor: links.tutors.some(live), invitation };

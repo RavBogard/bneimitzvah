@@ -92,10 +92,16 @@ export async function setupContact<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenant
   return row;
 }
 export async function setupInvitation<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, studentId: string, role: "parent" | "student", email: string, now: Date) {
-  const [row] = await tx.select({ acceptedAt: s.invite.acceptedAt, expiresAt: s.invite.expiresAt, delivery: s.invite.deliveryStatus }).from(s.invite)
+  const [row] = await tx.select({ acceptedAt: s.invite.acceptedAt, acceptedMembershipId: s.invite.acceptedMembershipId, expiresAt: s.invite.expiresAt, delivery: s.invite.deliveryStatus }).from(s.invite)
     .where(and(eq(s.invite.tenantId, tenantId), eq(s.invite.studentId, studentId), eq(s.invite.role, role), eq(s.invite.email, email), isNull(s.invite.revokedAt)))
     .orderBy(desc(sql`${s.invite.acceptedAt} is null and ${s.invite.expiresAt} > ${now.toISOString()}::timestamptz`), desc(s.invite.createdAt), desc(s.invite.id)).limit(1);
   return row;
+}
+export async function setupContactMembership<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, email: string) {
+  const [row] = await tx.select({ id: s.membership.id }).from(s.membership)
+    .innerJoin(s.user, eq(s.user.id, s.membership.userId))
+    .where(and(eq(s.membership.tenantId, tenantId), eq(s.user.email, email), eq(s.user.emailVerified, true), isNull(s.membership.disabledAt)));
+  return row?.id;
 }
 
 /** Marks a confirmed reading as reviewed for the current date and service, keeping its verses, basis and divisions. */

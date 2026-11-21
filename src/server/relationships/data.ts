@@ -69,11 +69,11 @@ export async function tutorLink<Q extends PgQueryResultHKT>(tx: AccessTransactio
 }
 
 export async function inspectLinks<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, studentId: string) {
-  const guardians = await tx.select({ link: s.guardian, revokedGrant: s.roleGrant.revokedAt, grantRevision: s.roleGrant.revision, disabledMembership: s.membership.disabledAt, verified: s.user.emailVerified, displayName: s.user.name }).from(s.guardian)
+  const guardians = await tx.select({ link: s.guardian, membershipId: s.membership.id, revokedGrant: s.roleGrant.revokedAt, grantRevision: s.roleGrant.revision, disabledMembership: s.membership.disabledAt, verified: s.user.emailVerified, displayName: s.user.name }).from(s.guardian)
     .innerJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.guardian.tenantId), eq(s.roleGrant.id, s.guardian.parentGrantId)))
     .innerJoin(s.membership, and(eq(s.membership.tenantId, s.roleGrant.tenantId), eq(s.membership.id, s.roleGrant.membershipId))).innerJoin(s.user, eq(s.user.id, s.membership.userId))
     .where(and(eq(s.guardian.tenantId, tenantId), eq(s.guardian.studentId, studentId), isNull(s.guardian.revokedAt))).orderBy(asc(s.guardian.id)).limit(501);
-  const identities = await tx.select({ link: s.studentIdentity, revokedGrant: s.roleGrant.revokedAt, grantRevision: s.roleGrant.revision, disabledMembership: s.membership.disabledAt, verified: s.user.emailVerified, displayName: s.user.name }).from(s.studentIdentity)
+  const identities = await tx.select({ link: s.studentIdentity, membershipId: s.membership.id, revokedGrant: s.roleGrant.revokedAt, grantRevision: s.roleGrant.revision, disabledMembership: s.membership.disabledAt, verified: s.user.emailVerified, displayName: s.user.name }).from(s.studentIdentity)
     .innerJoin(s.roleGrant, and(eq(s.roleGrant.tenantId, s.studentIdentity.tenantId), eq(s.roleGrant.id, s.studentIdentity.roleGrantId)))
     .innerJoin(s.membership, and(eq(s.membership.tenantId, s.roleGrant.tenantId), eq(s.membership.id, s.roleGrant.membershipId))).innerJoin(s.user, eq(s.user.id, s.membership.userId))
     .where(and(eq(s.studentIdentity.tenantId, tenantId), eq(s.studentIdentity.studentId, studentId), isNull(s.studentIdentity.revokedAt))).orderBy(asc(s.studentIdentity.id)).limit(501);

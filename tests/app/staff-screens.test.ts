@@ -44,7 +44,7 @@ async function setup() {
 const isoIn = (days: number) => { const d = new Date(); d.setDate(d.getDate() + days); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 it("shows independent setup steps for a child and an adult from live records without sending an invitation", async () => {
-  const t = await setup(), date = isoIn(42), childEmail = "child-setup@example.test", childId = t.unrelated.id;
+  const t = await setup(), date = isoIn(42), childEmail = "multi@example.test", childId = t.unrelated.id;
   const load = async (id: string) => {
     const result = await t.call(`/api/admin/students/${id}/setup`, "admin");
     expect(result.status).toBe(200);
@@ -78,7 +78,7 @@ it("shows independent setup steps for a child and an adult from live records wit
   expect(await load(childId)).toMatchObject({ reading: "ready", invitation: "accepted", access: "practice-off", service: "ready" });
   await t.f.owner(() => t.f.db.update(s.guardian).set({ practiceEnabled: true }).where(eq(s.guardian.studentId, childId)));
   expect(await load(childId)).toMatchObject({ access: "ready" });
-  const adult = await t.call("/api/admin/students", "admin", { student: { firstName: "Synthetic", lastName: "Adult Setup", ceremonyDate: date, studentKind: "adult", ownEmail: "adult-setup@example.test", parentEmail: null, serviceSlot: "morning" } });
+  const adult = await t.call("/api/admin/students", "admin", { student: { firstName: "Synthetic", lastName: "Adult Setup", ceremonyDate: date, studentKind: "adult", ownEmail: "routes-recipient@example.test", parentEmail: null, serviceSlot: "morning" } });
   expect(adult.status).toBe(201);
   const adultId = adult.json.id;
   expect(await load(adultId)).toMatchObject({ kind: "adult", contact: true, service: "ready", access: "unlinked", invitation: "none" });
@@ -88,6 +88,38 @@ it("shows independent setup steps for a child and an adult from live records wit
   });
   expect(await load(adultId)).toMatchObject({ access: "ready", invitation: "unneeded" });
   expect(t.f.deliveries).toHaveLength(deliveries);
+});
+
+it("tracks invitations for the current parent contact independently of the other guardian's practice access", async () => {
+  const t = await setup(), id = t.own.id, path = `/api/admin/students/${id}/setup`;
+  const first = "multi@example.test", second = "learner@example.test";
+  const read = async (invitation: string) => {
+    const result = await t.call(path, "admin");
+    expect(result.status).toBe(200);
+    expect(result.text).not.toContain("@");
+    expect(result.json).toMatchObject({ access: "ready", invitation });
+  };
+  const secondInvite = await t.f.owner(async () => {
+    await t.f.db.update(s.student).set({ parentEmail: second }).where(eq(s.student.id, id));
+    const [row] = await t.f.db.insert(s.invite).values({ tenantId: "crc", studentId: id, role: "parent", email: second, tokenHash: "c".repeat(64),
+      inviterMembershipId: t.f.adminMember.id, expiresAt: new Date(Date.now() + 86400000) }).returning();
+    return row;
+  });
+  await read("prepared");
+  const secondLink = await t.f.owner(async () => {
+    const [grant] = await t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: t.f.learnerGrant.membershipId, role: "parent" }).returning();
+    const [link] = await t.f.db.insert(s.guardian).values({ tenantId: "crc", studentId: id, parentGrantId: grant.id, linkProvenance: "synthetic" }).returning();
+    await t.f.db.update(s.invite).set({ acceptedAt: new Date(), acceptedMembershipId: grant.membershipId }).where(eq(s.invite.id, secondInvite.id));
+    return link;
+  });
+  await read("accepted");
+  await t.f.owner(() => t.f.db.update(s.student).set({ parentEmail: first }).where(eq(s.student.id, id)));
+  await read("unneeded");
+  await t.f.owner(async () => {
+    await t.f.db.update(s.student).set({ parentEmail: second }).where(eq(s.student.id, id));
+    await t.f.db.update(s.guardian).set({ revokedAt: new Date() }).where(eq(s.guardian.id, secondLink.id));
+  });
+  await read("none");
 });
 
 describe("Needs you (N14)", () => {
