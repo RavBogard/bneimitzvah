@@ -8,17 +8,21 @@ export type ShermetPlaybackTiming = {
   clip(index: number, word: number, signal: AbortSignal): Promise<ShermetTimedClip | null>;
 };
 
+type VerseAudio = ReferenceAudioElement & Pick<HTMLAudioElement, "ended">;
+
 /** Whole-verse human recordings. No PocketTorah timing is reused. */
 export function createShermetPlayback(input: {
   verses: readonly { ref: string }[]; available: ReadonlySet<string> | (() => ReadonlySet<string>); canContinue(): boolean;
+  onEnded?(index: number, selection: ReadingSelection): void;
+  repeatEnabled?(): boolean;
   onState(state: ReadingPlaybackState): void; onActiveWord(value: { verse: number; index: number } | null): void;
   timed?: ShermetPlaybackTiming;
   initialSpeed?: number;
-  audio?(): ReferenceAudioElement;
+  audio?(): VerseAudio;
 }) {
   let state: ReadingPlaybackState = { verse: null, selection: "verse", timingHeld: false, suspended: false,
     playback: { status: "idle", selection: "verse", repeat: false, speed: validRecordingSpeed(input.initialSpeed ?? 1) ? input.initialSpeed ?? 1 : 1, speedSupported: false, wordsReady: false, wordCount: 0, retryPlay: false } };
-  let media: ReferenceAudioElement | null = null, closed = false, generation = 0, lastPlay = 0, wantsPlay = false;
+  let media: VerseAudio | null = null, closed = false, generation = 0, lastPlay = 0, wantsPlay = false;
   let abort = new AbortController(), url: string | null = null, frame: number | null = null;
   let words: readonly { word: number; start: number; end: number }[] = [];
   const publish = (patch: Partial<ReadingPlaybackState>, playback = {}) => { state = { ...state, ...patch, playback: { ...state.playback, ...playback } }; input.onState(state); };
@@ -39,10 +43,14 @@ export function createShermetPlayback(input: {
     if (url) { URL.revokeObjectURL(url); url = null; }
   }
   function failed() { if (allowed()) { drop(); publish({}, { status: "error" }); } }
-  function ended() {
+  function ended(event: Event) {
+    if (!media || !Object.is(event.currentTarget, media) || !media.ended || !wantsPlay) return;
     if (!allowed()) { drop(); return; }
-    if (state.playback.repeat && media) { media.currentTime = 0; void play(); }
-    else { clearWord(); publish({}, { status: "ready" }); }
+    if (state.playback.repeat && (input.repeatEnabled?.() ?? true)) { media.currentTime = 0; void play(); return; }
+    const { verse, selection } = state, ticket = generation;
+    wantsPlay = false;
+    clearWord(); publish({}, { status: "ready" });
+    if (verse !== null && allowed() && generation === ticket) input.onEnded?.(verse, selection);
   }
   async function play() {
     if (!allowed() || state.timingHeld || state.verse === null) return;

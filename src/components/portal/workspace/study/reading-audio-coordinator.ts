@@ -15,6 +15,11 @@ export function createReadingAudioCoordinator() {
   type Registration = { slot: ReadingAudioSlot; suspend(): void; disposed: boolean };
   const registrations = new Map<ReadingAudioSlot, Registration>();
   let current: { registration: Registration; ticket: ReadingAudioIntent } | null = null;
+  // A section run spans player registrations while the next text page loads.
+  const observers = new Set<(slot: ReadingAudioSlot | null) => void>();
+  const notify = (slot: ReadingAudioSlot | null) => {
+    for (const observer of observers) { try { observer(slot); } catch { /* Observers never change playback authority. */ } }
+  };
   let transitioning = false, draining = false, pendingStop = false, blocked = false, closed = false, generation = 0, stopEpoch = 0;
   const valid = (registration: Registration) => !registration.disposed && registrations.get(registration.slot) === registration;
   function stop(registration: Registration) { try { registration.suspend(); return true; } catch { blocked = true; return false; } }
@@ -34,6 +39,7 @@ export function createReadingAudioCoordinator() {
   }
   function stopAll() {
     current = null;
+    notify(null);
     if (!Number.isSafeInteger(++stopEpoch)) blocked = true;
     // A nested call in the complete pass already has every owner covered.
     if (!draining) pendingStop = true;
@@ -42,6 +48,7 @@ export function createReadingAudioCoordinator() {
     return finishTransition();
   }
   return Object.freeze({
+    observe(observer: (slot: ReadingAudioSlot | null) => void) { observers.add(observer); return () => { observers.delete(observer); }; },
     register(slot: ReadingAudioSlot, suspend: () => void): ReadingAudioRegistration {
       if (closed || blocked || transitioning || !["proposed", "assigned", "lifted", "spoken", "proposed-collection", "assigned-collection"].includes(slot) || typeof suspend !== "function") return inert;
       const previous = registrations.get(slot);
@@ -67,7 +74,7 @@ export function createReadingAudioCoordinator() {
             if (!complete) { stop(registration); return null; }
             if (!valid(registration) || closed || blocked || !Number.isSafeInteger(++generation)) { blocked = true; stop(registration); return null; }
             const ticket: ReadingAudioIntent = Object.freeze({ [intentBrand]: true as const, generation });
-            current = { registration, ticket }; return ticket;
+            current = { registration, ticket }; notify(slot); return ticket;
           } finally { finishTransition(); }
         },
         isCurrent,

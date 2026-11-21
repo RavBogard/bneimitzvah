@@ -33,9 +33,12 @@ beforeAll(async () => {
   await fixture.ownerDb.update(s.student).set({ rehearsal1: "2026-12-19", rehearsal2: "2026-12-26", serviceSlot: "morning" }).where(eq(s.student.id, fixture.student.id));
   const [member] = await fixture.ownerDb.select().from(s.membership).where(eq(s.membership.userId, fixture.admin.id));
   for (const [kind, book, count] of [["torah", "Genesis", 10], ["haftarah", "Isaiah", 9]] as const) {
-    const [assignment] = await fixture.ownerDb.insert(s.assignment).values({ tenantId: "crc", studentId: fixture.student.id, kind, basis: "custom", ref: `${book} 1:1-${count}`, status: "confirmed", setByMembershipId: member.id,
-      proposalSnapshot: { ranges: [`${book} 1:1-${count}`], confirmationDate: "2027-01-02", needsReview: false } }).returning();
-    await fixture.ownerDb.insert(s.assignmentVerse).values(Array.from({ length: count }, (_, i) => ({ tenantId: "crc", studentId: fixture.student.id, assignmentId: assignment.id, ordinal: i + 1, verseRef: `${book} 1:${i + 1}` })));
+    const ranges = kind === "torah" ? ["Genesis 1:1", "Genesis 1:3-10"] : ["Isaiah 1:1-9"];
+    const verses = Array.from({ length: count }, (_, index) => index + 1).filter(verse => kind !== "torah" || verse !== 2);
+    const [assignment] = await fixture.ownerDb.insert(s.assignment).values({ tenantId: "crc", studentId: fixture.student.id, kind, basis: "custom",
+      ref: ranges.join("; "), aliyahStarts: kind === "torah" ? ["Genesis 1:4"] : null, status: "confirmed", setByMembershipId: member.id,
+      proposalSnapshot: { ranges, confirmationDate: "2027-01-02", needsReview: false } }).returning();
+    await fixture.ownerDb.insert(s.assignmentVerse).values(verses.map((verse, index) => ({ tenantId: "crc", studentId: fixture.student.id, assignmentId: assignment.id, ordinal: index + 1, verseRef: book + " 1:" + verse })));
   }
   await fixture.ownerDb.insert(s.privatePronouns).values({ tenantId: "crc", studentId: fixture.student.id, pronouns: "they/them" });
   stop = await startBrowserServer(fixture.withRuntime); browser = await chromium.launch({ headless: true });
@@ -72,7 +75,7 @@ it("opens the tutor's existing aliyah without staff details and restores them on
   await ui(tab.getByTestId("private-pronouns")).toHaveCount(0);
   await ui(tab.getByTestId("pronouns-editor")).toHaveCount(0);
   await ui(tab.locator(".reading-other-assignments, .study-verse-bar, .guide-place")).toHaveCount(0);
-  await ui(surface(tab).getByRole("button", { name: "Play from first verse", exact: true })).toBeVisible();
+  await ui(surface(tab).getByRole("button", { name: "Play aliyah", exact: true })).toBeVisible();
   await ui(surface(tab).getByRole("region", { name: "Reading playback", exact: true })).toBeVisible();
   await ui(surface(tab).getByTestId("practice-verse-controls")).toBeVisible();
   await tab.getByTestId("close-assigned-practice").click();
@@ -96,6 +99,84 @@ it("keeps the student's passage, progress and existing player through Practice a
   await ui(tab.getByTestId("assigned-text")).toHaveAttribute("data-practice-ref", "Genesis 1:1");
   await ui(tab.getByTestId("player-selection")).toHaveAttribute("data-selected-ref", "Genesis 1:1");
   await ui(tab.getByTestId("reading-plan")).toBeAttached();
+});
+
+it("plays the assigned aliyah in order, pauses and resumes, and stops at its recorded boundary on a phone", async () => {
+  const { tab } = await practiceReading("student", 390, 844);
+  const played: string[] = [];
+  const frames = 8000 * 6;
+  const wave = Buffer.alloc(44 + 2 * frames);
+  wave.write("RIFF"); wave.writeUInt32LE(wave.length - 8, 4); wave.write("WAVEfmt ", 8);
+  wave.writeUInt32LE(16, 16); wave.writeUInt16LE(1, 20); wave.writeUInt16LE(1, 22);
+  wave.writeUInt32LE(8000, 24); wave.writeUInt32LE(16000, 28); wave.writeUInt16LE(2, 32);
+  wave.writeUInt16LE(16, 34); wave.write("data", 36); wave.writeUInt32LE(2 * frames, 40);
+  await tab.addInitScript(() => {
+    const original = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () {
+      if (new URL(this.src, location.href).pathname === "/api/shermet-audio") Object.assign(window, { sectionAudio: this });
+      return original.call(this);
+    };
+  });
+  await tab.route("**/api/shermet-audio/catalog", route => route.fulfill({ json: { refs: ["Genesis 1:1", "Genesis 1:3", "Genesis 1:4", "Isaiah 1:1", "Isaiah 1:2"] } }));
+  let missing = false;
+  await tab.route("**/api/shermet-audio?*", route => {
+    const ref = new URL(route.request().url()).searchParams.get("ref")!;
+    if (missing && ref === "Genesis 1:1") return route.fulfill({ status: 404 });
+    played.push(ref);
+    return route.fulfill({ contentType: "audio/wav", body: wave });
+  });
+  await tab.goto("/mine/reading#practice");
+  const practice = surface(tab), parts = practice.getByRole("tablist", { name: "Reading sections" });
+  const start = practice.getByTestId("play-section-start");
+  const stop = practice.getByRole("button", { name: "Stop aliyah", exact: true });
+  const transport = practice.getByRole("group", { name: "Verse playback", exact: true });
+  const pause = transport.getByRole("button", { name: "Pause", exact: true });
+  const finish = () => tab.evaluate(() => {
+    const media = (window as unknown as { sectionAudio: HTMLMediaElement }).sectionAudio;
+    media.currentTime = media.duration - 0.05;
+  });
+
+  await parts.getByRole("tab", { name: "Aliyah 2", exact: true }).click();
+  await ui(practice.getByTestId("assigned-text")).toHaveAttribute("data-practice-ref", "Genesis 1:4");
+  await parts.getByRole("tab", { name: "Aliyah 1", exact: true }).click();
+  await ui(practice.getByTestId("assigned-text")).toHaveAttribute("data-practice-ref", "Genesis 1:1");
+  expect(played).toEqual([]);
+  await start.click();
+  await ui(pause).toBeVisible();
+  await ui(transport.getByRole("button", { name: "Repeat", exact: true })).toBeDisabled();
+  await pause.click();
+  expect([...new Set(played)]).toEqual(["Genesis 1:1"]);
+  await transport.getByRole("button", { name: "Play", exact: true }).click();
+  await ui(pause).toBeVisible();
+  await finish();
+  await ui(practice.getByTestId("player-selection")).toHaveAttribute("data-selected-ref", "Genesis 1:3");
+  await ui(pause).toBeVisible();
+  await finish();
+  await ui(stop).toHaveCount(0);
+  await ui(practice.getByText("Aliyah finished.", { exact: true })).toBeVisible();
+  expect([...new Set(played)]).toEqual(["Genesis 1:1", "Genesis 1:3"]);
+  await start.click();
+  await ui(pause).toBeVisible();
+  await stop.click();
+  await ui(start).toBeVisible();
+  await ui(pause).toHaveCount(0);
+
+  missing = true;
+  await start.click();
+  await ui(practice.getByText(/Playback stopped/)).toBeVisible();
+  await ui(stop).toHaveCount(0);
+  await ui(practice.getByText("Aliyah finished.", { exact: true })).toHaveCount(0);
+  await ui(practice.getByTestId("player-selection")).toHaveAttribute("data-selected-ref", "Genesis 1:1");
+
+  await practice.getByRole("button", { name: "Haftarah text", exact: true }).click();
+  await ui(start).toHaveText("Play from first verse");
+  await start.click();
+  await ui(pause).toBeVisible();
+  await ui(transport.getByRole("button", { name: "Repeat", exact: true })).toBeEnabled();
+  await finish();
+  await ui(pause).toHaveCount(0);
+  await ui(practice.getByTestId("player-selection")).toHaveAttribute("data-selected-ref", "Isaiah 1:1");
+  expect(played).not.toContain("Isaiah 1:2");
 });
 
 it("lets the linked learner edit optional pronouns privately from Account", async () => {

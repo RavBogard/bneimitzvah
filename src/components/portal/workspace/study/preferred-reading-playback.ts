@@ -16,6 +16,7 @@ export function createPreferredReadingPlayback(input: PocketInput & {
   const publish = (next: ReadingPlaybackState) => { state = { ...next, source, fallback }; input.onState(state); };
   const pocket = factories.pockettorah({ ...input, initialSpeed: input.speeds?.pockettorah, canContinue: () => !closed && source === "pockettorah" && input.canContinue(), onState: next => { if (!closed && source === "pockettorah") publish(next); } });
   const shermet = factories.shermet({ verses: input.verses, available: () => resolvedAvailability ?? input.available(), timed: input.timed, initialSpeed: input.speeds?.shermet,
+    repeatEnabled: input.repeatEnabled, onEnded: input.onEnded,
     canContinue: () => !closed && source === "shermet" && input.canContinue(), onActiveWord: input.onActiveWord,
     onState(next) {
       if (closed || source !== "shermet") return;

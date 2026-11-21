@@ -21,6 +21,8 @@ export function createShortReadingPlayback(input: {
   verses: readonly { ref: string; readingText: string; wordCount: number }[];
   load(index: number, signal: AbortSignal): Promise<ReferenceShortResolution>;
   onState(state: ReadingPlaybackState): void;
+  onEnded?(index: number, selection: ReadingSelection): void;
+  repeatEnabled?(): boolean;
   onActiveWord(value: { verse: number; index: number } | null): void;
   platform?: Platform;
   /** Trusted synchronous scheduling/lifetime check; never acquires authority. */
@@ -206,9 +208,11 @@ export function createShortReadingPlayback(input: {
     if (!allowed()) return;
     if (closed || !media || !wantsPlay || !bound || !ownsSource() || media.readyState < 1 || !media.ended) return;
     if (!shortMediaFramesMatch(media.currentTime, bound.rate, bound.frames)) { if (media.ended) { quiet(); playback({ status: "error" }); } return; }
-    const repeat = state.playback.repeat, index = state.verse, selection = state.selection, mine = turn; quiet();
+    const repeat = state.playback.repeat && (input.repeatEnabled?.() ?? true), index = state.verse, selection = state.selection, mine = turn; quiet();
     if (!allowed() || turn !== mine) return; playback({ status: "ready" });
-    if (repeat && index !== null && allowed() && turn === mine) void select(index, selection);
+    if (index === null || !allowed() || turn !== mine) return;
+    if (repeat) void select(index, selection);
+    else input.onEnded?.(index, selection);
   };
   const playing = () => { if (!allowed()) return; if (!closed && prime?.turn === turn && media?.src === prime.url && media.currentSrc === prime.url) return; if (ownsSource() && (!wantsPlay || closed)) media?.pause(); };
   const error = () => { if (!allowed()) return; if (!closed && ownsSource() && media?.error) { quiet(); playback({ status: "error" }); } };

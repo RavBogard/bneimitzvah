@@ -5,6 +5,7 @@ import { statusOf, useWorkspace, WorkspaceLink } from "../provider";
 import { studyBinding, studyPlan, type StudyKind, type StudyPage, type StudyVerse } from "./api";
 import { StudyCredits } from "./credits";
 import { Apparatus, FlowingStudyText } from "./annotations";
+import { nextAssignedVerse } from "./section-playback";
 import { ReadingPlayer, playMainVerseForWord, type ReadingPlayerHandle } from "./reading-player";
 import type { ReadingSelection } from "./main-playback";
 import { WordTools, type WordToolsHandle } from "./word-tools";
@@ -24,7 +25,7 @@ import { sectionIndexAt, sectionsFromStarts, type Section } from "../../../../li
 import { SectionTabs, Sheet } from "../../../ui";
 import { NextSection } from "./next-section";
 import { PortalRequestError } from "../../api";
-import { watchReadingAudioDeadline } from "./reading-player-intent";
+import { readingAudioCurrent, watchReadingAudioDeadline } from "./reading-player-intent";
 import type { ShortReferenceOwner } from "./short-reference-bridge";
 import type { GuideStore } from "./guide-store";
 import { additionsFor, themeHeadings } from "./notes-model";
@@ -107,12 +108,21 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const pendingJump = useRef<string | null>(null);
   // A verse Up close was asked to open on, once the text page that holds it is on screen.
   const pendingLift = useRef<{ kind: StudyKind; ref: string } | null>(null);
-  const pendingFirstPlayback = useRef<{ kind: StudyKind; offset: number } | null>(null);
+  type Run = { baseline: Assigned; kind: StudyKind; end: number; at: number; pageOffset: number; pending: boolean; continuous: boolean; focusNext: boolean };
+  const run = useRef<Run | null>(null);
+  const [runState, setRunState] = useState<"playing" | "finished" | "failed" | null>(null);
+  const cancelRun = useCallback(() => { run.current = null; setRunState(null); }, []);
+  useLayoutEffect(() => audio?.observe(slot => { if (slot !== "assigned") cancelRun(); }), [audio, cancelRun]);
   const [state, setState] = useState<{ binding: string; kind?: StudyKind; page?: StudyPage; error?: number; loading?: boolean }>({ binding: "" });
   const key = baseline ? studyBinding(baseline) : "";
-  const clear = useCallback(() => { stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.dispose(); shortMetadata.current = null; modalRequest.current?.abort(); modalOwner.current?.dispose(); modalOwner.current = null; generation.current++; controller.current?.abort(); setLift(null); setState({ binding: "", loading: true }); }, [stopAudio]);
-  const load = useCallback(async (value: Assigned, kind: StudyKind, offset: number, outer?: AbortSignal) => {
-    stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.dispose(); shortMetadata.current = null;
+  const readingDeadline = baseline?.context ? Date.parse(baseline.context.expiresAt) : undefined;
+  const clear = useCallback(() => { cancelRun(); stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.dispose(); shortMetadata.current = null; modalRequest.current?.abort(); modalOwner.current?.dispose(); modalOwner.current = null; generation.current++; controller.current?.abort(); setLift(null); setState({ binding: "", loading: true }); }, [stopAudio, cancelRun]);
+  const load = useCallback(async (value: Assigned, kind: StudyKind, offset: number, outer?: AbortSignal, continuation?: Run) => {
+    if (continuation) {
+      if (run.current !== continuation) return false;
+      if (!readingAudioCurrent(value.context ? Date.parse(value.context.expiresAt) : undefined)) { cancelRun(); return false; }
+    } else { cancelRun(); stopAudio?.(); }
+    playback.current?.suspend(); shortMetadata.current?.dispose(); shortMetadata.current = null;
     modalRequest.current?.abort(); modalOwner.current?.dispose(); modalOwner.current = null;
     controller.current?.abort(); const request = new AbortController(), turn = ++generation.current; controller.current = request;
     const abort = () => request.abort(); if (outer?.aborted) abort(); outer?.addEventListener("abort", abort, { once: true });
@@ -131,7 +141,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       if ([401, 403, 404].includes(status)) { metadata.current = null; authorityFailed(status); throw error; }
       return false;
     } finally { outer?.removeEventListener("abort", abort); }
-  }, [readStudy, authorityFailed, onKindChange, stopAudio]);
+  }, [readStudy, authorityFailed, onKindChange, stopAudio, cancelRun]);
   const reload = useCallback(async (value: Assigned, signal: AbortSignal) => {
     metadata.current = value;
     if (!value.readings.length) { clear(); setState({ binding: studyBinding(value) }); selection.current = null; return; }
@@ -142,20 +152,24 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     await load(value, kind, offset, signal);
   }, [clear, load]);
   useLayoutEffect(() => register({ clear, reload }), [register, clear, reload]);
-  useLayoutEffect(() => () => { generation.current++; controller.current?.abort(); metadata.current = null; }, []);
+  useLayoutEffect(() => () => { run.current = null; generation.current++; controller.current?.abort(); metadata.current = null; }, []);
+  useLayoutEffect(() => { cancelRun(); }, [key, epoch, active, study, practiceSurface, cancelRun]);
   const current = key && state.binding === key ? state : null;
-  async function explicitLoad(kind: StudyKind, offset: number, place?: { ref: string; wordIndex: number }) {
+  async function explicitLoad(kind: StudyKind, offset: number, place?: { ref: string; wordIndex: number }, continuation?: Run) {
+    if (!continuation) cancelRun();
     const value = metadata.current;
-    if (!value || studyBinding(value) !== key) return;
-    if (guardDeparture && !await guardDeparture()) return;
-    if (metadata.current !== value || studyBinding(value) !== key) return;
+    if (!value || studyBinding(value) !== key) { if (continuation && run.current === continuation) cancelRun(); return; }
+    if (guardDeparture && !await guardDeparture()) { if (continuation && run.current === continuation) cancelRun(); return; }
+    if (continuation && run.current !== continuation) return;
+    if (metadata.current !== value || studyBinding(value) !== key) { if (continuation && run.current === continuation) cancelRun(); return; }
     try {
-      const pending = load(value, kind, offset), request = controller.current, turn = generation.current;
+      const pending = load(value, kind, offset, undefined, continuation), request = controller.current, turn = generation.current;
       pendingPlace.current = place ? { kind, offset, turn, ref: place.ref, wordIndex: place.wordIndex } : null;
       const loaded = await pending;
+      if (!loaded && continuation && run.current === continuation) cancelRun();
       if (loaded && place && controller.current === request && turn === generation.current) onVisit?.(kind, place.ref);
       if (loaded && onPage && request && controller.current === request && turn === generation.current && !request.signal.aborted && metadata.current === value) await onPage(kind, offset, request.signal);
-    } catch { /* Authority state has already cleared text and metadata. */ }
+    } catch { if (continuation && run.current === continuation) cancelRun(); /* Authority state has already cleared text and metadata. */ }
   }
   // The tutor's recorded aliyot are the sections (1.9 N3, decision 2). A section is a text page that starts where it does (the server cuts a page from any
   // offset), and what is shown is that page up to the section's end: one section at a time, and the text flows inside it. A section longer than a text page
@@ -188,11 +202,11 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     if (!active || lift) shortMetadata.current?.suspend();
   }, [active, lift]);
   useLayoutEffect(() => {
-    const background = () => { if (document.visibilityState !== "visible") shortMetadata.current?.suspend(); };
-    const leave = () => shortMetadata.current?.suspend();
+    const leave = () => { cancelRun(); shortMetadata.current?.suspend(); };
+    const background = () => { if (document.visibilityState !== "visible") leave(); };
     document.addEventListener("visibilitychange", background); window.addEventListener("pagehide", leave);
     return () => { document.removeEventListener("visibilitychange", background); window.removeEventListener("pagehide", leave); };
-  }, []);
+  }, [cancelRun]);
   // Separate modal ownership: main owner remains restricted by !lift. Navigation
   // cancels only its subscriber; an authorized completed page can stay modal-local.
   useLayoutEffect(() => {
@@ -240,7 +254,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const openTools = (ref: string, opener: HTMLElement | null) => { toolsOpener.current = opener; setPicked(ref); setToolsRef(ref); };
   // Study plays nothing (2026-10-28): there a verse is only chosen.
   const hear = (page: StudyPage, index: number, word: ReadingSelection = "verse") => { setPicked(page.verses[index].ref); if (study) return; playback.current?.select(index, word); if (word === "verse") tools.current?.selectVerse(index); else tools.current?.select(index, word); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
-  const open = (page: StudyPage, index: number) => { setPicked(page.verses[index].ref);
+  const open = (page: StudyPage, index: number) => { cancelRun(); setPicked(page.verses[index].ref);
     if (onOpenPractice) { setToolsRef(null); onOpenPractice(); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); requestAnimationFrame(() => scrollToVerse(page.verses[index].ref)); return; }
     stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.suspend(); modalRequest.current?.abort();
     const old = modalScope.current, next = { page, index, opening: old?.page === page ? old.opening : ++modalSequence.current, navigation: (old?.navigation ?? 0) + 1 };
@@ -262,11 +276,28 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     const index = livePage.verses.findIndex(row => row.ref === want.ref); if (index < 0) return;
     pendingLift.current = null; open(livePage, index);
   }, [livePage]); // eslint-disable-line react-hooks/exhaustive-deps
+  function playRunVerse(page: StudyPage, selected: Run) {
+    const index = selected.at - page.offset;
+    const verse = page.verses[index];
+    const reading = selected.baseline.readings.find(row => row.kind === selected.kind);
+    if (metadata.current !== selected.baseline || !playback.current || !verse || verse.ref !== reading?.verses[selected.at]
+      || !active || study || !readingAudioCurrent(readingDeadline) || document.visibilityState !== "visible") { cancelRun(); return; }
+    selected.pending = false;
+    setPicked(verse.ref); tools.current?.selectVerse(index);
+    if (selected.continuous) playback.current.selectForRun(index);
+    else { run.current = null; playback.current.select(index); }
+    onVisit?.(selected.kind, verse.ref);
+    if (selected.focusNext) {
+      selected.focusNext = false;
+      const row = passageRef.current?.querySelector('[data-verse-ref="' + CSS.escape(verse.ref) + '"]');
+      const control = row?.querySelector<HTMLElement>('button[data-verse-number], [data-word-index][role="button"]');
+      control?.focus({ preventScroll: true });
+      control?.scrollIntoView({ block: "center" });
+    }
+  }
   useEffect(() => {
-    const target = pendingFirstPlayback.current;
-    if (!target || !livePage || state.kind !== target.kind || livePage.offset !== target.offset) return;
-    pendingFirstPlayback.current = null;
-    hear(livePage, 0);
+    const selected = run.current;
+    if (selected?.pending && livePage?.offset === selected.pageOffset && state.kind === selected.kind) playRunVerse(livePage, selected);
   }, [livePage]); // eslint-disable-line react-hooks/exhaustive-deps
   if (upCloseHandle) upCloseHandle.current = livePage && baseline ? (want, ref) => {
     const row = baseline.readings.find(item => item.kind === want), position = row ? row.verses.indexOf(ref) : -1;
@@ -297,7 +328,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   if (!baseline.readings.length) return null;
   const kind = current?.kind ?? selection.current?.kind ?? baseline.readings[0].kind, assignment = baseline.readings.find(row => row.kind === kind);
   // The text pages of what is open: the whole assignment, or the open section (which starts its own first page).
-  const first = sectionNow >= 0 ? sections[sectionNow].start : 0, last = sectionNow >= 0 ? sections[sectionNow].end : Infinity;
+  const first = sectionNow >= 0 ? sections[sectionNow].start : 0, last = sectionNow >= 0 ? sections[sectionNow].end : (assignment?.verses.length ?? 0);
   const offsets = [first]; if (assignment && livePage) { let next: number | null = first; while (next !== null) { const page = studyPlan(baseline, kind, next); next = page.nextOffset; if (next !== null && next < last) offsets.push(next); else next = null; } }
   const previous = livePage ? offsets[offsets.indexOf(livePage.offset) - 1] : undefined;
   const single = livePage ? previous === undefined && livePage.nextOffset === null : false;
@@ -337,12 +368,35 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   }
   const goSection = (index: number) => { const target = sections[index]; if (target && target.start !== livePage?.offset) void explicitLoad(kind, target.start); };
   const practiceRef = livePage?.verses.find(row => row.ref === picked)?.ref ?? livePage?.verses[0]?.ref;
-  const playFromFirst = () => {
-    if (!livePage) return;
-    const offset = sectionNow >= 0 ? sections[sectionNow].start : 0;
-    if (offset === livePage.offset) { hear(livePage, 0); return; }
-    pendingFirstPlayback.current = { kind, offset };
-    void explicitLoad(kind, offset);
+  const playSection = () => {
+    if (!livePage || !playback.current || !audio || first >= last || metadata.current !== baseline || !active || study || !readingAudioCurrent(readingDeadline)) return;
+    audio.stopAll();
+    const continuous = sectionNow >= 0;
+    const selected: Run = { baseline, kind, at: first, end: last, pageOffset: first, pending: false, continuous, focusNext: false };
+    run.current = selected;
+    if (continuous) setRunState("playing");
+    if (livePage.offset === first) playRunVerse(livePage, selected);
+    else { selected.pending = true; void explicitLoad(kind, first, undefined, selected); }
+  };
+  const endRunVerse = (index: number) => {
+    const selected = run.current;
+    if (!selected || selected.pending || !livePage || selected.kind !== kind || selected.baseline !== baseline
+      || selected.at !== livePage.offset + index) return;
+    if (!readingAudioCurrent(readingDeadline)) { cancelRun(); return; }
+    const next = nextAssignedVerse(selected, livePage);
+    if (next.kind === "complete") { run.current = null; setRunState("finished"); return; }
+    if (next.kind === "invalid") { cancelRun(); return; }
+    selected.focusNext = Boolean(passageRef.current?.contains(document.activeElement?.closest("[data-player-transport]") ?? null));
+    selected.at = next.at;
+    if (next.kind === "verse") { playRunVerse(livePage, selected); return; }
+    selected.pending = true; selected.pageOffset = next.at;
+    void explicitLoad(kind, next.at, undefined, selected);
+  };
+  const failRunVerse = (index: number) => {
+    const selected = run.current;
+    if (!selected || selected.pending || !livePage || selected.baseline !== baseline || selected.kind !== kind || selected.at !== livePage.offset + index) return;
+    run.current = null;
+    setRunState("failed");
   };
   return <section className="assigned-study" data-testid="assigned-text" aria-label="Assigned text" data-size={prefs.size} data-practice-ref={practiceRef}>
     <WordPanelSource host={wordHost} />
@@ -357,15 +411,19 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       onSelect={id => { if (id === SERVICE_CHIP) onService?.(); else goSection(sections.findIndex(row => row.n === id)); }} />}
     {/* Study's About card (v6) is the one overview: the guide's, else the approved portion summary's text. The old summary block and its outline are gone. */}
     {study && renderIntro && <div className="study-intro">{renderIntro(kind)}</div>}
+    {(livePage || runState === "playing") && <div className="study-section-start" data-testid="practice-section-start">
+      {livePage && <h2>{sectionNow >= 0 ? sections[sectionNow].label : kind === "torah" ? "Torah reading" : "Haftarah reading"}</h2>}
+      {listeningEnabled && active && !study && (runState === "playing"
+        ? <button type="button" className="button-secondary" onClick={() => { cancelRun(); playback.current?.suspend(); }}>Stop aliyah</button>
+        : <button type="button" className="button-secondary" data-testid="play-section-start" disabled={!readingAudioCurrent(readingDeadline)} onClick={playSection}>{sectionNow >= 0 ? "Play aliyah" : "Play from first verse"}</button>)}
+      {runState === "finished" && <p role="status">Aliyah finished.</p>}
+      {runState === "failed" && <p role="status">Playback stopped. Try this verse again or restart from the first verse.</p>}
+    </div>}
     {!current || current.loading ? <p role="status">Loading the assigned text…</p> : current.error ? <div role="status" data-testid="study-text-state" data-text-state={current.error === 409 ? "assignment-changed" : [401, 403, 404].includes(current.error) ? "access-changed" : "unavailable"}><h4>{current.error === 409 ? "Assignment changed" : [401, 403, 404].includes(current.error) ? "Text access changed" : "Text unavailable"}</h4>
       <p>{current.error === 409 ? learner ? "Your reading was just updated. Load the new version to keep going." : "Refresh the reading metadata before loading this assignment’s text again." : learner ? "The verses didn’t load. Check your connection and try again." : "No previous text is being shown. Confirmed references and the reading review form remain separate."}</p>
       <button className="button-secondary" onClick={() => { if (current.error === 409) void reloadMetadata().catch(() => undefined); else void explicitLoad(kind, selection.current?.offset ?? 0); }}>{current.error === 409 ? "Refresh reading and text" : "Reload assigned text"}</button>
       {renderActiveWork?.()}
     </div> : livePage && <>
-      <div className="study-section-start" data-testid="practice-section-start">
-        <h2>{sectionNow >= 0 ? sections[sectionNow].label : kind === "torah" ? "Torah reading" : "Haftarah reading"}</h2>
-        {listeningEnabled && !study && <button type="button" className="button-secondary" data-testid="play-section-start" onClick={playFromFirst}>Play from first verse</button>}
-      </div>
       {renderSectionControls?.({ studentId: baseline.student.id, mode: baseline.mode, assignmentId: assignment!.id, assignmentRevision: assignment!.revision, kind,
         startVerse: assignment!.verses[sectionNow >= 0 ? sections[sectionNow].start : 0], practiceSurface })}
       {study ? <>
@@ -384,7 +442,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
         && <NextSection onNext={() => goSection(sectionNow + 1)} preview={rawPage?.verses[sections[sectionNow + 1].start - rawPage.offset]} />}
       {listeningEnabled && !study && <ReadingPlayer passageRef={passageRef} key={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])}
         scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])} verses={livePage.verses} active={active && !lift} enabled={!lift} expiresAt={baseline?.context ? Date.parse(baseline.context.expiresAt) : undefined} audio={audio ? { coordinator: audio, slot: "assigned" } : undefined}
-        register={registerPlayback} onActiveWord={setPlayingWord} load={async (index, signal) => {
+        register={registerPlayback} onActiveWord={setPlayingWord} onManualSelect={cancelRun} onVerseEnded={endRunVerse} onVerseFailed={failRunVerse} runActive={() => run.current?.continuous === true} load={async (index, signal) => {
           const value = baseline, page = livePage!, turn = generation.current;
           if (signal.aborted || metadata.current !== value || page !== livePage || !page.verses[index]) throw new PortalRequestError(409);
           const owned = shortMetadata.current; if (!owned) throw new PortalRequestError(409);

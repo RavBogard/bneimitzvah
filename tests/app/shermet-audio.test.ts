@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -82,12 +82,12 @@ describe("operator configured Shermet recordings", () => {
 function fakeAudio() {
   const events = new Map<string, EventListenerOrEventListenerObject>();
   let plays = 0, pauses = 0;
-  const audio = { src: "", preload: "", duration: 4, currentTime: 0, playbackRate: 1, preservesPitch: true,
-    play: async () => { plays++; }, pause: () => { pauses++; }, load() {}, removeAttribute() { audio.src = ""; },
+  const audio = { src: "", preload: "", duration: 4, currentTime: 0, ended: false, playbackRate: 1, preservesPitch: true,
+    play: async () => { plays++; audio.ended = false; }, pause: () => { pauses++; }, load() {}, removeAttribute() { audio.src = ""; },
     addEventListener: (name: string, listener: EventListenerOrEventListenerObject) => { events.set(name, listener); },
     removeEventListener: (name: string) => { events.delete(name); },
-  } as ReferenceAudioElement;
-  return { audio, get plays() { return plays; }, get pauses() { return pauses; }, ended() { (events.get("ended") as EventListener)({} as Event); } };
+  } as ReferenceAudioElement & { ended: boolean };
+  return { audio, get plays() { return plays; }, get pauses() { return pauses; }, ended() { audio.ended = true; (events.get("ended") as EventListener | undefined)?.({ currentTarget: audio } as unknown as Event); } };
 }
 describe("Shermet verse transport", () => {
   it("loops the selected verse, never supplies word timings, and suspends media", async () => {
@@ -106,6 +106,20 @@ describe("Shermet verse transport", () => {
     await player.select(0); allowed = false; player.suspend();
     expect(f.audio.src).toBe(""); expect(f.pauses).toBeGreaterThan(0);
     await player.play(); expect(f.plays).toBe(3); player.dispose();
+  });
+  it("notifies a section run only after an actual whole verse finishes, even with the single-verse repeat preference", async () => {
+    const first = fakeAudio(), second = fakeAudio(), sources = [first.audio, second.audio];
+    const finished = vi.fn();
+    const refs = ["Genesis 1:1", "Genesis 1:3"];
+    const player = createShermetPlayback({ verses: refs.map(ref => ({ ref })), available: new Set(refs), canContinue: () => true,
+      audio: () => sources.shift()!, repeatEnabled: () => false, onEnded: finished, onState() {}, onActiveWord() {} });
+    await player.select(0); player.setRepeat(true); player.pause(); first.ended();
+    expect(finished).not.toHaveBeenCalled();
+    await player.play(); first.ended(); first.ended();
+    expect(finished.mock.calls).toEqual([[0, "verse"]]);
+    await player.select(1); first.ended(); second.ended();
+    expect(finished.mock.calls).toEqual([[0, "verse"], [1, "verse"]]);
+    player.dispose();
   });
   it("does not let a late play promise resume a replaced selection", async () => {
     const f = fakeAudio(); let resolve!: () => void;

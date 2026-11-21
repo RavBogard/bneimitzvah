@@ -17,14 +17,14 @@ import { humanTracksForVerses } from "../../../../lib/reference-audio/human-trac
 import { ReadingCollectionPlayback } from "../../../shermet-library/reading-collection";
 const recordingPreferences = new WeakMap<ReturnType<typeof createReadingAudioCoordinator>, "pockettorah" | "shermet">();
 const speedPreferences = new WeakMap<ReturnType<typeof createReadingAudioCoordinator>, { shermet: number; pockettorah: number }>();
-export type ReadingPlayerHandle = { select(index: number, selection?: ReadingSelection): void; pause(): void; suspend(): void };
+export type ReadingPlayerHandle = { select(index: number, selection?: ReadingSelection): void; selectForRun(index: number): void; pause(): void; suspend(): void };
 /** Main-text activation chooses the verse; grammar retains the tapped word.
  * Explicit Practice/WordTools drills continue to use numeric selections. */
 export function playMainVerseForWord(player: Pick<ReadingPlayerHandle, "select"> | null, tools: { select(verse: number, word: number): void } | null, verse: number, word: number) {
   if (!Number.isSafeInteger(verse) || verse < 0 || !Number.isSafeInteger(word) || word < 0) return;
   player?.select(verse, "verse"); tools?.select(verse, word);
 }
-export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expiresAt, audio, wordTools = true, target, load, register, onActiveWord, passageRef }: {
+export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expiresAt, audio, wordTools = true, target, load, register, onActiveWord, passageRef, onManualSelect, onVerseEnded, onVerseFailed, runActive }: {
   scopeKey: string; verses: readonly StudyVerse[]; active: boolean; enabled?: boolean; expiresAt?: number; wordTools?: boolean;
   /** The flowing text rendered by this same reader. Lifted practice renders its transport in its own dialog. */
   passageRef?: RefObject<HTMLDivElement | null>;
@@ -34,6 +34,10 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
   audio?: { coordinator: ReturnType<typeof createReadingAudioCoordinator>; slot: ReadingAudioSlot };
   load(index: number, signal: AbortSignal): Promise<ReferenceShortResolution>;
   register(value: ReadingPlayerHandle | null): void;
+  onManualSelect?(): void;
+  onVerseEnded?(index: number): void;
+  onVerseFailed?(index: number): void;
+  runActive?(): boolean;
   onActiveWord(value: { verse: number; index: number } | null): void;
 }) {
   const id = useId(), owner = useRef<ReturnType<typeof createPreferredReadingPlayback> | null>(null);
@@ -47,7 +51,7 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
   useEffect(() => {
     setRecording(audio ? recordingPreferences.get(audio.coordinator) ?? "shermet" : "shermet");
   }, [scopeKey, verses]);
-  const callbacks = useRef({ load, onActiveWord, active, enabled, expiresAt, target, shermetRefs }); callbacks.current = { load, onActiveWord, active, enabled, expiresAt, target, shermetRefs };
+  const callbacks = useRef({ load, onActiveWord, active, enabled, expiresAt, target, shermetRefs, onManualSelect, onVerseEnded, onVerseFailed, runActive }); callbacks.current = { load, onActiveWord, active, enabled, expiresAt, target, shermetRefs, onManualSelect, onVerseEnded, onVerseFailed, runActive };
   const targetOwner = useRef<ReturnType<typeof createReadingPlayerTarget> | null>(null);
   if (!targetOwner.current) targetOwner.current = createReadingPlayerTarget();
   const targetCurrent = () => targetOwner.current!.current(callbacks.current.target);
@@ -59,8 +63,17 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
     let current = true;
     let owned: ReturnType<typeof createReadingPlayerIntent> | undefined;
     const common = {
+      repeatEnabled: () => !callbacks.current.runActive?.(),
+      onEnded: (index: number, selection: ReadingSelection) => {
+        if (current && selection === "verse" && owned?.isCurrent() && targetCurrent()) callbacks.current.onVerseEnded?.(index);
+      },
       canContinue: () => current && callbacks.current.active && callbacks.current.enabled && readingAudioCurrent(callbacks.current.expiresAt) && Boolean(owned?.isCurrent()) && targetCurrent(),
-      onState: (value: ReadingPlaybackState) => { if (current) setState(value); }, onActiveWord: (value: { verse: number; index: number } | null) => { if (current && (value === null || owned?.isCurrent() && targetCurrent())) callbacks.current.onActiveWord(value); },
+      onState: (value: ReadingPlaybackState) => {
+        if (!current) return;
+        setState(value);
+        if (value.verse !== null && value.selection === "verse" && owned?.isCurrent() && targetCurrent()
+          && (value.playback.status === "unavailable" || value.playback.status === "error")) callbacks.current.onVerseFailed?.(value.verse);
+      }, onActiveWord: (value: { verse: number; index: number } | null) => { if (current && (value === null || owned?.isCurrent() && targetCurrent())) callbacks.current.onActiveWord(value); },
     };
     let selectionTurn = 0;
     const playback = createPreferredReadingPlayback({ ...common, preference: recording, available: () => callbacks.current.shermetRefs,
@@ -83,7 +96,11 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
       enabled: () => current && callbacks.current.enabled && readingAudioCurrent(callbacks.current.expiresAt), active: () => callbacks.current.active,
       visible: () => document.visibilityState === "visible", frame: callback => requestAnimationFrame(callback), cancelFrame: cancelAnimationFrame });
     const selectedIntent = owned; owner.current = playback; intent.current = selectedIntent; setState(playback.state); setRequest(null);
-    register({ select: (index, selection) => { setSourcePreview(null); targetOwner.current!.select(callbacks.current.target); selectedIntent.select(index, selection); }, pause: selectedIntent.pause, suspend: () => { targetOwner.current!.clear(); selectedIntent.suspend(); } });
+    const select = (index: number, selection?: ReadingSelection) => {
+      setSourcePreview(null); targetOwner.current!.select(callbacks.current.target); selectedIntent.select(index, selection);
+    };
+    register({ select(index, selection) { callbacks.current.onManualSelect?.(); select(index, selection); },
+      selectForRun: index => select(index), pause: selectedIntent.pause, suspend: () => { targetOwner.current!.clear(); selectedIntent.suspend(); } });
     const background = () => { if (document.visibilityState !== "visible") selectedIntent.suspend(); };
     const leave = () => selectedIntent.suspend();
     document.addEventListener("visibilitychange", background); window.addEventListener("pagehide", leave);
@@ -102,7 +119,7 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
     const slot = selectedRef && active ? passageRef?.current?.querySelector<HTMLElement>(`[data-verse-playback-slot="${CSS.escape(selectedRef)}"]`) : null;
     setAnchor(slot ?? null);
   }, [passageRef, selectedRef, active, scopeKey]);
-  const choose = (index: number, selection: ReadingSelection = "verse") => { setSourcePreview(null); targetOwner.current!.select(callbacks.current.target); intent.current?.select(index, selection); };
+  const choose = (index: number, selection: ReadingSelection = "verse") => { onManualSelect?.(); setSourcePreview(null); targetOwner.current!.select(callbacks.current.target); intent.current?.select(index, selection); };
   const play = () => { if (preview.index === null) return; if (!preview.current) choose(preview.index); else intent.current?.play(); };
   const ready = !state?.suspended && (playback?.status === "ready" || playback?.status === "playing");
   const loading = Boolean(request) || playback?.status === "loading";
@@ -113,6 +130,7 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
       : loading ? "Loading recording…" : playback?.status === "unavailable" ? "A recording isn’t available for this selection."
         : playback?.status === "error" ? "The recording couldn’t be loaded. Try again." : playback?.retryPlay ? "Your browser needs another tap. Press Play to hear your selection."
           : state?.suspended ? "Playback paused. Tap the reading or press Play when you’re ready." : state?.source === "shermet" ? playback?.wordsReady ? "Cantor Wendy Shermet’s recording follows the words. Repeat keeps the current selection." : "Cantor Wendy Shermet’s recording plays a whole verse. Repeat keeps the current verse. Word timing isn’t available for this recording." : `Tapping the reading plays a whole verse. ${wordTools ? "Practice and Word tools offer" : "Practice offers"} word drills. Repeat keeps the current selection.`;
+  const running = runActive?.() === true;
   const transportStatus = !deadlineCurrent || loading || held || playback?.status === "unavailable" || playback?.status === "error" || playback?.retryPlay;
   const transport = selected && active && <span className={styles.top} data-player-transport="" role="group" aria-label="Verse playback" aria-describedby={id + "-verse"} dir="ltr" lang="en">
     <span className={styles.controls}>
@@ -120,7 +138,7 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
         if (loading || held) return;
         if (playback?.status === "playing") intent.current?.pause(); else play();
       }}>{playback?.status === "playing" ? "Pause" : playback?.status === "error" ? "Try again" : "Play"}</button>
-      <button type="button" disabled={!audio || !actionable || !ready || held} aria-pressed={playback?.repeat ?? false} onClick={() => intent.current?.setRepeat(!playback?.repeat)}>Repeat</button>
+      <button type="button" disabled={!audio || !actionable || !ready || held || running} aria-pressed={!running && (playback?.repeat ?? false)} onClick={() => intent.current?.setRepeat(!playback?.repeat)}>Repeat</button>
     </span>
     {transportStatus && <span role="status" className={styles.transportStatus}>{message}</span>}
   </span>;
@@ -129,7 +147,7 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
     {selected && <p id={id + "-verse"} className={styles.selection} data-testid="player-selection" data-selected-ref={selected.ref} data-selected-part={String(preview.selection)}>
       <bdi>{selected.ref}</bdi> · {preview.selection === "verse" ? "Whole verse" : `Word ${(preview.selection as number) + 1}`}
     </p>}
-    <div className={styles.panel}><div className={styles.options}>{shermetRefs.size > 0 && <div className={styles.field}><label htmlFor={`${id}-recording`}>Recording</label><select id={`${id}-recording`} value={recording} onChange={event => { intent.current?.suspend(); setSourcePreview(preview.index); const preference = event.target.value === "shermet" ? "shermet" : "pockettorah"; if (audio) recordingPreferences.set(audio.coordinator, preference); setRecording(preference); }}><option value="pockettorah">PocketTorah</option><option value="shermet">Cantor Wendy Shermet first</option></select></div>}<div className={styles.field}><label htmlFor={`${id}-selection`}>Practice</label><select id={`${id}-selection`} disabled={!audio || !actionable || !selected} value={String(preview.selection)} onChange={event => { if (preview.index !== null) choose(preview.index, event.target.value === "verse" ? "verse" : Number(event.target.value)); }}>
+    <div className={styles.panel}><div className={styles.options}>{shermetRefs.size > 0 && <div className={styles.field}><label htmlFor={`${id}-recording`}>Recording</label><select id={`${id}-recording`} value={recording} onChange={event => { onManualSelect?.(); intent.current?.suspend(); setSourcePreview(preview.index); const preference = event.target.value === "shermet" ? "shermet" : "pockettorah"; if (audio) recordingPreferences.set(audio.coordinator, preference); setRecording(preference); }}><option value="pockettorah">PocketTorah</option><option value="shermet">Cantor Wendy Shermet first</option></select></div>}<div className={styles.field}><label htmlFor={`${id}-selection`}>Practice</label><select id={`${id}-selection`} disabled={!audio || !actionable || !selected} value={String(preview.selection)} onChange={event => { if (preview.index !== null) choose(preview.index, event.target.value === "verse" ? "verse" : Number(event.target.value)); }}>
       <option value="verse">Whole verse</option>{words?.status === "ready" && words.projection.words.map(word => <option key={word.index} value={word.index}>Word {word.index + 1}: {word.text}</option>)}
     </select></div><div className={styles.field}><label htmlFor={`${id}-speed`}>Speed</label><select id={`${id}-speed`} disabled={!audio || !actionable || !ready || !playback?.speedSupported} value={playback?.speed ?? 1} onChange={event => { const speed = Number(event.target.value); if (audio && state?.source) { const preferred = speedPreferences.get(audio.coordinator) ?? { shermet: 1, pockettorah: 1 }; speedPreferences.set(audio.coordinator, { ...preferred, [state.source]: speed }); } intent.current?.setSpeed(speed); }}>{[0.5,0.75,1,1.25].map(speed => <option key={speed} value={speed}>{speed}×</option>)}</select></div></div>
     {state?.fallback && <p className={styles.message}>{`PocketTorah supplies this selection${state.fallback === "timing" ? " because Shermet word timing is unavailable" : state.fallback === "failed" ? " because the Shermet recording could not load" : " because no Shermet recording is available"}.`}</p>}
