@@ -1,3 +1,5 @@
+.recordingSiteBar:global(.site-bar) { flex-wrap: wrap; }
+.recordingSiteBar :global(.site-bar-nav) { flex-wrap: wrap; max-width: 100%; }
 .filters { display: flex; flex-wrap: wrap; gap: 1rem; margin-block: 1.5rem; }
 .filters label { display: grid; gap: .35rem; flex: 1 1 15rem; min-width: 0; }
 .filters input, .filters select { width: 100%; min-height: 44px; }
@@ -7,7 +9,7 @@
 .results h3 { margin: 0 0 .35rem; font-size: 1.1rem; }
 .results p { margin-block: .3rem; }
 .actions, .pagination { display: flex; flex-wrap: wrap; gap: .75rem; margin-block: .75rem; }
-.actions button, .pagination button { min-height: 44px; }
+.actions button, .pagination button { min-height: 44px; max-width: 100%; overflow-wrap: anywhere; }
 .player { position: sticky; bottom: 0; padding: 1rem; background: var(--color-surface); border-top: 1px solid var(--color-rule); }
 .player h2 { font-size: 1rem; margin: 0; }
 .player p { margin-block: .35rem; }
@@ -23,31 +25,52 @@
   position: sticky;
   bottom: 0;
   z-index: 2;
+  container-type: inline-size;
+  max-width: 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: .25rem .75rem;
-  padding: .5rem .75rem max(.5rem, env(safe-area-inset-bottom));
+  padding: .375rem .5rem max(.375rem, env(safe-area-inset-bottom));
   background: var(--color-surface);
   border: 1px solid var(--color-rule);
 }
-.compactPlayer h2 {
-  flex: 1 1 12rem;
+.compactPlayer .compactTitle {
+  flex: 1 0 min(10rem, 100%);
   min-width: 0;
   margin: 0;
   font-size: 1rem;
+  font-weight: 650;
   line-height: 1.25;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .compactActions {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
   gap: .25rem;
+  max-width: 100%;
 }
-.compactActions button { min-height: 44px; padding-inline: .45em; }
+.compactActions button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: .125rem .375rem;
+}
+.actionIcon { display: none; }
+@container (max-width: 14rem) {
+  .actionLabel { display: none; }
+  .actionIcon { display: block; }
+}
 .compactPlayer audio { display: none; }
-.compactPlayer p { flex-basis: 100%; margin-block: .25rem; }
+.compactPlayer [role="alert"] {
+  flex-basis: 100%;
+  max-height: 20svh;
+  overflow: auto;
+  margin: .25rem 0;
+}
 .inlineControls { margin-block-start: .75rem; }
 .inlineControls label { max-width: 100%; }
 .inlineControls input { min-width: 0; }

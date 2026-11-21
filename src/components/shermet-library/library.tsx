@@ -94,6 +94,20 @@ let preferredSpeed = 1;
 const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 /** Shared by the library and the actual matching prayer lesson. Native controls
  * include a raw-rate menu in some browsers, so all controls use relative rates. */
+const compactIcons = {
+  play: "M8 5v14l11-7z",
+  pause: "M9 5v14m6-14v14",
+  controls: "M4 7h16M4 17h16M8 4v6m8 4v6",
+  close: "m6 6 12 12m0-12L6 18",
+};
+
+function CompactActionLabel({ action, label }: { action: keyof typeof compactIcons; label: string }) {
+  return <><span className={styles.actionLabel}>{label}</span>
+    <svg className={styles.actionIcon} width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d={compactIcons[action]} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg></>;
+}
+
 type CompactPlayer = {
   media: RefObject<HTMLAudioElement | null>;
   playButton: RefObject<HTMLButtonElement | null>;
@@ -137,7 +151,10 @@ export function ShermetLibraryPlayer({ item, sha256, compact }: { item: ShermetL
       onRateChange={() => { if (media.current) applyRecordingTempo(media.current, "shermet", speed); }}
       onTimeUpdate={event => setPosition(event.currentTarget.currentTime)} onDurationChange={event => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
       onVolumeChange={event => { setVolume(event.currentTarget.volume); setMuted(event.currentTarget.muted); }} onError={() => setError(true)} />;
-  const playControl = <button type="button" ref={compact?.playButton} onClick={play}>{playing ? "Pause" : "Play"}</button>;
+  const playLabel = playing ? "Pause" : "Play";
+  const playControl = <button type="button" ref={compact?.playButton} onClick={play} aria-label={compact ? playLabel : undefined}>
+    {compact ? <CompactActionLabel action={playing ? "pause" : "play"} label={playLabel} /> : playLabel}
+  </button>;
   const controls = <>
     <div className={styles.controls}>
       {!compact && playControl}
@@ -151,14 +168,14 @@ export function ShermetLibraryPlayer({ item, sha256, compact }: { item: ShermetL
   </>;
   const errorMessage = error && <p role="alert">This recording couldn’t be loaded. Choose another recording or try again.</p>;
   if (compact) return <section ref={compact.player} className={styles.compactPlayer} aria-label="Selected recording">
-    <h2>{shermetLibraryTitle(item)}</h2>
+    <p className={styles.compactTitle}>{shermetLibraryTitle(item)}</p>
     <div className={styles.compactActions}>
       {playControl}
-      <button type="button" aria-expanded={compact.expanded} aria-controls={compact.panelId} onClick={event => {
+      <button type="button" aria-label="Controls" aria-expanded={compact.expanded} aria-controls={compact.panelId} onClick={event => {
         if (compact.expanded) event.currentTarget.focus();
         compact.toggleControls();
-      }}>Controls</button>
-      <button type="button" onClick={compact.close}>Close</button>
+      }}><CompactActionLabel action="controls" label="Controls" /></button>
+      <button type="button" aria-label="Close" onClick={compact.close}><CompactActionLabel action="close" label="Close" /></button>
     </div>
     {audio}
     {errorMessage}
