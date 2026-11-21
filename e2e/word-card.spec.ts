@@ -114,3 +114,20 @@ test("on a small phone Practice up close sets a long verse so all of it shows on
   const overflow = await stage.evaluate(node => node.querySelector(".lift-hebrew")!.getBoundingClientRect().bottom - node.getBoundingClientRect().bottom);
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test("the legacy practice dismiss button sits at the top right and Escape restores focus", async ({ page }) => {
+  await mock(page);
+  await page.goto("/read");
+  await page.locator('.study-verses [data-verse-ref="Genesis 1:2"] [data-word-index="0"]').first().click();
+  const open = page.getByRole("button", { name: "View Genesis 1:2 up close", exact: true });
+  await open.click();
+  const lift = page.locator("dialog.lift");
+  const close = lift.getByRole("button", { name: "Close practice view", exact: true });
+  await expect(close).toBeInViewport();
+  const button = (await close.boundingBox())!, bar = (await lift.locator(".lift-bar").boundingBox())!;
+  expect(bar.x + bar.width - button.x - button.width).toBeLessThanOrEqual(16);
+  expect(button.y - bar.y).toBeLessThanOrEqual(16);
+  await page.keyboard.press("Escape");
+  await expect(lift).toHaveCount(0);
+  await expect(open).toBeFocused();
+});

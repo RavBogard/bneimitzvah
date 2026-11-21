@@ -4,7 +4,7 @@ import styles from "./reading-practice.module.css";
 import { PronounsEditor } from "../profile/pronouns";
 import { AssignedPracticeOffline } from "../offline/assigned-practice";
 import { useIdentity } from "../../site/identity-context";
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import { type Assigned, type Reading, type ReadingMode, type Student } from "./api";
 import { PrepareVerseLink, StudentFootLinks, useUpCloseAddress } from "./student-reading-links";
 import { statusOf, useWorkspace, useWorkspaceModal, WorkspaceLink } from "./provider";
@@ -83,6 +83,11 @@ export function nextDate(student: Pick<Student, "ceremonyDate" | "rehearsal1" | 
 const RAIL_QUERY = "(min-width: 1200px)";
 const subscribeRail = (change: () => void) => { if (typeof matchMedia !== "function") return () => undefined; const query = matchMedia(RAIL_QUERY); query.addEventListener("change", change); return () => query.removeEventListener("change", change); };
 const railWide = () => typeof matchMedia === "function" && matchMedia(RAIL_QUERY).matches;
+function controlInView(node?: HTMLElement | null): boolean {
+  if (!node?.isConnected || node.closest("[hidden], [inert]")) return false;
+  const box = node.getBoundingClientRect();
+  return box.width > 0 && box.height > 0 && box.top >= 0 && box.left >= 0 && box.bottom <= innerHeight && box.right <= innerWidth;
+}
 /** The next date as the lesson card says it: the chip within two weeks, else the kind, the date and the days to go. */
 function NextDateLine({ student }: { student: Pick<Student, "ceremonyDate" | "rehearsal1" | "rehearsal2"> }) {
   const next = nextDate(student);
@@ -155,7 +160,7 @@ function AssignmentContext({ row, current = false, staff }: { row: Reading; curr
 }
 
 /** The anchors the foot, the pinned card and the old tab addresses name: Service parts and Lessons follow the text on one page (Readings for everyone E2). */
-export const SECTION_IDS = Object.freeze({ service: "service-parts", lessons: "lessons" });
+export const SECTION_IDS = Object.freeze({ service: "service-parts", lessons: "lessons", tutorLesson: "tutor-lesson-and-practice" });
 const sectionIds: readonly string[] = Object.values(SECTION_IDS);
 /** The sentence that says listening is not released yet: under the reading for staff and parents, and on a student's disabled Listen. */
 const LISTENING_OFF = "Listening isn’t available yet. You can still read, use word tools, and practice.";
@@ -267,16 +272,17 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   }, [mode, authorizedReading, key]);
   const shownAsk = mode === "child-practice" && ask?.key === key ? ask.text : null;
   // The tutor's lesson card reads the same snapshot: the newest "Before next time", and whether the list is ready for a new note.
+  const [practiceOpen, setPracticeOpen] = useState(false);
   const staffView = mode === "tutor" || mode === "admin";
   const [lessonCard, setLessonCard] = useState<{ key: string; ready: boolean; latest: { lessonDate: string; beforeNext: string | null } | null } | null>(null);
   useLayoutEffect(() => {
-    if (!staffView || !authorizedReading) return;
+    if (!staffView || !authorizedReading || practiceOpen) return;
     lessons.current?.snapshot?.(value => {
       if (value.baseline !== authorizedReading) return;
       const latest = value.lesson.status === "ready" ? value.lesson.latest : null;
       setLessonCard({ key, ready: value.lesson.status === "ready", latest: latest ? { lessonDate: latest.lessonDate, beforeNext: latest.beforeNext ?? null } : null });
     });
-  }, [staffView, authorizedReading, key]);
+  }, [staffView, authorizedReading, key, practiceOpen]);
   const wide = useSyncExternalStore(subscribeRail, railWide, () => false);
   const congregation = useCongregation(Boolean(authorizedReading)), links = congregation.links;
   useLayoutEffect(() => {
@@ -297,7 +303,8 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   const practicingMode = mode === "student" || mode === "child-practice", practicing = practicingMode && Boolean(student) && readings.length > 0 && !exploring;
   // Tutors and admins teach from the same Song session reading, and keep the staff assignment details.
   const staff = mode === "tutor" || mode === "admin", song = learner || staff, editorId = `${serviceId}-editor`;
-  const [practiceOpen, setPracticeOpen] = useState(false);
+  const reloadTutorLessons = useRef(false);
+  const practiceClose = useRef<HTMLButtonElement>(null);
   const practiceOrigin = useRef<{ element: HTMLElement | null; target: "dock" | "hero" | "verse" }>({ element: null, target: "verse" });
   const enterPractice = () => {
     const expected = authorizedReading;
@@ -309,6 +316,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   };
   const closePractice = () => {
     const passage = readingPanel.current?.querySelector<HTMLElement>("[data-practice-ref]")?.dataset.practiceRef;
+    reloadTutorLessons.current = mode === "tutor";
     setPracticeOpen(false);
     requestAnimationFrame(() => {
       const verse = passage ? readingPanel.current?.querySelector<HTMLElement>(`[data-verse-ref="${CSS.escape(passage)}"]`) : null;
@@ -318,11 +326,27 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
       // control rather than retaining a disconnected DOM node.
       const trigger = origin.target === "dock" ? readingPanel.current?.querySelector<HTMLElement>('[data-testid="dock-up-close"]')
         : origin.target === "hero" && origin.element?.isConnected ? origin.element : null;
-      const target = trigger ?? verse?.querySelector<HTMLElement>("button[data-verse-number], button[data-word-index]")
-        ?? (origin.element?.isConnected ? origin.element : null);
+      const verseAction = verse?.querySelector<HTMLElement>('button[data-verse-number], [role="button"][data-word-index]');
+      const target = controlInView(trigger) ? trigger : verseAction ?? trigger ?? (origin.element?.isConnected ? origin.element : null);
+      if (!controlInView(target)) target?.scrollIntoView({ block: "center", inline: "nearest" });
       target?.focus({ preventScroll: true });
     });
   };
+  useLayoutEffect(() => {
+    if (!practiceOpen) return;
+    const close = practiceClose.current;
+    if (!controlInView(close)) close?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    close?.focus({ preventScroll: true });
+  }, [practiceOpen]);
+  useEffect(() => {
+    if (practiceOpen || !reloadTutorLessons.current || !authorizedReading) return;
+    reloadTutorLessons.current = false;
+    const request = new AbortController();
+    void lessons.current?.reload(authorizedReading, request.signal).catch(error => {
+      if (!request.signal.aborted) studyDenied(statusOf(error));
+    });
+    return () => request.abort();
+  }, [practiceOpen, authorizedReading, studyDenied]);
   useEffect(() => { if (!authorizedReading || (current?.error !== undefined && [401, 403, 404].includes(current.error))) setPracticeOpen(false); }, [authorizedReading, current?.error]);
   useEffect(() => {
     if (!practiceOpen) return;
@@ -378,10 +402,10 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   // "Lessons", the foot, an old ?tab= link the redirect kept as a hash) brings it into view once the reading has loaded.
   const toSection = useCallback((id: string) => {
     const heading = document.getElementById(id); if (!heading?.isConnected) return;
-    const folded = heading.closest<HTMLDetailsElement>("details[data-reading-plan], details[data-section-fold]"); if (folded) folded.open = true;
+    const folded = heading.closest<HTMLDetailsElement>("details[data-reading-plan], details[data-section-fold], details[data-tutor-lesson-fold]"); if (folded) folded.open = true;
     heading.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); heading.focus({ preventScroll: true });
   }, []);
-  const hashed = useRef(false);
+  const hashed = useRef<string | null>(null);
   // A student's plan folds into one disclosure at the foot; the parts stay mounted inside it either way, so reloads and unsent work behave the same.
   // It wraps for the whole life of a student page (never only once the reading loads), so nothing inside remounts; it starts folded only once there is a
   // reading to practice (a student with only service parts, or a portion still being explored, sees them open).
@@ -473,10 +497,10 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   const writeNote = () => { toSection(SECTION_IDS.lessons); requestAnimationFrame(() => document.querySelector<HTMLButtonElement>("[data-lesson-add]")?.click()); };
   // Arriving at /mine/reading#lessons (or an old ?tab= address the redirect turned into a hash): once the reading is shown, bring that section forward, once.
   useEffect(() => {
-    if (hashed.current || !authorizedReading) return;
-    const id = decodeURIComponent(window.location.hash.slice(1)); hashed.current = true;
+    if (hashed.current === key || !authorizedReading) return;
+    const id = decodeURIComponent(window.location.hash.slice(1)); hashed.current = key;
     if (sectionIds.includes(id)) requestAnimationFrame(() => toSection(id));
-  }, [authorizedReading, toSection]);
+  }, [authorizedReading, key, toSection]);
   const serviceBlock = tabPanel("service", <><ServiceLearningPanel id={serviceId} headingId={SECTION_IDS.service} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} onDepartureActive={setServiceDepartureActive} onVisit={(plan, unitId) => calendar.visitUnit(plan, unitId)} />
       {identity.crc && authorizedReading && <p className="field-help"><a href={links.siddurUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">CRC digital siddur collection</a>{links.musicUrl && <> · <a href={links.musicUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Service music</a></>}</p>}</>);
   const lessonsBlock = tabPanel("lessons", <>{staff && student && authorizedReading && <TutorPracticeDays />}{staff && student && authorizedReading && <StaffPracticeDays calendar={calendar} firstName={student.firstName} />}<LessonLog mode={mode} studentId={studentId} register={registerLessons} tabbed={false} headingId={SECTION_IDS.lessons} firstName={student?.firstName ?? firstName} /></>);
@@ -487,16 +511,19 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   // Learners (students, child practice, parents) always open in Lein; staff open in the lens they last used.
   // 1.9 N23: the assigned tutor's read of this student's practice is held by the scope itself, so its answer re-renders only the lines
   // that use it, never this panel (and never its playback). Nothing is asked for anyone else, or while the gate is closed.
-  // Staff (tutor walk 2026-10-28, whole-screen rethink): the text and Service parts on the left, and a lesson rail on the right that stays in view,
-  // with the lesson card over the Lessons list. Narrower, the card sits under the title and the Lessons follow Service parts, as before.
+  // The tutor's lesson card and history share one disclosure. On a narrow screen the summary opens
+  // the same sidebar from a link under the title.
   const card = !practiceOpen && staff && student && authorizedReading ? <LessonCard baseline={authorizedReading} latest={lessonCard?.key === key ? lessonCard.latest : null} ready={lessonCard?.key === key && lessonCard.ready}
-    addButton={!wide} onAdd={origin => lessons.current?.add?.(origin)} calendar={calendar} onMarked={() => progress.refresh()} /> : null;
+    addButton={mode === "admin" && !wide} onAdd={origin => lessons.current?.add?.(origin)} calendar={calendar} onMarked={() => progress.refresh()} /> : null;
+  const revealLessons = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!event.button && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) toSection(event.currentTarget.hash.slice(1));
+  };
   const body = <>
     {/* 1.9 N16 re-measure (CLS): while the reading loads it keeps a screen of room, so what follows it never jumps into view and out again. */}
     {current?.loading && <div className="reading-loading-space reading-loading" data-testid="reading-loading"><p role="status">{learner ? "Loading the reading…" : "Checking the current assignment, text and saved work…"}</p>
       <div className="reading-skeleton" aria-hidden="true"><span /><span /><span /><span /><span /></div></div>}<div className="reading-workspace reading-with-work" data-testid="reading-workspace" data-assigned-practice={practiceOpen ? "" : undefined} hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
     <section aria-label="Assigned reading">
-      {practiceOpen && <header className={styles.header}><h1>Practice</h1><button type="button" className="button-secondary" data-testid="close-assigned-practice" onClick={closePractice}>Back to reading</button></header>}
+      {practiceOpen && <header className={styles.header}><h1>Practice</h1><button ref={practiceClose} type="button" className="sheet-close" aria-label="Back to reading" data-testid="close-assigned-practice" onClick={closePractice}>{icons.close}</button></header>}
       {!student ? <div className={`workspace-state${current?.error ? "" : " reading-loading-space"}`} aria-live="polite"><StateHeading>{current?.error ? "Reading unavailable" : "Loading the assigned reading"}</StateHeading>
         <p>{current?.error === 404 || current?.error === 403 ? "This reading is no longer available in the selected role. Choose another available student." : current?.error && mode === "parent" && childName ? <><bdi dir="auto">{childName}</bdi>’s reading didn’t load.</> : current?.error ? "We couldn’t load the confirmed assignment. No previous student’s reading is being shown." : "Checking the selected student and confirmed references."}</p>
         {current?.error && <button className="button-secondary" onClick={() => setRetry(value => value + 1)}>{mode === "parent" ? "Try again" : "Reload reading"}</button>}</div> : <>
@@ -514,7 +541,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
           {!practicing && mode !== "parent" && !staff && readings.length > 1 && <AssignedReadingSummaries readings={readings} selectedKind={selectedReading.kind} />}
           {!practicing && practiceAction && <div className="hero-actions">{practiceAction}</div>}</>}
       </header>
-      {!wide && card}
+      {!wide && (mode === "tutor" && card ? <a href={`#${SECTION_IDS.tutorLesson}`} className={`button-secondary ${styles.lessonShortcut}`} onClick={revealLessons}>Lesson and practice</a> : card)}
       {/* The parent's page is a This week page (the whole-screen rethink): the card with Practice with the child, then Lesson notes and Service parts as
           rows that open in place, then Family honors, and last the text behind "See Noa's reading". */}
       {mode === "parent" && <ParentStudySummary store={parentSummary} baseline={authorizedReading ?? null} scope={parentScope} notice={congregation.consentNotice} action={practiceWith} readProgress={readProgress} refused={refreshSession}
@@ -550,7 +577,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
       {!practiceOpen && authorizedReading && !practicingMode && guideLink}
       {!practiceOpen && !learner && otherReadings.length > 0 && <details className="reading-other-assignments"><summary>Other confirmed reading details</summary>{otherReadings.map(row => <AssignmentContext key={row.id} row={row} staff={staff} />)}</details>}
       {/* The parent's text already ends in Trope chart and Print practice sheet, and its rows sit above it: one foot row, not two (finding 16). */}
-      {!practiceOpen && student && song && authorizedReading && mode !== "parent" && <ReadingFoot printLast print={printSheetHref ?? undefined} lead={practicingMode ? undefined : <><a href={`#${SECTION_IDS.service}`}>Service parts</a><a href={`#${SECTION_IDS.lessons}`}>Lessons</a></>} more={mode === "student" ? <StudentFootLinks readings={readings} /> : undefined} />}</>))}
+      {!practiceOpen && student && song && authorizedReading && mode !== "parent" && <ReadingFoot printLast print={printSheetHref ?? undefined} lead={practicingMode ? undefined : <><a href={`#${SECTION_IDS.service}`}>Service parts</a><a href={`#${SECTION_IDS.lessons}`} onClick={mode === "tutor" ? revealLessons : undefined}>Lessons</a></>} more={mode === "student" ? <StudentFootLinks readings={readings} /> : undefined} />}</>))}
     </section>
     {student && !song && <aside className="reading-tools" aria-labelledby="tools-heading"><h2 id="tools-heading">Practice tools</h2>
       <p>The confirmed assignment appears here. Use the review form below to propose and confirm changes.</p>
@@ -562,7 +589,10 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary, f
   </>;
   return <TutorPracticeScope mode={mode} studentId={studentId}><ReadingPrefsScope studentId={studentId} englishOnWide={!staff}><StudyLensScope storageKey={staff ? LENS_STORAGE.staff : null}><DepartureReview coordinator={work} />
     {staff ? <div className={`staff-layout${practiceOpen ? ` ${styles.focused}` : ""}`} data-testid="staff-layout"><div className="staff-main">{body}{!practiceOpen && serviceBlock}</div>
-      {!practiceOpen && <div className="lesson-rail" data-testid="lesson-rail">{wide && card}{lessonsBlock}</div>}</div> : body}{!practiceOpen && editor && (staff ? <dialog ref={sheet} id={editorId} className="editor-sheet" aria-labelledby="reading-editor-title" closedby={editorBusy ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); closeSheet(); }}>
+      {!practiceOpen && (mode === "tutor" ? <details key={key} className={`lesson-rail ${styles.lessonRail}`} data-testid="lesson-rail" data-tutor-lesson-fold="" hidden={!authorizedReading}>
+        <summary id={SECTION_IDS.tutorLesson} data-testid="lesson-rail-toggle">Lesson and practice</summary>
+        {card}{lessonsBlock}
+      </details> : <div className="lesson-rail" data-testid="lesson-rail">{wide && card}{lessonsBlock}</div>)}</div> : body}{!practiceOpen && editor && (staff ? <dialog ref={sheet} id={editorId} className="editor-sheet" aria-labelledby="reading-editor-title" closedby={editorBusy ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); closeSheet(); }}>
       <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close verse editor" disabled={editorBusy} onClick={closeSheet}>{icons.close}</button></div>{editor}
     </dialog> : <div id={editorId} className="reading-editor-anchor">{editor}</div>)}
     {!practiceOpen && plan(<>{student && practicingMode && authorizedReading && <div className="reading-plan-dates">{slotLine && <p className="hero-slot" data-testid="plan-service">{slotLine}</p>}<RehearsalDates student={student} />{guideLink}</div>}

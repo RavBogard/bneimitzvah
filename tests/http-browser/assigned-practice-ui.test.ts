@@ -5,6 +5,7 @@ import { beforeAll, afterAll, it, expect, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { eq } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 import { browserFixture } from "./fixture";
 import { assertBrowserStartupAllowed, BROWSER_ORIGIN, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
@@ -13,6 +14,7 @@ import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { normalizeHebrew } from "../../src/server/study/normalize";
 import type { StudyRequest } from "../../src/server/study/types";
 import * as s from "../../src/server/db/index";
+import { manage, openVerseEditor } from "./reading-nav";
 vi.mock("server-only", () => ({}));
 
 // Invented pointed words, a dozen to a verse, so ten verses run well past one phone screen.
@@ -22,6 +24,7 @@ const studyPage = (request: StudyRequest) => {
   return { ...page, verses: page.verses.map((verse, index) => ({ ...verse, hebrew: normalizeHebrew(`${Array.from({ length: 12 }, (_, i) => WORDS[(index + i) % WORDS.length]).join(" ")}׃`) })) };
 };
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
+let anotherStudentId: string;
 const contexts: BrowserContext[] = [];
 
 beforeAll(async () => {
@@ -41,6 +44,11 @@ beforeAll(async () => {
     await fixture.ownerDb.insert(s.assignmentVerse).values(verses.map((verse, index) => ({ tenantId: "crc", studentId: fixture.student.id, assignmentId: assignment.id, ordinal: index + 1, verseRef: book + " 1:" + verse })));
   }
   await fixture.ownerDb.insert(s.privatePronouns).values({ tenantId: "crc", studentId: fixture.student.id, pronouns: "they/them" });
+  const [tutor] = await fixture.ownerDb.select().from(s.membership).where(eq(s.membership.userId, fixture.tutor.id));
+  await fixture.ownerDb.insert(s.lessonLog).values({ tenantId: "crc", studentId: fixture.student.id, entryId: randomUUID(), creatorMembershipId: tutor.id,
+    creatorUserId: fixture.tutor.id, lessonDate: "2026-11-18", summary: "Synthetic tutor lesson for the shared reading.", beforeNext: "Synthetic next practice.", version: 1, deleted: false });
+  anotherStudentId = (await fixture.practice()).sibling.id;
+  await fixture.ownerDb.insert(s.tutorStudent).values({ tenantId: "crc", studentId: anotherStudentId, tutorGrantId: fixture.tutorGrant.id });
   stop = await startBrowserServer(fixture.withRuntime); browser = await chromium.launch({ headless: true });
 }, 120_000);
 afterAll(async () => {
@@ -48,7 +56,7 @@ afterAll(async () => {
 }, 120_000);
 
 async function practiceReading(role: "student" | "tutor", width: number, height: number) {
-  const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, viewport: { width, height }, isMobile: true, hasTouch: true, serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
+  const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, viewport: { width, height }, isMobile: width < 640, hasTouch: width < 640, serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
   await context.route("**/*", async route => { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); });
   const tab = await context.newPage(), requests: string[] = []; tab.on("request", request => requests.push(new URL(request.url()).pathname));
   await tab.goto("/", { waitUntil: "domcontentloaded" });
@@ -62,12 +70,39 @@ async function practiceReading(role: "student" | "tutor", width: number, height:
 
 const surface = (tab: Page) => tab.locator("[data-assigned-practice]");
 
-it("opens the tutor's existing aliyah without staff details and restores them on return", async () => {
-  const { tab } = await practiceReading("tutor", 1440, 1000);
-  await ui(tab.getByTestId("lesson-rail")).toBeVisible();
+for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
+it(`starts with a closed tutor sidebar and returns from Practice and the editor at ${viewport.width}px`, async () => {
+  const { tab } = await practiceReading("tutor", viewport.width, viewport.height);
+  const rail = tab.getByTestId("lesson-rail"), disclosure = rail.getByTestId("lesson-rail-toggle");
+  const history = rail.getByRole("heading", { name: "Lessons", exact: true });
+  const note = rail.getByText("Synthetic tutor lesson for the shared reading.", { exact: true });
+  const upcoming = rail.getByText("Synthetic next practice.", { exact: false });
+  const assertRight = async (button: import("playwright").Locator, bar: import("playwright").Locator) => {
+    await ui(button).toBeInViewport();
+    const close = (await button.boundingBox())!, frame = (await bar.boundingBox())!;
+    expect(frame.x + frame.width - close.x - close.width).toBeLessThanOrEqual(16);
+    expect(close.y - frame.y).toBeLessThanOrEqual(16);
+    expect(close.width).toBeGreaterThanOrEqual(44);
+  };
+  await ui(rail).toBeVisible();
+  await ui(disclosure).toHaveText("Lesson and practice");
+  await ui(rail).not.toHaveAttribute("open", "");
+  await ui(history).toBeHidden();
+  await ui(note).toBeHidden();
+  await ui(upcoming).toBeHidden();
+  const readingColumn = tab.getByTestId("staff-layout").locator(".staff-main");
+  const collapsedWidth = (await readingColumn.boundingBox())!.width;
+  await disclosure.focus();
+  await tab.keyboard.press("Enter");
+  await ui(history).toBeVisible();
+  await ui(note).toBeVisible();
+  await ui(upcoming.first()).toBeVisible();
+  await ui(rail.locator(".lesson-log")).toHaveCount(1);
+  if (viewport.width >= 1200) expect((await readingColumn.boundingBox())!.width).toBeLessThan(collapsedWidth);
   await ui(tab.locator("[data-staff-nav]")).toBeVisible();
   await ui(tab.getByTestId("private-pronouns")).toContainText("they/them");
-  await tab.locator(".reading-practice-action").click();
+  const enter = tab.locator(".reading-practice-action");
+  await enter.click();
   await ui(surface(tab)).toBeVisible();
   await ui(tab.locator("dialog.lift")).toHaveCount(0);
   await ui(tab.getByTestId("lesson-rail")).toHaveCount(0);
@@ -78,10 +113,55 @@ it("opens the tutor's existing aliyah without staff details and restores them on
   await ui(surface(tab).getByRole("button", { name: "Play aliyah", exact: true })).toBeVisible();
   await ui(surface(tab).getByRole("region", { name: "Reading playback", exact: true })).toBeVisible();
   await ui(surface(tab).getByTestId("practice-verse-controls")).toBeVisible();
-  await tab.getByTestId("close-assigned-practice").click();
+  const close = tab.getByTestId("close-assigned-practice");
+  await assertRight(close, surface(tab).locator("header").first());
+  await ui(close).toBeFocused();
+  if (viewport.width < 640) await close.click(); else await tab.keyboard.press("Escape");
   await ui(surface(tab)).toHaveCount(0);
-  await ui(tab.getByTestId("lesson-rail")).toBeVisible();
+  const returned = tab.locator(":focus");
+  await ui(returned).toBeInViewport();
+  expect(await returned.evaluate(node => node.matches(".reading-practice-action") || !!node.closest('[data-verse-ref="Genesis 1:1"]'))).toBe(true);
+  await ui(rail).not.toHaveAttribute("open", "");
+  await ui(note).toBeHidden();
+  if (viewport.width < 640) {
+    await tab.getByRole("link", { name: "Lesson and practice", exact: true }).click();
+    await ui(disclosure).toBeFocused();
+  }
+  else await disclosure.click();
+  await ui(note).toBeVisible();
+
+  const manage = tab.getByRole("button", { name: "Manage reading", exact: true });
+  await openVerseEditor(tab);
+  const editor = tab.getByRole("dialog", { name: "Set the assigned reading" });
+  const editorClose = editor.getByRole("button", { name: "Close verse editor" });
+  await assertRight(editorClose, editor.locator(".sheet-bar"));
+  if (viewport.width < 640) await tab.keyboard.press("Escape"); else await editorClose.click();
+  await ui(editor).toBeHidden();
+  await ui(manage).toBeFocused();
+  await tab.goto(`/workspace/tutor/${fixture.student.id}`);
+  await ui(disclosure).toBeVisible();
+  await ui(rail).not.toHaveAttribute("open", "");
+  await ui(note).toBeHidden();
+  if (viewport.width >= 1200) {
+    await manage(tab, "Add lesson note");
+    const add = tab.getByRole("dialog", { name: "Add lesson note" });
+    await ui(add).toBeVisible();
+    await tab.keyboard.press("Escape");
+    await ui(add).toBeHidden();
+    await ui(note).toBeVisible();
+    const nav = tab.locator("[data-staff-nav]");
+    await nav.getByText("My Students", { exact: true }).click();
+    await nav.locator(`a[href="/workspace/tutor/${anotherStudentId}"]`).click();
+    await tab.waitForURL(url => url.pathname === `/workspace/tutor/${anotherStudentId}`);
+    await ui(disclosure).toBeVisible();
+    await ui(rail).not.toHaveAttribute("open", "");
+    await ui(note).toHaveCount(0);
+    await tab.goto(`/workspace/tutor/${fixture.student.id}#lessons`);
+    await ui(history).toBeFocused();
+    await ui(note).toBeVisible();
+  }
 });
+}
 
 it("keeps the student's passage, progress and existing player through Practice and back", async () => {
   const { tab } = await practiceReading("student", 390, 844);

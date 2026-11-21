@@ -13,6 +13,7 @@ export async function toSection(tab: Page, section: "service" | "lessons") {
   // The plan folds once the reading has loaded, so it is opened again until the section stays in view.
   for (let attempt = 0; attempt < 50 && !(await heading.isVisible()); attempt++) {
     if (await heading.evaluate(node => Boolean(node.closest("details[data-reading-plan]:not([open])")))) await openPlan(tab);
+    else if (await heading.evaluate(node => Boolean(node.closest("details[data-tutor-lesson-fold]:not([open])")))) await tab.getByTestId("lesson-rail-toggle").click();
     // A parent's page folds Lesson notes and Service parts into rows that open in place: the row is opened, as a reader would.
     else if (await heading.evaluate(node => Boolean(node.closest("details[data-section-fold]:not([open])")))) await heading.evaluate(node => { const fold = node.closest<HTMLDetailsElement>("details[data-section-fold]"); fold?.querySelector<HTMLElement>(":scope > summary")?.click(); });
     else await tab.waitForTimeout(100);
