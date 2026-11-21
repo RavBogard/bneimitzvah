@@ -83,4 +83,28 @@ test("recording library searches original labels, filters categories, and plays 
   await expect(listen).toBeFocused();
   await expect(listen).toBeInViewport();
   expect(media.length).toBeGreaterThan(0); expect(media.every(url => new URL(url).searchParams.get("id") === available.id)).toBe(true);
+  const focusedControlIsUncovered = () => page.evaluate(() => {
+    const focused = document.activeElement;
+    if (!focused) return false;
+    const bounds = focused.getBoundingClientRect();
+    const hit = document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    return Boolean(hit && focused.contains(hit));
+  });
+  const largeText = await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+  for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
+    await page.setViewportSize(viewport);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
+    await listen.press("Enter");
+    await expect.poll(focusedControlIsUncovered).toBe(true);
+    await controls.press("Enter");
+    await expect(panel.getByRole("button", { name: "Repeat", exact: true })).toBeFocused();
+    await expect.poll(focusedControlIsUncovered).toBe(true);
+    await controls.press("Enter");
+    await expect(panel).toBeHidden();
+    await expect.poll(focusedControlIsUncovered).toBe(true);
+    await player.getByRole("button", { name: "Close", exact: true }).press("Enter");
+    await expect(listen).toBeFocused();
+    await expect.poll(focusedControlIsUncovered).toBe(true);
+  }
+  await largeText.evaluate(style => style.remove());
 });
