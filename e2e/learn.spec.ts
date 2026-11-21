@@ -47,9 +47,11 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
   const next = page.locator("[data-next]");
   await expect(next).toHaveAttribute("data-next", "torah-sof-pasuk");
   await expect(page.getByText(/Can hear:|lessons visited/)).toHaveCount(0); // Daniel 2026-10-24: the home shows no count
-  await expect(page.getByTestId("learn-saved-note")).toHaveText("Progress is saved on this device. Sign in to keep it.");
-  await expect(page.locator("main").getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", "/sign-in");
-  await expect(page.getByRole("navigation", { name: "Site", exact: true }).getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", "/sign-in");
+  await expect(page.getByTestId("learn-saved-note")).toHaveText("Progress is saved on this device. Sign in with Google or an email code to return to Learn to lein.");
+  await expect(page.locator("main").getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", "/sign-in?return=%2Flearn");
+  const headerSignIn = page.getByRole("navigation", { name: "Site", exact: true }).getByRole("link", { name: "Sign in", exact: true });
+  await headerSignIn.focus();
+  await expect(headerSignIn).toHaveAttribute("href", "/sign-in?return=%2Flearn");
   // Every lesson on both paths is a link (the order is advice), while Next still recommends one.
   await expect(page.locator('section[aria-labelledby="path-torah"] ol a')).toHaveCount(12);
   await expect(page.locator('section[aria-labelledby="path-haftarah"] ol a')).toHaveCount(12);

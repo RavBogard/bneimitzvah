@@ -631,7 +631,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
 
   return <VersePanelScope passage={discussionPassage}>
     <WordPanelSource host={wordHost} />
-    <div className="reading-lens-row">
+    <div className={`reading-lens-row ${styles.lensRow}`}>
       {sources.length > 1 && <div className={styles.passageTabs} role="tablist" aria-label="Reading text selection">
         {sources.map((row, at) => <button key={at} type="button" role="tab" id={`${group}-passage-${at}`} className={styles.passageTab} aria-selected={at === index} tabIndex={at === index ? 0 : -1} data-passage-tab={row.source.passage.kind}
           onKeyDown={event => {
@@ -676,7 +676,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
               onPick={ref => { const at = page.verses.findIndex(row => row.ref === ref); if (at >= 0) release(() => setFocus(at)); }} />
           </> : <>
             {!choice.view?.choosing && <p className={styles.verseCue} data-testid="verse-cue">
-              {listening ? "Select a verse number or Hebrew word to hear the verse." : "Select a Hebrew word to explore it."}
+              {listening ? "Select a word or verse number to listen." : "Select a Hebrew word to explore it."}
             </p>}
             <FlowingStudyText verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={prefs.translation} englishHidden={drillVerse ? DRILL_STRINGS.hidden : undefined} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
             sections={labels} linked={linkedVerse(leinLink, page.verses)} onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} choice={choice.view} />

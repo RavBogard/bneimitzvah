@@ -18,6 +18,7 @@ test("on a Pixel 7 the first Hebrew starts above y 400 on /read with the week's 
     await page.goto(`${week}${lens === "study" ? "&lens=study" : ""}`);
     await expect(page.getByRole("tablist", { name: "Reading text selection" })).toBeVisible();
     await expect(page.getByRole("tablist", { name: "Reading sections" })).toBeVisible();
+    await expect(page.getByTestId("verse-cue")).toBeVisible();
     await expect(firstWord(page)).toBeVisible();
     measured[lens] = Math.round((await firstWord(page).boundingBox())!.y);
   }
