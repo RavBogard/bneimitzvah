@@ -2,6 +2,10 @@
 
 Updated 2026-11-21. This file is replaced, not appended: it says where the work stands today, in about a hundred lines. The full log up to 2026-11-16 (gate lines, merges, migrations, walk findings) is unchanged at `docs/archive/STATE-through-2026-11-16.md`. Daniel's binding rulings are indexed in `docs/planning/RULINGS.md`; `MISSION.md` beside this file is still the authority. Historical plans, returns and reviews are under `docs/archive/` with their old folder layout.
 
+## Account display names, November 21
+
+People can edit their own display name from Account. Congregation admins can edit it from People or Tutors. The name belongs to the account in that congregation. Ceremony roster names remain separately editable in the student’s details.
+
 ## Saved-reading editing, November 21
 
 Daniel approved one **Edit** button on a personally saved reading. **Change verses** opens the existing selection, and **Edit name and date** opens the details form. Daniel deferred changes to child sign-in until a later evaluation.
