@@ -1,12 +1,12 @@
 # State — CRC B'nei Mitzvah portal
 
-Updated 2026-11-20. This file is replaced, not appended: it says where the work stands today, in about a hundred lines. The full log up to 2026-11-16 (gate lines, merges, migrations, walk findings) is unchanged at `docs/archive/STATE-through-2026-11-16.md`. Daniel's binding rulings are indexed in `docs/planning/RULINGS.md`; `MISSION.md` beside this file is still the authority. Historical plans, returns and reviews are under `docs/archive/` with their old folder layout.
+Updated 2026-11-21. This file is replaced, not appended: it says where the work stands today, in about a hundred lines. The full log up to 2026-11-16 (gate lines, merges, migrations, walk findings) is unchanged at `docs/archive/STATE-through-2026-11-16.md`. Daniel's binding rulings are indexed in `docs/planning/RULINGS.md`; `MISSION.md` beside this file is still the authority. Historical plans, returns and reviews are under `docs/archive/` with their old folder layout.
 
-## Approved feature gaps, November 20
+## Feature gap release, November 21
 
-The [build plan](../2026-11-20-feature-gap-analysis/BUILD-PLAN.md) governs six milestones. Editor recording coverage is live at `acce5818`. Independent review verified the staff capability checks and response fields and corrected the handling of lost access. All [15 CI jobs](https://github.com/RavBogard/bneimitzvah/actions/runs/44869408757) passed. Production UI with synthetic tutor data showed the coverage summary and credited verse/word details at 390 and 1440 px.
+All six milestones in the [approved plan](../2026-11-20-feature-gap-analysis/BUILD-PLAN.md) are live. The [feature gap analysis](../2026-11-20-feature-gap-analysis/REPORT.md) records the original findings. Tutors see recording coverage and credited voices. A child learning through a parent keeps their own progress. Coursework and assigned Practice credit one Chicago calendar day, including saved work synced later. Adults can resume privately marked verses in a dated reading. Service lessons credit the exact assigned part, and staff can resume setup from current records.
 
-The remaining five milestones are integrated for release. Synthetic family tests cover selected-child course history and Chicago-day credit after an offline restart. Adult rehearsal marks stay with the saved reading’s owner. Service completion follows the exact assigned part and revision. The staff checklist reads current roster, relationship, reading and invitation state. Independent checks covered authority changes during a save, tab and account switches, and invitation status for the intended recipient. Production promotion requires the full CI run, migrations 0062–0066 and the canonical site checks.
+Production runs the application from [dbde6cfa](https://github.com/RavBogard/bneimitzvah/commit/dbde6cfae950278f02edb9c21aeab577318a8062). All [15 release checks](https://github.com/RavBogard/bneimitzvah/actions/runs/44875577478) passed. Database migrations 0062–0066 and row-level policies were verified. Production registered the daily retention job for 11:43 UTC. Canonical-site checks used synthetic student, parent, tutor, admin and reading data. Installed-browser tests exercised offline completion, account and child changes, and replay. A real-family pilot remains Daniel’s decision.
 
 ## Usability release, November 20
 
