@@ -66,7 +66,7 @@ function CongregationSettingsPage() {
   const [view, setView] = useState<SettingsView | null>(null), [draft, setDraft] = useState<Draft | null>(null), [loading, setLoading] = useState(true), [failure, setFailure] = useState(false);
   const [pending, setPending] = useState(false), [problems, setProblems] = useState<string[]>([]), [message, setMessage] = useState<{ text: string; tone: "status" | "alert" } | null>(null);
   const [conflict, setConflict] = useState(false);
-  const request = useRef<AbortController | null>(null), alive = useRef(true), mutation = useRef<{ key: string; id: string } | null>(null);
+  const request = useRef<AbortController | null>(null), generation = useRef(0), mutation = useRef<{ key: string; id: string } | null>(null);
   // G21 (AD-13): after a refused save, focus moves to the first field that needs a change.
   const form = useRef<HTMLFormElement>(null), [focusTurn, setFocusTurn] = useState(0);
   useEffect(() => { if (focusTurn) form.current?.querySelector<HTMLElement>("[aria-invalid=\"true\"]")?.focus(); }, [focusTurn]);
@@ -104,7 +104,7 @@ function CongregationSettingsPage() {
   }, []);
   const clear = useCallback(() => {
     editor.current.dirty = false;
-    alive.current = false; request.current?.abort(); mutation.current = null;
+    generation.current++; request.current?.abort(); mutation.current = null;
     finishDeparture(false);
     setView(null); setDraft(null); setSwitches({ weeklyDigest: false, studentReminder: false });
     setPending(false); setProblems([]); setMessage(null); setConflict(false); setFailure(false);
@@ -151,8 +151,8 @@ function CongregationSettingsPage() {
   }, [serviceAuthorityFailed]);
   useEffect(() => registerReload(load), [registerReload, load]);
   useEffect(() => {
-    alive.current = true; void load();
-    return () => { alive.current = false; request.current?.abort(); finishDeparture(false); };
+    void load();
+    return () => { generation.current++; request.current?.abort(); finishDeparture(false); };
   }, [load, finishDeparture]);
   useEffect(() => {
     let departedWithDraft = false;
@@ -162,7 +162,7 @@ function CongregationSettingsPage() {
     };
     const restored = (event: PageTransitionEvent) => {
       if (!event.persisted || !departedWithDraft) return;
-      departedWithDraft = false; alive.current = true; void load();
+      departedWithDraft = false; void load();
     };
     window.addEventListener("pagehide", departed);
     window.addEventListener("pageshow", restored);
@@ -183,10 +183,11 @@ function CongregationSettingsPage() {
     // One mutation id per exact request, so a retry after a lost reply is recognised rather than saved twice.
     const key = JSON.stringify([view.version, settings]);
     if (mutation.current?.key !== key) mutation.current = { key, id: crypto.randomUUID() };
+    const turn = generation.current;
     setPending(true); setProblems([]); setMessage(null);
     try {
       const outcome = await settingsApi.save({ expectedVersion: view.version, settings, mutationId: mutation.current.id });
-      if (!alive.current) return;
+      if (turn !== generation.current) return;
       if (outcome.ok) {
         const nextView = { ...view, version: outcome.version, settings: checked.value };
         const nextDraft = draftOf(checked.value), nextSwitches = switchesOf(checked.value);
@@ -200,11 +201,11 @@ function CongregationSettingsPage() {
       else if (outcome.code === "invalid") { setProblems(outcome.problems); setFocusTurn(turn => turn + 1); setMessage({ text: "Some settings need a change before they can be saved.", tone: "alert" }); }
       else { setConflict(true); setMessage({ text: "Someone saved these settings after you opened this page, so your changes weren’t saved. Reload to review the latest settings with your changes still in place.", tone: "alert" }); }
     } catch (error) {
-      if (!alive.current) return;
+      if (turn !== generation.current) return;
       const status = statusOf(error);
       if (status === 401 || status === 403 || status === 404) serviceAuthorityFailed(status);
       else setMessage({ text: "We couldn’t confirm the save. Your changes are still here. Try saving again to check.", tone: "alert" });
-    } finally { if (alive.current) setPending(false); }
+    } finally { if (turn === generation.current) setPending(false); }
   }
 
   const invalid = new Set(problems.flatMap(problem => fieldFor[problem] ?? []));

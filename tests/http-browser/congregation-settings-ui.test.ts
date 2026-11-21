@@ -157,6 +157,39 @@ it("Back keeps the draft on cancel and discards it before returning to the previ
   await ui(tab.getByTestId("settings-dirty")).toBeEmpty();
 });
 
+it("ignores an old save response after a discarded page is restored", async () => {
+  const tab = await page("admin");
+  await navigate(tab, "/workspace/admin/settings");
+  const name = tab.getByLabel("Name on study guides", { exact: true });
+  await ui(name).toBeVisible();
+  const initial = (await api(tab, "/api/admin/congregation-settings")).data.view;
+  await safe(() => name.fill("Synthetic departed draft"));
+  const endpoint = `${BROWSER_ORIGIN}/api/admin/congregation-settings`;
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await tab.route(endpoint, async route => {
+    if (route.request().method() !== "POST") return route.continue();
+    await held;
+    await route.fulfill({ json: { ok: true, replayed: false, version: initial.version + 1 } });
+  });
+  try {
+    const sent = tab.waitForRequest(request => request.url() === endpoint && request.method() === "POST");
+    await safe(() => tab.getByRole("button", { name: "Save settings" }).click());
+    await sent;
+    await tab.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: true })));
+    await ui(name).toHaveCount(0);
+    await tab.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
+    await ui(name).toHaveValue(initial.settings.rabbiDisplayName ?? "");
+    const response = tab.waitForResponse(result => result.url() === endpoint && result.request().method() === "POST");
+    release();
+    await (await response).finished();
+    await tab.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await ui(name).toHaveValue(initial.settings.rabbiDisplayName ?? "");
+    await ui(tab.getByText("Settings saved.", { exact: true })).toHaveCount(0);
+    await ui(tab.getByTestId("settings-dirty")).toBeEmpty();
+  } finally { release(); }
+});
+
 it("fits a phone without sideways scrolling, and a tutor can neither open nor write the settings", async () => {
   const phone = await page("admin", true); await navigate(phone, "/workspace/admin/settings");
   await ui(phone.getByRole("heading", { name: "Congregation settings", level: 1, exact: true })).toBeVisible();
