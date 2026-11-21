@@ -40,6 +40,7 @@ export function PracticeNavigationGuard() {
   const path = usePathname(), query = useSearchParams(), router = useRouter();
   const previousPath = useRef(path);
   useEffect(() => {
+    if (!path) return;
     const previous = previousPath.current;
     previousPath.current = path;
     for (const listen of routeListeners) listen();
@@ -53,7 +54,7 @@ export function PracticeNavigationGuard() {
     }
     // A selection can finish while the parent route is still rendering. Only
     // a departure from practice may close it, never a query change on that route.
-    if (previous === path || !(previous.startsWith("/workspace/practice/") || isLearnPath(previous))) return;
+    if (!previous || previous === path || !(previous.startsWith("/workspace/practice/") || isLearnPath(previous))) return;
     practice.invalidate();
     if (!practice.pending) void practice.exit().catch(() => undefined);
   }, [path, query, router]);
@@ -86,7 +87,7 @@ export function ChildPracticeLearn({ children }: { children: ReactNode }) {
   const [offline, setOffline] = useState<{ transport: LearningTransport; lease: PracticeLease } | null>(null);
   const route = useRef(path); route.current = path;
   useEffect(() => setMounted(true), []);
-  const child = mounted && (childLearnPath(path, search) || isLearnPath(path) && tabPractice().selection !== null);
+  const child = mounted && Boolean(path && (childLearnPath(path, search) || isLearnPath(path) && tabPractice().selection !== null));
 
   useEffect(() => {
     if (!child) return;
@@ -104,7 +105,7 @@ export function ChildPracticeLearn({ children }: { children: ReactNode }) {
     };
     const expired = () => { setOffline(null); setUnavailable(true); };
     let offlineExpiry: ReturnType<typeof setTimeout> | undefined;
-    const pack = () => route.current === "/learn/service" || route.current.startsWith("/learn/service/") ? "service" : "course";
+    const pack = () => route.current === "/learn/service" || route.current?.startsWith("/learn/service/") ? "service" : "course";
     const openOffline = async () => {
       const lease = await readPracticeLease("child", pack());
       if (!current()) return;
