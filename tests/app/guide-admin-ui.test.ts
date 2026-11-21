@@ -61,6 +61,20 @@ test("an empty congregation shows the empty state, and an address that is not a 
   expect(() => parseOverview({ ...answer, guides: [{ ...answer.guides[0], afterHold: { version: "1" } }] })).toThrow();
 });
 
+test("reading and status filters apply to both sections, and the catalog offers later results in bounded pages", () => {
+  const overview = parseOverview(answer);
+  const { waiting, groups } = arrange(overview, { query: "  NÓACH ", status: "published" });
+  expect(waiting).toHaveLength(0);
+  expect(groups.map(group => [group.key, group.items.map(item => item.type)])).toEqual([["noach", ["discussion"]]]);
+  expect(arrange(overview, { query: "Vayera", status: "draft" }).waiting.map(item => item.type)).toEqual(["summary"]);
+  const discussions = Array.from({ length: 13 }, (_, index) => ({ ...overview.discussions[0], slug: `synthetic-${index}` }));
+  const markup = render({ ...overview, discussions });
+  expect(markup).toContain('type="search"');
+  expect(markup).toContain('data-testid="guide-admin-count"');
+  expect(markup).toContain('aria-label="Reading results pages"');
+  expect((markup.match(/data-testid="guide-admin-(guide|summary|discussion)"/g) ?? []).length).toBe(12);
+});
+
 test("the page's wording, pinned once", () => {
   const markup = render(parseOverview(answer));
   expect(markup).toContain("Waiting for Rabbi Synthetic");
