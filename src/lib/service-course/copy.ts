@@ -9,6 +9,11 @@ export const COPY = Object.freeze({
   home: Object.freeze({
     title: "Learn the service", // home.title
     intro: "Each prayer in the Shabbat morning service: what it is, how to read it, and where it is in the siddur.", // home.intro
+    introWithEvening: "Read and practice the prayers for Shabbat morning, Saturday evening, and Havdalah.",
+    morning: "Shabbat morning",
+    evening: "Saturday evening",
+    havdalah: "Havdalah",
+    jump: "Jump to a service",
     nextLabel: "Next", // home.next.label
     start: "Start", // home.next.start
     minutes: "about {n} minutes", // home.next.minutes

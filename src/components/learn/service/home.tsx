@@ -1,5 +1,5 @@
 "use client";
-import { CRC_TENANT, homeUnits, lessonById, lessonMinutes, lessonOpen, type Lesson } from "../../../lib/service-course/course";
+import { CRC_TENANT, homeUnits, lessonById, lessonMinutes, lessonOpen, type Lesson, type Unit } from "../../../lib/service-course/course";
 import { COPY, fill } from "../../../lib/service-course/copy";
 import { courseDone, emptyProgress, isDone, nextLesson, type Progress } from "../../../lib/service-course/progress";
 import type { Path } from "../../../lib/service-course/path";
@@ -14,6 +14,7 @@ import { icons, ServiceAppBar } from "./bits";
 import { pathLessons, useServiceProgress, type PathView } from "./progress";
 import { useCoursePath } from "./offline";
 import { savedDate, useOfflineWording } from "../../portal/offline/status";
+import { signInAddress } from "../../../lib/site/return-address";
 import { useIdentity } from "../../site/identity-context";
 
 /** One lesson row. Every row is a link, in every state: a lesson never locks, so nothing here is a bare span (DP-09). */
@@ -66,6 +67,18 @@ export function YourParts({ view, progress, next, savedAt = null }: { view: Path
   </section>;
 }
 
+const eveningAnchors = new Map([["evening", "saturday-evening"], ["havdalah", "havdalah"]]);
+
+function CourseUnit({ unit, progress, next }: { unit: Unit; progress: Progress; next: Lesson | null }) {
+  const Heading = unit.phase === "morning" ? "h3" : "h2", anchor = eveningAnchors.get(unit.id);
+  return <section id={anchor} tabIndex={anchor ? -1 : undefined} className={anchor ? styles.serviceJumpTarget : undefined}
+    aria-labelledby={`unit-${unit.id}`} data-unit={unit.id}>
+    <div className={learn.pathHead}><Heading id={`unit-${unit.id}`}>{unit.title}</Heading></div>
+    <p className={styles.unitSummary}>{unit.summary}</p>
+    <PathList lessons={unit.lessons.map(id => lessonById(id)!).filter(lesson => lessonOpen(lesson))} progress={progress} next={next} />
+  </section>;
+}
+
 /** The course home: one next step, the links, the signed-in student's own parts, every unit of the Shabbat morning service in order, then (CRC, 2.0 SC7) Saturday evening and Havdalah. */
 export function ServiceHome() {
   const identity = useIdentity();
@@ -77,7 +90,9 @@ export function ServiceHome() {
   const next = nextLesson(progress, CRC_TENANT, mine ?? CRC_TENANT.defaultPath), review = ready ? reviewSummary(progress, localDay(Date.now())) : null;
   // Below a Your parts answer (a list or a line), the rest of the course sits under its own heading.
   const listed = view.status === "ready" || view.status === "error";
-  const [savedBefore, savedAfter] = COPY.home.saved.split("Sign in");
+  const units = homeUnits();
+  const morning = units.filter(unit => unit.phase === "morning");
+  const evening = units.filter(unit => unit.phase === "evening");
   return <div className={`portal-shell ${learn.shell}`}>
     <a className="skip-link" href="#service-main">Skip to the course</a>
     <ServiceAppBar />
@@ -85,7 +100,7 @@ export function ServiceHome() {
       <div className={learn.home}>
         <div className={learn.homeLead}>
           <h1 className={learn.title}>{COPY.home.title}</h1>
-          <p className={learn.intro}>{COPY.home.intro}</p>
+          <p className={learn.intro}>{evening.length ? COPY.home.introWithEvening : COPY.home.intro}</p>
           {identity.crc && <p><a href="/recordings?category=blessing">Listen to Cantor Wendy Shermet’s blessings and prayers</a></p>}
           {!ready ? <p role="status" className={learn.state}>{COPY.state.homeLoading}</p>
             : courseDone(progress) ? <section className={learn.next} aria-labelledby="service-next"><h2 id="service-next" className={learn.nextTitle}>{COPY.home.done}</h2></section>
@@ -101,16 +116,21 @@ export function ServiceHome() {
           <nav className={learn.links} aria-label={COPY.home.nav}><a href="/learn">{COPY.home.lein}</a><a href="/learn/service/about">{COPY.home.about}</a></nav>
           {/* Until the account holds the progress (synced), it is on this device, so the line stays: also when the account cannot be
               reached at all, as on a server with no database. Learn to lein's home does the same. */}
-          {account.state !== "synced" && <p className={learn.saved} data-saved="device">{savedBefore}<a href="/sign-in">Sign in</a>{savedAfter}</p>}
+          {account.state !== "synced" && <p className={learn.saved} data-saved="device">{COPY.home.saved} <a href={signInAddress("/learn/service")}>Sign in</a> to return to Learn the service.</p>}
         </div>
         <div className={learn.paths}>
           <YourParts view={view} progress={progress} next={next} savedAt={savedAt} />
           {listed && <h2 className={styles.allHeading}>{COPY.home.allHeading}</h2>}
-          {homeUnits().map(unit => <section key={unit.id} aria-labelledby={`unit-${unit.id}`} data-unit={unit.id}>
-            <div className={learn.pathHead}><h2 id={`unit-${unit.id}`}>{unit.title}</h2></div>
-            <p className={styles.unitSummary}>{unit.summary}</p>
-            <PathList lessons={unit.lessons.map(id => lessonById(id)!).filter(lesson => lessonOpen(lesson))} progress={progress} next={next} />
-          </section>)}
+          <nav className={`${learn.links} ${styles.serviceJumps}`} aria-label={COPY.home.jump}>
+            {morning.length > 0 && <a href="#shabbat-morning">{COPY.home.morning}</a>}
+            {evening.some(unit => unit.id === "evening") && <a href="#saturday-evening">{COPY.home.evening}</a>}
+            {evening.some(unit => unit.id === "havdalah") && <a href="#havdalah">{COPY.home.havdalah}</a>}
+          </nav>
+          {morning.length > 0 && <section id="shabbat-morning" tabIndex={-1} aria-labelledby="morning-title" className={styles.serviceJumpTarget}>
+            <h2 id="morning-title" className={styles.allHeading}>{COPY.home.morning}</h2>
+            <div className={styles.morningUnits}>{morning.map(unit => <CourseUnit key={unit.id} unit={unit} progress={progress} next={next} />)}</div>
+          </section>}
+          {evening.map(unit => <CourseUnit key={unit.id} unit={unit} progress={progress} next={next} />)}
           {/* The evening's units list above when the congregation's evening is on (CRC's, 2.0 SC7); elsewhere this line stays. */}
           {!CRC_TENANT.evening && <p className={styles.later}>{COPY.home.eveningLater}</p>}
         </div>

@@ -92,3 +92,8 @@
 .introNote { color: var(--color-muted); }
 .bigWord { font-size: 3.25rem; line-height: 1.6; margin: 0; text-align: center; }
 .bigTr { margin: 0; font-size: 1.375rem; font-weight: 650; min-height: 44px; display: flex; align-items: center; }
+
+.serviceJumps { margin-block: 0; }
+.serviceJumps a { display: inline-flex; align-items: center; min-height: 44px; }
+.serviceJumpTarget { scroll-margin-block-start: 1rem; }
+.morningUnits { display: grid; gap: 1.5rem; }

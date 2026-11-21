@@ -59,21 +59,29 @@ test("the course home opens at 360 px: the next lesson, the links, every unit, a
   expect(response?.headers()["x-robots-tag"]).toBe("noindex, nofollow");
   await expect(page).toHaveTitle("Learn the service | CRC Torah");
   await expect(page.getByRole("heading", { level: 1, name: "Learn the service" })).toBeVisible();
-  await expect(page.getByText("Each prayer in the Shabbat morning service: what it is, how to read it, and where it is in the siddur.")).toBeVisible();
+  await expect(page.getByText("Read and practice the prayers for Shabbat morning, Saturday evening, and Havdalah.")).toBeVisible();
   const next = page.locator("[data-next]");
   await expect(next).toHaveAttribute("data-next", "shma");
   await expect(next.getByRole("heading", { level: 2, name: "Sh’ma" })).toBeVisible();
   await expect(next.getByText("about 5 minutes")).toBeVisible();
   await expect(page.getByText("Progress is saved on this device.")).toBeVisible();
+  const jumps = page.getByRole("navigation", { name: "Jump to a service", exact: true });
+  for (const [label, anchor] of [["Havdalah", "havdalah"], ["Saturday evening", "saturday-evening"], ["Shabbat morning", "shabbat-morning"]]) {
+    await jumps.getByRole("link", { name: label, exact: true }).click();
+    expect(new URL(page.url()).hash).toBe("#" + anchor);
+    const target = page.locator("#" + anchor);
+    await expect(target).toBeInViewport();
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   // CRC's Saturday evening and Havdalah are here now (2.0 SC7), so the "come next" line is gone and their two units list below.
   await expect(page.getByText("Saturday evening and Havdalah come next.")).toHaveCount(0);
   for (const title of ["Saturday evening: the Sh’ma and its blessings", "Havdalah"]) await expect(page.getByRole("heading", { level: 2, name: title, exact: true })).toBeVisible();
   const nav = page.getByRole("navigation", { name: "Course" });
   await expect(nav.getByRole("link", { name: "Learn to lein" })).toHaveAttribute("href", "/learn");
   await expect(nav.getByRole("link", { name: "About" })).toHaveAttribute("href", "/learn/service/about");
-  for (const title of ["The parts every student leads", "Morning blessings", "The Sh’ma and its blessings", "The Amidah", "The Torah service", "Closing the service"]) await expect(page.getByRole("heading", { level: 2, name: title, exact: true })).toBeVisible();
+  for (const title of ["The parts every student leads", "Morning blessings", "The Sh’ma and its blessings", "The Amidah", "The Torah service", "Closing the service"]) await expect(page.getByRole("heading", { level: 3, name: title, exact: true })).toBeVisible();
   // Reading Hebrew sits at the top, optional: its unit, its six lessons and the quiet row that points to it until f1 is done (2.0 SC3).
-  await expect(page.getByRole("heading", { level: 2, name: "Reading Hebrew" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 3, name: "Reading Hebrew" })).toBeVisible();
   await expect(page.getByRole("link", { name: "New to Hebrew letters? Start with Reading Hebrew." })).toHaveAttribute("href", "/learn/service/f1");
   await expect(page.locator("[data-unit='reading'] li")).toHaveText(["Letters, part one", "Letters, part two", "Vowels", "Dots that change a letter", "Reading words", "Reading lines"]);
   // Nothing is due and nothing is read yet: no Review row, no Quick ten row.
