@@ -4,11 +4,14 @@
 
 /* This week: the focal moment, at display scale. */
 .week { min-width: 0; margin-bottom: 2.5rem; }
+.weekHeader { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; min-height: 44px; }
+.currentShabbat { display: inline-flex; align-items: center; min-height: 44px; font-size: 0.9375rem; font-weight: 650; }
 .eyebrow { margin: 0; color: var(--color-action); font-size: 0.9375rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; }
-.parashah { margin-top: 0.75rem; max-width: 16ch; font-size: clamp(2.5rem, 7.5vw, 4.25rem); font-weight: 800; line-height: 1; letter-spacing: -0.035em; overflow-wrap: anywhere; }
+.parashah { display: flow-root; margin-top: 0.75rem; max-width: 16ch; font-size: clamp(2.5rem, 7.5vw, 4.25rem); font-weight: 800; line-height: 1; letter-spacing: -0.035em; overflow-wrap: anywhere; }
 /* A quiet, static placeholder the height of one display line; no shimmer. */
 .skeleton { display: block; width: min(100%, 6em); height: 0.7em; margin-block: 0.15em; border-radius: var(--radius-control); background: var(--color-rule); }
-.meta { margin-top: 0.625rem; color: var(--color-muted); font-size: 1.0625rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+/* The date and reading ranges share reserved space from the first paint. */
+.meta { min-block-size: 1lh; margin-top: 0.625rem; color: var(--color-muted); font-size: 1.0625rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-top: 1.5rem; }
 .actions > :global(.button-start) { display: inline-flex; align-items: center; justify-content: center; color: #fff; text-decoration: none; }
 .actions > :global(.button-start):hover { color: #fff; }
@@ -53,6 +56,7 @@
   .week { margin-bottom: 2rem; }
   .find { margin-bottom: 2rem; }
   .parashah { font-size: clamp(2.5rem, 12vw, 3.25rem); }
+  .meta { min-block-size: 2lh; }
   .actions { margin-top: 1.25rem; }
   /* Keep both labels on one line when they fit side by side; wrap the actions as units on narrower screens. */
   .actions > :global(.button-start), .actions > :global(.button-hero-secondary) { flex: 1 1 auto; min-width: 0; max-width: 100%; padding-inline: 1rem; }

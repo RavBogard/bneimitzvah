@@ -67,17 +67,20 @@ export function ThisWeekView({ state, quiet = false, label, titleRef, actions }:
   label?: string; titleRef?: Ref<HTMLHeadingElement>; actions?: ReactNode }) {
   const week = state.status === "ready" ? state.week : null, loading = state.status === "loading";
   return <section className={styles.week} data-testid="this-week" data-week-state={state.status === "loading" ? "pending" : state.status} data-week-which={state.next ? "next" : "this"} aria-labelledby="this-week-title" aria-busy={loading}>
-    <p className={styles.eyebrow}>{label ?? (state.next ? "Next Shabbat" : "This Shabbat")}</p>
+    <div className={styles.weekHeader}>
+      <p className={styles.eyebrow}>{label ?? (state.next ? "Next Shabbat" : "This Shabbat")}</p>
+      {state.next && !actions && <a className={styles.currentShabbat} data-testid="this-shabbat-link" href="/read">This Shabbat</a>}
+    </div>
     <h1 id="this-week-title" ref={titleRef} tabIndex={titleRef ? -1 : undefined} className={styles.parashah}>
       {loading ? <><span className="sr-only">{FALLBACK_TITLE}</span><span className={styles.skeleton} aria-hidden="true" data-skeleton /></> : week?.parashah ?? FALLBACK_TITLE}
     </h1>
-    {state.date && <p className={styles.meta} data-testid="week-ranges"><time dateTime={state.date}>{longDate(state.date)}</time>
+    <p className={styles.meta} data-testid="week-ranges" aria-hidden={state.date === null || undefined}>
+      {state.date && <time dateTime={state.date}>{longDate(state.date)}</time>}
       {week?.torah && <> · Torah <bdi dir="ltr">{displayRange(week.torah.ranges)}</bdi></>}
-      {week?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(week.haftarah.ranges)}</bdi></>}</p>}
+      {week?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(week.haftarah.ranges)}</bdi></>}</p>
     <div className={styles.actions}>{actions ?? <>
       <a className={quiet ? "button-hero-secondary" : "button-start"} href={state.next && state.date ? readAddress({ mode: "week", date: state.date, kind: null }) : "/read"}>Practice a reading</a>
       <a className="button-hero-secondary" href={state.next && state.date ? readAddress({ mode: "week", date: state.date, kind: null }, { study: true }) : "/read?lens=study"}>Study Torah</a>
-      {state.next && <a className="button-hero-secondary" data-testid="this-shabbat-link" href="/read">This Shabbat</a>}
     </>}</div>
   </section>;
 }
