@@ -2,9 +2,10 @@ import "server-only";
 import type { HttpRuntime } from "../runtime/composition";
 import { readJsonBody } from "./body";
 import { closedObject, uniqueQuery } from "./query";
-import { errorResponse, privateHeaders, privateJson, type JsonValue } from "./responses";
+import { errorResponse, HttpBoundaryError, privateHeaders, privateJson, type JsonValue } from "./responses";
 
-// The admin's guide sharing page: one GET downloads the reviewed guides as a file; two POSTs take a file back, one to preview and one to import.
+// The admin's guide sharing page: one GET downloads the reviewed guides as a file (with `?unreviewed=1`, the visible unreviewed ones too,
+// marked; the service decides what that includes); two POSTs take a file back, one to preview and one to import.
 // Admin mode only (the service's capability check), cookie session, same-origin posts; the file is parsed strictly before anything else runs.
 const routes = { "/api/admin/guide-share/export": ["GET"], "/api/admin/guide-share/preview": ["POST"], "/api/admin/guide-share/import": ["POST"] } as const;
 export function guideShareRouteMethods(pathname: string): readonly string[] | null {
@@ -13,9 +14,10 @@ export function guideShareRouteMethods(pathname: string): readonly string[] | nu
 export async function handleGuideShareRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
   const pathname = new URL(request.url).pathname, methods = guideShareRouteMethods(pathname); if (!methods) return null;
   try {
-    uniqueQuery(request.url, []);
+    const query = uniqueQuery(request.url, request.method === "GET" ? ["unreviewed"] : []), unreviewed = query.get("unreviewed");
+    if (unreviewed !== null && unreviewed !== "1") throw new HttpBoundaryError();
     if (request.method === "GET") {
-      const file = await runtime.guideShare.exportFile(request as never);
+      const file = await runtime.guideShare.exportFile(request as never, { includeUnreviewed: unreviewed === "1" });
       const headers = privateHeaders();
       headers.set("content-type", "application/json; charset=utf-8");
       headers.set("content-disposition", 'attachment; filename="guide-export.json"');

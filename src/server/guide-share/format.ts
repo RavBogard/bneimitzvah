@@ -7,11 +7,16 @@ import { PORTION_SUMMARY_LIMITS } from "../portion-summary/validation";
  * exactly this shape. It carries no id of any kind from the exporting database (no row, user, membership or Sefaria link id), no
  * email, nothing student-specific and no English verse text. A citation is its Sefaria reference (a public key such as "Rashi on
  * Genesis 1:1:1"), which the importer looks up again in its own catalog.
+ *
+ * A guide may carry `reviewed: false` (Daniel 2026-11-23): the exporting rabbi chose to include guides students see that are not marked
+ * reviewed. Absent means reviewed, so every earlier file means what it meant; no other value is accepted. It is a label for the importing
+ * rabbi only: an import never reads it to set review state, and every imported guide arrives held and unreviewed whatever it says.
+ * A parser from before this field refuses a file that carries it (a guide with a key it does not know is the wrong shape).
  */
 export const SHARE_SCHEMA = "guide-export/v1";
 export const SHARE_LIMITS = Object.freeze({ fileBytes: 4 * 1024 * 1024, guides: 200, summaries: 80, discussions: 300, discussionSources: 24, credit: 240, problems: 20 });
 
-export type ShareGuide = Readonly<{ kind: "torah" | "haftarah"; readingKey: string; origin: "claude" | "rabbi"; credit: string;
+export type ShareGuide = Readonly<{ kind: "torah" | "haftarah"; readingKey: string; origin: "claude" | "rabbi"; credit: string; reviewed?: false;
   body: Readonly<{ overview: string; themes: readonly Readonly<{ id: string; title: string; intro: string;
     notes: readonly Readonly<{ verseRef: string; body: string; sources: readonly Readonly<{ ref: string }>[] }>[] }>[] }> }>;
 export type ShareSummary = Readonly<{ reading: string; summary: string; outline: readonly string[]; credit: string }>;
@@ -20,6 +25,7 @@ export type ShareDiscussion = Readonly<{ slug: string; title: string; kind: "tor
 export type ShareFile = Readonly<{ schema: typeof SHARE_SCHEMA; exportedAt: string; guides: readonly ShareGuide[]; summaries: readonly ShareSummary[]; discussions: readonly ShareDiscussion[] }>;
 type Result = { ok: true; file: ShareFile } | { ok: false; problems: string[] };
 
+const GUIDE_KEYS = ["kind", "readingKey", "origin", "credit", "body"] as const;
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value)
   && [Object.prototype, null].includes(Object.getPrototypeOf(value));
@@ -41,7 +47,8 @@ export function parseShareFile(value: unknown): Result {
   const seenGuides = new Set<string>(), outGuides: ShareGuide[] = [];
   guides.forEach((raw, i) => {
     const at = `guides[${i}]`;
-    if (!object(raw) || !exactKeys(raw, ["kind", "readingKey", "origin", "credit", "body"])) return bad(`${at}: shape`);
+    if (!object(raw) || !exactKeys(raw, Object.hasOwn(raw, "reviewed") ? [...GUIDE_KEYS, "reviewed"] : GUIDE_KEYS)) return bad(`${at}: shape`);
+    if (Object.hasOwn(raw, "reviewed") && raw.reviewed !== false) return bad(`${at}.reviewed`);
     if (raw.kind !== "torah" && raw.kind !== "haftarah") return bad(`${at}.kind`);
     if (typeof raw.readingKey !== "string" || raw.readingKey.length > 160 || !SLUG.test(raw.readingKey)) return bad(`${at}.readingKey`);
     if (raw.origin !== "claude" && raw.origin !== "rabbi") return bad(`${at}.origin`);
@@ -71,7 +78,8 @@ export function parseShareFile(value: unknown): Result {
       notes: (theme.notes as Record<string, unknown>[]).map(note => ({ verseRef: note.verseRef as string, body: note.body as string,
         sources: (note.sources as { ref: string }[]).map(source => ({ ref: source.ref })) })) }));
     if (themes.some(theme => theme.notes.some(note => new Set(note.sources.map(s => s.ref)).size !== note.sources.length))) return bad(`${at}.body: a citation is repeated`);
-    outGuides.push({ kind: raw.kind, readingKey: raw.readingKey, origin: raw.origin, credit: raw.credit as string, body: { overview: body.overview as string, themes } });
+    outGuides.push({ kind: raw.kind, readingKey: raw.readingKey, origin: raw.origin, credit: raw.credit as string, ...(raw.reviewed === false ? { reviewed: false as const } : {}),
+      body: { overview: body.overview as string, themes } });
   });
 
   const seenSummaries = new Set<string>(), outSummaries: ShareSummary[] = [];

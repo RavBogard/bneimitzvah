@@ -2,7 +2,8 @@ import { gatedFetch } from "../session-gate";
 import { PortalRequestError } from "../../api";
 
 /** What the guide sharing page shows of a preview or an import. Every field is read defensively: the page renders text only, never markup. */
-export type Item = { label: string; status: "ready" | "skipped"; reason: string | null; dropped: number };
+/** `credit` and `notReviewed` are set for guides only: who the file credits, and whether it marked the guide as not reviewed. */
+export type Item = { label: string; status: "ready" | "skipped"; reason: string | null; dropped: number; credit?: string; notReviewed?: boolean };
 export type Outcome =
   | { ok: true; guides: Item[]; summaries: Item[]; discussions: Item[]; authors: string[]; imported: { guides: number; summaries: number } | null }
   | { ok: false; problems: string[] };
@@ -11,11 +12,12 @@ const bad = (): never => { throw new PortalRequestError(503); };
 const text = (value: unknown, max: number) => typeof value === "string" && value.length <= max ? value : bad();
 const list = (value: unknown, max: number): unknown[] => Array.isArray(value) && value.length <= max ? value : bad();
 const rec = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : bad();
-function items(value: unknown, label: (row: Record<string, unknown>) => string): Item[] {
+function items(value: unknown, label: (row: Record<string, unknown>) => string, guide = false): Item[] {
   return list(value, 600).map(raw => {
     const row = rec(raw);
     return { label: label(row), status: row.status === "ready" ? "ready" : "skipped", reason: typeof row.reason === "string" ? text(row.reason, 60) : null,
-      dropped: Number.isSafeInteger(row.droppedCitations) ? Number(row.droppedCitations) : 0 };
+      dropped: Number.isSafeInteger(row.droppedCitations) ? Number(row.droppedCitations) : 0,
+      ...(guide ? { credit: typeof row.credit === "string" ? text(row.credit, 240) : undefined, notReviewed: row.reviewed === false } : {}) };
   });
 }
 export function parseOutcome(status: number, value: unknown): Outcome {
@@ -24,7 +26,7 @@ export function parseOutcome(status: number, value: unknown): Outcome {
   if (status !== 200 || row.ok !== true) return bad();
   const imported = row.imported === undefined ? null : rec(row.imported);
   return { ok: true, authors: list(row.authors, 200).map(a => text(a, 240)),
-    guides: items(row.guides, r => `${text(r.kind, 20)}: ${text(r.readingKey, 160)}`), summaries: items(row.summaries, r => text(r.reading, 80)), discussions: items(row.discussions, r => text(r.slug, 80)),
+    guides: items(row.guides, r => `${text(r.kind, 20)}: ${text(r.readingKey, 160)}`, true), summaries: items(row.summaries, r => text(r.reading, 80)), discussions: items(row.discussions, r => text(r.slug, 80)),
     imported: imported ? { guides: Number(imported.guides) || 0, summaries: Number(imported.summaries) || 0 } : null };
 }
 async function post(path: string, file: unknown, signal?: AbortSignal): Promise<Outcome> {
@@ -44,6 +46,8 @@ async function post(path: string, file: unknown, signal?: AbortSignal): Promise<
 }
 export const guideShareApi = {
   exportHref: "/api/admin/guide-share/export",
+  /** The same download with the visible guides not yet reviewed included too; the server decides what that means. */
+  exportAllHref: "/api/admin/guide-share/export?unreviewed=1",
   maxBytes: MAX_FILE,
   preview: (file: unknown, signal?: AbortSignal) => post("/api/admin/guide-share/preview", file, signal),
   importFile: (file: unknown, signal?: AbortSignal) => post("/api/admin/guide-share/import", file, signal),
