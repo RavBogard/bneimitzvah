@@ -24,7 +24,9 @@ function Group({ id, title, items }: { id: string; title: string; items: Item[] 
   const ready = items.filter(item => item.status === "ready").length;
   return <section className="people-card" aria-labelledby={`guide-share-${id}`} data-testid={`guide-share-${id}`}>
     <div className="people-card-head"><h2 id={`guide-share-${id}`}>{title}</h2><p>{ready} of {items.length} can be imported.</p></div>
-    <ul>{items.map(item => <li key={item.label} data-status={item.status} data-reason={item.reason ?? undefined}>{item.label}
+    <ul>{items.map(item => <li key={item.label} data-status={item.status} data-reason={item.reason ?? undefined} data-not-reviewed={item.notReviewed || undefined}>{item.label}
+      {item.credit ? ` — From ${item.credit}` : ""}
+      {item.notReviewed && <> · <span data-testid="guide-share-not-reviewed">Not reviewed by its author</span></>}
       {item.status === "skipped" && item.reason ? ` — ${REASONS[item.reason] ?? "Not imported."}` : ""}
       {item.dropped > 0 ? ` — ${item.dropped} source${item.dropped === 1 ? "" : "s"} this portal could not confirm will be left out.` : ""}</li>)}</ul>
   </section>;
@@ -32,6 +34,7 @@ function Group({ id, title, items }: { id: string; title: string; items: Item[] 
 
 function GuideSharingPage() {
   const [file, setFile] = useState<unknown>(null), [name, setName] = useState(""), [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [includeUnreviewed, setIncludeUnreviewed] = useState(false);
   const [pending, setPending] = useState(false), [message, setMessage] = useState<{ text: string; tone: "status" | "alert" } | null>(null), [done, setDone] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
@@ -67,8 +70,11 @@ function GuideSharingPage() {
     <PageHeader title="Share guides" />
     <section className="people-card" aria-labelledby="guide-share-export-head">
       <div className="people-card-head"><h2 id="guide-share-export-head">Export</h2>
-        <p>Downloads one file with your reviewed guides, approved portion summaries and published discussions, each credited to its author. It never includes student guides, student or family details, held drafts or unreviewed work.</p></div>
-      <p><a className="button" href={guideShareApi.exportHref} download="guide-export.json" data-testid="guide-share-export">Download reviewed guides</a></p>
+        <p>Downloads one file with your reviewed guides, approved portion summaries and published discussions, each credited to its author. It never includes student guides, student or family details or held drafts, and includes guides not yet reviewed only if you choose.</p></div>
+      <div className="roster-field"><label className="email-choice"><input type="checkbox" checked={includeUnreviewed} onChange={event => setIncludeUnreviewed(event.target.checked)}
+        aria-describedby="guide-share-unreviewed-help" data-testid="guide-share-include-unreviewed" />Include guides not yet reviewed</label>
+        <p className="field-help" id="guide-share-unreviewed-help">They are marked as not reviewed, and arrive held like every imported guide.</p></div>
+      <p><a className="button" href={includeUnreviewed ? guideShareApi.exportAllHref : guideShareApi.exportHref} download="guide-export.json" data-testid="guide-share-export">{includeUnreviewed ? "Download guides" : "Download reviewed guides"}</a></p>
     </section>
     <section className="people-card" aria-labelledby="guide-share-import-head">
       <div className="people-card-head"><h2 id="guide-share-import-head">Import</h2>

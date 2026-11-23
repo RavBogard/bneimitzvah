@@ -53,7 +53,7 @@ Daniel approved the [six-milestone learning and staff workflow plan](2026-11-20-
 
 - G3: no student hears generated chant until Daniel passes the listening review: at least 95% of review verses on melody and zero "would teach wrong", after G1 (notes within ±50 cents) and G2 (technical checks). No code path serves an unreleased render. 2026-10-15. M ruling 17; C "G3 gate".
 - G3 covers generated chant only. Human recordings play for everyone, signed-out visitors included, with no listening review; bad cuts are fixed as found. 2026-10-22. M "Amended 2026-10-22 (show rather than hide)".
-- Daniel selected Cantor Wendy Shermet of Temple Israel, Omaha as CRC’s default recorded voice on November 20, 2026. Her full collection may be used for public CRC streaming, shared links and offline practice. Use available reference recordings on gaps and show their own credit. [Shermet decision](2026-11-20-shermet-recordings/PLAN.md).
+- Daniel selected Cantor Wendy Shermet of Temple Israel, Omaha as CRC’s default recorded voice on November 20, 2026. Her full collection may be used for public CRC streaming, shared links and offline practice. On 2026-11-23 Daniel ruled that the recording permissions cover non-commercial use by other synagogues ("our permissions cover anyone else using it for non profit shul use"): Shermet and Karaite recordings play on another congregation's own copy, switched by `CANTOR_RECORDINGS`; Finkel's tracks stay CRC only until they are packaged. Use available reference recordings on gaps and show their own credit. [Shermet decision](2026-11-20-shermet-recordings/PLAN.md).
 - Daniel selected the Karaite Jews of America’s recordings by Hazan Rotem Cohen and CRC’s recordings by Cantor Josh Finkel as additional listening options on November 20, 2026. Wendy stays first. Daniel instructed CRC to proceed on the assumption of permission for the Karaite collection. A future gift to its publisher is a separate decision. The Finkel selection supersedes the October source-material-only ruling for playback.
 - The 168 Finkel objects stay in the private Blob store; no deletion without Daniel. 2026-10-22. S "Current return point, 2026-10-21 night" (rulings 10 and the Finkel cut).
 - Once G3 passes, generated chant fills verses with no human recording (human recordings first) and plays for everyone, signed-out visitors included. 2026-10-22. M "Amended 2026-10-22"; S 1.5 rulings (5).
@@ -135,7 +135,7 @@ Daniel approved the [six-milestone learning and staff workflow plan](2026-11-20-
 
 - Another congregation runs its own copy (its own fork, Vercel, Neon and accounts), rebranded by settings; CRC's identity and Siona Benjamin's art appear only on CRC's origins. 2026-10-30. FK 1, 13 and "Decided here".
 - Actually provisioning a second tenant on CRC's deployment is Daniel's gate. 2026-10-16, restated 2026-10-23. M ruling 21 and D11; C "Stop and ask".
-- Reviewed guides and summaries may be exported to another congregation, credited, arriving held. 2026-10-30. FK 11.
+- Guides and summaries may be exported to another congregation, credited, arriving held. The export may include guides not yet reviewed, labelled as such, when the exporting rabbi chooses. 2026-10-30, amended 2026-11-23 (Daniel: "All of them, labelled"). FK 11.
 
 ## 10. Wording and tone
 

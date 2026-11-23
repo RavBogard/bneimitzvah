@@ -292,3 +292,98 @@ test("an imported summary keeps its author through approval, public read and exp
   const exportedFile = await f.send(EXPORT, { who: "multi", origin: OTHER });
   expect(exportedFile.body.summaries).toEqual([summary]);
 });
+
+// Daniel 2026-11-23: the export may include guides not yet reviewed, labelled. Off by default; the server decides what "on" includes.
+const ALL = `${EXPORT}?unreviewed=1`;
+const keyOf = (g: { kind: string; readingKey: string }) => `${g.kind}:${g.readingKey}`;
+async function seedMixed(f: Awaited<ReturnType<typeof fixture>>) {
+  await f.seed("crc", "torah", "pekudei");
+  await f.seed("crc", "torah", "vayera", { reviewed: false, origin: "claude", body: guide({ overview: "Visible unreviewed overview." }) });
+  // A held draft written over visible unreviewed work: the stream is mid-revision, so it stays home.
+  await f.seed("crc", "torah", "noach", { reviewed: false, body: guide({ overview: "UNDER-HELD-CANARY visible below a draft." }) });
+  await f.seed("crc", "torah", "noach", { version: 2, reviewed: false, hold: true, body: guide({ overview: "HELD-DRAFT-CANARY." }) });
+  // Withdrawn from the web: a web hold of version 2 leaves version 1 showing to readers, but the stream was withdrawn.
+  await f.seed("crc", "torah", "bereshit", { reviewed: false, body: guide({ overview: "WITHDRAWN-OLDER-CANARY." }) });
+  await f.seed("crc", "torah", "bereshit", { version: 2, reviewed: false, body: guide({ overview: "WITHDRAWN-CANARY." }) });
+  await f.seed("crc", "torah", "bereshit", { version: 3, reviewed: false, hold: true, channel: "web", copyOfVersion: 2, body: guide({ overview: "WITHDRAWN-CANARY." }) });
+  // Withdrawn outright: nothing left showing.
+  await f.seed("crc", "torah", "lech-lecha", { reviewed: false, body: guide({ overview: "WITHDRAWN-ONLY-CANARY." }) });
+  await f.seed("crc", "torah", "lech-lecha", { version: 2, reviewed: false, hold: true, channel: "web", copyOfVersion: 1, body: guide({ overview: "WITHDRAWN-ONLY-CANARY." }) });
+  // Held and never released.
+  await f.seed("crc", "haftarah", "vayera", { reviewed: false, hold: true, body: guide({ overview: "HELD-ONLY-CANARY." }) });
+  // Another congregation's visible unreviewed guide.
+  await f.seed("other", "torah", "vayishlach", { reviewed: false, body: guide({ overview: "OTHER-TENANT-CANARY." }) });
+  // A per-student guide, unreviewed.
+  await f.owner(async () => {
+    const [assignment] = await f.db.insert(s.assignment).values({ tenantId: "crc", studentId: f.students[0].id, kind: "torah", basis: "custom", ref: "Exodus 40:34-38", status: "confirmed", setByMembershipId: f.adminMember.id,
+      proposalSnapshot: { slotProvenance: 1, needsReview: false, source: {} } }).returning();
+    await f.db.insert(s.studyGuideStudent).values({ tenantId: "crc", studentId: f.students[0].id, assignmentId: assignment.id, assignmentRevision: 1, kind: "torah", version: 1, baseVersion: 0, previousVersion: null, origin: "claude", reviewed: false,
+      body: { themes: [theme("for-you", { title: "STUDENT-CANARY" })] }, actorUserId: f.adminMember.userId, actorMembershipId: f.adminMember.id, roleGrantId: f.adminGrant.id, role: "admin", mode: "admin", channel: "mcp", mutationId: randomUUID(), requestDigest: digest });
+  });
+}
+const NEVER = ["UNDER-HELD-CANARY", "HELD-DRAFT-CANARY", "WITHDRAWN-OLDER-CANARY", "WITHDRAWN-CANARY", "WITHDRAWN-ONLY-CANARY", "HELD-ONLY-CANARY", "OTHER-TENANT-CANARY", "STUDENT-CANARY", "example.test"];
+
+test("with the option off the export is what it was; on, it adds only visible unreviewed guides, each marked, and never held, withdrawn, student or other-tenant work", async () => {
+  const f = await fixture();
+  await seedMixed(f);
+  const off = await f.exported(), on = await f.send(ALL, { who: "admin" });
+  expect(on.status).toBe(200);
+  expect(parseShareFile(off.body).ok).toBe(true);
+  expect(parseShareFile(on.body).ok).toBe(true);
+  expect(off.body.guides.map(keyOf)).toEqual(["torah:pekudei"]);
+  expect(off.text).not.toContain('"reviewed"');
+  expect(on.body.guides.map(keyOf)).toEqual(["torah:pekudei", "torah:vayera"]);
+  expect(on.body.guides[0]).toEqual(off.body.guides[0]);
+  expect(on.body.guides[1]).toMatchObject({ origin: "claude", reviewed: false, credit: "the rabbi" });
+  // Apart from the added guides and the timestamp, the two files are the same bytes.
+  const same = (file: { exportedAt: string; guides: { reviewed?: boolean }[] }) => JSON.stringify({ ...file, exportedAt: "", guides: file.guides.filter(g => g.reviewed !== false) });
+  expect(same(on.body)).toBe(same(off.body));
+  for (const r of [off, on]) for (const canary of NEVER) expect(r.text, canary).not.toContain(canary);
+  // The other congregation's export, option on, carries its own guide and nothing of this one.
+  const theirs = await f.send(ALL, { who: "multi", origin: OTHER });
+  expect(theirs.body.guides.map(keyOf)).toEqual(["torah:vayishlach"]);
+  expect(theirs.text).not.toContain("Visible unreviewed overview");
+});
+
+test("only an admin exports with the option, and the option takes no other value", async () => {
+  const f = await fixture();
+  await seedMixed(f);
+  for (const who of ["multi", "learner"] as const) expect((await f.send(ALL, { who })).status, who).toBe(403);
+  expect((await f.send(ALL, { who: "anonymous" })).status).toBe(401);
+  for (const query of ["?unreviewed=true", "?unreviewed=0", "?unreviewed=1&unreviewed=1", "?all=1"]) expect((await f.send(`${EXPORT}${query}`, { who: "admin" })).status, query).toBe(400);
+});
+
+test("a guide marked not reviewed arrives held and unreviewed, labelled in the preview only; a forged reviewed value is refused; an old file imports as before", async () => {
+  const f = await fixture();
+  const marked = fileOf({ guides: [shareGuide({ reviewed: false })] });
+  const preview = await f.post(PREVIEW, marked);
+  expect(preview.status).toBe(200);
+  expect(preview.body.guides).toEqual([{ kind: "torah", readingKey: "pekudei", status: "ready", droppedCitations: 0, credit: "Rabbi Daniel Bogard", reviewed: false }]);
+  for (const forged of [true, "false", null, 0]) {
+    const file = fileOf({ guides: [shareGuide({ reviewed: forged })] });
+    for (const path of [PREVIEW, IMPORT]) expect((await f.post(path, file)).status, `${String(forged)} ${path}`).toBe(400);
+  }
+  expect(await f.guides("other")).toHaveLength(0);
+  const done = await f.post(IMPORT, marked);
+  expect(done.body.imported.guides).toBe(1);
+  const [row] = await f.guides("other");
+  expect(row).toMatchObject({ readingKey: "pekudei", version: 1, hold: true, reviewed: false, channel: "web", importCredit: "Rabbi Daniel Bogard" });
+  // A file without the field still parses with no label, and its preview carries none.
+  const old = fileOf({ guides: [shareGuide({ readingKey: "vayera" })] });
+  const parsed = parseShareFile(old);
+  expect(parsed.ok && Object.hasOwn(parsed.file.guides[0], "reviewed")).toBe(false);
+  expect(parsed.ok).toBe(true);
+  expect(Object.hasOwn((await f.post(PREVIEW, old)).body.guides[0], "reviewed")).toBe(false);
+});
+
+test("a round trip with the option on lands the unreviewed guide held and unreviewed in the importer's tenant", async () => {
+  const f = await fixture();
+  await f.seed("crc", "torah", "pekudei", { reviewed: false, origin: "claude" });
+  expect((await f.exported()).body.guides).toEqual([]);
+  const file = (await f.send(ALL, { who: "admin" })).body;
+  const preview = await f.post(PREVIEW, file);
+  expect(preview.body.guides).toEqual([{ kind: "torah", readingKey: "pekudei", status: "ready", droppedCitations: 0, credit: "the rabbi", reviewed: false }]);
+  expect((await f.post(IMPORT, file)).body.imported.guides).toBe(1);
+  const rows = await f.guides("other");
+  expect(rows.map(r => [r.readingKey, r.version, r.hold, r.reviewed, r.origin, r.importCredit])).toEqual([["pekudei", 1, true, false, "claude", "the rabbi"]]);
+});

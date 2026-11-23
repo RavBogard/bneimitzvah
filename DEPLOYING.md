@@ -287,15 +287,15 @@ To turn these recordings off, set `CANTOR_RECORDINGS=false` in Vercel Production
 
 Cantor Josh Finkel's recordings are kept in CRC's private storage and are not yet available to copies. Your copy does not list or offer them.
 
-## 10. Importing Daniel's reviewed guides (optional)
+## 10. Importing Daniel's guides (optional)
 
-A rabbi at CRC can export reviewed study guides, approved portion summaries and published discussions as one `guide-export/v1` file. Ask Daniel's office for the file; it contains no student information, ids, emails or verse text.
+A rabbi at CRC can export reviewed study guides, approved portion summaries and published discussions as one `guide-export/v1` file. The exporting rabbi can also tick "Include guides not yet reviewed": the file then carries the guides CRC's students currently see that are not yet marked reviewed, each marked as not reviewed. Ask Daniel's office for the file; it contains no student information, ids, emails or verse text.
 
 1. Sign in as an administrator and open More, then Share guides (`/workspace/admin/guide-sharing`). The route exists and is in the build (verified: its page shell loads, titled "Share guides"; its signed-in contents and the import itself were not exercised).
-2. Choose the file. The portal shows a preview and imports nothing yet.
+2. Choose the file. The portal shows a preview and imports nothing yet. A guide the exporting rabbi had not reviewed is labelled "Not reviewed by its author" beside its credit; that label is shown in the preview only and is not stored with the imported guide.
 3. Confirm. Citations are looked up again in your own catalog; any that do not match are dropped and counted in the preview.
 4. What to expect: guides arrive **held** (not visible to students) and unreviewed, credited "From <author>", and are never written over a reading that already has a guide. Portion summaries arrive as drafts, and approving one needs the credit set in section 4 (it is stamped with your congregation's credit, not the original author's). Discussions are listed but are not imported. Importing the same file twice changes nothing.
-5. Your rabbi reads each guide, edits as needed, and publishes. Publishing is what makes it visible to students. Do not publish for the rabbi.
+5. Your rabbi reads each guide, edits as needed, and publishes. Publishing is what makes it visible to students. Read the guides labelled not reviewed with particular care before publishing them. Do not publish for the rabbi.
 
 ## 11. Staying in sync with upstream (your choice)
 

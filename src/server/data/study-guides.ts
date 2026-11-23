@@ -114,10 +114,16 @@ export async function importedKeys<Q extends PgQueryResultHKT>(tx: AccessTransac
   const rows = await tx.selectDistinct({ kind: t.kind, readingKey: t.readingKey, importKey: t.importKey }).from(t).where(and(eq(t.tenantId, tenantId), isNotNull(t.importKey))).limit(5000);
   return new Set(rows.map(r => `${r.kind}:${r.readingKey}:${r.importKey}`));
 }
-/** The latest visible, reviewed version of every guide stream: what an export carries. Held and unreviewed work never appears here. */
-export async function reviewedVisibleGuides<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, limit: number) {
+/**
+ * Each stream's version that students see now (the reader's own rule), for guide sharing. `latest` is true when nothing was written
+ * after it: no held draft and no web hold (a withdrawal) sits over it. Base guides only; per-student guides live in another table.
+ */
+export async function visibleGuides<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, limit: number) {
   const t = s.studyGuide;
-  return tx.selectDistinctOn([t.kind, t.readingKey], { kind: t.kind, readingKey: t.readingKey, origin: t.origin, reviewed: t.reviewed, body: t.body, importCredit: t.importCredit })
+  // Spelled out with the outer table's name: in a select list drizzle renders a column unqualified, which here would mean "later"'s own.
+  const latest = sql<boolean>`not exists (select 1 from "study_guide" "later" where "later"."tenant_id" = "study_guide"."tenant_id"
+    and "later"."kind" = "study_guide"."kind" and "later"."reading_key" = "study_guide"."reading_key" and "later"."version" > "study_guide"."version")`;
+  return tx.selectDistinctOn([t.kind, t.readingKey], { kind: t.kind, readingKey: t.readingKey, origin: t.origin, reviewed: t.reviewed, body: t.body, importCredit: t.importCredit, latest })
     .from(t).where(and(eq(t.tenantId, tenantId), eq(t.hold, false), notHeldSince(t))).orderBy(t.kind, t.readingKey, desc(t.version)).limit(limit);
 }
 

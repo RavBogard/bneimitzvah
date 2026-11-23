@@ -19,9 +19,10 @@ import { currentSettings } from "../data/tenant-settings";
 import { authorName, parseShareFile, SHARE_LIMITS, SHARE_SCHEMA, type ShareDiscussion, type ShareFile, type ShareGuide, type ShareSummary } from "./format";
 
 /**
- * Guide sharing (plan ruling 11, 2026-10-30). Export reads the congregation's reviewed work and nothing else; import writes only into the
+ * Guide sharing (plan ruling 11, 2026-10-30). Export reads the congregation's reviewed work and nothing else, unless the rabbi asks for the
+ * guides students see that are not yet reviewed too (Daniel 2026-11-23), each then marked `reviewed: false`; import writes only into the
  * caller's own tenant, held, after looking every citation up again in this portal's own catalog. Both are admin-only and carry no id.
- * What an export can never contain is decided by what these queries select: no student guide table, no held or unreviewed version, no
+ * What an export can never contain is decided by what these queries select: no student guide table, no held version, no
  * member, grant, email or row id, and nothing from the Sefaria text store.
  */
 type Related = (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>;
@@ -29,7 +30,8 @@ type Status = "ready" | "skipped";
 export type GuideReason = "already-imported" | "has-guide" | "not-in-catalog" | "verse-outside-reading" | "citations-unchecked" | "invalid";
 export type SummaryReason = "already-imported" | "not-a-parashah";
 export type DiscussionReason = "cannot-arrive-held";
-export type PlanGuide = Readonly<{ kind: "torah" | "haftarah"; readingKey: string; status: Status; reason?: GuideReason; droppedCitations: number; credit: string }>;
+/** `reviewed: false` repeats the file's label for the preview. It never reaches the stored guide, which is unreviewed either way. */
+export type PlanGuide = Readonly<{ kind: "torah" | "haftarah"; readingKey: string; status: Status; reason?: GuideReason; droppedCitations: number; credit: string; reviewed?: false }>;
 export type PlanSummary = Readonly<{ reading: string; status: Status; reason?: SummaryReason; credit: string }>;
 export type PlanDiscussion = Readonly<{ slug: string; status: "skipped"; reason: DiscussionReason }>;
 export type SharePreview = Readonly<{ ok: true; guides: readonly PlanGuide[]; summaries: readonly PlanSummary[]; discussions: readonly PlanDiscussion[]; authors: readonly string[] }>;
@@ -53,15 +55,21 @@ export function createGuideShareService<Q extends PgQueryResultHKT>(input: { acc
   }
 
   // Export ------------------------------------------------------------------------------------------
-  async function exportFile(request: CookieMutationRequest): Promise<ShareFile> {
+  /**
+   * Which guides leave, decided here and only here: each stream's version students see now (`data.visibleGuides`: this tenant's base
+   * guides, not held and not held since). Reviewed ones always; with `includeUnreviewed`, unreviewed ones too, but only when nothing was
+   * written after them (no held draft or web hold over them), and each is marked `reviewed: false`.
+   */
+  async function exportFile(request: CookieMutationRequest, options: { includeUnreviewed?: boolean } = {}): Promise<ShareFile> {
+    const unreviewed = options.includeUnreviewed === true;
     return input.access.withAdminCapability(request, { mode: "admin", capability: "read-guides" }, async (tx, actor) => {
       const name = await nameOf(tx, actor.tenantId), keep = <T>(items: T[], one: (item: T) => ShareFile) => items.filter(item => parseShareFile(JSON.parse(JSON.stringify(one(item)))).ok);
       const guides: ShareGuide[] = [];
-      for (const row of await data.reviewedVisibleGuides(tx, actor.tenantId, SHARE_LIMITS.guides * 3)) {
-        if (!row.reviewed || (row.origin !== "claude" && row.origin !== "rabbi") || (row.kind !== "torah" && row.kind !== "haftarah")) continue;
+      for (const row of await data.visibleGuides(tx, actor.tenantId, SHARE_LIMITS.guides * 3)) {
+        if (!(row.reviewed === true || (unreviewed && row.reviewed === false && row.latest === true)) || (row.origin !== "claude" && row.origin !== "rabbi") || (row.kind !== "torah" && row.kind !== "haftarah")) continue;
         const checked = validateGuideBody(row.body, { allowOverview: true });
         if (!checked.ok || checked.value.overview === undefined) continue;
-        guides.push({ kind: row.kind, readingKey: row.readingKey, origin: row.origin, credit: row.importCredit ?? name,
+        guides.push({ kind: row.kind, readingKey: row.readingKey, origin: row.origin, credit: row.importCredit ?? name, ...(row.reviewed ? {} : { reviewed: false as const }),
           body: { overview: checked.value.overview, themes: checked.value.themes.map(theme => ({ id: theme.id, title: theme.title, intro: theme.intro,
             notes: theme.notes.map(note => ({ verseRef: note.verseRef, body: note.body, sources: note.sources.map(source => ({ ref: source.ref })) })) })) } });
       }
@@ -141,7 +149,7 @@ export function createGuideShareService<Q extends PgQueryResultHKT>(input: { acc
     const related = memoRelated(), check = createGuideChecker({ related, timeoutMs: 25_000 });
     const guides: PlanGuide[] = [], ready: Ready[] = [];
     for (const guide of file.guides) {
-      const base = { kind: guide.kind, readingKey: guide.readingKey, credit: guide.credit }, key = guideImportKey(guide), id = `${guide.kind}:${guide.readingKey}`;
+      const base = { kind: guide.kind, readingKey: guide.readingKey, credit: guide.credit, ...(guide.reviewed === false ? { reviewed: false as const } : {}) }, key = guideImportKey(guide), id = `${guide.kind}:${guide.readingKey}`;
       const skip = (reason: GuideReason, droppedCitations = 0) => guides.push(Object.freeze({ ...base, status: "skipped" as const, reason, droppedCitations }));
       if (state.imported.has(`${id}:${key}`)) { skip("already-imported"); continue; }
       if (state.streams.has(id)) { skip("has-guide"); continue; }
