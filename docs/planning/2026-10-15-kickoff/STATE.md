@@ -1,6 +1,10 @@
 # State — CRC B'nei Mitzvah portal
 
-Updated 2026-11-21. This file is replaced, not appended: it says where the work stands today, in about a hundred lines. The full log up to 2026-11-16 (gate lines, merges, migrations, walk findings) is unchanged at `docs/archive/STATE-through-2026-11-16.md`. Daniel's binding rulings are indexed in `docs/planning/RULINGS.md`; `MISSION.md` beside this file is still the authority. Historical plans, returns and reviews are under `docs/archive/` with their old folder layout.
+Updated 2026-11-23. This file is replaced, not appended: it says where the work stands today, in about a hundred lines. The full log up to 2026-11-16 (gate lines, merges, migrations, walk findings) is unchanged at `docs/archive/STATE-through-2026-11-16.md`. Daniel's binding rulings are indexed in `docs/planning/RULINGS.md`; `MISSION.md` beside this file is still the authority. Historical plans, returns and reviews are under `docs/archive/` with their old folder layout.
+
+## Copies for other congregations, November 23
+
+Daniel ruled that the recording permissions cover non-commercial use by other synagogues, and that the guide export may carry guides not yet reviewed, labelled. Both are in `RULINGS.md`. On a copy, Cantor Shermet's and Hazan Rotem Cohen's recordings now play with no setup (`CANTOR_RECORDINGS=false` turns them off); Cantor Finkel's tracks stay CRC only until they are packaged from the private store. Share guides has "Include guides not yet reviewed"; those guides are marked in the file and in the importing rabbi's preview, and arrive held like every import. An older copy refuses a file that carries the mark. Adversarial review of the export passed. [CI](https://github.com/RavBogard/bneimitzvah/actions/runs/45106734501) passed on the second attempt: `tests/http-browser/service-learning-ui.test.ts` ("retains choices after an uncertain confirmation") failed once after 32 seconds and passed on re-run, a flake still to fix. Not yet done: the 4 MB export cap throws instead of trimming, and Finkel's tracks need a kit. The first rabbi to use this is at Temple Kol Emeth, Marietta; Daniel sends her the guide himself.
 
 ## Account display names, November 21
 
@@ -40,7 +44,7 @@ Daniel approved starting the tutor lesson sidebar collapsed and placing Close in
 ## In progress
 
 - **Study guides:** every catalog key has a published base guide, origin claude, not yet reviewed. Daniel marks guides reviewed as he reads them. The ones flagged as sensitive for his read: yom-kippur-mincha (Lev 18), achrei-mot, i-samuel-15 (Zachor), ezekiel-37, nasso, behar. Plan: `docs/superpowers/plans/2026-10-28-replacing-the-study-guide-booklet.md`.
-- **Another congregation's own copy:** `DEPLOYING.md` and the fork identity work are merged; the Cowork starter prompt for that congregation's rabbi is ready, and Daniel sends it himself. Plan: `docs/planning/2026-10-30-second-congregation-copy/PLAN.md`.
+- **Another congregation's own copy:** `DEPLOYING.md`, the fork identity work, cantor recordings on copies and the full guide export are merged; see "Copies for other congregations" above. Plan: `docs/planning/2026-10-30-second-congregation-copy/PLAN.md`.
 - **torah.centralreform.org cutover (T7):** waits on CRC's firewall and SiteGround DNS. Then Daniel sets `BETTER_AUTH_URL`, rebuild, and check that beitmitzvah's `/sw.js` is the tombstone (runbook: `docs/archive/planning/2026-10-22-crc-torah-cutover/RUNBOOK.md`, section 4.3).
 
 ## Shipped 2026-11-16 and 17
