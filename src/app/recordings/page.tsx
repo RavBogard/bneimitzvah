@@ -11,7 +11,7 @@ export async function generateMetadata() {
   return { title: pageTitle(await readPublicProductName(), "Recordings"), referrer: "no-referrer" as const };
 }
 export default async function RecordingsPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
-  if (!resolveIdentity().crc) notFound();
+  if (!resolveIdentity().cantorRecordings) notFound();
   const params = await searchParams, category = params.category && Object.hasOwn(SHERMET_CATEGORIES, params.category) ? params.category : "";
   return <div className={`portal-shell ${styles.shell}`}><a className="skip-link" href="#recordings-main">Skip to recordings</a><SiteBar /><main id="recordings-main" className={styles.main}>
     <h1 className={`${styles.title} ${libraryStyles.recordingTitle}`}>Recordings</h1><p>Browse Torah, haftarah, blessings, trope lessons and holiday recordings by collection.</p>

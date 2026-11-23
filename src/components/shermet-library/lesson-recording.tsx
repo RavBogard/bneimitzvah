@@ -9,14 +9,14 @@ export function LessonRecording({ lesson, morning = true, showAvailability = fal
   const key = !morning && ["barchu", "chatzi-kaddish"].includes(lesson) ? `${lesson}-evening` : lesson;
   useEffect(() => {
     const abort = new AbortController(); setItem(null); setSelected(null); setStatus("checking");
-    if (!identity.crc || !SHERMET_SERVICE_ITEMS[key] || ["vahavta", "mi-chamochah"].includes(lesson) && !morning) { setStatus("missing"); return; }
+    if (!identity.cantorRecordings || !SHERMET_SERVICE_ITEMS[key] || ["vahavta", "mi-chamochah"].includes(lesson) && !morning) { setStatus("missing"); return; }
     void fetch(`/api/shermet-library?${new URLSearchParams({ lesson: key })}`, { signal: AbortSignal.any([abort.signal, AbortSignal.timeout(10000)]), credentials: "omit", redirect: "error", cache: "no-store" })
       .then(response => { if (!response.ok) throw new Error("Recording metadata unavailable"); return response.json(); }).then(value => {
         const items = parseShermetLibrary({ version: 1, items: value?.items });
         if (!abort.signal.aborted) { setItem(items.find(item => item.id === SHERMET_SERVICE_ITEMS[key]) ?? null); setStatus("missing"); }
       }).catch(() => { if (!abort.signal.aborted) setStatus("failed"); });
     return () => abort.abort();
-  }, [lesson, key, identity.crc, morning]);
+  }, [lesson, key, identity.cantorRecordings, morning]);
   if (!item) return showAvailability ? <p>{status === "checking" ? "Checking recordings…" : status === "failed"
     ? "Recording availability couldn’t be checked." : "No practice recording is available for this part."}</p> : null;
   return <section aria-label="Prayer recording">{showAvailability ? <h5>Course recording</h5> : <h2>Listen</h2>}<p>{item.label}</p><p><a href={item.pageUrl} target="_blank" rel="noreferrer">Cantor Wendy Shermet · Temple Israel, Omaha</a></p>

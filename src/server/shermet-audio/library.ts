@@ -1,5 +1,5 @@
 import catalog from "./nonverse-catalog.json";
-import { isCrcEnvironment } from "../../lib/site/identity";
+import { cantorRecordingsEnabled } from "../../lib/site/identity";
 import { parseShermetLibrary, SHERMET_SERVICE_ITEMS, type ShermetLibraryItem } from "../../lib/reference-audio/shermet-library";
 import { getVerifiedShermetMedia, shermetMediaResponse } from "./service";
 const items = parseShermetLibrary(catalog);
@@ -28,4 +28,4 @@ export function createShermetLibrary(input: { enabled: boolean; items?: readonly
     },
   };
 }
-export const runtimeShermetLibrary = () => createShermetLibrary({ enabled: isCrcEnvironment(process.env) });
+export const runtimeShermetLibrary = (env: Readonly<Record<string, string | undefined>> = process.env) => createShermetLibrary({ enabled: cantorRecordingsEnabled(env) });

@@ -59,7 +59,7 @@ export default function AboutPage() {
           <span>{edition.changes}</span>
         </li>)}</ul>
         <h3>Recordings</h3>
-        {identity.crc && <p>CRC readers and lessons play <a href="https://www.templeisraelomaha.com/cantors-classroom" {...external}>Cantor Wendy Shermet of Temple Israel, Omaha</a> wherever a matching performance is available. She chants in the Binder/Schleifer tradition. Word drills use timing from the recording you hear. <a href="/recordings">Browse her recordings</a>.</p>}
+        {identity.cantorRecordings && <p data-testid="shermet-credit">{identity.crc ? "CRC readers and lessons play" : "Readers and lessons here play"} <a href="https://www.templeisraelomaha.com/cantors-classroom" {...external}>Cantor Wendy Shermet of Temple Israel, Omaha</a> wherever a matching performance is available. She chants in the Binder/Schleifer tradition. Word drills use timing from the recording you hear. <a href="/recordings">Browse her recordings</a>.</p>}
         <p><a href="https://archive.org/details/PockettorahAudioFiles" {...external}>{REFERENCE_ATTRIBUTION.title}</a> · {REFERENCE_ATTRIBUTION.creator} · <a href={REFERENCE_ATTRIBUTION.licenseUrl} {...external}>{REFERENCE_ATTRIBUTION.license}</a> · {REFERENCE_ATTRIBUTION.changes}</p>
         <p>PocketTorah uses the Standard Reform cantillation of Binder and Avery.</p>
         <h3>Fonts</h3>

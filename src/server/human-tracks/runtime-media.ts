@@ -1,6 +1,6 @@
 import "server-only";
-import { HUMAN_TRACK_DIGEST, type HumanTrack } from "../../lib/reference-audio/human-tracks";
-import { isCrcEnvironment } from "../../lib/site/identity";
+import { HUMAN_TRACK_DIGEST, humanTrackById, humanVoiceAvailable, type HumanTrack } from "../../lib/reference-audio/human-tracks";
+import { cantorRecordingsEnabled, isCrcEnvironment } from "../../lib/site/identity";
 import { createHumanTrackMedia, publishedKaraiteMedia } from "./media";
 
 async function privateFinkelMedia(track: HumanTrack, { range, signal }: { range: string | null; signal: AbortSignal }) {
@@ -21,7 +21,14 @@ async function privateFinkelMedia(track: HumanTrack, { range, signal }: { range:
   return { body: result.stream, headers: result.headers };
 }
 
+/** A track this place may serve, read from the environment on each request: Karaite tracks follow the cantor-recordings switch, Finkel's CRC identity. */
+export function runtimeHumanTrack(id: string, env: Readonly<Record<string, string | undefined>> = process.env) {
+  const track = humanTrackById(id);
+  return track && humanVoiceAvailable(track.voice, { crc: isCrcEnvironment(env), cantorRecordings: cantorRecordingsEnabled(env) }) ? track : undefined;
+}
+
 export const humanTrackMedia = createHumanTrackMedia({
-  enabled: isCrcEnvironment(process.env),
+  enabled: true,
+  track: id => runtimeHumanTrack(id),
   upstream: (track, options) => track.voice === "rotem-cohen" ? publishedKaraiteMedia(track, options) : privateFinkelMedia(track, options),
 });

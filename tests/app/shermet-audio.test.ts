@@ -30,7 +30,7 @@ describe("operator configured Shermet recordings", () => {
     for (const ref of ["Genesis 1:2", "Genesis 1:1", "Genesis 1:2", "Genesis 1:3"]) query.append("ref", ref);
     expect(await (await f.api.catalog(new Request(`http://localhost/catalog?${query}`))).json()).toEqual({ refs: ["Genesis 1:2", "Genesis 1:1"] });
   });
-  it("limits public metadata to CRC and keeps local-only extras out of production and forks", async () => {
+  it("publishes the public metadata wherever cantor recordings are on and keeps local-only extras out of production and forks", async () => {
     const f = await fixture();
     // A local-only reference must stay outside the public pilot as it grows.
     const localRef = "Ezekiel 48:1";
@@ -41,8 +41,11 @@ describe("operator configured Shermet recordings", () => {
     for (const env of [{ ...local, BETTER_AUTH_URL: "https://other.example.test" }, { ...local, BETTER_AUTH_URL: "https://torah.centralreform.org", NODE_ENV: "production" }]) {
       expect((await (await runtimeShermetAudio(env).catalog(request(localRef))).json()).refs).toEqual([]);
     }
+    // Daniel 2026-11-23: a fork plays the published recordings too, unless CANTOR_RECORDINGS is exactly "false".
     const fork = runtimeShermetAudio({ BETTER_AUTH_URL: "https://other.example.test" });
-    expect((await (await fork.catalog(new Request("http://localhost/catalog"))).json()).refs).toEqual([]);
+    expect((await (await fork.catalog(new Request("http://localhost/catalog"))).json()).refs).toEqual(SHERMET_PILOT_RECORDINGS.map(entry => entry.ref));
+    const off = runtimeShermetAudio({ BETTER_AUTH_URL: "https://other.example.test", CANTOR_RECORDINGS: "false" });
+    expect((await (await off.catalog(new Request("http://localhost/catalog"))).json()).refs).toEqual([]);
   });
   it("discovers public entries without media fetch and pins public retrieval to its exact URL and digest", async () => {
     const calls: { url: string; options?: RequestInit }[] = [];

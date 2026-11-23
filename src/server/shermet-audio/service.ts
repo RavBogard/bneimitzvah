@@ -3,7 +3,7 @@ import { readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 import { canonicalReadingRef } from "../../lib/readings/reading-ref";
 import { SHERMET_PILOT_RECORDINGS } from "./pilot-metadata";
-import { isCrcEnvironment } from "../../lib/site/identity";
+import { cantorRecordingsEnabled, isCrcEnvironment } from "../../lib/site/identity";
 
 const MAX_AUDIO = 20 * 1024 * 1024;
 const MAX_CACHED_BYTES = 32 * 1024 * 1024;
@@ -85,9 +85,10 @@ function byteRange(value: string, length: number): { start: number; end: number 
   return { start, end: Math.min(end, length - 1) };
 }
 export function runtimeShermetAudio(env: Readonly<Record<string, string | undefined>> = process.env) {
-  const crc = isCrcEnvironment(env);
-  const local = crc && env.NODE_ENV !== "production" && env.PORTAL_ENVIRONMENT !== "production" ? env.SHERMET_AUDIO_DIR : undefined;
-  return createShermetAudio(local, crc);
+  // The published recordings stream from Temple Israel's site and play on any copy that keeps them on. An operator's local
+  // directory is a CRC development aid only.
+  const local = isCrcEnvironment(env) && env.NODE_ENV !== "production" && env.PORTAL_ENVIRONMENT !== "production" ? env.SHERMET_AUDIO_DIR : undefined;
+  return createShermetAudio(local, cantorRecordingsEnabled(env));
 }
 export function singleVerse(ref: unknown, kind?: unknown) {
   const parsed = canonicalReadingRef(ref, kind ?? "torah") ?? (kind === undefined ? canonicalReadingRef(ref, "haftarah") : null);

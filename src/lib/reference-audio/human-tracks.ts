@@ -79,6 +79,17 @@ export const HUMAN_TRACKS: readonly HumanTrack[] = (source as HumanTrack[])
 const indexedTracks = new Map(HUMAN_TRACKS.map(track => [track.id, track]));
 export const humanTrackById = (id: string) => indexedTracks.get(id);
 
+/**
+ * Which voices play here. Hazan Rotem Cohen's recordings stream from karaites.org and follow the cantor-recordings switch, so they play
+ * on another congregation's copy too. Cantor Finkel's tracks (and any voice added later) live in CRC's private store: CRC only.
+ */
+export function humanVoiceAvailable(voice: HumanVoice, place: Readonly<{ crc: boolean; cantorRecordings: boolean }>) {
+  return voice === "rotem-cohen" ? place.cantorRecordings : place.crc;
+}
+/** The tracks this place may list, offer, count or serve. */
+export const availableHumanTracks = (place: Readonly<{ crc: boolean; cantorRecordings: boolean }>, tracks: readonly HumanTrack[] = HUMAN_TRACKS) =>
+  tracks.filter(track => humanVoiceAvailable(track.voice, place));
+
 const refsByPortion = new Map<string, ReadonlySet<string>>();
 function portionRefs(portion: string) {
   let refs = refsByPortion.get(portion);

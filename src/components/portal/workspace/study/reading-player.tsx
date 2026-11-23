@@ -14,7 +14,7 @@ import { createReadingPlayerIntent, readingAudioCurrent, readingPlayerPreview, c
 import type { ReadingAudioSlot, createReadingAudioCoordinator } from "./reading-audio-coordinator";
 import styles from "./reading-player.module.css";
 import { useIdentity } from "../../../site/identity-context";
-import { humanTracksForVerses } from "../../../../lib/reference-audio/human-tracks";
+import { availableHumanTracks, humanTracksForVerses } from "../../../../lib/reference-audio/human-tracks";
 import { ReadingCollectionPlayback } from "../../../shermet-library/reading-collection";
 const recordingPreferences = new WeakMap<ReturnType<typeof createReadingAudioCoordinator>, "pockettorah" | "shermet">();
 const speedPreferences = new WeakMap<ReturnType<typeof createReadingAudioCoordinator>, { shermet: number; pockettorah: number }>();
@@ -46,8 +46,9 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
   const [sourcePreview, setSourcePreview] = useState<number | null>(null);
   const verseRefs = useMemo(() => verses.map(verse => verse.ref), [verses]);
   const shermetRefs = useShermetRecordings(verseRefs);
-  const crc = useIdentity().crc;
-  const collectionTracks = useMemo(() => crc && audio?.slot !== "lifted" ? humanTracksForVerses(verseRefs) : [], [crc, audio?.slot, verseRefs]);
+  // The cantors' recordings this place may play (Karaite on any copy that keeps them on, Finkel on CRC only).
+  const identity = useIdentity();
+  const collectionTracks = useMemo(() => audio?.slot !== "lifted" ? humanTracksForVerses(verseRefs, availableHumanTracks(identity)) : [], [identity, audio?.slot, verseRefs]);
   const timed = useMemo(() => createShermetTimedAudio(), [scopeKey, verses]);
   useEffect(() => {
     setRecording((audio && recordingPreferences.get(audio.coordinator)) || DEFAULT_READING_RECORDING);

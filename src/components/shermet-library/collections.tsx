@@ -1,18 +1,19 @@
 "use client";
 import { useId, useState } from "react";
-import { HUMAN_TRACKS, HUMAN_TRACK_KINDS, HUMAN_VOICES, humanTrackCoverage, humanTrackPlayable, type HumanTrack, type HumanTrackKind, type HumanVoice } from "../../lib/reference-audio/human-tracks";
+import { useIdentity } from "../site/identity-context";
+import { availableHumanTracks, HUMAN_TRACK_KINDS, HUMAN_VOICES, humanTrackCoverage, humanTrackPlayable, type HumanTrack, type HumanTrackKind, type HumanVoice } from "../../lib/reference-audio/human-tracks";
 import { ShermetLibrary } from "./library";
 import { HumanTrackCoverage, HumanTrackCredit, HumanTrackPlayback, HumanTrackSave } from "./human-track-playback";
 import styles from "./library.module.css";
 
 export function RecordingCollections({ initialCategory }: { initialCategory: string }) {
   const [voice, setVoice] = useState<"shermet" | HumanVoice>("shermet");
-  const id = useId();
+  const id = useId(), tracks = availableHumanTracks(useIdentity());
   return <>
     <div className={styles.filters}><label htmlFor={id}>Collection<select id={id} value={voice}
       onChange={event => setVoice(event.target.value as typeof voice)}>
       <option value="shermet">Cantor Wendy Shermet · Temple Israel, Omaha</option>
-      {Object.entries(HUMAN_VOICES).map(([key, value]) => HUMAN_TRACKS.some(track => track.voice === key) &&
+      {Object.entries(HUMAN_VOICES).map(([key, value]) => tracks.some(track => track.voice === key) &&
         <option key={key} value={key}>{value.name} · {value.tradition}</option>)}
     </select></label></div>
     {voice === "shermet" ? <ShermetLibrary initialCategory={initialCategory} /> : <OtherRecordingLibrary key={voice} voice={voice} />}
@@ -21,7 +22,7 @@ export function RecordingCollections({ initialCategory }: { initialCategory: str
 function OtherRecordingLibrary({ voice }: { voice: HumanVoice }) {
   const [query, setQuery] = useState(""), [category, setCategory] = useState<HumanTrackKind | "">(""),
     [choice, setChoice] = useState<HumanTrack | null>(null), [visible, setVisible] = useState(40);
-  const library = HUMAN_TRACKS.filter(track => track.voice === voice);
+  const library = availableHumanTracks(useIdentity()).filter(track => track.voice === voice);
   const matches = library.filter(track => (!category || category === track.kind)
     && [track.title, humanTrackCoverage(track), ...(track.portions ?? [])].some(value => value?.toLowerCase().includes(query.trim().toLowerCase())));
   const kinds = Object.entries(HUMAN_TRACK_KINDS).filter(([kind]) => library.some(track => track.kind === kind));

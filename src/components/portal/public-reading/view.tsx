@@ -9,7 +9,7 @@ import { StudyCredits } from "../workspace/study/credits";
 import { ReadingPlayer, playMainVerseForWord, type ReadingPlayerHandle } from "../workspace/study/reading-player";
 import { useIdentity } from "../../site/identity-context";
 import { ReadingCollectionPlayback } from "../../shermet-library/reading-collection";
-import { humanTracksForVerses } from "../../../lib/reference-audio/human-tracks";
+import { availableHumanTracks, humanTracksForVerses } from "../../../lib/reference-audio/human-tracks";
 import { useShermetRecordingAvailability } from "../workspace/study/use-shermet-recordings";
 import type { ReadingSelection } from "../workspace/study/main-playback";
 import { WordTools, type WordToolsHandle } from "../workspace/study/word-tools";
@@ -406,11 +406,11 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
 }) {
   const source = (sources[index] ?? sources[0]).source, passage = source.passage, kind = passage.kind, key = selectorKey(source.selector);
   const allVerses = useMemo(() => { try { return expandReadingRanges(passage.ranges, kind, TANAKH_VERSE_COUNTS); } catch { return []; } }, [passage, kind]);
-  // Mount CRC's transport before discovery: the first gesture must reach the
+  // Mount the transport before discovery wherever the cantor recordings play: the first gesture must reach the
   // player's cancellable availability lookup, including Shermet-only verses.
-  // A fork without PocketTorah remains text-only.
-  const crc = useIdentity().crc, shermet = useShermetRecordingAvailability(allVerses);
-  const listening = source.listening || crc && (shermet.pending || shermet.refs.size > 0);
+  // A copy with neither PocketTorah nor the cantor recordings remains text-only.
+  const identity = useIdentity(), shermet = useShermetRecordingAvailability(allVerses);
+  const listening = source.listening || identity.cantorRecordings && (shermet.pending || shermet.refs.size > 0);
   const choice = useVerseChoice(choose, allVerses, kind), more = useMore(), chapters = useMemo(() => readingChapters(allVerses), [allVerses]);
   const linkedIndex = verse !== null && verse <= passage.verseCount ? verse - 1 : null;
   // What a text page is: one section when the calendar gives aliyot (the text flows inside it), else one of the server's pages.
@@ -508,7 +508,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     return () => { live = false; };
   }, [source, key, kind, passage, sections, windows, range, nextWin, textKey, retry, audio]);
   const page = text?.key === textKey ? text.page : undefined, preview = text?.key === textKey ? text.preview ?? null : null;
-  const standaloneTracks = useMemo(() => crc && !listening && page ? humanTracksForVerses(page.verses.map(verse => verse.ref)) : [], [crc, listening, page]);
+  const standaloneTracks = useMemo(() => !listening && page ? humanTracksForVerses(page.verses.map(verse => verse.ref), availableHumanTracks(identity)) : [], [identity, listening, page]);
   // Print's labels ("Aliyah 4", "Maftir") above the verse where a section begins on this page, in either lens.
   const labels = useMemo(() => page && sections.length ? labelsIn(sections, range.section, page.offset, page.offset + page.verses.length) : NO_LABELS, [page, sections, range.section]);
   const linkedOnPage = page && linkedIndex !== null && linkedIndex >= page.offset && linkedIndex < page.offset + page.verses.length ? linkedIndex - page.offset : null;

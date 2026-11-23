@@ -104,7 +104,7 @@ export function ServiceHome() {
         <div className={learn.homeLead}>
           <h1 className={learn.title}>{COPY.home.title}</h1>
           <p className={learn.intro}>{evening.length ? COPY.home.introWithEvening : COPY.home.intro}</p>
-          {identity.crc && <p><a href="/recordings?category=blessing">Listen to Cantor Wendy Shermet’s blessings and prayers</a></p>}
+          {identity.cantorRecordings && <p><a href="/recordings?category=blessing">Listen to Cantor Wendy Shermet’s blessings and prayers</a></p>}
           {view.status === "ready" && <p><a href={assignedPartsHref(child?.selection.context.studentId)}>My assigned parts</a></p>}
           {view.status === "ready" && !child && <PersonalStudyLink course="service" />}
           {!ready ? <p role="status" className={learn.state}>{COPY.state.homeLoading}</p>

@@ -223,6 +223,7 @@ Set these in Vercel under Settings, then Environment Variables, for the **Produc
 | `ORIGIN_ALIASES` | Optional redirect-only hosts. | No | `www.torah.example.org` |
 | `CONGREGATION_LOGO` | Optional file in `public/`. | No | `logo.png` |
 | `CREDIT_UPSTREAM` | Optional, your choice. Only `true` turns it on: the footer then says "Built on the CRC Beit Mitzvah app by Rabbi Daniel Bogard", linking to the project. Off by default; a fork's footer shows no personal credit otherwise. | No | `true` |
+| `CANTOR_RECORDINGS` | Optional. The cantor recordings of section 9.1 play by default; only exactly `false` turns them off. | No | `false` |
 | `BLOB_STORE_ID` | Your private Blob store id; only for reference audio (section 9). | No | `store_...` |
 | `REFERENCE_AUDIO_CATALOG_SHA256` | Reference audio (section 9). Printed by the installer. | No | 64 hex characters |
 | `REFERENCE_AUDIO_SHORT_MANIFEST_SHA256` | Reference audio. Printed by the installer. | No | 64 hex characters |
@@ -270,6 +271,21 @@ Cost note: this stores about 7,030 objects (7,028 clips plus the catalog and man
 4. **The student-release switch is the congregation's choice.** The installer prints `REFERENCE_AUDIO_STUDENT_RELEASE=true` as part of a full install. If the rabbi wants to hear the recordings first, set it to `false` (or leave it unset); administrators can then audition them and students cannot hear them. Setting `true` without the catalog hash makes the app refuse to start. Ask the rabbi, do not decide.
 5. Credit PocketTorah where the portal credits its sources, as the kit's `LICENSE-KIT.md` says. The kit and anything made from it stay CC BY-SA 3.0.
 6. Verify: open a reading as an administrator and play a word. With the student switch on, check as a student (a test student you create) too.
+
+### 9.1 Cantor recordings
+
+These play on your copy with no setup, no Blob store and no kit:
+
+- **Cantor Wendy Shermet, Temple Israel, Omaha**: verse recordings in the readers, with word timing, the blessings and prayers in the service course, the trope lessons, and the Recordings page (`/recordings`).
+- **Hazan Rotem Cohen** (Egyptian Karaite tradition): his recordings in the readers where they match the verses, and on the Recordings page.
+
+Nothing is copied into your copy or your storage. The portal streams each recording from its publisher (Temple Israel's site, karaites.org) when someone presses play, and checks Cantor Shermet's recordings against a fingerprint pinned in the code.
+
+The permission CRC holds covers non-commercial use by synagogues. Keep the credits: the portal shows the cantor's name and congregation or tradition wherever a recording plays, and the About page credits Cantor Shermet. Do not remove them.
+
+To turn these recordings off, set `CANTOR_RECORDINGS=false` in Vercel Production and redeploy. The readers then use the PocketTorah kit (if installed) or show the text only, and `/recordings` returns 404.
+
+Cantor Josh Finkel's recordings are kept in CRC's private storage and are not yet available to copies. Your copy does not list or offer them.
 
 ## 10. Importing Daniel's reviewed guides (optional)
 

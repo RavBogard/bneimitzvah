@@ -27,11 +27,14 @@ export type Identity = Readonly<{
   canonicalOrigin: string | null;
   aliasHosts: readonly string[];
   logo: Logo;
+  /** Whether the cantor recordings that stream from their publishers (Cantor Wendy Shermet, Hazan Rotem Cohen) play here. */
+  cantorRecordings: boolean;
 }>;
 
 export const CRC_IDENTITY: Identity = Object.freeze({
   crc: true, name: "Central Reform Congregation", shortName: "CRC", productName: "CRC Torah",
   canonicalOrigin: null, aliasHosts: Object.freeze([...CRC_ALIAS_HOSTS]), logo: Object.freeze({ kind: "crc" as const }),
+  cantorRecordings: true,
 });
 
 const NONE: Logo = Object.freeze({ kind: "none" as const });
@@ -77,6 +80,15 @@ export function isCrcEnvironment(env: Environment): boolean {
   return env.NODE_ENV !== "production" && env.PORTAL_ENVIRONMENT !== "production" && /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(origin);
 }
 
+/**
+ * Whether the cantor recordings that stream from their publishers may play here (Daniel 2026-11-23: the permission covers any
+ * synagogue's non-commercial use). Always on CRC; on another copy on unless CANTOR_RECORDINGS is exactly "false". Separate from
+ * the CRC identity: Cantor Finkel's tracks live in CRC's private store and still follow isCrcEnvironment.
+ */
+export function cantorRecordingsEnabled(env: Environment = process.env): boolean {
+  return isCrcEnvironment(env) || env.CANTOR_RECORDINGS !== "false";
+}
+
 export function resolveIdentity(env: Environment = process.env): Identity {
   if (isCrcEnvironment(env)) return CRC_IDENTITY;
   const name = text(env.CONGREGATION_NAME) ?? GENERIC_NAME;
@@ -88,6 +100,7 @@ export function resolveIdentity(env: Environment = process.env): Identity {
     canonicalOrigin,
     aliasHosts: Object.freeze(canonicalOrigin ? configuredAliases(env.ORIGIN_ALIASES).filter(host => host !== canonicalHost) : []),
     logo: configuredLogo(env.CONGREGATION_LOGO),
+    cantorRecordings: cantorRecordingsEnabled(env),
   });
 }
 
