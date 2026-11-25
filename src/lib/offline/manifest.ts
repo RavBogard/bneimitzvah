@@ -11,15 +11,14 @@ const CONTROLS = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u
 export function plainProductName(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 && value.trim() === value && Array.from(value).length <= 120 && !CONTROLS.test(value) ? value : null;
 }
-export function webManifest(productName: string, crc: boolean = resolveIdentity().crc) {
+export function webManifest(productName: string, crcIcons: boolean = resolveIdentity().crc) {
   const name = plainProductName(productName);
   if (!name) throw new Error("Product name refused");
   return Object.freeze({
-    // CRC's app opens the week's reading in Study (Daniel 2026-11-25); id and scope stay "/" so the installed identity is unchanged. A fork keeps its root.
-    id: "/", name, short_name: name, start_url: crc ? "/read?lens=study" : "/", scope: "/", display: "standalone",
+    id: "/", name, short_name: name, start_url: "/", scope: "/", display: "standalone",
     theme_color: MANIFEST_THEME, background_color: MANIFEST_BACKGROUND,
     // CRC's floor artwork only for CRC; a fork's manifest names no icon (its own logo is not a set of install icons).
-    icons: !crc ? [] : [
+    icons: !crcIcons ? [] : [
       { src: "/brand/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/brand/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
       { src: "/brand/maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
