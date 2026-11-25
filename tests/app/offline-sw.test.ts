@@ -130,7 +130,31 @@ describe("routing is the complete allowlist", () => {
     expect(await (await w.request("/read?date=2026-10-31", { mode: "navigate" }))!.text()).toBe("<p>/read</p>");
     expect(await (await w.request("/learn/torah-sof-pasuk", { mode: "navigate" }))!.text()).toBe("<p>/learn/torah-sof-pasuk</p>");
     expect(await (await w.request("/learn/practice/quick-ten-torah", { mode: "navigate" }))!.text()).toBe("<p>/learn/practice/quick-ten-torah</p>");
-    for (const path of ["/", "/workspace/student", "/account", "/learn/not-a-lesson", "/learn/practice/not-a-run"]) expect(await (await w.request(path, { mode: "navigate" }))!.text(), path).toBe("<p>/offline</p>");
+    // "/" is left out here: on the torah origin it opens Study offline (next test).
+    for (const path of ["/workspace/student", "/account", "/learn/not-a-lesson", "/learn/practice/not-a-run"]) expect(await (await w.request(path, { mode: "navigate" }))!.text(), path).toBe("<p>/offline</p>");
+  });
+  test("offline, the torah origin's root redirects to this week's reading in Study; other origins keep /offline; online the server's redirect passes through", async () => {
+    let online = true;
+    const fetch = async (request: Request) => {
+      if (!online) throw new TypeError("offline");
+      const url = new URL(request.url);
+      return url.pathname === "/" ? new Response(null, { status: 307, headers: { location: `${url.origin}/read?lens=study#home` } }) : basic(new Response(`<p>${url.pathname}</p>`, { headers: { "content-type": "text/html" } }));
+    };
+    const w = await load({ fetch });
+    await w.lifecycle("install"); online = false;
+    for (const path of ["/", "/?utm=synthetic"]) {
+      const answer = (await w.request(path, { mode: "navigate" }))!;
+      expect(answer.status).toBe(307); expect(answer.headers.get("location")).toBe(`${TORAH_ORIGIN}/read?lens=study`);
+    }
+    expect(await (await w.request("/read?lens=study", { mode: "navigate" }))!.text()).toBe("<p>/read</p>");
+    for (const origin of [BEIT_MITZVAH_ORIGIN, "http://127.0.0.1:3000"]) {
+      online = true; const other = await load({ origin, fetch });
+      await other.lifecycle("install"); online = false;
+      expect(await (await other.request("/", { mode: "navigate" }))!.text()).toBe("<p>/offline</p>");
+    }
+    online = true;
+    const passed = (await w.request("/", { mode: "navigate" }))!;
+    expect(passed.status).toBe(307); expect(passed.headers.get("location")).toBe(`${TORAH_ORIGIN}/read?lens=study#home`);
   });
 });
 

@@ -190,6 +190,9 @@ async function navigate(request, url) {
   // Never cached at runtime: only the installed shell answers, and only when the network does not.
   try { return await fetch(request); }
   catch (error) {
+    // The torah origin's root opens the week's reading in Study (Daniel 2026-11-25), so offline it goes there too, to the shell's
+    // reader, rather than to /offline; every other origin keeps the front door online and /offline here, as before.
+    if (url.pathname === "/" && (POLICY.studyRootOrigins || []).includes(OWN_ORIGIN)) return Response.redirect(new URL(POLICY.studyLanding, OWN_ORIGIN).href, 307);
     const cache = await caches.open(POLICY.shellCache);
     const page = POLICY.shellPages.includes(url.pathname) ? url.pathname : "/offline";
     const hit = (await cache.match(page)) || (await cache.match("/offline"));

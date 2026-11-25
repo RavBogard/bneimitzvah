@@ -177,3 +177,16 @@ test("the invitation page stays a plain invitation page with no doors", async ({
   await expect(page.locator("[data-door]")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Practice a reading", exact: true })).toHaveCount(0);
 });
+
+// Daniel 2026-11-25: arriving at the torah host's root opens Study (src/lib/navigation/canonical.ts, unit and built-server tests; this
+// local server is not the torah host, so / is still the door here). The front door is also at /home, the same page, kept out of search.
+test("the front door is also at /home, the same page and not for search engines", async ({ page }) => {
+  await session(page, signedOut); await week(page);
+  const response = await page.goto("/home");
+  expect(response?.status()).toBe(200);
+  expect(response?.headers()["x-robots-tag"]).toBe("noindex, nofollow");
+  await expect(page.getByTestId("this-week")).toBeVisible();
+  await expect(page.locator('[data-door="beit-mitzvah"]')).toBeVisible();
+  await expect(page.locator('[data-door="learn"]')).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe("/home");
+});

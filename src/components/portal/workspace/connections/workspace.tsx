@@ -83,7 +83,7 @@ function ConnectionsPage({ admin }: { admin: boolean }) {
   return <section className="role-workspace admin-workspace connections-workspace">
     <PageHeader title="Claude connections" description="Claude reaches the portal as the person who connected it, with that person’s access. Ending a connection stops it at once; to use Claude again, connect it again from Claude." />
     {message && <p className={message.tone === "alert" ? "request-error roster-message" : "workspace-notice roster-message"} role={message.tone}>{message.text}</p>}
-    {message?.signIn && <p><WorkspaceLink href="/">Check account and sign in again</WorkspaceLink></p>}
+    {message?.signIn && <p><WorkspaceLink href="/account">Check account and sign in again</WorkspaceLink></p>}
     {loading && !view ? <p role="status">Loading connections…</p>
       : failure || !view ? <div className="admin-state" role="alert"><p>Connections couldn’t be loaded.</p><Button onClick={() => void load()}>Reload</Button></div>
       : <>

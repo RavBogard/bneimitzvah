@@ -66,6 +66,8 @@ afterAll(async () => {
 for (const canonical of [BEIT, TORAH]) {
   const other = canonical === BEIT ? TORAH : BEIT;
   const aliases = [...fixedAliases, new URL(other).host];
+  // Daniel 2026-11-25: torah's root means Study, so once torah is canonical an alias lands on the front door at /home instead of /.
+  const door = canonical === TORAH ? "/home" : "/";
   describe(`BETTER_AUTH_URL = ${canonical}`, () => {
     beforeAll(async () => { await stop(); await start(canonical); });
 
@@ -84,7 +86,7 @@ for (const canonical of [BEIT, TORAH]) {
       for (const host of aliases) {
         for (const method of ["GET", "HEAD"]) {
           const response = await exchange("/auth/email/?token=synthetic-private", host, method);
-          expect(response.status).toBe(303); expect(response.headers.get("location")).toBe(canonical + "/#home");
+          expect(response.status).toBe(303); expect(response.headers.get("location")).toBe(canonical + door + "#home");
           expect(response.headers.get("cache-control")).toBe("private, no-store");
           expect(response.headers.get("referrer-policy")).toBe("no-referrer");
           expect(response.headers.has("set-cookie")).toBe(false); await response.body?.cancel();
@@ -132,7 +134,7 @@ for (const canonical of [BEIT, TORAH]) {
             if (url.origin === canonical) {
               canonicalPaused.push(url.href);
               if (document) canonicalDocumentPauses.push(url.href);
-              if (document && url.pathname === "/" && !url.search) {
+              if (document && url.pathname === door && !url.search) {
                 await session.send("Fetch.fulfillRequest", { requestId: event.requestId, responseCode: 200,
                   responseHeaders: [{ name: "content-type", value: "text/html" }], body: Buffer.from("<p>Canonical synthetic landing</p>").toString("base64") });
                 return;
@@ -154,12 +156,12 @@ for (const canonical of [BEIT, TORAH]) {
         for (const host of aliases) {
           await tab.goto(`https://${host}/invitations/open/?token=synthetic-private#token=synthetic-fragment`);
           const destination = new URL(tab.url());
-          expect(destination.origin + destination.pathname).toBe(canonical + "/");
+          expect(destination.origin + destination.pathname).toBe(canonical + door);
           expect(destination.search).toBe(""); expect(destination.hash).toBe("#home");
           expect(tab.url()).not.toContain("synthetic-private"); expect(tab.url()).not.toContain("synthetic-fragment");
         }
         const expectedAliases = aliases.map(host => `https://${host}/invitations/open/?token=synthetic-private`);
-        const expectedCanonical = aliases.map(() => canonical + "/");
+        const expectedCanonical = aliases.map(() => canonical + door);
         expect(aliasNavigations).toEqual(expectedAliases); expect(aliasDocumentPauses).toEqual(expectedAliases);
         expect(canonicalNavigations).toEqual(expectedCanonical); expect(canonicalDocumentPauses).toEqual(expectedCanonical);
         expect(canonicalRequests.length).toBeGreaterThanOrEqual(aliases.length);
@@ -173,6 +175,25 @@ for (const canonical of [BEIT, TORAH]) {
       } finally { closed = true; await context.close(); }
     });
 
+    test("arriving at the torah host's root opens Study on the canonical origin; every other host's root keeps the front door (Daniel 2026-11-25)", async () => {
+      for (const method of ["GET", "HEAD"]) for (const path of ["/", "/?state=synthetic-private"]) {
+        const torah = await exchange(path, new URL(TORAH).host, method);
+        expect(torah.status).toBe(canonical === TORAH ? 307 : 303); expect(torah.headers.get("location")).toBe(canonical + "/read?lens=study#home");
+        expect(torah.headers.get("cache-control")).toBe("private, no-store"); expect(torah.headers.has("set-cookie")).toBe(false); await torah.body?.cancel();
+        const beit = await exchange(path, new URL(BEIT).host, method);
+        if (canonical === BEIT) { expect(beit.status).toBe(200); expect(beit.headers.has("location")).toBe(false); }
+        else { expect(beit.status).toBe(303); expect(beit.headers.get("location")).toBe(canonical + "/home#home"); }
+        expect(beit.headers.has("set-cookie")).toBe(false); await beit.body?.cancel();
+      }
+      const home = await exchange("/home", new URL(canonical).host);
+      expect(home.status).toBe(200); expect(home.headers.has("location")).toBe(false); await home.body?.cancel();
+      // Off the root, the torah host is served (or canonicalised) as before.
+      const read = await exchange("/account", new URL(TORAH).host);
+      if (canonical === TORAH) { expect(read.status).toBe(200); expect(read.headers.has("location")).toBe(false); }
+      else expect(read.headers.get("location")).toBe(canonical + "/#home");
+      await read.body?.cancel();
+    });
+
     test("pinned Next malformed origin-form normalization stays same-origin before alias gate", async () => {
       for (const method of ["GET", "POST"]) {
         const response = await exchange("/auth//email?token=synthetic-private", aliases[0], method);
@@ -184,7 +205,7 @@ for (const canonical of [BEIT, TORAH]) {
         await response.body?.cancel();
         const next = await exchange(location, aliases[0], method);
         expect(next.status).toBe(method === "GET" ? 303 : 404);
-        expect(next.headers.get("location")).toBe(method === "GET" ? canonical + "/#home" : null);
+        expect(next.headers.get("location")).toBe(method === "GET" ? canonical + door + "#home" : null);
         expect(next.headers.has("set-cookie")).toBe(false); await next.body?.cancel();
       }
     });

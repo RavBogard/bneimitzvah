@@ -144,7 +144,7 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
     <PageHeader title={admin ? "People" : "Link requests"} />{!admin && <DocumentTitle heading="Link requests" />}
     {productName && <p className="people-note">An account keeps a person’s saved readings, place in Learn to lein, preferred commentaries and settings. Everything else on <bdi dir="auto">{productName}</bdi> is open without one.</p>}
     {message && <p className={message.tone === "alert" ? "request-error roster-message" : "workspace-notice roster-message"} role={message.tone}>{message.text}</p>}
-    {message?.signIn && <p><WorkspaceLink href="/">Check account and sign in again</WorkspaceLink></p>}
+    {message?.signIn && <p><WorkspaceLink href="/account">Check account and sign in again</WorkspaceLink></p>}
     {loading && !requests ? <p role="status">Loading link requests…</p>
       : broken || !requests ? <div className="admin-state" role="alert"><p>Link requests couldn’t be loaded.</p><Button onClick={() => void load()}>Reload</Button></div>
       : <>

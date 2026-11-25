@@ -10,6 +10,8 @@ import { SHERMET_SERVICE_ITEMS } from "../reference-audio/shermet-library";
  * (static pages and their build files), the three public reading routes, the public manifest, and
  * PocketTorah's content-addressed short clips. No private API, no recording, no generated chant.
  */
+/** Where the torah origin's root sends everyone (Daniel 2026-11-25): this week's reading in Study. canonical.ts adds its fixed fragment. */
+export const STUDY_LANDING = "/read?lens=study";
 /** The intended main address (§3.1). */
 export const TORAH_ORIGIN = "https://torah.centralreform.org";
 /** The live address (Daniel's decision 14, 1.9 N24, 2026-10-24: "Work on both"). */
@@ -229,6 +231,8 @@ export function workerPolicy(input: { build: string; enabled: boolean; shellPage
     shermetAudioPath: "^/api/shermet-audio$", shermetDataPath: "^/api/shermet-audio/(?:catalog|timing)$",
     shermetLibraryIds: Object.values(SHERMET_SERVICE_ITEMS),
     shermetLibraryLessons: Object.keys(SHERMET_SERVICE_ITEMS),
+    // Offline, a navigation to the torah origin's root opens Study, as the server's redirect does online (canonical.ts STUDY_LANDING).
+    studyRootOrigins: Object.freeze([TORAH_ORIGIN]), studyLanding: STUDY_LANDING,
   });
 }
 export type WorkerPolicy = ReturnType<typeof workerPolicy>;
