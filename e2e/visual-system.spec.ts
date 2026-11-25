@@ -350,6 +350,9 @@ test.describe("student pages keep their look: only the body size changed", () =>
       expect(await page.evaluate(() => getComputedStyle(document.body).fontSize)).toBe("17px");
       // Headings are set in rem or clamp, so the body size must not move them. Put the body back to 16px and compare.
       const sizes = () => page.evaluate(() => [...document.querySelectorAll("h1, h2, h3")].map(node => getComputedStyle(node).fontSize));
+      // A page that is still loading can add a heading between the two readings (the front door's sign-in heading did, in CI on
+      // 2026-11-25), so wait until nothing on it is busy before taking the first one.
+      await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
       const now = await sizes();
       await page.addStyleTag({ content: "body { font-size: 1rem !important; }" });
       expect(await sizes()).toEqual(now);
