@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { createRequire } from "node:module";
 import { format } from "node:url";
-import { CANONICAL_ORIGINS, canonicalNavigation, canonicalNavigationEnabled, selectedCanonicalOrigin } from "../../src/lib/navigation/canonical";
+import { CANONICAL_ORIGINS, canonicalNavigation, canonicalNavigationEnabled, FRONT_DOOR_REDIRECT, selectedCanonicalOrigin, STUDY_ORIGIN, STUDY_REDIRECT } from "../../src/lib/navigation/canonical";
+import { STUDY_LANDING, TORAH_ORIGIN } from "../../src/lib/offline/policy";
+import { webManifest } from "../../src/lib/offline/manifest";
 
 const BEIT = "https://beitmitzvah.centralreform.org", TORAH = "https://torah.centralreform.org";
 const fixedAliases = ["barmitzvah.centralreform.org", "batmitzvah.centralreform.org", "bnaimitzvah.centralreform.org", "bneimitzvah.centralreform.org", "bneimitzvah.vercel.app"];
@@ -26,7 +28,9 @@ test("exactly two hard-coded CRC origins can be canonical, and the list is froze
 for (const selected of [BEIT, TORAH]) {
   const other = selected === BEIT ? TORAH : BEIT;
   const enabled = { ...production, BETTER_AUTH_URL: selected };
-  const destination = `${selected}/#home`;
+  // Daniel 2026-11-25: the torah host's root opens Study; every other arrival keeps the front door, which is at /home once torah is canonical.
+  const destination = selected === TORAH ? `${selected}/home#home` : `${selected}/#home`;
+  const landing = (host: string, path: string) => host === "torah.centralreform.org" && new URL(path, "https://x.example.test").pathname === "/" ? `${selected}/read?lens=study#home` : destination;
   const aliases = [...fixedAliases, new URL(other).host];
 
   describe(`BETTER_AUTH_URL selects ${selected}`, () => {
@@ -38,6 +42,8 @@ for (const selected of [BEIT, TORAH]) {
     test("the selected canonical is never its own alias, whatever the path or method", () => {
       const host = new URL(selected).host;
       for (const method of ["GET", "HEAD", "POST"]) for (const path of ["/", "/api/session", "/auth/email?token=synthetic-private"]) {
+        // The torah host's own root, read only, is the one exception: it answers with Study (tested below).
+        if (selected === TORAH && path === "/" && method !== "POST") continue;
         expect(canonicalNavigation(request(host, path, method), enabled)).toBeNull();
       }
     });
@@ -47,7 +53,7 @@ for (const selected of [BEIT, TORAH]) {
       for (const method of ["GET", "HEAD"]) for (const path of ["/", "/read?x=1", "/auth/email?token=synthetic-private#token=synthetic-fragment"]) {
         const response = canonicalNavigation(request(host, path, method), enabled);
         privateResponse(response, 303);
-        expect(response?.headers.get("location")).toBe(destination);
+        expect(response?.headers.get("location")).toBe(landing(host, path));
       }
       privateResponse(canonicalNavigation(request(host, "/api/session"), enabled), 404);
       privateResponse(canonicalNavigation(request(host, "/", "POST"), enabled), 404);
@@ -58,7 +64,7 @@ for (const selected of [BEIT, TORAH]) {
         for (const path of ["/?state=synthetic-private#synthetic-fragment", "/auth/email/?token=synthetic-private", "/invitations/open#token=synthetic-fragment", "/workspace/student?returnTo=https://foreign.example.test"]) {
           const response = canonicalNavigation(request(host, path, method), enabled);
           privateResponse(response, 303);
-          expect(response?.headers.get("location")).toBe(destination);
+          expect(response?.headers.get("location")).toBe(landing(host, path));
         }
         const internal = canonicalNavigation(request(host, "/account?code=synthetic-private", method, {}, "http://127.0.0.1:3192"), enabled);
         expect(internal?.headers.get("location")).toBe(destination);
@@ -100,14 +106,50 @@ for (const selected of [BEIT, TORAH]) {
   });
 }
 
-test("BETTER_AUTH_URL = beitmitzvah keeps today's behaviour: beitmitzvah serves, torah and every alias redirect to beitmitzvah", () => {
+test("BETTER_AUTH_URL = beitmitzvah: beitmitzvah serves its front door at /, every alias redirects to it, and torah's root alone opens Study there", () => {
   const enabled = { ...production, BETTER_AUTH_URL: BEIT };
   expect(canonicalNavigation(request("beitmitzvah.centralreform.org", "/"), enabled)).toBeNull();
-  for (const host of [...fixedAliases, "torah.centralreform.org"]) {
+  for (const host of fixedAliases) {
     const response = canonicalNavigation(request(host, "/"), enabled);
     privateResponse(response, 303);
     expect(response?.headers.get("location")).toBe("https://beitmitzvah.centralreform.org/#home");
   }
+  for (const path of ["/", "/?state=synthetic-private#token=synthetic-fragment"]) {
+    const response = canonicalNavigation(request("torah.centralreform.org", path), enabled);
+    privateResponse(response, 303);
+    expect(response?.headers.get("location")).toBe("https://beitmitzvah.centralreform.org/read?lens=study#home");
+  }
+  const off = canonicalNavigation(request("torah.centralreform.org", "/read"), enabled);
+  expect(off?.headers.get("location")).toBe("https://beitmitzvah.centralreform.org/#home");
+});
+
+test("BETTER_AUTH_URL = torah: torah's root opens Study, the rest of torah is served, and beitmitzvah and every alias land on the front door at /home", () => {
+  const enabled = { ...production, BETTER_AUTH_URL: TORAH };
+  for (const method of ["GET", "HEAD"]) for (const path of ["/", "/?state=synthetic-private#token=synthetic-fragment"]) {
+    const response = canonicalNavigation(request("torah.centralreform.org", path, method), enabled);
+    privateResponse(response, 307);
+    expect(response?.headers.get("location")).toBe("https://torah.centralreform.org/read?lens=study#home");
+  }
+  // An internally reconstructed request URL still reads its path; the destination never comes from the request.
+  expect(canonicalNavigation(request("torah.centralreform.org", "/", "GET", {}, "http://127.0.0.1:3192"), enabled)?.headers.get("location")).toBe("https://torah.centralreform.org/read?lens=study#home");
+  for (const path of ["/home", "/read", "/read?lens=study", "/account", "/api/session", "/sw.js", "//"]) expect(canonicalNavigation(request("torah.centralreform.org", path), enabled), path).toBeNull();
+  for (const method of ["POST", "PUT"]) expect(canonicalNavigation(request("torah.centralreform.org", "/", method), enabled)).toBeNull();
+  for (const host of ["beitmitzvah.centralreform.org", ...fixedAliases]) for (const path of ["/", "/?state=synthetic-private", "/read"]) {
+    const response = canonicalNavigation(request(host, path), enabled);
+    privateResponse(response, 303);
+    expect(response?.headers.get("location")).toBe("https://torah.centralreform.org/home#home");
+  }
+});
+
+test("a fork's canonical origin never takes the Study landing, and the redirect strings agree with the offline policy and the manifest", () => {
+  const fork = "https://torah.fork-congregation.example", enabled = { ...production, BETTER_AUTH_URL: fork, CANONICAL_ORIGIN: fork, ORIGIN_ALIASES: "alias.fork-congregation.example" };
+  expect(selectedCanonicalOrigin(enabled)).toBe(fork);
+  expect(canonicalNavigation(request("torah.fork-congregation.example", "/"), enabled)).toBeNull();
+  expect(canonicalNavigation(request("alias.fork-congregation.example", "/"), enabled)?.headers.get("location")).toBe(`${fork}/#home`);
+  expect(STUDY_ORIGIN).toBe(TORAH_ORIGIN);
+  expect(STUDY_REDIRECT).toBe(`${STUDY_LANDING}#home`);
+  expect(FRONT_DOOR_REDIRECT).toBe("/home#home");
+  expect(webManifest("CRC Torah").start_url).toBe(STUDY_LANDING);
 });
 
 test("stable preactivation and rollback are inert; only an exact production selection of a hard-coded canonical activates", () => {
@@ -134,6 +176,7 @@ test("the pinned Next redirect serializer preserves the fixed harmless fragment 
     const serialize = (location: string) => format(parseUrl(getRelativeURL(location, "https://barmitzvah.centralreform.org/auth/email?token=synthetic-private")));
     expect(serialize(origin + "/#")).toBe(origin + "/");
     expect(serialize(`${origin}/#home`)).toBe(origin + "/#home");
+    for (const path of [STUDY_REDIRECT, FRONT_DOOR_REDIRECT]) expect(serialize(origin + path)).toBe(origin + path);
   }
 });
 

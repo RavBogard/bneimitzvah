@@ -251,7 +251,7 @@ describe("where the beacon is mounted", () => {
     for (const location of ["/learn/run-through", "/learn/run-through?kind=haftarah"]) expect(normalizePublicPagePath(location), location).toBeNull();
     expect(publicPageViewPaths()).not.toContain("/learn/run-through");
     // Nothing under the signed-in workspace, the account page, sign-in, connect or the root layout imports it.
-    for (const file of all.filter(f => /^src\/app\/(workspace|account|sign-in|connect|invitations|unsubscribe|offline)\//.test(f) || f === "src/app/layout.tsx" || f === "src/app/page.tsx"))
+    for (const file of all.filter(f => /^src\/app\/(workspace|account|sign-in|connect|invitations|unsubscribe|offline)\//.test(f) || f === "src/app/layout.tsx" || f === "src/app/page.tsx" || f === "src/app/home/page.tsx"))
       expect(await readFile(file, "utf8"), file).not.toMatch(/PageViewBeacon|page-view-beacon|api\/public\/view/);
   });
   it("sends no cookie, no referrer and keeps nothing on the device", async () => {

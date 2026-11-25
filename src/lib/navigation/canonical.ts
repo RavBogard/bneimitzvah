@@ -25,6 +25,16 @@ export function selectedCanonicalOrigin(env: Environment): CanonicalOrigin | nul
 export function canonicalNavigationEnabled(env: Environment) {
   return selectedCanonicalOrigin(env) !== null;
 }
+/**
+ * Arriving at the torah host's root opens this week's reading in Study, for everyone (Daniel 2026-11-25: "Only when they go to Torah.
+ * Not when they go to beitmitzvah."). The rule follows the host the request arrived on, so it holds whichever of the two is canonical:
+ * torah's root redirects to Study, and every other CRC host keeps the front door (at /, or at /home once torah is canonical and its
+ * root means Study). Both destinations are these fixed strings on the selected origin, never anything from the request.
+ */
+export const STUDY_ORIGIN = CANONICAL_ORIGINS[1];
+const STUDY_HOST = new URL(STUDY_ORIGIN).host;
+export const STUDY_REDIRECT = "/read?lens=study#home";
+export const FRONT_DOOR_REDIRECT = "/home#home";
 const privateHeaders = { "cache-control": "private, no-store", "referrer-policy": "no-referrer" };
 const denied = () => new Response(null, { status: 404, headers: privateHeaders });
 
@@ -38,6 +48,13 @@ export function canonicalNavigation(request: Pick<Request, "url" | "headers" | "
   // Request.url using an internal listening address; never promote Host to auth.
   // The selected canonical's own host is never an alias (it would redirect to itself).
   const host = request.headers.get("host");
+  const crc = (CANONICAL_ORIGINS as readonly string[]).includes(origin);
+  // The torah host as the canonical origin: its root alone, read only, answers with Study; everything else there is served as usual.
+  if (crc && host !== null && host === canonicalHost && host === STUDY_HOST && ["GET", "HEAD"].includes(request.method)) {
+    let pathname: string;
+    try { pathname = new URL(request.url).pathname; } catch { return null; }
+    return pathname === "/" ? new Response(null, { status: 307, headers: { ...privateHeaders, location: `${origin}${STUDY_REDIRECT}` } }) : null;
+  }
   if (!host || host === canonicalHost || !aliases.has(host)) return null;
   let url: URL;
   try { url = new URL(request.url); } catch { return denied(); }
@@ -55,5 +72,7 @@ export function canonicalNavigation(request: Pick<Request, "url" | "headers" | "
   // A fixed nonempty harmless fragment replaces any incoming browser fragment.
   // Next's redirect parse/format pipeline strips a literal empty '#'.
   // Never reuse incoming path/query/fragment or query-preserving redirects.
-  return new Response(null, { status: 303, headers: { ...privateHeaders, location: `${origin}/#home` } });
+  // The destination is one of three fixed paths, chosen only by the arrival host and whether the path was exactly the root.
+  const landing = crc && host === STUDY_HOST && url.pathname === "/" ? STUDY_REDIRECT : crc && canonicalHost === STUDY_HOST ? FRONT_DOOR_REDIRECT : "/#home";
+  return new Response(null, { status: 303, headers: { ...privateHeaders, location: `${origin}${landing}` } });
 }

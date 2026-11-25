@@ -3,6 +3,7 @@ vi.mock("server-only", () => ({}));
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import Home, { generateMetadata } from "../../src/app/page";
+import HomeAtHome, { generateMetadata as homeAtHomeMetadata } from "../../src/app/home/page";
 import AcceptInvitationPage from "../../src/app/invitations/accept/page";
 import AccountRoute from "../../src/app/account/page";
 import SignInPage from "../../src/app/sign-in/page";
@@ -15,6 +16,11 @@ const home = async (query: Record<string, string> = {}) => renderToStaticMarkup(
 const week = (date: string): PublicWeek => ({ date, parashah: "Noach", fetchedAt: 0, listening: { pocketTorah: false },
   torah: { kind: "torah", ranges: ["Genesis 6:9-11:32"], verseCount: 153, pages: [] },
   haftarah: { kind: "haftarah", ranges: ["Isaiah 54:1-55:5"], verseCount: 22, pages: [] } });
+
+test("the front door is also at /home, the same page, for arrivals that torah's Study root would otherwise take (Daniel 2026-11-25)", () => {
+  expect(HomeAtHome).toBe(Home);
+  expect(homeAtHomeMetadata).toBe(generateMetadata);
+});
 
 test("the home is CRC Torah's front door: This week, then the Beit Mitzvah door, then Learn to lein", async () => {
   const markup = await home();
