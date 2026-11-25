@@ -149,7 +149,8 @@ test("a fork's canonical origin never takes the Study landing, and the redirect 
   expect(STUDY_ORIGIN).toBe(TORAH_ORIGIN);
   expect(STUDY_REDIRECT).toBe(`${STUDY_LANDING}#home`);
   expect(FRONT_DOOR_REDIRECT).toBe("/home#home");
-  expect(webManifest("CRC Torah").start_url).toBe(STUDY_LANDING);
+  // The installed app starts at the root: the manifest is linked on beitmitzvah too, whose root is the front door; on torah the root itself leads to Study.
+  expect(webManifest("CRC Torah").start_url).toBe("/");
 });
 
 test("stable preactivation and rollback are inert; only an exact production selection of a hard-coded canonical activates", () => {
