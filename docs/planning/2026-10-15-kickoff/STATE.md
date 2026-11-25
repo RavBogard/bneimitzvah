@@ -1,6 +1,12 @@
 # State — CRC B'nei Mitzvah portal
 
-Updated 2026-11-23. This file is replaced, not appended: it says where the work stands today, in about a hundred lines. The full log up to 2026-11-16 (gate lines, merges, migrations, walk findings) is unchanged at `docs/archive/STATE-through-2026-11-16.md`. Daniel's binding rulings are indexed in `docs/planning/RULINGS.md`; `MISSION.md` beside this file is still the authority. Historical plans, returns and reviews are under `docs/archive/` with their old folder layout.
+Updated 2026-11-25. This file is replaced, not appended: it says where the work stands today, in about a hundred lines. The full log up to 2026-11-16 (gate lines, merges, migrations, walk findings) is unchanged at `docs/archive/STATE-through-2026-11-16.md`. Daniel's binding rulings are indexed in `docs/planning/RULINGS.md`; `MISSION.md` beside this file is still the authority. Historical plans, returns and reviews are under `docs/archive/` with their old folder layout.
+
+## The main address, November 25
+
+Daniel ruled that arriving at torah.centralreform.org opens this week's parashah in the Study view, for everyone, and that beitmitzvah.centralreform.org keeps the front door (`RULINGS.md`, section 1). The rule is in `src/lib/navigation/canonical.ts` and follows the host a request arrived on: the torah host's `/` redirects to `/read?lens=study`, now (torah is an alias) and after the cutover (torah canonical). The front door is also served at `/home`; once torah is canonical, an arrival at beitmitzvah or another alias lands there. Offline, the worker sends the torah origin's `/` to Study. Other congregations' copies are unchanged.
+
+Decided here: the installed app still starts at `/`, because the manifest is linked on beitmitzvah too. "Check my access" and the approved and linked account emails go to `/mine`, and "Check account and sign in again" goes to `/account`, since `/` on torah no longer shows account status. No e2e opens the torah host; the built-server test `tests/http-browser/canonical-navigation.test.ts` covers both arrangements. [CI](https://github.com/RavBogard/bneimitzvah/actions/runs/45691727943) passed after two flakes were fixed: `tests/http-browser/service-ecosystem-ui.test.ts` read the body of a response that starts a navigation, and `e2e/visual-system.spec.ts` measured headings before the front door finished loading. The `service-learning-ui` flake noted below is still open.
 
 ## Copies for other congregations, November 23
 
