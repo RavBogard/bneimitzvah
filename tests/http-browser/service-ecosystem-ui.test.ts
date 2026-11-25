@@ -92,7 +92,8 @@ it("opens the lesson from its exact part, saves completion there, and returns to
   ]);
   expect(opened.request().postDataJSON()).toMatchObject({ mode: "student", rowId: "synthetic-closing", lessonId: "torah-service", complete: false });
   expect(opened.status(), "the scoped lesson open request should succeed").toBe(200);
-  expect(await opened.json()).toMatchObject({ ok: true, slot: "morning" });
+  // The click navigates as soon as this request answers, and the browser then drops the answer's body, so only its status is read
+  // (reading the body failed in CI on 2026-11-25); the lesson opening on the assigned part below shows what the answer carried.
   const next = tab.getByRole("button", { name: "Next", exact: true });
   await ui(tab.locator('[data-lesson="torah-service"][data-step="about"]').getByRole("button", { name: "Next", exact: true }),
     "the approved lesson should enable Next on its first step").toBeEnabled();
